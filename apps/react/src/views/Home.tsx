@@ -37,7 +37,7 @@ export function Home() {
 					<Link to="/sidecar">meet the manager</Link>
 				</Card>
 			</Grid>
-			<h2>one system, three seats</h2>
+			<h2>adopt in order of pain</h2>
 			<p>
 				adopt in order of pain: negentropy alone judges any repo — start there.
 				add runseal when operations outgrow your shell history. add sidecar when

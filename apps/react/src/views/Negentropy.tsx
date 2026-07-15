@@ -64,31 +64,20 @@ export function Negentropy() {
 			<p>
 				an agent-maintained codebase rots differently: every session reads the
 				code with fresh eyes, prose comments drift unread, and each small
-				compromise compounds quietly. negentropy prices that entropy — a
-				self-contained structural checker that pushes explanation pressure out
-				of prose and into structure, tests, vocabulary, and docs.
+				compromise compounds quietly. negentropy turns that rot into a bill: a
+				structural checker that makes every violation either fixed or visibly
+				owed, so meaning moves out of prose and into structure, tests, and named
+				vocabulary.
 			</p>
 			<p>
-				it is not a linter: lint rules police style inside one language's
-				toolchain. negentropy's nine laws police structure across languages from
-				one grammar-first parser substrate — no target compilers, no target
-				toolchains.
+				it is not a linter: lint rules check style inside one language's
+				toolchain. negentropy checks structure across languages with one shared
+				parser — no target compilers, no target toolchains.
 			</p>
 			<p>
 				<Badge>rust</Badge> <Badge>typescript</Badge> <Badge>tsx</Badge>{" "}
 				<Badge>scss</Badge> <Badge>markdown</Badge>
 			</p>
-			<h2 id="quickstart">quickstart</h2>
-			<Code name="install" copy>
-				{start}
-			</Code>
-			<p>
-				manage.sh fetches the released binary from R2 into ~/.local/bin — linux
-				x86_64 today, more targets as the runner pool grows. on an existing repo
-				start with negentropy --debt . to see the bill before strict makes it
-				fatal. laws and territories are declared per repo in negentropy.toml:
-			</p>
-			<Code name="negentropy.toml">{config}</Code>
 			<h2 id="loop">the loop</h2>
 			<p>
 				the premise, demonstrated. an agent wrote two violations in eight lines
@@ -110,6 +99,18 @@ export function Negentropy() {
 				same PR.
 			</p>
 			<Code name="vocabulary.toml">{lexicon}</Code>
+			<h2 id="quickstart">quickstart</h2>
+			<Code name="install" copy>
+				{start}
+			</Code>
+			<p>
+				manage.sh is a short, readable script: it fetches one released binary
+				into ~/.local/bin — linux x86_64 today, more targets as the runner pool
+				grows. on an existing repo start with negentropy --debt . to see the
+				bill before strict makes it fatal. laws and territories are declared per
+				repo in negentropy.toml:
+			</p>
+			<Code name="negentropy.toml">{config}</Code>
 			<h2 id="seats">where the law sits</h2>
 			<p>
 				an agent does not obey documents; it obeys gates. the law binds at four
