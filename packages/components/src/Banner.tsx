@@ -17,7 +17,6 @@ export function Banner(props: Props) {
 				<p>{props.line}</p>
 			</div>
 			<nav>{props.children}</nav>
-			<img className="ghost" src={props.mark} alt="" width="224" height="224" />
 		</header>
 	);
 }
