@@ -1,4 +1,8 @@
-import { Badge, Card, Code, Grid, Hero } from "@open-web/components";
+import { Badge, Banner, Card, Code, Forge, Grid } from "@open-web/components";
+import releases from "../data/releases.json";
+
+const start = `curl -fsSL https://runseal.perish.uk/manage.sh | sh
+runseal :guard`;
 
 const sample = `$ runseal :guard
 ==> negentropy version pin
@@ -13,13 +17,25 @@ clean`;
 export function Runseal() {
 	return (
 		<article>
-			<Hero
+			<Banner
+				mark="/marks/runseal.svg"
 				title="runseal"
-				text="run a command inside a small, explicit profile. runseal gives a repo named wrappers, local resources, and env, argv, and symlink setup without becoming a task runner or a secret manager."
+				line="keep flows explicit."
 			>
+				<Badge>stable {releases.runseal}</Badge>
+				<Forge repo="PerishCode/runseal" />
+			</Banner>
+			<p>
+				run a command inside a small, explicit profile. runseal gives a repo
+				named wrappers, local resources, and env, argv, and symlink setup
+				without becoming a task runner or a secret manager.
+			</p>
+			<p>
 				<Badge>env</Badge> <Badge>symlink</Badge> <Badge>argv</Badge>{" "}
 				<Badge>deno</Badge>
-			</Hero>
+			</p>
+			<h2>quickstart</h2>
+			<Code copy>{start}</Code>
 			<Grid>
 				<Card title="routing">
 					<p>

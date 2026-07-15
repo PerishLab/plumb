@@ -5,7 +5,7 @@ import { io } from "@/lib/std/io.ts";
 function usage(): void {
   io.print("Usage: runseal :bake");
   io.print("");
-  io.print("Bake the living vocabulary of the four repos into apps/react/src/data.");
+  io.print("Bake the living vocabulary and the stable release versions into apps/react/src/data.");
 }
 
 const args = parseArgs(Deno.args, { boolean: ["help", "h"] });
@@ -21,6 +21,21 @@ type Entry = { repo: string; roots: Root[] };
 
 const repos = ["negentropy", "runseal", "sidecar", "open-web"];
 const target = "apps/react/src/data/vocabulary.json";
+const shelf = "apps/react/src/data/releases.json";
+const gates: Record<string, string> = {
+  negentropy: "https://releases.negentropy.perish.uk",
+  runseal: "https://releases.runseal.perish.uk",
+  sidecar: "https://releases.sidecar.perish.uk",
+};
+
+async function version(base: string): Promise<string> {
+  const response = await fetch(`${base}/stable/latest/metadata.json`);
+  if (!response.ok) {
+    io.fail(`bake: ${base} answered ${response.status}`);
+  }
+  const body = await response.json();
+  return typeof body.releaseVersion === "string" ? body.releaseVersion : "";
+}
 
 function parse(text: string): Root[] {
   const roots: Root[] = [];
@@ -63,3 +78,11 @@ const atoms = entries
   .flatMap((entry) => entry.roots)
   .reduce((sum, root) => sum + root.atoms.length, 0);
 io.print(`bake: ${atoms} atoms across ${entries.length} repos -> ${target}`);
+
+const releases: Record<string, string> = {};
+for (const [name, base] of Object.entries(gates)) {
+  releases[name] = await version(base);
+}
+await Deno.writeTextFile(shelf, `${JSON.stringify(releases, null, "\t")}\n`);
+await cmd.run("pnpm", ["biome", "format", "--write", shelf]);
+io.print(`bake: ${Object.values(releases).join(" ")} -> ${shelf}`);

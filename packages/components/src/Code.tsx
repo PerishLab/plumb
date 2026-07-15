@@ -1,13 +1,18 @@
+import { Copy } from "./Copy";
 import "./Code.scss";
 
 type Props = {
 	children: string;
+	copy?: boolean;
 };
 
 export function Code(props: Props) {
 	return (
-		<pre className="code">
-			<code>{props.children}</code>
-		</pre>
+		<div className="code">
+			<pre>
+				<code>{props.children}</code>
+			</pre>
+			{props.copy === true ? <Copy text={props.children} /> : null}
+		</div>
 	);
 }

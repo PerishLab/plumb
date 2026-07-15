@@ -1,4 +1,8 @@
-import { Badge, Card, Code, Grid, Hero } from "@open-web/components";
+import { Badge, Banner, Card, Code, Forge, Grid } from "@open-web/components";
+import releases from "../data/releases.json";
+
+const start = `curl -fsSL https://sidecar.perish.uk/manage.sh | sh
+sidecar start`;
 
 const sample = `$ sidecar plan --config examples/minimal.toml
 project: example-sidecar-project (namespace: default)
@@ -13,13 +17,25 @@ inspect endpoints: 1
 export function Sidecar() {
 	return (
 		<article>
-			<Hero
+			<Banner
+				mark="/marks/sidecar.svg"
 				title="sidecar"
-				text="a lightweight, manifest-driven process instance manager for projects that run a small set of cooperating local processes: shallow isolation without space isolation."
+				line="keep local runtimes named."
 			>
+				<Badge>stable {releases.sidecar}</Badge>
+				<Forge repo="PerishCode/sidecar" />
+			</Banner>
+			<p>
+				a lightweight, manifest-driven process instance manager for projects
+				that run a small set of cooperating local processes: shallow isolation
+				without space isolation.
+			</p>
+			<p>
 				<Badge>manifest</Badge> <Badge>stamp</Badge> <Badge>broker</Badge>{" "}
 				<Badge>inspect</Badge>
-			</Hero>
+			</p>
+			<h2>quickstart</h2>
+			<Code copy>{start}</Code>
 			<Grid>
 				<Card title="manifest">
 					<p>

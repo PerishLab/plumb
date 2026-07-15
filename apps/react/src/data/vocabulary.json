@@ -6802,6 +6802,10 @@
 				"root": "packages/components/src",
 				"atoms": [
 					{
+						"word": "Atom",
+						"count": 1
+					},
+					{
 						"word": "Badge",
 						"count": 2
 					},
@@ -6830,6 +6834,10 @@
 						"count": 2
 					},
 					{
+						"word": "Ledger",
+						"count": 2
+					},
+					{
 						"word": "List",
 						"count": 2
 					},
@@ -6839,7 +6847,7 @@
 					},
 					{
 						"word": "Props",
-						"count": 10
+						"count": 11
 					},
 					{
 						"word": "Search",
@@ -6847,7 +6855,7 @@
 					},
 					{
 						"word": "props",
-						"count": 10
+						"count": 11
 					}
 				]
 			},

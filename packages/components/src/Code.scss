@@ -1,10 +1,15 @@
 .code {
-	padding: var(--space-3) var(--space-4);
+	position: relative;
 	border: var(--line) solid var(--rule);
 	border-radius: var(--radius);
 	background: var(--well);
-	overflow-x: auto;
-	font-size: var(--fine);
-	line-height: var(--leading);
-	color: var(--ink);
+
+	pre {
+		margin: 0;
+		padding: var(--space-3) var(--space-4);
+		overflow-x: auto;
+		font-size: var(--fine);
+		line-height: var(--leading);
+		color: var(--ink);
+	}
 }

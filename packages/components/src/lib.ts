@@ -1,7 +1,10 @@
 export { Badge } from "./Badge";
+export { Banner } from "./Banner";
 export { Button } from "./Button";
 export { Card } from "./Card";
 export { Code } from "./Code";
+export { Copy } from "./Copy";
+export { Forge } from "./Forge";
 export { Frame } from "./Frame";
 export { Grid } from "./Grid";
 export { Hero } from "./Hero";

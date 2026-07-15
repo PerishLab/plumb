@@ -1,4 +1,8 @@
-import { Badge, Card, Code, Grid, Hero } from "@open-web/components";
+import { Badge, Banner, Card, Code, Forge, Grid } from "@open-web/components";
+import releases from "../data/releases.json";
+
+const start = `curl -fsSL https://releases.negentropy.perish.uk/manage.sh | sh
+negentropy --strict .`;
 
 const sample = `$ negentropy --debt .
 src/deeply.ts:5:12 block depth over limit
@@ -10,13 +14,25 @@ hot files: src/deeply.ts=1 src/helper.ts=1`;
 export function Negentropy() {
 	return (
 		<article>
-			<Hero
+			<Banner
+				mark="/marks/negentropy.svg"
 				title="negentropy"
-				text="a self-contained structural checker for reducing semantic entropy in codebases, especially agent-maintained ones. it pushes explanation pressure out of prose and into structure, tests, vocabulary, and docs."
+				line="keep entropy down."
 			>
+				<Badge>stable {releases.negentropy}</Badge>
+				<Forge repo="PerishCode/negentropy" />
+			</Banner>
+			<p>
+				a self-contained structural checker for reducing semantic entropy in
+				codebases, especially agent-maintained ones. it pushes explanation
+				pressure out of prose and into structure, tests, vocabulary, and docs.
+			</p>
+			<p>
 				<Badge>rust</Badge> <Badge>typescript</Badge> <Badge>tsx</Badge>{" "}
 				<Badge>scss</Badge> <Badge>markdown</Badge>
-			</Hero>
+			</p>
+			<h2>quickstart</h2>
+			<Code copy>{start}</Code>
 			<Grid>
 				<Card title="grammar first">
 					<p>

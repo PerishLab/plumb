@@ -1,0 +1,18 @@
+.copy {
+	position: absolute;
+	top: var(--space-2);
+	right: var(--space-2);
+	padding: var(--space-1) var(--space-2);
+	border: var(--line) solid var(--rule);
+	border-radius: var(--radius);
+	background: var(--panel);
+	color: var(--muted);
+	font-family: var(--mono);
+	font-size: var(--fine);
+	cursor: pointer;
+}
+
+.copy:hover {
+	color: var(--bright);
+	border-color: var(--accent);
+}

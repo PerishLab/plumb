@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+	<title>sidecar</title>
+	<rect x="1" y="1" width="62" height="62" rx="14" fill="#101214" stroke="#2a2f35" stroke-width="2"/>
+	<rect x="19" y="13" width="11" height="38" rx="3" fill="#7fb4e0"/>
+	<rect x="38" y="27" width="9" height="24" rx="3" fill="#9aa4af"/>
+	<rect x="30" y="35" width="8" height="7" rx="2" fill="#3a424b"/>
+</svg>
