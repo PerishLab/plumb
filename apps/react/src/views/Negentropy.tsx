@@ -43,6 +43,10 @@ const mended = `export function tally(rows: number[][][]): number {
 const clean = `$ negentropy --strict .
 clean`;
 
+const contract = `# AGENTS.md
+This repository is a constitution-era web workspace.
+\`negentropy --strict .\` must print \`clean\` before anything lands.`;
+
 export function Negentropy() {
 	return (
 		<article>
@@ -97,6 +101,41 @@ export function Negentropy() {
 				every transcript on this page is a real run. this loop — write, judge,
 				restructure, clean — is what the workshop is for.
 			</p>
+			<h2>where the law sits</h2>
+			<p>
+				an agent does not obey documents; it obeys gates. the law binds at four
+				seats, and the contract is one line — this is the actual first line an
+				agent reads before touching this site's source:
+			</p>
+			<Code>{contract}</Code>
+			<Grid>
+				<Card title="session">
+					<p>
+						AGENTS.md names the constitution, so every session starts under it.
+						the agent reads the bill as it works: negentropy --debt . is cheap
+						enough to run after every edit.
+					</p>
+				</Card>
+				<Card title="commit">
+					<p>
+						the pre-commit hook runs the full guard: a tree that is not clean
+						cannot be committed, so a session cannot end dirty by accident.
+					</p>
+				</Card>
+				<Card title="merge">
+					<p>
+						guard.yml runs the same gauntlet in CI, and the land flow merges
+						only on green. one gate, three faces — session, commit, merge.
+					</p>
+				</Card>
+				<Card title="vocabulary">
+					<p>
+						when a name wants two words, the agent restructures — or registers
+						the compound with a rationale. the dictionary delta rides the same
+						PR as the code that needed it.
+					</p>
+				</Card>
+			</Grid>
 			<Grid>
 				<Card title="grammar first">
 					<p>
