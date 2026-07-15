@@ -1,3 +1,1 @@
-import { Button as widget } from "./Button";
-
-export const Button = widget;
+export { Button } from "./Button";

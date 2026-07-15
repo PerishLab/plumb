@@ -1,7 +1,11 @@
 [scan]
 include = [
   "apps/**/*.ts",
+  "apps/**/*.tsx",
+  "apps/**/*.scss",
   "packages/**/*.ts",
+  "packages/**/*.tsx",
+  "packages/**/*.scss",
   "docs/**/*.md",
 ]
 exclude = [
@@ -44,3 +48,7 @@ paths = [
 ]
 note = "vite and vitest require root-level config files; path law anchors to src and tests"
 allow = ["path"]
+
+[[grant]]
+syntax = "style"
+paths = ["packages/components/**"]
