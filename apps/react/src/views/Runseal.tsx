@@ -1,8 +1,22 @@
 import { Badge, Banner, Card, Code, Forge, Grid } from "@open-web/components";
 import releases from "../data/releases.json";
 
-const start = `curl -fsSL https://runseal.perish.uk/manage.sh | sh
-runseal :guard`;
+const start = `curl -fsSL https://runseal.perish.uk/manage.sh | sh`;
+
+const profile = `[resources]
+root = ".local"
+
+[[injections]]
+type = "env"
+
+[injections.vars]
+APP_DATA_DIR = "resource://data"`;
+
+const session = `$ runseal @resolve resource://data
+~/app/.local/data
+
+$ runseal sh -c 'echo $APP_DATA_DIR'
+~/app/.local/data`;
 
 const sample = `$ runseal :guard
 ==> negentropy version pin
@@ -26,8 +40,10 @@ export function Runseal() {
 				<Forge repo="PerishCode/runseal" />
 			</Banner>
 			<p>
-				run a command inside a small, explicit profile. runseal gives a repo
-				named wrappers, local resources, and env, argv, and symlink setup
+				operational glue rots: too many environment variables, too many
+				machine-specific assumptions, too much of the flow living in shell
+				history and uncontrolled script stacks. runseal gives the glue one small
+				explicit profile — declared resources, named wrappers, injected env —
 				without becoming a task runner or a secret manager.
 			</p>
 			<p>
@@ -36,6 +52,13 @@ export function Runseal() {
 			</p>
 			<h2>quickstart</h2>
 			<Code copy>{start}</Code>
+			<p>
+				manage.sh fetches the released binary from R2 into ~/.local/bin — linux,
+				macos, and windows. then declare a profile at the repo root
+				(runseal.toml) and every command you run through runseal sees it:
+			</p>
+			<Code>{profile}</Code>
+			<Code>{session}</Code>
 			<Grid>
 				<Card title="routing">
 					<p>
@@ -66,6 +89,10 @@ export function Runseal() {
 					</p>
 				</Card>
 			</Grid>
+			<p>
+				the receipt below is real: every change to this site lands through these
+				wrappers.
+			</p>
 			<Code>{sample}</Code>
 		</article>
 	);

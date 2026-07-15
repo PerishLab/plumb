@@ -1,7 +1,16 @@
 import { Frame, Nav } from "@open-web/components";
-import { NavLink, Outlet } from "react-router";
+import { useEffect } from "react";
+import { NavLink, Outlet, useLocation } from "react-router";
+import { pages } from "../lib/meta";
 
 export function Shell() {
+	const spot = useLocation();
+	useEffect(() => {
+		const page = pages.find((entry) => entry.path === spot.pathname);
+		if (page !== undefined) {
+			document.title = page.title;
+		}
+	}, [spot]);
 	return (
 		<Frame>
 			<Nav>

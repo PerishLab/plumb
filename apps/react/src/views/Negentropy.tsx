@@ -4,12 +4,20 @@ import releases from "../data/releases.json";
 const start = `curl -fsSL https://releases.negentropy.perish.uk/manage.sh | sh
 negentropy --strict .`;
 
-const sample = `$ negentropy --debt .
-src/deeply.ts:5:12 block depth over limit
+const fixture = `export function fetchAllData(rows: number[][][]): number {
+	let sum = 0;
+	for (const plane of rows) {
+		for (const row of plane) {
+			for (const cell of row) {
+				if (cell > 0) {
+					sum += cell;`;
+
+const finding = `$ negentropy --debt .
+src/helper.ts:6:19 block depth over limit
 src/helper.ts:1:17 debt fetchAllData
 1 faults, 0 blindspots, 1 debt
 by law: block=1 word=1
-hot files: src/deeply.ts=1 src/helper.ts=1`;
+hot files: src/helper.ts=2`;
 
 export function Negentropy() {
 	return (
@@ -23,9 +31,17 @@ export function Negentropy() {
 				<Forge repo="PerishCode/negentropy" />
 			</Banner>
 			<p>
-				a self-contained structural checker for reducing semantic entropy in
-				codebases, especially agent-maintained ones. it pushes explanation
-				pressure out of prose and into structure, tests, vocabulary, and docs.
+				an agent-maintained codebase rots differently: every session reads the
+				code with fresh eyes, prose comments drift unread, and each small
+				compromise compounds quietly. negentropy prices that entropy — a
+				self-contained structural checker that pushes explanation pressure out
+				of prose and into structure, tests, vocabulary, and docs.
+			</p>
+			<p>
+				it is not a linter: lint rules police style inside one language's
+				toolchain. negentropy's nine laws police structure across languages from
+				one grammar-first parser substrate — no target compilers, no target
+				toolchains.
 			</p>
 			<p>
 				<Badge>rust</Badge> <Badge>typescript</Badge> <Badge>tsx</Badge>{" "}
@@ -33,6 +49,19 @@ export function Negentropy() {
 			</p>
 			<h2>quickstart</h2>
 			<Code copy>{start}</Code>
+			<p>
+				manage.sh fetches the released binary from R2 into ~/.local/bin — linux
+				x86_64 today, more targets as the runner pool grows. laws and
+				territories are declared per repo in negentropy.toml; without one, the
+				defaults judge the whole tree.
+			</p>
+			<h2>a first finding</h2>
+			<p>
+				two violations in eight lines: a compound name and a block one idea too
+				deep.
+			</p>
+			<Code>{fixture}</Code>
+			<Code>{finding}</Code>
 			<Grid>
 				<Card title="grammar first">
 					<p>
@@ -63,7 +92,6 @@ export function Negentropy() {
 					</p>
 				</Card>
 			</Grid>
-			<Code>{sample}</Code>
 		</article>
 	);
 }

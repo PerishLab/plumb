@@ -1,18 +1,28 @@
 import { Badge, Banner, Card, Code, Forge, Grid } from "@open-web/components";
 import releases from "../data/releases.json";
 
-const start = `curl -fsSL https://sidecar.perish.uk/manage.sh | sh
-sidecar start`;
+const start = `curl -fsSL https://sidecar.perish.uk/manage.sh | sh`;
 
-const sample = `$ sidecar plan --config examples/minimal.toml
-project: example-sidecar-project (namespace: default)
-app: desktop -> pnpm tauri dev
-targets: 2
-- api [mode=dev] -> cargo run -p example-api -- --sidecar-stamp=v=1;a=api;n=default;m=dev;s=tool%3Asidecar
-    inspect_socket: unix:///tmp/sidecar-example-api.sock
-- desktop [mode=dev] -> pnpm tauri dev --sidecar-stamp=v=1;a=desktop;n=default;m=dev;s=tool%3Asidecar
-inspect endpoints: 1
-- api-health http http://127.0.0.1:3901/health`;
+const manifest = `[project]
+name = "open-web"
+namespace = "open-web"
+
+[app]
+name = "react"
+command = "pnpm"
+args = ["--filter", "@open-web/react", "dev", "--"]
+mode = "dev"
+port = 0
+health_url = "http://127.0.0.1:{port}"`;
+
+const session = `$ sidecar start
+broker runtime pid=1355780 endpoint=tcp://127.0.0.1:40185
+started react pid=1355785
+
+$ sidecar status
+namespace: open-web
+runtime: running (pid 1355780) tcp://127.0.0.1:40185
+- react: running (pid 1355785) http://127.0.0.1:34953`;
 
 export function Sidecar() {
 	return (
@@ -26,9 +36,12 @@ export function Sidecar() {
 				<Forge repo="PerishCode/sidecar" />
 			</Banner>
 			<p>
-				a lightweight, manifest-driven process instance manager for projects
-				that run a small set of cooperating local processes: shallow isolation
-				without space isolation.
+				local processes share one host — PATH, credentials, localhost, ports,
+				logs. once a project runs more than one communicating process, that
+				shared space needs machine-readable identity, or dev servers, workers,
+				and agent sessions cross wires: wrong endpoints, stale pids, ambiguous
+				logs, unsafe cleanup. sidecar is shallow isolation without space
+				isolation — not a container runtime, not a cluster, not pm2.
 			</p>
 			<p>
 				<Badge>manifest</Badge> <Badge>stamp</Badge> <Badge>broker</Badge>{" "}
@@ -36,6 +49,14 @@ export function Sidecar() {
 			</p>
 			<h2>quickstart</h2>
 			<Code copy>{start}</Code>
+			<p>
+				manage.sh fetches the released binary from R2 into ~/.local/bin — linux,
+				macos, and windows. the lifecycle contract is one manifest at the repo
+				root. this one is not an example: it is this site's own, and the page
+				you are reading was served through a port leased exactly this way.
+			</p>
+			<Code>{manifest}</Code>
+			<Code>{session}</Code>
 			<Grid>
 				<Card title="manifest">
 					<p>
@@ -58,15 +79,14 @@ export function Sidecar() {
 						hello handshake.
 					</p>
 				</Card>
-				<Card title="inspect">
+				<Card title="port lease">
 					<p>
-						one event frame over a unix socket talks to a running target. the
-						project owns event names and payloads; sidecar owns the transport
-						envelope and timeout.
+						port = 0 leases a free loopback port at every start, injected as
+						SIDECAR_PORT and substituted into health_url — no fixed port, no
+						loopback squatting, nothing to collide with.
 					</p>
 				</Card>
 			</Grid>
-			<Code>{sample}</Code>
 		</article>
 	);
 }
