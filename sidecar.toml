@@ -6,7 +6,7 @@ root = "."
 [app]
 name = "react"
 command = "pnpm"
-args = ["--filter", "@open-web/react", "dev"]
+args = ["--filter", "@open-web/react", "dev", "--"]
 cwd = "."
 mode = "dev"
 health_url = "http://localhost:5173"
