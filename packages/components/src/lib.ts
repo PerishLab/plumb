@@ -4,6 +4,7 @@ export { Button } from "./Button";
 export { Card } from "./Card";
 export { Code } from "./Code";
 export { Copy } from "./Copy";
+export { Footer } from "./Footer";
 export { Forge } from "./Forge";
 export { Frame } from "./Frame";
 export { Grid } from "./Grid";

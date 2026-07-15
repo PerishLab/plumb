@@ -1,4 +1,4 @@
-import { Frame, Nav } from "@open-web/components";
+import { Footer, Forge, Frame, Nav } from "@open-web/components";
 import { useEffect } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
 import { pages } from "../lib/meta";
@@ -25,6 +25,11 @@ export function Shell() {
 				<NavLink to="/vocabulary">vocabulary</NavLink>
 			</Nav>
 			<Outlet />
+			<Footer>
+				<Forge repo="PerishCode/negentropy" />
+				<Forge repo="PerishCode/runseal" />
+				<Forge repo="PerishCode/sidecar" />
+			</Footer>
 		</Frame>
 	);
 }

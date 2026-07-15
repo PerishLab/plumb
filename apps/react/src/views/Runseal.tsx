@@ -91,7 +91,9 @@ export function Runseal() {
 			</Grid>
 			<p>
 				the receipt below is real: every change to this site lands through these
-				wrappers.
+				wrappers. wrappers are repo-authored deno files, not builtins — the
+				receipt shows this repo's own gauntlet, and running wrappers needs deno
+				on the path.
 			</p>
 			<Code>{sample}</Code>
 		</article>

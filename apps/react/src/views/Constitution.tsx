@@ -29,7 +29,7 @@ const laws = [
 		name: "comment",
 		kind: "fault",
 		text: "comments are denied by default; each one is a fault.",
-		why: "a comment is explanation that failed to become structure — and an agent will not reread it next session. denial moves the pressure into a better name, a test, a vocabulary entry, or a doc.",
+		why: "a comment is explanation that failed to become structure — and an agent will not reread it next session. denial moves the pressure into a better name, a test, a vocabulary entry, or a doc. the escape hatch is declared, not implied: a boundary entry in negentropy.toml can allow comments where an external quirk truly demands them — priced and visible.",
 	},
 	{
 		name: "grant",

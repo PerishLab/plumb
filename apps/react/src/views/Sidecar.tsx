@@ -4,24 +4,34 @@ import releases from "../data/releases.json";
 const start = `curl -fsSL https://sidecar.perish.uk/manage.sh | sh`;
 
 const manifest = `[project]
-name = "open-web"
-namespace = "open-web"
+name = "smoke"
+namespace = "smoke"
 
 [app]
-name = "react"
-command = "pnpm"
-args = ["--filter", "@open-web/react", "dev", "--"]
+name = "echo"
+command = "sh"
+args = ["-c", "exec python3 -m http.server $SIDECAR_PORT --bind 127.0.0.1"]
 mode = "dev"
 port = 0
 health_url = "http://127.0.0.1:{port}"`;
 
 const session = `$ sidecar start
-broker runtime pid=1355780 endpoint=tcp://127.0.0.1:40185
-started react pid=1355785
+broker runtime pid=1258583 endpoint=tcp://127.0.0.1:42071
+started echo pid=1258588
 
 $ sidecar status
-namespace: open-web
-runtime: running (pid 1355780) tcp://127.0.0.1:40185
+namespace: smoke
+runtime: running (pid 1258583) tcp://127.0.0.1:42071
+- echo: running (pid 1258588) http://127.0.0.1:36761`;
+
+const living = `[app]
+name = "react"
+command = "pnpm"
+args = ["--filter", "@open-web/react", "dev", "--"]
+port = 0
+health_url = "http://127.0.0.1:{port}"
+
+$ sidecar status
 - react: running (pid 1355785) http://127.0.0.1:34953`;
 
 export function Sidecar() {
@@ -52,11 +62,16 @@ export function Sidecar() {
 			<p>
 				manage.sh fetches the released binary from R2 into ~/.local/bin — linux,
 				macos, and windows. the lifecycle contract is one manifest at the repo
-				root. this one is not an example: it is this site's own, and the page
-				you are reading was served through a port leased exactly this way.
+				root. this one runs anywhere python runs — the port is leased at start
+				and handed to the target as SIDECAR_PORT:
 			</p>
 			<Code>{manifest}</Code>
 			<Code>{session}</Code>
+			<p>
+				and the same contract in production: the page you are reading was served
+				through a port leased exactly this way, from this site's own manifest.
+			</p>
+			<Code>{living}</Code>
 			<Grid>
 				<Card title="manifest">
 					<p>

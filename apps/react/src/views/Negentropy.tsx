@@ -4,6 +4,22 @@ import releases from "../data/releases.json";
 const start = `curl -fsSL https://releases.negentropy.perish.uk/manage.sh | sh
 negentropy --strict .`;
 
+const config = `[scan]
+include = ["src/**/*.ts"]
+
+[module]
+roots = ["src"]
+
+[limit]
+block = 4
+path = 4
+
+[comment]
+allow = false
+
+[word]
+single = true`;
+
 const fixture = `export function fetchAllData(rows: number[][][]): number {
 	let sum = 0;
 	for (const plane of rows) {
@@ -18,6 +34,14 @@ src/helper.ts:1:17 debt fetchAllData
 1 faults, 0 blindspots, 1 debt
 by law: block=1 word=1
 hot files: src/helper.ts=2`;
+
+const mended = `export function tally(rows: number[][][]): number {
+	const cells = rows.flat(2);
+	return cells.filter((cell) => cell > 0).reduce((sum, cell) => sum + cell, 0);
+}`;
+
+const clean = `$ negentropy --strict .
+clean`;
 
 export function Negentropy() {
 	return (
@@ -51,17 +75,28 @@ export function Negentropy() {
 			<Code copy>{start}</Code>
 			<p>
 				manage.sh fetches the released binary from R2 into ~/.local/bin — linux
-				x86_64 today, more targets as the runner pool grows. laws and
-				territories are declared per repo in negentropy.toml; without one, the
-				defaults judge the whole tree.
+				x86_64 today, more targets as the runner pool grows. on an existing repo
+				start with negentropy --debt . to see the bill before strict makes it
+				fatal. laws and territories are declared per repo in negentropy.toml:
 			</p>
-			<h2>a first finding</h2>
+			<Code>{config}</Code>
+			<h2>the loop</h2>
 			<p>
-				two violations in eight lines: a compound name and a block one idea too
-				deep.
+				the premise, demonstrated. an agent wrote two violations in eight lines
+				— a compound name and a block one idea too deep:
 			</p>
 			<Code>{fixture}</Code>
 			<Code>{finding}</Code>
+			<p>
+				the checker priced the entropy; the agent paid it down — a single word
+				that resolves, a shape that is flat:
+			</p>
+			<Code>{mended}</Code>
+			<Code>{clean}</Code>
+			<p>
+				every transcript on this page is a real run. this loop — write, judge,
+				restructure, clean — is what the workshop is for.
+			</p>
 			<Grid>
 				<Card title="grammar first">
 					<p>

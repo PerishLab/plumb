@@ -24,7 +24,7 @@ function head(page: Page): string {
 		`<meta property="og:title" content="${page.title}" />`,
 		`<meta property="og:description" content="${page.text}" />`,
 		`<meta property="og:image" content="${home}/og.png" />`,
-		`<meta property="og:url" content="${home}${page.path}" />`,
+		`<meta property="og:url" content="${home}${page.path === "/" ? "/" : `${page.path}/`}" />`,
 		`<meta property="og:type" content="website" />`,
 		`<meta name="twitter:card" content="summary_large_image" />`,
 	].join("\n\t\t");
