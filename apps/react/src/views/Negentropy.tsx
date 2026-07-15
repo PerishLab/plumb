@@ -36,8 +36,23 @@ by law: block=1 word=1
 hot files: src/helper.ts=2`;
 
 const mended = `export function tally(rows: number[][][]): number {
-	const cells = rows.flat(2);
-	return cells.filter((cell) => cell > 0).reduce((sum, cell) => sum + cell, 0);
+	let sum = 0;
+	for (const plane of rows) {
+		sum += gain(plane);
+	}
+	return sum;
+}
+
+function gain(plane: number[][]): number {
+	let sum = 0;
+	for (const row of plane) {
+		for (const cell of row) {
+			if (cell > 0) {
+				sum += cell;
+			}
+		}
+	}
+	return sum;
 }`;
 
 const clean = `$ negentropy --strict .
@@ -86,8 +101,9 @@ export function Negentropy() {
 			<Code name="src/helper.ts">{fixture}</Code>
 			<Code>{finding}</Code>
 			<p>
-				the checker priced the entropy; the agent paid it down — a single word
-				that resolves, a shape that is flat:
+				the checker billed it; the agent paid — not by clever chaining, but the
+				way the law intends: extract the buried idea and name it. same
+				algorithm, same passes, two flat shapes:
 			</p>
 			<Code name="src/helper.ts">{mended}</Code>
 			<Code>{clean}</Code>
@@ -113,9 +129,9 @@ export function Negentropy() {
 			<Code name="negentropy.toml">{config}</Code>
 			<h2 id="seats">where the law sits</h2>
 			<p>
-				an agent does not obey documents; it obeys gates. the law binds at four
-				seats, and the contract is one line — this is the actual first line an
-				agent reads before touching this site's source:
+				an agent can read a document and still drift; only gates bind. the
+				contract is one line — the actual first line an agent reads before
+				touching this site's source — and three gates stand behind it:
 			</p>
 			<Code name="AGENTS.md">{contract}</Code>
 			<Grid>
@@ -129,7 +145,8 @@ export function Negentropy() {
 				<Card title="commit">
 					<p>
 						the pre-commit hook runs the full guard: a tree that is not clean
-						cannot be committed, so a session cannot end dirty by accident.
+						cannot be committed, so no dirty change slips into history by
+						accident.
 					</p>
 				</Card>
 				<Card title="merge">
