@@ -4,6 +4,9 @@ packages:
 
 allowBuilds:
   "@parcel/watcher": false
+  esbuild: false
+  sharp: false
+  workerd: false
 
 catalog:
   "@biomejs/biome": 2.5.3
@@ -17,3 +20,4 @@ catalog:
   typescript: 7.0.2
   vite: 8.1.4
   vitest: 4.1.10
+  wrangler: 4.110.0

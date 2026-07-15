@@ -6,27 +6,22 @@ import { io } from "@/lib/std/io.ts";
 import { json } from "@/lib/std/json.ts";
 import { runseal } from "@/lib/std/runseal.ts";
 
-const dist = "apps/react/dist";
-const table = "apps/react/src/lib/routes.ts";
-const keys = [
-  "OPENWEB_SITE_S3_AK",
-  "OPENWEB_SITE_S3_SK",
-  "OPENWEB_SITE_S3_BUCKET",
-  "OPENWEB_SITE_S3_URL",
-  "OPENWEB_SITE_DOMAIN",
-];
+const app = "apps/react";
+const dist = `${app}/dist`;
+const config = `${app}/wrangler.jsonc`;
+const table = `${app}/src/lib/routes.ts`;
 
 function usage(): void {
   io.print("Usage: runseal :ship [--dry-run | --check]");
   io.print("");
-  io.print("Build the react app, snapshot SPA routes, and sync dist/ to the R2 site bucket.");
+  io.print("Build the react app and deploy it as Workers Static Assets on the site domain.");
   io.print("");
-  io.print("  --dry-run   print the full plan without building or syncing");
-  io.print("  --check     probe the site DNS record and R2 bucket via cloudflare tooling");
+  io.print("  --dry-run   print the plan and run a credential-free wrangler dry run");
+  io.print("  --check     probe the token, zone, DNS record, and worker via cloudflare tooling");
   io.print("");
   io.print("Secrets:");
-  io.print("  .local/secrets/ship.env        OPENWEB_SITE_* contract (see AGENTS.md)");
-  io.print("  .local/secrets/cloudflare.env  CLOUDFLARE_* contract used by --check");
+  io.print("  .local/secrets/ship.env        OPENWEB_SITE_DOMAIN (see AGENTS.md)");
+  io.print("  .local/secrets/cloudflare.env  CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN");
 }
 
 function secretsDir(): string {
@@ -52,6 +47,39 @@ function unfilled(values: Record<string, string>, wanted: string[]): string[] {
   return wanted.filter((key) => values[key] === undefined || values[key] === "");
 }
 
+type Vault = {
+  domain: string;
+  account: string;
+  token: string;
+  empty: string[];
+};
+
+async function vault(): Promise<Vault> {
+  const site = await secrets("ship.env");
+  const cloud = await secrets("cloudflare.env");
+  const empty = [
+    ...unfilled(site, ["OPENWEB_SITE_DOMAIN"]).map((key) => `ship.env: ${key}`),
+    ...unfilled(cloud, ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]).map(
+      (key) => `cloudflare.env: ${key}`,
+    ),
+  ];
+  return {
+    domain: site.OPENWEB_SITE_DOMAIN ?? "",
+    account: cloud.CLOUDFLARE_ACCOUNT_ID ?? "",
+    token: cloud.CLOUDFLARE_API_TOKEN ?? "",
+    empty,
+  };
+}
+
+async function worker(): Promise<string> {
+  const text = await Deno.readTextFile(config);
+  const found = text.match(/"name":\s*"([^"]+)"/);
+  if (found === null) {
+    return io.fail(`ship: no worker name found in ${config}`);
+  }
+  return found[1];
+}
+
 async function routes(): Promise<string[]> {
   const text = await Deno.readTextFile(table);
   const paths = [...text.matchAll(/path:\s*"([^"]+)"/g)].map((found) => found[1]);
@@ -61,94 +89,41 @@ async function routes(): Promise<string[]> {
   return paths;
 }
 
-function deep(paths: string[]): string[] {
-  return paths.filter((route) => route !== "/");
-}
-
-type Sync = { note: string; args: string[] };
-
-function commands(bucket: string, url: string): Sync[] {
-  const endpoint = url.replace(/\/$/, "");
-  return [
-    {
-      note: "hashed assets, immutable cache",
-      args: [
-        "--endpoint-url",
-        endpoint,
-        "s3",
-        "sync",
-        dist,
-        `s3://${bucket}`,
-        "--delete",
-        "--exclude",
-        "*.html",
-        "--cache-control",
-        "public, max-age=31536000, immutable",
-        "--no-progress",
-      ],
-    },
-    {
-      note: "html shells, short cache",
-      args: [
-        "--endpoint-url",
-        endpoint,
-        "s3",
-        "cp",
-        dist,
-        `s3://${bucket}`,
-        "--recursive",
-        "--exclude",
-        "*",
-        "--include",
-        "*.html",
-        "--content-type",
-        "text/html; charset=utf-8",
-        "--cache-control",
-        "public, max-age=60, must-revalidate",
-        "--no-progress",
-      ],
-    },
-  ];
-}
-
-function show(args: string[]): string {
-  return ["aws", ...args].map((arg) => (arg.includes(" ") ? `"${arg}"` : arg)).join(" ");
+function deep(paths: string[]): string | undefined {
+  return paths.find((route) => route !== "/");
 }
 
 async function plan(): Promise<void> {
-  const site = await secrets("ship.env");
-  const empty = unfilled(site, keys);
-  const fill = (key: string): string => (site[key] ? site[key] : `<${key}>`);
+  const keys = await vault();
+  const domain = keys.domain === "" ? "<OPENWEB_SITE_DOMAIN>" : keys.domain;
   const paths = await routes();
   io.print("==> ship plan (dry run)");
   io.print("");
   io.print("build:");
   io.print("  pnpm --filter @open-web/react build");
   io.print("");
-  io.print("snapshot:");
-  for (const route of deep(paths)) {
-    io.print(`  ${dist}/index.html -> ${dist}${route}/index.html`);
-  }
-  io.print("");
-  io.print("sync:");
-  io.print(
-    "  env: AWS_ACCESS_KEY_ID=<OPENWEB_SITE_S3_AK> AWS_SECRET_ACCESS_KEY=<OPENWEB_SITE_S3_SK>",
-  );
-  io.print("  env: AWS_DEFAULT_REGION=auto AWS_EC2_METADATA_DISABLED=true");
-  for (const command of commands(fill("OPENWEB_SITE_S3_BUCKET"), fill("OPENWEB_SITE_S3_URL"))) {
-    io.print(`  ${show(command.args)}`);
-  }
+  io.print("deploy:");
+  io.print("  env: CLOUDFLARE_ACCOUNT_ID=<CLOUDFLARE_ACCOUNT_ID> CLOUDFLARE_API_TOKEN=<redacted>");
+  io.print(`  pnpm exec wrangler deploy --domain ${domain}  (cwd ${app})`);
   io.print("");
   io.print("verify:");
-  io.print(`  https://${fill("OPENWEB_SITE_DOMAIN")}/`);
-  const first = deep(paths)[0];
-  if (first !== undefined) {
-    io.print(`  https://${fill("OPENWEB_SITE_DOMAIN")}${first}`);
+  io.print(`  https://${domain}/`);
+  const route = deep(paths);
+  if (route !== undefined) {
+    io.print(`  https://${domain}${route}`);
   }
-  if (empty.length > 0) {
+  if (keys.empty.length > 0) {
     io.print("");
-    io.print(`unfilled in ${secretsDir()}/ship.env: ${empty.join(", ")}`);
+    io.print(`unfilled in ${secretsDir()}: ${keys.empty.join(", ")}`);
   }
+  io.print("");
+  if (!(await fs.file.exists(`${dist}/index.html`))) {
+    io.print(`wrangler dry run: skipped (${dist}/index.html missing; build first)`);
+    return;
+  }
+  io.print("wrangler dry run:");
+  const flags = keys.domain === "" ? [] : ["--domain", keys.domain];
+  await cmd.run("pnpm", ["exec", "wrangler", "deploy", "--dry-run", ...flags], { cwd: app });
 }
 
 async function probe(url: string): Promise<void> {
@@ -161,10 +136,9 @@ async function probe(url: string): Promise<void> {
 }
 
 async function ship(): Promise<void> {
-  const site = await secrets("ship.env");
-  const empty = unfilled(site, keys);
-  if (empty.length > 0) {
-    io.fail(`ship: unfilled in ${secretsDir()}/ship.env: ${empty.join(", ")}`);
+  const keys = await vault();
+  if (keys.empty.length > 0) {
+    io.fail(`ship: unfilled in ${secretsDir()}: ${keys.empty.join(", ")}`);
   }
   const paths = await routes();
   io.print("==> build");
@@ -172,46 +146,67 @@ async function ship(): Promise<void> {
   if (!(await fs.file.exists(`${dist}/index.html`))) {
     io.fail(`ship: build produced no ${dist}/index.html`);
   }
-  io.print("==> snapshot");
-  const shell = await Deno.readTextFile(`${dist}/index.html`);
-  for (const route of deep(paths)) {
-    await fs.file.writeText(`${dist}${route}/index.html`, shell);
-    io.print(`  ${dist}${route}/index.html`);
-  }
-  io.print("==> sync");
-  const auth = {
-    AWS_ACCESS_KEY_ID: site.OPENWEB_SITE_S3_AK,
-    AWS_SECRET_ACCESS_KEY: site.OPENWEB_SITE_S3_SK,
-    AWS_DEFAULT_REGION: "auto",
-    AWS_EC2_METADATA_DISABLED: "true",
-  };
-  for (const command of commands(site.OPENWEB_SITE_S3_BUCKET, site.OPENWEB_SITE_S3_URL)) {
-    io.print(`  ${command.note}`);
-    await cmd.run("aws", command.args, { env: auth });
-  }
+  io.print("==> deploy");
+  await cmd.run("pnpm", ["exec", "wrangler", "deploy", "--domain", keys.domain], {
+    cwd: app,
+    env: {
+      CLOUDFLARE_ACCOUNT_ID: keys.account,
+      CLOUDFLARE_API_TOKEN: keys.token,
+    },
+  });
   io.print("==> verify");
-  await probe(`https://${site.OPENWEB_SITE_DOMAIN}/`);
-  const first = deep(paths)[0];
-  if (first !== undefined) {
-    await probe(`https://${site.OPENWEB_SITE_DOMAIN}${first}`);
+  await probe(`https://${keys.domain}/`);
+  const route = deep(paths);
+  if (route !== undefined) {
+    await probe(`https://${keys.domain}${route}`);
   }
   io.print("ship: ok");
 }
 
+async function attempt(args: string[]): Promise<{ code: number; out: string }> {
+  const output = await new Deno.Command("runseal", {
+    args,
+    stdin: "null",
+    stdout: "piped",
+    stderr: "piped",
+  }).output();
+  return { code: output.code, out: new TextDecoder().decode(output.stdout).trimEnd() };
+}
+
 async function check(): Promise<void> {
-  const site = await secrets("ship.env");
-  const cloud = await secrets("cloudflare.env");
-  const gate = unfilled(cloud, ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]);
+  const keys = await vault();
+  const gate = keys.empty.filter((key) => key.startsWith("cloudflare.env"));
   if (gate.length > 0) {
-    io.print(`check: skipped (unfilled in ${secretsDir()}/cloudflare.env: ${gate.join(", ")})`);
+    io.print(`check: skipped (unfilled in ${secretsDir()}: ${gate.join(", ")})`);
     return;
   }
+  let verdict = await attempt([
+    "@tool",
+    "cloudflare",
+    "api",
+    "request",
+    "GET",
+    "/user/tokens/verify",
+  ]);
+  if (verdict.code !== 0) {
+    verdict = await attempt([
+      "@tool",
+      "cloudflare",
+      "api",
+      "request",
+      "GET",
+      `/accounts/${keys.account}/tokens/verify`,
+    ]);
+  }
+  if (verdict.code !== 0) {
+    io.fail("check: token failed both /user and /accounts verify endpoints");
+  }
+  io.print(`token: ${json.get(verdict.out, ".result.status")}`);
   const name = await runseal.text(["@tool", "cloudflare", "config", "get", "zone_name"]);
   const zone = await runseal.text(["@tool", "cloudflare", "zone", "get", "--name", name]);
   const id = json.get(zone, ".id");
   io.print(`zone: ${name} (${id})`);
-  const domain = site.OPENWEB_SITE_DOMAIN ?? "";
-  if (domain === "") {
+  if (keys.domain === "") {
     io.print("check: skipped dns probe (unfilled in ship.env: OPENWEB_SITE_DOMAIN)");
   } else {
     const records = await runseal.text([
@@ -223,29 +218,29 @@ async function check(): Promise<void> {
       "--zone-id",
       id,
       "--name",
-      domain,
+      keys.domain,
     ]);
     if (json.len(records) === 0) {
-      io.fail(`check: no DNS record for ${domain} in zone ${name}`);
+      io.print(`dns: no record for ${keys.domain} yet (wrangler deploy attaches the domain)`);
+    } else {
+      const record = json.get(records, "[0]");
+      io.print(`dns: ${keys.domain} ${json.get(record, ".type")} (${json.get(record, ".id")})`);
     }
-    const record = json.get(records, "[0]");
-    io.print(`dns: ${domain} ${json.get(record, ".type")} -> ${json.get(record, ".content")}`);
   }
-  const bucket = site.OPENWEB_SITE_S3_BUCKET ?? "";
-  if (bucket === "") {
-    io.print("check: skipped bucket probe (unfilled in ship.env: OPENWEB_SITE_S3_BUCKET)");
+  const script = await worker();
+  const service = await attempt([
+    "@tool",
+    "cloudflare",
+    "api",
+    "request",
+    "GET",
+    `/accounts/${keys.account}/workers/services/${script}`,
+  ]);
+  if (service.code === 0) {
+    const found = json.get(service.out, ".result");
+    io.print(`worker: ${json.get(found, ".id")} (created ${json.get(found, ".created_on")})`);
   } else {
-    const account = cloud.CLOUDFLARE_ACCOUNT_ID;
-    const response = await runseal.text([
-      "@tool",
-      "cloudflare",
-      "api",
-      "request",
-      "GET",
-      `/accounts/${account}/r2/buckets/${bucket}`,
-    ]);
-    const found = json.get(response, ".result");
-    io.print(`bucket: ${json.get(found, ".name")} (${json.get(found, ".location")})`);
+    io.print(`worker: ${script} not found yet (first :ship creates it)`);
   }
   io.print("check: ok");
 }

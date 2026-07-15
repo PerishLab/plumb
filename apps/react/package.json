@@ -21,6 +21,7 @@
 		"sass": "catalog:",
 		"typescript": "catalog:",
 		"vite": "catalog:",
-		"vitest": "catalog:"
+		"vitest": "catalog:",
+		"wrangler": "catalog:"
 	}
 }
