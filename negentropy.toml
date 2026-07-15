@@ -1,0 +1,46 @@
+[scan]
+include = [
+  "apps/**/*.ts",
+  "packages/**/*.ts",
+  "docs/**/*.md",
+]
+exclude = [
+  "**/node_modules/**",
+  "**/dist/**",
+]
+
+[module]
+roots = [
+  "apps/*/src",
+  "apps/*/tests",
+  "packages/*/src",
+  "packages/*/tests",
+]
+
+[limit]
+block = 4
+path = 4
+
+[comment]
+allow = false
+
+[word]
+single = true
+
+[[grant]]
+syntax = "test"
+paths = [
+  "apps/*/tests/**/*.test.ts",
+  "apps/*/tests/**/*.test.tsx",
+  "packages/*/tests/**/*.test.ts",
+  "packages/*/tests/**/*.test.tsx",
+]
+
+[[boundary]]
+paths = [
+  "apps/react/vite.config.ts",
+  "apps/react/vitest.config.ts",
+  "packages/components/vitest.config.ts",
+]
+note = "vite and vitest require root-level config files; path law anchors to src and tests"
+allow = ["path"]
