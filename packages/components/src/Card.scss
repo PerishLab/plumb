@@ -1,0 +1,25 @@
+.card {
+	padding: 1.25rem;
+	border: 1px solid #2a2f35;
+	border-radius: 0.5rem;
+	background: #16191d;
+
+	h3 {
+		margin: 0 0 0.5rem;
+		font-size: 1rem;
+	}
+
+	p {
+		margin: 0 0 0.75rem;
+		font-size: 0.9rem;
+		color: #9aa4af;
+	}
+
+	p:last-child {
+		margin-bottom: 0;
+	}
+
+	a {
+		font-size: 0.9rem;
+	}
+}

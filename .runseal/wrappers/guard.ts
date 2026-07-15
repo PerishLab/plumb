@@ -46,6 +46,7 @@ await cmd.run("deno", [
   "--lock",
   ".runseal/deno.lock",
   "--frozen=true",
+  ".runseal/wrappers/bake.ts",
   ".runseal/wrappers/guard.ts",
   ".runseal/wrappers/init.ts",
   ".runseal/wrappers/land.ts",

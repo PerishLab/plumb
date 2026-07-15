@@ -1,0 +1,21 @@
+body {
+	margin: 0;
+	background: #101214;
+	color: #d6dbe1;
+	font-family: system-ui, sans-serif;
+	line-height: 1.6;
+}
+
+.frame {
+	max-width: 60rem;
+	margin: 0 auto;
+	padding: 0 1.5rem 4rem;
+
+	a {
+		color: #7fb4e0;
+	}
+
+	code {
+		font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+	}
+}

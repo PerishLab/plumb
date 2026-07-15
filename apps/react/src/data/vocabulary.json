@@ -1,0 +1,6793 @@
+[
+	{
+		"repo": "negentropy",
+		"roots": [
+			{
+				"root": "crates/cli/src",
+				"atoms": [
+					{
+						"word": "Cli",
+						"count": 1
+					},
+					{
+						"word": "Repo",
+						"count": 1
+					},
+					{
+						"word": "Report",
+						"count": 1
+					},
+					{
+						"word": "a",
+						"count": 1
+					},
+					{
+						"word": "atoms",
+						"count": 1
+					},
+					{
+						"word": "b",
+						"count": 1
+					},
+					{
+						"word": "barred",
+						"count": 1
+					},
+					{
+						"word": "base",
+						"count": 2
+					},
+					{
+						"word": "blind",
+						"count": 2
+					},
+					{
+						"word": "book",
+						"count": 2
+					},
+					{
+						"word": "class",
+						"count": 3
+					},
+					{
+						"word": "cli",
+						"count": 1
+					},
+					{
+						"word": "comma",
+						"count": 1
+					},
+					{
+						"word": "config",
+						"count": 1
+					},
+					{
+						"word": "count",
+						"count": 1
+					},
+					{
+						"word": "debt",
+						"count": 3
+					},
+					{
+						"word": "digest",
+						"count": 1
+					},
+					{
+						"word": "dir",
+						"count": 1
+					},
+					{
+						"word": "draw",
+						"count": 1
+					},
+					{
+						"word": "emit",
+						"count": 1
+					},
+					{
+						"word": "entries",
+						"count": 1
+					},
+					{
+						"word": "escape",
+						"count": 1
+					},
+					{
+						"word": "faults",
+						"count": 2
+					},
+					{
+						"word": "files",
+						"count": 6
+					},
+					{
+						"word": "finding",
+						"count": 3
+					},
+					{
+						"word": "findings",
+						"count": 3
+					},
+					{
+						"word": "full",
+						"count": 1
+					},
+					{
+						"word": "glean",
+						"count": 1
+					},
+					{
+						"word": "hot",
+						"count": 1
+					},
+					{
+						"word": "index",
+						"count": 1
+					},
+					{
+						"word": "json",
+						"count": 1
+					},
+					{
+						"word": "label",
+						"count": 1
+					},
+					{
+						"word": "laws",
+						"count": 1
+					},
+					{
+						"word": "line",
+						"count": 1
+					},
+					{
+						"word": "list",
+						"count": 2
+					},
+					{
+						"word": "listed",
+						"count": 3
+					},
+					{
+						"word": "main",
+						"count": 1
+					},
+					{
+						"word": "map",
+						"count": 2
+					},
+					{
+						"word": "mine",
+						"count": 1
+					},
+					{
+						"word": "name",
+						"count": 3
+					},
+					{
+						"word": "node",
+						"count": 5
+					},
+					{
+						"word": "one",
+						"count": 1
+					},
+					{
+						"word": "order",
+						"count": 1
+					},
+					{
+						"word": "ordered",
+						"count": 2
+					},
+					{
+						"word": "out",
+						"count": 3
+					},
+					{
+						"word": "path",
+						"count": 10
+					},
+					{
+						"word": "rel",
+						"count": 4
+					},
+					{
+						"word": "relative",
+						"count": 1
+					},
+					{
+						"word": "repo",
+						"count": 1
+					},
+					{
+						"word": "report",
+						"count": 1
+					},
+					{
+						"word": "root",
+						"count": 2
+					},
+					{
+						"word": "scan",
+						"count": 1
+					},
+					{
+						"word": "shape",
+						"count": 1
+					},
+					{
+						"word": "sheet",
+						"count": 1
+					},
+					{
+						"word": "skip",
+						"count": 1
+					},
+					{
+						"word": "source",
+						"count": 4
+					},
+					{
+						"word": "span",
+						"count": 1
+					},
+					{
+						"word": "spot",
+						"count": 1
+					},
+					{
+						"word": "strict",
+						"count": 2
+					},
+					{
+						"word": "summary",
+						"count": 1
+					},
+					{
+						"word": "text",
+						"count": 5
+					},
+					{
+						"word": "tree",
+						"count": 1
+					},
+					{
+						"word": "version",
+						"count": 1
+					},
+					{
+						"word": "visit",
+						"count": 1
+					},
+					{
+						"word": "vocabulary",
+						"count": 2
+					},
+					{
+						"word": "walk",
+						"count": 1
+					},
+					{
+						"word": "wanted",
+						"count": 1
+					},
+					{
+						"word": "within",
+						"count": 1
+					}
+				]
+			},
+			{
+				"root": "crates/grammar/src",
+				"atoms": [
+					{
+						"word": "Alt",
+						"count": 1
+					},
+					{
+						"word": "Any",
+						"count": 1
+					},
+					{
+						"word": "Class",
+						"count": 1
+					},
+					{
+						"word": "Comment",
+						"count": 2
+					},
+					{
+						"word": "Cst",
+						"count": 1
+					},
+					{
+						"word": "Cursor",
+						"count": 1
+					},
+					{
+						"word": "Emit",
+						"count": 1
+					},
+					{
+						"word": "Head",
+						"count": 1
+					},
+					{
+						"word": "Item",
+						"count": 2
+					},
+					{
+						"word": "JSX",
+						"count": 1
+					},
+					{
+						"word": "Kind",
+						"count": 1
+					},
+					{
+						"word": "Lit",
+						"count": 1
+					},
+					{
+						"word": "Literal",
+						"count": 1
+					},
+					{
+						"word": "Loose",
+						"count": 1
+					},
+					{
+						"word": "Markup",
+						"count": 1
+					},
+					{
+						"word": "Name",
+						"count": 1
+					},
+					{
+						"word": "Not",
+						"count": 1
+					},
+					{
+						"word": "One",
+						"count": 1
+					},
+					{
+						"word": "Opt",
+						"count": 1
+					},
+					{
+						"word": "Param",
+						"count": 1
+					},
+					{
+						"word": "Pat",
+						"count": 1
+					},
+					{
+						"word": "Pattern",
+						"count": 1
+					},
+					{
+						"word": "Plus",
+						"count": 1
+					},
+					{
+						"word": "Probe",
+						"count": 1
+					},
+					{
+						"word": "Quant",
+						"count": 1
+					},
+					{
+						"word": "RUST",
+						"count": 1
+					},
+					{
+						"word": "Receiver",
+						"count": 1
+					},
+					{
+						"word": "Rep",
+						"count": 1
+					},
+					{
+						"word": "Root",
+						"count": 1
+					},
+					{
+						"word": "Rows",
+						"count": 1
+					},
+					{
+						"word": "Rule",
+						"count": 1
+					},
+					{
+						"word": "Scope",
+						"count": 1
+					},
+					{
+						"word": "Seq",
+						"count": 1
+					},
+					{
+						"word": "Slot",
+						"count": 1
+					},
+					{
+						"word": "Source",
+						"count": 1
+					},
+					{
+						"word": "Span",
+						"count": 2
+					},
+					{
+						"word": "Star",
+						"count": 1
+					},
+					{
+						"word": "State",
+						"count": 1
+					},
+					{
+						"word": "Style",
+						"count": 1
+					},
+					{
+						"word": "TS",
+						"count": 1
+					},
+					{
+						"word": "Test",
+						"count": 1
+					},
+					{
+						"word": "Token",
+						"count": 1
+					},
+					{
+						"word": "Word",
+						"count": 1
+					},
+					{
+						"word": "action",
+						"count": 1
+					},
+					{
+						"word": "ahead",
+						"count": 1
+					},
+					{
+						"word": "all",
+						"count": 1
+					},
+					{
+						"word": "alt",
+						"count": 3
+					},
+					{
+						"word": "any",
+						"count": 2
+					},
+					{
+						"word": "at",
+						"count": 42
+					},
+					{
+						"word": "atom",
+						"count": 3
+					},
+					{
+						"word": "base",
+						"count": 1
+					},
+					{
+						"word": "before",
+						"count": 1
+					},
+					{
+						"word": "best",
+						"count": 2
+					},
+					{
+						"word": "better",
+						"count": 1
+					},
+					{
+						"word": "body",
+						"count": 3
+					},
+					{
+						"word": "braces",
+						"count": 1
+					},
+					{
+						"word": "bump",
+						"count": 1
+					},
+					{
+						"word": "byte",
+						"count": 8
+					},
+					{
+						"word": "bytes",
+						"count": 17
+					},
+					{
+						"word": "class",
+						"count": 2
+					},
+					{
+						"word": "close",
+						"count": 2
+					},
+					{
+						"word": "comments",
+						"count": 2
+					},
+					{
+						"word": "count",
+						"count": 1
+					},
+					{
+						"word": "cur",
+						"count": 1
+					},
+					{
+						"word": "deep",
+						"count": 1
+					},
+					{
+						"word": "dialect",
+						"count": 1
+					},
+					{
+						"word": "done",
+						"count": 1
+					},
+					{
+						"word": "eat",
+						"count": 1
+					},
+					{
+						"word": "end",
+						"count": 17
+					},
+					{
+						"word": "eol",
+						"count": 1
+					},
+					{
+						"word": "escaped",
+						"count": 1
+					},
+					{
+						"word": "expr",
+						"count": 1
+					},
+					{
+						"word": "flush",
+						"count": 1
+					},
+					{
+						"word": "fmt",
+						"count": 1
+					},
+					{
+						"word": "fold",
+						"count": 1
+					},
+					{
+						"word": "format",
+						"count": 1
+					},
+					{
+						"word": "got",
+						"count": 1
+					},
+					{
+						"word": "group",
+						"count": 1
+					},
+					{
+						"word": "hashes",
+						"count": 1
+					},
+					{
+						"word": "head",
+						"count": 1
+					},
+					{
+						"word": "heads",
+						"count": 1
+					},
+					{
+						"word": "hit",
+						"count": 1
+					},
+					{
+						"word": "holds",
+						"count": 1
+					},
+					{
+						"word": "hook",
+						"count": 1
+					},
+					{
+						"word": "hooked",
+						"count": 1
+					},
+					{
+						"word": "idx",
+						"count": 1
+					},
+					{
+						"word": "index",
+						"count": 2
+					},
+					{
+						"word": "inner",
+						"count": 7
+					},
+					{
+						"word": "item",
+						"count": 2
+					},
+					{
+						"word": "items",
+						"count": 2
+					},
+					{
+						"word": "kids",
+						"count": 10
+					},
+					{
+						"word": "kind",
+						"count": 5
+					},
+					{
+						"word": "level",
+						"count": 5
+					},
+					{
+						"word": "lex",
+						"count": 2
+					},
+					{
+						"word": "lexers",
+						"count": 2
+					},
+					{
+						"word": "line",
+						"count": 1
+					},
+					{
+						"word": "lit",
+						"count": 2
+					},
+					{
+						"word": "lo",
+						"count": 2
+					},
+					{
+						"word": "load",
+						"count": 1
+					},
+					{
+						"word": "longest",
+						"count": 1
+					},
+					{
+						"word": "loose",
+						"count": 1
+					},
+					{
+						"word": "lost",
+						"count": 3
+					},
+					{
+						"word": "make",
+						"count": 1
+					},
+					{
+						"word": "mark",
+						"count": 1
+					},
+					{
+						"word": "marked",
+						"count": 1
+					},
+					{
+						"word": "matches",
+						"count": 1
+					},
+					{
+						"word": "name",
+						"count": 12
+					},
+					{
+						"word": "neg",
+						"count": 1
+					},
+					{
+						"word": "next",
+						"count": 2
+					},
+					{
+						"word": "node",
+						"count": 5
+					},
+					{
+						"word": "not",
+						"count": 2
+					},
+					{
+						"word": "note",
+						"count": 1
+					},
+					{
+						"word": "once",
+						"count": 1
+					},
+					{
+						"word": "open",
+						"count": 1
+					},
+					{
+						"word": "opt",
+						"count": 2
+					},
+					{
+						"word": "out",
+						"count": 2
+					},
+					{
+						"word": "parse",
+						"count": 2
+					},
+					{
+						"word": "parsers",
+						"count": 2
+					},
+					{
+						"word": "parts",
+						"count": 7
+					},
+					{
+						"word": "pat",
+						"count": 4
+					},
+					{
+						"word": "path",
+						"count": 1
+					},
+					{
+						"word": "peek",
+						"count": 1
+					},
+					{
+						"word": "peg",
+						"count": 1
+					},
+					{
+						"word": "plus",
+						"count": 2
+					},
+					{
+						"word": "pos",
+						"count": 4
+					},
+					{
+						"word": "quant",
+						"count": 4
+					},
+					{
+						"word": "quantify",
+						"count": 1
+					},
+					{
+						"word": "quoted",
+						"count": 1
+					},
+					{
+						"word": "r",
+						"count": 3
+					},
+					{
+						"word": "raise",
+						"count": 1
+					},
+					{
+						"word": "refer",
+						"count": 1
+					},
+					{
+						"word": "rep",
+						"count": 3
+					},
+					{
+						"word": "root",
+						"count": 3
+					},
+					{
+						"word": "route",
+						"count": 1
+					},
+					{
+						"word": "row",
+						"count": 1
+					},
+					{
+						"word": "rows",
+						"count": 1
+					},
+					{
+						"word": "rule",
+						"count": 4
+					},
+					{
+						"word": "rules",
+						"count": 8
+					},
+					{
+						"word": "run",
+						"count": 3
+					},
+					{
+						"word": "rust",
+						"count": 1
+					},
+					{
+						"word": "seq",
+						"count": 3
+					},
+					{
+						"word": "settle",
+						"count": 1
+					},
+					{
+						"word": "sheet",
+						"count": 1
+					},
+					{
+						"word": "shut",
+						"count": 1
+					},
+					{
+						"word": "sift",
+						"count": 1
+					},
+					{
+						"word": "sig",
+						"count": 2
+					},
+					{
+						"word": "slot",
+						"count": 1
+					},
+					{
+						"word": "sort",
+						"count": 1
+					},
+					{
+						"word": "source",
+						"count": 4
+					},
+					{
+						"word": "space",
+						"count": 1
+					},
+					{
+						"word": "spaces",
+						"count": 1
+					},
+					{
+						"word": "span",
+						"count": 4
+					},
+					{
+						"word": "split",
+						"count": 1
+					},
+					{
+						"word": "src",
+						"count": 2
+					},
+					{
+						"word": "stack",
+						"count": 1
+					},
+					{
+						"word": "star",
+						"count": 2
+					},
+					{
+						"word": "start",
+						"count": 8
+					},
+					{
+						"word": "starts",
+						"count": 1
+					},
+					{
+						"word": "state",
+						"count": 1
+					},
+					{
+						"word": "step",
+						"count": 2
+					},
+					{
+						"word": "styled",
+						"count": 1
+					},
+					{
+						"word": "swatch",
+						"count": 1
+					},
+					{
+						"word": "sweep",
+						"count": 1
+					},
+					{
+						"word": "tag",
+						"count": 2
+					},
+					{
+						"word": "tagged",
+						"count": 1
+					},
+					{
+						"word": "term",
+						"count": 1
+					},
+					{
+						"word": "text",
+						"count": 6
+					},
+					{
+						"word": "tick",
+						"count": 1
+					},
+					{
+						"word": "tok",
+						"count": 1
+					},
+					{
+						"word": "token",
+						"count": 1
+					},
+					{
+						"word": "tokens",
+						"count": 4
+					},
+					{
+						"word": "toks",
+						"count": 2
+					},
+					{
+						"word": "trims",
+						"count": 1
+					},
+					{
+						"word": "trivia",
+						"count": 1
+					},
+					{
+						"word": "ts",
+						"count": 1
+					},
+					{
+						"word": "tsx",
+						"count": 1
+					},
+					{
+						"word": "unit",
+						"count": 2
+					},
+					{
+						"word": "upper",
+						"count": 1
+					},
+					{
+						"word": "usize",
+						"count": 1
+					},
+					{
+						"word": "want",
+						"count": 2
+					},
+					{
+						"word": "web",
+						"count": 1
+					},
+					{
+						"word": "wide",
+						"count": 1
+					},
+					{
+						"word": "woven",
+						"count": 1
+					},
+					{
+						"word": "wrap",
+						"count": 2
+					}
+				]
+			},
+			{
+				"root": "crates/kernel/src",
+				"atoms": [
+					{
+						"word": "Blind",
+						"count": 1
+					},
+					{
+						"word": "Boundary",
+						"count": 1
+					},
+					{
+						"word": "Class",
+						"count": 1
+					},
+					{
+						"word": "Comment",
+						"count": 1
+					},
+					{
+						"word": "Config",
+						"count": 1
+					},
+					{
+						"word": "Debt",
+						"count": 1
+					},
+					{
+						"word": "Fault",
+						"count": 1
+					},
+					{
+						"word": "File",
+						"count": 1
+					},
+					{
+						"word": "Finding",
+						"count": 1
+					},
+					{
+						"word": "Glob",
+						"count": 1
+					},
+					{
+						"word": "Grant",
+						"count": 1
+					},
+					{
+						"word": "Limit",
+						"count": 1
+					},
+					{
+						"word": "Module",
+						"count": 1
+					},
+					{
+						"word": "Node",
+						"count": 1
+					},
+					{
+						"word": "Scan",
+						"count": 2
+					},
+					{
+						"word": "Store",
+						"count": 1
+					},
+					{
+						"word": "String",
+						"count": 1
+					},
+					{
+						"word": "Word",
+						"count": 1
+					},
+					{
+						"word": "allow",
+						"count": 2
+					},
+					{
+						"word": "arity",
+						"count": 1
+					},
+					{
+						"word": "at",
+						"count": 3
+					},
+					{
+						"word": "atom",
+						"count": 1
+					},
+					{
+						"word": "axis",
+						"count": 1
+					},
+					{
+						"word": "block",
+						"count": 2
+					},
+					{
+						"word": "blocks",
+						"count": 2
+					},
+					{
+						"word": "boundary",
+						"count": 1
+					},
+					{
+						"word": "check",
+						"count": 1
+					},
+					{
+						"word": "claim",
+						"count": 1
+					},
+					{
+						"word": "class",
+						"count": 2
+					},
+					{
+						"word": "col",
+						"count": 1
+					},
+					{
+						"word": "comment",
+						"count": 2
+					},
+					{
+						"word": "compound",
+						"count": 2
+					},
+					{
+						"word": "config",
+						"count": 5
+					},
+					{
+						"word": "count",
+						"count": 3
+					},
+					{
+						"word": "counts",
+						"count": 2
+					},
+					{
+						"word": "coverage",
+						"count": 1
+					},
+					{
+						"word": "covers",
+						"count": 1
+					},
+					{
+						"word": "cst",
+						"count": 1
+					},
+					{
+						"word": "declared",
+						"count": 1
+					},
+					{
+						"word": "default",
+						"count": 2
+					},
+					{
+						"word": "depth",
+						"count": 3
+					},
+					{
+						"word": "dispatch",
+						"count": 1
+					},
+					{
+						"word": "edge",
+						"count": 1
+					},
+					{
+						"word": "exclude",
+						"count": 1
+					},
+					{
+						"word": "exempt",
+						"count": 1
+					},
+					{
+						"word": "file",
+						"count": 3
+					},
+					{
+						"word": "findings",
+						"count": 1
+					},
+					{
+						"word": "flat",
+						"count": 1
+					},
+					{
+						"word": "from",
+						"count": 1
+					},
+					{
+						"word": "gap",
+						"count": 1
+					},
+					{
+						"word": "glob",
+						"count": 1
+					},
+					{
+						"word": "glyph",
+						"count": 2
+					},
+					{
+						"word": "glyphs",
+						"count": 1
+					},
+					{
+						"word": "grant",
+						"count": 2
+					},
+					{
+						"word": "granted",
+						"count": 1
+					},
+					{
+						"word": "grow",
+						"count": 1
+					},
+					{
+						"word": "have",
+						"count": 3
+					},
+					{
+						"word": "head",
+						"count": 2
+					},
+					{
+						"word": "include",
+						"count": 1
+					},
+					{
+						"word": "item",
+						"count": 1
+					},
+					{
+						"word": "key",
+						"count": 1
+					},
+					{
+						"word": "kids",
+						"count": 1
+					},
+					{
+						"word": "kind",
+						"count": 3
+					},
+					{
+						"word": "last",
+						"count": 1
+					},
+					{
+						"word": "law",
+						"count": 4
+					},
+					{
+						"word": "laws",
+						"count": 1
+					},
+					{
+						"word": "layers",
+						"count": 2
+					},
+					{
+						"word": "lift",
+						"count": 1
+					},
+					{
+						"word": "limit",
+						"count": 1
+					},
+					{
+						"word": "line",
+						"count": 2
+					},
+					{
+						"word": "linked",
+						"count": 1
+					},
+					{
+						"word": "load",
+						"count": 1
+					},
+					{
+						"word": "mark",
+						"count": 1
+					},
+					{
+						"word": "markup",
+						"count": 2
+					},
+					{
+						"word": "markups",
+						"count": 1
+					},
+					{
+						"word": "matches",
+						"count": 1
+					},
+					{
+						"word": "module",
+						"count": 1
+					},
+					{
+						"word": "name",
+						"count": 7
+					},
+					{
+						"word": "node",
+						"count": 13
+					},
+					{
+						"word": "noise",
+						"count": 1
+					},
+					{
+						"word": "note",
+						"count": 5
+					},
+					{
+						"word": "out",
+						"count": 1
+					},
+					{
+						"word": "owner",
+						"count": 1
+					},
+					{
+						"word": "param",
+						"count": 1
+					},
+					{
+						"word": "part",
+						"count": 2
+					},
+					{
+						"word": "parts",
+						"count": 2
+					},
+					{
+						"word": "pat",
+						"count": 3
+					},
+					{
+						"word": "path",
+						"count": 19
+					},
+					{
+						"word": "paths",
+						"count": 2
+					},
+					{
+						"word": "place",
+						"count": 1
+					},
+					{
+						"word": "prefix",
+						"count": 1
+					},
+					{
+						"word": "prev",
+						"count": 2
+					},
+					{
+						"word": "receiver",
+						"count": 1
+					},
+					{
+						"word": "registered",
+						"count": 1
+					},
+					{
+						"word": "root",
+						"count": 3
+					},
+					{
+						"word": "roots",
+						"count": 1
+					},
+					{
+						"word": "run",
+						"count": 1
+					},
+					{
+						"word": "scan",
+						"count": 2
+					},
+					{
+						"word": "scopes",
+						"count": 1
+					},
+					{
+						"word": "seat",
+						"count": 2
+					},
+					{
+						"word": "seated",
+						"count": 1
+					},
+					{
+						"word": "segments",
+						"count": 1
+					},
+					{
+						"word": "segs",
+						"count": 1
+					},
+					{
+						"word": "single",
+						"count": 2
+					},
+					{
+						"word": "size",
+						"count": 1
+					},
+					{
+						"word": "source",
+						"count": 3
+					},
+					{
+						"word": "span",
+						"count": 1
+					},
+					{
+						"word": "split",
+						"count": 1
+					},
+					{
+						"word": "start",
+						"count": 1
+					},
+					{
+						"word": "store",
+						"count": 1
+					},
+					{
+						"word": "structure",
+						"count": 1
+					},
+					{
+						"word": "syntax",
+						"count": 3
+					},
+					{
+						"word": "table",
+						"count": 1
+					},
+					{
+						"word": "tail",
+						"count": 1
+					},
+					{
+						"word": "text",
+						"count": 6
+					},
+					{
+						"word": "to",
+						"count": 1
+					},
+					{
+						"word": "value",
+						"count": 1
+					},
+					{
+						"word": "vocab",
+						"count": 2
+					},
+					{
+						"word": "want",
+						"count": 3
+					},
+					{
+						"word": "word",
+						"count": 4
+					}
+				]
+			},
+			{
+				"root": "crates/kernel/tests",
+				"atoms": [
+					{
+						"word": "ambient",
+						"count": 1
+					},
+					{
+						"word": "arity",
+						"count": 1
+					},
+					{
+						"word": "attr",
+						"count": 1
+					},
+					{
+						"word": "axes",
+						"count": 1
+					},
+					{
+						"word": "binding",
+						"count": 1
+					},
+					{
+						"word": "blocky",
+						"count": 1
+					},
+					{
+						"word": "body",
+						"count": 1
+					},
+					{
+						"word": "bytes",
+						"count": 1
+					},
+					{
+						"word": "card",
+						"count": 1
+					},
+					{
+						"word": "chain",
+						"count": 2
+					},
+					{
+						"word": "comment",
+						"count": 1
+					},
+					{
+						"word": "compound",
+						"count": 1
+					},
+					{
+						"word": "config",
+						"count": 14
+					},
+					{
+						"word": "count",
+						"count": 1
+					},
+					{
+						"word": "coverage",
+						"count": 1
+					},
+					{
+						"word": "debt",
+						"count": 1
+					},
+					{
+						"word": "deep",
+						"count": 1
+					},
+					{
+						"word": "defaults",
+						"count": 1
+					},
+					{
+						"word": "deno",
+						"count": 1
+					},
+					{
+						"word": "depth",
+						"count": 1
+					},
+					{
+						"word": "dispatch",
+						"count": 1
+					},
+					{
+						"word": "elseif",
+						"count": 1
+					},
+					{
+						"word": "exported",
+						"count": 1
+					},
+					{
+						"word": "field",
+						"count": 1
+					},
+					{
+						"word": "file",
+						"count": 3
+					},
+					{
+						"word": "finding",
+						"count": 1
+					},
+					{
+						"word": "five",
+						"count": 1
+					},
+					{
+						"word": "found",
+						"count": 5
+					},
+					{
+						"word": "four",
+						"count": 1
+					},
+					{
+						"word": "glob",
+						"count": 1
+					},
+					{
+						"word": "grant",
+						"count": 1
+					},
+					{
+						"word": "guard",
+						"count": 1
+					},
+					{
+						"word": "hits",
+						"count": 1
+					},
+					{
+						"word": "hooks",
+						"count": 1
+					},
+					{
+						"word": "inner",
+						"count": 1
+					},
+					{
+						"word": "kebab",
+						"count": 1
+					},
+					{
+						"word": "ladder",
+						"count": 1
+					},
+					{
+						"word": "law",
+						"count": 1
+					},
+					{
+						"word": "laws",
+						"count": 3
+					},
+					{
+						"word": "layered",
+						"count": 1
+					},
+					{
+						"word": "limit",
+						"count": 1
+					},
+					{
+						"word": "literal",
+						"count": 1
+					},
+					{
+						"word": "lives",
+						"count": 1
+					},
+					{
+						"word": "markup",
+						"count": 1
+					},
+					{
+						"word": "method",
+						"count": 1
+					},
+					{
+						"word": "methods",
+						"count": 1
+					},
+					{
+						"word": "minted",
+						"count": 1
+					},
+					{
+						"word": "mixed",
+						"count": 1
+					},
+					{
+						"word": "module",
+						"count": 2
+					},
+					{
+						"word": "named",
+						"count": 1
+					},
+					{
+						"word": "nest",
+						"count": 1
+					},
+					{
+						"word": "node",
+						"count": 2
+					},
+					{
+						"word": "open",
+						"count": 1
+					},
+					{
+						"word": "other",
+						"count": 1
+					},
+					{
+						"word": "path",
+						"count": 3
+					},
+					{
+						"word": "plain",
+						"count": 1
+					},
+					{
+						"word": "pull",
+						"count": 1
+					},
+					{
+						"word": "quad",
+						"count": 2
+					},
+					{
+						"word": "raw",
+						"count": 1
+					},
+					{
+						"word": "receiver",
+						"count": 1
+					},
+					{
+						"word": "reexport",
+						"count": 1
+					},
+					{
+						"word": "reference",
+						"count": 1
+					},
+					{
+						"word": "registered",
+						"count": 1
+					},
+					{
+						"word": "roots",
+						"count": 1
+					},
+					{
+						"word": "scan",
+						"count": 1
+					},
+					{
+						"word": "scss",
+						"count": 1
+					},
+					{
+						"word": "sheet",
+						"count": 1
+					},
+					{
+						"word": "shut",
+						"count": 1
+					},
+					{
+						"word": "source",
+						"count": 4
+					},
+					{
+						"word": "specific",
+						"count": 1
+					},
+					{
+						"word": "split",
+						"count": 1
+					},
+					{
+						"word": "style",
+						"count": 1
+					},
+					{
+						"word": "switch",
+						"count": 1
+					},
+					{
+						"word": "tagged",
+						"count": 1
+					},
+					{
+						"word": "territory",
+						"count": 1
+					},
+					{
+						"word": "text",
+						"count": 3
+					},
+					{
+						"word": "trio",
+						"count": 1
+					},
+					{
+						"word": "tsx",
+						"count": 1
+					},
+					{
+						"word": "typescript",
+						"count": 1
+					},
+					{
+						"word": "unmatched",
+						"count": 1
+					},
+					{
+						"word": "vars",
+						"count": 1
+					},
+					{
+						"word": "wildcard",
+						"count": 1
+					},
+					{
+						"word": "word",
+						"count": 1
+					},
+					{
+						"word": "woven",
+						"count": 1
+					}
+				]
+			}
+		]
+	},
+	{
+		"repo": "runseal",
+		"roots": [
+			{
+				"root": ".runseal",
+				"atoms": [
+					{
+						"word": "Backup",
+						"count": 1
+					},
+					{
+						"word": "Bin",
+						"count": 1
+					},
+					{
+						"word": "Check",
+						"count": 1
+					},
+					{
+						"word": "Dir",
+						"count": 1
+					},
+					{
+						"word": "Doc",
+						"count": 1
+					},
+					{
+						"word": "Entry",
+						"count": 1
+					},
+					{
+						"word": "Field",
+						"count": 1
+					},
+					{
+						"word": "File",
+						"count": 1
+					},
+					{
+						"word": "Flags",
+						"count": 1
+					},
+					{
+						"word": "Inherited",
+						"count": 1
+					},
+					{
+						"word": "Options",
+						"count": 4
+					},
+					{
+						"word": "Path",
+						"count": 1
+					},
+					{
+						"word": "Picked",
+						"count": 1
+					},
+					{
+						"word": "Policy",
+						"count": 1
+					},
+					{
+						"word": "Route",
+						"count": 1
+					},
+					{
+						"word": "Source",
+						"count": 1
+					},
+					{
+						"word": "Value",
+						"count": 1
+					},
+					{
+						"word": "Version",
+						"count": 1
+					},
+					{
+						"word": "account",
+						"count": 1
+					},
+					{
+						"word": "actual",
+						"count": 1
+					},
+					{
+						"word": "after",
+						"count": 1
+					},
+					{
+						"word": "ahead",
+						"count": 1
+					},
+					{
+						"word": "arg",
+						"count": 3
+					},
+					{
+						"word": "args",
+						"count": 12
+					},
+					{
+						"word": "base",
+						"count": 2
+					},
+					{
+						"word": "before",
+						"count": 1
+					},
+					{
+						"word": "bin",
+						"count": 1
+					},
+					{
+						"word": "blocked",
+						"count": 1
+					},
+					{
+						"word": "bracket",
+						"count": 1
+					},
+					{
+						"word": "branch",
+						"count": 5
+					},
+					{
+						"word": "buckets",
+						"count": 1
+					},
+					{
+						"word": "change",
+						"count": 1
+					},
+					{
+						"word": "channel",
+						"count": 1
+					},
+					{
+						"word": "choices",
+						"count": 1
+					},
+					{
+						"word": "cli",
+						"count": 1
+					},
+					{
+						"word": "collect",
+						"count": 1
+					},
+					{
+						"word": "command",
+						"count": 1
+					},
+					{
+						"word": "compare",
+						"count": 1
+					},
+					{
+						"word": "concat",
+						"count": 1
+					},
+					{
+						"word": "config",
+						"count": 1
+					},
+					{
+						"word": "creation",
+						"count": 1
+					},
+					{
+						"word": "current",
+						"count": 6
+					},
+					{
+						"word": "decoder",
+						"count": 1
+					},
+					{
+						"word": "digest",
+						"count": 1
+					},
+					{
+						"word": "dirname",
+						"count": 1
+					},
+					{
+						"word": "dirty",
+						"count": 1
+					},
+					{
+						"word": "doc",
+						"count": 1
+					},
+					{
+						"word": "dot",
+						"count": 1
+					},
+					{
+						"word": "dry",
+						"count": 2
+					},
+					{
+						"word": "encoder",
+						"count": 2
+					},
+					{
+						"word": "end",
+						"count": 3
+					},
+					{
+						"word": "entries",
+						"count": 2
+					},
+					{
+						"word": "env",
+						"count": 1
+					},
+					{
+						"word": "error",
+						"count": 1
+					},
+					{
+						"word": "existing",
+						"count": 1
+					},
+					{
+						"word": "exists",
+						"count": 1
+					},
+					{
+						"word": "expected",
+						"count": 2
+					},
+					{
+						"word": "fail",
+						"count": 1
+					},
+					{
+						"word": "field",
+						"count": 1
+					},
+					{
+						"word": "file",
+						"count": 2
+					},
+					{
+						"word": "first",
+						"count": 1
+					},
+					{
+						"word": "flags",
+						"count": 1
+					},
+					{
+						"word": "found",
+						"count": 2
+					},
+					{
+						"word": "fs",
+						"count": 1
+					},
+					{
+						"word": "full",
+						"count": 1
+					},
+					{
+						"word": "get",
+						"count": 1
+					},
+					{
+						"word": "guarded",
+						"count": 1
+					},
+					{
+						"word": "hash",
+						"count": 1
+					},
+					{
+						"word": "hooks",
+						"count": 1
+					},
+					{
+						"word": "id",
+						"count": 4
+					},
+					{
+						"word": "id?",
+						"count": 1
+					},
+					{
+						"word": "index",
+						"count": 1
+					},
+					{
+						"word": "input",
+						"count": 5
+					},
+					{
+						"word": "io",
+						"count": 1
+					},
+					{
+						"word": "join",
+						"count": 2
+					},
+					{
+						"word": "joined",
+						"count": 2
+					},
+					{
+						"word": "json",
+						"count": 1
+					},
+					{
+						"word": "key",
+						"count": 1
+					},
+					{
+						"word": "label",
+						"count": 1
+					},
+					{
+						"word": "landable",
+						"count": 1
+					},
+					{
+						"word": "left",
+						"count": 1
+					},
+					{
+						"word": "load",
+						"count": 1
+					},
+					{
+						"word": "matched",
+						"count": 1
+					},
+					{
+						"word": "merge",
+						"count": 1
+					},
+					{
+						"word": "message",
+						"count": 2
+					},
+					{
+						"word": "message?",
+						"count": 1
+					},
+					{
+						"word": "mode",
+						"count": 1
+					},
+					{
+						"word": "name",
+						"count": 4
+					},
+					{
+						"word": "names",
+						"count": 1
+					},
+					{
+						"word": "negentropy",
+						"count": 1
+					},
+					{
+						"word": "next",
+						"count": 2
+					},
+					{
+						"word": "normalize",
+						"count": 1
+					},
+					{
+						"word": "number",
+						"count": 3
+					},
+					{
+						"word": "offset",
+						"count": 1
+					},
+					{
+						"word": "ok",
+						"count": 1
+					},
+					{
+						"word": "options",
+						"count": 6
+					},
+					{
+						"word": "origin",
+						"count": 2
+					},
+					{
+						"word": "output",
+						"count": 1
+					},
+					{
+						"word": "parse",
+						"count": 4
+					},
+					{
+						"word": "parsed",
+						"count": 2
+					},
+					{
+						"word": "parts",
+						"count": 3
+					},
+					{
+						"word": "path",
+						"count": 5
+					},
+					{
+						"word": "paths",
+						"count": 2
+					},
+					{
+						"word": "payload",
+						"count": 2
+					},
+					{
+						"word": "plan",
+						"count": 1
+					},
+					{
+						"word": "pr",
+						"count": 1
+					},
+					{
+						"word": "prefix",
+						"count": 1
+					},
+					{
+						"word": "pretty",
+						"count": 2
+					},
+					{
+						"word": "print",
+						"count": 2
+					},
+					{
+						"word": "pull",
+						"count": 1
+					},
+					{
+						"word": "raw",
+						"count": 1
+					},
+					{
+						"word": "redirect",
+						"count": 1
+					},
+					{
+						"word": "ref",
+						"count": 1
+					},
+					{
+						"word": "reject",
+						"count": 1
+					},
+					{
+						"word": "remote",
+						"count": 1
+					},
+					{
+						"word": "remove",
+						"count": 1
+					},
+					{
+						"word": "repo",
+						"count": 6
+					},
+					{
+						"word": "request",
+						"count": 1
+					},
+					{
+						"word": "required",
+						"count": 1
+					},
+					{
+						"word": "resolve",
+						"count": 1
+					},
+					{
+						"word": "response",
+						"count": 1
+					},
+					{
+						"word": "rest",
+						"count": 1
+					},
+					{
+						"word": "rid",
+						"count": 2
+					},
+					{
+						"word": "right",
+						"count": 1
+					},
+					{
+						"word": "root",
+						"count": 1
+					},
+					{
+						"word": "rule",
+						"count": 1
+					},
+					{
+						"word": "rules",
+						"count": 3
+					},
+					{
+						"word": "ruleset",
+						"count": 2
+					},
+					{
+						"word": "rulesets",
+						"count": 2
+					},
+					{
+						"word": "run",
+						"count": 2
+					},
+					{
+						"word": "runseal",
+						"count": 1
+					},
+					{
+						"word": "selected",
+						"count": 1
+					},
+					{
+						"word": "separator",
+						"count": 3
+					},
+					{
+						"word": "sha",
+						"count": 2
+					},
+					{
+						"word": "slash",
+						"count": 1
+					},
+					{
+						"word": "slot",
+						"count": 2
+					},
+					{
+						"word": "stat",
+						"count": 1
+					},
+					{
+						"word": "steps",
+						"count": 1
+					},
+					{
+						"word": "subjects",
+						"count": 1
+					},
+					{
+						"word": "target",
+						"count": 3
+					},
+					{
+						"word": "template",
+						"count": 1
+					},
+					{
+						"word": "text",
+						"count": 1
+					},
+					{
+						"word": "title",
+						"count": 1
+					},
+					{
+						"word": "token",
+						"count": 1
+					},
+					{
+						"word": "total",
+						"count": 1
+					},
+					{
+						"word": "tree",
+						"count": 1
+					},
+					{
+						"word": "trimmed",
+						"count": 1
+					},
+					{
+						"word": "unknown",
+						"count": 1
+					},
+					{
+						"word": "upsert",
+						"count": 1
+					},
+					{
+						"word": "url",
+						"count": 1
+					},
+					{
+						"word": "usage",
+						"count": 5
+					},
+					{
+						"word": "validate",
+						"count": 1
+					},
+					{
+						"word": "value",
+						"count": 5
+					},
+					{
+						"word": "verify",
+						"count": 1
+					},
+					{
+						"word": "version",
+						"count": 2
+					},
+					{
+						"word": "workflow",
+						"count": 1
+					},
+					{
+						"word": "zero",
+						"count": 1
+					},
+					{
+						"word": "zone",
+						"count": 5
+					},
+					{
+						"word": "zones",
+						"count": 1
+					}
+				]
+			},
+			{
+				"root": "app/src",
+				"atoms": [
+					{
+						"word": "ADD",
+						"count": 1
+					},
+					{
+						"word": "Absent",
+						"count": 1
+					},
+					{
+						"word": "Account",
+						"count": 1
+					},
+					{
+						"word": "App",
+						"count": 1
+					},
+					{
+						"word": "Append",
+						"count": 1
+					},
+					{
+						"word": "Args",
+						"count": 1
+					},
+					{
+						"word": "Argv",
+						"count": 2
+					},
+					{
+						"word": "BASE",
+						"count": 1
+					},
+					{
+						"word": "Bin",
+						"count": 1
+					},
+					{
+						"word": "Body",
+						"count": 1
+					},
+					{
+						"word": "Bucket",
+						"count": 1
+					},
+					{
+						"word": "CANCEL",
+						"count": 1
+					},
+					{
+						"word": "CORE",
+						"count": 1
+					},
+					{
+						"word": "CREATE",
+						"count": 6
+					},
+					{
+						"word": "Check",
+						"count": 1
+					},
+					{
+						"word": "Checks",
+						"count": 1
+					},
+					{
+						"word": "Cli",
+						"count": 1
+					},
+					{
+						"word": "Client",
+						"count": 1
+					},
+					{
+						"word": "Cmd",
+						"count": 2
+					},
+					{
+						"word": "Comment",
+						"count": 1
+					},
+					{
+						"word": "Config",
+						"count": 2
+					},
+					{
+						"word": "Context",
+						"count": 1
+					},
+					{
+						"word": "DISPATCH",
+						"count": 1
+					},
+					{
+						"word": "Deno",
+						"count": 1
+					},
+					{
+						"word": "Doc",
+						"count": 1
+					},
+					{
+						"word": "ENTRIES",
+						"count": 1
+					},
+					{
+						"word": "EXACT",
+						"count": 1
+					},
+					{
+						"word": "Editor",
+						"count": 1
+					},
+					{
+						"word": "Entry",
+						"count": 1
+					},
+					{
+						"word": "Env",
+						"count": 7
+					},
+					{
+						"word": "Error",
+						"count": 1
+					},
+					{
+						"word": "Existing",
+						"count": 1
+					},
+					{
+						"word": "Exports",
+						"count": 1
+					},
+					{
+						"word": "FIND",
+						"count": 1
+					},
+					{
+						"word": "Fleet",
+						"count": 1
+					},
+					{
+						"word": "GET",
+						"count": 7
+					},
+					{
+						"word": "GUARD",
+						"count": 1
+					},
+					{
+						"word": "Help",
+						"count": 1
+					},
+					{
+						"word": "Injection",
+						"count": 4
+					},
+					{
+						"word": "Input",
+						"count": 1
+					},
+					{
+						"word": "Internal",
+						"count": 1
+					},
+					{
+						"word": "Issue",
+						"count": 1
+					},
+					{
+						"word": "JSON",
+						"count": 1
+					},
+					{
+						"word": "Join",
+						"count": 1
+					},
+					{
+						"word": "LIST",
+						"count": 4
+					},
+					{
+						"word": "Lifecycle",
+						"count": 1
+					},
+					{
+						"word": "Listed",
+						"count": 1
+					},
+					{
+						"word": "Login",
+						"count": 1
+					},
+					{
+						"word": "MERGE",
+						"count": 1
+					},
+					{
+						"word": "Manage",
+						"count": 1
+					},
+					{
+						"word": "Metadata",
+						"count": 1
+					},
+					{
+						"word": "Op",
+						"count": 1
+					},
+					{
+						"word": "Options",
+						"count": 1
+					},
+					{
+						"word": "Outcome",
+						"count": 1
+					},
+					{
+						"word": "PROBE",
+						"count": 1
+					},
+					{
+						"word": "PROFILE",
+						"count": 1
+					},
+					{
+						"word": "Parser",
+						"count": 1
+					},
+					{
+						"word": "Permissions",
+						"count": 1
+					},
+					{
+						"word": "Poll",
+						"count": 1
+					},
+					{
+						"word": "Prepend",
+						"count": 1
+					},
+					{
+						"word": "Process",
+						"count": 1
+					},
+					{
+						"word": "Profile",
+						"count": 2
+					},
+					{
+						"word": "REQUEST",
+						"count": 1
+					},
+					{
+						"word": "RESOLVE",
+						"count": 1
+					},
+					{
+						"word": "RESOURCES",
+						"count": 1
+					},
+					{
+						"word": "ROOT",
+						"count": 24
+					},
+					{
+						"word": "Replace",
+						"count": 1
+					},
+					{
+						"word": "Repo",
+						"count": 1
+					},
+					{
+						"word": "Resolve",
+						"count": 1
+					},
+					{
+						"word": "Resolved",
+						"count": 1
+					},
+					{
+						"word": "Resources",
+						"count": 2
+					},
+					{
+						"word": "Ruleset",
+						"count": 1
+					},
+					{
+						"word": "Runner",
+						"count": 1
+					},
+					{
+						"word": "Section",
+						"count": 1
+					},
+					{
+						"word": "Set",
+						"count": 1
+					},
+					{
+						"word": "Spec",
+						"count": 1
+					},
+					{
+						"word": "String",
+						"count": 2
+					},
+					{
+						"word": "Symlink",
+						"count": 4
+					},
+					{
+						"word": "Tea",
+						"count": 1
+					},
+					{
+						"word": "UPDATE",
+						"count": 3
+					},
+					{
+						"word": "UPSERT",
+						"count": 2
+					},
+					{
+						"word": "Unset",
+						"count": 1
+					},
+					{
+						"word": "VERSION",
+						"count": 1
+					},
+					{
+						"word": "WATCH",
+						"count": 1
+					},
+					{
+						"word": "WHICH",
+						"count": 1
+					},
+					{
+						"word": "WRAPPERS",
+						"count": 1
+					},
+					{
+						"word": "Which",
+						"count": 1
+					},
+					{
+						"word": "Wrapper",
+						"count": 1
+					},
+					{
+						"word": "Wrappers",
+						"count": 1
+					},
+					{
+						"word": "Zone",
+						"count": 1
+					},
+					{
+						"word": "about",
+						"count": 1
+					},
+					{
+						"word": "absent",
+						"count": 1
+					},
+					{
+						"word": "absolute",
+						"count": 1
+					},
+					{
+						"word": "account",
+						"count": 5
+					},
+					{
+						"word": "action",
+						"count": 1
+					},
+					{
+						"word": "active",
+						"count": 1
+					},
+					{
+						"word": "api",
+						"count": 3
+					},
+					{
+						"word": "app",
+						"count": 9
+					},
+					{
+						"word": "apply",
+						"count": 2
+					},
+					{
+						"word": "arg",
+						"count": 3
+					},
+					{
+						"word": "args",
+						"count": 52
+					},
+					{
+						"word": "argv",
+						"count": 2
+					},
+					{
+						"word": "atom",
+						"count": 1
+					},
+					{
+						"word": "base",
+						"count": 11
+					},
+					{
+						"word": "body",
+						"count": 24
+					},
+					{
+						"word": "boolean",
+						"count": 2
+					},
+					{
+						"word": "branch",
+						"count": 4
+					},
+					{
+						"word": "bucket",
+						"count": 1
+					},
+					{
+						"word": "build",
+						"count": 2
+					},
+					{
+						"word": "candidates",
+						"count": 4
+					},
+					{
+						"word": "cfg",
+						"count": 4
+					},
+					{
+						"word": "change",
+						"count": 1
+					},
+					{
+						"word": "chars",
+						"count": 1
+					},
+					{
+						"word": "checks",
+						"count": 2
+					},
+					{
+						"word": "child",
+						"count": 6
+					},
+					{
+						"word": "cleanup",
+						"count": 3
+					},
+					{
+						"word": "cli",
+						"count": 2
+					},
+					{
+						"word": "client",
+						"count": 7
+					},
+					{
+						"word": "closed",
+						"count": 2
+					},
+					{
+						"word": "cloudflare",
+						"count": 1
+					},
+					{
+						"word": "cmd",
+						"count": 3
+					},
+					{
+						"word": "code",
+						"count": 2
+					},
+					{
+						"word": "collect",
+						"count": 1
+					},
+					{
+						"word": "command",
+						"count": 15
+					},
+					{
+						"word": "comment",
+						"count": 1
+					},
+					{
+						"word": "config",
+						"count": 37
+					},
+					{
+						"word": "conflict",
+						"count": 1
+					},
+					{
+						"word": "content",
+						"count": 1
+					},
+					{
+						"word": "context",
+						"count": 1
+					},
+					{
+						"word": "core",
+						"count": 2
+					},
+					{
+						"word": "count",
+						"count": 2
+					},
+					{
+						"word": "create",
+						"count": 6
+					},
+					{
+						"word": "cwd",
+						"count": 5
+					},
+					{
+						"word": "deadline",
+						"count": 2
+					},
+					{
+						"word": "dedup",
+						"count": 2
+					},
+					{
+						"word": "default",
+						"count": 3
+					},
+					{
+						"word": "delimiter",
+						"count": 1
+					},
+					{
+						"word": "deno",
+						"count": 6
+					},
+					{
+						"word": "description",
+						"count": 2
+					},
+					{
+						"word": "dir",
+						"count": 3
+					},
+					{
+						"word": "dirs",
+						"count": 2
+					},
+					{
+						"word": "discover",
+						"count": 1
+					},
+					{
+						"word": "dispatch",
+						"count": 1
+					},
+					{
+						"word": "doc",
+						"count": 1
+					},
+					{
+						"word": "dump",
+						"count": 1
+					},
+					{
+						"word": "early",
+						"count": 1
+					},
+					{
+						"word": "effective",
+						"count": 1
+					},
+					{
+						"word": "enabled",
+						"count": 4
+					},
+					{
+						"word": "entries",
+						"count": 1
+					},
+					{
+						"word": "entry",
+						"count": 5
+					},
+					{
+						"word": "env",
+						"count": 18
+					},
+					{
+						"word": "eval",
+						"count": 11
+					},
+					{
+						"word": "exact",
+						"count": 1
+					},
+					{
+						"word": "examples",
+						"count": 1
+					},
+					{
+						"word": "executable",
+						"count": 2
+					},
+					{
+						"word": "existing",
+						"count": 3
+					},
+					{
+						"word": "expand",
+						"count": 1
+					},
+					{
+						"word": "expanded",
+						"count": 2
+					},
+					{
+						"word": "expected",
+						"count": 1
+					},
+					{
+						"word": "explicit",
+						"count": 1
+					},
+					{
+						"word": "export",
+						"count": 3
+					},
+					{
+						"word": "exported",
+						"count": 1
+					},
+					{
+						"word": "exports",
+						"count": 7
+					},
+					{
+						"word": "extensions",
+						"count": 1
+					},
+					{
+						"word": "fetch",
+						"count": 1
+					},
+					{
+						"word": "file",
+						"count": 12
+					},
+					{
+						"word": "find",
+						"count": 2
+					},
+					{
+						"word": "forgejo",
+						"count": 2
+					},
+					{
+						"word": "found",
+						"count": 1
+					},
+					{
+						"word": "from",
+						"count": 1
+					},
+					{
+						"word": "get",
+						"count": 7
+					},
+					{
+						"word": "git",
+						"count": 1
+					},
+					{
+						"word": "github",
+						"count": 2
+					},
+					{
+						"word": "guard",
+						"count": 1
+					},
+					{
+						"word": "head",
+						"count": 1
+					},
+					{
+						"word": "help",
+						"count": 6
+					},
+					{
+						"word": "home",
+						"count": 4
+					},
+					{
+						"word": "host",
+						"count": 4
+					},
+					{
+						"word": "hosted",
+						"count": 1
+					},
+					{
+						"word": "http",
+						"count": 2
+					},
+					{
+						"word": "id",
+						"count": 3
+					},
+					{
+						"word": "index",
+						"count": 5
+					},
+					{
+						"word": "injection",
+						"count": 2
+					},
+					{
+						"word": "injections",
+						"count": 8
+					},
+					{
+						"word": "inline",
+						"count": 2
+					},
+					{
+						"word": "input",
+						"count": 2
+					},
+					{
+						"word": "inputs",
+						"count": 2
+					},
+					{
+						"word": "internal",
+						"count": 1
+					},
+					{
+						"word": "interval",
+						"count": 3
+					},
+					{
+						"word": "issue",
+						"count": 2
+					},
+					{
+						"word": "items",
+						"count": 1
+					},
+					{
+						"word": "join",
+						"count": 1
+					},
+					{
+						"word": "key",
+						"count": 18
+					},
+					{
+						"word": "label",
+						"count": 3
+					},
+					{
+						"word": "last",
+						"count": 1
+					},
+					{
+						"word": "left",
+						"count": 1
+					},
+					{
+						"word": "limit",
+						"count": 3
+					},
+					{
+						"word": "line",
+						"count": 2
+					},
+					{
+						"word": "link",
+						"count": 3
+					},
+					{
+						"word": "list",
+						"count": 3
+					},
+					{
+						"word": "listed",
+						"count": 1
+					},
+					{
+						"word": "load",
+						"count": 4
+					},
+					{
+						"word": "lock",
+						"count": 1
+					},
+					{
+						"word": "login",
+						"count": 2
+					},
+					{
+						"word": "logins",
+						"count": 1
+					},
+					{
+						"word": "main",
+						"count": 1
+					},
+					{
+						"word": "manage",
+						"count": 1
+					},
+					{
+						"word": "map",
+						"count": 1
+					},
+					{
+						"word": "matches",
+						"count": 1
+					},
+					{
+						"word": "max",
+						"count": 2
+					},
+					{
+						"word": "merge",
+						"count": 4
+					},
+					{
+						"word": "merged",
+						"count": 1
+					},
+					{
+						"word": "meta",
+						"count": 2
+					},
+					{
+						"word": "metadata",
+						"count": 2
+					},
+					{
+						"word": "method",
+						"count": 9
+					},
+					{
+						"word": "name",
+						"count": 41
+					},
+					{
+						"word": "names",
+						"count": 2
+					},
+					{
+						"word": "need",
+						"count": 1
+					},
+					{
+						"word": "new",
+						"count": 3
+					},
+					{
+						"word": "normalize",
+						"count": 2
+					},
+					{
+						"word": "number",
+						"count": 7
+					},
+					{
+						"word": "op",
+						"count": 6
+					},
+					{
+						"word": "open",
+						"count": 1
+					},
+					{
+						"word": "ops",
+						"count": 2
+					},
+					{
+						"word": "option",
+						"count": 2
+					},
+					{
+						"word": "optional",
+						"count": 4
+					},
+					{
+						"word": "options",
+						"count": 1
+					},
+					{
+						"word": "origin",
+						"count": 1
+					},
+					{
+						"word": "os",
+						"count": 1
+					},
+					{
+						"word": "out",
+						"count": 4
+					},
+					{
+						"word": "outcome",
+						"count": 2
+					},
+					{
+						"word": "output",
+						"count": 2
+					},
+					{
+						"word": "owner",
+						"count": 3
+					},
+					{
+						"word": "padding",
+						"count": 1
+					},
+					{
+						"word": "pair",
+						"count": 1
+					},
+					{
+						"word": "params",
+						"count": 1
+					},
+					{
+						"word": "parse",
+						"count": 7
+					},
+					{
+						"word": "parsed",
+						"count": 1
+					},
+					{
+						"word": "parts",
+						"count": 2
+					},
+					{
+						"word": "path",
+						"count": 35
+					},
+					{
+						"word": "paths",
+						"count": 1
+					},
+					{
+						"word": "payload",
+						"count": 15
+					},
+					{
+						"word": "permissions",
+						"count": 2
+					},
+					{
+						"word": "phase",
+						"count": 1
+					},
+					{
+						"word": "pr",
+						"count": 4
+					},
+					{
+						"word": "prefix",
+						"count": 10
+					},
+					{
+						"word": "prefixes",
+						"count": 1
+					},
+					{
+						"word": "prepare",
+						"count": 1
+					},
+					{
+						"word": "prepend",
+						"count": 1
+					},
+					{
+						"word": "present",
+						"count": 1
+					},
+					{
+						"word": "probe",
+						"count": 2
+					},
+					{
+						"word": "process",
+						"count": 1
+					},
+					{
+						"word": "profile",
+						"count": 21
+					},
+					{
+						"word": "profiles",
+						"count": 5
+					},
+					{
+						"word": "progressive",
+						"count": 1
+					},
+					{
+						"word": "pull",
+						"count": 3
+					},
+					{
+						"word": "pulls",
+						"count": 1
+					},
+					{
+						"word": "push",
+						"count": 1
+					},
+					{
+						"word": "query",
+						"count": 12
+					},
+					{
+						"word": "r2",
+						"count": 1
+					},
+					{
+						"word": "raw",
+						"count": 9
+					},
+					{
+						"word": "read",
+						"count": 1
+					},
+					{
+						"word": "record",
+						"count": 3
+					},
+					{
+						"word": "redirect",
+						"count": 2
+					},
+					{
+						"word": "reference",
+						"count": 2
+					},
+					{
+						"word": "register",
+						"count": 4
+					},
+					{
+						"word": "registered",
+						"count": 2
+					},
+					{
+						"word": "relative",
+						"count": 1
+					},
+					{
+						"word": "remove",
+						"count": 1
+					},
+					{
+						"word": "render",
+						"count": 1
+					},
+					{
+						"word": "replace",
+						"count": 1
+					},
+					{
+						"word": "repo",
+						"count": 22
+					},
+					{
+						"word": "request",
+						"count": 6
+					},
+					{
+						"word": "required",
+						"count": 5
+					},
+					{
+						"word": "resolve",
+						"count": 6
+					},
+					{
+						"word": "resolved",
+						"count": 4
+					},
+					{
+						"word": "resources",
+						"count": 12
+					},
+					{
+						"word": "response",
+						"count": 3
+					},
+					{
+						"word": "rest",
+						"count": 2
+					},
+					{
+						"word": "result",
+						"count": 4
+					},
+					{
+						"word": "rewritten",
+						"count": 1
+					},
+					{
+						"word": "right",
+						"count": 1
+					},
+					{
+						"word": "root",
+						"count": 4
+					},
+					{
+						"word": "route",
+						"count": 2
+					},
+					{
+						"word": "rule",
+						"count": 6
+					},
+					{
+						"word": "ruleset",
+						"count": 4
+					},
+					{
+						"word": "run",
+						"count": 9
+					},
+					{
+						"word": "runnable",
+						"count": 1
+					},
+					{
+						"word": "runs",
+						"count": 2
+					},
+					{
+						"word": "runseal",
+						"count": 1
+					},
+					{
+						"word": "runtime",
+						"count": 1
+					},
+					{
+						"word": "searched",
+						"count": 4
+					},
+					{
+						"word": "seconds",
+						"count": 1
+					},
+					{
+						"word": "secret",
+						"count": 2
+					},
+					{
+						"word": "secrets",
+						"count": 1
+					},
+					{
+						"word": "sections",
+						"count": 1
+					},
+					{
+						"word": "select",
+						"count": 1
+					},
+					{
+						"word": "send",
+						"count": 2
+					},
+					{
+						"word": "separator",
+						"count": 5
+					},
+					{
+						"word": "set",
+						"count": 1
+					},
+					{
+						"word": "sha",
+						"count": 3
+					},
+					{
+						"word": "shutdown",
+						"count": 4
+					},
+					{
+						"word": "source",
+						"count": 8
+					},
+					{
+						"word": "spec",
+						"count": 1
+					},
+					{
+						"word": "specs",
+						"count": 3
+					},
+					{
+						"word": "split",
+						"count": 1
+					},
+					{
+						"word": "status",
+						"count": 8
+					},
+					{
+						"word": "statuses",
+						"count": 1
+					},
+					{
+						"word": "stem",
+						"count": 3
+					},
+					{
+						"word": "suffix",
+						"count": 1
+					},
+					{
+						"word": "symbol",
+						"count": 1
+					},
+					{
+						"word": "symlink",
+						"count": 1
+					},
+					{
+						"word": "symlinks",
+						"count": 1
+					},
+					{
+						"word": "target",
+						"count": 14
+					},
+					{
+						"word": "task",
+						"count": 1
+					},
+					{
+						"word": "tea",
+						"count": 1
+					},
+					{
+						"word": "text",
+						"count": 4
+					},
+					{
+						"word": "timeout",
+						"count": 3
+					},
+					{
+						"word": "title",
+						"count": 2
+					},
+					{
+						"word": "token",
+						"count": 15
+					},
+					{
+						"word": "tool",
+						"count": 1
+					},
+					{
+						"word": "top",
+						"count": 1
+					},
+					{
+						"word": "unique",
+						"count": 1
+					},
+					{
+						"word": "unset",
+						"count": 1
+					},
+					{
+						"word": "update",
+						"count": 3
+					},
+					{
+						"word": "uri",
+						"count": 2
+					},
+					{
+						"word": "uris",
+						"count": 2
+					},
+					{
+						"word": "url",
+						"count": 11
+					},
+					{
+						"word": "usage",
+						"count": 1
+					},
+					{
+						"word": "valid",
+						"count": 2
+					},
+					{
+						"word": "validate",
+						"count": 5
+					},
+					{
+						"word": "value",
+						"count": 34
+					},
+					{
+						"word": "values",
+						"count": 5
+					},
+					{
+						"word": "var",
+						"count": 2
+					},
+					{
+						"word": "variable",
+						"count": 2
+					},
+					{
+						"word": "vars",
+						"count": 1
+					},
+					{
+						"word": "version",
+						"count": 1
+					},
+					{
+						"word": "wait",
+						"count": 2
+					},
+					{
+						"word": "watch",
+						"count": 1
+					},
+					{
+						"word": "which",
+						"count": 2
+					},
+					{
+						"word": "with",
+						"count": 1
+					},
+					{
+						"word": "workflow",
+						"count": 6
+					},
+					{
+						"word": "wrapper",
+						"count": 3
+					},
+					{
+						"word": "wrappers",
+						"count": 3
+					},
+					{
+						"word": "zone",
+						"count": 11
+					}
+				]
+			},
+			{
+				"root": "app/tests",
+				"atoms": [
+					{
+						"word": "Assert",
+						"count": 3
+					},
+					{
+						"word": "Check",
+						"count": 1
+					},
+					{
+						"word": "File",
+						"count": 1
+					},
+					{
+						"word": "Fixture",
+						"count": 8
+					},
+					{
+						"word": "Git",
+						"count": 1
+					},
+					{
+						"word": "Mock",
+						"count": 3
+					},
+					{
+						"word": "Paths",
+						"count": 2
+					},
+					{
+						"word": "Probe",
+						"count": 2
+					},
+					{
+						"word": "Profile",
+						"count": 1
+					},
+					{
+						"word": "Script",
+						"count": 6
+					},
+					{
+						"word": "Shell",
+						"count": 3
+					},
+					{
+						"word": "Stub",
+						"count": 1
+					},
+					{
+						"word": "Suffix",
+						"count": 1
+					},
+					{
+						"word": "Tool",
+						"count": 1
+					},
+					{
+						"word": "Wrapper",
+						"count": 3
+					},
+					{
+						"word": "_temp",
+						"count": 8
+					},
+					{
+						"word": "absolute",
+						"count": 2
+					},
+					{
+						"word": "accept",
+						"count": 3
+					},
+					{
+						"word": "actions",
+						"count": 1
+					},
+					{
+						"word": "actual",
+						"count": 3
+					},
+					{
+						"word": "address",
+						"count": 5
+					},
+					{
+						"word": "allowed",
+						"count": 1
+					},
+					{
+						"word": "ancestor",
+						"count": 1
+					},
+					{
+						"word": "api",
+						"count": 1
+					},
+					{
+						"word": "applies",
+						"count": 1
+					},
+					{
+						"word": "args",
+						"count": 21
+					},
+					{
+						"word": "argv",
+						"count": 1
+					},
+					{
+						"word": "assert",
+						"count": 1
+					},
+					{
+						"word": "assertion",
+						"count": 2
+					},
+					{
+						"word": "base",
+						"count": 2
+					},
+					{
+						"word": "bat",
+						"count": 2
+					},
+					{
+						"word": "bin",
+						"count": 16
+					},
+					{
+						"word": "body",
+						"count": 8
+					},
+					{
+						"word": "branch",
+						"count": 1
+					},
+					{
+						"word": "buffer",
+						"count": 1
+					},
+					{
+						"word": "bump",
+						"count": 1
+					},
+					{
+						"word": "channel",
+						"count": 1
+					},
+					{
+						"word": "cloudflare",
+						"count": 1
+					},
+					{
+						"word": "cmd",
+						"count": 4
+					},
+					{
+						"word": "command",
+						"count": 7
+					},
+					{
+						"word": "comment",
+						"count": 1
+					},
+					{
+						"word": "config",
+						"count": 1
+					},
+					{
+						"word": "content",
+						"count": 5
+					},
+					{
+						"word": "contention",
+						"count": 1
+					},
+					{
+						"word": "count",
+						"count": 2
+					},
+					{
+						"word": "create",
+						"count": 1
+					},
+					{
+						"word": "creates",
+						"count": 2
+					},
+					{
+						"word": "credentials",
+						"count": 1
+					},
+					{
+						"word": "cwd",
+						"count": 11
+					},
+					{
+						"word": "deadline",
+						"count": 6
+					},
+					{
+						"word": "deno",
+						"count": 1
+					},
+					{
+						"word": "dir",
+						"count": 6
+					},
+					{
+						"word": "dirty",
+						"count": 1
+					},
+					{
+						"word": "dns",
+						"count": 1
+					},
+					{
+						"word": "dry",
+						"count": 2
+					},
+					{
+						"word": "env",
+						"count": 9
+					},
+					{
+						"word": "envs",
+						"count": 3
+					},
+					{
+						"word": "exact",
+						"count": 1
+					},
+					{
+						"word": "exe",
+						"count": 1
+					},
+					{
+						"word": "exit",
+						"count": 1
+					},
+					{
+						"word": "expand",
+						"count": 1
+					},
+					{
+						"word": "expected",
+						"count": 8
+					},
+					{
+						"word": "explicit",
+						"count": 2
+					},
+					{
+						"word": "extension",
+						"count": 1
+					},
+					{
+						"word": "external",
+						"count": 1
+					},
+					{
+						"word": "failed",
+						"count": 2
+					},
+					{
+						"word": "fails",
+						"count": 2
+					},
+					{
+						"word": "fallback",
+						"count": 1
+					},
+					{
+						"word": "file",
+						"count": 6
+					},
+					{
+						"word": "first",
+						"count": 2
+					},
+					{
+						"word": "fixture",
+						"count": 4
+					},
+					{
+						"word": "forgejo",
+						"count": 1
+					},
+					{
+						"word": "fx",
+						"count": 52
+					},
+					{
+						"word": "gets",
+						"count": 1
+					},
+					{
+						"word": "git",
+						"count": 1
+					},
+					{
+						"word": "github",
+						"count": 1
+					},
+					{
+						"word": "global",
+						"count": 3
+					},
+					{
+						"word": "guard",
+						"count": 2
+					},
+					{
+						"word": "handle",
+						"count": 5
+					},
+					{
+						"word": "hashes",
+						"count": 1
+					},
+					{
+						"word": "help",
+						"count": 5
+					},
+					{
+						"word": "hidden",
+						"count": 1
+					},
+					{
+						"word": "home",
+						"count": 10
+					},
+					{
+						"word": "inert",
+						"count": 1
+					},
+					{
+						"word": "init",
+						"count": 2
+					},
+					{
+						"word": "internal",
+						"count": 1
+					},
+					{
+						"word": "invalid",
+						"count": 2
+					},
+					{
+						"word": "issue",
+						"count": 1
+					},
+					{
+						"word": "key",
+						"count": 6
+					},
+					{
+						"word": "label",
+						"count": 6
+					},
+					{
+						"word": "land",
+						"count": 1
+					},
+					{
+						"word": "latest",
+						"count": 1
+					},
+					{
+						"word": "left",
+						"count": 2
+					},
+					{
+						"word": "lifecycle",
+						"count": 1
+					},
+					{
+						"word": "limits",
+						"count": 1
+					},
+					{
+						"word": "line",
+						"count": 1
+					},
+					{
+						"word": "lines",
+						"count": 2
+					},
+					{
+						"word": "lists",
+						"count": 1
+					},
+					{
+						"word": "local",
+						"count": 3
+					},
+					{
+						"word": "log",
+						"count": 8
+					},
+					{
+						"word": "manage",
+						"count": 1
+					},
+					{
+						"word": "map",
+						"count": 1
+					},
+					{
+						"word": "mismatch",
+						"count": 1
+					},
+					{
+						"word": "missing",
+						"count": 2
+					},
+					{
+						"word": "mock",
+						"count": 1
+					},
+					{
+						"word": "model",
+						"count": 1
+					},
+					{
+						"word": "name",
+						"count": 13
+					},
+					{
+						"word": "names",
+						"count": 1
+					},
+					{
+						"word": "namespace",
+						"count": 1
+					},
+					{
+						"word": "nearest",
+						"count": 2
+					},
+					{
+						"word": "nested",
+						"count": 5
+					},
+					{
+						"word": "new",
+						"count": 5
+					},
+					{
+						"word": "origin",
+						"count": 1
+					},
+					{
+						"word": "output",
+						"count": 96
+					},
+					{
+						"word": "pair",
+						"count": 2
+					},
+					{
+						"word": "passes",
+						"count": 1
+					},
+					{
+						"word": "path",
+						"count": 29
+					},
+					{
+						"word": "paths",
+						"count": 7
+					},
+					{
+						"word": "payload",
+						"count": 2
+					},
+					{
+						"word": "permissions",
+						"count": 10
+					},
+					{
+						"word": "picked",
+						"count": 1
+					},
+					{
+						"word": "pinned",
+						"count": 1
+					},
+					{
+						"word": "plans",
+						"count": 1
+					},
+					{
+						"word": "policy",
+						"count": 1
+					},
+					{
+						"word": "precedence",
+						"count": 2
+					},
+					{
+						"word": "prefix",
+						"count": 1
+					},
+					{
+						"word": "prepend",
+						"count": 2
+					},
+					{
+						"word": "printed",
+						"count": 2
+					},
+					{
+						"word": "priority",
+						"count": 3
+					},
+					{
+						"word": "profile",
+						"count": 15
+					},
+					{
+						"word": "profiles",
+						"count": 2
+					},
+					{
+						"word": "progressive",
+						"count": 1
+					},
+					{
+						"word": "project",
+						"count": 22
+					},
+					{
+						"word": "pull",
+						"count": 1
+					},
+					{
+						"word": "read",
+						"count": 5
+					},
+					{
+						"word": "reads",
+						"count": 1
+					},
+					{
+						"word": "record",
+						"count": 2
+					},
+					{
+						"word": "rejects",
+						"count": 2
+					},
+					{
+						"word": "release",
+						"count": 1
+					},
+					{
+						"word": "repo",
+						"count": 4
+					},
+					{
+						"word": "request",
+						"count": 10
+					},
+					{
+						"word": "required",
+						"count": 2
+					},
+					{
+						"word": "resolve",
+						"count": 1
+					},
+					{
+						"word": "resolves",
+						"count": 1
+					},
+					{
+						"word": "resource",
+						"count": 1
+					},
+					{
+						"word": "reuse",
+						"count": 1
+					},
+					{
+						"word": "rich",
+						"count": 1
+					},
+					{
+						"word": "right",
+						"count": 2
+					},
+					{
+						"word": "root",
+						"count": 6
+					},
+					{
+						"word": "run",
+						"count": 9
+					},
+					{
+						"word": "script",
+						"count": 6
+					},
+					{
+						"word": "secrets",
+						"count": 2
+					},
+					{
+						"word": "serve",
+						"count": 3
+					},
+					{
+						"word": "server",
+						"count": 8
+					},
+					{
+						"word": "shadow",
+						"count": 1
+					},
+					{
+						"word": "shell",
+						"count": 3
+					},
+					{
+						"word": "skips",
+						"count": 2
+					},
+					{
+						"word": "source",
+						"count": 4
+					},
+					{
+						"word": "stable",
+						"count": 1
+					},
+					{
+						"word": "status",
+						"count": 1
+					},
+					{
+						"word": "stderr",
+						"count": 12
+					},
+					{
+						"word": "stdout",
+						"count": 42
+					},
+					{
+						"word": "steps",
+						"count": 1
+					},
+					{
+						"word": "stream",
+						"count": 5
+					},
+					{
+						"word": "success",
+						"count": 1
+					},
+					{
+						"word": "suffix",
+						"count": 1
+					},
+					{
+						"word": "symlink",
+						"count": 1
+					},
+					{
+						"word": "target",
+						"count": 4
+					},
+					{
+						"word": "tea",
+						"count": 1
+					},
+					{
+						"word": "temp",
+						"count": 39
+					},
+					{
+						"word": "text",
+						"count": 4
+					},
+					{
+						"word": "token",
+						"count": 2
+					},
+					{
+						"word": "tools",
+						"count": 2
+					},
+					{
+						"word": "topics",
+						"count": 1
+					},
+					{
+						"word": "ts",
+						"count": 2
+					},
+					{
+						"word": "unknown",
+						"count": 1
+					},
+					{
+						"word": "update",
+						"count": 1
+					},
+					{
+						"word": "updates",
+						"count": 1
+					},
+					{
+						"word": "value",
+						"count": 6
+					},
+					{
+						"word": "values",
+						"count": 1
+					},
+					{
+						"word": "vars",
+						"count": 2
+					},
+					{
+						"word": "version",
+						"count": 1
+					},
+					{
+						"word": "visible",
+						"count": 1
+					},
+					{
+						"word": "wait",
+						"count": 3
+					},
+					{
+						"word": "watch",
+						"count": 2
+					},
+					{
+						"word": "which",
+						"count": 3
+					},
+					{
+						"word": "wrapper",
+						"count": 8
+					},
+					{
+						"word": "wrappers",
+						"count": 2
+					},
+					{
+						"word": "write",
+						"count": 15
+					},
+					{
+						"word": "writes",
+						"count": 2
+					},
+					{
+						"word": "zone",
+						"count": 1
+					}
+				]
+			}
+		]
+	},
+	{
+		"repo": "sidecar",
+		"roots": [
+			{
+				"root": "crates/cli/src",
+				"atoms": [
+					{
+						"word": "Args",
+						"count": 1
+					},
+					{
+						"word": "Broker",
+						"count": 1
+					},
+					{
+						"word": "Chain",
+						"count": 1
+					},
+					{
+						"word": "FETCH",
+						"count": 1
+					},
+					{
+						"word": "Format",
+						"count": 1
+					},
+					{
+						"word": "INSTALL",
+						"count": 1
+					},
+					{
+						"word": "Json",
+						"count": 1
+					},
+					{
+						"word": "Launch",
+						"count": 1
+					},
+					{
+						"word": "Listing",
+						"count": 1
+					},
+					{
+						"word": "MANIFEST",
+						"count": 1
+					},
+					{
+						"word": "Probe",
+						"count": 1
+					},
+					{
+						"word": "Ready",
+						"count": 2
+					},
+					{
+						"word": "SOCKET",
+						"count": 1
+					},
+					{
+						"word": "Session",
+						"count": 1
+					},
+					{
+						"word": "Status",
+						"count": 1
+					},
+					{
+						"word": "Summary",
+						"count": 1
+					},
+					{
+						"word": "TIMEOUT",
+						"count": 1
+					},
+					{
+						"word": "TTL",
+						"count": 1
+					},
+					{
+						"word": "Text",
+						"count": 1
+					},
+					{
+						"word": "Value",
+						"count": 1
+					},
+					{
+						"word": "Version",
+						"count": 1
+					},
+					{
+						"word": "__test",
+						"count": 3
+					},
+					{
+						"word": "_binary",
+						"count": 1
+					},
+					{
+						"word": "accept",
+						"count": 1
+					},
+					{
+						"word": "addr",
+						"count": 2
+					},
+					{
+						"word": "all",
+						"count": 4
+					},
+					{
+						"word": "app",
+						"count": 2
+					},
+					{
+						"word": "args",
+						"count": 6
+					},
+					{
+						"word": "base",
+						"count": 5
+					},
+					{
+						"word": "bindings",
+						"count": 1
+					},
+					{
+						"word": "body",
+						"count": 4
+					},
+					{
+						"word": "broker",
+						"count": 10
+					},
+					{
+						"word": "brokers",
+						"count": 2
+					},
+					{
+						"word": "build",
+						"count": 3
+					},
+					{
+						"word": "cache",
+						"count": 1
+					},
+					{
+						"word": "candidate",
+						"count": 1
+					},
+					{
+						"word": "chain",
+						"count": 2
+					},
+					{
+						"word": "channel",
+						"count": 10
+					},
+					{
+						"word": "checked",
+						"count": 2
+					},
+					{
+						"word": "child",
+						"count": 3
+					},
+					{
+						"word": "cli",
+						"count": 1
+					},
+					{
+						"word": "cmd",
+						"count": 2
+					},
+					{
+						"word": "command",
+						"count": 9
+					},
+					{
+						"word": "commands",
+						"count": 1
+					},
+					{
+						"word": "config",
+						"count": 3
+					},
+					{
+						"word": "current",
+						"count": 1
+					},
+					{
+						"word": "cwd",
+						"count": 4
+					},
+					{
+						"word": "deadline",
+						"count": 3
+					},
+					{
+						"word": "default",
+						"count": 1
+					},
+					{
+						"word": "detach",
+						"count": 1
+					},
+					{
+						"word": "diagnostics",
+						"count": 7
+					},
+					{
+						"word": "duration",
+						"count": 1
+					},
+					{
+						"word": "enabled",
+						"count": 2
+					},
+					{
+						"word": "endpoint",
+						"count": 6
+					},
+					{
+						"word": "endpoints",
+						"count": 1
+					},
+					{
+						"word": "ensure",
+						"count": 1
+					},
+					{
+						"word": "entry",
+						"count": 1
+					},
+					{
+						"word": "env",
+						"count": 4
+					},
+					{
+						"word": "event",
+						"count": 4
+					},
+					{
+						"word": "exact",
+						"count": 1
+					},
+					{
+						"word": "exchange",
+						"count": 1
+					},
+					{
+						"word": "exe",
+						"count": 1
+					},
+					{
+						"word": "expected",
+						"count": 2
+					},
+					{
+						"word": "explicit",
+						"count": 2
+					},
+					{
+						"word": "fetch",
+						"count": 1
+					},
+					{
+						"word": "fetched",
+						"count": 1
+					},
+					{
+						"word": "field",
+						"count": 1
+					},
+					{
+						"word": "file",
+						"count": 1
+					},
+					{
+						"word": "force",
+						"count": 8
+					},
+					{
+						"word": "format",
+						"count": 12
+					},
+					{
+						"word": "fresh",
+						"count": 1
+					},
+					{
+						"word": "group",
+						"count": 1
+					},
+					{
+						"word": "handle",
+						"count": 1
+					},
+					{
+						"word": "help",
+						"count": 1
+					},
+					{
+						"word": "hit",
+						"count": 1
+					},
+					{
+						"word": "hits",
+						"count": 4
+					},
+					{
+						"word": "home",
+						"count": 3
+					},
+					{
+						"word": "identity",
+						"count": 8
+					},
+					{
+						"word": "idle",
+						"count": 1
+					},
+					{
+						"word": "inherited",
+						"count": 1
+					},
+					{
+						"word": "inherits",
+						"count": 2
+					},
+					{
+						"word": "inspect",
+						"count": 5
+					},
+					{
+						"word": "instance",
+						"count": 1
+					},
+					{
+						"word": "items",
+						"count": 1
+					},
+					{
+						"word": "json",
+						"count": 2
+					},
+					{
+						"word": "kill",
+						"count": 1
+					},
+					{
+						"word": "label",
+						"count": 1
+					},
+					{
+						"word": "latest",
+						"count": 3
+					},
+					{
+						"word": "launch",
+						"count": 2
+					},
+					{
+						"word": "line",
+						"count": 3
+					},
+					{
+						"word": "list",
+						"count": 4
+					},
+					{
+						"word": "listener",
+						"count": 2
+					},
+					{
+						"word": "listing",
+						"count": 4
+					},
+					{
+						"word": "load",
+						"count": 2
+					},
+					{
+						"word": "local",
+						"count": 2
+					},
+					{
+						"word": "locate",
+						"count": 2
+					},
+					{
+						"word": "log",
+						"count": 5
+					},
+					{
+						"word": "main",
+						"count": 1
+					},
+					{
+						"word": "major",
+						"count": 1
+					},
+					{
+						"word": "minor",
+						"count": 1
+					},
+					{
+						"word": "name",
+						"count": 3
+					},
+					{
+						"word": "namespace",
+						"count": 5
+					},
+					{
+						"word": "new",
+						"count": 1
+					},
+					{
+						"word": "newer",
+						"count": 2
+					},
+					{
+						"word": "notice",
+						"count": 1
+					},
+					{
+						"word": "now",
+						"count": 2
+					},
+					{
+						"word": "option",
+						"count": 1
+					},
+					{
+						"word": "output",
+						"count": 2
+					},
+					{
+						"word": "parse",
+						"count": 3
+					},
+					{
+						"word": "parsed",
+						"count": 6
+					},
+					{
+						"word": "parts",
+						"count": 1
+					},
+					{
+						"word": "patch",
+						"count": 1
+					},
+					{
+						"word": "path",
+						"count": 11
+					},
+					{
+						"word": "paths",
+						"count": 12
+					},
+					{
+						"word": "payload",
+						"count": 1
+					},
+					{
+						"word": "pick",
+						"count": 1
+					},
+					{
+						"word": "pid",
+						"count": 6
+					},
+					{
+						"word": "pids",
+						"count": 4
+					},
+					{
+						"word": "plan",
+						"count": 18
+					},
+					{
+						"word": "pre",
+						"count": 1
+					},
+					{
+						"word": "probe",
+						"count": 2
+					},
+					{
+						"word": "project",
+						"count": 4
+					},
+					{
+						"word": "purge",
+						"count": 1
+					},
+					{
+						"word": "raw",
+						"count": 2
+					},
+					{
+						"word": "read",
+						"count": 1
+					},
+					{
+						"word": "reader",
+						"count": 1
+					},
+					{
+						"word": "ready",
+						"count": 7
+					},
+					{
+						"word": "reap",
+						"count": 1
+					},
+					{
+						"word": "record",
+						"count": 2
+					},
+					{
+						"word": "release",
+						"count": 1
+					},
+					{
+						"word": "remote",
+						"count": 2
+					},
+					{
+						"word": "remove",
+						"count": 1
+					},
+					{
+						"word": "render",
+						"count": 1
+					},
+					{
+						"word": "request",
+						"count": 3
+					},
+					{
+						"word": "reset",
+						"count": 1
+					},
+					{
+						"word": "response",
+						"count": 5
+					},
+					{
+						"word": "restart",
+						"count": 1
+					},
+					{
+						"word": "result",
+						"count": 1
+					},
+					{
+						"word": "role",
+						"count": 3
+					},
+					{
+						"word": "rows",
+						"count": 4
+					},
+					{
+						"word": "run",
+						"count": 3
+					},
+					{
+						"word": "running",
+						"count": 1
+					},
+					{
+						"word": "runtime",
+						"count": 5
+					},
+					{
+						"word": "sanitize",
+						"count": 1
+					},
+					{
+						"word": "save",
+						"count": 1
+					},
+					{
+						"word": "saved",
+						"count": 1
+					},
+					{
+						"word": "scan",
+						"count": 1
+					},
+					{
+						"word": "scratch",
+						"count": 1
+					},
+					{
+						"word": "script",
+						"count": 1
+					},
+					{
+						"word": "searched",
+						"count": 2
+					},
+					{
+						"word": "seconds",
+						"count": 2
+					},
+					{
+						"word": "serve",
+						"count": 1
+					},
+					{
+						"word": "session",
+						"count": 3
+					},
+					{
+						"word": "severity",
+						"count": 2
+					},
+					{
+						"word": "sidecar",
+						"count": 10
+					},
+					{
+						"word": "socket",
+						"count": 1
+					},
+					{
+						"word": "spawn",
+						"count": 1
+					},
+					{
+						"word": "stamp",
+						"count": 2
+					},
+					{
+						"word": "start",
+						"count": 1
+					},
+					{
+						"word": "state",
+						"count": 14
+					},
+					{
+						"word": "status",
+						"count": 8
+					},
+					{
+						"word": "stderr",
+						"count": 2
+					},
+					{
+						"word": "stop",
+						"count": 2
+					},
+					{
+						"word": "stopped",
+						"count": 1
+					},
+					{
+						"word": "store",
+						"count": 1
+					},
+					{
+						"word": "stream",
+						"count": 3
+					},
+					{
+						"word": "target",
+						"count": 9
+					},
+					{
+						"word": "targets",
+						"count": 3
+					},
+					{
+						"word": "test",
+						"count": 1
+					},
+					{
+						"word": "text",
+						"count": 5
+					},
+					{
+						"word": "timeout",
+						"count": 7
+					},
+					{
+						"word": "tmpdir",
+						"count": 1
+					},
+					{
+						"word": "trimmed",
+						"count": 3
+					},
+					{
+						"word": "ttl",
+						"count": 4
+					},
+					{
+						"word": "update",
+						"count": 1
+					},
+					{
+						"word": "url",
+						"count": 3
+					},
+					{
+						"word": "value",
+						"count": 12
+					},
+					{
+						"word": "version",
+						"count": 2
+					},
+					{
+						"word": "wait",
+						"count": 1
+					},
+					{
+						"word": "watch",
+						"count": 1
+					},
+					{
+						"word": "worker",
+						"count": 1
+					},
+					{
+						"word": "write",
+						"count": 1
+					}
+				]
+			},
+			{
+				"root": "crates/cli/tests",
+				"atoms": [
+					{
+						"word": "addr",
+						"count": 1
+					},
+					{
+						"word": "beta",
+						"count": 1
+					},
+					{
+						"word": "bin",
+						"count": 2
+					},
+					{
+						"word": "boundary",
+						"count": 1
+					},
+					{
+						"word": "config",
+						"count": 2
+					},
+					{
+						"word": "dev",
+						"count": 1
+					},
+					{
+						"word": "discovers",
+						"count": 1
+					},
+					{
+						"word": "doctor",
+						"count": 1
+					},
+					{
+						"word": "env",
+						"count": 1
+					},
+					{
+						"word": "equal",
+						"count": 1
+					},
+					{
+						"word": "error",
+						"count": 1
+					},
+					{
+						"word": "explicit",
+						"count": 2
+					},
+					{
+						"word": "force",
+						"count": 1
+					},
+					{
+						"word": "global",
+						"count": 1
+					},
+					{
+						"word": "handle",
+						"count": 1
+					},
+					{
+						"word": "hello",
+						"count": 1
+					},
+					{
+						"word": "help",
+						"count": 1
+					},
+					{
+						"word": "id",
+						"count": 1
+					},
+					{
+						"word": "key",
+						"count": 1
+					},
+					{
+						"word": "line",
+						"count": 1
+					},
+					{
+						"word": "listener",
+						"count": 1
+					},
+					{
+						"word": "malformed",
+						"count": 1
+					},
+					{
+						"word": "manifest",
+						"count": 1
+					},
+					{
+						"word": "minor",
+						"count": 1
+					},
+					{
+						"word": "mismatch",
+						"count": 1
+					},
+					{
+						"word": "missing",
+						"count": 1
+					},
+					{
+						"word": "name",
+						"count": 2
+					},
+					{
+						"word": "nested",
+						"count": 3
+					},
+					{
+						"word": "nonce",
+						"count": 2
+					},
+					{
+						"word": "omitted",
+						"count": 1
+					},
+					{
+						"word": "output",
+						"count": 6
+					},
+					{
+						"word": "parsed",
+						"count": 9
+					},
+					{
+						"word": "payload",
+						"count": 1
+					},
+					{
+						"word": "plan",
+						"count": 1
+					},
+					{
+						"word": "prev",
+						"count": 1
+					},
+					{
+						"word": "project",
+						"count": 2
+					},
+					{
+						"word": "request",
+						"count": 2
+					},
+					{
+						"word": "reset",
+						"count": 1
+					},
+					{
+						"word": "response",
+						"count": 2
+					},
+					{
+						"word": "root",
+						"count": 6
+					},
+					{
+						"word": "scratch",
+						"count": 2
+					},
+					{
+						"word": "serve",
+						"count": 1
+					},
+					{
+						"word": "stable",
+						"count": 1
+					},
+					{
+						"word": "stderr",
+						"count": 3
+					},
+					{
+						"word": "stdout",
+						"count": 3
+					},
+					{
+						"word": "timeout",
+						"count": 1
+					},
+					{
+						"word": "ttl",
+						"count": 1
+					},
+					{
+						"word": "version",
+						"count": 1
+					},
+					{
+						"word": "zero",
+						"count": 1
+					}
+				]
+			},
+			{
+				"root": "crates/core/src",
+				"atoms": [
+					{
+						"word": "App",
+						"count": 3
+					},
+					{
+						"word": "Broker",
+						"count": 1
+					},
+					{
+						"word": "Diagnostic",
+						"count": 1
+					},
+					{
+						"word": "Endpoint",
+						"count": 3
+					},
+					{
+						"word": "Err",
+						"count": 1
+					},
+					{
+						"word": "Error",
+						"count": 4
+					},
+					{
+						"word": "FLAG",
+						"count": 2
+					},
+					{
+						"word": "Hello",
+						"count": 1
+					},
+					{
+						"word": "Identity",
+						"count": 1
+					},
+					{
+						"word": "Inherit",
+						"count": 2
+					},
+					{
+						"word": "Inspect",
+						"count": 1
+					},
+					{
+						"word": "Kind",
+						"count": 1
+					},
+					{
+						"word": "MODE",
+						"count": 1
+					},
+					{
+						"word": "Manifest",
+						"count": 1
+					},
+					{
+						"word": "NAMESPACE",
+						"count": 1
+					},
+					{
+						"word": "Ok",
+						"count": 2
+					},
+					{
+						"word": "Parse",
+						"count": 1
+					},
+					{
+						"word": "Paths",
+						"count": 1
+					},
+					{
+						"word": "Plan",
+						"count": 1
+					},
+					{
+						"word": "Project",
+						"count": 1
+					},
+					{
+						"word": "Read",
+						"count": 1
+					},
+					{
+						"word": "Ready",
+						"count": 2
+					},
+					{
+						"word": "Request",
+						"count": 2
+					},
+					{
+						"word": "Response",
+						"count": 2
+					},
+					{
+						"word": "Row",
+						"count": 1
+					},
+					{
+						"word": "SOURCE",
+						"count": 1
+					},
+					{
+						"word": "Severity",
+						"count": 1
+					},
+					{
+						"word": "Sidecar",
+						"count": 3
+					},
+					{
+						"word": "Stamp",
+						"count": 1
+					},
+					{
+						"word": "Stamped",
+						"count": 1
+					},
+					{
+						"word": "State",
+						"count": 1
+					},
+					{
+						"word": "String",
+						"count": 5
+					},
+					{
+						"word": "TCP",
+						"count": 1
+					},
+					{
+						"word": "Target",
+						"count": 1
+					},
+					{
+						"word": "Tcp",
+						"count": 1
+					},
+					{
+						"word": "UNIX",
+						"count": 1
+					},
+					{
+						"word": "Unix",
+						"count": 1
+					},
+					{
+						"word": "VERSION",
+						"count": 2
+					},
+					{
+						"word": "Warning",
+						"count": 1
+					},
+					{
+						"word": "_line",
+						"count": 1
+					},
+					{
+						"word": "_path",
+						"count": 1
+					},
+					{
+						"word": "_pid",
+						"count": 1
+					},
+					{
+						"word": "_timeout",
+						"count": 1
+					},
+					{
+						"word": "active",
+						"count": 1
+					},
+					{
+						"word": "addr",
+						"count": 4
+					},
+					{
+						"word": "addrs",
+						"count": 4
+					},
+					{
+						"word": "app",
+						"count": 6
+					},
+					{
+						"word": "args",
+						"count": 14
+					},
+					{
+						"word": "argv",
+						"count": 7
+					},
+					{
+						"word": "at",
+						"count": 1
+					},
+					{
+						"word": "broker",
+						"count": 1
+					},
+					{
+						"word": "byte",
+						"count": 2
+					},
+					{
+						"word": "bytes",
+						"count": 2
+					},
+					{
+						"word": "cargo",
+						"count": 1
+					},
+					{
+						"word": "code",
+						"count": 2
+					},
+					{
+						"word": "columns",
+						"count": 1
+					},
+					{
+						"word": "command",
+						"count": 11
+					},
+					{
+						"word": "config",
+						"count": 3
+					},
+					{
+						"word": "consumes",
+						"count": 1
+					},
+					{
+						"word": "count",
+						"count": 3
+					},
+					{
+						"word": "cwd",
+						"count": 5
+					},
+					{
+						"word": "data",
+						"count": 2
+					},
+					{
+						"word": "decode",
+						"count": 4
+					},
+					{
+						"word": "decoded",
+						"count": 4
+					},
+					{
+						"word": "dedup",
+						"count": 1
+					},
+					{
+						"word": "default",
+						"count": 2
+					},
+					{
+						"word": "describe",
+						"count": 1
+					},
+					{
+						"word": "diagnostics",
+						"count": 5
+					},
+					{
+						"word": "dir",
+						"count": 1
+					},
+					{
+						"word": "discover",
+						"count": 2
+					},
+					{
+						"word": "encode",
+						"count": 4
+					},
+					{
+						"word": "encoded",
+						"count": 2
+					},
+					{
+						"word": "endpoint",
+						"count": 9
+					},
+					{
+						"word": "endpoints",
+						"count": 2
+					},
+					{
+						"word": "entries",
+						"count": 1
+					},
+					{
+						"word": "entry",
+						"count": 1
+					},
+					{
+						"word": "env",
+						"count": 5
+					},
+					{
+						"word": "error",
+						"count": 2
+					},
+					{
+						"word": "event",
+						"count": 1
+					},
+					{
+						"word": "exists",
+						"count": 1
+					},
+					{
+						"word": "expand",
+						"count": 1
+					},
+					{
+						"word": "expected",
+						"count": 1
+					},
+					{
+						"word": "explicit",
+						"count": 2
+					},
+					{
+						"word": "fallback",
+						"count": 1
+					},
+					{
+						"word": "family",
+						"count": 1
+					},
+					{
+						"word": "filter",
+						"count": 3
+					},
+					{
+						"word": "find",
+						"count": 2
+					},
+					{
+						"word": "first",
+						"count": 3
+					},
+					{
+						"word": "flag",
+						"count": 2
+					},
+					{
+						"word": "fmt",
+						"count": 3
+					},
+					{
+						"word": "formatter",
+						"count": 3
+					},
+					{
+						"word": "from",
+						"count": 2
+					},
+					{
+						"word": "group",
+						"count": 1
+					},
+					{
+						"word": "handle",
+						"count": 1
+					},
+					{
+						"word": "header",
+						"count": 2
+					},
+					{
+						"word": "health",
+						"count": 5
+					},
+					{
+						"word": "hello",
+						"count": 1
+					},
+					{
+						"word": "hex",
+						"count": 1
+					},
+					{
+						"word": "hits",
+						"count": 1
+					},
+					{
+						"word": "home",
+						"count": 1
+					},
+					{
+						"word": "id",
+						"count": 3
+					},
+					{
+						"word": "index",
+						"count": 1
+					},
+					{
+						"word": "inherits",
+						"count": 5
+					},
+					{
+						"word": "inodes",
+						"count": 4
+					},
+					{
+						"word": "inspect",
+						"count": 2
+					},
+					{
+						"word": "ip",
+						"count": 1
+					},
+					{
+						"word": "ipv4",
+						"count": 1
+					},
+					{
+						"word": "ipv6",
+						"count": 1
+					},
+					{
+						"word": "key",
+						"count": 2
+					},
+					{
+						"word": "kind",
+						"count": 4
+					},
+					{
+						"word": "launch",
+						"count": 1
+					},
+					{
+						"word": "line",
+						"count": 4
+					},
+					{
+						"word": "linux",
+						"count": 1
+					},
+					{
+						"word": "listeners",
+						"count": 9
+					},
+					{
+						"word": "load",
+						"count": 1
+					},
+					{
+						"word": "lsof",
+						"count": 1
+					},
+					{
+						"word": "macos",
+						"count": 1
+					},
+					{
+						"word": "message",
+						"count": 6
+					},
+					{
+						"word": "micros",
+						"count": 1
+					},
+					{
+						"word": "mode",
+						"count": 5
+					},
+					{
+						"word": "name",
+						"count": 11
+					},
+					{
+						"word": "names",
+						"count": 2
+					},
+					{
+						"word": "namespace",
+						"count": 13
+					},
+					{
+						"word": "new",
+						"count": 2
+					},
+					{
+						"word": "output",
+						"count": 3
+					},
+					{
+						"word": "parse",
+						"count": 4
+					},
+					{
+						"word": "parsed",
+						"count": 1
+					},
+					{
+						"word": "parts",
+						"count": 1
+					},
+					{
+						"word": "path",
+						"count": 11
+					},
+					{
+						"word": "paths",
+						"count": 1
+					},
+					{
+						"word": "payload",
+						"count": 1
+					},
+					{
+						"word": "percent",
+						"count": 1
+					},
+					{
+						"word": "pid",
+						"count": 15
+					},
+					{
+						"word": "plan",
+						"count": 10
+					},
+					{
+						"word": "port",
+						"count": 3
+					},
+					{
+						"word": "predicate",
+						"count": 1
+					},
+					{
+						"word": "prefix",
+						"count": 2
+					},
+					{
+						"word": "probe",
+						"count": 1
+					},
+					{
+						"word": "process",
+						"count": 1
+					},
+					{
+						"word": "project",
+						"count": 12
+					},
+					{
+						"word": "query",
+						"count": 1
+					},
+					{
+						"word": "raw",
+						"count": 2
+					},
+					{
+						"word": "reader",
+						"count": 2
+					},
+					{
+						"word": "ready",
+						"count": 5
+					},
+					{
+						"word": "request",
+						"count": 3
+					},
+					{
+						"word": "require",
+						"count": 1
+					},
+					{
+						"word": "required",
+						"count": 2
+					},
+					{
+						"word": "resolve",
+						"count": 1
+					},
+					{
+						"word": "response",
+						"count": 2
+					},
+					{
+						"word": "role",
+						"count": 2
+					},
+					{
+						"word": "root",
+						"count": 5
+					},
+					{
+						"word": "rows",
+						"count": 6
+					},
+					{
+						"word": "runtime",
+						"count": 1
+					},
+					{
+						"word": "send",
+						"count": 1
+					},
+					{
+						"word": "severity",
+						"count": 1
+					},
+					{
+						"word": "sidecars",
+						"count": 2
+					},
+					{
+						"word": "size",
+						"count": 1
+					},
+					{
+						"word": "snapshot",
+						"count": 3
+					},
+					{
+						"word": "socket",
+						"count": 6
+					},
+					{
+						"word": "source",
+						"count": 4
+					},
+					{
+						"word": "stamp",
+						"count": 8
+					},
+					{
+						"word": "start",
+						"count": 1
+					},
+					{
+						"word": "state",
+						"count": 3
+					},
+					{
+						"word": "status",
+						"count": 2
+					},
+					{
+						"word": "stdout",
+						"count": 2
+					},
+					{
+						"word": "stop",
+						"count": 1
+					},
+					{
+						"word": "stream",
+						"count": 2
+					},
+					{
+						"word": "table",
+						"count": 4
+					},
+					{
+						"word": "targets",
+						"count": 3
+					},
+					{
+						"word": "tcp",
+						"count": 2
+					},
+					{
+						"word": "text",
+						"count": 8
+					},
+					{
+						"word": "timeout",
+						"count": 8
+					},
+					{
+						"word": "trimmed",
+						"count": 2
+					},
+					{
+						"word": "unix",
+						"count": 2
+					},
+					{
+						"word": "unreserved",
+						"count": 1
+					},
+					{
+						"word": "url",
+						"count": 2
+					},
+					{
+						"word": "validate",
+						"count": 2
+					},
+					{
+						"word": "value",
+						"count": 16
+					},
+					{
+						"word": "version",
+						"count": 2
+					},
+					{
+						"word": "vetted",
+						"count": 1
+					},
+					{
+						"word": "warn",
+						"count": 1
+					},
+					{
+						"word": "warning",
+						"count": 1
+					},
+					{
+						"word": "windows",
+						"count": 2
+					},
+					{
+						"word": "word",
+						"count": 1
+					}
+				]
+			},
+			{
+				"root": "crates/core/tests",
+				"atoms": [
+					{
+						"word": "LOCK",
+						"count": 1
+					},
+					{
+						"word": "_guard",
+						"count": 1
+					},
+					{
+						"word": "addr",
+						"count": 1
+					},
+					{
+						"word": "args",
+						"count": 3
+					},
+					{
+						"word": "bare",
+						"count": 1
+					},
+					{
+						"word": "brokers",
+						"count": 1
+					},
+					{
+						"word": "canonical",
+						"count": 2
+					},
+					{
+						"word": "cli",
+						"count": 1
+					},
+					{
+						"word": "data",
+						"count": 1
+					},
+					{
+						"word": "diagnostics",
+						"count": 6
+					},
+					{
+						"word": "discover",
+						"count": 1
+					},
+					{
+						"word": "duplicates",
+						"count": 1
+					},
+					{
+						"word": "empty",
+						"count": 2
+					},
+					{
+						"word": "encoded",
+						"count": 2
+					},
+					{
+						"word": "endpoint",
+						"count": 2
+					},
+					{
+						"word": "env",
+						"count": 1
+					},
+					{
+						"word": "err",
+						"count": 2
+					},
+					{
+						"word": "error",
+						"count": 2
+					},
+					{
+						"word": "expected",
+						"count": 1
+					},
+					{
+						"word": "forms",
+						"count": 2
+					},
+					{
+						"word": "full",
+						"count": 1
+					},
+					{
+						"word": "hello",
+						"count": 1
+					},
+					{
+						"word": "hits",
+						"count": 2
+					},
+					{
+						"word": "home",
+						"count": 2
+					},
+					{
+						"word": "identity",
+						"count": 5
+					},
+					{
+						"word": "inline",
+						"count": 2
+					},
+					{
+						"word": "inodes",
+						"count": 1
+					},
+					{
+						"word": "invalid",
+						"count": 2
+					},
+					{
+						"word": "legacy",
+						"count": 1
+					},
+					{
+						"word": "line",
+						"count": 1
+					},
+					{
+						"word": "linux",
+						"count": 1
+					},
+					{
+						"word": "listener",
+						"count": 2
+					},
+					{
+						"word": "listeners",
+						"count": 1
+					},
+					{
+						"word": "lsof",
+						"count": 1
+					},
+					{
+						"word": "manifest",
+						"count": 1
+					},
+					{
+						"word": "mismatched",
+						"count": 1
+					},
+					{
+						"word": "ok",
+						"count": 1
+					},
+					{
+						"word": "optional",
+						"count": 1
+					},
+					{
+						"word": "parsed",
+						"count": 6
+					},
+					{
+						"word": "partial",
+						"count": 1
+					},
+					{
+						"word": "paths",
+						"count": 5
+					},
+					{
+						"word": "percent",
+						"count": 1
+					},
+					{
+						"word": "plan",
+						"count": 2
+					},
+					{
+						"word": "planned",
+						"count": 1
+					},
+					{
+						"word": "port",
+						"count": 1
+					},
+					{
+						"word": "probe",
+						"count": 1
+					},
+					{
+						"word": "ps",
+						"count": 1
+					},
+					{
+						"word": "request",
+						"count": 1
+					},
+					{
+						"word": "required",
+						"count": 2
+					},
+					{
+						"word": "reserved",
+						"count": 2
+					},
+					{
+						"word": "rows",
+						"count": 2
+					},
+					{
+						"word": "scoped",
+						"count": 1
+					},
+					{
+						"word": "seed",
+						"count": 1
+					},
+					{
+						"word": "separated",
+						"count": 3
+					},
+					{
+						"word": "solo",
+						"count": 1
+					},
+					{
+						"word": "stamp",
+						"count": 4
+					},
+					{
+						"word": "stamped",
+						"count": 1
+					},
+					{
+						"word": "state",
+						"count": 8
+					},
+					{
+						"word": "table",
+						"count": 1
+					},
+					{
+						"word": "test",
+						"count": 1
+					},
+					{
+						"word": "text",
+						"count": 4
+					},
+					{
+						"word": "unix",
+						"count": 1
+					},
+					{
+						"word": "warned",
+						"count": 1
+					},
+					{
+						"word": "windows",
+						"count": 1
+					},
+					{
+						"word": "worker",
+						"count": 1
+					},
+					{
+						"word": "xdg",
+						"count": 2
+					}
+				]
+			}
+		]
+	},
+	{
+		"repo": "open-web",
+		"roots": [
+			{
+				"root": "apps/react/src",
+				"atoms": [
+					{
+						"word": "Atom",
+						"count": 1
+					},
+					{
+						"word": "Constitution",
+						"count": 1
+					},
+					{
+						"word": "Entry",
+						"count": 1
+					},
+					{
+						"word": "Home",
+						"count": 1
+					},
+					{
+						"word": "Negentropy",
+						"count": 1
+					},
+					{
+						"word": "Rack",
+						"count": 1
+					},
+					{
+						"word": "Root",
+						"count": 1
+					},
+					{
+						"word": "Runseal",
+						"count": 1
+					},
+					{
+						"word": "Shelf",
+						"count": 1
+					},
+					{
+						"word": "Shell",
+						"count": 1
+					},
+					{
+						"word": "Sidecar",
+						"count": 1
+					},
+					{
+						"word": "Vocabulary",
+						"count": 1
+					},
+					{
+						"word": "atoms",
+						"count": 1
+					},
+					{
+						"word": "entries",
+						"count": 2
+					},
+					{
+						"word": "laws",
+						"count": 1
+					},
+					{
+						"word": "props",
+						"count": 2
+					},
+					{
+						"word": "prune",
+						"count": 1
+					},
+					{
+						"word": "query",
+						"count": 1
+					},
+					{
+						"word": "root",
+						"count": 2
+					},
+					{
+						"word": "router",
+						"count": 1
+					},
+					{
+						"word": "routes",
+						"count": 1
+					},
+					{
+						"word": "sample",
+						"count": 3
+					},
+					{
+						"word": "sift",
+						"count": 1
+					},
+					{
+						"word": "term",
+						"count": 2
+					},
+					{
+						"word": "title",
+						"count": 1
+					}
+				]
+			},
+			{
+				"root": "apps/react/tests",
+				"atoms": [
+					{
+						"word": "entries",
+						"count": 1
+					},
+					{
+						"word": "markup",
+						"count": 2
+					},
+					{
+						"word": "path",
+						"count": 1
+					},
+					{
+						"word": "render",
+						"count": 1
+					}
+				]
+			},
+			{
+				"root": "packages/components/src",
+				"atoms": [
+					{
+						"word": "Badge",
+						"count": 2
+					},
+					{
+						"word": "Button",
+						"count": 2
+					},
+					{
+						"word": "Card",
+						"count": 2
+					},
+					{
+						"word": "Code",
+						"count": 2
+					},
+					{
+						"word": "Frame",
+						"count": 2
+					},
+					{
+						"word": "Grid",
+						"count": 2
+					},
+					{
+						"word": "Hero",
+						"count": 2
+					},
+					{
+						"word": "List",
+						"count": 2
+					},
+					{
+						"word": "Nav",
+						"count": 2
+					},
+					{
+						"word": "Props",
+						"count": 10
+					},
+					{
+						"word": "Search",
+						"count": 2
+					},
+					{
+						"word": "props",
+						"count": 10
+					}
+				]
+			},
+			{
+				"root": "packages/components/tests",
+				"atoms": [
+					{
+						"word": "markup",
+						"count": 3
+					}
+				]
+			}
+		]
+	}
+]

@@ -25,18 +25,27 @@ reference `catalog:` only.
 
 ## Laws in practice
 
-- Single word: every file, directory, and declared name in scanned `.ts` is one
-  vocabulary atom (`vocabulary.toml` registers exceptions; keep it empty).
-- Block depth <= 4; path depth <= 4 from the module roots
+- Single word: every file, directory, and declared name in scanned sources is
+  one vocabulary atom (`vocabulary.toml` registers exceptions; keep it empty).
+- Block depth <= 4; markup depth <= 8; path depth <= 4 from the module roots
   (`apps/*/src`, `apps/*/tests`, `packages/*/src`, `packages/*/tests`).
-- No comments in `.ts` sources or configs.
+- No comments in scanned sources or configs.
+- Style declarations only under `packages/components/**`; apps consume
+  component classNames and declare nothing.
 
-## Deliberate blind spot
+## Closed blind spot
 
-`negentropy.toml` scans `apps/**/*.ts`, `packages/**/*.ts`, `docs/**/*.md` —
-NOT `.tsx`. The tsx grammar lands in a later negentropy release; until then
-keep `.tsx` surfaces thin (components and views only) so flipping the scan to
-include them is a one-line constitution change, not a refactor.
+The tsx and scss grammars landed in negentropy v0.2.0-beta.1; `negentropy.toml`
+scans `.ts`, `.tsx`, and `.scss` under `apps/` and `packages/` plus
+`docs/**/*.md`. Markup nesting is its own law: depth <= 8 per element tree.
+Keep `.tsx` surfaces thin anyway — components and views only.
+
+## Baked data
+
+`runseal :bake` runs `negentropy --vocabulary .` across the four sibling repos
+(`negentropy`, `runseal`, `sidecar`, `open-web`) and writes
+`apps/react/src/data/vocabulary.json`. The JSON is committed so the site works
+without re-baking; re-run after vocabulary-visible changes.
 
 ## Operating
 

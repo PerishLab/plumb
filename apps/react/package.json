@@ -11,7 +11,8 @@
 	"dependencies": {
 		"@open-web/components": "workspace:*",
 		"react": "catalog:",
-		"react-dom": "catalog:"
+		"react-dom": "catalog:",
+		"react-router": "catalog:"
 	},
 	"devDependencies": {
 		"@types/react": "catalog:",

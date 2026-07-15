@@ -1,0 +1,21 @@
+.nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1.25rem;
+	padding: 1.25rem 0;
+	margin-bottom: 2rem;
+	border-bottom: 1px solid #2a2f35;
+
+	a {
+		color: #9aa4af;
+		text-decoration: none;
+	}
+
+	a:hover {
+		color: #e8edf2;
+	}
+
+	a.active {
+		color: #e8edf2;
+	}
+}
