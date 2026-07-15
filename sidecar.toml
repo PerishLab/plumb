@@ -9,4 +9,4 @@ command = "pnpm"
 args = ["--filter", "@open-web/react", "dev", "--"]
 cwd = "."
 mode = "dev"
-health_url = "http://localhost:5173"
+health_url = "http://127.0.0.1:5173"

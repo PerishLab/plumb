@@ -9,7 +9,7 @@ const manifest = "sidecar.toml";
 
 function usage(): void {
   io.print("Usage: runseal :playwright <verb> [args]");
-  io.print("Usage: runseal :playwright -- <raw playwright-cli args>");
+  io.print("Usage: runseal :playwright raw <playwright-cli args>");
   io.print("");
   io.print("Perceive the react app through a project-specialized playwright-cli session.");
   io.print("");
@@ -19,7 +19,7 @@ function usage(): void {
   io.print("  console [level]   print console messages of the live page");
   io.print("  status            probe the app and list browser sessions");
   io.print("  close             close the browser session");
-  io.print("  -- <args>         run raw playwright-cli inside the project session");
+  io.print("  raw <args>        run raw playwright-cli inside the project session");
   io.print("");
   io.print("The app process belongs to sidecar; this wrapper never starts or stops it.");
 }
@@ -128,15 +128,18 @@ async function status(): Promise<void> {
   await cmd.run("pnpm", ["exec", "playwright-cli", "list"]);
 }
 
-const args = parseArgs(Deno.args, { boolean: ["help", "h", "all"] });
-const raw = (args["--"] ?? []) as string[];
-if (helpRequested(args) || (args._.length === 0 && raw.length === 0)) {
-  usage();
-  Deno.exit(0);
+if (Deno.args[0] === "raw") {
+  if (Deno.args.length === 1) {
+    usage();
+    Deno.exit(1);
+  }
+  Deno.exit(await cmd.status("pnpm", invocation(Deno.args.slice(1))));
 }
 
-if (raw.length > 0) {
-  Deno.exit(await cmd.status("pnpm", invocation(raw)));
+const args = parseArgs(Deno.args, { boolean: ["help", "h", "all"] });
+if (helpRequested(args) || args._.length === 0) {
+  usage();
+  Deno.exit(0);
 }
 
 const verb = String(args._[0]);

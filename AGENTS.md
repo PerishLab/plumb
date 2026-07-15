@@ -57,7 +57,7 @@ browser session, and passes everything else through untouched.
 - `shot <route...>` / `shot --all` — screenshots to `.local/playwright/shots/<route>.png`
 - `text <route...>` — accessibility snapshots to `.local/playwright/snaps/<route>.yml`
 - `console [level]` / `status` / `close` — live-page console, app+session state, teardown
-- `runseal :playwright -- <raw args>` — the full playwright-cli surface inside the session
+- `runseal :playwright raw <args>` — the full playwright-cli surface inside the session
 
 The app process belongs to sidecar (`sidecar.toml`); the wrapper only probes
 `health_url` and fails with a pointer when nothing serves. One-time setup:
