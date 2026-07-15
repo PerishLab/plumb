@@ -8,6 +8,7 @@
 	"scripts": {
 		"dev": "pnpm --filter @open-web/react dev",
 		"bake": "runseal :bake",
+		"ship": "runseal :ship",
 		"build": "pnpm -r build",
 		"test": "pnpm -r test",
 		"check": "biome check .",

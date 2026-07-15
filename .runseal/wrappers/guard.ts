@@ -50,6 +50,7 @@ await cmd.run("deno", [
   ".runseal/wrappers/guard.ts",
   ".runseal/wrappers/init.ts",
   ".runseal/wrappers/land.ts",
+  ".runseal/wrappers/ship.ts",
 ]);
 
 io.print("==> negentropy");
