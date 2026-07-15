@@ -74,4 +74,25 @@ for (const page of pages) {
 	writeFileSync(`${dir}/index.html`, html);
 }
 writeFileSync("dist/llms.txt", guide);
-console.log(`prerender: ${pages.length} routes + llms.txt`);
+
+const home = "https://harness.perish.uk";
+const robots = `User-agent: *
+Allow: /
+
+Sitemap: ${home}/sitemap.xml
+`;
+writeFileSync("dist/robots.txt", robots);
+
+const spots = pages
+	.map(
+		(page) =>
+			`\t<url><loc>${home}${page.path === "/" ? "/" : `${page.path}/`}</loc></url>`,
+	)
+	.join("\n");
+const atlas = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${spots}
+</urlset>
+`;
+writeFileSync("dist/sitemap.xml", atlas);
+console.log(`prerender: ${pages.length} routes + llms.txt + robots + sitemap`);

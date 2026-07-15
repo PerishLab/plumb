@@ -15,8 +15,7 @@ export function Ledger(props: Props) {
 			{props.atoms.map((atom) => (
 				<li key={atom.word}>
 					<span>{atom.word}</span>
-					<span className="tail" />
-					<span className="tally">{atom.count}</span>
+					<span className="tail" /> <span className="tally">{atom.count}</span>
 				</li>
 			))}
 		</ul>
