@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+	<title>open-web</title>
+	<rect x="1" y="1" width="62" height="62" rx="14" fill="#101214" stroke="#2a2f35" stroke-width="2"/>
+	<rect x="11" y="18" width="10" height="30" rx="3" fill="#7fb4e0"/>
+	<rect x="27" y="27" width="10" height="21" rx="3" fill="#9aa4af"/>
+	<rect x="43" y="36" width="10" height="12" rx="3" fill="#3a424b"/>
+</svg>

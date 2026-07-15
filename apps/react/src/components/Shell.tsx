@@ -6,6 +6,7 @@ export function Shell() {
 		<Frame>
 			<Nav>
 				<NavLink to="/" end>
+					<img src="/favicon.svg" alt="" width="18" height="18" />
 					open-web
 				</NavLink>
 				<NavLink to="/negentropy">negentropy</NavLink>

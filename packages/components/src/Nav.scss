@@ -7,6 +7,9 @@
 	border-bottom: 1px solid #2a2f35;
 
 	a {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
 		color: #9aa4af;
 		text-decoration: none;
 	}
