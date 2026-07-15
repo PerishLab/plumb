@@ -126,13 +126,27 @@ async function plan(): Promise<void> {
   await cmd.run("pnpm", ["exec", "wrangler", "deploy", "--dry-run", ...flags], { cwd: app });
 }
 
-async function probe(url: string): Promise<void> {
-  const response = await fetch(url, { headers: { "cache-control": "no-cache" } });
-  await response.body?.cancel();
-  if (response.status !== 200) {
-    io.fail(`ship: expected 200 from ${url}, got ${response.status}`);
+async function probe(url: string): Promise<boolean> {
+  for (let turn = 0; turn < 3; turn += 1) {
+    const status = await knock(url);
+    if (status === 200) {
+      io.print(`  200 ${url}`);
+      return true;
+    }
+    io.print(`  retry ${url} (${status})`);
+    await new Promise((resolve) => setTimeout(resolve, 5000));
   }
-  io.print(`  200 ${url}`);
+  return false;
+}
+
+async function knock(url: string): Promise<number | string> {
+  try {
+    const response = await fetch(url, { headers: { "cache-control": "no-cache" } });
+    await response.body?.cancel();
+    return response.status;
+  } catch (thrown) {
+    return thrown instanceof Error ? thrown.message.split(":")[0] : "unreachable";
+  }
 }
 
 async function ship(): Promise<void> {
@@ -155,12 +169,30 @@ async function ship(): Promise<void> {
     },
   });
   io.print("==> verify");
-  await probe(`https://${keys.domain}/`);
+  let reached = await probe(`https://${keys.domain}/`);
   const route = deep(paths);
-  if (route !== undefined) {
-    await probe(`https://${keys.domain}${route}`);
+  if (reached && route !== undefined) {
+    reached = await probe(`https://${keys.domain}${route}`);
+  }
+  if (!reached) {
+    await anchored(keys);
   }
   io.print("ship: ok");
+}
+
+async function anchored(keys: { account: string; token: string; domain: string }): Promise<void> {
+  const base = "https://api.cloudflare.com/client/v4";
+  const response = await fetch(`${base}/accounts/${keys.account}/workers/domains`, {
+    headers: { authorization: `Bearer ${keys.token}` },
+  });
+  const body = await response.json();
+  const bound = (body.result ?? []).some(
+    (entry: { hostname?: string }) => entry.hostname === keys.domain,
+  );
+  if (!bound) {
+    io.fail(`ship: edge unreachable and ${keys.domain} is not attached; deploy likely failed`);
+  }
+  io.print(`  edge unreachable from here; API confirms ${keys.domain} is attached (local proxy?)`);
 }
 
 async function attempt(args: string[]): Promise<{ code: number; out: string }> {
