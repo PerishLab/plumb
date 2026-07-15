@@ -1,4 +1,4 @@
-import { Card, Grid, Hero, Ledger, Search } from "@open-web/components";
+import { Card, Grid, Hero, Ledger, List, Search } from "@open-web/components";
 import { useState } from "react";
 import vocabulary from "../data/vocabulary.json";
 import { type Entry, type Root, sift } from "../lib/sift";
@@ -17,11 +17,23 @@ function Rack(props: { root: Root }) {
 function Shelf(props: { entry: Entry }) {
 	return (
 		<section>
-			<h2>{props.entry.repo}</h2>
+			<h2 id={props.entry.repo}>{props.entry.repo}</h2>
 			{props.entry.roots.map((root) => (
 				<Rack key={root.root} root={root} />
 			))}
 		</section>
+	);
+}
+
+export function Jump(props: { entries: Entry[] }) {
+	return (
+		<List>
+			{props.entries.map((entry) => (
+				<li key={entry.repo}>
+					<a href={`#${entry.repo}`}>{entry.repo}</a>
+				</li>
+			))}
+		</List>
 	);
 }
 
@@ -63,6 +75,7 @@ export function Vocabulary() {
 				</Card>
 			</Grid>
 			<h2 id="atoms">the atoms</h2>
+			<Jump entries={entries} />
 			<Search value={query} change={update} hint="filter atoms" />
 			{entries.length === 0 ? <p>no atoms match "{query}".</p> : null}
 			{entries.map((entry) => (
