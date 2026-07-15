@@ -57,21 +57,23 @@ export function Sidecar() {
 				<Badge>manifest</Badge> <Badge>stamp</Badge> <Badge>broker</Badge>{" "}
 				<Badge>inspect</Badge>
 			</p>
-			<h2>quickstart</h2>
-			<Code copy>{start}</Code>
+			<h2 id="quickstart">quickstart</h2>
+			<Code name="install" copy>
+				{start}
+			</Code>
 			<p>
 				manage.sh fetches the released binary from R2 into ~/.local/bin — linux,
 				macos, and windows. the lifecycle contract is one manifest at the repo
 				root. this one runs anywhere python runs — the port is leased at start
 				and handed to the target as SIDECAR_PORT:
 			</p>
-			<Code>{manifest}</Code>
+			<Code name="sidecar.toml">{manifest}</Code>
 			<Code>{session}</Code>
 			<p>
 				and the same contract in production: the page you are reading was served
 				through a port leased exactly this way, from this site's own manifest.
 			</p>
-			<Code>{living}</Code>
+			<Code name="sidecar.toml">{living}</Code>
 			<Grid>
 				<Card title="manifest">
 					<p>

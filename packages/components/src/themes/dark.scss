@@ -1,3 +1,5 @@
+@use "../media";
+
 :root {
 	--ground: #0f1115;
 	--panel: #151a21;
@@ -21,6 +23,9 @@
 	--radius: 0.5rem;
 	--bead: 1rem;
 	--line: 1px;
+	--beat: 150ms;
+	--rim: 2px;
+	--dent: 2;
 	--leading: 1.6;
 	--tight: 1.2;
 	--heft: 600;
@@ -31,4 +36,11 @@
 	--prose: 42rem;
 	--cell: 15rem;
 	--track: -0.01em;
+}
+
+@include media.narrow {
+	:root {
+		--hero: 2rem;
+		--space-6: 3rem;
+	}
 }

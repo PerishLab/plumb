@@ -171,6 +171,24 @@
 	inherits: true;
 }
 
+@property --beat {
+	syntax: "<time>";
+	inherits: true;
+	initial-value: 0s;
+}
+
+@property --rim {
+	syntax: "<length>";
+	inherits: true;
+	initial-value: 0px;
+}
+
+@property --dent {
+	syntax: "<number>";
+	inherits: true;
+	initial-value: 0;
+}
+
 @property --leading {
 	syntax: "<number>";
 	inherits: true;

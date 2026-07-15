@@ -12,6 +12,12 @@ type = "env"
 [injections.vars]
 APP_DATA_DIR = "resource://data"`;
 
+const wrapper = `const target = Deno.env.get("APP_DATA_DIR");
+console.log(\`hello - the profile says data lives at \${target}\`);`;
+
+const flight = `$ runseal :hello
+hello - the profile says data lives at ~/app/.local/data`;
+
 const session = `$ runseal @resolve resource://data
 ~/app/.local/data
 
@@ -50,15 +56,23 @@ export function Runseal() {
 				<Badge>env</Badge> <Badge>symlink</Badge> <Badge>argv</Badge>{" "}
 				<Badge>deno</Badge>
 			</p>
-			<h2>quickstart</h2>
-			<Code copy>{start}</Code>
+			<h2 id="quickstart">quickstart</h2>
+			<Code name="install" copy>
+				{start}
+			</Code>
 			<p>
 				manage.sh fetches the released binary from R2 into ~/.local/bin — linux,
 				macos, and windows. then declare a profile at the repo root
 				(runseal.toml) and every command you run through runseal sees it:
 			</p>
-			<Code>{profile}</Code>
+			<Code name="runseal.toml">{profile}</Code>
 			<Code>{session}</Code>
+			<p>
+				name a flow once and it becomes a verb: a wrapper is a deno file under
+				.runseal/wrappers, run under the profile's declared permission policy.
+			</p>
+			<Code name=".runseal/wrappers/hello.ts">{wrapper}</Code>
+			<Code>{flight}</Code>
 			<Grid>
 				<Card title="routing">
 					<p>

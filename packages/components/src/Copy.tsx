@@ -1,3 +1,4 @@
+import { useState } from "react";
 import "./Copy.scss";
 
 type Props = {
@@ -5,13 +6,19 @@ type Props = {
 };
 
 export function Copy(props: Props) {
+	const [done, flip] = useState(false);
+	const grab = () => {
+		navigator.clipboard.writeText(props.text);
+		flip(true);
+		setTimeout(() => flip(false), 1600);
+	};
 	return (
 		<button
-			className="copy"
+			className={done ? "copy done" : "copy"}
 			type="button"
-			onClick={() => navigator.clipboard.writeText(props.text)}
+			onClick={grab}
 		>
-			copy
+			{done ? "copied" : "copy"}
 		</button>
 	);
 }

@@ -34,7 +34,7 @@ export function Vocabulary() {
 				title="vocabulary"
 				text="the living dictionary: every atom declared across the three tools and this site, grouped by module root, counted on every bake, and judged by case law."
 			/>
-			<h2>case law</h2>
+			<h2 id="rulings">case law</h2>
 			<p>
 				single word only works against a living dictionary: agents maintain
 				vocabulary deltas alongside code diffs, a registered compound demands a
@@ -62,8 +62,9 @@ export function Vocabulary() {
 					</p>
 				</Card>
 			</Grid>
-			<h2>the atoms</h2>
+			<h2 id="atoms">the atoms</h2>
 			<Search value={query} change={update} hint="filter atoms" />
+			{entries.length === 0 ? <p>no atoms match "{query}".</p> : null}
 			{entries.map((entry) => (
 				<Shelf key={entry.repo} entry={entry} />
 			))}

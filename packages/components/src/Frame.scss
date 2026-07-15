@@ -1,9 +1,37 @@
+@use "./media";
+
 body {
 	margin: 0;
 	background: var(--ground);
 	color: var(--ink);
 	font-family: var(--sans);
 	line-height: var(--leading);
+}
+
+::selection {
+	background: var(--accent);
+	color: var(--ground);
+}
+
+:focus-visible {
+	outline: var(--rim) solid var(--accent);
+	outline-offset: var(--rim);
+}
+
+.skip {
+	position: fixed;
+	top: 0;
+	left: 0;
+	padding: var(--space-2) var(--space-3);
+	background: var(--panel);
+	color: var(--bright);
+	opacity: 0;
+	pointer-events: none;
+}
+
+.skip:focus {
+	opacity: 1;
+	pointer-events: auto;
 }
 
 .frame {
@@ -23,6 +51,7 @@ body {
 	h2 {
 		margin: var(--space-5) 0 var(--space-3);
 		font-size: var(--title);
+		scroll-margin-top: var(--space-4);
 	}
 
 	h3 code {
@@ -32,11 +61,29 @@ body {
 		color: var(--muted);
 	}
 
+	article > p {
+		max-width: var(--prose);
+	}
+
 	a {
 		color: var(--accent);
+		transition: color var(--beat);
+	}
+
+	a:hover {
+		color: var(--bright);
 	}
 
 	code {
 		font-family: var(--mono);
+	}
+}
+
+@include media.calm {
+	.frame a,
+	.copy,
+	.nav a,
+	.forge {
+		transition: none;
 	}
 }

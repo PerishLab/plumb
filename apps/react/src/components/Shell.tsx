@@ -13,6 +13,9 @@ export function Shell() {
 	}, [spot]);
 	return (
 		<Frame>
+			<a className="skip" href="#main">
+				skip to content
+			</a>
 			<Nav>
 				<NavLink to="/" end>
 					<img src="/favicon.svg" alt="" width="18" height="18" />
@@ -24,7 +27,9 @@ export function Shell() {
 				<NavLink to="/constitution">constitution</NavLink>
 				<NavLink to="/vocabulary">vocabulary</NavLink>
 			</Nav>
-			<Outlet />
+			<main id="main">
+				<Outlet />
+			</main>
 			<Footer>
 				<Forge repo="PerishCode/negentropy" />
 				<Forge repo="PerishCode/runseal" />

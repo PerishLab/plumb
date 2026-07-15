@@ -1,7 +1,4 @@
 .copy {
-	position: absolute;
-	top: var(--space-2);
-	right: var(--space-2);
 	padding: var(--space-1) var(--space-2);
 	border: var(--line) solid var(--rule);
 	border-radius: var(--radius);
@@ -10,9 +7,15 @@
 	font-family: var(--mono);
 	font-size: var(--fine);
 	cursor: pointer;
+	transition: color var(--beat), border-color var(--beat);
 }
 
 .copy:hover {
 	color: var(--bright);
+	border-color: var(--accent);
+}
+
+.copy.done {
+	color: var(--accent);
 	border-color: var(--accent);
 }

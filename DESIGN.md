@@ -18,17 +18,18 @@ All four live in `packages/components/src`, the style territory.
   the repository where a design literal (hex, rem, ms) may appear. Compile-time
   scss locals may dedupe values inside a theme; they never leave the file.
 - `media.scss` — **defines the seams**. The only home of `@media`, spelled
-  once per seam as a mixin (`wide` / `narrow`, one seam at 48rem); it also
-  flips the `--seam` marker so the runtime can ask which world it is in
-  without ever learning the numbers. Media states are enumerated worlds,
-  like themes on the viewport axis — not a breakpoint ladder.
+  once per seam as a mixin (`wide` / `narrow`, one seam at 48rem; `calm`
+  for prefers-reduced-motion); it also flips the `--seam` marker so the
+  runtime can ask which world it is in without ever learning the numbers.
+  Media states are enumerated worlds, like themes on the viewport axis —
+  not a breakpoint ladder.
 - `<Atom>.scss` — **consumes**. Component sheets speak `var()` plus the
   enum whitelist below, and reference seams only via the media mixins.
   No literals, no raw `@media`, ever.
 
 ## The token table
 
-33 seats. Every seat is used by a living component; an unused token is a
+36 seats. Every seat is used by a living component; an unused token is a
 squatter and gets evicted.
 
 | dimension | tokens | rationale |
@@ -43,14 +44,17 @@ squatter and gets evicted.
 | face | `sans` `serif` `mono` | the workaday voice, the statute voice, the ledger |
 | measure | `page` `prose` `cell` | page width, reading width, grid cell |
 | track | `track` | the inscription's letter squeeze |
+| motion | `beat` | one transition duration; easings stay keywords |
+| focus | `rim` | the focus ring's width and offset |
+| indent | `dent` | one tab width for transcripts |
 | seam | `seam` | the runtime-readable media marker |
 
 ## The whitelist
 
 Atom sheets may use, beyond `var()`: CSS keyword enums (`flex`, `grid`,
 `inline-flex`, `inline-block`, `wrap`, `center`, `none`, `auto`, `pointer`,
-`border-box`, `hidden`, and their peers) and the identity values `0`, `100%`,
-`1fr`. **No unit literal is ever whitelisted** — the moment a rule wants a
+`border-box`, `hidden`, and their peers) and the identity values `0`, `1`,
+`100%`, `1fr`. **No unit literal is ever whitelisted** — the moment a rule wants a
 number with a unit, it wants a token.
 
 ## The consumption ladder
@@ -77,6 +81,18 @@ reads the `--seam` marker and mounts exactly one incarnation. Size, density,
 and spacing never justify a fork — they are rung 2. Forks are expected to be
 rare; a crowd at rung 4 means the seam is wrong or the design is fighting
 the carrier.
+
+## States and feedback
+
+The static face is half the law; the other half is how it answers a hand.
+
+- Every interactive atom declares its three states: hover, focus-visible,
+  active or done. The focus ring is `rim` + `accent`, everywhere the same.
+- An action that changes unseen state must confess on the surface: the copy
+  button says "copied"; silence is a defect, not minimalism.
+- Motion passes through the `beat` token and nothing else; the `calm` seam
+  (prefers-reduced-motion) stills all of it. One duration, quiet easings —
+  transitions are the difference between still and dead, not decoration.
 
 ## Naming
 

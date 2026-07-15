@@ -43,6 +43,9 @@ const mended = `export function tally(rows: number[][][]): number {
 const clean = `$ negentropy --strict .
 clean`;
 
+const lexicon = `[compound]
+dataset = "the industry's own word; data-set reads worse"`;
+
 const contract = `# AGENTS.md
 This repository is a constitution-era web workspace.
 \`negentropy --strict .\` must print \`clean\` before anything lands.`;
@@ -75,39 +78,45 @@ export function Negentropy() {
 				<Badge>rust</Badge> <Badge>typescript</Badge> <Badge>tsx</Badge>{" "}
 				<Badge>scss</Badge> <Badge>markdown</Badge>
 			</p>
-			<h2>quickstart</h2>
-			<Code copy>{start}</Code>
+			<h2 id="quickstart">quickstart</h2>
+			<Code name="install" copy>
+				{start}
+			</Code>
 			<p>
 				manage.sh fetches the released binary from R2 into ~/.local/bin — linux
 				x86_64 today, more targets as the runner pool grows. on an existing repo
 				start with negentropy --debt . to see the bill before strict makes it
 				fatal. laws and territories are declared per repo in negentropy.toml:
 			</p>
-			<Code>{config}</Code>
-			<h2>the loop</h2>
+			<Code name="negentropy.toml">{config}</Code>
+			<h2 id="loop">the loop</h2>
 			<p>
 				the premise, demonstrated. an agent wrote two violations in eight lines
 				— a compound name and a block one idea too deep:
 			</p>
-			<Code>{fixture}</Code>
+			<Code name="src/helper.ts">{fixture}</Code>
 			<Code>{finding}</Code>
 			<p>
 				the checker priced the entropy; the agent paid it down — a single word
 				that resolves, a shape that is flat:
 			</p>
-			<Code>{mended}</Code>
+			<Code name="src/helper.ts">{mended}</Code>
 			<Code>{clean}</Code>
 			<p>
 				every transcript on this page is a real run. this loop — write, judge,
-				restructure, clean — is what the workshop is for.
+				restructure, clean — is what the workshop is for. and when the compound
+				truly is the industry's word, the other exit is honest too: register it
+				with a rationale in vocabulary.toml, and the dictionary delta rides the
+				same PR.
 			</p>
-			<h2>where the law sits</h2>
+			<Code name="vocabulary.toml">{lexicon}</Code>
+			<h2 id="seats">where the law sits</h2>
 			<p>
 				an agent does not obey documents; it obeys gates. the law binds at four
 				seats, and the contract is one line — this is the actual first line an
 				agent reads before touching this site's source:
 			</p>
-			<Code>{contract}</Code>
+			<Code name="AGENTS.md">{contract}</Code>
 			<Grid>
 				<Card title="session">
 					<p>

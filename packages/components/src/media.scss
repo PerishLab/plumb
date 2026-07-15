@@ -22,3 +22,9 @@ $edge: 47.9375rem;
 		@content;
 	}
 }
+
+@mixin calm {
+	@media (prefers-reduced-motion: reduce) {
+		@content;
+	}
+}
