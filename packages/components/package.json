@@ -9,6 +9,7 @@
 		"test": "vitest run"
 	},
 	"dependencies": {
+		"@fontsource/spectral": "catalog:",
 		"react": "catalog:"
 	},
 	"devDependencies": {

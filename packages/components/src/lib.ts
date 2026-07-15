@@ -5,6 +5,7 @@ export { Code } from "./Code";
 export { Frame } from "./Frame";
 export { Grid } from "./Grid";
 export { Hero } from "./Hero";
+export { Ledger } from "./Ledger";
 export { List } from "./List";
 export { Nav } from "./Nav";
 export { Search } from "./Search";

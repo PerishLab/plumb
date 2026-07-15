@@ -11,6 +11,27 @@ body {
 	margin: 0 auto;
 	padding: 0 var(--space-4) var(--space-6);
 
+	h1,
+	h2,
+	h3 {
+		font-family: var(--serif);
+		font-weight: var(--heft);
+		line-height: var(--tight);
+		letter-spacing: var(--track);
+	}
+
+	h2 {
+		margin: var(--space-5) 0 var(--space-3);
+		font-size: var(--title);
+	}
+
+	h3 code {
+		font-family: var(--mono);
+		font-weight: normal;
+		font-size: var(--fine);
+		color: var(--muted);
+	}
+
 	a {
 		color: var(--accent);
 	}

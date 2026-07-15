@@ -1,4 +1,4 @@
-import { Badge, Hero, List, Search } from "@open-web/components";
+import { Hero, Ledger, Search } from "@open-web/components";
 import { useState } from "react";
 import vocabulary from "../data/vocabulary.json";
 import { type Entry, type Root, sift } from "../lib/sift";
@@ -9,14 +9,7 @@ function Rack(props: { root: Root }) {
 			<h3>
 				<code>{props.root.root}</code>
 			</h3>
-			<List>
-				{props.root.atoms.map((atom) => (
-					<li key={atom.word}>
-						{atom.word}
-						<Badge>{atom.count}</Badge>
-					</li>
-				))}
-			</List>
+			<Ledger atoms={props.root.atoms} />
 		</section>
 	);
 }

@@ -1,15 +1,16 @@
 .hero {
-	padding: var(--space-4) 0 var(--space-3);
+	padding: var(--space-5) 0 var(--space-3);
 
 	h1 {
-		margin: 0 0 var(--space-2);
+		margin: 0 0 var(--space-3);
 		font-size: var(--hero);
-		letter-spacing: var(--track);
+		text-wrap: balance;
 	}
 
 	p {
 		margin: 0 0 var(--space-3);
 		max-width: var(--prose);
+		font-size: var(--lead);
 		color: var(--muted);
 	}
 }

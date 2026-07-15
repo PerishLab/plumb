@@ -1,0 +1,27 @@
+.ledger {
+	columns: var(--cell);
+	column-gap: var(--space-5);
+	margin: var(--space-3) 0 var(--space-5);
+	padding: 0;
+	list-style: none;
+	font-family: var(--mono);
+	font-size: var(--fine);
+
+	li {
+		display: flex;
+		align-items: baseline;
+		gap: var(--space-2);
+		break-inside: avoid;
+		padding: var(--space-1) 0;
+	}
+
+	.tail {
+		flex: auto;
+		border-bottom: var(--line) dotted var(--rule);
+	}
+
+	.tally {
+		color: var(--muted);
+		font-variant-numeric: tabular-nums;
+	}
+}

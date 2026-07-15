@@ -9,6 +9,9 @@ catalogs:
     '@biomejs/biome':
       specifier: 2.5.3
       version: 2.5.3
+    '@fontsource/spectral':
+      specifier: 5.2.8
+      version: 5.2.8
     '@playwright/cli':
       specifier: 0.1.17
       version: 0.1.17
@@ -105,6 +108,9 @@ importers:
 
   packages/components:
     dependencies:
+      '@fontsource/spectral':
+        specifier: 'catalog:'
+        version: 5.2.8
       react:
         specifier: 'catalog:'
         version: 19.2.7
@@ -401,6 +407,9 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@fontsource/spectral@5.2.8':
+    resolution: {integrity: sha512-0CqZ8/z8A38BdeSz5t2NSd5tCO1R9P1k7SF2VpRLMbZTMSSR6+2Dk0ZBMfEQK/IrBLQS1HgHLMqpdTwRpnKpGQ==}
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -1548,6 +1557,8 @@ snapshots:
 
   '@esbuild/win32-x64@0.28.1':
     optional: true
+
+  '@fontsource/spectral@5.2.8': {}
 
   '@img/colour@1.1.0': {}
 

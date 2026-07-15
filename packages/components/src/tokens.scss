@@ -142,6 +142,35 @@
 	initial-value: 0px;
 }
 
+@property --lead {
+	syntax: "<length>";
+	inherits: true;
+	initial-value: 0px;
+}
+
+@property --title {
+	syntax: "<length>";
+	inherits: true;
+	initial-value: 0px;
+}
+
+@property --tight {
+	syntax: "<number>";
+	inherits: true;
+	initial-value: 0;
+}
+
+@property --heft {
+	syntax: "<number>";
+	inherits: true;
+	initial-value: 0;
+}
+
+@property --serif {
+	syntax: "*";
+	inherits: true;
+}
+
 @property --leading {
 	syntax: "<number>";
 	inherits: true;

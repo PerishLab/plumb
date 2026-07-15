@@ -5,6 +5,8 @@
 	padding: var(--space-4) 0;
 	margin-bottom: var(--space-5);
 	border-bottom: var(--line) solid var(--rule);
+	font-family: var(--mono);
+	font-size: var(--fine);
 
 	a {
 		display: inline-flex;
@@ -20,5 +22,8 @@
 
 	a.active {
 		color: var(--bright);
+		text-decoration: underline;
+		text-decoration-color: var(--accent);
+		text-underline-offset: var(--space-2);
 	}
 }

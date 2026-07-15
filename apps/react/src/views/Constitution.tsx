@@ -17,6 +17,11 @@ const laws = [
 		text: "scope nesting past four is a fault.",
 	},
 	{
+		name: "markup",
+		kind: "fault",
+		text: "element nesting past eight in one element tree is a fault; markup is its own axis, neither scope nor literal.",
+	},
+	{
 		name: "comment",
 		kind: "fault",
 		text: "comments are denied by default; each one is a fault.",
@@ -24,7 +29,7 @@ const laws = [
 	{
 		name: "grant",
 		kind: "fault",
-		text: "granted syntax outside its declared territory is a fault; test syntax is the first class.",
+		text: "granted syntax outside its declared territory is a fault; test and style are the granted classes.",
 	},
 	{
 		name: "dispatch",
@@ -48,7 +53,7 @@ export function Constitution() {
 		<article>
 			<Hero
 				title="constitution"
-				text="eight laws judge a codebase, each landing in one of three classes: a fault fails the run, debt is reported and tolerated, and a blindspot marks an unparsed region."
+				text="nine laws judge a codebase, each landing in one of three classes: a fault fails the run, debt is reported and tolerated, and a blindspot marks an unparsed region."
 			/>
 			<Grid>
 				{laws.map((law) => (

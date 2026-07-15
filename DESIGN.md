@@ -28,18 +28,19 @@ All four live in `packages/components/src`, the style territory.
 
 ## The token table
 
-28 seats. Every seat is used by a living component; an unused token is a
+33 seats. Every seat is used by a living component; an unused token is a
 squatter and gets evicted.
 
 | dimension | tokens | rationale |
 | --- | --- | --- |
 | color | `ground` `panel` `well` `rule` `ink` `bright` `muted` `accent` | the page, its raised and sunken surfaces, one line color, three text voices, one accent |
-| type | `fine` `body` `hero` | small print, prose, inscription — three sizes, no ladder |
+| type | `fine` `body` `lead` `title` `hero` | small print, prose, the hero's deck, section heads, inscription |
 | space | `space-1` … `space-6` | 0.25 / 0.5 / 1 / 1.5 / 2 / 4 rem — a countable gamut |
 | radius | `radius` `bead` | the corner and the pill |
 | line | `line` | one stroke width |
-| leading | `leading` | one rhythm |
-| face | `sans` `mono` | the voice and the ledger |
+| leading | `leading` `tight` | prose rhythm and heading rhythm |
+| weight | `heft` | one heading weight |
+| face | `sans` `serif` `mono` | the workaday voice, the statute voice, the ledger |
 | measure | `page` `prose` `cell` | page width, reading width, grid cell |
 | track | `track` | the inscription's letter squeeze |
 | seam | `seam` | the runtime-readable media marker |

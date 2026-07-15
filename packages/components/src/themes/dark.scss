@@ -1,15 +1,17 @@
 :root {
-	--ground: #101214;
-	--panel: #16191d;
-	--well: #0b0d0f;
-	--rule: #2a2f35;
-	--ink: #d6dbe1;
-	--bright: #e8edf2;
-	--muted: #9aa4af;
+	--ground: #0f1115;
+	--panel: #151a21;
+	--well: #0b0e12;
+	--rule: #262d36;
+	--ink: #cfd6dd;
+	--bright: #eef2f6;
+	--muted: #8b96a2;
 	--accent: #7fb4e0;
 	--fine: 0.875rem;
 	--body: 1rem;
-	--hero: 2rem;
+	--lead: 1.125rem;
+	--title: 1.25rem;
+	--hero: 2.5rem;
 	--space-1: 0.25rem;
 	--space-2: 0.5rem;
 	--space-3: 1rem;
@@ -20,10 +22,13 @@
 	--bead: 1rem;
 	--line: 1px;
 	--leading: 1.6;
+	--tight: 1.2;
+	--heft: 600;
 	--sans: system-ui, sans-serif;
+	--serif: "Spectral", Georgia, serif;
 	--mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 	--page: 60rem;
 	--prose: 42rem;
 	--cell: 15rem;
-	--track: -0.02em;
+	--track: -0.01em;
 }

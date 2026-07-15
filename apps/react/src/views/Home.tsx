@@ -12,7 +12,7 @@ export function Home() {
 			<Grid>
 				<Card title="negentropy">
 					<p>
-						a grammar-first structural checker enforcing an eight-law
+						a grammar-first structural checker enforcing a nine-law
 						constitution: single-word names, shallow blocks and paths, denied
 						comments, granted syntax, and a vocabulary that never freezes.
 					</p>
@@ -38,7 +38,7 @@ export function Home() {
 			<Grid>
 				<Card title="constitution">
 					<p>
-						the eight laws every repo in this workshop answers to, and the
+						the nine laws every repo in this workshop answers to, and the
 						stability promise that prices change.
 					</p>
 					<Link to="/constitution">read the laws</Link>
