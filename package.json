@@ -6,15 +6,13 @@
 	},
 	"packageManager": "pnpm@11.13.0",
 	"scripts": {
-		"dev": "pnpm --filter @open-web/react dev",
-		"bake": "runseal :bake",
-		"ship": "runseal :ship",
 		"build": "pnpm -r build",
 		"test": "pnpm -r test",
 		"check": "biome check .",
 		"typecheck": "pnpm -r exec tsc --noEmit"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "catalog:"
+		"@biomejs/biome": "catalog:",
+		"@playwright/cli": "catalog:"
 	}
 }

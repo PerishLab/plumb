@@ -1,4 +1,5 @@
 .task/
 .local/
+.playwright-cli/
 node_modules/
 dist/

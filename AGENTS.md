@@ -47,9 +47,25 @@ Keep `.tsx` surfaces thin anyway — components and views only.
 `apps/react/src/data/vocabulary.json`. The JSON is committed so the site works
 without re-baking; re-run after vocabulary-visible changes.
 
+## Perceiving
+
+`runseal :playwright` is the project-specialized path of playwright-cli
+(`@playwright/cli`, catalog-pinned): it binds the routes table, the sidecar
+`health_url`, and the artifact home `.local/playwright/` into an `openweb`
+browser session, and passes everything else through untouched.
+
+- `shot <route...>` / `shot --all` — screenshots to `.local/playwright/shots/<route>.png`
+- `text <route...>` — accessibility snapshots to `.local/playwright/snaps/<route>.yml`
+- `console [level]` / `status` / `close` — live-page console, app+session state, teardown
+- `runseal :playwright -- <raw args>` — the full playwright-cli surface inside the session
+
+The app process belongs to sidecar (`sidecar.toml`); the wrapper only probes
+`health_url` and fails with a pointer when nothing serves. One-time setup:
+`pnpm exec playwright-cli install-browser chromium` (headless shell, ~115 MiB).
+
 ## Shipping
 
-`pnpm ship` (`runseal :ship`) deploys the site as Cloudflare Workers Static
+`runseal :ship` deploys the site as Cloudflare Workers Static
 Assets — SPA routing is the worker's home turf; R2 keeps the release-artifact
 role only:
 
