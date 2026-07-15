@@ -5,7 +5,6 @@ import { io } from "@/lib/std/io.ts";
 const session = "openweb";
 const home = ".local/playwright";
 const table = "apps/react/src/lib/routes.ts";
-const manifest = "sidecar.toml";
 
 function usage(): void {
   io.print("Usage: runseal :playwright <verb> [args]");
@@ -24,13 +23,16 @@ function usage(): void {
   io.print("The app process belongs to sidecar; this wrapper never starts or stops it.");
 }
 
+type Slot = { running?: boolean; healthUrl?: string | null };
+
 async function base(): Promise<string> {
-  const text = await Deno.readTextFile(manifest);
-  const found = text.match(/health_url\s*=\s*"([^"]+)"/);
-  if (found === null) {
-    return io.fail(`playwright: no health_url found in ${manifest}`);
+  const text = await cmd.text("sidecar", ["status", "--format", "json"]);
+  const status = JSON.parse(text) as { targets?: Slot[] };
+  const found = (status.targets ?? []).find((slot) => typeof slot.healthUrl === "string");
+  if (found === undefined || found.running !== true || typeof found.healthUrl !== "string") {
+    return io.fail("playwright: the app is not running; start it through sidecar first");
   }
-  return found[1].replace(/\/+$/, "");
+  return found.healthUrl.replace(/\/+$/, "");
 }
 
 async function routes(): Promise<string[]> {

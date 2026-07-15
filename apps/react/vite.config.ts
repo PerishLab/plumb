@@ -5,6 +5,7 @@ export default defineConfig({
 	plugins: [react()],
 	server: {
 		host: "127.0.0.1",
+		port: Number(process.env.SIDECAR_PORT ?? 5173),
 		strictPort: true,
 	},
 });
