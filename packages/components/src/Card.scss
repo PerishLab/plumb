@@ -1,18 +1,18 @@
 .card {
-	padding: 1.25rem;
-	border: 1px solid #2a2f35;
-	border-radius: 0.5rem;
-	background: #16191d;
+	padding: var(--space-4);
+	border: var(--line) solid var(--rule);
+	border-radius: var(--radius);
+	background: var(--panel);
 
 	h3 {
-		margin: 0 0 0.5rem;
-		font-size: 1rem;
+		margin: 0 0 var(--space-2);
+		font-size: var(--body);
 	}
 
 	p {
-		margin: 0 0 0.75rem;
-		font-size: 0.9rem;
-		color: #9aa4af;
+		margin: 0 0 var(--space-2);
+		font-size: var(--fine);
+		color: var(--muted);
 	}
 
 	p:last-child {
@@ -20,6 +20,6 @@
 	}
 
 	a {
-		font-size: 0.9rem;
+		font-size: var(--fine);
 	}
 }

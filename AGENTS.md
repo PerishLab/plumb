@@ -20,6 +20,10 @@ reference `catalog:` only.
 
 - Style: only `packages/components` owns style declarations. A component
   imports its own `.scss` sibling. Apps contain zero `.scss` files.
+- Design: DESIGN.md is the design constitution — four organs
+  (tokens/themes/media/atoms), a 28-seat token table, an enum whitelist,
+  a four-rung consumption ladder, and the fork law. Read it before touching
+  any `.scss` or adding UI.
 - Tests: vitest over `tests/**/*.test.ts` per package; the constitution grants
   test syntax only on those paths.
 

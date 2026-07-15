@@ -1,10 +1,10 @@
 .code {
-	padding: 1rem 1.25rem;
-	border: 1px solid #2a2f35;
-	border-radius: 0.5rem;
-	background: #0b0d0f;
+	padding: var(--space-3) var(--space-4);
+	border: var(--line) solid var(--rule);
+	border-radius: var(--radius);
+	background: var(--well);
 	overflow-x: auto;
-	font-size: 0.85rem;
-	line-height: 1.55;
-	color: #c7d0d9;
+	font-size: var(--fine);
+	line-height: var(--leading);
+	color: var(--ink);
 }

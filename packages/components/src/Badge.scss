@@ -1,8 +1,8 @@
 .badge {
 	display: inline-block;
-	padding: 0 0.5rem;
-	border: 1px solid #2a2f35;
-	border-radius: 1rem;
-	font-size: 0.75rem;
-	color: #9aa4af;
+	padding: 0 var(--space-2);
+	border: var(--line) solid var(--rule);
+	border-radius: var(--bead);
+	font-size: var(--fine);
+	color: var(--muted);
 }
