@@ -1,8 +1,7 @@
 .card {
-	padding: var(--space-4);
-	border: var(--line) solid var(--rule);
-	border-radius: var(--radius);
-	background: var(--panel);
+	padding: var(--space-1) 0 var(--space-1) var(--space-3);
+	border-left: var(--rim) solid var(--rule);
+	transition: border-color var(--beat);
 
 	h3 {
 		margin: 0 0 var(--space-2);
@@ -22,4 +21,8 @@
 	a {
 		font-size: var(--fine);
 	}
+}
+
+.card:hover {
+	border-left-color: var(--accent);
 }

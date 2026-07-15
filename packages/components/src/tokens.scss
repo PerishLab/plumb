@@ -189,6 +189,12 @@
 	initial-value: 0;
 }
 
+@property --mist {
+	syntax: "<number>";
+	inherits: true;
+	initial-value: 0;
+}
+
 @property --leading {
 	syntax: "<number>";
 	inherits: true;

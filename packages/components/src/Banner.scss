@@ -1,4 +1,7 @@
+@use "./media";
+
 .banner {
+	position: relative;
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -23,5 +26,21 @@
 		align-items: center;
 		gap: var(--space-3);
 		margin-left: auto;
+	}
+
+	.ghost {
+		position: absolute;
+		top: var(--space-5);
+		right: 0;
+		width: var(--space-6);
+		height: auto;
+		opacity: var(--mist);
+		pointer-events: none;
+	}
+}
+
+@include media.narrow {
+	.banner .ghost {
+		display: none;
 	}
 }

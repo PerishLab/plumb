@@ -6,6 +6,7 @@ export function Home() {
 	return (
 		<article>
 			<Hero
+				mark="/favicon.svg"
 				title={title()}
 				text="a workshop for code that AI agents maintain. an agent does not reread your prose — meaning must live in structure, vocabulary, and law. three sharp tools hold that line."
 			/>

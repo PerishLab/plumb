@@ -1,4 +1,7 @@
+@use "./media";
+
 .hero {
+	position: relative;
 	padding: var(--space-5) 0 var(--space-3);
 
 	h1 {
@@ -12,5 +15,21 @@
 		max-width: var(--prose);
 		font-size: var(--lead);
 		color: var(--muted);
+	}
+
+	.ghost {
+		position: absolute;
+		top: var(--space-3);
+		right: 0;
+		width: var(--cell);
+		height: auto;
+		opacity: var(--mist);
+		pointer-events: none;
+	}
+}
+
+@include media.narrow {
+	.hero .ghost {
+		display: none;
 	}
 }
