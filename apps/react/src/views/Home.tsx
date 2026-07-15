@@ -8,7 +8,7 @@ export function Home() {
 			<Hero
 				mark="/favicon.svg"
 				title={title()}
-				text="a workshop for code that AI agents maintain. an agent does not reread your prose — meaning must live in structure, vocabulary, and law. three sharp tools hold that line."
+				text="a workshop for code that AI agents maintain. the problem is familiar: an agent rewrites the file, the comment above it quietly becomes a lie, and nobody — human or agent — rereads it. so the rules here live where a checker can enforce them: in structure and named vocabulary, not in prose."
 			/>
 			<Grid>
 				<Card title="negentropy">
@@ -56,8 +56,9 @@ export function Home() {
 				</Card>
 				<Card title="vocabulary">
 					<p>
-						the living dictionary: every atom declared across the three tools
-						and this site, counted on every bake and judged by case law.
+						the living dictionary: every name declared across the three tools
+						and this site, recounted on every site build — and written verdicts
+						for the words that were fought over.
 					</p>
 					<Link to="/vocabulary">search the atoms</Link>
 				</Card>

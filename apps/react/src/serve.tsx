@@ -30,6 +30,37 @@ function head(page: Page): string {
 	].join("\n\t\t");
 }
 
+const guide = `# open-web
+
+> a workshop of three tools for code that AI agents maintain: rules live in
+> checkable structure and a reviewed vocabulary, not in prose comments.
+
+## tools
+
+- [negentropy](https://harness.perish.uk/negentropy/): structural checker, nine
+  mechanical laws, five languages. install:
+  curl -fsSL https://releases.negentropy.perish.uk/manage.sh | sh
+- [runseal](https://harness.perish.uk/runseal/): operator toolbelt - explicit
+  profile, named wrappers, forge tools. install:
+  curl -fsSL https://runseal.perish.uk/manage.sh | sh
+- [sidecar](https://harness.perish.uk/sidecar/): local process manager -
+  manifest lifecycle, stamped identity, leased ports. install:
+  curl -fsSL https://sidecar.perish.uk/manage.sh | sh
+
+## law
+
+- [constitution](https://harness.perish.uk/constitution/): the nine laws and
+  why each exists
+- [vocabulary](https://harness.perish.uk/vocabulary/): every declared name,
+  counted; written verdicts for contested words
+
+## source
+
+- https://github.com/PerishCode/negentropy
+- https://github.com/PerishCode/runseal
+- https://github.com/PerishCode/sidecar
+`;
+
 const template = readFileSync("dist/index.html", "utf8");
 for (const page of pages) {
 	const html = template
@@ -42,4 +73,5 @@ for (const page of pages) {
 	mkdirSync(dir, { recursive: true });
 	writeFileSync(`${dir}/index.html`, html);
 }
-console.log(`prerender: ${pages.length} routes`);
+writeFileSync("dist/llms.txt", guide);
+console.log(`prerender: ${pages.length} routes + llms.txt`);

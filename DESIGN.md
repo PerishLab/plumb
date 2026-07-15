@@ -94,6 +94,17 @@ The static face is half the law; the other half is how it answers a hand.
   (prefers-reduced-motion) stills all of it. One duration, quiet easings —
   transitions are the difference between still and dead, not decoration.
 
+## Voice
+
+Words are design material, and the reader may be a person or an agent.
+
+- Resonance first: every page opens with an experience a fellow sufferer
+  recognizes — a real wound, calmly named. Grandeur is a defect; so is fear.
+- Plain before poem: a claim lands in plain words before any poetic line.
+  The poem is the seal for a reader who already nodded, never the ticket in.
+- House words pay a toll: atom, bake, seat, land — on first use per page a
+  plain apposition or a concrete example rides along, or the word stays home.
+
 ## Naming
 
 A token name is one vocabulary atom, optionally followed by an ordinal

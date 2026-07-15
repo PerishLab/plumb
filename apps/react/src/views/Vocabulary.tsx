@@ -32,14 +32,14 @@ export function Vocabulary() {
 		<article>
 			<Hero
 				title="vocabulary"
-				text="the living dictionary: every atom declared across the three tools and this site, grouped by module root, counted on every bake, and judged by case law."
+				text="the living dictionary: every name declared across the three tools and this site — an atom, in house speech — grouped by the folder that owns it and recounted on every site build. contested words get written verdicts below."
 			/>
 			<h2 id="rulings">case law</h2>
 			<p>
-				single word only works against a living dictionary: agents maintain
-				vocabulary deltas alongside code diffs, a registered compound demands a
-				rationale, and a contested word gets a verdict. three rulings from the
-				book:
+				the single-word rule only works if the dictionary lives: when an agent
+				needs a new word, the dictionary change rides the same PR as the code
+				that needs it; a compound name must argue its case in writing; and a
+				contested word gets a ruling. three from the book:
 			</p>
 			<Grid>
 				<Card title="kill">

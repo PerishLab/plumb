@@ -62,7 +62,7 @@ export function Constitution() {
 		<article>
 			<Hero
 				title="constitution"
-				text="nine laws judge a codebase. they are written for repos maintained by AI agents, where explanation left in prose is explanation that dies: a fault fails the run, debt is reported and tolerated, and a blindspot is the scanner's honesty about an unparsed region."
+				text="nine laws judge a codebase. they exist because agent-maintained repos rot in a particular way: prose explanations go unread and drift into lies, while structure is checked on every run. a violation lands in one of three classes — a fault fails the run, debt is reported and tolerated, and a blindspot marks a region the scanner could not parse. honesty, not silence."
 			/>
 			<Grid>
 				{laws.map((law) => (
