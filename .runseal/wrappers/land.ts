@@ -12,6 +12,7 @@ type Options = {
   body: string;
   dryRun: boolean;
   deleteBranch: boolean;
+  watch: boolean;
 };
 
 function usage(): void {
@@ -26,12 +27,14 @@ function usage(): void {
   io.print("  --body <body>      pull request body override");
   io.print("  --dry-run          print planned actions without changing git or the remote");
   io.print("  --no-delete        keep the topic branch after merge");
+  io.print("  --watch=false      stop once the PR exists; skip the guard wait and merge");
 }
 
 function parse(args: string[]): Options & { help: boolean } {
   const parsed = cli.parse(args, {
     string: ["base", "body"],
-    boolean: ["dry-run", "no-delete", "help", "h"],
+    boolean: ["dry-run", "no-delete", "watch", "help", "h"],
+    default: { watch: true },
   });
   flags(parsed).positionals("land", { allowHelp: true });
   return {
@@ -39,6 +42,7 @@ function parse(args: string[]): Options & { help: boolean } {
     body: flags(parsed).string("body"),
     dryRun: flags(parsed).boolean("dry-run"),
     deleteBranch: !flags(parsed).boolean("no-delete"),
+    watch: parsed.watch === true,
     help: flags(parsed).help(),
   };
 }
@@ -70,6 +74,10 @@ const head = await bin("git").text(["rev-parse", "HEAD"], { cwd: repo });
 const api = new Forgejo(remote, await token(remote));
 const pull = await findOrCreateForgejo(repo, api, options, branch);
 io.print(pull.url);
+if (!options.watch) {
+  io.print("land: PR is up; guard not awaited (--watch=false)");
+  Deno.exit(0);
+}
 await waitForGuard(api, pull, head);
 await api.merge(pull.number, options.deleteBranch, head);
 await bin("git").run(["checkout", options.base], { cwd: repo });
