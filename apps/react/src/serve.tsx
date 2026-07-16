@@ -90,7 +90,7 @@ config (negentropy.toml at the repo root; without one, defaults judge the
 whole tree):
   [scan] include / exclude globs
   [module] roots (the depth coordinate system)
-  [limit] block = 4, path = 4; markup = 8 counts its own axis
+  [limit] block = 4, path = 4, param = 4; markup = 8 counts its own axis
   [comment] allow = false
   [word] single = true
   [[grant]] syntax = "test" | "style", paths - confine a syntax class
