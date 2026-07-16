@@ -42,7 +42,7 @@ export function Runseal() {
 				title="runseal"
 				line="keep flows explicit."
 			>
-				<Badge>stable {releases.runseal}</Badge>
+				<Badge>stable {releases.runseal.version}</Badge>
 				<Forge repo="PerishCode/runseal" />
 			</Banner>
 			<p>
@@ -61,8 +61,10 @@ export function Runseal() {
 				{start}
 			</Code>
 			<p>
-				manage.sh installs linux x86_64 today and links runseal into
-				~/.local/bin — put that on PATH; windows has manage.ps1. then declare a
+				manage.sh installs {releases.runseal.platforms} and links runseal into
+				~/.local/bin — put that on PATH
+				{releases.runseal.windows ? "; windows installs via manage.ps1" : ""}.
+				every artifact's sha256 sits beside it in checksums.txt. then declare a
 				profile at the repo root (runseal.toml) and every command you run
 				through runseal sees it:
 			</p>

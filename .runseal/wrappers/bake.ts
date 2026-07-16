@@ -28,13 +28,37 @@ const gates: Record<string, string> = {
   sidecar: "https://releases.sidecar.perish.uk",
 };
 
-async function version(base: string): Promise<string> {
+type Gate = { version: string; platforms: string; windows: boolean };
+
+function phrase(keys: string[]): string {
+  const parts: string[] = [];
+  if (keys.includes("linuxX64")) {
+    parts.push("linux x86_64");
+  }
+  const arm = keys.includes("macArm64") || keys.includes("darwinArm64");
+  const intel = keys.includes("macX64") || keys.includes("darwinX64");
+  if (arm && intel) {
+    parts.push("macos (intel and apple silicon)");
+  } else if (arm) {
+    parts.push("macos (apple silicon)");
+  } else if (intel) {
+    parts.push("macos (intel)");
+  }
+  return parts.join(" and ");
+}
+
+async function gate(base: string): Promise<Gate> {
   const response = await fetch(`${base}/stable/latest/metadata.json`);
   if (!response.ok) {
     io.fail(`bake: ${base} answered ${response.status}`);
   }
   const body = await response.json();
-  return typeof body.releaseVersion === "string" ? body.releaseVersion : "";
+  const keys = Object.keys(body.artifacts ?? {});
+  return {
+    version: typeof body.releaseVersion === "string" ? body.releaseVersion : "",
+    platforms: phrase(keys),
+    windows: keys.includes("winX64") || keys.includes("windowsX64"),
+  };
 }
 
 function parse(text: string): Root[] {
@@ -79,10 +103,13 @@ const atoms = entries
   .reduce((sum, root) => sum + root.atoms.length, 0);
 io.print(`bake: ${atoms} atoms across ${entries.length} repos -> ${target}`);
 
-const releases: Record<string, string> = {};
+const releases: Record<string, Gate> = {};
 for (const [name, base] of Object.entries(gates)) {
-  releases[name] = await version(base);
+  releases[name] = await gate(base);
 }
 await Deno.writeTextFile(shelf, `${JSON.stringify(releases, null, "\t")}\n`);
 await cmd.run("pnpm", ["biome", "format", "--write", shelf]);
-io.print(`bake: ${Object.values(releases).join(" ")} -> ${shelf}`);
+const summary = Object.values(releases)
+  .map((entry) => entry.version)
+  .join(" ");
+io.print(`bake: ${summary} -> ${shelf}`);

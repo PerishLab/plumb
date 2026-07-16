@@ -73,7 +73,8 @@ what: nine mechanical laws judged over one parser substrate; five languages
 (rust, typescript, tsx, scss, markdown). a violation lands as fault (fails the
 run), debt (reported, tolerated), or blindspot (unparsed region).
 
-install (linux x86_64 today):
+install (see /llms.txt for the live platform list; sha256 sums sit in
+checksums.txt beside every artifact):
   curl -fsSL https://releases.negentropy.perish.uk/manage.sh | sh
 installs under ~/.local/share/negentropy and links into ~/.local/bin.
 
@@ -104,7 +105,7 @@ source: https://github.com/PerishCode/negentropy
 what: run commands inside a small explicit profile - env, argv, symlinks,
 declared resources; repo-authored wrappers become verbs.
 
-install (linux x86_64 today; windows: manage.ps1):
+install (windows: manage.ps1; sha256 sums in checksums.txt):
   curl -fsSL https://runseal.perish.uk/manage.sh | sh
 
 surface:
@@ -127,7 +128,7 @@ what: one manifest per project; stamped process identity; a chosen free port
 handed to each target as SIDECAR_PORT; one loopback tcp broker per namespace;
 an inspect bridge over unix sockets.
 
-install (linux x86_64, macos intel and apple silicon; windows: manage.ps1):
+install (windows: manage.ps1; sha256 sums in checksums.txt):
   curl -fsSL https://sidecar.perish.uk/manage.sh | sh
 
 surface:

@@ -63,7 +63,7 @@
 					},
 					{
 						"word": "count",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "debt",
@@ -190,6 +190,10 @@
 						"count": 10
 					},
 					{
+						"word": "plural",
+						"count": 1
+					},
+					{
 						"word": "rel",
 						"count": 4
 					},
@@ -275,6 +279,10 @@
 					},
 					{
 						"word": "within",
+						"count": 1
+					},
+					{
+						"word": "word",
 						"count": 1
 					}
 				]
@@ -6688,7 +6696,15 @@
 						"count": 1
 					},
 					{
+						"word": "Jump",
+						"count": 1
+					},
+					{
 						"word": "Negentropy",
+						"count": 1
+					},
+					{
+						"word": "Page",
 						"count": 1
 					},
 					{
@@ -6716,7 +6732,19 @@
 						"count": 1
 					},
 					{
+						"word": "Site",
+						"count": 1
+					},
+					{
 						"word": "Vocabulary",
+						"count": 1
+					},
+					{
+						"word": "app",
+						"count": 1
+					},
+					{
+						"word": "atlas",
 						"count": 1
 					},
 					{
@@ -6724,16 +6752,96 @@
 						"count": 1
 					},
 					{
+						"word": "clean",
+						"count": 1
+					},
+					{
+						"word": "config",
+						"count": 1
+					},
+					{
+						"word": "contract",
+						"count": 1
+					},
+					{
+						"word": "dir",
+						"count": 1
+					},
+					{
 						"word": "entries",
 						"count": 2
+					},
+					{
+						"word": "finding",
+						"count": 1
+					},
+					{
+						"word": "fixture",
+						"count": 1
+					},
+					{
+						"word": "flight",
+						"count": 1
+					},
+					{
+						"word": "guide",
+						"count": 1
+					},
+					{
+						"word": "head",
+						"count": 1
+					},
+					{
+						"word": "home",
+						"count": 2
+					},
+					{
+						"word": "html",
+						"count": 1
 					},
 					{
 						"word": "laws",
 						"count": 1
 					},
 					{
-						"word": "props",
+						"word": "lexicon",
+						"count": 1
+					},
+					{
+						"word": "living",
+						"count": 1
+					},
+					{
+						"word": "manifest",
+						"count": 1
+					},
+					{
+						"word": "manual",
+						"count": 1
+					},
+					{
+						"word": "mended",
+						"count": 1
+					},
+					{
+						"word": "page",
 						"count": 2
+					},
+					{
+						"word": "pages",
+						"count": 1
+					},
+					{
+						"word": "path",
+						"count": 1
+					},
+					{
+						"word": "profile",
+						"count": 1
+					},
+					{
+						"word": "props",
+						"count": 3
 					},
 					{
 						"word": "prune",
@@ -6741,6 +6849,14 @@
 					},
 					{
 						"word": "query",
+						"count": 1
+					},
+					{
+						"word": "render",
+						"count": 1
+					},
+					{
+						"word": "robots",
 						"count": 1
 					},
 					{
@@ -6757,10 +6873,30 @@
 					},
 					{
 						"word": "sample",
-						"count": 3
+						"count": 1
+					},
+					{
+						"word": "session",
+						"count": 2
 					},
 					{
 						"word": "sift",
+						"count": 1
+					},
+					{
+						"word": "spot",
+						"count": 1
+					},
+					{
+						"word": "spots",
+						"count": 1
+					},
+					{
+						"word": "start",
+						"count": 3
+					},
+					{
+						"word": "template",
 						"count": 1
 					},
 					{
@@ -6770,6 +6906,10 @@
 					{
 						"word": "title",
 						"count": 1
+					},
+					{
+						"word": "wrapper",
+						"count": 1
 					}
 				]
 			},
@@ -6778,11 +6918,11 @@
 				"atoms": [
 					{
 						"word": "entries",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "markup",
-						"count": 2
+						"count": 4
 					},
 					{
 						"word": "path",
@@ -6810,6 +6950,10 @@
 						"count": 2
 					},
 					{
+						"word": "Banner",
+						"count": 2
+					},
+					{
 						"word": "Button",
 						"count": 2
 					},
@@ -6819,6 +6963,18 @@
 					},
 					{
 						"word": "Code",
+						"count": 2
+					},
+					{
+						"word": "Copy",
+						"count": 2
+					},
+					{
+						"word": "Footer",
+						"count": 2
+					},
+					{
+						"word": "Forge",
 						"count": 2
 					},
 					{
@@ -6847,15 +7003,51 @@
 					},
 					{
 						"word": "Props",
-						"count": 11
+						"count": 16
+					},
+					{
+						"word": "Rail",
+						"count": 2
 					},
 					{
 						"word": "Search",
 						"count": 2
 					},
 					{
+						"word": "Stop",
+						"count": 1
+					},
+					{
+						"word": "body",
+						"count": 1
+					},
+					{
+						"word": "drawn",
+						"count": 1
+					},
+					{
+						"word": "grab",
+						"count": 1
+					},
+					{
+						"word": "index",
+						"count": 1
+					},
+					{
+						"word": "order",
+						"count": 1
+					},
+					{
 						"word": "props",
-						"count": 11
+						"count": 16
+					},
+					{
+						"word": "text",
+						"count": 2
+					},
+					{
+						"word": "topped",
+						"count": 1
 					}
 				]
 			},

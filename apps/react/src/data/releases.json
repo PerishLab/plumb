@@ -1,5 +1,17 @@
 {
-	"negentropy": "v0.2.0",
-	"runseal": "v0.9.0",
-	"sidecar": "v0.5.3"
+	"negentropy": {
+		"version": "v0.3.0",
+		"platforms": "linux x86_64 and macos (apple silicon)",
+		"windows": true
+	},
+	"runseal": {
+		"version": "v0.10.0",
+		"platforms": "linux x86_64 and macos (intel and apple silicon)",
+		"windows": true
+	},
+	"sidecar": {
+		"version": "v0.5.3",
+		"platforms": "linux x86_64 and macos (intel and apple silicon)",
+		"windows": true
+	}
 }

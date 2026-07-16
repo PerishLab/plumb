@@ -31,7 +31,7 @@ const fixture = `export function fetchAllData(rows: number[][][]): number {
 const finding = `$ negentropy --debt .
 src/helper.ts:6:19 block depth over limit
 src/helper.ts:1:17 debt fetchAllData
-1 faults, 0 blindspots, 1 debt
+1 fault, 0 blindspots, 1 debt
 by law: block=1 word=1
 hot files: src/helper.ts=2`;
 
@@ -73,7 +73,7 @@ export function Negentropy() {
 				title="negentropy"
 				line="keep entropy down."
 			>
-				<Badge>stable {releases.negentropy}</Badge>
+				<Badge>stable {releases.negentropy.version}</Badge>
 				<Forge repo="PerishCode/negentropy" />
 			</Banner>
 			<p>
@@ -121,11 +121,15 @@ export function Negentropy() {
 			</Code>
 			<p>
 				manage.sh is a short, readable script: it installs the released binary
-				under ~/.local/share and links it into ~/.local/bin — put that on PATH.
-				linux x86_64 today. on an existing repo start with negentropy --debt .
-				to list the tolerated debt; faults already fail, and --strict also makes
-				blindspots fatal. laws and territories are declared per repo in
-				negentropy.toml:
+				under ~/.local/share and links it into ~/.local/bin — put that on PATH.{" "}
+				{releases.negentropy.platforms} today
+				{releases.negentropy.windows
+					? "— windows installs via manage.ps1 "
+					: ""}
+				— and every artifact's sha256 sits beside it in checksums.txt. on an
+				existing repo start with negentropy --debt . to list the tolerated debt;
+				faults already fail, and --strict also makes blindspots fatal. laws and
+				territories are declared per repo in negentropy.toml:
 			</p>
 			<Code name="negentropy.toml">{config}</Code>
 			<h2 id="seats">where the law sits</h2>

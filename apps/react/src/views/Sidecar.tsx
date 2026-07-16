@@ -42,7 +42,7 @@ export function Sidecar() {
 				title="sidecar"
 				line="keep local runtimes named."
 			>
-				<Badge>stable {releases.sidecar}</Badge>
+				<Badge>stable {releases.sidecar.version}</Badge>
 				<Forge repo="PerishCode/sidecar" />
 			</Banner>
 			<p>
@@ -62,11 +62,12 @@ export function Sidecar() {
 				{start}
 			</Code>
 			<p>
-				manage.sh installs linux x86_64 and macos (intel and apple silicon) and
-				links sidecar into ~/.local/bin — put that on PATH; windows has
-				manage.ps1. the lifecycle contract is one manifest at the repo root.
-				this one needs only sh and python: sidecar picks a free loopback port at
-				start and hands it to the target as SIDECAR_PORT:
+				manage.sh installs {releases.sidecar.platforms} and links sidecar into
+				~/.local/bin — put that on PATH
+				{releases.sidecar.windows ? "; windows installs via manage.ps1" : ""}.
+				the lifecycle contract is one manifest at the repo root. this one needs
+				only sh and python: sidecar picks a free loopback port at start and
+				hands it to the target as SIDECAR_PORT:
 			</p>
 			<Code name="sidecar.toml">{manifest}</Code>
 			<Code>{session}</Code>
