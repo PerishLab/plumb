@@ -1,3 +1,4 @@
+import { Cloudflare, keys as held } from "@perish/harness/cloudflare";
 import { cli, flags } from "@perish/harness/cli";
 import { bin, exists } from "@perish/harness/cmd";
 import { env } from "@perish/harness/env";
@@ -195,14 +196,11 @@ async function anchored(keys: { account: string; token: string; domain: string }
   io.print(`  edge unreachable from here; API confirms ${keys.domain} is attached (local proxy?)`);
 }
 
-async function attempt(args: string[]): Promise<{ code: number; out: string }> {
-  const output = await new Deno.Command("runseal", {
-    args,
-    stdin: "null",
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
-  return { code: output.code, out: new TextDecoder().decode(output.stdout).trimEnd() };
+function seated(value: unknown): Record<string, unknown> {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
 }
 
 async function check(): Promise<void> {
@@ -212,66 +210,43 @@ async function check(): Promise<void> {
     io.print(`check: skipped (unfilled in ${secretsDir()}: ${gate.join(", ")})`);
     return;
   }
-  let verdict = await attempt([
-    "@tool",
-    "cloudflare",
-    "api",
-    "request",
-    "GET",
-    "/user/tokens/verify",
-  ]);
-  if (verdict.code !== 0) {
-    verdict = await attempt([
-      "@tool",
-      "cloudflare",
-      "api",
-      "request",
-      "GET",
-      `/accounts/${keys.account}/tokens/verify`,
-    ]);
+  const secrets = await held();
+  const api = new Cloudflare(
+    secrets.CLOUDFLARE_API_TOKEN ?? "",
+    env.get("CLOUDFLARE_API_BASE", "https://api.cloudflare.com/client/v4"),
+  );
+  let verdict: Record<string, unknown>;
+  try {
+    verdict = seated(await api.result("GET", "/user/tokens/verify"));
+  } catch {
+    try {
+      verdict = seated(await api.result("GET", `/accounts/${keys.account}/tokens/verify`));
+    } catch {
+      return io.fail("check: token failed both /user and /accounts verify endpoints");
+    }
   }
-  if (verdict.code !== 0) {
-    io.fail("check: token failed both /user and /accounts verify endpoints");
-  }
-  io.print(`token: ${doc(verdict.out).get(".result.status")}`);
-  const name = await runseal.text(["@tool", "cloudflare", "config", "get", "zone_name"]);
-  const zone = await runseal.text(["@tool", "cloudflare", "zone", "get", "--name", name]);
-  const id = doc(zone).get(".id");
+  io.print(`token: ${verdict.status}`);
+  const name = secrets.CLOUDFLARE_ZONE_NAME || "perish.uk";
+  const zone = await api.zone(name);
+  const id = String(zone.id);
   io.print(`zone: ${name} (${id})`);
   if (keys.domain === "") {
     io.print("check: skipped dns probe (unfilled in ship.env: OPENWEB_SITE_DOMAIN)");
   } else {
-    const records = await runseal.text([
-      "@tool",
-      "cloudflare",
-      "zone",
-      "dns-record",
-      "list",
-      "--zone-id",
-      id,
-      "--name",
-      keys.domain,
-    ]);
-    if (doc(records).len() === 0) {
+    const records = (await api.records(id, keys.domain)).map(seated);
+    if (records.length === 0) {
       io.print(`dns: no record for ${keys.domain} yet (wrangler deploy attaches the domain)`);
     } else {
-      const record = doc(records).get("[0]");
-      io.print(`dns: ${keys.domain} ${doc(record).get(".type")} (${doc(record).get(".id")})`);
+      io.print(`dns: ${keys.domain} ${records[0].type} (${records[0].id})`);
     }
   }
   const script = await worker();
-  const service = await attempt([
-    "@tool",
-    "cloudflare",
-    "api",
-    "request",
-    "GET",
-    `/accounts/${keys.account}/workers/services/${script}`,
-  ]);
-  if (service.code === 0) {
-    const found = doc(service.out).get(".result");
-    io.print(`worker: ${doc(found).get(".id")} (created ${doc(found).get(".created_on")})`);
-  } else {
+  try {
+    const found = seated(
+      await api.result("GET", `/accounts/${keys.account}/workers/services/${script}`),
+    );
+    io.print(`worker: ${found.id} (created ${found.created_on})`);
+  } catch {
     io.print(`worker: ${script} not found yet (first :ship creates it)`);
   }
   io.print("check: ok");
