@@ -1582,7 +1582,7 @@
 					},
 					{
 						"word": "deep",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "defaults",
@@ -1669,6 +1669,10 @@
 						"count": 1
 					},
 					{
+						"word": "knit",
+						"count": 1
+					},
+					{
 						"word": "ladder",
 						"count": 1
 					},
@@ -1694,6 +1698,10 @@
 					},
 					{
 						"word": "lives",
+						"count": 1
+					},
+					{
+						"word": "make",
 						"count": 1
 					},
 					{
@@ -1809,6 +1817,10 @@
 						"count": 1
 					},
 					{
+						"word": "spell",
+						"count": 1
+					},
+					{
 						"word": "split",
 						"count": 1
 					},
@@ -1853,15 +1865,15 @@
 						"count": 1
 					},
 					{
+						"word": "weave",
+						"count": 1
+					},
+					{
 						"word": "wildcard",
 						"count": 1
 					},
 					{
 						"word": "word",
-						"count": 1
-					},
-					{
-						"word": "woven",
 						"count": 1
 					}
 				]
@@ -1875,87 +1887,19 @@
 				"root": ".runseal",
 				"atoms": [
 					{
-						"word": "Backup",
-						"count": 1
-					},
-					{
-						"word": "Bin",
-						"count": 1
-					},
-					{
 						"word": "Check",
 						"count": 1
 					},
 					{
-						"word": "Dir",
-						"count": 1
-					},
-					{
-						"word": "Doc",
-						"count": 1
-					},
-					{
-						"word": "Entry",
-						"count": 1
-					},
-					{
-						"word": "Field",
-						"count": 1
-					},
-					{
-						"word": "File",
-						"count": 1
-					},
-					{
-						"word": "Flags",
-						"count": 1
-					},
-					{
-						"word": "Inherited",
-						"count": 1
-					},
-					{
 						"word": "Options",
-						"count": 4
-					},
-					{
-						"word": "Path",
-						"count": 1
-					},
-					{
-						"word": "Picked",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "Policy",
 						"count": 1
 					},
 					{
-						"word": "Route",
-						"count": 1
-					},
-					{
-						"word": "Source",
-						"count": 1
-					},
-					{
-						"word": "Value",
-						"count": 1
-					},
-					{
-						"word": "Version",
-						"count": 1
-					},
-					{
 						"word": "account",
-						"count": 1
-					},
-					{
-						"word": "actual",
-						"count": 1
-					},
-					{
-						"word": "after",
 						"count": 1
 					},
 					{
@@ -1964,31 +1908,15 @@
 					},
 					{
 						"word": "arg",
-						"count": 3
+						"count": 1
 					},
 					{
 						"word": "args",
-						"count": 12
+						"count": 7
 					},
 					{
 						"word": "base",
 						"count": 2
-					},
-					{
-						"word": "before",
-						"count": 1
-					},
-					{
-						"word": "bin",
-						"count": 1
-					},
-					{
-						"word": "blocked",
-						"count": 1
-					},
-					{
-						"word": "bracket",
-						"count": 1
 					},
 					{
 						"word": "branch",
@@ -2007,30 +1935,6 @@
 						"count": 1
 					},
 					{
-						"word": "choices",
-						"count": 1
-					},
-					{
-						"word": "cli",
-						"count": 1
-					},
-					{
-						"word": "collect",
-						"count": 1
-					},
-					{
-						"word": "command",
-						"count": 1
-					},
-					{
-						"word": "compare",
-						"count": 1
-					},
-					{
-						"word": "concat",
-						"count": 1
-					},
-					{
 						"word": "config",
 						"count": 1
 					},
@@ -2040,30 +1944,10 @@
 					},
 					{
 						"word": "current",
-						"count": 6
-					},
-					{
-						"word": "decoder",
-						"count": 1
-					},
-					{
-						"word": "digest",
-						"count": 1
-					},
-					{
-						"word": "dirname",
-						"count": 1
+						"count": 4
 					},
 					{
 						"word": "dirty",
-						"count": 1
-					},
-					{
-						"word": "doc",
-						"count": 1
-					},
-					{
-						"word": "dot",
 						"count": 1
 					},
 					{
@@ -2071,55 +1955,15 @@
 						"count": 2
 					},
 					{
-						"word": "encoder",
-						"count": 2
-					},
-					{
-						"word": "end",
-						"count": 3
-					},
-					{
-						"word": "entries",
-						"count": 2
-					},
-					{
-						"word": "env",
-						"count": 1
-					},
-					{
-						"word": "error",
-						"count": 1
-					},
-					{
 						"word": "existing",
 						"count": 1
 					},
 					{
-						"word": "exists",
-						"count": 1
-					},
-					{
-						"word": "expected",
-						"count": 2
-					},
-					{
-						"word": "fail",
-						"count": 1
-					},
-					{
-						"word": "field",
-						"count": 1
-					},
-					{
 						"word": "file",
-						"count": 2
+						"count": 1
 					},
 					{
 						"word": "first",
-						"count": 1
-					},
-					{
-						"word": "flags",
 						"count": 1
 					},
 					{
@@ -2127,23 +1971,11 @@
 						"count": 2
 					},
 					{
-						"word": "fs",
-						"count": 1
-					},
-					{
 						"word": "full",
 						"count": 1
 					},
 					{
-						"word": "get",
-						"count": 1
-					},
-					{
 						"word": "guarded",
-						"count": 1
-					},
-					{
-						"word": "hash",
 						"count": 1
 					},
 					{
@@ -2159,47 +1991,15 @@
 						"count": 1
 					},
 					{
-						"word": "index",
-						"count": 1
-					},
-					{
-						"word": "input",
-						"count": 5
-					},
-					{
-						"word": "io",
-						"count": 1
-					},
-					{
-						"word": "join",
-						"count": 2
-					},
-					{
-						"word": "joined",
-						"count": 2
-					},
-					{
-						"word": "json",
-						"count": 1
-					},
-					{
-						"word": "key",
-						"count": 1
-					},
-					{
-						"word": "label",
-						"count": 1
-					},
-					{
 						"word": "landable",
 						"count": 1
 					},
 					{
-						"word": "left",
+						"word": "load",
 						"count": 1
 					},
 					{
-						"word": "load",
+						"word": "mark",
 						"count": 1
 					},
 					{
@@ -2212,10 +2012,6 @@
 					},
 					{
 						"word": "message",
-						"count": 2
-					},
-					{
-						"word": "message?",
 						"count": 1
 					},
 					{
@@ -2224,22 +2020,6 @@
 					},
 					{
 						"word": "name",
-						"count": 4
-					},
-					{
-						"word": "names",
-						"count": 1
-					},
-					{
-						"word": "negentropy",
-						"count": 1
-					},
-					{
-						"word": "next",
-						"count": 2
-					},
-					{
-						"word": "normalize",
 						"count": 1
 					},
 					{
@@ -2247,48 +2027,32 @@
 						"count": 3
 					},
 					{
-						"word": "offset",
-						"count": 1
-					},
-					{
 						"word": "ok",
 						"count": 1
 					},
 					{
 						"word": "options",
-						"count": 6
+						"count": 5
 					},
 					{
 						"word": "origin",
 						"count": 2
 					},
 					{
-						"word": "output",
-						"count": 1
-					},
-					{
 						"word": "parse",
-						"count": 4
+						"count": 2
 					},
 					{
 						"word": "parsed",
 						"count": 2
 					},
 					{
-						"word": "parts",
-						"count": 3
-					},
-					{
-						"word": "path",
-						"count": 5
-					},
-					{
 						"word": "paths",
-						"count": 2
+						"count": 1
 					},
 					{
 						"word": "payload",
-						"count": 2
+						"count": 1
 					},
 					{
 						"word": "plan",
@@ -2308,7 +2072,7 @@
 					},
 					{
 						"word": "print",
-						"count": 2
+						"count": 1
 					},
 					{
 						"word": "pull",
@@ -2347,10 +2111,6 @@
 						"count": 1
 					},
 					{
-						"word": "required",
-						"count": 1
-					},
-					{
 						"word": "resolve",
 						"count": 1
 					},
@@ -2359,16 +2119,8 @@
 						"count": 1
 					},
 					{
-						"word": "rest",
-						"count": 1
-					},
-					{
 						"word": "rid",
 						"count": 2
-					},
-					{
-						"word": "right",
-						"count": 1
 					},
 					{
 						"word": "root",
@@ -2392,34 +2144,14 @@
 					},
 					{
 						"word": "run",
-						"count": 2
-					},
-					{
-						"word": "runseal",
 						"count": 1
-					},
-					{
-						"word": "selected",
-						"count": 1
-					},
-					{
-						"word": "separator",
-						"count": 3
 					},
 					{
 						"word": "sha",
 						"count": 2
 					},
 					{
-						"word": "slash",
-						"count": 1
-					},
-					{
 						"word": "slot",
-						"count": 2
-					},
-					{
-						"word": "stat",
 						"count": 1
 					},
 					{
@@ -2439,31 +2171,11 @@
 						"count": 1
 					},
 					{
-						"word": "text",
-						"count": 1
-					},
-					{
 						"word": "title",
 						"count": 1
 					},
 					{
 						"word": "token",
-						"count": 1
-					},
-					{
-						"word": "total",
-						"count": 1
-					},
-					{
-						"word": "tree",
-						"count": 1
-					},
-					{
-						"word": "trimmed",
-						"count": 1
-					},
-					{
-						"word": "unknown",
 						"count": 1
 					},
 					{
@@ -2479,27 +2191,11 @@
 						"count": 5
 					},
 					{
-						"word": "validate",
-						"count": 1
-					},
-					{
 						"word": "value",
-						"count": 5
-					},
-					{
-						"word": "verify",
 						"count": 1
-					},
-					{
-						"word": "version",
-						"count": 2
 					},
 					{
 						"word": "workflow",
-						"count": 1
-					},
-					{
-						"word": "zero",
 						"count": 1
 					},
 					{

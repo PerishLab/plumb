@@ -1,0 +1,9 @@
+{
+	"negentropy": {
+		"laws": "[scan]\ninclude = [\"src/**/*.ts\"]\n\n[module]\nroots = [\"src\"]\n\n[limit]\nblock = 4\npath = 4\n\n[comment]\nallow = false\n\n[word]\nsingle = true",
+		"dirty": "export function fetchAllData(rows: number[][][]): number {\n\tlet sum = 0;\n\tfor (const plane of rows) {\n\t\tfor (const row of plane) {\n\t\t\tfor (const cell of row) {\n\t\t\t\tif (cell > 0) {\n\t\t\t\t\tsum += cell;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\treturn sum;\n}",
+		"finding": "$ negentropy --debt .\nsrc/helper.ts:6:19 block depth over limit\nsrc/helper.ts:1:17 debt fetchAllData\n1 fault, 0 blindspots, 1 debt\nby law: block=1 word=1\nhot files: src/helper.ts=2",
+		"mended": "export function tally(rows: number[][][]): number {\n\tlet sum = 0;\n\tfor (const plane of rows) {\n\t\tsum += gain(plane);\n\t}\n\treturn sum;\n}\n\nfunction gain(plane: number[][]): number {\n\tlet sum = 0;\n\tfor (const row of plane) {\n\t\tfor (const cell of row) {\n\t\t\tif (cell > 0) {\n\t\t\t\tsum += cell;\n\t\t\t}\n\t\t}\n\t}\n\treturn sum;\n}",
+		"clean": "$ negentropy --strict .\nclean"
+	}
+}

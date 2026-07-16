@@ -1,62 +1,17 @@
 import { Badge, Banner, Card, Code, Forge, Grid } from "@open-web/components";
 import releases from "../data/releases.json";
+import transcripts from "../data/transcripts.json";
+
+const {
+	laws: config,
+	dirty: fixture,
+	finding,
+	mended,
+	clean,
+} = transcripts.negentropy;
 
 const start = `curl -fsSL https://releases.negentropy.perish.uk/manage.sh | sh
 negentropy --strict .`;
-
-const config = `[scan]
-include = ["src/**/*.ts"]
-
-[module]
-roots = ["src"]
-
-[limit]
-block = 4
-path = 4
-
-[comment]
-allow = false
-
-[word]
-single = true`;
-
-const fixture = `export function fetchAllData(rows: number[][][]): number {
-	let sum = 0;
-	for (const plane of rows) {
-		for (const row of plane) {
-			for (const cell of row) {
-				if (cell > 0) {
-					sum += cell;`;
-
-const finding = `$ negentropy --debt .
-src/helper.ts:6:19 block depth over limit
-src/helper.ts:1:17 debt fetchAllData
-1 fault, 0 blindspots, 1 debt
-by law: block=1 word=1
-hot files: src/helper.ts=2`;
-
-const mended = `export function tally(rows: number[][][]): number {
-	let sum = 0;
-	for (const plane of rows) {
-		sum += gain(plane);
-	}
-	return sum;
-}
-
-function gain(plane: number[][]): number {
-	let sum = 0;
-	for (const row of plane) {
-		for (const cell of row) {
-			if (cell > 0) {
-				sum += cell;
-			}
-		}
-	}
-	return sum;
-}`;
-
-const clean = `$ negentropy --strict .
-clean`;
 
 const lexicon = `[compound]
 dataset = "the industry's own word; data-set reads worse"`;
