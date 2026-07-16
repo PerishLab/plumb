@@ -1,4 +1,4 @@
-import { Card, Grid, Hero } from "@open-web/components";
+import { Card, Grid, Hero, Rail } from "@open-web/components";
 import { Link } from "react-router";
 import { title } from "../lib/title";
 
@@ -38,12 +38,29 @@ export function Home() {
 				</Card>
 			</Grid>
 			<h2>adopt in order of pain</h2>
+			<Rail
+				stops={[
+					{
+						mark: "/marks/negentropy.svg",
+						name: "negentropy",
+						text: "any repo it can read — start here.",
+					},
+					{
+						mark: "/marks/runseal.svg",
+						name: "runseal",
+						text: "when operations outgrow your shell history.",
+					},
+					{
+						mark: "/marks/sidecar.svg",
+						name: "sidecar",
+						text: "when one dev server becomes three cooperating processes.",
+					},
+				]}
+			/>
 			<p>
-				negentropy alone judges any repo it can read — start there. add runseal
-				when operations outgrow your shell history. add sidecar when one dev
-				server becomes three cooperating processes. this site practices what it
-				preaches: its source is checked by negentropy, its changes land through
-				runseal wrappers, and its dev server rents its port from sidecar.
+				this site practices what it preaches: its source is checked by
+				negentropy, its changes land through runseal wrappers, and its dev
+				server rents its port from sidecar.
 			</p>
 			<Grid>
 				<Card title="constitution">

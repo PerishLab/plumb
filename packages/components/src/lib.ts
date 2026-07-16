@@ -12,4 +12,5 @@ export { Hero } from "./Hero";
 export { Ledger } from "./Ledger";
 export { List } from "./List";
 export { Nav } from "./Nav";
+export { Rail } from "./Rail";
 export { Search } from "./Search";

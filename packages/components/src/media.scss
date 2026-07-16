@@ -23,6 +23,12 @@ $edge: 47.9375rem;
 	}
 }
 
+@mixin light {
+	@media (prefers-color-scheme: light) {
+		@content;
+	}
+}
+
 @mixin calm {
 	@media (prefers-reduced-motion: reduce) {
 		@content;

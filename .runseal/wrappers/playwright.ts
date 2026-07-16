@@ -74,7 +74,10 @@ async function ensure(url: string): Promise<void> {
   }
   await Deno.mkdir(`${home}/shots`, { recursive: true });
   await Deno.mkdir(`${home}/snaps`, { recursive: true });
-  const config = { outputDir: `${home}/output` };
+  const config = {
+    outputDir: `${home}/output`,
+    browser: { contextOptions: { colorScheme: "dark" } },
+  };
   await Deno.writeTextFile(`${home}/config.json`, `${JSON.stringify(config, null, "\t")}\n`);
 }
 

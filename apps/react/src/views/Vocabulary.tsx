@@ -73,6 +73,24 @@ export function Vocabulary() {
 						else stops at the PR.
 					</p>
 				</Card>
+				<Card title="fetch">
+					<p>
+						fetch is network-only: it names the wire crossing. the one squatter
+						— a local lookup wearing the network verb — was re-sentenced to get.
+					</p>
+				</Card>
+				<Card title="create">
+					<p>
+						memory is new, wire is create — the split is a real boundary, not
+						convention drift.
+					</p>
+				</Card>
+				<Card title="idle">
+					<p>
+						idle is a question, not an action. policy — stop if idle — stays in
+						the caller.
+					</p>
+				</Card>
 			</Grid>
 			<h2 id="atoms">the atoms</h2>
 			<Jump entries={entries} />
