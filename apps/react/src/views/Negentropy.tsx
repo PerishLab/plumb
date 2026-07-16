@@ -29,7 +29,7 @@ export function Negentropy() {
 				line="keep entropy down."
 			>
 				<Badge>stable {releases.negentropy.version}</Badge>
-				<Forge repo="PerishCode/negentropy" />
+				<Forge repo="PerishFire/negentropy" />
 			</Banner>
 			<p>
 				an agent-maintained codebase rots differently: every session reads the

@@ -43,7 +43,7 @@ export function Sidecar() {
 				line="keep local runtimes named."
 			>
 				<Badge>stable {releases.sidecar.version}</Badge>
-				<Forge repo="PerishCode/sidecar" />
+				<Forge repo="PerishFire/sidecar" />
 			</Banner>
 			<p>
 				local processes share one host — PATH, credentials, localhost, ports,

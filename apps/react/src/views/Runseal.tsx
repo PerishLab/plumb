@@ -43,7 +43,7 @@ export function Runseal() {
 				line="keep flows explicit."
 			>
 				<Badge>stable {releases.runseal.version}</Badge>
-				<Forge repo="PerishCode/runseal" />
+				<Forge repo="PerishFire/runseal" />
 			</Banner>
 			<p>
 				operational glue rots: too many environment variables, too many

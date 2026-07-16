@@ -56,9 +56,9 @@ const guide = `# open-web
 
 ## source
 
-- https://github.com/PerishCode/negentropy
-- https://github.com/PerishCode/runseal
-- https://github.com/PerishCode/sidecar
+- https://git.perish.top/PerishFire/negentropy
+- https://git.perish.top/PerishFire/runseal
+- https://git.perish.top/PerishFire/sidecar
 `;
 
 const manual = `# open-web - full reference for agents
@@ -98,7 +98,7 @@ whole tree):
   [[boundary]] paths, allow, note - a declared exemption
   vocabulary.toml: [compound] name = "rationale" registers a compound;
   an empty rationale does not register.
-source: https://github.com/PerishCode/negentropy
+source: https://git.perish.top/PerishFire/negentropy
 
 ## runseal - operator toolbelt
 
@@ -120,7 +120,7 @@ profile (runseal.toml at the repo root; discovery walks upward, then
   [resources] root
   [[injections]] type = "env" (+ [injections.vars] NAME = "resource://path")
   [deno] permissions = ["--allow-..."] - required for .ts wrappers
-source: https://github.com/PerishCode/runseal
+source: https://git.perish.top/PerishFire/runseal
 
 ## sidecar - local process manager
 
@@ -143,7 +143,7 @@ manifest (sidecar.toml at the repo root):
   template), ready
 the packed --sidecar-stamp arg is the only identity contract; state lives in
 targets.json and logs under the data home.
-source: https://github.com/PerishCode/sidecar
+source: https://git.perish.top/PerishFire/sidecar
 
 ## law
 

@@ -31,9 +31,9 @@ export function Shell() {
 				<Outlet />
 			</main>
 			<Footer>
-				<Forge repo="PerishCode/negentropy" />
-				<Forge repo="PerishCode/runseal" />
-				<Forge repo="PerishCode/sidecar" />
+				<Forge repo="PerishFire/negentropy" />
+				<Forge repo="PerishFire/runseal" />
+				<Forge repo="PerishFire/sidecar" />
 			</Footer>
 		</Frame>
 	);
