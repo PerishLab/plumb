@@ -5,7 +5,7 @@ const laws = [
 		name: "word",
 		kind: "debt",
 		text: "a declared name is one vocabulary atom; an unregistered compound is debt.",
-		why: "single-word pressure points downward to the language namespace, and upward to a living vocabulary that gives the atom meaning.",
+		why: "single-word pressure pushes down into the language namespace, and up into a living vocabulary that gives each atom meaning.",
 	},
 	{
 		name: "path",
@@ -29,13 +29,13 @@ const laws = [
 		name: "comment",
 		kind: "fault",
 		text: "comments are denied by default; each one is a fault.",
-		why: "a comment is explanation that failed to become structure — and no gate makes the next session reread it. denial moves the pressure into a better name, a test, a vocabulary entry, or a doc. the escape hatch is declared, not implied: a boundary entry in negentropy.toml can allow comments where an external quirk truly demands them — priced and visible.",
+		why: "a comment is an explanation that failed to become structure — and no gate makes the next session reread it. denial moves the pressure into a better name, a test, a vocabulary entry, or a doc. the escape hatch is declared, not implied: a boundary entry in negentropy.toml can allow comments where an external quirk truly demands them — priced and visible.",
 	},
 	{
 		name: "grant",
 		kind: "fault",
 		text: "granted syntax outside its declared territory is a fault; test and style are the granted classes.",
-		why: "with a grant declared, product files hold zero test code — ls is the audit. no grant declared means the class is unrestricted.",
+		why: "a grant confines a syntax class to its declared territory — tests in test paths, styles in the styled package. no grant declared means the class roams free.",
 	},
 	{
 		name: "dispatch",
@@ -62,7 +62,7 @@ export function Constitution() {
 		<article>
 			<Hero
 				title="constitution"
-				text="nine laws judge a codebase. they exist because agent-maintained repos rot in a particular way: prose explanations go unread and drift into lies, while structure is checked on every run. a violation lands in one of three classes — a fault fails the run, debt is reported and tolerated, and a blindspot marks a region the scanner could not parse. honesty, not silence."
+				text="nine laws judge a codebase, and each one turns a kind of structural drift into something a gate can refuse. a violation lands in one of three classes — a fault fails the run, debt is reported and tolerated, and a blindspot marks a region the scanner could not parse. honesty, not silence."
 			/>
 			<Grid>
 				{laws.map((law) => (
@@ -74,9 +74,9 @@ export function Constitution() {
 				))}
 			</Grid>
 			<p>
-				stable is a promise: the promised surfaces hold, and the guard's version
-				policy prices every change — an unchanged kernel keeps to patch bumps, a
-				changed kernel pays a minor or higher.
+				stable is a promise: patch releases keep the checker's contract intact,
+				and changing the contract costs a minor release or higher — the version
+				policy makes every rule change pay its price in the open.
 			</p>
 		</article>
 	);

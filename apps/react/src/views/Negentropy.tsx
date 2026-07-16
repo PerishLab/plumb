@@ -80,14 +80,14 @@ export function Negentropy() {
 				an agent-maintained codebase rots differently: every session reads the
 				code with fresh eyes, prose comments drift unread, and each small
 				compromise compounds quietly. negentropy turns that rot into a bill: a
-				structural checker that makes every violation either fixed or visibly
-				owed, so meaning moves out of prose and into structure, tests, and named
-				vocabulary.
+				structural checker where every detected fault must be fixed, every debt
+				stays visibly owed, and every unparsed region is named — so meaning
+				moves out of prose and into structure, tests, and named vocabulary.
 			</p>
 			<p>
-				it is not a linter: lint rules check style inside one language's
-				toolchain. negentropy checks structure across languages with one shared
-				parser — no target compilers, no target toolchains.
+				it works above the usual linter, not beside it: one shared parser
+				applies the same structural laws across every language it reads — no
+				target compilers, no target toolchains.
 			</p>
 			<p>
 				<Badge>rust</Badge> <Badge>typescript</Badge> <Badge>tsx</Badge>{" "}
@@ -110,9 +110,9 @@ export function Negentropy() {
 			<p>
 				every transcript on this page is a real run. this loop — write, judge,
 				restructure, clean — is what the workshop is for. and when the compound
-				truly is the industry's word, the other exit is honest too: register it
-				with a rationale in vocabulary.toml, and the dictionary delta rides the
-				same PR.
+				is truly the industry's word, the other exit is honest too: register it
+				with a rationale in vocabulary.toml, and let the dictionary delta ride
+				the same PR.
 			</p>
 			<Code name="vocabulary.toml">{lexicon}</Code>
 			<h2 id="quickstart">quickstart</h2>
@@ -120,11 +120,13 @@ export function Negentropy() {
 				{start}
 			</Code>
 			<p>
-				manage.sh is a short, readable script: it fetches one released binary
-				into ~/.local/bin — linux x86_64 today, more targets as the runner pool
-				grows. on an existing repo start with negentropy --debt . to see the
-				bill before strict makes it fatal. laws and territories are declared per
-				repo in negentropy.toml:
+				manage.sh is a short, readable script: it installs the released binary
+				under ~/.local/share and links it into ~/.local/bin — put that on PATH.
+				linux x86_64 and apple-silicon macs today, more targets as the runner
+				pool grows. on an existing repo start with negentropy --debt . to list
+				the tolerated debt; faults already fail, and --strict also makes
+				blindspots fatal. laws and territories are declared per repo in
+				negentropy.toml:
 			</p>
 			<Code name="negentropy.toml">{config}</Code>
 			<h2 id="seats">where the law sits</h2>

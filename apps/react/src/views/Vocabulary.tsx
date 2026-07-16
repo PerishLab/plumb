@@ -44,7 +44,7 @@ export function Vocabulary() {
 		<article>
 			<Hero
 				title="vocabulary"
-				text="the living dictionary: every name declared across the three tools and this site, grouped by the folder that owns it and recounted on every site build. contested words get written verdicts below."
+				text="the living dictionary: every name declared across the three tools and this site, grouped by the folder that owns it — each tally is the name's declaration count there, recounted on every site build. contested words get written verdicts below."
 			/>
 			<h2 id="rulings">case law</h2>
 			<p>

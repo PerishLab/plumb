@@ -23,7 +23,7 @@ export const pages: Page[] = [
 	{
 		path: "/sidecar",
 		title: "sidecar — keep local runtimes named",
-		text: "a manifest-driven local process manager: stamped identity, leased ports, one broker per namespace. shallow isolation without space isolation.",
+		text: "a manifest-driven local process manager: stamped identity, chosen free ports, one broker per namespace. shallow isolation without space isolation.",
 	},
 	{
 		path: "/constitution",
@@ -33,6 +33,6 @@ export const pages: Page[] = [
 	{
 		path: "/vocabulary",
 		title: "vocabulary — the living dictionary",
-		text: "every atom declared across the three tools and this site, counted on every bake and judged by case law.",
+		text: "every name declared across the three tools and this site, recounted on every site build and judged by written case law.",
 	},
 ];

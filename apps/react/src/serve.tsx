@@ -44,7 +44,7 @@ const guide = `# open-web
   profile, named wrappers, forge tools. install:
   curl -fsSL https://runseal.perish.uk/manage.sh | sh
 - [sidecar](https://harness.perish.uk/sidecar/): local process manager -
-  manifest lifecycle, stamped identity, leased ports. install:
+  manifest lifecycle, stamped identity, chosen free ports. install:
   curl -fsSL https://sidecar.perish.uk/manage.sh | sh
 
 ## law

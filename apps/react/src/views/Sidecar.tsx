@@ -10,19 +10,19 @@ namespace = "smoke"
 [app]
 name = "echo"
 command = "sh"
-args = ["-c", "exec python3 -m http.server $SIDECAR_PORT --bind 127.0.0.1"]
+args = ["-c", "python3 -m http.server $SIDECAR_PORT --bind 127.0.0.1"]
 mode = "dev"
 port = 0
 health_url = "http://127.0.0.1:{port}"`;
 
 const session = `$ sidecar start
-broker runtime pid=1258583 endpoint=tcp://127.0.0.1:42071
-started echo pid=1258588
+broker runtime pid=1467115 endpoint=tcp://127.0.0.1:42831
+started echo pid=1467120
 
 $ sidecar status
 namespace: smoke
-runtime: running (pid 1258583) tcp://127.0.0.1:42071
-- echo: running (pid 1258588) http://127.0.0.1:36761`;
+runtime: running (pid 1467115) tcp://127.0.0.1:42831
+- echo: running (pid 1467120) http://127.0.0.1:44247`;
 
 const living = `[app]
 name = "react"
@@ -62,16 +62,17 @@ export function Sidecar() {
 				{start}
 			</Code>
 			<p>
-				manage.sh fetches the released binary from R2 into ~/.local/bin — linux,
-				macos, and windows. the lifecycle contract is one manifest at the repo
-				root. this one runs anywhere python runs — the port is leased at start
-				and handed to the target as SIDECAR_PORT:
+				manage.sh installs linux x86_64 and macos (intel and apple silicon) and
+				links sidecar into ~/.local/bin — put that on PATH; windows has
+				manage.ps1. the lifecycle contract is one manifest at the repo root.
+				this one needs only sh and python: sidecar picks a free loopback port at
+				start and hands it to the target as SIDECAR_PORT:
 			</p>
 			<Code name="sidecar.toml">{manifest}</Code>
 			<Code>{session}</Code>
 			<p>
-				and the same contract in production: the page you are reading was served
-				through a port leased exactly this way, from this site's own manifest.
+				and the same contract runs this site's own dev server: its manifest
+				below is the real one — the port is picked before pnpm dev starts.
 			</p>
 			<Code name="sidecar.toml">{living}</Code>
 			<Grid>
@@ -85,22 +86,22 @@ export function Sidecar() {
 				<Card title="stamp">
 					<p>
 						every spawned target receives one packed --sidecar-stamp arg
-						carrying identity and the runtime endpoint. it is the only launch
-						metadata contract — no env fallback.
+						carrying identity and the runtime endpoint. identity is stamp-only —
+						a chosen port still arrives separately, as env.
 					</p>
 				</Card>
 				<Card title="broker">
 					<p>
-						each project and namespace gets one loopback tcp broker, discovered
-						from argv identity plus live listener probing and confirmed with a
-						hello handshake.
+						each project and namespace gets one local tcp broker: sidecar finds
+						it by its process stamp, probes the listener, and trusts it only
+						after the reply.
 					</p>
 				</Card>
 				<Card title="port lease">
 					<p>
-						port = 0 leases a free loopback port at every start, injected as
-						SIDECAR_PORT and substituted into health_url — no fixed port, no
-						loopback squatting, nothing to collide with.
+						port = 0 asks the kernel for a free loopback port at every start,
+						passes the number as SIDECAR_PORT and into health_url — the target
+						owns the bind, and nothing squats a fixed port.
 					</p>
 				</Card>
 			</Grid>

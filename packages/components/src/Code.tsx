@@ -33,7 +33,7 @@ export function Code(props: Props) {
 		<div className="code">
 			{topped ? (
 				<header>
-					<span>{props.name}</span>
+					<span>{props.name}</span>{" "}
 					{props.copy === true ? <Copy text={props.children} /> : null}
 				</header>
 			) : null}

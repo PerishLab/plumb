@@ -40,5 +40,7 @@
 		flex-wrap: nowrap;
 		overflow-x: auto;
 		scrollbar-width: none;
+		padding-right: var(--space-5);
+		mask-image: linear-gradient(to right, black calc(100% - var(--space-5)), transparent);
 	}
 }

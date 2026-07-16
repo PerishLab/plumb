@@ -16,13 +16,13 @@ const wrapper = `const target = Deno.env.get("APP_DATA_DIR");
 console.log(\`hello - the profile says data lives at \${target}\`);`;
 
 const flight = `$ runseal :hello
-hello - the profile says data lives at ~/app/.local/data`;
+hello - the profile says data lives at /home/you/app/.local/data`;
 
 const session = `$ runseal @resolve resource://data
-~/app/.local/data
+/home/you/app/.local/data
 
 $ runseal sh -c 'echo $APP_DATA_DIR'
-~/app/.local/data`;
+/home/you/app/.local/data`;
 
 const sample = `$ runseal :guard
 ==> negentropy version pin
@@ -61,15 +61,18 @@ export function Runseal() {
 				{start}
 			</Code>
 			<p>
-				manage.sh fetches the released binary from R2 into ~/.local/bin — linux,
-				macos, and windows. then declare a profile at the repo root
-				(runseal.toml) and every command you run through runseal sees it:
+				manage.sh installs linux x86_64 today and links runseal into
+				~/.local/bin — put that on PATH; windows has manage.ps1, and more
+				targets follow as the release lanes land. then declare a profile at the
+				repo root (runseal.toml) and every command you run through runseal sees
+				it:
 			</p>
 			<Code name="runseal.toml">{profile}</Code>
 			<Code>{session}</Code>
 			<p>
-				name a flow once and it becomes a verb: a wrapper is a deno file under
-				.runseal/wrappers, run under the profile's declared permission policy.
+				name a flow once and it becomes a verb: a wrapper is a .ts or .sh file
+				under .runseal/wrappers; deno wrappers run under the profile's declared
+				permission policy.
 			</p>
 			<Code name=".runseal/wrappers/hello.ts">{wrapper}</Code>
 			<Code>{flight}</Code>
@@ -104,10 +107,9 @@ export function Runseal() {
 				</Card>
 			</Grid>
 			<p>
-				the receipt below is real: every change to this site lands through these
-				wrappers. wrappers are repo-authored deno files, not builtins — the
-				receipt shows this repo's own gauntlet, and running wrappers needs deno
-				on the path.
+				the receipt below is one real run of this repo's own gauntlet — these
+				wrappers are repo-authored, not builtins, and the deno ones need deno on
+				the path.
 			</p>
 			<Code>{sample}</Code>
 		</article>
