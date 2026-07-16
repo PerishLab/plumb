@@ -1,10 +1,10 @@
-import { booleanOption, helpRequested, parseArgs, requireNoPositionals } from "@/lib/cli.ts";
-import { cmd } from "@/lib/std/cmd.ts";
-import { env } from "@/lib/std/env.ts";
-import { fs } from "@/lib/std/fs.ts";
-import { io } from "@/lib/std/io.ts";
-import { json } from "@/lib/std/json.ts";
-import { runseal } from "@/lib/std/runseal.ts";
+import { cli, flags } from "@perish/harness/cli";
+import { bin, exists } from "@perish/harness/cmd";
+import { env } from "@perish/harness/env";
+import { fs } from "@perish/harness/fs";
+import { io } from "@perish/harness/io";
+import { doc } from "@perish/harness/json";
+import { runseal } from "@perish/harness/runseal";
 
 const app = "apps/react";
 const dist = `${app}/dist`;
@@ -123,7 +123,7 @@ async function plan(): Promise<void> {
   }
   io.print("wrangler dry run:");
   const flags = keys.domain === "" ? [] : ["--domain", keys.domain];
-  await cmd.run("pnpm", ["exec", "wrangler", "deploy", "--dry-run", ...flags], { cwd: app });
+  await bin("pnpm").run(["exec", "wrangler", "deploy", "--dry-run", ...flags], { cwd: app });
 }
 
 async function probe(url: string): Promise<boolean> {
@@ -156,12 +156,12 @@ async function ship(): Promise<void> {
   }
   const paths = await routes();
   io.print("==> build");
-  await cmd.run("pnpm", ["--filter", "@open-web/react", "build"]);
+  await bin("pnpm").run(["--filter", "@open-web/react", "build"]);
   if (!(await fs.file.exists(`${dist}/index.html`))) {
     io.fail(`ship: build produced no ${dist}/index.html`);
   }
   io.print("==> deploy");
-  await cmd.run("pnpm", ["exec", "wrangler", "deploy", "--domain", keys.domain], {
+  await bin("pnpm").run(["exec", "wrangler", "deploy", "--domain", keys.domain], {
     cwd: app,
     env: {
       CLOUDFLARE_ACCOUNT_ID: keys.account,
@@ -233,10 +233,10 @@ async function check(): Promise<void> {
   if (verdict.code !== 0) {
     io.fail("check: token failed both /user and /accounts verify endpoints");
   }
-  io.print(`token: ${json.get(verdict.out, ".result.status")}`);
+  io.print(`token: ${doc(verdict.out).get(".result.status")}`);
   const name = await runseal.text(["@tool", "cloudflare", "config", "get", "zone_name"]);
   const zone = await runseal.text(["@tool", "cloudflare", "zone", "get", "--name", name]);
-  const id = json.get(zone, ".id");
+  const id = doc(zone).get(".id");
   io.print(`zone: ${name} (${id})`);
   if (keys.domain === "") {
     io.print("check: skipped dns probe (unfilled in ship.env: OPENWEB_SITE_DOMAIN)");
@@ -252,11 +252,11 @@ async function check(): Promise<void> {
       "--name",
       keys.domain,
     ]);
-    if (json.len(records) === 0) {
+    if (doc(records).len() === 0) {
       io.print(`dns: no record for ${keys.domain} yet (wrangler deploy attaches the domain)`);
     } else {
-      const record = json.get(records, "[0]");
-      io.print(`dns: ${keys.domain} ${json.get(record, ".type")} (${json.get(record, ".id")})`);
+      const record = doc(records).get("[0]");
+      io.print(`dns: ${keys.domain} ${doc(record).get(".type")} (${doc(record).get(".id")})`);
     }
   }
   const script = await worker();
@@ -269,23 +269,23 @@ async function check(): Promise<void> {
     `/accounts/${keys.account}/workers/services/${script}`,
   ]);
   if (service.code === 0) {
-    const found = json.get(service.out, ".result");
-    io.print(`worker: ${json.get(found, ".id")} (created ${json.get(found, ".created_on")})`);
+    const found = doc(service.out).get(".result");
+    io.print(`worker: ${doc(found).get(".id")} (created ${doc(found).get(".created_on")})`);
   } else {
     io.print(`worker: ${script} not found yet (first :ship creates it)`);
   }
   io.print("check: ok");
 }
 
-const args = parseArgs(Deno.args, { boolean: ["help", "h", "dry-run", "check"] });
-requireNoPositionals(args, "ship", { allowHelp: true });
-if (helpRequested(args)) {
+const args = cli.parse(Deno.args, { boolean: ["help", "h", "dry-run", "check"] });
+flags(args).positionals("ship", { allowHelp: true });
+if (flags(args).help()) {
   usage();
   Deno.exit(0);
 }
-if (booleanOption(args, "check")) {
+if (flags(args).boolean("check")) {
   await check();
-} else if (booleanOption(args, "dry-run")) {
+} else if (flags(args).boolean("dry-run")) {
   await plan();
 } else {
   await ship();

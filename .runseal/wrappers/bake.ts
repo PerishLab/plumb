@@ -1,6 +1,6 @@
-import { helpRequested, parseArgs, requireNoPositionals } from "@/lib/cli.ts";
-import { cmd } from "@/lib/std/cmd.ts";
-import { io } from "@/lib/std/io.ts";
+import { cli, flags } from "@perish/harness/cli";
+import { bin, exists } from "@perish/harness/cmd";
+import { io } from "@perish/harness/io";
 
 function usage(): void {
   io.print("Usage: runseal :bake");
@@ -8,9 +8,9 @@ function usage(): void {
   io.print("Bake the living vocabulary and the stable release versions into apps/react/src/data.");
 }
 
-const args = parseArgs(Deno.args, { boolean: ["help", "h"] });
-requireNoPositionals(args, "bake", { allowHelp: true });
-if (helpRequested(args)) {
+const args = cli.parse(Deno.args, { boolean: ["help", "h"] });
+flags(args).positionals("bake", { allowHelp: true });
+if (flags(args).help()) {
   usage();
   Deno.exit(0);
 }
@@ -85,7 +85,7 @@ async function gather(repo: string): Promise<Entry> {
     io.fail(`bake: ${dir} is not a negentropy-guarded checkout`);
   }
   io.print(`==> ${repo}`);
-  const text = await cmd.text("negentropy", ["--vocabulary", "."], { cwd: dir });
+  const text = await bin("negentropy").text(["--vocabulary", "."], { cwd: dir });
   return { repo, roots: parse(text) };
 }
 
@@ -96,7 +96,7 @@ for (const repo of repos) {
 
 await Deno.mkdir("apps/react/src/data", { recursive: true });
 await Deno.writeTextFile(target, `${JSON.stringify(entries, null, "\t")}\n`);
-await cmd.run("pnpm", ["biome", "format", "--write", target]);
+await bin("pnpm").run(["biome", "format", "--write", target]);
 
 const atoms = entries
   .flatMap((entry) => entry.roots)
@@ -108,7 +108,7 @@ for (const [name, base] of Object.entries(gates)) {
   releases[name] = await gate(base);
 }
 await Deno.writeTextFile(shelf, `${JSON.stringify(releases, null, "\t")}\n`);
-await cmd.run("pnpm", ["biome", "format", "--write", shelf]);
+await bin("pnpm").run(["biome", "format", "--write", shelf]);
 const summary = Object.values(releases)
   .map((entry) => entry.version)
   .join(" ");

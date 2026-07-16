@@ -1,13 +1,7 @@
-import {
-  booleanOption,
-  helpRequested,
-  parseArgs as parseCliArgs,
-  requireNoPositionals,
-  stringOption,
-} from "@/lib/cli.ts";
-import { Forgejo, origin, type Pull, type Remote, token } from "@/lib/forgejo/forgejo.ts";
-import { cmd } from "@/lib/std/cmd.ts";
-import { io } from "@/lib/std/io.ts";
+import { cli, flags } from "@perish/harness/cli";
+import { Forgejo, origin, type Pull, type Remote, token } from "@perish/harness/forgejo";
+import { bin, exists } from "@perish/harness/cmd";
+import { io } from "@perish/harness/io";
 
 const guardTimeoutMs = 240_000;
 const pollRegisterMs = 5_000;
@@ -34,28 +28,28 @@ function usage(): void {
   io.print("  --no-delete        keep the topic branch after merge");
 }
 
-function parseArgs(args: string[]): Options & { help: boolean } {
-  const parsed = parseCliArgs(args, {
+function parse(args: string[]): Options & { help: boolean } {
+  const parsed = cli.parse(args, {
     string: ["base", "body"],
     boolean: ["dry-run", "no-delete", "help", "h"],
   });
-  requireNoPositionals(parsed, "land", { allowHelp: true });
+  flags(parsed).positionals("land", { allowHelp: true });
   return {
-    base: stringOption(parsed, "base", "main"),
-    body: stringOption(parsed, "body"),
-    dryRun: booleanOption(parsed, "dry-run"),
-    deleteBranch: !booleanOption(parsed, "no-delete"),
-    help: helpRequested(parsed),
+    base: flags(parsed).string("base", "main"),
+    body: flags(parsed).string("body"),
+    dryRun: flags(parsed).boolean("dry-run"),
+    deleteBranch: !flags(parsed).boolean("no-delete"),
+    help: flags(parsed).help(),
   };
 }
 
-const options = parseArgs([...Deno.args]);
+const options = parse([...Deno.args]);
 if (options.help) {
   usage();
   Deno.exit(0);
 }
 
-await cmd.run("git", ["--version"], { stdout: "null" });
+await bin("git").run(["--version"], { stdout: "null" });
 const repo = await root();
 const remote = await origin(repo);
 
@@ -67,29 +61,29 @@ if (options.dryRun) {
 }
 
 await ensureLandable(repo, options.base, branch, { fetch: true });
-if (!await cmd.exists("tea")) {
+if (!await exists("tea")) {
   io.fail(`land: missing required tool: tea; run tea login add --url https://${remote.host}`);
 }
-await cmd.run("git", ["push", "-u", "origin", branch], { cwd: repo });
-const head = await cmd.text("git", ["rev-parse", "HEAD"], { cwd: repo });
+await bin("git").run(["push", "-u", "origin", branch], { cwd: repo });
+const head = await bin("git").text(["rev-parse", "HEAD"], { cwd: repo });
 
 const api = new Forgejo(remote, await token(remote));
 const pull = await findOrCreateForgejo(repo, api, options, branch);
 io.print(pull.url);
 await waitForGuard(api, pull, head);
 await api.merge(pull.number, options.deleteBranch, head);
-await cmd.run("git", ["checkout", options.base], { cwd: repo });
-await cmd.run("git", ["pull", "--ff-only", "origin", options.base], { cwd: repo });
+await bin("git").run(["checkout", options.base], { cwd: repo });
+await bin("git").run(["pull", "--ff-only", "origin", options.base], { cwd: repo });
 if (options.deleteBranch && await gitOk(repo, ["rev-parse", "--verify", `refs/heads/${branch}`])) {
-  await cmd.run("git", ["branch", "-D", branch], { cwd: repo });
+  await bin("git").run(["branch", "-D", branch], { cwd: repo });
 }
 
 async function root(): Promise<string> {
-  return await cmd.text("git", ["rev-parse", "--show-toplevel"]);
+  return await bin("git").text(["rev-parse", "--show-toplevel"]);
 }
 
 async function currentBranch(repo: string): Promise<string> {
-  const branch = await cmd.text("git", ["branch", "--show-current"], { cwd: repo });
+  const branch = await bin("git").text(["branch", "--show-current"], { cwd: repo });
   if (branch === "") {
     io.fail("land: detached HEAD is not a landable topic branch");
   }
@@ -105,12 +99,12 @@ async function ensureLandable(
   if (branch === base || branch === "main" || branch === "master") {
     io.fail(`land: must run on a topic branch, not ${branch}`);
   }
-  const dirty = await cmd.text("git", ["status", "--short"], { cwd: repo });
+  const dirty = await bin("git").text(["status", "--short"], { cwd: repo });
   if (dirty.trim() !== "") {
     io.fail("land: working tree must be clean; commit or discard changes first");
   }
   if (options.fetch) {
-    await cmd.run("git", ["fetch", "origin", base], { cwd: repo });
+    await bin("git").run(["fetch", "origin", base], { cwd: repo });
   }
   const remoteBase = `origin/${base}`;
   if (!await gitOk(repo, ["rev-parse", "--verify", remoteBase])) {
@@ -120,7 +114,7 @@ async function ensureLandable(
     io.fail(`land: current branch must contain latest ${remoteBase}; rebase onto ${base} first`);
   }
   const ahead = Number(
-    await cmd.text("git", ["rev-list", "--count", `${remoteBase}..HEAD`], { cwd: repo }),
+    await bin("git").text(["rev-list", "--count", `${remoteBase}..HEAD`], { cwd: repo }),
   );
   if (!Number.isFinite(ahead) || ahead <= 0) {
     io.fail(`land: current branch has no commits ahead of ${remoteBase}`);
@@ -156,7 +150,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function gitOk(repo: string, args: string[]): Promise<boolean> {
-  return await cmd.status("git", args, {
+  return await bin("git").status(args, {
     cwd: repo,
     stdin: "null",
     stdout: "null",
@@ -180,7 +174,7 @@ async function findOrCreateForgejo(
 }
 
 async function deriveTitle(repo: string, base: string, branch: string): Promise<string> {
-  const subjects = await cmd.text("git", [
+  const subjects = await bin("git").text([
     "log",
     "--reverse",
     "--format=%s",
@@ -191,7 +185,7 @@ async function deriveTitle(repo: string, base: string, branch: string): Promise<
 }
 
 async function deriveBody(repo: string, base: string): Promise<string> {
-  return await cmd.text("git", ["log", "--reverse", "--format=%B", `origin/${base}..HEAD`], {
+  return await bin("git").text(["log", "--reverse", "--format=%B", `origin/${base}..HEAD`], {
     cwd: repo,
   });
 }

@@ -1,45 +1,52 @@
-import { helpRequested, parseArgs, requireNoPositionals } from "@/lib/cli.ts";
-import { cmd } from "@/lib/std/cmd.ts";
-import { io } from "@/lib/std/io.ts";
+import { cache } from "@perish/harness/cache";
+import { cli, flags } from "@perish/harness/cli";
+import { bin, exists } from "@perish/harness/cmd";
+import { io } from "@perish/harness/io";
 
 function usage(): void {
-  io.print("Usage: runseal :guard");
+  io.print("Usage: runseal :guard [--fresh]");
   io.print("");
   io.print("Run repository guard checks.");
 }
 
-const args = parseArgs(Deno.args, { boolean: ["help", "h"] });
-requireNoPositionals(args, "guard", { allowHelp: true });
-if (helpRequested(args)) {
+const args = cli.parse(Deno.args, { boolean: ["help", "h", "fresh"] });
+flags(args).positionals("guard", { allowHelp: true });
+if (flags(args).help()) {
   usage();
   Deno.exit(0);
 }
 
 async function pin(): Promise<void> {
   const want = (await Deno.readTextFile(".runseal/negentropy.version")).trim();
-  const have = (await cmd.text("negentropy", ["--version"])).replace("negentropy", "").trim();
+  const have = (await bin("negentropy").text(["--version"])).replace("negentropy", "").trim();
   if (have !== want) {
     io.fail(`guard: negentropy ${have} does not match pin ${want}`);
   }
+}
+
+const mark = await cache.key();
+if (args.fresh !== true && (await cache.hit(mark))) {
+  io.print(`guard: clean (cached ${mark.slice(0, 12)})`);
+  Deno.exit(0);
 }
 
 io.print("==> negentropy version pin");
 await pin();
 
 io.print("==> biome");
-await cmd.run("pnpm", ["biome", "ci", "."]);
+await bin("pnpm").run(["biome", "ci", "."]);
 
 io.print("==> tsc");
-await cmd.run("pnpm", ["-r", "exec", "tsc", "--noEmit"]);
+await bin("pnpm").run(["-r", "exec", "tsc", "--noEmit"]);
 
 io.print("==> vitest");
-await cmd.run("pnpm", ["-r", "test"]);
+await bin("pnpm").run(["-r", "test"]);
 
 io.print("==> deno fmt");
-await cmd.run("deno", ["fmt", "--check", ".runseal"]);
+await bin("deno").run(["fmt", "--check", ".runseal"]);
 
 io.print("==> deno check");
-await cmd.run("deno", [
+await bin("deno").run([
   "check",
   "--config",
   ".runseal/deno.json",
@@ -55,4 +62,6 @@ await cmd.run("deno", [
 ]);
 
 io.print("==> negentropy");
-await cmd.run("negentropy", ["--strict", "."]);
+await bin("negentropy").run(["--strict", "."]);
+
+await cache.keep(mark);

@@ -1,6 +1,6 @@
-import { booleanOption, helpRequested, parseArgs } from "@/lib/cli.ts";
-import { cmd } from "@/lib/std/cmd.ts";
-import { io } from "@/lib/std/io.ts";
+import { cli, flags } from "@perish/harness/cli";
+import { bin, exists } from "@perish/harness/cmd";
+import { io } from "@perish/harness/io";
 
 const session = "openweb";
 const home = ".local/playwright";
@@ -26,7 +26,7 @@ function usage(): void {
 type Slot = { running?: boolean; healthUrl?: string | null };
 
 async function base(): Promise<string> {
-  const text = await cmd.text("sidecar", ["status", "--format", "json"]);
+  const text = await bin("sidecar").text(["status", "--format", "json"]);
   const status = JSON.parse(text) as { targets?: Slot[] };
   const found = (status.targets ?? []).find((slot) => typeof slot.healthUrl === "string");
   if (found === undefined || found.running !== true || typeof found.healthUrl !== "string") {
@@ -86,11 +86,11 @@ function invocation(extra: string[]): string[] {
 }
 
 async function loud(extra: string[]): Promise<void> {
-  await cmd.run("pnpm", invocation(extra));
+  await bin("pnpm").run(invocation(extra));
 }
 
 async function quiet(extra: string[]): Promise<number> {
-  return await cmd.status("pnpm", invocation(extra), { stdout: "null" });
+  return await bin("pnpm").status(invocation(extra), { stdout: "null" });
 }
 
 async function visit(url: string): Promise<void> {
@@ -130,7 +130,7 @@ async function capture(names: string[], all: boolean, verb: "shot" | "text"): Pr
 async function status(): Promise<void> {
   const url = await base();
   io.print(`app: ${(await serving(url)) ? "serving" : "down"} (${url})`);
-  await cmd.run("pnpm", ["exec", "playwright-cli", "list"]);
+  await bin("pnpm").run(["exec", "playwright-cli", "list"]);
 }
 
 if (Deno.args[0] === "raw") {
@@ -138,11 +138,11 @@ if (Deno.args[0] === "raw") {
     usage();
     Deno.exit(1);
   }
-  Deno.exit(await cmd.status("pnpm", invocation(Deno.args.slice(1))));
+  Deno.exit(await bin("pnpm").status(invocation(Deno.args.slice(1))));
 }
 
-const args = parseArgs(Deno.args, { boolean: ["help", "h", "all"] });
-if (helpRequested(args) || args._.length === 0) {
+const args = cli.parse(Deno.args, { boolean: ["help", "h", "all"] });
+if (flags(args).help() || args._.length === 0) {
   usage();
   Deno.exit(0);
 }
@@ -151,7 +151,7 @@ const verb = String(args._[0]);
 const rest = args._.slice(1).map(String);
 
 if (verb === "shot" || verb === "text") {
-  await capture(rest, booleanOption(args, "all"), verb);
+  await capture(rest, flags(args).boolean("all"), verb);
 } else if (verb === "console") {
   await loud(["console", ...rest]);
 } else if (verb === "status") {
