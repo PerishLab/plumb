@@ -122,9 +122,8 @@ export function Negentropy() {
 			<p>
 				manage.sh is a short, readable script: it installs the released binary
 				under ~/.local/share and links it into ~/.local/bin — put that on PATH.
-				linux x86_64 and apple-silicon macs today, more targets as the runner
-				pool grows. on an existing repo start with negentropy --debt . to list
-				the tolerated debt; faults already fail, and --strict also makes
+				linux x86_64 today. on an existing repo start with negentropy --debt .
+				to list the tolerated debt; faults already fail, and --strict also makes
 				blindspots fatal. laws and territories are declared per repo in
 				negentropy.toml:
 			</p>
@@ -165,6 +164,7 @@ export function Negentropy() {
 					</p>
 				</Card>
 			</Grid>
+			<h2 id="pieces">the pieces</h2>
 			<Grid>
 				<Card title="grammar first">
 					<p>

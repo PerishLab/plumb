@@ -62,10 +62,9 @@ export function Runseal() {
 			</Code>
 			<p>
 				manage.sh installs linux x86_64 today and links runseal into
-				~/.local/bin — put that on PATH; windows has manage.ps1, and more
-				targets follow as the release lanes land. then declare a profile at the
-				repo root (runseal.toml) and every command you run through runseal sees
-				it:
+				~/.local/bin — put that on PATH; windows has manage.ps1. then declare a
+				profile at the repo root (runseal.toml) and every command you run
+				through runseal sees it:
 			</p>
 			<Code name="runseal.toml">{profile}</Code>
 			<Code>{session}</Code>

@@ -38,6 +38,7 @@
 @include media.narrow {
 	.nav {
 		flex-wrap: nowrap;
+		gap: var(--space-3);
 		overflow-x: auto;
 		scrollbar-width: none;
 		padding-right: var(--space-5);

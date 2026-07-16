@@ -39,9 +39,9 @@ export function Home() {
 			</Grid>
 			<h2>adopt in order of pain</h2>
 			<p>
-				negentropy alone judges any repo — start there. add runseal when
-				operations outgrow your shell history. add sidecar when one dev server
-				becomes three cooperating processes. this site practices what it
+				negentropy alone judges any repo it can read — start there. add runseal
+				when operations outgrow your shell history. add sidecar when one dev
+				server becomes three cooperating processes. this site practices what it
 				preaches: its source is checked by negentropy, its changes land through
 				runseal wrappers, and its dev server rents its port from sidecar.
 			</p>
