@@ -5,12 +5,12 @@
 		"windows": true
 	},
 	"runseal": {
-		"version": "v0.10.0",
+		"version": "v0.11.0",
 		"platforms": "linux x86_64 and macos (intel and apple silicon)",
 		"windows": true
 	},
 	"sidecar": {
-		"version": "v0.5.3",
+		"version": "v0.5.4",
 		"platforms": "linux x86_64 and macos (intel and apple silicon)",
 		"windows": true
 	}
