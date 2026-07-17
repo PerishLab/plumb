@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Copy } from "./Copy";
+import { Copy } from "../../control/Copy/Copy";
 import "./Code.scss";
 
 type Props = {
