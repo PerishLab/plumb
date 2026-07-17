@@ -1,5 +1,7 @@
 import { cli, flags } from "@perish/harness/cli";
 import { bin, exists } from "@perish/harness/cmd";
+import { env } from "@perish/harness/env";
+import { fs } from "@perish/harness/fs";
 import { io } from "@perish/harness/io";
 
 const session = "openweb";
@@ -20,7 +22,10 @@ function usage(): void {
   io.print("  close             close the browser session");
   io.print("  raw <args>        run raw playwright-cli inside the project session");
   io.print("");
+  io.print("  --edge            aim shot/text at the shipped site instead of the local app");
+  io.print("");
   io.print("The app process belongs to sidecar; this wrapper never starts or stops it.");
+  io.print("Every shot and text refuses a page whose root never mounted.");
 }
 
 type Slot = { running?: boolean; healthUrl?: string | null };
@@ -33,6 +38,17 @@ async function base(): Promise<string> {
     return io.fail("playwright: the app is not running; start it through sidecar first");
   }
   return found.healthUrl.replace(/\/+$/, "");
+}
+
+async function edge(): Promise<string> {
+  const dir = env.get("RUNSEAL_REPO_SECRETS_DIR", ".local/secrets");
+  const text = await fs.file.readTextIfExists(`${dir}/ship.env`);
+  const found = text.match(/^OPENWEB_SITE_DOMAIN=(.+)$/m);
+  const domain = (found?.[1] ?? "").trim().replace(/^["']/, "").replace(/["']$/, "");
+  if (domain === "") {
+    return io.fail("playwright: OPENWEB_SITE_DOMAIN unfilled in ship.env; cannot reach the edge");
+  }
+  return `https://${domain}`;
 }
 
 async function routes(): Promise<string[]> {
@@ -105,8 +121,25 @@ async function visit(url: string): Promise<void> {
   }
 }
 
-async function capture(names: string[], all: boolean, verb: "shot" | "text"): Promise<void> {
-  const url = await base();
+async function mounted(url: string): Promise<void> {
+  const probe = "() => document.getElementById('root')?.childElementCount ?? 0";
+  const text = await bin("pnpm").text(invocation(["eval", probe]));
+  const lines = text.split("\n").map((line) => line.trim());
+  const count = lines[lines.indexOf("### Result") + 1] ?? "";
+  if (!/^[1-9]\d*$/.test(count)) {
+    io.fail(
+      `playwright: empty root at ${url}; the app never mounted - restart it through sidecar or aim --edge`,
+    );
+  }
+}
+
+async function capture(
+  names: string[],
+  all: boolean,
+  verb: "shot" | "text",
+  remote: boolean,
+): Promise<void> {
+  const url = remote ? await edge() : await base();
   await ensure(url);
   const paths = await routes();
   const wanted = all ? paths : names.map((name) => resolve(name, paths));
@@ -115,6 +148,7 @@ async function capture(names: string[], all: boolean, verb: "shot" | "text"): Pr
   }
   for (const route of wanted) {
     await visit(`${url}${route}`);
+    await mounted(`${url}${route}`);
     const file = verb === "shot"
       ? `${home}/shots/${label(route)}.png`
       : `${home}/snaps/${label(route)}.yml`;
@@ -141,7 +175,7 @@ if (Deno.args[0] === "raw") {
   Deno.exit(await bin("pnpm").status(invocation(Deno.args.slice(1))));
 }
 
-const args = cli.parse(Deno.args, { boolean: ["help", "h", "all"] });
+const args = cli.parse(Deno.args, { boolean: ["help", "h", "all", "edge"] });
 if (flags(args).help() || args._.length === 0) {
   usage();
   Deno.exit(0);
@@ -151,7 +185,7 @@ const verb = String(args._[0]);
 const rest = args._.slice(1).map(String);
 
 if (verb === "shot" || verb === "text") {
-  await capture(rest, flags(args).boolean("all"), verb);
+  await capture(rest, flags(args).boolean("all"), verb, flags(args).boolean("edge"));
 } else if (verb === "console") {
   await loud(["console", ...rest]);
 } else if (verb === "status") {
