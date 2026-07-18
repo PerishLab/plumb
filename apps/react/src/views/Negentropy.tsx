@@ -132,11 +132,11 @@ export function Negentropy() {
 						target toolchains.
 					</p>
 				</Card>
-				<Card title="nine laws">
+				<Card title="eleven laws">
 					<p>
-						word, path, block, markup, comment, grant, dispatch, receiver, param
-						— each declared in negentropy.toml and judged on every run of the
-						scanned tree.
+						word, path, file, fanout, block, markup, comment, grant, dispatch,
+						receiver, param — each declared in negentropy.toml and judged on
+						every run of the scanned tree.
 					</p>
 				</Card>
 				<Card title="three classes">

@@ -13,9 +13,9 @@ export function Home() {
 			<Grid>
 				<Card title="negentropy">
 					<p>
-						keep entropy down: a grammar-first structural checker enforcing a
-						nine-law constitution — single-word names, shallow blocks and paths,
-						denied comments, granted syntax, and a vocabulary that never
+						keep entropy down: a grammar-first structural checker enforcing an
+						eleven-law constitution — single-word names, shallow blocks and
+						paths, denied comments, granted syntax, and a vocabulary that never
 						freezes.
 					</p>
 					<Link to="/negentropy">read the checker</Link>
@@ -65,7 +65,7 @@ export function Home() {
 			<Grid>
 				<Card title="constitution">
 					<p>
-						the nine laws every repo in this workshop answers to, why each one
+						the eleven laws every repo in this workshop answers to, why each one
 						exists, and the versioning promise that makes a rule change cost a
 						release.
 					</p>

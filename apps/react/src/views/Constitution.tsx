@@ -14,6 +14,18 @@ const laws = [
 		why: "the block signal at the file-tree scale. a path is a name; keep it a short one.",
 	},
 	{
+		name: "file",
+		kind: "fault",
+		text: "a file running past three hundred lines is a fault.",
+		why: "the fix is a move, not a squeeze — fmt owns line layout. a long file is more than one seat wearing one name.",
+	},
+	{
+		name: "fanout",
+		kind: "fault",
+		text: "a directory holding more than ten children is a fault.",
+		why: "a wide directory is a chapter refusing to split. the count sees only the scan set, so the width it reports only ever understates.",
+	},
+	{
 		name: "block",
 		kind: "fault",
 		text: "scope nesting past four is a fault.",
@@ -62,7 +74,7 @@ export function Constitution() {
 		<article>
 			<Hero
 				title="constitution"
-				text="nine laws judge a codebase, and each one turns a kind of structural drift into something a gate can refuse. a violation lands in one of three classes — a fault fails the run, debt is reported and tolerated, and a blindspot marks a region the scanner could not parse. honesty, not silence."
+				text="eleven laws judge a codebase, and each one turns a kind of structural drift into something a gate can refuse. a violation lands in one of three classes — a fault fails the run, debt is reported and tolerated, and a blindspot marks a region the scanner could not parse. honesty, not silence."
 			/>
 			<Grid>
 				{laws.map((law) => (

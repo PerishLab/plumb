@@ -37,7 +37,7 @@ const guide = `# open-web
 
 ## tools
 
-- [negentropy](https://harness.perish.uk/negentropy/): structural checker, nine
+- [negentropy](https://harness.perish.uk/negentropy/): structural checker, eleven
   mechanical laws, five languages. install:
   curl -fsSL https://releases.negentropy.perish.uk/manage.sh | sh
 - [runseal](https://harness.perish.uk/runseal/): operator toolbelt - explicit
@@ -49,7 +49,7 @@ const guide = `# open-web
 
 ## law
 
-- [constitution](https://harness.perish.uk/constitution/): the nine laws and
+- [constitution](https://harness.perish.uk/constitution/): the eleven laws and
   why each exists
 - [vocabulary](https://harness.perish.uk/vocabulary/): every declared name,
   counted; written verdicts for contested words
@@ -69,7 +69,7 @@ const manual = `# open-web - full reference for agents
 
 ## negentropy - structural checker
 
-what: nine mechanical laws judged over one parser substrate; five languages
+what: eleven mechanical laws judged over one parser substrate; five languages
 (rust, typescript, tsx, scss, markdown). a violation lands as fault (fails the
 run), debt (reported, tolerated), or blindspot (unparsed region).
 
@@ -147,7 +147,7 @@ source: https://git.perish.top/PerishFire/sidecar
 
 ## law
 
-constitution: https://harness.perish.uk/constitution/ - nine laws and why
+constitution: https://harness.perish.uk/constitution/ - eleven laws and why
 each exists. vocabulary: https://harness.perish.uk/vocabulary/ - every
 declared name counted per owning folder; contested words carry written
 verdicts.

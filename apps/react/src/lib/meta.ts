@@ -13,7 +13,7 @@ export const pages: Page[] = [
 	{
 		path: "/negentropy",
 		title: "negentropy — keep entropy down",
-		text: "a grammar-first structural checker for agent-maintained codebases: nine laws, a living vocabulary, no target compilers, no target toolchains.",
+		text: "a grammar-first structural checker for agent-maintained codebases: eleven laws, a living vocabulary, no target compilers, no target toolchains.",
 	},
 	{
 		path: "/runseal",
@@ -27,7 +27,7 @@ export const pages: Page[] = [
 	},
 	{
 		path: "/constitution",
-		title: "constitution — nine laws, three classes",
+		title: "constitution — eleven laws, three classes",
 		text: "the laws every repo in this workshop answers to, why each one exists, and the stability promise that prices change.",
 	},
 	{
