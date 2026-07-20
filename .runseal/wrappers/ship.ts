@@ -6,11 +6,18 @@ import { fs } from "@perish/harness/fs";
 import { io } from "@perish/harness/io";
 import { doc } from "@perish/harness/json";
 import { runseal } from "@perish/harness/runseal";
+import { family, kind, run } from "@perish/shield";
 
 const app = "apps/react";
 const dist = `${app}/dist`;
 const config = `${app}/wrangler.jsonc`;
 const table = `${app}/src/lib/routes.ts`;
+
+const fault = family("ship", {
+  unfilled: kind<{ missing: string[] }>(),
+  build: kind<{ path: string }>(),
+  unreached: kind<{ domain: string }>(),
+});
 
 function usage(): void {
   io.print("Usage: runseal :ship [--dry-run | --check]");
@@ -153,13 +160,13 @@ async function knock(url: string): Promise<number | string> {
 async function ship(): Promise<void> {
   const keys = await vault();
   if (keys.empty.length > 0) {
-    io.fail(`ship: unfilled in ${secretsDir()}: ${keys.empty.join(", ")}`);
+    throw fault.unfilled({ missing: keys.empty });
   }
   const paths = await routes();
   io.print("==> build");
   await bin("pnpm").run(["--filter", "@open-web/react", "build"]);
   if (!(await fs.file.exists(`${dist}/index.html`))) {
-    io.fail(`ship: build produced no ${dist}/index.html`);
+    throw fault.build({ path: `${dist}/index.html` });
   }
   io.print("==> deploy");
   await bin("pnpm").run(["exec", "wrangler", "deploy", "--domain", keys.domain], {
@@ -191,7 +198,7 @@ async function anchored(keys: { account: string; token: string; domain: string }
     (entry: { hostname?: string }) => entry.hostname === keys.domain,
   );
   if (!bound) {
-    io.fail(`ship: edge unreachable and ${keys.domain} is not attached; deploy likely failed`);
+    throw fault.unreached({ domain: keys.domain });
   }
   io.print(`  edge unreachable from here; API confirms ${keys.domain} is attached (local proxy?)`);
 }
@@ -263,5 +270,13 @@ if (flags(args).boolean("check")) {
 } else if (flags(args).boolean("dry-run")) {
   await plan();
 } else {
-  await ship();
+  await run(ship).catch(fault.consume({
+    unfilled: (thrown) =>
+      io.fail(`ship: unfilled in ${secretsDir()}: ${thrown.meta.missing.join(", ")}`),
+    build: (thrown) => io.fail(`ship: build produced no ${thrown.meta.path}`),
+    unreached: (thrown) =>
+      io.fail(
+        `ship: edge unreachable and ${thrown.meta.domain} is not attached; deploy likely failed`,
+      ),
+  }));
 }
