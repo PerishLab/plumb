@@ -207,7 +207,7 @@
 					},
 					{
 						"word": "report",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "root",
@@ -215,6 +215,10 @@
 					},
 					{
 						"word": "scan",
+						"count": 1
+					},
+					{
+						"word": "seats",
 						"count": 1
 					},
 					{
@@ -840,7 +844,7 @@
 					},
 					{
 						"word": "rules",
-						"count": 8
+						"count": 9
 					},
 					{
 						"word": "run",
@@ -1161,7 +1165,7 @@
 					},
 					{
 						"word": "config",
-						"count": 5
+						"count": 8
 					},
 					{
 						"word": "count",
@@ -1212,12 +1216,16 @@
 						"count": 1
 					},
 					{
-						"word": "file",
+						"word": "fanout",
 						"count": 3
 					},
 					{
+						"word": "file",
+						"count": 5
+					},
+					{
 						"word": "findings",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "flat",
@@ -1277,7 +1285,7 @@
 					},
 					{
 						"word": "kids",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "kind",
@@ -1300,6 +1308,10 @@
 						"count": 2
 					},
 					{
+						"word": "length",
+						"count": 1
+					},
+					{
 						"word": "lift",
 						"count": 1
 					},
@@ -1310,6 +1322,10 @@
 					{
 						"word": "line",
 						"count": 2
+					},
+					{
+						"word": "lines",
+						"count": 1
 					},
 					{
 						"word": "linked",
@@ -1345,7 +1361,7 @@
 					},
 					{
 						"word": "node",
-						"count": 13
+						"count": 14
 					},
 					{
 						"word": "noise",
@@ -1353,7 +1369,7 @@
 					},
 					{
 						"word": "note",
-						"count": 5
+						"count": 7
 					},
 					{
 						"word": "out",
@@ -1373,7 +1389,7 @@
 					},
 					{
 						"word": "parts",
-						"count": 2
+						"count": 3
 					},
 					{
 						"word": "pat",
@@ -1381,11 +1397,11 @@
 					},
 					{
 						"word": "path",
-						"count": 19
+						"count": 22
 					},
 					{
 						"word": "paths",
-						"count": 2
+						"count": 3
 					},
 					{
 						"word": "place",
@@ -1417,11 +1433,11 @@
 					},
 					{
 						"word": "run",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "scan",
-						"count": 2
+						"count": 3
 					},
 					{
 						"word": "scopes",
@@ -1429,7 +1445,7 @@
 					},
 					{
 						"word": "seat",
-						"count": 2
+						"count": 3
 					},
 					{
 						"word": "seated",
@@ -1453,7 +1469,7 @@
 					},
 					{
 						"word": "source",
-						"count": 3
+						"count": 4
 					},
 					{
 						"word": "span",
@@ -1549,6 +1565,10 @@
 						"count": 1
 					},
 					{
+						"word": "calm",
+						"count": 1
+					},
+					{
 						"word": "card",
 						"count": 1
 					},
@@ -1566,7 +1586,7 @@
 					},
 					{
 						"word": "config",
-						"count": 14
+						"count": 16
 					},
 					{
 						"word": "count",
@@ -1578,7 +1598,7 @@
 					},
 					{
 						"word": "debt",
-						"count": 1
+						"count": 3
 					},
 					{
 						"word": "deep",
@@ -1613,6 +1633,10 @@
 						"count": 1
 					},
 					{
+						"word": "fanout",
+						"count": 1
+					},
+					{
 						"word": "field",
 						"count": 1
 					},
@@ -1625,15 +1649,23 @@
 						"count": 1
 					},
 					{
+						"word": "findings",
+						"count": 1
+					},
+					{
 						"word": "five",
 						"count": 1
 					},
 					{
 						"word": "found",
-						"count": 5
+						"count": 7
 					},
 					{
 						"word": "four",
+						"count": 1
+					},
+					{
+						"word": "generic",
 						"count": 1
 					},
 					{
@@ -1646,6 +1678,10 @@
 					},
 					{
 						"word": "guard",
+						"count": 1
+					},
+					{
+						"word": "hit",
 						"count": 1
 					},
 					{
@@ -1686,6 +1722,10 @@
 					},
 					{
 						"word": "layered",
+						"count": 1
+					},
+					{
+						"word": "length",
 						"count": 1
 					},
 					{
@@ -1797,6 +1837,10 @@
 						"count": 1
 					},
 					{
+						"word": "seat",
+						"count": 3
+					},
+					{
 						"word": "shaped",
 						"count": 1
 					},
@@ -1853,6 +1897,10 @@
 						"count": 1
 					},
 					{
+						"word": "typeonly",
+						"count": 1
+					},
+					{
 						"word": "typescript",
 						"count": 1
 					},
@@ -1866,6 +1914,10 @@
 					},
 					{
 						"word": "weave",
+						"count": 1
+					},
+					{
+						"word": "wide",
 						"count": 1
 					},
 					{
@@ -1887,12 +1939,8 @@
 				"root": ".runseal",
 				"atoms": [
 					{
-						"word": "Check",
+						"word": "Op",
 						"count": 1
-					},
-					{
-						"word": "Options",
-						"count": 2
 					},
 					{
 						"word": "Policy",
@@ -1903,112 +1951,36 @@
 						"count": 1
 					},
 					{
-						"word": "ahead",
-						"count": 1
-					},
-					{
 						"word": "arg",
 						"count": 1
 					},
 					{
 						"word": "args",
-						"count": 7
+						"count": 2
 					},
 					{
 						"word": "base",
-						"count": 2
-					},
-					{
-						"word": "branch",
-						"count": 5
-					},
-					{
-						"word": "buckets",
 						"count": 1
 					},
 					{
-						"word": "change",
-						"count": 1
-					},
-					{
-						"word": "channel",
-						"count": 1
-					},
-					{
-						"word": "config",
-						"count": 1
-					},
-					{
-						"word": "creation",
-						"count": 1
-					},
-					{
-						"word": "current",
-						"count": 4
-					},
-					{
-						"word": "dirty",
-						"count": 1
-					},
-					{
-						"word": "dry",
-						"count": 2
-					},
-					{
-						"word": "existing",
-						"count": 1
-					},
-					{
-						"word": "file",
-						"count": 1
-					},
-					{
-						"word": "first",
+						"word": "forge",
 						"count": 1
 					},
 					{
 						"word": "found",
-						"count": 2
-					},
-					{
-						"word": "full",
 						"count": 1
 					},
 					{
-						"word": "guarded",
+						"word": "held",
 						"count": 1
 					},
 					{
-						"word": "hooks",
-						"count": 1
-					},
-					{
-						"word": "id",
-						"count": 4
-					},
-					{
-						"word": "id?",
-						"count": 1
-					},
-					{
-						"word": "landable",
-						"count": 1
-					},
-					{
-						"word": "load",
+						"word": "listed",
 						"count": 1
 					},
 					{
 						"word": "mark",
-						"count": 1
-					},
-					{
-						"word": "matched",
-						"count": 1
-					},
-					{
-						"word": "merge",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "message",
@@ -2019,75 +1991,11 @@
 						"count": 1
 					},
 					{
-						"word": "name",
-						"count": 1
-					},
-					{
-						"word": "number",
-						"count": 3
-					},
-					{
-						"word": "ok",
-						"count": 1
-					},
-					{
-						"word": "options",
-						"count": 5
-					},
-					{
-						"word": "origin",
-						"count": 2
-					},
-					{
-						"word": "parse",
-						"count": 2
-					},
-					{
-						"word": "parsed",
-						"count": 2
-					},
-					{
-						"word": "paths",
-						"count": 1
-					},
-					{
-						"word": "payload",
-						"count": 1
-					},
-					{
-						"word": "plan",
-						"count": 1
-					},
-					{
-						"word": "pr",
-						"count": 1
-					},
-					{
-						"word": "prefix",
+						"word": "phase",
 						"count": 1
 					},
 					{
 						"word": "pretty",
-						"count": 2
-					},
-					{
-						"word": "print",
-						"count": 1
-					},
-					{
-						"word": "pull",
-						"count": 1
-					},
-					{
-						"word": "raw",
-						"count": 1
-					},
-					{
-						"word": "redirect",
-						"count": 1
-					},
-					{
-						"word": "ref",
 						"count": 1
 					},
 					{
@@ -2095,83 +2003,11 @@
 						"count": 1
 					},
 					{
-						"word": "remote",
-						"count": 1
-					},
-					{
-						"word": "remove",
-						"count": 1
-					},
-					{
-						"word": "repo",
-						"count": 6
-					},
-					{
-						"word": "request",
-						"count": 1
-					},
-					{
-						"word": "resolve",
-						"count": 1
-					},
-					{
-						"word": "response",
-						"count": 1
-					},
-					{
-						"word": "rid",
-						"count": 2
-					},
-					{
-						"word": "root",
-						"count": 1
-					},
-					{
-						"word": "rule",
-						"count": 1
-					},
-					{
-						"word": "rules",
-						"count": 3
-					},
-					{
-						"word": "ruleset",
-						"count": 2
-					},
-					{
-						"word": "rulesets",
-						"count": 2
-					},
-					{
-						"word": "run",
-						"count": 1
-					},
-					{
-						"word": "sha",
-						"count": 2
-					},
-					{
-						"word": "slot",
-						"count": 1
-					},
-					{
-						"word": "steps",
-						"count": 1
-					},
-					{
-						"word": "subjects",
+						"word": "seated",
 						"count": 1
 					},
 					{
 						"word": "target",
-						"count": 3
-					},
-					{
-						"word": "template",
-						"count": 1
-					},
-					{
-						"word": "title",
 						"count": 1
 					},
 					{
@@ -2179,32 +2015,12 @@
 						"count": 1
 					},
 					{
-						"word": "upsert",
-						"count": 1
-					},
-					{
-						"word": "url",
-						"count": 1
-					},
-					{
 						"word": "usage",
-						"count": 5
+						"count": 2
 					},
 					{
 						"word": "value",
-						"count": 1
-					},
-					{
-						"word": "workflow",
-						"count": 1
-					},
-					{
-						"word": "zone",
-						"count": 5
-					},
-					{
-						"word": "zones",
-						"count": 1
+						"count": 3
 					}
 				]
 			},
@@ -2212,15 +2028,7 @@
 				"root": "app/src",
 				"atoms": [
 					{
-						"word": "ADD",
-						"count": 1
-					},
-					{
 						"word": "Absent",
-						"count": 1
-					},
-					{
-						"word": "Account",
 						"count": 1
 					},
 					{
@@ -2240,39 +2048,11 @@
 						"count": 2
 					},
 					{
-						"word": "BASE",
-						"count": 1
-					},
-					{
 						"word": "Bin",
 						"count": 1
 					},
 					{
-						"word": "Body",
-						"count": 1
-					},
-					{
-						"word": "Bucket",
-						"count": 1
-					},
-					{
-						"word": "CANCEL",
-						"count": 1
-					},
-					{
-						"word": "CORE",
-						"count": 1
-					},
-					{
-						"word": "CREATE",
-						"count": 6
-					},
-					{
 						"word": "Check",
-						"count": 1
-					},
-					{
-						"word": "Checks",
 						"count": 1
 					},
 					{
@@ -2280,27 +2060,11 @@
 						"count": 1
 					},
 					{
-						"word": "Client",
-						"count": 1
-					},
-					{
-						"word": "Cmd",
-						"count": 2
-					},
-					{
-						"word": "Comment",
-						"count": 1
-					},
-					{
 						"word": "Config",
-						"count": 2
+						"count": 1
 					},
 					{
 						"word": "Context",
-						"count": 1
-					},
-					{
-						"word": "DISPATCH",
 						"count": 1
 					},
 					{
@@ -2312,24 +2076,12 @@
 						"count": 1
 					},
 					{
-						"word": "ENTRIES",
-						"count": 1
-					},
-					{
-						"word": "EXACT",
-						"count": 1
-					},
-					{
 						"word": "Editor",
 						"count": 1
 					},
 					{
-						"word": "Entry",
-						"count": 1
-					},
-					{
 						"word": "Env",
-						"count": 7
+						"count": 6
 					},
 					{
 						"word": "Error",
@@ -2344,19 +2096,7 @@
 						"count": 1
 					},
 					{
-						"word": "FIND",
-						"count": 1
-					},
-					{
 						"word": "Fleet",
-						"count": 1
-					},
-					{
-						"word": "GET",
-						"count": 7
-					},
-					{
-						"word": "GUARD",
 						"count": 1
 					},
 					{
@@ -2376,20 +2116,8 @@
 						"count": 1
 					},
 					{
-						"word": "Issue",
-						"count": 1
-					},
-					{
-						"word": "JSON",
-						"count": 1
-					},
-					{
 						"word": "Join",
 						"count": 1
-					},
-					{
-						"word": "LIST",
-						"count": 4
 					},
 					{
 						"word": "Lifecycle",
@@ -2397,18 +2125,6 @@
 					},
 					{
 						"word": "Listed",
-						"count": 1
-					},
-					{
-						"word": "Login",
-						"count": 1
-					},
-					{
-						"word": "MERGE",
-						"count": 1
-					},
-					{
-						"word": "Manage",
 						"count": 1
 					},
 					{
@@ -2420,15 +2136,7 @@
 						"count": 1
 					},
 					{
-						"word": "Options",
-						"count": 1
-					},
-					{
 						"word": "Outcome",
-						"count": 1
-					},
-					{
-						"word": "PROBE",
 						"count": 1
 					},
 					{
@@ -2444,10 +2152,6 @@
 						"count": 1
 					},
 					{
-						"word": "Poll",
-						"count": 1
-					},
-					{
 						"word": "Prepend",
 						"count": 1
 					},
@@ -2460,10 +2164,6 @@
 						"count": 2
 					},
 					{
-						"word": "REQUEST",
-						"count": 1
-					},
-					{
 						"word": "RESOLVE",
 						"count": 1
 					},
@@ -2472,15 +2172,7 @@
 						"count": 1
 					},
 					{
-						"word": "ROOT",
-						"count": 24
-					},
-					{
 						"word": "Replace",
-						"count": 1
-					},
-					{
-						"word": "Repo",
 						"count": 1
 					},
 					{
@@ -2496,23 +2188,11 @@
 						"count": 2
 					},
 					{
-						"word": "Ruleset",
-						"count": 1
-					},
-					{
 						"word": "Runner",
 						"count": 1
 					},
 					{
-						"word": "Section",
-						"count": 1
-					},
-					{
 						"word": "Set",
-						"count": 1
-					},
-					{
-						"word": "Spec",
 						"count": 1
 					},
 					{
@@ -2524,27 +2204,7 @@
 						"count": 4
 					},
 					{
-						"word": "Tea",
-						"count": 1
-					},
-					{
-						"word": "UPDATE",
-						"count": 3
-					},
-					{
-						"word": "UPSERT",
-						"count": 2
-					},
-					{
 						"word": "Unset",
-						"count": 1
-					},
-					{
-						"word": "VERSION",
-						"count": 1
-					},
-					{
-						"word": "WATCH",
 						"count": 1
 					},
 					{
@@ -2568,14 +2228,6 @@
 						"count": 1
 					},
 					{
-						"word": "Zone",
-						"count": 1
-					},
-					{
-						"word": "about",
-						"count": 1
-					},
-					{
 						"word": "absent",
 						"count": 1
 					},
@@ -2584,20 +2236,8 @@
 						"count": 1
 					},
 					{
-						"word": "account",
-						"count": 5
-					},
-					{
 						"word": "action",
 						"count": 1
-					},
-					{
-						"word": "active",
-						"count": 1
-					},
-					{
-						"word": "api",
-						"count": 3
 					},
 					{
 						"word": "app",
@@ -2608,40 +2248,16 @@
 						"count": 2
 					},
 					{
-						"word": "arg",
-						"count": 3
-					},
-					{
 						"word": "args",
-						"count": 52
+						"count": 6
 					},
 					{
 						"word": "argv",
 						"count": 2
 					},
 					{
-						"word": "atom",
-						"count": 1
-					},
-					{
 						"word": "base",
-						"count": 11
-					},
-					{
-						"word": "body",
-						"count": 24
-					},
-					{
-						"word": "boolean",
-						"count": 2
-					},
-					{
-						"word": "branch",
 						"count": 4
-					},
-					{
-						"word": "bucket",
-						"count": 1
 					},
 					{
 						"word": "build",
@@ -2656,16 +2272,8 @@
 						"count": 4
 					},
 					{
-						"word": "change",
-						"count": 1
-					},
-					{
 						"word": "chars",
 						"count": 1
-					},
-					{
-						"word": "checks",
-						"count": 2
 					},
 					{
 						"word": "child",
@@ -2680,20 +2288,12 @@
 						"count": 2
 					},
 					{
-						"word": "client",
-						"count": 7
-					},
-					{
 						"word": "closed",
 						"count": 2
 					},
 					{
-						"word": "cloudflare",
-						"count": 1
-					},
-					{
 						"word": "cmd",
-						"count": 3
+						"count": 1
 					},
 					{
 						"word": "code",
@@ -2705,22 +2305,14 @@
 					},
 					{
 						"word": "command",
-						"count": 15
-					},
-					{
-						"word": "comment",
-						"count": 1
+						"count": 10
 					},
 					{
 						"word": "config",
-						"count": 37
+						"count": 21
 					},
 					{
 						"word": "conflict",
-						"count": 1
-					},
-					{
-						"word": "content",
 						"count": 1
 					},
 					{
@@ -2729,31 +2321,19 @@
 					},
 					{
 						"word": "core",
-						"count": 2
-					},
-					{
-						"word": "count",
-						"count": 2
+						"count": 1
 					},
 					{
 						"word": "create",
-						"count": 6
+						"count": 1
 					},
 					{
 						"word": "cwd",
 						"count": 5
 					},
 					{
-						"word": "deadline",
-						"count": 2
-					},
-					{
 						"word": "dedup",
 						"count": 2
-					},
-					{
-						"word": "default",
-						"count": 3
 					},
 					{
 						"word": "delimiter",
@@ -2762,10 +2342,6 @@
 					{
 						"word": "deno",
 						"count": 6
-					},
-					{
-						"word": "description",
-						"count": 2
 					},
 					{
 						"word": "dir",
@@ -2788,14 +2364,6 @@
 						"count": 1
 					},
 					{
-						"word": "dump",
-						"count": 1
-					},
-					{
-						"word": "early",
-						"count": 1
-					},
-					{
 						"word": "effective",
 						"count": 1
 					},
@@ -2809,22 +2377,14 @@
 					},
 					{
 						"word": "entry",
-						"count": 5
+						"count": 3
 					},
 					{
 						"word": "env",
-						"count": 18
-					},
-					{
-						"word": "eval",
-						"count": 11
+						"count": 14
 					},
 					{
 						"word": "exact",
-						"count": 1
-					},
-					{
-						"word": "examples",
 						"count": 1
 					},
 					{
@@ -2868,76 +2428,16 @@
 						"count": 1
 					},
 					{
-						"word": "fetch",
-						"count": 1
-					},
-					{
 						"word": "file",
-						"count": 12
-					},
-					{
-						"word": "find",
-						"count": 2
-					},
-					{
-						"word": "forgejo",
-						"count": 2
-					},
-					{
-						"word": "found",
-						"count": 1
-					},
-					{
-						"word": "from",
-						"count": 1
-					},
-					{
-						"word": "get",
-						"count": 7
-					},
-					{
-						"word": "git",
-						"count": 1
-					},
-					{
-						"word": "github",
-						"count": 2
-					},
-					{
-						"word": "guard",
-						"count": 1
-					},
-					{
-						"word": "head",
-						"count": 1
+						"count": 9
 					},
 					{
 						"word": "help",
-						"count": 6
-					},
-					{
-						"word": "home",
-						"count": 4
-					},
-					{
-						"word": "host",
-						"count": 4
-					},
-					{
-						"word": "hosted",
-						"count": 1
-					},
-					{
-						"word": "http",
 						"count": 2
 					},
 					{
-						"word": "id",
+						"word": "home",
 						"count": 3
-					},
-					{
-						"word": "index",
-						"count": 5
 					},
 					{
 						"word": "injection",
@@ -2948,31 +2448,11 @@
 						"count": 8
 					},
 					{
-						"word": "inline",
-						"count": 2
-					},
-					{
 						"word": "input",
-						"count": 2
-					},
-					{
-						"word": "inputs",
-						"count": 2
-					},
-					{
-						"word": "internal",
 						"count": 1
 					},
 					{
-						"word": "interval",
-						"count": 3
-					},
-					{
-						"word": "issue",
-						"count": 2
-					},
-					{
-						"word": "items",
+						"word": "internal",
 						"count": 1
 					},
 					{
@@ -2981,34 +2461,18 @@
 					},
 					{
 						"word": "key",
-						"count": 18
+						"count": 13
 					},
 					{
 						"word": "label",
-						"count": 3
-					},
-					{
-						"word": "last",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "left",
 						"count": 1
 					},
 					{
-						"word": "limit",
-						"count": 3
-					},
-					{
-						"word": "line",
-						"count": 2
-					},
-					{
 						"word": "link",
-						"count": 3
-					},
-					{
-						"word": "list",
 						"count": 3
 					},
 					{
@@ -3017,26 +2481,14 @@
 					},
 					{
 						"word": "load",
-						"count": 4
+						"count": 1
 					},
 					{
 						"word": "lock",
 						"count": 1
 					},
 					{
-						"word": "login",
-						"count": 2
-					},
-					{
-						"word": "logins",
-						"count": 1
-					},
-					{
 						"word": "main",
-						"count": 1
-					},
-					{
-						"word": "manage",
 						"count": 1
 					},
 					{
@@ -3048,12 +2500,8 @@
 						"count": 1
 					},
 					{
-						"word": "max",
-						"count": 2
-					},
-					{
 						"word": "merge",
-						"count": 4
+						"count": 3
 					},
 					{
 						"word": "merged",
@@ -3068,20 +2516,12 @@
 						"count": 2
 					},
 					{
-						"word": "method",
-						"count": 9
-					},
-					{
 						"word": "name",
-						"count": 41
+						"count": 16
 					},
 					{
 						"word": "names",
 						"count": 2
-					},
-					{
-						"word": "need",
-						"count": 1
 					},
 					{
 						"word": "new",
@@ -3092,36 +2532,12 @@
 						"count": 2
 					},
 					{
-						"word": "number",
-						"count": 7
-					},
-					{
 						"word": "op",
 						"count": 6
 					},
 					{
-						"word": "open",
-						"count": 1
-					},
-					{
 						"word": "ops",
 						"count": 2
-					},
-					{
-						"word": "option",
-						"count": 2
-					},
-					{
-						"word": "optional",
-						"count": 4
-					},
-					{
-						"word": "options",
-						"count": 1
-					},
-					{
-						"word": "origin",
-						"count": 1
 					},
 					{
 						"word": "os",
@@ -3129,78 +2545,30 @@
 					},
 					{
 						"word": "out",
-						"count": 4
-					},
-					{
-						"word": "outcome",
-						"count": 2
-					},
-					{
-						"word": "output",
-						"count": 2
-					},
-					{
-						"word": "owner",
 						"count": 3
 					},
 					{
-						"word": "padding",
-						"count": 1
-					},
-					{
-						"word": "pair",
-						"count": 1
-					},
-					{
-						"word": "params",
+						"word": "outcome",
 						"count": 1
 					},
 					{
 						"word": "parse",
-						"count": 7
-					},
-					{
-						"word": "parsed",
 						"count": 1
 					},
 					{
-						"word": "parts",
-						"count": 2
-					},
-					{
 						"word": "path",
-						"count": 35
+						"count": 12
 					},
 					{
 						"word": "paths",
 						"count": 1
 					},
 					{
-						"word": "payload",
-						"count": 15
-					},
-					{
 						"word": "permissions",
-						"count": 2
-					},
-					{
-						"word": "phase",
-						"count": 1
-					},
-					{
-						"word": "pr",
-						"count": 4
+						"count": 3
 					},
 					{
 						"word": "prefix",
-						"count": 10
-					},
-					{
-						"word": "prefixes",
-						"count": 1
-					},
-					{
-						"word": "prepare",
 						"count": 1
 					},
 					{
@@ -3210,10 +2578,6 @@
 					{
 						"word": "present",
 						"count": 1
-					},
-					{
-						"word": "probe",
-						"count": 2
 					},
 					{
 						"word": "process",
@@ -3228,48 +2592,12 @@
 						"count": 5
 					},
 					{
-						"word": "progressive",
-						"count": 1
-					},
-					{
-						"word": "pull",
-						"count": 3
-					},
-					{
-						"word": "pulls",
-						"count": 1
-					},
-					{
 						"word": "push",
 						"count": 1
 					},
 					{
-						"word": "query",
-						"count": 12
-					},
-					{
-						"word": "r2",
-						"count": 1
-					},
-					{
 						"word": "raw",
-						"count": 9
-					},
-					{
-						"word": "read",
-						"count": 1
-					},
-					{
-						"word": "record",
 						"count": 3
-					},
-					{
-						"word": "redirect",
-						"count": 2
-					},
-					{
-						"word": "reference",
-						"count": 2
 					},
 					{
 						"word": "register",
@@ -3288,24 +2616,8 @@
 						"count": 1
 					},
 					{
-						"word": "render",
-						"count": 1
-					},
-					{
 						"word": "replace",
 						"count": 1
-					},
-					{
-						"word": "repo",
-						"count": 22
-					},
-					{
-						"word": "request",
-						"count": 6
-					},
-					{
-						"word": "required",
-						"count": 5
 					},
 					{
 						"word": "resolve",
@@ -3320,16 +2632,8 @@
 						"count": 12
 					},
 					{
-						"word": "response",
-						"count": 3
-					},
-					{
-						"word": "rest",
-						"count": 2
-					},
-					{
 						"word": "result",
-						"count": 4
+						"count": 2
 					},
 					{
 						"word": "rewritten",
@@ -3344,28 +2648,16 @@
 						"count": 4
 					},
 					{
-						"word": "route",
-						"count": 2
-					},
-					{
-						"word": "rule",
-						"count": 6
-					},
-					{
-						"word": "ruleset",
-						"count": 4
-					},
-					{
 						"word": "run",
-						"count": 9
+						"count": 4
 					},
 					{
 						"word": "runnable",
 						"count": 1
 					},
 					{
-						"word": "runs",
-						"count": 2
+						"word": "runner",
+						"count": 1
 					},
 					{
 						"word": "runseal",
@@ -3380,30 +2672,6 @@
 						"count": 4
 					},
 					{
-						"word": "seconds",
-						"count": 1
-					},
-					{
-						"word": "secret",
-						"count": 2
-					},
-					{
-						"word": "secrets",
-						"count": 1
-					},
-					{
-						"word": "sections",
-						"count": 1
-					},
-					{
-						"word": "select",
-						"count": 1
-					},
-					{
-						"word": "send",
-						"count": 2
-					},
-					{
 						"word": "separator",
 						"count": 5
 					},
@@ -3412,20 +2680,12 @@
 						"count": 1
 					},
 					{
-						"word": "sha",
-						"count": 3
-					},
-					{
 						"word": "shutdown",
 						"count": 4
 					},
 					{
 						"word": "source",
 						"count": 8
-					},
-					{
-						"word": "spec",
-						"count": 1
 					},
 					{
 						"word": "specs",
@@ -3437,19 +2697,11 @@
 					},
 					{
 						"word": "status",
-						"count": 8
-					},
-					{
-						"word": "statuses",
 						"count": 1
 					},
 					{
 						"word": "stem",
 						"count": 3
-					},
-					{
-						"word": "suffix",
-						"count": 1
 					},
 					{
 						"word": "symbol",
@@ -3465,39 +2717,19 @@
 					},
 					{
 						"word": "target",
-						"count": 14
+						"count": 8
 					},
 					{
 						"word": "task",
 						"count": 1
 					},
 					{
-						"word": "tea",
-						"count": 1
-					},
-					{
 						"word": "text",
-						"count": 4
-					},
-					{
-						"word": "timeout",
-						"count": 3
-					},
-					{
-						"word": "title",
-						"count": 2
+						"count": 1
 					},
 					{
 						"word": "token",
-						"count": 15
-					},
-					{
-						"word": "tool",
-						"count": 1
-					},
-					{
-						"word": "top",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "unique",
@@ -3508,10 +2740,6 @@
 						"count": 1
 					},
 					{
-						"word": "update",
-						"count": 3
-					},
-					{
 						"word": "uri",
 						"count": 2
 					},
@@ -3520,35 +2748,19 @@
 						"count": 2
 					},
 					{
-						"word": "url",
-						"count": 11
-					},
-					{
-						"word": "usage",
-						"count": 1
-					},
-					{
 						"word": "valid",
 						"count": 2
 					},
 					{
 						"word": "validate",
-						"count": 5
+						"count": 4
 					},
 					{
 						"word": "value",
-						"count": 34
-					},
-					{
-						"word": "values",
-						"count": 5
+						"count": 11
 					},
 					{
 						"word": "var",
-						"count": 2
-					},
-					{
-						"word": "variable",
 						"count": 2
 					},
 					{
@@ -3561,10 +2773,6 @@
 					},
 					{
 						"word": "wait",
-						"count": 2
-					},
-					{
-						"word": "watch",
 						"count": 1
 					},
 					{
@@ -3576,20 +2784,12 @@
 						"count": 1
 					},
 					{
-						"word": "workflow",
-						"count": 6
-					},
-					{
 						"word": "wrapper",
 						"count": 3
 					},
 					{
 						"word": "wrappers",
 						"count": 3
-					},
-					{
-						"word": "zone",
-						"count": 11
 					}
 				]
 			},
@@ -3601,16 +2801,12 @@
 						"count": 3
 					},
 					{
-						"word": "Check",
-						"count": 1
-					},
-					{
 						"word": "File",
 						"count": 1
 					},
 					{
 						"word": "Fixture",
-						"count": 8
+						"count": 6
 					},
 					{
 						"word": "Git",
@@ -3618,11 +2814,11 @@
 					},
 					{
 						"word": "Mock",
-						"count": 3
+						"count": 2
 					},
 					{
 						"word": "Paths",
-						"count": 2
+						"count": 1
 					},
 					{
 						"word": "Probe",
@@ -3634,22 +2830,14 @@
 					},
 					{
 						"word": "Script",
-						"count": 6
+						"count": 5
 					},
 					{
 						"word": "Shell",
 						"count": 3
 					},
 					{
-						"word": "Stub",
-						"count": 1
-					},
-					{
 						"word": "Suffix",
-						"count": 1
-					},
-					{
-						"word": "Tool",
 						"count": 1
 					},
 					{
@@ -3658,7 +2846,7 @@
 					},
 					{
 						"word": "_temp",
-						"count": 8
+						"count": 6
 					},
 					{
 						"word": "absolute",
@@ -3666,19 +2854,15 @@
 					},
 					{
 						"word": "accept",
-						"count": 3
-					},
-					{
-						"word": "actions",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "actual",
-						"count": 3
+						"count": 2
 					},
 					{
 						"word": "address",
-						"count": 5
+						"count": 2
 					},
 					{
 						"word": "allowed",
@@ -3693,27 +2877,11 @@
 						"count": 1
 					},
 					{
-						"word": "applies",
-						"count": 1
-					},
-					{
 						"word": "args",
-						"count": 21
+						"count": 17
 					},
 					{
 						"word": "argv",
-						"count": 1
-					},
-					{
-						"word": "assert",
-						"count": 1
-					},
-					{
-						"word": "assertion",
-						"count": 2
-					},
-					{
-						"word": "base",
 						"count": 2
 					},
 					{
@@ -3722,26 +2890,14 @@
 					},
 					{
 						"word": "bin",
-						"count": 16
+						"count": 12
 					},
 					{
 						"word": "body",
-						"count": 8
-					},
-					{
-						"word": "branch",
-						"count": 1
-					},
-					{
-						"word": "buffer",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "bump",
-						"count": 1
-					},
-					{
-						"word": "channel",
 						"count": 1
 					},
 					{
@@ -3754,19 +2910,11 @@
 					},
 					{
 						"word": "command",
-						"count": 7
-					},
-					{
-						"word": "comment",
-						"count": 1
-					},
-					{
-						"word": "config",
-						"count": 1
+						"count": 3
 					},
 					{
 						"word": "content",
-						"count": 5
+						"count": 2
 					},
 					{
 						"word": "contention",
@@ -3777,24 +2925,12 @@
 						"count": 2
 					},
 					{
-						"word": "create",
-						"count": 1
-					},
-					{
-						"word": "creates",
-						"count": 2
-					},
-					{
-						"word": "credentials",
-						"count": 1
-					},
-					{
 						"word": "cwd",
-						"count": 11
+						"count": 8
 					},
 					{
 						"word": "deadline",
-						"count": 6
+						"count": 4
 					},
 					{
 						"word": "deno",
@@ -3805,24 +2941,12 @@
 						"count": 6
 					},
 					{
-						"word": "dirty",
-						"count": 1
-					},
-					{
-						"word": "dns",
-						"count": 1
-					},
-					{
-						"word": "dry",
-						"count": 2
-					},
-					{
 						"word": "env",
-						"count": 9
+						"count": 8
 					},
 					{
 						"word": "envs",
-						"count": 3
+						"count": 1
 					},
 					{
 						"word": "exact",
@@ -3842,7 +2966,7 @@
 					},
 					{
 						"word": "expected",
-						"count": 8
+						"count": 6
 					},
 					{
 						"word": "explicit",
@@ -3855,10 +2979,6 @@
 					{
 						"word": "external",
 						"count": 1
-					},
-					{
-						"word": "failed",
-						"count": 2
 					},
 					{
 						"word": "fails",
@@ -3874,31 +2994,19 @@
 					},
 					{
 						"word": "first",
-						"count": 2
+						"count": 1
 					},
 					{
 						"word": "fixture",
-						"count": 4
+						"count": 3
 					},
 					{
-						"word": "forgejo",
+						"word": "flow",
 						"count": 1
 					},
 					{
 						"word": "fx",
-						"count": 52
-					},
-					{
-						"word": "gets",
-						"count": 1
-					},
-					{
-						"word": "git",
-						"count": 1
-					},
-					{
-						"word": "github",
-						"count": 1
+						"count": 36
 					},
 					{
 						"word": "global",
@@ -3906,11 +3014,11 @@
 					},
 					{
 						"word": "guard",
-						"count": 2
+						"count": 1
 					},
 					{
 						"word": "handle",
-						"count": 5
+						"count": 2
 					},
 					{
 						"word": "hashes",
@@ -3918,11 +3026,7 @@
 					},
 					{
 						"word": "help",
-						"count": 5
-					},
-					{
-						"word": "hidden",
-						"count": 1
+						"count": 3
 					},
 					{
 						"word": "home",
@@ -3942,10 +3046,6 @@
 					},
 					{
 						"word": "invalid",
-						"count": 2
-					},
-					{
-						"word": "issue",
 						"count": 1
 					},
 					{
@@ -3957,23 +3057,11 @@
 						"count": 6
 					},
 					{
-						"word": "land",
-						"count": 1
-					},
-					{
-						"word": "latest",
-						"count": 1
-					},
-					{
 						"word": "left",
 						"count": 2
 					},
 					{
 						"word": "lifecycle",
-						"count": 1
-					},
-					{
-						"word": "limits",
 						"count": 1
 					},
 					{
@@ -3985,16 +3073,12 @@
 						"count": 2
 					},
 					{
-						"word": "lists",
-						"count": 1
-					},
-					{
 						"word": "local",
 						"count": 3
 					},
 					{
 						"word": "log",
-						"count": 8
+						"count": 6
 					},
 					{
 						"word": "manage",
@@ -4013,20 +3097,16 @@
 						"count": 2
 					},
 					{
-						"word": "mock",
-						"count": 1
-					},
-					{
 						"word": "model",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "name",
-						"count": 13
+						"count": 10
 					},
 					{
 						"word": "names",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "namespace",
@@ -4042,15 +3122,11 @@
 					},
 					{
 						"word": "new",
-						"count": 5
-					},
-					{
-						"word": "origin",
-						"count": 1
+						"count": 3
 					},
 					{
 						"word": "output",
-						"count": 96
+						"count": 55
 					},
 					{
 						"word": "pair",
@@ -4062,22 +3138,22 @@
 					},
 					{
 						"word": "path",
-						"count": 29
+						"count": 25
 					},
 					{
 						"word": "paths",
-						"count": 7
-					},
-					{
-						"word": "payload",
-						"count": 2
+						"count": 5
 					},
 					{
 						"word": "permissions",
-						"count": 10
+						"count": 8
 					},
 					{
 						"word": "picked",
+						"count": 1
+					},
+					{
+						"word": "pin",
 						"count": 1
 					},
 					{
@@ -4094,15 +3170,11 @@
 					},
 					{
 						"word": "precedence",
-						"count": 2
-					},
-					{
-						"word": "prefix",
 						"count": 1
 					},
 					{
 						"word": "prepend",
-						"count": 2
+						"count": 1
 					},
 					{
 						"word": "printed",
@@ -4121,44 +3193,24 @@
 						"count": 2
 					},
 					{
-						"word": "progressive",
-						"count": 1
-					},
-					{
 						"word": "project",
-						"count": 22
-					},
-					{
-						"word": "pull",
-						"count": 1
+						"count": 20
 					},
 					{
 						"word": "read",
-						"count": 5
+						"count": 2
 					},
 					{
 						"word": "reads",
 						"count": 1
 					},
 					{
-						"word": "record",
-						"count": 2
-					},
-					{
 						"word": "rejects",
-						"count": 2
-					},
-					{
-						"word": "release",
 						"count": 1
 					},
 					{
-						"word": "repo",
-						"count": 4
-					},
-					{
 						"word": "request",
-						"count": 10
+						"count": 4
 					},
 					{
 						"word": "required",
@@ -4177,44 +3229,40 @@
 						"count": 1
 					},
 					{
-						"word": "reuse",
-						"count": 1
-					},
-					{
-						"word": "rich",
-						"count": 1
-					},
-					{
 						"word": "right",
 						"count": 2
 					},
 					{
 						"word": "root",
-						"count": 6
+						"count": 5
 					},
 					{
 						"word": "run",
-						"count": 9
+						"count": 6
 					},
 					{
 						"word": "script",
 						"count": 6
 					},
 					{
-						"word": "secrets",
-						"count": 2
-					},
-					{
-						"word": "serve",
+						"word": "seat",
 						"count": 3
 					},
 					{
+						"word": "secrets",
+						"count": 1
+					},
+					{
+						"word": "serve",
+						"count": 1
+					},
+					{
 						"word": "server",
-						"count": 8
+						"count": 4
 					},
 					{
 						"word": "shadow",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "shell",
@@ -4238,22 +3286,18 @@
 					},
 					{
 						"word": "stderr",
-						"count": 12
+						"count": 11
 					},
 					{
 						"word": "stdout",
-						"count": 42
-					},
-					{
-						"word": "steps",
-						"count": 1
+						"count": 37
 					},
 					{
 						"word": "stream",
-						"count": 5
+						"count": 2
 					},
 					{
-						"word": "success",
+						"word": "stub",
 						"count": 1
 					},
 					{
@@ -4269,24 +3313,16 @@
 						"count": 4
 					},
 					{
-						"word": "tea",
-						"count": 1
-					},
-					{
 						"word": "temp",
-						"count": 39
+						"count": 25
 					},
 					{
 						"word": "text",
-						"count": 4
+						"count": 3
 					},
 					{
 						"word": "token",
-						"count": 2
-					},
-					{
-						"word": "tools",
-						"count": 2
+						"count": 1
 					},
 					{
 						"word": "topics",
@@ -4301,16 +3337,8 @@
 						"count": 1
 					},
 					{
-						"word": "update",
-						"count": 1
-					},
-					{
-						"word": "updates",
-						"count": 1
-					},
-					{
 						"word": "value",
-						"count": 6
+						"count": 5
 					},
 					{
 						"word": "values",
@@ -4318,7 +3346,7 @@
 					},
 					{
 						"word": "vars",
-						"count": 2
+						"count": 1
 					},
 					{
 						"word": "version",
@@ -4326,14 +3354,10 @@
 					},
 					{
 						"word": "visible",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "wait",
-						"count": 3
-					},
-					{
-						"word": "watch",
 						"count": 2
 					},
 					{
@@ -4350,14 +3374,10 @@
 					},
 					{
 						"word": "write",
-						"count": 15
+						"count": 12
 					},
 					{
 						"word": "writes",
-						"count": 2
-					},
-					{
-						"word": "zone",
 						"count": 1
 					}
 				]
@@ -4488,7 +3508,7 @@
 					},
 					{
 						"word": "args",
-						"count": 6
+						"count": 7
 					},
 					{
 						"word": "base",
@@ -4740,7 +3760,7 @@
 					},
 					{
 						"word": "lease",
-						"count": 1
+						"count": 2
 					},
 					{
 						"word": "line",
@@ -4896,7 +3916,7 @@
 					},
 					{
 						"word": "ready",
-						"count": 7
+						"count": 8
 					},
 					{
 						"word": "reap",
@@ -6424,6 +5444,10 @@
 						"count": 1
 					},
 					{
+						"word": "Shield",
+						"count": 1
+					},
+					{
 						"word": "Sidecar",
 						"count": 1
 					},
@@ -6448,7 +5472,15 @@
 						"count": 1
 					},
 					{
+						"word": "consume",
+						"count": 1
+					},
+					{
 						"word": "contract",
+						"count": 1
+					},
+					{
+						"word": "declare",
 						"count": 1
 					},
 					{
@@ -6477,6 +5509,10 @@
 					},
 					{
 						"word": "html",
+						"count": 1
+					},
+					{
+						"word": "install",
 						"count": 1
 					},
 					{
@@ -6525,6 +5561,10 @@
 					},
 					{
 						"word": "query",
+						"count": 1
+					},
+					{
+						"word": "raise",
 						"count": 1
 					},
 					{

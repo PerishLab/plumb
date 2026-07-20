@@ -1,6 +1,14 @@
 import { cli, flags } from "@perish/harness/cli";
 import { bin, exists } from "@perish/harness/cmd";
 import { io } from "@perish/harness/io";
+import { family, kind, run } from "@perish/shield";
+
+const fault = family("bake", {
+  answered: kind<{ base: string; status: number }>(),
+  unfinding: kind<{ finding: string }>(),
+  unclean: kind<{ verdict: string }>(),
+  unguarded: kind<{ dir: string }>(),
+});
 
 function usage(): void {
   io.print("Usage: runseal :bake");
@@ -52,7 +60,7 @@ function phrase(keys: string[]): string {
 async function gate(base: string): Promise<Gate> {
   const response = await fetch(`${base}/stable/latest/metadata.json`);
   if (!response.ok) {
-    io.fail(`bake: ${base} answered ${response.status}`);
+    throw fault.answered({ base, status: response.status });
   }
   const body = await response.json();
   const keys = Object.keys(body.artifacts ?? {});
@@ -61,6 +69,15 @@ async function gate(base: string): Promise<Gate> {
     platforms: phrase(keys),
     windows: keys.includes("winX64") || keys.includes("windowsX64"),
   };
+}
+
+async function jsr(pkg: string): Promise<{ version: string }> {
+  const response = await fetch(`https://jsr.io/${pkg}/meta.json`);
+  if (!response.ok) {
+    throw fault.answered({ base: `jsr:${pkg}`, status: response.status });
+  }
+  const body = await response.json();
+  return { version: typeof body.latest === "string" ? body.latest : "" };
 }
 
 const laws = `[scan]
@@ -124,12 +141,12 @@ async function witness(): Promise<Scroll> {
     await Deno.writeTextFile(`${dir}/src/helper.ts`, `${dirty}\n`);
     const finding = await bin("sh").text(["-c", "negentropy --debt . || true"], { cwd: dir });
     if (!finding.includes("fault") || !finding.includes("debt")) {
-      io.fail(`bake: dirty fixture did not produce a finding transcript:\n${finding}`);
+      throw fault.unfinding({ finding });
     }
     await Deno.writeTextFile(`${dir}/src/helper.ts`, `${tidy}\n`);
     const verdict = await bin("negentropy").text(["--strict", "."], { cwd: dir });
     if (verdict !== "clean") {
-      io.fail(`bake: mended fixture did not come back clean:\n${verdict}`);
+      throw fault.unclean({ verdict });
     }
     return {
       laws,
@@ -164,39 +181,51 @@ async function gather(repo: string): Promise<Entry> {
   try {
     await Deno.stat(`${dir}/negentropy.toml`);
   } catch {
-    io.fail(`bake: ${dir} is not a negentropy-guarded checkout`);
+    throw fault.unguarded({ dir });
   }
   io.print(`==> ${repo}`);
   const text = await bin("negentropy").text(["--vocabulary", "."], { cwd: dir });
   return { repo, roots: parse(text) };
 }
 
-const entries: Entry[] = [];
-for (const repo of repos) {
-  entries.push(await gather(repo));
+async function flow(): Promise<void> {
+  const entries: Entry[] = [];
+  for (const repo of repos) {
+    entries.push(await gather(repo));
+  }
+
+  await Deno.mkdir("apps/react/src/data", { recursive: true });
+  await Deno.writeTextFile(target, `${JSON.stringify(entries, null, "\t")}\n`);
+  await bin("pnpm").run(["biome", "format", "--write", target]);
+
+  const atoms = entries
+    .flatMap((entry) => entry.roots)
+    .reduce((sum, root) => sum + root.atoms.length, 0);
+  io.print(`bake: ${atoms} atoms across ${entries.length} repos -> ${target}`);
+
+  const witnessed = { negentropy: await witness() };
+  await Deno.writeTextFile(scroll, `${JSON.stringify(witnessed, null, "\t")}\n`);
+  await bin("pnpm").run(["biome", "format", "--write", scroll]);
+  io.print(`bake: negentropy transcripts witnessed -> ${scroll}`);
+
+  const releases: Record<string, { version: string; platforms?: string; windows?: boolean }> = {};
+  for (const [name, base] of Object.entries(gates)) {
+    releases[name] = await gate(base);
+  }
+  releases.shield = await jsr("@perish/shield");
+  await Deno.writeTextFile(shelf, `${JSON.stringify(releases, null, "\t")}\n`);
+  await bin("pnpm").run(["biome", "format", "--write", shelf]);
+  const summary = Object.values(releases)
+    .map((entry) => entry.version)
+    .join(" ");
+  io.print(`bake: ${summary} -> ${shelf}`);
 }
 
-await Deno.mkdir("apps/react/src/data", { recursive: true });
-await Deno.writeTextFile(target, `${JSON.stringify(entries, null, "\t")}\n`);
-await bin("pnpm").run(["biome", "format", "--write", target]);
-
-const atoms = entries
-  .flatMap((entry) => entry.roots)
-  .reduce((sum, root) => sum + root.atoms.length, 0);
-io.print(`bake: ${atoms} atoms across ${entries.length} repos -> ${target}`);
-
-const witnessed = { negentropy: await witness() };
-await Deno.writeTextFile(scroll, `${JSON.stringify(witnessed, null, "\t")}\n`);
-await bin("pnpm").run(["biome", "format", "--write", scroll]);
-io.print(`bake: negentropy transcripts witnessed -> ${scroll}`);
-
-const releases: Record<string, Gate> = {};
-for (const [name, base] of Object.entries(gates)) {
-  releases[name] = await gate(base);
-}
-await Deno.writeTextFile(shelf, `${JSON.stringify(releases, null, "\t")}\n`);
-await bin("pnpm").run(["biome", "format", "--write", shelf]);
-const summary = Object.values(releases)
-  .map((entry) => entry.version)
-  .join(" ");
-io.print(`bake: ${summary} -> ${shelf}`);
+await run(flow).catch(fault.consume({
+  answered: (thrown) => io.fail(`bake: ${thrown.meta.base} answered ${thrown.meta.status}`),
+  unfinding: (thrown) =>
+    io.fail(`bake: dirty fixture did not produce a finding transcript:\n${thrown.meta.finding}`),
+  unclean: (thrown) =>
+    io.fail(`bake: mended fixture did not come back clean:\n${thrown.meta.verdict}`),
+  unguarded: (thrown) => io.fail(`bake: ${thrown.meta.dir} is not a negentropy-guarded checkout`),
+}));
