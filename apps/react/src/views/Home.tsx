@@ -36,6 +36,14 @@ export function Home() {
 					</p>
 					<Link to="/sidecar">meet the manager</Link>
 				</Card>
+				<Card title="shield">
+					<p>
+						keep faults named: a domain declares its failure vocabulary once,
+						native throw keeps its shape to the boundary, and every handler is
+						typed and exhaustive — no Result monad, no runtime deps.
+					</p>
+					<Link to="/shield">read the substrate</Link>
+				</Card>
 			</Grid>
 			<h2>adopt in order of pain</h2>
 			<Rail

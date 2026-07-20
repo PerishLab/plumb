@@ -24,6 +24,7 @@ export function Shell() {
 				<NavLink to="/negentropy">negentropy</NavLink>
 				<NavLink to="/runseal">runseal</NavLink>
 				<NavLink to="/sidecar">sidecar</NavLink>
+				<NavLink to="/shield">shield</NavLink>
 				<NavLink to="/constitution">constitution</NavLink>
 				<NavLink to="/vocabulary">vocabulary</NavLink>
 			</Nav>
@@ -34,6 +35,7 @@ export function Shell() {
 				<Forge repo="PerishFire/negentropy" />
 				<Forge repo="PerishFire/runseal" />
 				<Forge repo="PerishFire/sidecar" />
+				<Forge repo="PerishFire/shield" />
 			</Footer>
 		</Frame>
 	);

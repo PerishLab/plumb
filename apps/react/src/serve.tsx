@@ -24,7 +24,9 @@ function head(page: Page): string {
 		`<meta property="og:title" content="${page.title}" />`,
 		`<meta property="og:description" content="${page.text}" />`,
 		`<meta property="og:image" content="${home}/og.png" />`,
-		`<meta property="og:url" content="${home}${page.path === "/" ? "/" : `${page.path}/`}" />`,
+		`<meta property="og:url" content="${home}${
+			page.path === "/" ? "/" : `${page.path}/`
+		}" />`,
 		`<meta property="og:type" content="website" />`,
 		`<meta name="twitter:card" content="summary_large_image" />`,
 	].join("\n\t\t");
@@ -32,7 +34,7 @@ function head(page: Page): string {
 
 const guide = `# open-web
 
-> a workshop of three tools for code that AI agents maintain: rules live in
+> a workshop of four tools for code that AI agents maintain: rules live in
 > checkable structure and a reviewed vocabulary, not in prose comments.
 
 ## tools
@@ -46,6 +48,9 @@ const guide = `# open-web
 - [sidecar](https://harness.perish.uk/sidecar/): local process manager -
   manifest lifecycle, stamped identity, chosen free ports. install:
   curl -fsSL https://sidecar.perish.uk/manage.sh | sh
+- [shield](https://harness.perish.uk/shield/): fault substrate for typescript -
+  native throw, family-scoped kinds, no Result monad, zero deps. import:
+  import { family } from "jsr:@perish/shield";
 
 ## law
 
@@ -59,6 +64,7 @@ const guide = `# open-web
 - https://git.perish.top/PerishFire/negentropy
 - https://git.perish.top/PerishFire/runseal
 - https://git.perish.top/PerishFire/sidecar
+- https://git.perish.top/PerishFire/shield
 `;
 
 const manual = `# open-web - full reference for agents
@@ -145,6 +151,28 @@ the packed --sidecar-stamp arg is the only identity contract; state lives in
 targets.json and logs under the data home.
 source: https://git.perish.top/PerishFire/sidecar
 
+## shield - fault substrate
+
+what: a typescript fault substrate below harness; native throw, no Result
+monad, zero runtime deps; a domain declares its failure vocabulary once and
+that declaration types both the throw site and every handler.
+
+import (jsr, runtime-pure):
+  import { assert, family, kind, run } from "jsr:@perish/shield";
+
+surface:
+  family(name, spec) - declare a domain's fault kinds; the spec is the single
+    source of truth for the factories and every handler's meta type
+  assert(expr, mint) - throw a minted fault when a check fails
+  run(fn) - the boundary; absorbs every non-fault into a foreign kind
+  first(...tries) - sequential fallback; total failure throws exhausted
+  <family>.consume(table) - exhaustive terminal disposition; every kind handled
+  <family>.attempt(fn, table) - local recovery over named kinds
+a business brings its own schema (zod, or the zero-dep kind phantom); shield
+consumes the inferred shape and never validates. adapters at the harness seam
+mint faults from native errors.
+source: https://git.perish.top/PerishFire/shield
+
 ## law
 
 constitution: https://harness.perish.uk/constitution/ - eleven laws and why
@@ -181,7 +209,9 @@ writeFileSync("dist/.well-known/llms.txt", guide);
 const spots = pages
 	.map(
 		(page) =>
-			`\t<url><loc>${home}${page.path === "/" ? "/" : `${page.path}/`}</loc></url>`,
+			`\t<url><loc>${home}${
+				page.path === "/" ? "/" : `${page.path}/`
+			}</loc></url>`,
 	)
 	.join("\n");
 const atlas = `<?xml version="1.0" encoding="UTF-8"?>

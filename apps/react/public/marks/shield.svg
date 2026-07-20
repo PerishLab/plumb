@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+	<title>shield</title>
+	<rect x="1" y="1" width="62" height="62" rx="14" fill="#101214" stroke="#2a2f35" stroke-width="2"/>
+	<path d="M17 16 H47 V34 Q47 45 32 51 Q17 45 17 34 Z" fill="#7fb4e0"/>
+	<rect x="28" y="27" width="8" height="8" rx="2" fill="#101214"/>
+</svg>

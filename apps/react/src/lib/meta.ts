@@ -8,7 +8,7 @@ export const pages: Page[] = [
 	{
 		path: "/",
 		title: "open-web — a workshop for agent-maintained code",
-		text: "three sharp tools on one premise: code maintained by AI agents needs laws, not comments. a structural checker, an operator toolbelt, and a process manager.",
+		text: "four sharp tools on one premise: code maintained by AI agents needs laws, not comments. a structural checker, an operator toolbelt, a process manager, and a fault substrate.",
 	},
 	{
 		path: "/negentropy",
@@ -24,6 +24,11 @@ export const pages: Page[] = [
 		path: "/sidecar",
 		title: "sidecar — keep local runtimes named",
 		text: "a manifest-driven local process manager: stamped identity, chosen free ports, one broker per namespace. shallow isolation without space isolation.",
+	},
+	{
+		path: "/shield",
+		title: "shield — keep faults named",
+		text: "a fault substrate for typescript: native throw, family-scoped kinds, no Result monad, zero runtime deps. one declaration types the throw site and every handler.",
 	},
 	{
 		path: "/constitution",

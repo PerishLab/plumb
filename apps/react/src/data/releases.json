@@ -13,5 +13,8 @@
 		"version": "v0.5.4",
 		"platforms": "linux x86_64 and macos (intel and apple silicon)",
 		"windows": true
+	},
+	"shield": {
+		"version": "0.1.0"
 	}
 }
