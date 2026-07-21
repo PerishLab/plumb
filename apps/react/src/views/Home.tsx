@@ -1,4 +1,4 @@
-import { Card, Grid, Hero, Rail } from "@open-web/components";
+import { Card, Grid, Hero, Rail } from "@perish/react-components";
 import { Link } from "react-router";
 import { title } from "../lib/title";
 

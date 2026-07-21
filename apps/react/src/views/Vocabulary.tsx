@@ -1,4 +1,11 @@
-import { Card, Grid, Hero, Ledger, List, Search } from "@open-web/components";
+import {
+	Card,
+	Grid,
+	Hero,
+	Ledger,
+	List,
+	Search,
+} from "@perish/react-components";
 import { useState } from "react";
 import vocabulary from "../data/vocabulary.json";
 import { type Entry, type Root, sift } from "../lib/sift";

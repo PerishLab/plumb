@@ -1,3 +1,7 @@
+minimumReleaseAgeExclude:
+  - "@perish/react-components"
+  - "@jsr/perish__vite-plugin-design"
+
 packages:
   - apps/*
   - packages/*

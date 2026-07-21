@@ -1,4 +1,4 @@
-import { Footer, Forge, Frame, Nav } from "@open-web/components";
+import { Footer, Forge, Frame, Nav } from "@perish/react-components";
 import { useEffect } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
 import { pages } from "../lib/meta";

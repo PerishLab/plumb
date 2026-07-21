@@ -9,12 +9,13 @@
 		"test": "vitest run"
 	},
 	"dependencies": {
-		"@open-web/components": "workspace:*",
+		"@perish/react-components": "0.1.0-beta.2",
 		"react": "catalog:",
 		"react-dom": "catalog:",
 		"react-router": "catalog:"
 	},
 	"devDependencies": {
+		"@jsr/perish__vite-plugin-design": "0.1.0-beta.11",
 		"@types/node": "catalog:",
 		"@types/react": "catalog:",
 		"@types/react-dom": "catalog:",

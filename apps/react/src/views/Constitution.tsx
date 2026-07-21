@@ -1,4 +1,4 @@
-import { Badge, Card, Grid, Hero } from "@open-web/components";
+import { Badge, Card, Grid, Hero } from "@perish/react-components";
 
 const laws = [
 	{

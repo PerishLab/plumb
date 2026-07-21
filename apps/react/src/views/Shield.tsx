@@ -1,4 +1,11 @@
-import { Badge, Banner, Card, Code, Forge, Grid } from "@open-web/components";
+import {
+	Badge,
+	Banner,
+	Card,
+	Code,
+	Forge,
+	Grid,
+} from "@perish/react-components";
 import releases from "../data/releases.json";
 
 const install = `import { assert, family, kind, run } from "jsr:@perish/shield";`;
