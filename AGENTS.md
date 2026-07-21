@@ -87,6 +87,12 @@ role only:
 3. verify: `/` and the first deep route from `apps/react/src/lib/routes.ts`
    must answer 200 on the public domain
 
+Verify asserts the BUILD, not just a heartbeat: it reads the fingerprinted
+asset out of the freshly built `dist/index.html` and requires the live page to
+reference that exact file. Cloudflare keeps serving the previous build for a
+while after a deploy, so a plain 200 passes against the old site — this repo
+printed `ship: ok` in exactly that state on 2026-07-21.
+
 Flags: `--dry-run` prints the plan with redacted credentials, then runs
 `wrangler deploy --dry-run` (credential-free) when `dist/` exists; `--check`
 verifies the token, the zone, the site DNS record, and worker existence via

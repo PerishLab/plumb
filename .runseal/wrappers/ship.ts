@@ -134,26 +134,37 @@ async function plan(): Promise<void> {
   await bin("pnpm").run(["exec", "wrangler", "deploy", "--dry-run", ...flags], { cwd: app });
 }
 
-async function probe(url: string): Promise<boolean> {
-  for (let turn = 0; turn < 3; turn += 1) {
-    const status = await knock(url);
-    if (status === 200) {
-      io.print(`  200 ${url}`);
+async function probe(url: string, mark: string): Promise<boolean> {
+  for (let turn = 0; turn < 10; turn += 1) {
+    const seen = await knock(url);
+    if (seen.status === 200 && seen.body.includes(mark)) {
+      io.print(`  200 ${url} serving ${mark}`);
       return true;
     }
-    io.print(`  retry ${url} (${status})`);
+    const why = seen.status === 200 ? "stale build" : seen.status;
+    io.print(`  retry ${url} (${why})`);
     await new Promise((resolve) => setTimeout(resolve, 5000));
   }
   return false;
 }
 
-async function knock(url: string): Promise<number | string> {
+async function stamp(): Promise<string> {
+  const html = await Deno.readTextFile(`${dist}/index.html`);
+  const found = /\/assets\/index-[A-Za-z0-9_-]+\.js/.exec(html);
+  if (found === null) {
+    return io.fail(`ship: no fingerprinted asset in ${dist}/index.html`);
+  }
+  return found[0];
+}
+
+async function knock(url: string): Promise<{ status: number | string; body: string }> {
   try {
     const response = await fetch(url, { headers: { "cache-control": "no-cache" } });
-    await response.body?.cancel();
-    return response.status;
+    const body = await response.text();
+    return { status: response.status, body };
   } catch (thrown) {
-    return thrown instanceof Error ? thrown.message.split(":")[0] : "unreachable";
+    const status = thrown instanceof Error ? thrown.message.split(":")[0] : "unreachable";
+    return { status, body: "" };
   }
 }
 
@@ -177,10 +188,11 @@ async function ship(): Promise<void> {
     },
   });
   io.print("==> verify");
-  let reached = await probe(`https://${keys.domain}/`);
+  const mark = await stamp();
+  let reached = await probe(`https://${keys.domain}/`, mark);
   const route = deep(paths);
   if (reached && route !== undefined) {
-    reached = await probe(`https://${keys.domain}${route}`);
+    reached = await probe(`https://${keys.domain}${route}`, mark);
   }
   if (!reached) {
     await anchored(keys);
