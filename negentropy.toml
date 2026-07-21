@@ -19,6 +19,7 @@ roots = [
   "apps/*/src",
   "apps/*/tests",
   "crates/*/src",
+  "crates/*/tests",
   "packages/*/src",
   "packages/*/tests",
 ]
@@ -40,17 +41,14 @@ paths = [
   "apps/*/tests/**/*.test.tsx",
   "packages/*/tests/**/*.test.ts",
   "packages/*/tests/**/*.test.tsx",
+  "crates/*/tests/**/*.rs",
 ]
 
 [[boundary]]
 paths = [
   "apps/web/vite.config.ts",
   "apps/web/vitest.config.ts",
-  "packages/components/vitest.config.ts",
 ]
 note = "vite and vitest require root-level config files; path law anchors to src and tests"
 allow = ["path"]
 
-[[grant]]
-syntax = "style"
-paths = ["packages/components/**"]
