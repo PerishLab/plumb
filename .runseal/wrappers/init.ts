@@ -25,7 +25,6 @@ await init({
     "packages/components/package.json",
     ".runseal/deno.json",
     ".runseal/deno.lock",
-    ".runseal/negentropy.version",
     ".runseal/hooks/pre-commit",
     ".runseal/hooks/commit-msg",
     ".runseal/wrappers/guard.ts",
