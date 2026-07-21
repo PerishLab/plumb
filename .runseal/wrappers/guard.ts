@@ -2,6 +2,12 @@ import { guard } from "@perish/harness/guard";
 
 await guard(
   [
+    { label: "cargo fmt", runs: [["cargo", ["fmt", "--all", "--check"]]] },
+    {
+      label: "cargo clippy",
+      runs: [["cargo", ["clippy", "--all-targets", "--", "-D", "warnings"]]],
+    },
+    { label: "cargo test", runs: [["cargo", ["test", "--locked"]]] },
     { label: "biome", runs: [["pnpm", ["biome", "ci", "."]]] },
     { label: "tsc", runs: [["pnpm", ["-r", "exec", "tsc", "--noEmit"]]] },
     { label: "vitest", runs: [["pnpm", ["-r", "test"]]] },

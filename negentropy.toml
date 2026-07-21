@@ -1,5 +1,6 @@
 [scan]
 include = [
+  "crates/**/*.rs",
   "apps/**/*.ts",
   "apps/**/*.tsx",
   "apps/**/*.scss",
@@ -17,6 +18,7 @@ exclude = [
 roots = [
   "apps/*/src",
   "apps/*/tests",
+  "crates/*/src",
   "packages/*/src",
   "packages/*/tests",
 ]
@@ -42,8 +44,8 @@ paths = [
 
 [[boundary]]
 paths = [
-  "apps/react/vite.config.ts",
-  "apps/react/vitest.config.ts",
+  "apps/web/vite.config.ts",
+  "apps/web/vitest.config.ts",
   "packages/components/vitest.config.ts",
 ]
 note = "vite and vitest require root-level config files; path law anchors to src and tests"

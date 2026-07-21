@@ -17,7 +17,7 @@ function render(path: string): string {
 }
 
 function head(page: Page): string {
-	const home = "https://harness.perish.uk";
+	const home = "https://plumb.perish.uk";
 	return [
 		`<title>${page.title}</title>`,
 		`<meta name="description" content="${page.text}" />`,
@@ -39,24 +39,24 @@ const guide = `# open-web
 
 ## tools
 
-- [negentropy](https://harness.perish.uk/negentropy/): structural checker, eleven
+- [negentropy](https://plumb.perish.uk/negentropy/): structural checker, eleven
   mechanical laws, five languages. install:
   curl -fsSL https://releases.negentropy.perish.uk/manage.sh | sh
-- [runseal](https://harness.perish.uk/runseal/): operator toolbelt - explicit
+- [runseal](https://plumb.perish.uk/runseal/): operator toolbelt - explicit
   profile, named wrappers, forge tools. install:
   curl -fsSL https://runseal.perish.uk/manage.sh | sh
-- [sidecar](https://harness.perish.uk/sidecar/): local process manager -
+- [sidecar](https://plumb.perish.uk/sidecar/): local process manager -
   manifest lifecycle, stamped identity, chosen free ports. install:
   curl -fsSL https://sidecar.perish.uk/manage.sh | sh
-- [shield](https://harness.perish.uk/shield/): fault substrate for typescript -
+- [shield](https://plumb.perish.uk/shield/): fault substrate for typescript -
   native throw, family-scoped kinds, no Result monad, zero deps. import:
   import { family } from "jsr:@perish/shield";
 
 ## law
 
-- [constitution](https://harness.perish.uk/constitution/): the eleven laws and
+- [constitution](https://plumb.perish.uk/constitution/): the eleven laws and
   why each exists
-- [vocabulary](https://harness.perish.uk/vocabulary/): every declared name,
+- [vocabulary](https://plumb.perish.uk/vocabulary/): every declared name,
   counted; written verdicts for contested words
 
 ## source
@@ -69,7 +69,7 @@ const guide = `# open-web
 
 const manual = `# open-web - full reference for agents
 
-> the deep mirror of https://harness.perish.uk for agent readers; /llms.txt is
+> the deep mirror of https://plumb.perish.uk for agent readers; /llms.txt is
 > the short card. rules live in checkable structure and a reviewed vocabulary,
 > not in prose comments.
 
@@ -175,8 +175,8 @@ source: https://git.perish.top/PerishFire/shield
 
 ## law
 
-constitution: https://harness.perish.uk/constitution/ - eleven laws and why
-each exists. vocabulary: https://harness.perish.uk/vocabulary/ - every
+constitution: https://plumb.perish.uk/constitution/ - eleven laws and why
+each exists. vocabulary: https://plumb.perish.uk/vocabulary/ - every
 declared name counted per owning folder; contested words carry written
 verdicts.
 `;
@@ -195,7 +195,7 @@ for (const page of pages) {
 }
 writeFileSync("dist/llms.txt", guide);
 
-const home = "https://harness.perish.uk";
+const home = "https://plumb.perish.uk";
 const robots = `User-agent: *
 Allow: /
 

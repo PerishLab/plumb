@@ -1,126 +1,41 @@
 # Agents
 
-This repository is a constitution-era web workspace. `negentropy --strict .`
-must print `clean` before anything lands.
+This repository is the workshop's living skeleton. `negentropy --strict .` must
+print `clean` before anything lands, and CI runs the same guard the pre-commit
+hook runs.
 
-## Stack
+## The relation
 
-node 24, pnpm workspaces, vite, react, typescript, vitest, biome, sass. Every
-version is pinned exact in the `catalog` of `pnpm-workspace.yaml`; packages
-reference `catalog:` only.
+negentropy owns its blindspots: a construct it cannot parse is the checker's
+debt, not the author's exception. plumb inherits that relation for SHAPES. If a
+repository in this ecosystem has no shadow here, plumb owes the shape.
+Divergence is the skeleton's debt.
+
+Downstream repositories do not get scanned by plumb, and plumb does not know
+they exist. The CLI travels to them: install it, run it in a repository, read
+what it reports. Feedback comes home as issues on this repo. That is the hot
+link, and it is the only one.
 
 ## Layout
 
-- `apps/react/` — the vite app `@open-web/react`: `src/{lib,views,components}`,
-  `tests/`. Never name a workspace package bare `react`.
-- `packages/components/` — the component library `@open-web/components`:
-  `src/` with `lib.ts` as the export surface, `tests/`.
+- `crates/plumb` — the CLI, published as a binary through the release lanes.
+- `apps/web` — the site at plumb.perish.uk.
+- `packages/*` — publishable specimens, when they earn their place.
 
-## Territory
+The layout is not invented; it is the union already demonstrated by codehull and
+ensign: `crates` for rust members, `apps` for deployable applications,
+`packages` for publishable node packages, `docs` for prose.
 
-- Style: only `packages/components` owns style declarations. A component
-  imports its own `.scss` sibling. Apps contain zero `.scss` files.
-- Design: DESIGN.md is the design constitution — four organs
-  (tokens/themes/media/atoms), a 28-seat token table, an enum whitelist,
-  a four-rung consumption ladder, and the fork law. Read it before touching
-  any `.scss` or adding UI.
-- Tests: vitest over `tests/**/*.test.ts` per package; the constitution grants
-  test syntax only on those paths.
+## Boundaries
 
-## Laws in practice
-
-- Single word: every file, directory, and declared name in scanned sources is
-  one vocabulary atom (`vocabulary.toml` registers exceptions; keep it empty).
-- Block depth <= 4; markup depth <= 8; path depth <= 4 from the module roots
-  (`apps/*/src`, `apps/*/tests`, `packages/*/src`, `packages/*/tests`).
-- No comments in scanned sources or configs.
-- Style declarations only under `packages/components/**`; apps consume
-  component classNames and declare nothing.
-
-## Closed blind spot
-
-The tsx and scss grammars landed in negentropy v0.2.0-beta.1; `negentropy.toml`
-scans `.ts`, `.tsx`, and `.scss` under `apps/` and `packages/` plus
-`docs/**/*.md`. Markup nesting is its own law: depth <= 8 per element tree.
-Keep `.tsx` surfaces thin anyway — components and views only.
-
-## Baked data
-
-`runseal :bake` runs `negentropy --vocabulary .` across the four sibling repos
-(`negentropy`, `runseal`, `sidecar`, `open-web`) and writes
-`apps/react/src/data/vocabulary.json`. The JSON is committed so the site works
-without re-baking; re-run after vocabulary-visible changes.
-
-## Perceiving
-
-`runseal :playwright` is the project-specialized path of playwright-cli
-(`@playwright/cli`, catalog-pinned): it binds the routes table, the live app
-address discovered from `sidecar status --format json`, and the artifact home
-`.local/playwright/` into an `openweb` browser session, and passes everything
-else through untouched.
-
-- `shot <route...>` / `shot --all` — screenshots to `.local/playwright/shots/<route>.png`
-- `text <route...>` — accessibility snapshots to `.local/playwright/snaps/<route>.yml`
-- `console [level]` / `status` / `close` — live-page console, app+session state, teardown
-- `runseal :playwright raw <args>` — the full playwright-cli surface inside the session
-
-The app process belongs to sidecar (`sidecar.toml`, `port = 0`): every
-`sidecar start` leases a fresh loopback port, injects it as `SIDECAR_PORT`,
-and substitutes it into the `{port}` of `health_url`; `vite.config.ts`
-consumes the env var and binds `127.0.0.1` strict (5173 only as the hand-run
-fallback). The wrapper asks sidecar for the live address and fails with a
-pointer when the app is not running. One-time setup:
-`pnpm exec playwright-cli install-browser chromium` (headless shell, ~115 MiB).
-
-## Shipping
-
-`runseal :ship` deploys the site as Cloudflare Workers Static
-Assets — SPA routing is the worker's home turf; R2 keeps the release-artifact
-role only:
-
-1. `pnpm --filter @open-web/react build`
-2. `pnpm exec wrangler deploy --domain <OPENWEB_SITE_DOMAIN>` from
-   `apps/react/`; `wrangler.jsonc` names the worker `openweb`, serves
-   `./dist`, and sets `not_found_handling: single-page-application` so deep
-   links resolve without route snapshots; the `--domain` flag attaches the
-   custom domain and its DNS record at deploy time
-3. verify: `/` and the first deep route from `apps/react/src/lib/routes.ts`
-   must answer 200 on the public domain
-
-Verify asserts the BUILD, not just a heartbeat: it reads the fingerprinted
-asset out of the freshly built `dist/index.html` and requires the live page to
-reference that exact file. Cloudflare keeps serving the previous build for a
-while after a deploy, so a plain 200 passes against the old site — this repo
-printed `ship: ok` in exactly that state on 2026-07-21.
-
-Flags: `--dry-run` prints the plan with redacted credentials, then runs
-`wrangler deploy --dry-run` (credential-free) when `dist/` exists; `--check`
-verifies the token, the zone, the site DNS record, and worker existence via
-`runseal @tool cloudflare` (raw `api request` where typed commands lack
-coverage), degrading gracefully while secrets are unfilled or before the
-first deploy.
-
-Secrets live under `.local/secrets/` (gitignored), one `KEY=value` per line,
-`#` comments allowed. Three values total; the wrapper fails cleanly naming
-exactly the unfilled keys.
-
-- `ship.env` — read by `:ship` at start:
-  - `OPENWEB_SITE_DOMAIN` — public site host, no scheme
-- `cloudflare.env` — read by `:ship`, `--check`, and `runseal @tool cloudflare`:
-  - `CLOUDFLARE_ACCOUNT_ID` — account identifier
-  - `CLOUDFLARE_API_TOKEN` — token with Workers Scripts edit + Zone DNS edit
-    (plus zone read) scope
-  - `CLOUDFLARE_ZONE_NAME` — zone carrying the site domain
-
-## Operating
-
-- Never commit on `main`; the pre-commit hook refuses it. Branch, then commit.
-- `runseal :init` validates tools and entrypoints and installs git hooks.
-- `runseal :guard` is the full local gate: negentropy pin check, `pnpm biome ci .`,
-  `pnpm -r exec tsc --noEmit`, `pnpm -r test`, `deno fmt --check .runseal`,
-  `deno check` over the wrappers, `negentropy --strict .`.
-- `runseal :land` squash-merges the topic branch on Forgejo after guard passes.
-- The negentropy pin is `.runseal/negentropy.version` (stable channel); CI
-  installs exactly that version and runs `negentropy --strict .`.
-- `sidecar.toml` defines the react dev server as the app target:
-  `pnpm --filter @open-web/react dev`.
+- LIVING SPECIMENS ONLY. An archetype held here must be really built and really
+  published, or it is not exercised and will rot exactly like boilerplate. What
+  is described but not run must say so.
+- CHECKING BEFORE SCAFFOLDING. `check` ships before `new`. A generator encodes
+  guesses; a diff harvests facts, and the ecosystem already holds eleven repos
+  of facts.
+- EVERY ELEMENT STAYS REMOVABLE. Encoding combinations is the point — many
+  choices here are only defensible together, not alone — but no element may
+  become unremovable, or its justification decays from finding to story.
+- plumb MUST PASS ITSELF. Running the CLI here has to come back clean, or the
+  debt relation above does not hold for the one repo that declares it.

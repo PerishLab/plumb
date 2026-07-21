@@ -8,7 +8,7 @@ import { doc } from "@perish/harness/json";
 import { runseal } from "@perish/harness/runseal";
 import { family, kind, run } from "@perish/shield";
 
-const app = "apps/react";
+const app = "apps/web";
 const dist = `${app}/dist`;
 const config = `${app}/wrangler.jsonc`;
 const table = `${app}/src/lib/routes.ts`;
@@ -28,7 +28,7 @@ function usage(): void {
   io.print("  --check     probe the token, zone, DNS record, and worker via cloudflare tooling");
   io.print("");
   io.print("Secrets:");
-  io.print("  .local/secrets/ship.env        OPENWEB_SITE_DOMAIN (see AGENTS.md)");
+  io.print("  .local/secrets/ship.env        PLUMB_SITE_DOMAIN (see AGENTS.md)");
   io.print("  .local/secrets/cloudflare.env  CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN");
 }
 
@@ -66,13 +66,13 @@ async function vault(): Promise<Vault> {
   const site = await secrets("ship.env");
   const cloud = await secrets("cloudflare.env");
   const empty = [
-    ...unfilled(site, ["OPENWEB_SITE_DOMAIN"]).map((key) => `ship.env: ${key}`),
+    ...unfilled(site, ["PLUMB_SITE_DOMAIN"]).map((key) => `ship.env: ${key}`),
     ...unfilled(cloud, ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]).map(
       (key) => `cloudflare.env: ${key}`,
     ),
   ];
   return {
-    domain: site.OPENWEB_SITE_DOMAIN ?? "",
+    domain: site.PLUMB_SITE_DOMAIN ?? "",
     account: cloud.CLOUDFLARE_ACCOUNT_ID ?? "",
     token: cloud.CLOUDFLARE_API_TOKEN ?? "",
     empty,
@@ -103,12 +103,12 @@ function deep(paths: string[]): string | undefined {
 
 async function plan(): Promise<void> {
   const keys = await vault();
-  const domain = keys.domain === "" ? "<OPENWEB_SITE_DOMAIN>" : keys.domain;
+  const domain = keys.domain === "" ? "<PLUMB_SITE_DOMAIN>" : keys.domain;
   const paths = await routes();
   io.print("==> ship plan (dry run)");
   io.print("");
   io.print("build:");
-  io.print("  pnpm --filter @open-web/react build");
+  io.print("  pnpm --filter @plumb/web build");
   io.print("");
   io.print("deploy:");
   io.print("  env: CLOUDFLARE_ACCOUNT_ID=<CLOUDFLARE_ACCOUNT_ID> CLOUDFLARE_API_TOKEN=<redacted>");
@@ -175,7 +175,7 @@ async function ship(): Promise<void> {
   }
   const paths = await routes();
   io.print("==> build");
-  await bin("pnpm").run(["--filter", "@open-web/react", "build"]);
+  await bin("pnpm").run(["--filter", "@plumb/web", "build"]);
   if (!(await fs.file.exists(`${dist}/index.html`))) {
     throw fault.build({ path: `${dist}/index.html` });
   }
@@ -250,7 +250,7 @@ async function check(): Promise<void> {
   const id = String(zone.id);
   io.print(`zone: ${name} (${id})`);
   if (keys.domain === "") {
-    io.print("check: skipped dns probe (unfilled in ship.env: OPENWEB_SITE_DOMAIN)");
+    io.print("check: skipped dns probe (unfilled in ship.env: PLUMB_SITE_DOMAIN)");
   } else {
     const records = (await api.records(id, keys.domain)).map(seated);
     if (records.length === 0) {
