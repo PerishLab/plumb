@@ -1,6 +1,6 @@
 {
   "imports": {
-    "@perish/harness": "jsr:@perish/harness@0.3.0",
+    "@perish/harness": "jsr:@perish/harness@0.4.0",
     "@perish/shield": "jsr:@perish/shield@0.1.0"
   },
   "compilerOptions": {
