@@ -3,6 +3,7 @@ mod shape;
 use clap::{Parser, Subcommand};
 use std::collections::BTreeSet;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 struct Note {
     grade: &'static str,
@@ -27,13 +28,35 @@ enum Command {
     },
 }
 
-const DIRS: [&str; 7] = [
-    "apps", "charts", "crates", "docs", "lib", "packages", "tests",
-];
+struct Rules {
+    dirs: BTreeSet<String>,
+    wrappers: BTreeSet<String>,
+    required: BTreeSet<String>,
+    lanes: BTreeSet<String>,
+}
 
-const WRAPPERS: [&str; 6] = ["guard", "init", "land", "release", "ship", "bake"];
-
-const LANES: [&str; 4] = ["guard", "release-beta", "release-stable", "probe"];
+static RULES: LazyLock<Rules> = LazyLock::new(|| {
+    let doc: toml::Table = include_str!("../rules/structure.toml")
+        .parse()
+        .expect("rules/structure.toml must parse");
+    let set = |key: &str| -> BTreeSet<String> {
+        doc.get(key)
+            .and_then(toml::Value::as_array)
+            .map(|list| {
+                list.iter()
+                    .filter_map(toml::Value::as_str)
+                    .map(str::to_string)
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    Rules {
+        dirs: set("dirs"),
+        wrappers: set("wrappers"),
+        required: set("required"),
+        lanes: set("lanes"),
+    }
+});
 
 const GUARD_CONCURRENCY: &str = "concurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true";
 
@@ -85,7 +108,7 @@ fn env(held: &shape::Shape) -> Found {
 fn structure(held: &shape::Shape) -> Found {
     let mut found = Found::new();
     if held.runseal {
-        for name in ["guard", "init", "land"] {
+        for name in &RULES.required {
             if !held.wrappers.contains(name) {
                 found.push(("out of true", format!("no {name} wrapper")));
             }
@@ -129,7 +152,7 @@ fn structure(held: &shape::Shape) -> Found {
         }
     }
     for name in &held.dirs {
-        if !DIRS.contains(&name.as_str()) {
+        if !RULES.dirs.contains(name) {
             found.push((
                 "unknown shape",
                 format!("directory {name} has no shadow in the skeleton"),
@@ -137,7 +160,7 @@ fn structure(held: &shape::Shape) -> Found {
         }
     }
     for name in &held.wrappers {
-        if !WRAPPERS.contains(&name.as_str()) {
+        if !RULES.wrappers.contains(name) {
             found.push((
                 "unknown shape",
                 format!("wrapper {name} has no shadow in the skeleton"),
@@ -147,7 +170,7 @@ fn structure(held: &shape::Shape) -> Found {
     paired(held, &mut found);
     matched(held, &mut found);
     for name in &held.lanes {
-        if !LANES.contains(&name.as_str()) {
+        if !RULES.lanes.contains(name) {
             found.push((
                 "unknown shape",
                 format!("workflow {name} has no shadow in the skeleton"),
