@@ -36,19 +36,21 @@ fn judge(held: &shape::Shape) -> Vec<Note> {
         });
         return notes;
     }
-    for name in ["guard", "init", "land"] {
-        if !held.wrappers.contains(name) {
+    if held.runseal {
+        for name in ["guard", "init", "land"] {
+            if !held.wrappers.contains(name) {
+                notes.push(Note {
+                    grade: "out of true",
+                    line: format!("no {name} wrapper"),
+                });
+            }
+        }
+        if !held.laws {
             notes.push(Note {
                 grade: "out of true",
-                line: format!("no {name} wrapper"),
+                line: "no negentropy.toml".to_string(),
             });
         }
-    }
-    if !held.laws {
-        notes.push(Note {
-            grade: "out of true",
-            line: "no negentropy.toml".to_string(),
-        });
     }
     for (key, seen, want) in [("block", held.block, 4), ("path", held.path, 4)] {
         if seen.is_some_and(|value| value != want) {

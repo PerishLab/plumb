@@ -17,6 +17,7 @@ pub struct Shape {
     pub root: std::path::PathBuf,
     pub inits: bool,
     pub rust: bool,
+    pub runseal: bool,
 }
 
 fn names(root: &Path, under: &str, suffix: &str) -> BTreeSet<String> {
@@ -155,6 +156,7 @@ pub fn read(root: &Path) -> Shape {
         ships: ships(root),
         ignore: std::fs::read_to_string(root.join(".gitignore")).unwrap_or_default(),
         rust: root.join("Cargo.toml").exists(),
+        runseal: root.join(".runseal").is_dir(),
         listed: listed(root),
         bounds: bounds(doc.as_ref()),
         root: root.to_path_buf(),

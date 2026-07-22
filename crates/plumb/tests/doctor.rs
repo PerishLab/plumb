@@ -28,6 +28,25 @@ fn itself() {
 }
 
 #[test]
+fn governs_on_seat() {
+    let bare = std::env::temp_dir().join("plumb-ungoverned");
+    std::fs::create_dir_all(&bare).expect("fixture should be made");
+    std::fs::write(bare.join("README.md"), "# bare\n").expect("readme should be written");
+    let out = run(&["doctor", bare.to_str().expect("path should be utf8")]);
+    std::fs::remove_dir_all(&bare).expect("fixture should be swept");
+    assert!(!out.contains("no guard wrapper"), "{out}");
+    assert!(!out.contains("no negentropy.toml"), "{out}");
+    assert!(out.contains("true to the skeleton"), "{out}");
+
+    let seat = std::env::temp_dir().join("plumb-governed");
+    std::fs::create_dir_all(seat.join(".runseal/wrappers")).expect("fixture should be made");
+    let out = run(&["doctor", seat.to_str().expect("path should be utf8")]);
+    std::fs::remove_dir_all(&seat).expect("fixture should be swept");
+    assert!(out.contains("no guard wrapper"), "{out}");
+    assert!(out.contains("no negentropy.toml"), "{out}");
+}
+
+#[test]
 fn blind() {
     let dir = std::env::temp_dir().join("plumb-blind");
     std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");
