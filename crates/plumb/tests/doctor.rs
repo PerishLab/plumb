@@ -47,6 +47,39 @@ fn governs_on_seat() {
 }
 
 #[test]
+fn guard_concurrency() {
+    let dir = std::env::temp_dir().join("plumb-concurrency");
+    std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");
+    std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
+    for name in ["guard", "init", "land"] {
+        std::fs::write(dir.join(format!(".runseal/wrappers/{name}.ts")), "")
+            .expect("wrapper should be written");
+    }
+    std::fs::write(dir.join("negentropy.toml"), "").expect("laws should be written");
+    let lane = dir.join(".forgejo/workflows/guard.yml");
+
+    std::fs::write(
+        &lane,
+        "name: guard\non:\n  pull_request:\n\njobs:\n  guard: {}\n",
+    )
+    .expect("lane should be written");
+    let bare = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(
+        bare.contains("guard lane without the concurrency block"),
+        "{bare}"
+    );
+
+    std::fs::write(
+        &lane,
+        "name: guard\non:\n  pull_request:\n\nconcurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true\n\njobs:\n  guard: {}\n",
+    )
+    .expect("lane should be written");
+    let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
+    assert!(!held.contains("concurrency block"), "{held}");
+}
+
+#[test]
 fn blind() {
     let dir = std::env::temp_dir().join("plumb-blind");
     std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");

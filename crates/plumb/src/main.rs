@@ -24,6 +24,8 @@ const WRAPPERS: [&str; 6] = ["guard", "init", "land", "release", "ship", "bake"]
 
 const LANES: [&str; 4] = ["guard", "release-beta", "release-stable", "probe"];
 
+const GUARD_CONCURRENCY: &str = "concurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true";
+
 fn judge(held: &shape::Shape) -> Vec<Note> {
     let mut notes = Vec::new();
     if let Some(why) = &held.unread {
@@ -49,6 +51,16 @@ fn judge(held: &shape::Shape) -> Vec<Note> {
             notes.push(Note {
                 grade: "out of true",
                 line: "no negentropy.toml".to_string(),
+            });
+        }
+        if held
+            .guard_lane
+            .as_ref()
+            .is_some_and(|yml| !yml.contains(GUARD_CONCURRENCY))
+        {
+            notes.push(Note {
+                grade: "out of true",
+                line: "guard lane without the concurrency block".to_string(),
             });
         }
     }

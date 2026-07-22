@@ -18,6 +18,7 @@ pub struct Shape {
     pub inits: bool,
     pub rust: bool,
     pub runseal: bool,
+    pub guard_lane: Option<String>,
 }
 
 fn names(root: &Path, under: &str, suffix: &str) -> BTreeSet<String> {
@@ -157,6 +158,7 @@ pub fn read(root: &Path) -> Shape {
         ignore: std::fs::read_to_string(root.join(".gitignore")).unwrap_or_default(),
         rust: root.join("Cargo.toml").exists(),
         runseal: root.join(".runseal").is_dir(),
+        guard_lane: std::fs::read_to_string(root.join(".forgejo/workflows/guard.yml")).ok(),
         listed: listed(root),
         bounds: bounds(doc.as_ref()),
         root: root.to_path_buf(),
