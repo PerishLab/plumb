@@ -6,8 +6,11 @@ use std::path::PathBuf;
 
 struct Note {
     grade: &'static str,
+    dim: &'static str,
     line: String,
 }
+
+type Found = Vec<(&'static str, String)>;
 
 #[derive(Parser)]
 #[command(name = "plumb", version = concat!("v", env!("CARGO_PKG_VERSION")))]
@@ -36,44 +39,34 @@ const GUARD_CONCURRENCY: &str = "concurrency:\n  group: guard-${{ github.event.p
 
 const CI_CONTAINER: &str = "mirror.perish.lan/ci/deno";
 
-type Layer = fn(&shape::Shape, &mut Vec<Note>);
-
-const LAYERS: [Layer; 3] = [env, structure, deps];
-
 fn judge(held: &shape::Shape) -> Vec<Note> {
     let mut notes = Vec::new();
-    if let Some(why) = &held.unread {
-        notes.push(Note {
-            grade: "blind",
-            line: format!(
-                "cannot read negentropy.toml: {}",
-                why.lines().next().unwrap_or("")
-            ),
-        });
-        return notes;
-    }
-    for layer in LAYERS {
-        layer(held, &mut notes);
-        if notes.iter().any(|note| note.grade == "out of true") {
-            break;
+    for (dim, found) in [
+        ("env", env(held)),
+        ("structure", structure(held)),
+        ("deps", deps(held)),
+    ] {
+        for (grade, line) in found {
+            notes.push(Note { grade, dim, line });
         }
     }
     notes
 }
 
-fn env(held: &shape::Shape, notes: &mut Vec<Note>) {
+fn env(held: &shape::Shape) -> Found {
+    let mut found = Found::new();
     if held
         .edition
         .as_ref()
         .is_some_and(|edition| edition != "2024")
     {
-        notes.push(Note {
-            grade: "out of true",
-            line: format!(
+        found.push((
+            "out of true",
+            format!(
                 "edition is {}, the skeleton holds 2024",
                 held.edition.as_deref().unwrap_or("")
             ),
-        });
+        ));
     }
     let pinned = format!("{CI_CONTAINER}:");
     if held
@@ -81,138 +74,144 @@ fn env(held: &shape::Shape, notes: &mut Vec<Note>) {
         .as_ref()
         .is_some_and(|yml| yml.contains(&pinned))
     {
-        notes.push(Note {
-            grade: "out of true",
-            line: "CI container pinned to a tag, the skeleton tracks latest".to_string(),
-        });
+        found.push((
+            "out of true",
+            "CI container pinned to a tag, the skeleton tracks latest".to_string(),
+        ));
     }
+    found
 }
 
-fn structure(held: &shape::Shape, notes: &mut Vec<Note>) {
+fn structure(held: &shape::Shape) -> Found {
+    let mut found = Found::new();
     if held.runseal {
         for name in ["guard", "init", "land"] {
             if !held.wrappers.contains(name) {
-                notes.push(Note {
-                    grade: "out of true",
-                    line: format!("no {name} wrapper"),
-                });
+                found.push(("out of true", format!("no {name} wrapper")));
             }
         }
         if !held.laws {
-            notes.push(Note {
-                grade: "out of true",
-                line: "no negentropy.toml".to_string(),
-            });
+            found.push(("out of true", "no negentropy.toml".to_string()));
         }
         if held
             .guard_lane
             .as_ref()
             .is_some_and(|yml| !yml.contains(GUARD_CONCURRENCY))
         {
-            notes.push(Note {
-                grade: "out of true",
-                line: "guard lane without the concurrency block".to_string(),
-            });
+            found.push((
+                "out of true",
+                "guard lane without the concurrency block".to_string(),
+            ));
         }
     }
-    for (key, seen, want) in [("block", held.block, 4), ("path", held.path, 4)] {
-        if seen.is_some_and(|value| value != want) {
-            notes.push(Note {
-                grade: "out of true",
-                line: format!(
-                    "limit {key} is {}, the skeleton holds {want}",
-                    seen.unwrap_or(0)
-                ),
-            });
+    if let Some(why) = &held.unread {
+        found.push((
+            "blind",
+            format!(
+                "cannot read negentropy.toml: {}",
+                why.lines().next().unwrap_or("")
+            ),
+        ));
+    } else {
+        for (key, seen, want) in [("block", held.block, 4), ("path", held.path, 4)] {
+            if seen.is_some_and(|value| value != want) {
+                found.push((
+                    "out of true",
+                    format!(
+                        "limit {key} is {}, the skeleton holds {want}",
+                        seen.unwrap_or(0)
+                    ),
+                ));
+            }
         }
-    }
-    if held.laws && !held.grants.contains("test") {
-        notes.push(Note {
-            grade: "out of true",
-            line: "no test grant".to_string(),
-        });
+        if held.laws && !held.grants.contains("test") {
+            found.push(("out of true", "no test grant".to_string()));
+        }
     }
     for name in &held.dirs {
         if !DIRS.contains(&name.as_str()) {
-            notes.push(Note {
-                grade: "unknown shape",
-                line: format!("directory {name} has no shadow in the skeleton"),
-            });
+            found.push((
+                "unknown shape",
+                format!("directory {name} has no shadow in the skeleton"),
+            ));
         }
     }
     for name in &held.wrappers {
         if !WRAPPERS.contains(&name.as_str()) {
-            notes.push(Note {
-                grade: "unknown shape",
-                line: format!("wrapper {name} has no shadow in the skeleton"),
-            });
+            found.push((
+                "unknown shape",
+                format!("wrapper {name} has no shadow in the skeleton"),
+            ));
         }
     }
-    paired(held, notes);
-    matched(held, notes);
+    paired(held, &mut found);
+    matched(held, &mut found);
     for name in &held.lanes {
         if !LANES.contains(&name.as_str()) {
-            notes.push(Note {
-                grade: "unknown shape",
-                line: format!("workflow {name} has no shadow in the skeleton"),
-            });
+            found.push((
+                "unknown shape",
+                format!("workflow {name} has no shadow in the skeleton"),
+            ));
         }
     }
+    found
 }
 
-fn deps(held: &shape::Shape, notes: &mut Vec<Note>) {
+fn deps(held: &shape::Shape) -> Found {
+    let mut found = Found::new();
     if held.binary && !held.clap {
-        notes.push(Note {
-            grade: "out of true",
-            line: "ships a rust binary without clap".to_string(),
-        });
+        found.push((
+            "out of true",
+            "ships a rust binary without clap".to_string(),
+        ));
     }
+    found
 }
 
-fn paired(held: &shape::Shape, notes: &mut Vec<Note>) {
+fn paired(held: &shape::Shape, found: &mut Found) {
     if held.rust && !held.ignore.lines().any(|line| line.trim() == "target/") {
-        notes.push(Note {
-            grade: "out of true",
-            line: "Cargo.toml without target/ in .gitignore".to_string(),
-        });
+        found.push((
+            "out of true",
+            "Cargo.toml without target/ in .gitignore".to_string(),
+        ));
     }
     if held.wrappers.contains("release") {
         for lane in ["release-beta", "release-stable"] {
             if !held.lanes.contains(lane) {
-                notes.push(Note {
-                    grade: "out of true",
-                    line: format!("release wrapper without a {lane} lane"),
-                });
+                found.push((
+                    "out of true",
+                    format!("release wrapper without a {lane} lane"),
+                ));
             }
         }
     }
     if !held.ships.is_empty() && !held.wrappers.contains("release") {
-        notes.push(Note {
-            grade: "out of true",
-            line: format!("declares {} without a release wrapper", show(&held.ships)),
-        });
+        found.push((
+            "out of true",
+            format!("declares {} without a release wrapper", show(&held.ships)),
+        ));
     }
 }
 
-fn matched(held: &shape::Shape, notes: &mut Vec<Note>) {
+fn matched(held: &shape::Shape, found: &mut Found) {
     if held.inits && held.listed.is_empty() {
-        notes.push(Note {
-            grade: "blind",
-            line: "an init wrapper is present but its required paths could not be read".to_string(),
-        });
+        found.push((
+            "blind",
+            "an init wrapper is present but its required paths could not be read".to_string(),
+        ));
     }
     for name in held.listed.difference(&held.wrappers) {
-        notes.push(Note {
-            grade: "out of true",
-            line: format!("init requires wrapper {name} which does not exist"),
-        });
+        found.push((
+            "out of true",
+            format!("init requires wrapper {name} which does not exist"),
+        ));
     }
     for path in &held.bounds {
         if !held.root.join(path).exists() {
-            notes.push(Note {
-                grade: "out of true",
-                line: format!("boundary names {path} which does not exist"),
-            });
+            found.push((
+                "out of true",
+                format!("boundary names {path} which does not exist"),
+            ));
         }
     }
 }
@@ -247,7 +246,7 @@ fn doctor(root: PathBuf) -> i32 {
     let mut wrong = 0;
     let mut blind = 0;
     for note in &notes {
-        println!("  {}: {}", note.grade, note.line);
+        println!("  {}: {} [{}]", note.grade, note.line, note.dim);
         if note.grade == "out of true" {
             wrong += 1;
         }
