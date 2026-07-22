@@ -23,6 +23,8 @@ pub struct Shape {
     pub binary: bool,
     pub clap: bool,
     pub deno: String,
+    pub root_package: Option<String>,
+    pub packages: Vec<(String, String)>,
 }
 
 fn names(root: &Path, under: &str, suffix: &str) -> BTreeSet<String> {
@@ -125,6 +127,57 @@ fn bounds(doc: Option<&toml::Value>) -> Vec<String> {
     found
 }
 
+fn json_field(text: &str, key: &str) -> Option<String> {
+    let marker = format!("\"{key}\"");
+    let at = text.find(&marker)?;
+    let rest = &text[at + marker.len()..];
+    let colon = rest.find(':')?;
+    let tail = &rest[colon + 1..];
+    let open = tail.find('"')?;
+    let value = &tail[open + 1..];
+    let close = value.find('"')?;
+    Some(value[..close].to_string())
+}
+
+fn package_name(dir: &Path) -> Option<String> {
+    for seat in ["deno.json", "package.json"] {
+        if let Ok(text) = std::fs::read_to_string(dir.join(seat))
+            && let Some(name) = json_field(&text, "name")
+        {
+            return Some(name);
+        }
+    }
+    None
+}
+
+fn packages(root: &Path) -> Vec<(String, String)> {
+    let mut held = Vec::new();
+    let Ok(entries) = std::fs::read_dir(root.join("packages")) else {
+        return held;
+    };
+    for entry in entries.flatten() {
+        let dir = entry.file_name().to_string_lossy().to_string();
+        if let Some(name) = package_name(&entry.path()) {
+            held.push((dir, name));
+        }
+    }
+    held
+}
+
+fn root_package(root: &Path) -> Option<String> {
+    if let Ok(text) = std::fs::read_to_string(root.join("deno.json"))
+        && text.contains("\"exports\"")
+    {
+        return json_field(&text, "name");
+    }
+    if minted(&root.join("package.json"))
+        && let Ok(text) = std::fs::read_to_string(root.join("package.json"))
+    {
+        return json_field(&text, "name");
+    }
+    None
+}
+
 fn denos(root: &Path) -> String {
     let mut held = String::new();
     for seat in ["deno.json", ".runseal/deno.json"] {
@@ -216,6 +269,8 @@ pub fn read(root: &Path) -> Shape {
                 .any(|line| line.trim_start().starts_with("clap"))
         }),
         deno: denos(root),
+        root_package: root_package(root),
+        packages: packages(root),
         listed: listed(root),
         bounds: bounds(doc.as_ref()),
         root: root.to_path_buf(),
