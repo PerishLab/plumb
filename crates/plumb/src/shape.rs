@@ -179,20 +179,7 @@ fn root_package(root: &Path) -> Option<String> {
 }
 
 fn denos(root: &Path) -> String {
-    let mut held = String::new();
-    for seat in ["deno.json", ".runseal/deno.json"] {
-        if let Ok(text) = std::fs::read_to_string(root.join(seat)) {
-            held.push_str(&text);
-        }
-    }
-    if let Ok(entries) = std::fs::read_dir(root.join("packages")) {
-        for entry in entries.flatten() {
-            if let Ok(text) = std::fs::read_to_string(entry.path().join("deno.json")) {
-                held.push_str(&text);
-            }
-        }
-    }
-    held
+    std::fs::read_to_string(root.join(".runseal/deno.json")).unwrap_or_default()
 }
 
 fn manifests(root: &Path) -> Vec<String> {
