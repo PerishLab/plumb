@@ -1,4 +1,4 @@
-import { guard } from "@perish/harness/guard";
+import { guard } from "@perish/sealkit/guard";
 
 await guard(
   [

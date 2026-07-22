@@ -1,0 +1,6 @@
+# Self-built dependencies that have been renamed or retired. Importing a retired
+# name is out of true — migrate to the replacement. A rename is a row here.
+
+[[retired]]
+name = "@perish/harness"
+use = "@perish/sealkit"

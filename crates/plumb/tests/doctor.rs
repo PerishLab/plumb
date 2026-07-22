@@ -148,6 +148,33 @@ fn clap() {
 }
 
 #[test]
+fn retired() {
+    let dir = std::env::temp_dir().join("plumb-retired");
+    std::fs::create_dir_all(dir.join(".runseal")).expect("fixture should be made");
+    let map = dir.join(".runseal/deno.json");
+
+    std::fs::write(
+        &map,
+        "{\"imports\":{\"@perish/harness\":\"jsr:@perish/harness@0.4.0\"}}",
+    )
+    .expect("map should be written");
+    let old = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(
+        old.contains("depends on @perish/harness, renamed to @perish/sealkit"),
+        "{old}"
+    );
+
+    std::fs::write(
+        &map,
+        "{\"imports\":{\"@perish/sealkit\":\"jsr:@perish/sealkit\"}}",
+    )
+    .expect("map should be written");
+    let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
+    assert!(!held.contains("renamed to"), "{held}");
+}
+
+#[test]
 fn blind() {
     let dir = std::env::temp_dir().join("plumb-blind");
     std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");

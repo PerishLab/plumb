@@ -1,9 +1,10 @@
+mod rules;
 mod shape;
 
 use clap::{Parser, Subcommand};
+use rules::RULES;
 use std::collections::BTreeSet;
 use std::path::PathBuf;
-use std::sync::LazyLock;
 
 struct Note {
     grade: &'static str,
@@ -27,36 +28,6 @@ enum Command {
         path: String,
     },
 }
-
-struct Rules {
-    dirs: BTreeSet<String>,
-    wrappers: BTreeSet<String>,
-    required: BTreeSet<String>,
-    lanes: BTreeSet<String>,
-}
-
-static RULES: LazyLock<Rules> = LazyLock::new(|| {
-    let doc: toml::Table = include_str!("../rules/structure.toml")
-        .parse()
-        .expect("rules/structure.toml must parse");
-    let set = |key: &str| -> BTreeSet<String> {
-        doc.get(key)
-            .and_then(toml::Value::as_array)
-            .map(|list| {
-                list.iter()
-                    .filter_map(toml::Value::as_str)
-                    .map(str::to_string)
-                    .collect()
-            })
-            .unwrap_or_default()
-    };
-    Rules {
-        dirs: set("dirs"),
-        wrappers: set("wrappers"),
-        required: set("required"),
-        lanes: set("lanes"),
-    }
-});
 
 const GUARD_CONCURRENCY: &str = "concurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true";
 
@@ -187,6 +158,14 @@ fn deps(held: &shape::Shape) -> Found {
             "out of true",
             "ships a rust binary without clap".to_string(),
         ));
+    }
+    for (name, held_use) in &RULES.retired {
+        if held.deno.contains(name.as_str()) {
+            found.push((
+                "out of true",
+                format!("depends on {name}, renamed to {held_use}"),
+            ));
+        }
     }
     found
 }

@@ -22,6 +22,7 @@ pub struct Shape {
     pub edition: Option<String>,
     pub binary: bool,
     pub clap: bool,
+    pub deno: String,
 }
 
 fn names(root: &Path, under: &str, suffix: &str) -> BTreeSet<String> {
@@ -124,6 +125,23 @@ fn bounds(doc: Option<&toml::Value>) -> Vec<String> {
     found
 }
 
+fn denos(root: &Path) -> String {
+    let mut held = String::new();
+    for seat in ["deno.json", ".runseal/deno.json"] {
+        if let Ok(text) = std::fs::read_to_string(root.join(seat)) {
+            held.push_str(&text);
+        }
+    }
+    if let Ok(entries) = std::fs::read_dir(root.join("packages")) {
+        for entry in entries.flatten() {
+            if let Ok(text) = std::fs::read_to_string(entry.path().join("deno.json")) {
+                held.push_str(&text);
+            }
+        }
+    }
+    held
+}
+
 fn manifests(root: &Path) -> Vec<String> {
     let mut held = Vec::new();
     for seat in ["Cargo.toml", "app/Cargo.toml"] {
@@ -197,6 +215,7 @@ pub fn read(root: &Path) -> Shape {
             text.lines()
                 .any(|line| line.trim_start().starts_with("clap"))
         }),
+        deno: denos(root),
         listed: listed(root),
         bounds: bounds(doc.as_ref()),
         root: root.to_path_buf(),

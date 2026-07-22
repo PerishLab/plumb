@@ -1,6 +1,6 @@
-import { cli, flags } from "@perish/harness/cli";
-import { init } from "@perish/harness/init";
-import { io } from "@perish/harness/io";
+import { cli, flags } from "@perish/sealkit/cli";
+import { init } from "@perish/sealkit/init";
+import { io } from "@perish/sealkit/io";
 
 const args = cli.parse(Deno.args, { boolean: ["help", "h"] });
 flags(args).positionals("init", { allowHelp: true });

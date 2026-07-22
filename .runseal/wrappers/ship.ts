@@ -1,11 +1,11 @@
-import { Cloudflare, keys as held } from "@perish/harness/cloudflare";
-import { cli, flags } from "@perish/harness/cli";
-import { bin, exists } from "@perish/harness/cmd";
-import { env } from "@perish/harness/env";
-import { fs } from "@perish/harness/fs";
-import { io } from "@perish/harness/io";
-import { doc } from "@perish/harness/json";
-import { runseal } from "@perish/harness/runseal";
+import { Cloudflare, keys as held } from "@perish/sealkit/cloudflare";
+import { cli, flags } from "@perish/sealkit/cli";
+import { bin, exists } from "@perish/sealkit/cmd";
+import { env } from "@perish/sealkit/env";
+import { fs } from "@perish/sealkit/fs";
+import { io } from "@perish/sealkit/io";
+import { doc } from "@perish/sealkit/json";
+import { runseal } from "@perish/sealkit/runseal";
 import { family, kind, run } from "@perish/shield";
 
 const app = "apps/web";

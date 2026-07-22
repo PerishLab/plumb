@@ -1,3 +1,3 @@
-import { land } from "@perish/harness/land";
+import { land } from "@perish/sealkit/land";
 
 await land(Deno.args);
