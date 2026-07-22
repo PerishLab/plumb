@@ -1,5 +1,6 @@
 mod shape;
 
+use clap::{Parser, Subcommand};
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
@@ -8,12 +9,19 @@ struct Note {
     line: String,
 }
 
-fn usage() {
-    println!("Usage: plumb doctor [path]");
-    println!();
-    println!("Hold a repository against the skeleton and report where it hangs");
-    println!("out of true. plumb reports; it never edits. A finding may be the");
-    println!("repository's debt or the skeleton's own.");
+#[derive(Parser)]
+#[command(name = "plumb", version = concat!("v", env!("CARGO_PKG_VERSION")))]
+struct Cli {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    Doctor {
+        #[arg(default_value = ".")]
+        path: String,
+    },
 }
 
 const DIRS: [&str; 7] = [
@@ -152,7 +160,14 @@ fn structure(held: &shape::Shape, notes: &mut Vec<Note>) {
     }
 }
 
-fn deps(_held: &shape::Shape, _notes: &mut Vec<Note>) {}
+fn deps(held: &shape::Shape, notes: &mut Vec<Note>) {
+    if held.binary && !held.clap {
+        notes.push(Note {
+            grade: "out of true",
+            line: "ships a rust binary without clap".to_string(),
+        });
+    }
+}
 
 fn paired(held: &shape::Shape, notes: &mut Vec<Note>) {
     if held.rust && !held.ignore.lines().any(|line| line.trim() == "target/") {
@@ -249,20 +264,8 @@ fn doctor(root: PathBuf) -> i32 {
 }
 
 fn main() {
-    let mut args = std::env::args().skip(1);
-    let code = match args.next().as_deref() {
-        Some("--version") | Some("-V") => {
-            println!("plumb v{}", env!("CARGO_PKG_VERSION"));
-            0
-        }
-        Some("doctor") => {
-            let seat = args.next().unwrap_or_else(|| ".".to_string());
-            doctor(PathBuf::from(seat))
-        }
-        _ => {
-            usage();
-            0
-        }
+    let code = match Cli::parse().command {
+        Command::Doctor { path } => doctor(PathBuf::from(path)),
     };
     std::process::exit(code);
 }

@@ -20,6 +20,8 @@ pub struct Shape {
     pub runseal: bool,
     pub guard_lane: Option<String>,
     pub edition: Option<String>,
+    pub binary: bool,
+    pub clap: bool,
 }
 
 fn names(root: &Path, under: &str, suffix: &str) -> BTreeSet<String> {
@@ -122,6 +124,23 @@ fn bounds(doc: Option<&toml::Value>) -> Vec<String> {
     found
 }
 
+fn manifests(root: &Path) -> Vec<String> {
+    let mut held = Vec::new();
+    for seat in ["Cargo.toml", "app/Cargo.toml"] {
+        if let Ok(text) = std::fs::read_to_string(root.join(seat)) {
+            held.push(text);
+        }
+    }
+    if let Ok(entries) = std::fs::read_dir(root.join("crates")) {
+        for entry in entries.flatten() {
+            if let Ok(text) = std::fs::read_to_string(entry.path().join("Cargo.toml")) {
+                held.push(text);
+            }
+        }
+    }
+    held
+}
+
 fn edition(root: &Path) -> Option<String> {
     let text = std::fs::read_to_string(root.join("Cargo.toml")).ok()?;
     let doc = text.parse::<toml::Table>().ok()?;
@@ -173,6 +192,11 @@ pub fn read(root: &Path) -> Shape {
         runseal: root.join(".runseal").is_dir(),
         guard_lane: std::fs::read_to_string(root.join(".forgejo/workflows/guard.yml")).ok(),
         edition: edition(root),
+        binary: manifests(root).iter().any(|text| text.contains("[[bin]]")),
+        clap: manifests(root).iter().any(|text| {
+            text.lines()
+                .any(|line| line.trim_start().starts_with("clap"))
+        }),
         listed: listed(root),
         bounds: bounds(doc.as_ref()),
         root: root.to_path_buf(),
