@@ -22,6 +22,7 @@ pub struct Shape {
     pub edition: Option<String>,
     pub binary: bool,
     pub clap: bool,
+    pub substrate: bool,
     pub deno: String,
     pub root_package: Option<String>,
     pub packages: Vec<(String, String)>,
@@ -254,6 +255,10 @@ pub fn read(root: &Path) -> Shape {
         clap: manifests(root).iter().any(|text| {
             text.lines()
                 .any(|line| line.trim_start().starts_with("clap"))
+        }),
+        substrate: manifests(root).iter().any(|text| {
+            text.lines()
+                .any(|line| line.trim_start().starts_with("plumb-lib"))
         }),
         deno: denos(root),
         root_package: root_package(root),

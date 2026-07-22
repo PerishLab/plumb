@@ -148,6 +148,38 @@ fn clap() {
 }
 
 #[test]
+fn substrate() {
+    let dir = std::env::temp_dir().join("plumb-substrate");
+    std::fs::create_dir_all(&dir).expect("fixture should be made");
+    std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
+    let cargo = dir.join("Cargo.toml");
+
+    std::fs::write(
+        &cargo,
+        "[[bin]]\nname = \"x\"\n[dependencies]\nclap = \"4\"\n",
+    )
+    .expect("manifest should be written");
+    let bare = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(
+        bare.contains("ships a rust binary without plumb-lib"),
+        "{bare}"
+    );
+
+    std::fs::write(
+        &cargo,
+        "[[bin]]\nname = \"x\"\n[dependencies]\nclap = \"4\"\nplumb-lib = \"0.1\"\n",
+    )
+    .expect("manifest should be written");
+    let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+
+    std::fs::write(&cargo, "[dependencies]\nclap = \"4\"\n").expect("manifest should be written");
+    let lib = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
+    assert!(!held.contains("without plumb-lib"), "{held}");
+    assert!(!lib.contains("without plumb-lib"), "{lib}");
+}
+
+#[test]
 fn retired() {
     let dir = std::env::temp_dir().join("plumb-retired");
     std::fs::create_dir_all(dir.join(".runseal")).expect("fixture should be made");
