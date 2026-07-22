@@ -26,6 +26,10 @@ const LANES: [&str; 4] = ["guard", "release-beta", "release-stable", "probe"];
 
 const GUARD_CONCURRENCY: &str = "concurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true";
 
+type Layer = fn(&shape::Shape, &mut Vec<Note>);
+
+const LAYERS: [Layer; 3] = [env, structure, deps];
+
 fn judge(held: &shape::Shape) -> Vec<Note> {
     let mut notes = Vec::new();
     if let Some(why) = &held.unread {
@@ -38,6 +42,18 @@ fn judge(held: &shape::Shape) -> Vec<Note> {
         });
         return notes;
     }
+    for layer in LAYERS {
+        layer(held, &mut notes);
+        if notes.iter().any(|note| note.grade == "out of true") {
+            break;
+        }
+    }
+    notes
+}
+
+fn env(_held: &shape::Shape, _notes: &mut Vec<Note>) {}
+
+fn structure(held: &shape::Shape, notes: &mut Vec<Note>) {
     if held.runseal {
         for name in ["guard", "init", "land"] {
             if !held.wrappers.contains(name) {
@@ -97,8 +113,8 @@ fn judge(held: &shape::Shape) -> Vec<Note> {
             });
         }
     }
-    paired(held, &mut notes);
-    matched(held, &mut notes);
+    paired(held, notes);
+    matched(held, notes);
     for name in &held.lanes {
         if !LANES.contains(&name.as_str()) {
             notes.push(Note {
@@ -107,8 +123,9 @@ fn judge(held: &shape::Shape) -> Vec<Note> {
             });
         }
     }
-    notes
 }
+
+fn deps(_held: &shape::Shape, _notes: &mut Vec<Note>) {}
 
 fn paired(held: &shape::Shape, notes: &mut Vec<Note>) {
     if held.rust && !held.ignore.lines().any(|line| line.trim() == "target/") {
