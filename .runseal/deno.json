@@ -1,7 +1,7 @@
 {
   "imports": {
     "@perish/sealkit": "jsr:@perish/sealkit",
-    "@perish/shield": "jsr:@perish/shield@0.1.0"
+    "@perish/shield": "jsr:@perish/shield"
   },
   "compilerOptions": {
     "strict": true

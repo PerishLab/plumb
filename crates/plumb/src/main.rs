@@ -167,6 +167,27 @@ fn deps(held: &shape::Shape) -> Found {
             ));
         }
     }
+    for name in pinned(&held.deno) {
+        found.push((
+            "out of true",
+            format!("self-built {name} is version-pinned, the skeleton tracks latest"),
+        ));
+    }
+    found
+}
+
+fn pinned(deno: &str) -> BTreeSet<String> {
+    let marker = format!("jsr:{}/", RULES.scope);
+    let mut found = BTreeSet::new();
+    for chunk in deno.split(marker.as_str()).skip(1) {
+        let name: String = chunk
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric() || *c == '-')
+            .collect();
+        if chunk[name.len()..].starts_with('@') {
+            found.insert(format!("{}/{name}", RULES.scope));
+        }
+    }
     found
 }
 

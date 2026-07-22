@@ -7,6 +7,7 @@ pub struct Rules {
     pub required: BTreeSet<String>,
     pub lanes: BTreeSet<String>,
     pub retired: Vec<(String, String)>,
+    pub scope: String,
 }
 
 pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
@@ -40,11 +41,17 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
                 .collect()
         })
         .unwrap_or_default();
+    let scope = deps
+        .get("scope")
+        .and_then(toml::Value::as_str)
+        .unwrap_or_default()
+        .to_string();
     Rules {
         dirs: set("dirs"),
         wrappers: set("wrappers"),
         required: set("required"),
         lanes: set("lanes"),
         retired,
+        scope,
     }
 });

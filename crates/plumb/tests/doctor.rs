@@ -175,6 +175,33 @@ fn retired() {
 }
 
 #[test]
+fn pinned() {
+    let dir = std::env::temp_dir().join("plumb-pinned");
+    std::fs::create_dir_all(dir.join(".runseal")).expect("fixture should be made");
+    let map = dir.join(".runseal/deno.json");
+
+    std::fs::write(
+        &map,
+        "{\"imports\":{\"@perish/shield\":\"jsr:@perish/shield@0.1.0\"}}",
+    )
+    .expect("map should be written");
+    let pin = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(
+        pin.contains("self-built @perish/shield is version-pinned"),
+        "{pin}"
+    );
+
+    std::fs::write(
+        &map,
+        "{\"imports\":{\"@perish/shield\":\"jsr:@perish/shield\",\"@std/cli\":\"jsr:@std/cli@1.0.0\"}}",
+    )
+    .expect("map should be written");
+    let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
+    assert!(!held.contains("version-pinned"), "{held}");
+}
+
+#[test]
 fn blind() {
     let dir = std::env::temp_dir().join("plumb-blind");
     std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");

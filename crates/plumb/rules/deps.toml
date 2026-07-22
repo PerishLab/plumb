@@ -1,5 +1,8 @@
-# Self-built dependencies that have been renamed or retired. Importing a retired
-# name is out of true — migrate to the replacement. A rename is a row here.
+# The deps dimension's self-built policy. Self-built packages live under this
+# scope and track latest-stable — a version-pinned specifier is out of true.
+# Retired names must migrate to their replacement.
+
+scope = "@perish"
 
 [[retired]]
 name = "@perish/harness"
