@@ -51,7 +51,21 @@ fn judge(held: &shape::Shape) -> Vec<Note> {
     notes
 }
 
-fn env(_held: &shape::Shape, _notes: &mut Vec<Note>) {}
+fn env(held: &shape::Shape, notes: &mut Vec<Note>) {
+    if held
+        .edition
+        .as_ref()
+        .is_some_and(|edition| edition != "2024")
+    {
+        notes.push(Note {
+            grade: "out of true",
+            line: format!(
+                "edition is {}, the skeleton holds 2024",
+                held.edition.as_deref().unwrap_or("")
+            ),
+        });
+    }
+}
 
 fn structure(held: &shape::Shape, notes: &mut Vec<Note>) {
     if held.runseal {

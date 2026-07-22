@@ -80,6 +80,27 @@ fn guard_concurrency() {
 }
 
 #[test]
+fn edition() {
+    let dir = std::env::temp_dir().join("plumb-edition");
+    std::fs::create_dir_all(&dir).expect("fixture should be made");
+    let cargo = dir.join("Cargo.toml");
+
+    std::fs::write(&cargo, "[workspace.package]\nedition = \"2021\"\n")
+        .expect("manifest should be written");
+    let old = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(
+        old.contains("edition is 2021, the skeleton holds 2024"),
+        "{old}"
+    );
+
+    std::fs::write(&cargo, "[workspace.package]\nedition = \"2024\"\n")
+        .expect("manifest should be written");
+    let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
+    assert!(!held.contains("edition is"), "{held}");
+}
+
+#[test]
 fn blind() {
     let dir = std::env::temp_dir().join("plumb-blind");
     std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");

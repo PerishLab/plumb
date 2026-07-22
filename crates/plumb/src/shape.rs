@@ -19,6 +19,7 @@ pub struct Shape {
     pub rust: bool,
     pub runseal: bool,
     pub guard_lane: Option<String>,
+    pub edition: Option<String>,
 }
 
 fn names(root: &Path, under: &str, suffix: &str) -> BTreeSet<String> {
@@ -121,6 +122,18 @@ fn bounds(doc: Option<&toml::Value>) -> Vec<String> {
     found
 }
 
+fn edition(root: &Path) -> Option<String> {
+    let text = std::fs::read_to_string(root.join("Cargo.toml")).ok()?;
+    let doc = text.parse::<toml::Table>().ok()?;
+    let held = doc
+        .get("workspace")
+        .and_then(|value| value.get("package"))
+        .or_else(|| doc.get("package"));
+    held.and_then(|value| value.get("edition"))
+        .and_then(toml::Value::as_str)
+        .map(str::to_string)
+}
+
 pub fn read(root: &Path) -> Shape {
     let laws = root.join("negentropy.toml");
     let text = std::fs::read_to_string(&laws).unwrap_or_default();
@@ -159,6 +172,7 @@ pub fn read(root: &Path) -> Shape {
         rust: root.join("Cargo.toml").exists(),
         runseal: root.join(".runseal").is_dir(),
         guard_lane: std::fs::read_to_string(root.join(".forgejo/workflows/guard.yml")).ok(),
+        edition: edition(root),
         listed: listed(root),
         bounds: bounds(doc.as_ref()),
         root: root.to_path_buf(),
