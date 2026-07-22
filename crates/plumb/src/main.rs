@@ -26,6 +26,8 @@ const LANES: [&str; 4] = ["guard", "release-beta", "release-stable", "probe"];
 
 const GUARD_CONCURRENCY: &str = "concurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true";
 
+const CI_CONTAINER: &str = "mirror.perish.lan/ci/deno";
+
 type Layer = fn(&shape::Shape, &mut Vec<Note>);
 
 const LAYERS: [Layer; 3] = [env, structure, deps];
@@ -63,6 +65,17 @@ fn env(held: &shape::Shape, notes: &mut Vec<Note>) {
                 "edition is {}, the skeleton holds 2024",
                 held.edition.as_deref().unwrap_or("")
             ),
+        });
+    }
+    let pinned = format!("{CI_CONTAINER}:");
+    if held
+        .guard_lane
+        .as_ref()
+        .is_some_and(|yml| yml.contains(&pinned))
+    {
+        notes.push(Note {
+            grade: "out of true",
+            line: "CI container pinned to a tag, the skeleton tracks latest".to_string(),
         });
     }
 }

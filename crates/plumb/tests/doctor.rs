@@ -101,6 +101,24 @@ fn edition() {
 }
 
 #[test]
+fn container() {
+    let dir = std::env::temp_dir().join("plumb-container");
+    std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
+    let lane = dir.join(".forgejo/workflows/guard.yml");
+
+    std::fs::write(&lane, "container: mirror.perish.lan/ci/deno:20260716-abc\n")
+        .expect("lane should be written");
+    let pin = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(pin.contains("CI container pinned to a tag"), "{pin}");
+
+    std::fs::write(&lane, "container: mirror.perish.lan/ci/deno\n")
+        .expect("lane should be written");
+    let bare = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
+    assert!(!bare.contains("CI container pinned"), "{bare}");
+}
+
+#[test]
 fn blind() {
     let dir = std::env::temp_dir().join("plumb-blind");
     std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");
