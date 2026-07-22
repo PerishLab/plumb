@@ -10,5 +10,6 @@ name = "plumb"
 path = "src/main.rs"
 
 [dependencies]
+plumb-lib = { path = "../lib" }
 clap = { version = "4", features = ["derive"] }
 toml = "0.9"

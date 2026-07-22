@@ -4,10 +4,11 @@ mod shape;
 
 use clap::{Parser, Subcommand};
 use judge::{judge, show};
+use plumb_lib::cli::Root;
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "plumb", version = concat!("v", env!("CARGO_PKG_VERSION")))]
+#[command(name = "plumb", version = plumb_lib::version!("PLUMB"))]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -16,8 +17,8 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     Doctor {
-        #[arg(default_value = ".")]
-        path: String,
+        #[command(flatten)]
+        target: Root,
     },
 }
 
@@ -62,7 +63,7 @@ fn doctor(root: PathBuf) -> i32 {
 
 fn main() {
     let code = match Cli::parse().command {
-        Command::Doctor { path } => doctor(PathBuf::from(path)),
+        Command::Doctor { target } => doctor(PathBuf::from(target.root)),
     };
     std::process::exit(code);
 }
