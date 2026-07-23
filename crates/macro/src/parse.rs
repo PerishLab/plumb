@@ -181,7 +181,7 @@ fn arm(row: &Row, vis: &syn::Visibility) -> TokenStream {
     let field = &row.name;
     let long = row.name.to_string().replace('_', "-");
     let ty = bare(&row.ty).unwrap_or(&row.ty);
-    quote! { #[arg(long = #long)] #vis #field: ::core::option::Option<#ty> }
+    quote! { #[arg(long = #long)] #vis #field: Option<#ty> }
 }
 
 fn carry(row: &Row) -> TokenStream {

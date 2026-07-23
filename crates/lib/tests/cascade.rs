@@ -95,6 +95,22 @@ fn args_cover_env() {
 }
 
 #[test]
+fn args_are_optional_at_the_parser() {
+    #[derive(clap::Parser)]
+    struct Cli {
+        #[command(flatten)]
+        over: RigArgs,
+    }
+    let bare = <Cli as clap::Parser>::try_parse_from(["rig"]).expect("bare parse should hold");
+    assert_eq!(bare.over.theme, None);
+    assert_eq!(bare.over.tag, None);
+    let full = <Cli as clap::Parser>::try_parse_from(["rig", "--theme", "dark", "--tag", "t"])
+        .expect("full parse should hold");
+    assert_eq!(full.over.theme.as_deref(), Some("dark"));
+    assert_eq!(full.over.tag.as_deref(), Some("t"));
+}
+
+#[test]
 fn a_bad_env_value_is_an_error_not_a_default() {
     let get = |key: &str| (key == "RIG_COUNT").then(|| "nope".to_string());
     let err = Rig::env_with("RIG", &get).expect_err("the parse should fail");
