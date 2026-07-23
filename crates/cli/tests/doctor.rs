@@ -28,7 +28,7 @@ fn itself() {
 }
 
 #[test]
-fn governs_on_seat() {
+fn governs() {
     let bare = std::env::temp_dir().join("plumb-ungoverned");
     std::fs::create_dir_all(&bare).expect("fixture should be made");
     std::fs::write(bare.join("README.md"), "# bare\n").expect("readme should be written");
@@ -47,7 +47,7 @@ fn governs_on_seat() {
 }
 
 #[test]
-fn guard_concurrency() {
+fn concurrency() {
     let dir = std::env::temp_dir().join("plumb-concurrency");
     std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");
     std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");

@@ -32,18 +32,18 @@ fn nothing(_key: &str) -> Option<String> {
 }
 
 #[test]
-fn prefix_is_the_package_name() {
+fn prefixed() {
     assert_eq!(Rig::prefix(), "PLUMB");
 }
 
 #[test]
-fn defaults_hold_when_every_layer_is_silent() {
-    let held = Rig::default().merge(Rig::env_with("RIG", &nothing).expect("env should read"));
+fn defaults() {
+    let held = Rig::default().merge(Rig::lookup("RIG", &nothing).expect("env should read"));
     assert_eq!(held, Rig::default());
 }
 
 #[test]
-fn the_file_covers_the_defaults() {
+fn filed() {
     let dir = std::env::temp_dir().join("plumb-cascade-file");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
     let path = dir.join("rig.toml");
@@ -63,7 +63,7 @@ fn the_file_covers_the_defaults() {
 }
 
 #[test]
-fn env_covers_the_file() {
+fn veiled() {
     let get = |key: &str| match key {
         "RIG_NAME" => Some("veiled".to_string()),
         "RIG_LISTEN_PORT" => Some("7".to_string()),
@@ -74,28 +74,28 @@ fn env_covers_the_file() {
         name: "filed".to_string(),
         ..Rig::default()
     }
-    .merge(Rig::env_with("RIG", &get).expect("env should read"));
+    .merge(Rig::lookup("RIG", &get).expect("env should read"));
     assert_eq!(held.name, "veiled");
     assert_eq!(held.listen.port, 7);
     assert_eq!(held.tag.as_deref(), Some("held"));
 }
 
 #[test]
-fn args_cover_env() {
+fn armed() {
     let get = |key: &str| (key == "RIG_THEME").then(|| "enved".to_string());
     let args = RigArgs {
         theme: Some("dark".to_string()),
         tag: Some("tipped".to_string()),
     };
     let held = Rig::default()
-        .merge(Rig::env_with("RIG", &get).expect("env should read"))
+        .merge(Rig::lookup("RIG", &get).expect("env should read"))
         .merge(args.partial());
     assert_eq!(held.theme, "dark");
     assert_eq!(held.tag.as_deref(), Some("tipped"));
 }
 
 #[test]
-fn args_are_optional_at_the_parser() {
+fn optional() {
     #[derive(clap::Parser)]
     struct Cli {
         #[command(flatten)]
@@ -111,35 +111,35 @@ fn args_are_optional_at_the_parser() {
 }
 
 #[test]
-fn a_bad_env_value_is_an_error_not_a_default() {
+fn refused() {
     let get = |key: &str| (key == "RIG_COUNT").then(|| "nope".to_string());
-    let err = Rig::env_with("RIG", &get).expect_err("the parse should fail");
+    let err = Rig::lookup("RIG", &get).expect_err("the parse should fail");
     assert!(err.to_string().contains("RIG_COUNT"), "{err}");
 }
 
 #[test]
-fn an_empty_env_value_is_absent() {
+fn blank() {
     let get = |key: &str| (key == "RIG_NAME").then(|| "  ".to_string());
-    let held = Rig::default().merge(Rig::env_with("RIG", &get).expect("env should read"));
+    let held = Rig::default().merge(Rig::lookup("RIG", &get).expect("env should read"));
     assert_eq!(held.name, "base");
 }
 
 #[test]
-fn a_map_is_blind_to_env() {
+fn blind() {
     let get = |key: &str| (key == "RIG_EXTRAS").then(|| "poked".to_string());
-    let held = Rig::default().merge(Rig::env_with("RIG", &get).expect("env should read"));
+    let held = Rig::default().merge(Rig::lookup("RIG", &get).expect("env should read"));
     assert!(held.extras.is_empty());
 }
 
 #[test]
-fn kind_reads_from_env() {
+fn kinds() {
     assert_eq!(Kind::read("file"), Ok(Kind::File));
     assert_eq!(Kind::read("memory"), Ok(Kind::Memory));
     assert!(Kind::read("shelf").is_err());
 }
 
 #[test]
-fn resolve_runs_the_whole_onion() {
+fn onion() {
     let dir = std::env::temp_dir().join("plumb-cascade-resolve");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
     let path = dir.join("rig.toml");

@@ -1,7 +1,8 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
-    Attribute, Data, DeriveInput, Field, Fields, GenericArgument, Ident, PathArguments, Type,
+    Attribute, Data, DeriveInput, Field, Fields, GenericArgument as Argument, Ident,
+    PathArguments as Arguments, Type,
 };
 
 struct Row {
@@ -23,9 +24,9 @@ pub fn expand(item: DeriveInput) -> Result<TokenStream, syn::Error> {
     let name = &item.ident;
     let vis = &item.vis;
     let partial = format_ident!("{}Partial", name);
-    let held = rows.iter().map(|row| held(row, vis));
-    let reads = rows.iter().map(read);
-    let merges = rows.iter().map(merge);
+    let held = rows.iter().map(|row| row.held(vis));
+    let reads = rows.iter().map(Row::read);
+    let merges = rows.iter().map(Row::merge);
     let mut out = quote! {
         #[derive(Debug, Default, ::plumb::serde::Deserialize)]
         #[serde(crate = "::plumb::serde", default)]
@@ -35,7 +36,7 @@ pub fn expand(item: DeriveInput) -> Result<TokenStream, syn::Error> {
 
         impl ::plumb::config::Cascade for #name {
             type Partial = #partial;
-            fn env_with(
+            fn lookup(
                 prefix: &str,
                 get: &dyn Fn(&str) -> ::core::option::Option<::std::string::String>,
             ) -> ::core::result::Result<#partial, ::plumb::config::Error> {
@@ -73,53 +74,70 @@ fn rows(item: &DeriveInput) -> Result<Vec<Row>, syn::Error> {
             "Cascade derives on a plain struct",
         ));
     }
-    fields.named.iter().map(read_field).collect()
+    fields.named.iter().map(row).collect()
 }
 
-fn held(row: &Row, vis: &syn::Visibility) -> TokenStream {
-    let field = &row.name;
-    let ty = &row.ty;
-    if row.section {
-        quote! { #[serde(default)] #vis #field: <#ty as ::plumb::config::Cascade>::Partial }
-    } else {
-        quote! { #vis #field: ::core::option::Option<#ty> }
-    }
-}
-
-fn read(row: &Row) -> TokenStream {
-    let field = &row.name;
-    let ty = &row.ty;
-    let upper = row.name.to_string().to_uppercase();
-    if row.section {
-        return quote! {
-            #field: <#ty as ::plumb::config::Cascade>::env_with(
-                &::std::format!("{}_{}", prefix, #upper),
-                get,
-            )?
-        };
-    }
-    quote! {
-        #field: {
-            let key = ::std::format!("{}_{}", prefix, #upper);
-            #[allow(unused_imports)]
-            use ::plumb::config::Opaque as _;
-            (&::plumb::config::Sniff::<#ty>(::core::marker::PhantomData)).take(get(&key), &key)?
+impl Row {
+    fn held(&self, vis: &syn::Visibility) -> TokenStream {
+        let field = &self.name;
+        let ty = &self.ty;
+        if self.section {
+            quote! { #[serde(default)] #vis #field: <#ty as ::plumb::config::Cascade>::Partial }
+        } else {
+            quote! { #vis #field: ::core::option::Option<#ty> }
         }
     }
-}
 
-fn merge(row: &Row) -> TokenStream {
-    let field = &row.name;
-    let ty = &row.ty;
-    if row.section {
-        return quote! {
-            self.#field = <#ty as ::plumb::config::Cascade>::merge(self.#field, over.#field);
-        };
-    }
-    quote! {
-        if let ::core::option::Option::Some(value) = over.#field {
-            self.#field = value;
+    fn read(&self) -> TokenStream {
+        let field = &self.name;
+        let ty = &self.ty;
+        let upper = self.name.to_string().to_uppercase();
+        if self.section {
+            return quote! {
+                #field: <#ty as ::plumb::config::Cascade>::lookup(
+                    &::std::format!("{}_{}", prefix, #upper),
+                    get,
+                )?
+            };
         }
+        quote! {
+            #field: {
+                let key = ::std::format!("{}_{}", prefix, #upper);
+                #[allow(unused_imports)]
+                use ::plumb::config::Opaque as _;
+                (&::plumb::config::Sniff::<#ty>(::core::marker::PhantomData)).take(get(&key), &key)?
+            }
+        }
+    }
+
+    fn merge(&self) -> TokenStream {
+        let field = &self.name;
+        let ty = &self.ty;
+        if self.section {
+            return quote! {
+                self.#field = <#ty as ::plumb::config::Cascade>::merge(self.#field, over.#field);
+            };
+        }
+        quote! {
+            if let ::core::option::Option::Some(value) = over.#field {
+                self.#field = value;
+            }
+        }
+    }
+
+    fn arm(&self, vis: &syn::Visibility) -> TokenStream {
+        let field = &self.name;
+        let long = self.name.to_string().replace('_', "-");
+        let ty = bare(&self.ty).unwrap_or(&self.ty);
+        quote! { #[arg(long = #long)] #vis #field: Option<#ty> }
+    }
+
+    fn carry(&self) -> TokenStream {
+        let field = &self.name;
+        if bare(&self.ty).is_some() {
+            return quote! { #field: self.#field.map(::core::option::Option::Some) };
+        }
+        quote! { #field: self.#field }
     }
 }
 
@@ -161,35 +179,20 @@ fn armed(item: &DeriveInput, partial: &Ident, rows: &[Row]) -> TokenStream {
         return TokenStream::new();
     }
     let vis = &item.vis;
-    let args_name = format_ident!("{}Args", item.ident);
-    let fields = flagged.iter().map(|row| arm(row, vis));
-    let moves = flagged.iter().map(|row| carry(row));
+    let title = format_ident!("{}Args", item.ident);
+    let fields = flagged.iter().map(|row| row.arm(vis));
+    let moves = flagged.iter().map(|row| row.carry());
     quote! {
         #[derive(::clap::Args, Clone, Debug)]
-        #vis struct #args_name {
+        #vis struct #title {
             #(#fields,)*
         }
-        impl #args_name {
+        impl #title {
             #vis fn partial(self) -> #partial {
                 #partial { #(#moves,)* ..::core::default::Default::default() }
             }
         }
     }
-}
-
-fn arm(row: &Row, vis: &syn::Visibility) -> TokenStream {
-    let field = &row.name;
-    let long = row.name.to_string().replace('_', "-");
-    let ty = bare(&row.ty).unwrap_or(&row.ty);
-    quote! { #[arg(long = #long)] #vis #field: Option<#ty> }
-}
-
-fn carry(row: &Row) -> TokenStream {
-    let field = &row.name;
-    if bare(&row.ty).is_some() {
-        return quote! { #field: self.#field.map(::core::option::Option::Some) };
-    }
-    quote! { #field: self.#field }
 }
 
 fn marked(attrs: &[Attribute]) -> Result<bool, syn::Error> {
@@ -209,7 +212,7 @@ fn marked(attrs: &[Attribute]) -> Result<bool, syn::Error> {
     Ok(section)
 }
 
-fn read_field(field: &Field) -> Result<Row, syn::Error> {
+fn row(field: &Field) -> Result<Row, syn::Error> {
     let mut section = false;
     let mut arg = false;
     for attr in &field.attrs {
@@ -248,10 +251,10 @@ fn bare(ty: &Type) -> Option<&Type> {
     if last.ident != "Option" {
         return None;
     }
-    let PathArguments::AngleBracketed(args) = &last.arguments else {
+    let Arguments::AngleBracketed(args) = &last.arguments else {
         return None;
     };
-    let GenericArgument::Type(inner) = args.args.first()? else {
+    let Argument::Type(inner) = args.args.first()? else {
         return None;
     };
     Some(inner)

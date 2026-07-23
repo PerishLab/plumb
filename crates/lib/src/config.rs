@@ -117,10 +117,9 @@ impl<T> Opaque<T> for &Sniff<T> {
 
 pub trait Cascade: Default {
     type Partial: Default + DeserializeOwned;
-    fn env_with(prefix: &str, get: &dyn Fn(&str) -> Option<String>)
-    -> Result<Self::Partial, Error>;
+    fn lookup(prefix: &str, get: &dyn Fn(&str) -> Option<String>) -> Result<Self::Partial, Error>;
     fn env(prefix: &str) -> Result<Self::Partial, Error> {
-        Self::env_with(prefix, &|key| std::env::var(key).ok())
+        Self::lookup(prefix, &|key| std::env::var(key).ok())
     }
     fn merge(self, over: Self::Partial) -> Self;
 }
