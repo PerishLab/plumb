@@ -218,7 +218,7 @@ fn binary(root: &Path) -> bool {
 
 fn substrate(root: &Path) -> bool {
     std::fs::read_to_string(root.join("Cargo.lock"))
-        .map(|lock| lock.contains("name = \"plumb-lib\""))
+        .map(|lock| lock.contains("name = \"plumb\""))
         .unwrap_or(false)
 }
 

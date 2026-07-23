@@ -4,11 +4,11 @@ mod shape;
 
 use clap::{Parser, Subcommand};
 use judge::{judge, show};
-use plumb_lib::cli::Root;
+use plumb::cli::Root;
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "plumb", version = plumb_lib::version!("PLUMB"))]
+#[command(name = "plumb", version = plumb::version!("PLUMB"))]
 struct Cli {
     #[command(subcommand)]
     command: Command,

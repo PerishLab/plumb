@@ -160,19 +160,16 @@ fn substrate() {
     )
     .expect("manifest should be written");
     let bare = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    assert!(
-        bare.contains("ships a rust binary without plumb-lib"),
-        "{bare}"
-    );
+    assert!(bare.contains("ships a rust binary without plumb"), "{bare}");
 
     std::fs::write(
         dir.join("Cargo.lock"),
-        "[[package]]\nname = \"plumb-lib\"\nversion = \"0.2.0\"\n",
+        "[[package]]\nname = \"plumb\"\nversion = \"0.2.0\"\n",
     )
     .expect("lock should be written");
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(!held.contains("without plumb-lib"), "{held}");
+    assert!(!held.contains("without plumb"), "{held}");
 }
 
 #[test]

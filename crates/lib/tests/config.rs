@@ -1,4 +1,4 @@
-use plumb_lib::config::{self, Kind, Listen, Store};
+use plumb::config::{self, Kind, Listen, Store};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
@@ -10,7 +10,7 @@ struct Sample {
 
 #[test]
 fn loads() {
-    let dir = std::env::temp_dir().join("plumb-lib-load");
+    let dir = std::env::temp_dir().join("plumb-load");
     std::fs::create_dir_all(&dir).expect("fixture");
     let path = dir.join("sample.toml");
     std::fs::write(&path, "name = \"x\"\ncount = 3\n").expect("write");
@@ -33,7 +33,7 @@ fn missing() {
 
 #[test]
 fn malformed() {
-    let dir = std::env::temp_dir().join("plumb-lib-bad");
+    let dir = std::env::temp_dir().join("plumb-bad");
     std::fs::create_dir_all(&dir).expect("fixture");
     let path = dir.join("bad.toml");
     std::fs::write(&path, "name = \n").expect("write");
@@ -44,7 +44,7 @@ fn malformed() {
 
 #[test]
 fn finds() {
-    let root = std::env::temp_dir().join("plumb-lib-find");
+    let root = std::env::temp_dir().join("plumb-find");
     let nested = root.join("a/b");
     std::fs::create_dir_all(&nested).expect("fixture");
     std::fs::write(root.join("target.toml"), "").expect("write");
@@ -55,7 +55,7 @@ fn finds() {
 
 #[test]
 fn absent() {
-    let root = std::env::temp_dir().join("plumb-lib-absent");
+    let root = std::env::temp_dir().join("plumb-absent");
     std::fs::create_dir_all(&root).expect("fixture");
     let searched = config::discover(&root, "nope-xyz.toml").unwrap_err();
     std::fs::remove_dir_all(&root).expect("sweep");

@@ -1,5 +1,5 @@
 [package]
-name = "plumb"
+name = "plumb-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,6 +11,6 @@ name = "plumb"
 path = "src/main.rs"
 
 [dependencies]
-plumb-lib = { path = "../lib" }
+plumb = { path = "../lib" }
 clap = { version = "4", features = ["derive"] }
 toml = "0.9"

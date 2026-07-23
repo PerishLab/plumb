@@ -158,7 +158,7 @@ fn deps(held: &shape::Shape) -> Found {
     if held.binary && !held.substrate {
         found.push((
             "out of true",
-            "ships a rust binary without plumb-lib".to_string(),
+            "ships a rust binary without plumb".to_string(),
         ));
     }
     for (name, held_use) in &RULES.retired {
