@@ -1,5 +1,9 @@
+extern crate self as plumb;
+
 pub mod cli;
 pub mod config;
+
+pub use serde;
 
 #[macro_export]
 macro_rules! version {
