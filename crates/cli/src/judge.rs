@@ -136,6 +136,7 @@ fn structure(held: &shape::Shape) -> Found {
     }
     paired(held, &mut found);
     matched(held, &mut found);
+    anchored(held, &mut found);
     for name in &held.lanes {
         if !RULES.lanes.contains(name) {
             found.push((
@@ -221,6 +222,44 @@ fn matched(held: &shape::Shape, found: &mut Found) {
             found.push((
                 "out of true",
                 format!("boundary names {path} which does not exist"),
+            ));
+        }
+    }
+}
+
+fn anchored(held: &shape::Shape, found: &mut Found) {
+    if !held.rust {
+        return;
+    }
+    let Some(repo) = &held.repo else {
+        return;
+    };
+    let anchors: Vec<&String> = held
+        .crate_names
+        .iter()
+        .filter(|(_, name)| name == repo)
+        .map(|(seat, _)| seat)
+        .collect();
+    if anchors.is_empty() {
+        found.push((
+            "out of true",
+            format!("no crate is named {repo}, the anchor is missing"),
+        ));
+    }
+    if anchors.len() > 1 {
+        found.push((
+            "out of true",
+            format!(
+                "{} crates are named {repo}, the anchor must be alone",
+                anchors.len()
+            ),
+        ));
+    }
+    for seat in &held.cascade_seats {
+        if !anchors.contains(&seat) {
+            found.push((
+                "out of true",
+                format!("Cascade derives in {seat}, outside the anchor"),
             ));
         }
     }

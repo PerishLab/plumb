@@ -26,6 +26,9 @@ pub struct Shape {
     pub deno: String,
     pub root_package: Option<String>,
     pub packages: Vec<(String, String)>,
+    pub repo: Option<String>,
+    pub crate_names: Vec<(String, String)>,
+    pub cascade_seats: Vec<String>,
 }
 
 fn names(root: &Path, under: &str, suffix: &str) -> BTreeSet<String> {
@@ -282,6 +285,9 @@ pub fn read(root: &Path) -> Shape {
         deno: denos(root),
         root_package: root_package(root),
         packages: packages(root),
+        repo: crate::anchor::repo(root),
+        crate_names: crate::anchor::crate_names(root),
+        cascade_seats: crate::anchor::cascade_seats(root),
         listed: listed(root),
         bounds: bounds(doc.as_ref()),
         root: root.to_path_buf(),
