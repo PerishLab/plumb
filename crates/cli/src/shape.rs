@@ -216,6 +216,12 @@ fn binary(root: &Path) -> bool {
     })
 }
 
+fn substrate(root: &Path) -> bool {
+    std::fs::read_to_string(root.join("Cargo.lock"))
+        .map(|lock| lock.contains("name = \"plumb-lib\""))
+        .unwrap_or(false)
+}
+
 fn edition(root: &Path) -> Option<String> {
     let text = std::fs::read_to_string(root.join("Cargo.toml")).ok()?;
     let doc = text.parse::<toml::Table>().ok()?;
@@ -272,10 +278,7 @@ pub fn read(root: &Path) -> Shape {
             text.lines()
                 .any(|line| line.trim_start().starts_with("clap"))
         }),
-        substrate: manifests(root).iter().any(|text| {
-            text.lines()
-                .any(|line| line.trim_start().starts_with("plumb-lib"))
-        }),
+        substrate: substrate(root),
         deno: denos(root),
         root_package: root_package(root),
         packages: packages(root),

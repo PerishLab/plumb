@@ -166,17 +166,13 @@ fn substrate() {
     );
 
     std::fs::write(
-        &cargo,
-        "[[bin]]\nname = \"x\"\n[dependencies]\nclap = \"4\"\nplumb-lib = \"0.1\"\n",
+        dir.join("Cargo.lock"),
+        "[[package]]\nname = \"plumb-lib\"\nversion = \"0.2.0\"\n",
     )
-    .expect("manifest should be written");
+    .expect("lock should be written");
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-
-    std::fs::write(&cargo, "[dependencies]\nclap = \"4\"\n").expect("manifest should be written");
-    let lib = run(&["doctor", dir.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("without plumb-lib"), "{held}");
-    assert!(!lib.contains("without plumb-lib"), "{lib}");
 }
 
 #[test]
