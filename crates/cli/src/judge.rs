@@ -65,6 +65,11 @@ fn structure(held: &shape::Shape) -> Found {
                 found.push(("out of true", format!("no {name} wrapper")));
             }
         }
+        for name in &RULES.hooks {
+            if !held.hooks.contains(name) {
+                found.push(("out of true", format!("no {name} hook")));
+            }
+        }
         if !held.laws {
             found.push(("out of true", "no negentropy.toml".to_string()));
         }

@@ -5,4 +5,5 @@
 dirs = ["apps", "charts", "crates", "docs", "lib", "packages", "tests"]
 wrappers = ["guard", "init", "land", "release", "ship", "bake"]
 required = ["guard", "init", "land"]
+hooks = ["pre-commit", "commit-msg"]
 lanes = ["guard", "release-beta", "release-stable", "probe"]

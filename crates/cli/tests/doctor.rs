@@ -268,6 +268,25 @@ fn packages() {
 }
 
 #[test]
+fn hooks() {
+    let dir = std::env::temp_dir().join("plumb-hookless");
+    std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");
+    let bare = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(bare.contains("no pre-commit hook"), "{bare}");
+    assert!(bare.contains("no commit-msg hook"), "{bare}");
+
+    std::fs::create_dir_all(dir.join(".runseal/hooks")).expect("fixture should be made");
+    for name in ["pre-commit", "commit-msg"] {
+        std::fs::write(dir.join(format!(".runseal/hooks/{name}")), "#!/bin/sh\n")
+            .expect("hook should be written");
+    }
+    let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
+    assert!(!held.contains("no pre-commit hook"), "{held}");
+    assert!(!held.contains("no commit-msg hook"), "{held}");
+}
+
+#[test]
 fn blind() {
     let dir = std::env::temp_dir().join("plumb-blind");
     std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");

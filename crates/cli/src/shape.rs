@@ -3,6 +3,7 @@ use std::path::Path;
 
 pub struct Shape {
     pub wrappers: BTreeSet<String>,
+    pub hooks: BTreeSet<String>,
     pub dirs: BTreeSet<String>,
     pub block: Option<i64>,
     pub path: Option<i64>,
@@ -263,6 +264,7 @@ pub fn read(root: &Path) -> Shape {
     }
     Shape {
         wrappers: names(root, ".runseal/wrappers", ".ts"),
+        hooks: names(root, ".runseal/hooks", ""),
         dirs: dirs(root),
         block: limit("block"),
         path: limit("path"),
