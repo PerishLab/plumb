@@ -200,6 +200,22 @@ fn manifests(root: &Path) -> Vec<String> {
     held
 }
 
+fn binary(root: &Path) -> bool {
+    if manifests(root).iter().any(|text| text.contains("[[bin]]")) {
+        return true;
+    }
+    let mut seats = vec![root.to_path_buf(), root.join("app")];
+    if let Ok(entries) = std::fs::read_dir(root.join("crates")) {
+        for entry in entries.flatten() {
+            seats.push(entry.path());
+        }
+    }
+    seats.iter().any(|seat| {
+        seat.join("Cargo.toml").is_file()
+            && (seat.join("src/main.rs").is_file() || seat.join("src/bin").is_dir())
+    })
+}
+
 fn edition(root: &Path) -> Option<String> {
     let text = std::fs::read_to_string(root.join("Cargo.toml")).ok()?;
     let doc = text.parse::<toml::Table>().ok()?;
@@ -251,7 +267,7 @@ pub fn read(root: &Path) -> Shape {
         runseal: root.join(".runseal").is_dir(),
         guard_lane: std::fs::read_to_string(root.join(".forgejo/workflows/guard.yml")).ok(),
         edition: edition(root),
-        binary: manifests(root).iter().any(|text| text.contains("[[bin]]")),
+        binary: binary(root),
         clap: manifests(root).iter().any(|text| {
             text.lines()
                 .any(|line| line.trim_start().starts_with("clap"))
