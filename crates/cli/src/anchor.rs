@@ -48,11 +48,22 @@ impl Anchor<'_> {
     }
 
     pub fn repo(&self) -> Option<String> {
-        std::fs::canonicalize(self.0)
-            .ok()?
+        let root = std::fs::canonicalize(self.0).ok()?;
+        home(&root)
+            .unwrap_or(root)
             .file_name()
             .map(|name| name.to_string_lossy().to_string())
     }
+}
+
+fn home(root: &Path) -> Option<PathBuf> {
+    let text = std::fs::read_to_string(root.join(".git")).ok()?;
+    let gitdir = root.join(text.strip_prefix("gitdir:")?.trim());
+    let common = std::fs::read_to_string(gitdir.join("commondir")).ok()?;
+    std::fs::canonicalize(gitdir.join(common.trim()))
+        .ok()?
+        .parent()
+        .map(Path::to_path_buf)
 }
 
 fn name(dir: &Path) -> Option<String> {

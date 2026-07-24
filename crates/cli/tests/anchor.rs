@@ -106,3 +106,44 @@ fn strayed() {
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!exempt.contains("outside the anchor"), "{exempt}");
 }
+
+#[test]
+fn homed() {
+    let base = std::env::temp_dir().join("plumb-homed-fixture");
+    let home = base.join("plumb-homed");
+    let seat = base.join("seats/line");
+    std::fs::create_dir_all(home.join(".git/worktrees/line")).expect("fixture should be made");
+    std::fs::write(home.join(".git/worktrees/line/commondir"), "../..\n")
+        .expect("commondir should be written");
+    std::fs::create_dir_all(seat.join("crates/anchor/src")).expect("fixture should be made");
+    std::fs::create_dir_all(seat.join("crates/other/src")).expect("fixture should be made");
+    std::fs::write(
+        seat.join(".git"),
+        format!(
+            "gitdir: {}\n",
+            home.join(".git/worktrees/line")
+                .to_str()
+                .expect("path should be utf8")
+        ),
+    )
+    .expect("git pointer should be written");
+    std::fs::write(seat.join(".gitignore"), "target/\n").expect("ignore should be written");
+    std::fs::write(
+        seat.join("Cargo.toml"),
+        "[workspace]\nmembers = [\"crates/anchor\", \"crates/other\"]\n",
+    )
+    .expect("manifest should be written");
+    std::fs::write(
+        seat.join("crates/anchor/Cargo.toml"),
+        "[package]\nname = \"plumb-homed\"\n",
+    )
+    .expect("manifest should be written");
+    std::fs::write(
+        seat.join("crates/other/Cargo.toml"),
+        "[package]\nname = \"other\"\n",
+    )
+    .expect("manifest should be written");
+    let held = run(&["doctor", seat.to_str().expect("path should be utf8")]);
+    std::fs::remove_dir_all(&base).expect("fixture should be swept");
+    assert!(!held.contains("anchor is missing"), "{held}");
+}
