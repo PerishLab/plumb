@@ -1,7 +1,9 @@
 extern crate self as plumb;
 
+pub mod cancel;
 pub mod cli;
 pub mod config;
+pub mod context;
 
 pub use serde;
 
