@@ -22,6 +22,7 @@ roots = [
   "crates/*/tests",
   "packages/*/src",
   "packages/*/tests",
+  "docs",
 ]
 
 [limit]
