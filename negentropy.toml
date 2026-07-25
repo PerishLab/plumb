@@ -45,6 +45,15 @@ paths = [
   "crates/*/tests/**/*.rs",
 ]
 
+[[grant]]
+syntax = "environment"
+paths = [
+  "crates/lib/src/config.rs",
+  "crates/macro/src/parse.rs",
+  "apps/web/vite.config.ts",
+  "crates/*/tests/**/*.rs",
+]
+
 [[boundary]]
 paths = [
   "apps/web/vite.config.ts",
