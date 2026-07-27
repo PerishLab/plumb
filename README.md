@@ -44,15 +44,16 @@ executable `api` crate at `crates/api`, `plumb doctor` checks the combination as
 one product shape:
 
 - `sidecar.toml` leases both development ports, waits for API endpoint
-  readiness, and passes that endpoint to Web through a declared environment
-  binding;
-- API consumes `SIDECAR_PORT`, accepts the sidecar stamp, and emits its endpoint
-  as API readiness;
+  readiness at `/api/health`, and passes that endpoint to Web as `API_URL`;
+- API consumes `SIDECAR_PORT`, accepts the sidecar stamp, emits its endpoint as
+  API readiness, and mounts its whole public surface under `/api`;
 - Web consumes `@perish/react-components`, activates
-  `@perish/vite-plugin-design`, and takes its port and API binding from sidecar;
+  `@perish/vite-plugin-design`, loads the in-memory views manifest, and leaves
+  sidecar port and API proxy handling to the plugin;
+- the guard runs a real Web build, so the design compiler remains the
+  authoritative check for `views/**/*.tsx`;
 - production has separate API and Web image seats, separate chart workloads,
   Web-targeted ingress, and one Cargo/chart version train.
 
-The rule is about the dispatch relationship. Product routes, binding names,
-image names, and application-specific infrastructure remain the product's own
-shape.
+The rule is about the dispatch relationship. Product routes, image names, and
+application-specific infrastructure remain the product's own shape.

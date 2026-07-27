@@ -18,16 +18,21 @@ fn fixture(name: &str) -> PathBuf {
         std::fs::remove_dir_all(&root).expect("old fixture should be swept");
     }
     for path in [
-        "apps/web",
+        "apps/web/src",
         "crates/api/src",
         "deploy",
         "charts/specimen/templates",
+        ".runseal/wrappers",
     ] {
         std::fs::create_dir_all(root.join(path)).expect("fixture should be made");
     }
     std::fs::write(
         root.join("apps/web/package.json"),
         r#"{
+  "name": "@specimen/web",
+  "scripts": {
+    "build": "vite build"
+  },
   "dependencies": {
     "@perish/react-components": "0.1.0",
     "react": "19"
@@ -62,14 +67,14 @@ fn complete_pair_is_true() {
 [[sidecars]]
 name = "api"
 port = 0
-health_url = "http://127.0.0.1:{port}/health"
+health_url = "http://127.0.0.1:{port}/api/health"
 ready = { role = "api" }
 
 [app]
 name = "web"
 port = 0
 health_url = "http://127.0.0.1:{port}"
-inherits_env = [{ name = "SPECIMEN_API", from = "api.endpoint" }]
+inherits_env = [{ name = "API_URL", from = "api.endpoint" }]
 "#,
     )
     .expect("sidecar should be written");
@@ -80,6 +85,7 @@ fn main() {
     let _port = std::env::var("SIDECAR_PORT");
     let sidecar_stamp = "";
     eprintln!("{}", serde_json::json!({"role": "api", "endpoint": sidecar_stamp}));
+    let _router = Router::new().nest("/api", api);
 }
 "#,
     )
@@ -88,12 +94,29 @@ fn main() {
         root.join("apps/web/vite.config.ts"),
         r#"
 import { design } from "@perish/vite-plugin-design";
-const port = process.env.SIDECAR_PORT;
-const api = process.env.SPECIMEN_API;
-export default { plugins: [design()], server: { port, proxy: { "/": api } } };
+export default { plugins: [design()] };
 "#,
     )
     .expect("vite config should be written");
+    std::fs::write(
+        root.join("apps/web/src/main.tsx"),
+        r#"
+import source from "virtual:perish/views";
+import { Views } from "@perish/react-components";
+const app = <Views source={source} />;
+"#,
+    )
+    .expect("web entry should be written");
+    std::fs::write(
+        root.join("apps/web/tsconfig.json"),
+        r#"{"compilerOptions":{"types":["vite/client","@perish/react-components/client"]}}"#,
+    )
+    .expect("web compiler should be written");
+    std::fs::write(
+        root.join(".runseal/wrappers/guard.ts"),
+        r#"await bin("pnpm").run(["--filter", "@specimen/web", "build"]);"#,
+    )
+    .expect("guard should be written");
     std::fs::write(root.join("deploy/api.Dockerfile"), "FROM scratch\n")
         .expect("api image should be written");
     std::fs::write(root.join("deploy/web.Dockerfile"), "FROM scratch\n")
@@ -120,8 +143,66 @@ export default { plugins: [design()], server: { port, proxy: { "/": api } } };
     .expect("ingress should be written");
 
     let (_, out) = run(&root);
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(!out.contains("[dispatch]"), "{out}");
+
+    std::fs::write(
+        root.join("sidecar.toml"),
+        r#"
+[[sidecars]]
+name = "api"
+command = "sh"
+args = ["-c", "LISTEN_PORT=$SIDECAR_PORT exec cargo run -p api"]
+port = 0
+health_url = "http://127.0.0.1:{port}/api/health"
+ready = { role = "api" }
+
+[app]
+name = "web"
+port = 0
+health_url = "http://127.0.0.1:{port}"
+inherits_env = [{ name = "API_URL", from = "api.endpoint" }]
+"#,
+    )
+    .expect("sidecar should be written");
+    std::fs::write(
+        root.join("crates/api/src/main.rs"),
+        r#"
+fn main() {
+    let sidecar_stamp = "";
+    eprintln!("{}", serde_json::json!({"role": "api", "endpoint": sidecar_stamp}));
+    let _router = Router::new().nest("/api", api);
+}
+"#,
+    )
+    .expect("api source should be written");
+    let (_, out) = run(&root);
+    assert!(!out.contains("api does not consume SIDECAR_PORT"), "{out}");
+
+    std::fs::write(
+        root.join("sidecar.toml"),
+        r#"
+[[sidecars]]
+name = "api"
+port = 0
+health_url = "http://127.0.0.1:{port}/health"
+ready = { role = "api" }
+
+[app]
+name = "web"
+port = 0
+health_url = "http://127.0.0.1:{port}"
+inherits_env = [{ name = "SPECIMEN_API", from = "api.endpoint" }]
+"#,
+    )
+    .expect("sidecar should be written");
+    let (_, out) = run(&root);
+    for line in [
+        "sidecar api health_url must target {port}/api/health",
+        "sidecar web must inherit api.endpoint as API_URL",
+    ] {
+        assert!(out.contains(&format!("{line} [dispatch]")), "{out}");
+    }
+    std::fs::remove_dir_all(&root).expect("fixture should be swept");
 }
 
 #[test]
@@ -137,7 +218,11 @@ fn incomplete_pair_reports_the_composite_debt() {
         .expect("api source should be written");
     std::fs::write(
         root.join("apps/web/vite.config.ts"),
-        "export default { server: { port: 5173 } };\n",
+        r#"
+const port = process.env.SIDECAR_PORT;
+const api = process.env.API_URL;
+export default { server: { port, proxy: { "/api": api } } };
+"#,
     )
     .expect("vite config should be written");
 
@@ -149,8 +234,13 @@ fn incomplete_pair_reports_the_composite_debt() {
         "api does not consume SIDECAR_PORT",
         "api does not accept --sidecar-stamp",
         "api does not emit api endpoint readiness",
-        "vite does not consume SIDECAR_PORT",
+        "api does not mount the /api namespace",
         "vite does not activate the design plugin",
+        "vite manually consumes sidecar dispatch environment",
+        "web does not load the virtual views manifest",
+        "web does not render the views manifest",
+        "web compiler does not include @perish/react-components/client",
+        "guard does not build the web app",
         "production has no api image seat",
         "production has no web image seat",
         "chart does not split api and web workloads",
