@@ -11,7 +11,6 @@ pub struct Note {
 type Found = Vec<(&'static str, String)>;
 
 const CONCURRENCY: &str = "concurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true";
-
 const CONTAINER: &str = "mirror.perish.lan/ci/deno";
 
 pub fn judge(held: &shape::Shape) -> Vec<Note> {
@@ -259,8 +258,16 @@ impl shape::Shape {
                 ),
             ));
         }
+        let mut seats: BTreeSet<&str> = anchors.iter().map(|seat| seat.as_str()).collect();
+        for (seat, _) in self.named.iter().filter(|(_, name)| name == "api") {
+            if self.entries.contains(seat) {
+                seats.insert(seat);
+            } else {
+                found.push(("out of true", format!("api crate at {seat} is headless")));
+            }
+        }
         for seat in &self.derived {
-            if !anchors.contains(&seat) {
+            if !seats.contains(seat.as_str()) {
                 found.push((
                     "out of true",
                     format!("Cascade derives in {seat}, outside the anchor"),

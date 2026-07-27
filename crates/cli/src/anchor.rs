@@ -47,6 +47,14 @@ impl Anchor<'_> {
         held
     }
 
+    pub fn entries(&self) -> Vec<String> {
+        self.seats()
+            .into_iter()
+            .filter(|(_, dir)| entry(dir))
+            .map(|(seat, _)| seat)
+            .collect()
+    }
+
     pub fn repo(&self) -> Option<String> {
         let root = std::fs::canonicalize(self.0).ok()?;
         home(&root)
@@ -73,6 +81,19 @@ fn name(dir: &Path) -> Option<String> {
         .and_then(|value| value.get("name"))
         .and_then(toml::Value::as_str)
         .map(str::to_string)
+}
+
+fn entry(dir: &Path) -> bool {
+    if dir.join("src/main.rs").is_file() || dir.join("src/bin").is_dir() {
+        return true;
+    }
+    let Ok(text) = std::fs::read_to_string(dir.join("Cargo.toml")) else {
+        return false;
+    };
+    let Ok(doc) = text.parse::<toml::Table>() else {
+        return false;
+    };
+    doc.get("bin").and_then(toml::Value::as_array).is_some()
 }
 
 fn holds(dir: &Path) -> bool {

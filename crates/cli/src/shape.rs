@@ -30,6 +30,7 @@ pub struct Shape {
     pub repo: Option<String>,
     pub named: Vec<(String, String)>,
     pub derived: Vec<String>,
+    pub entries: Vec<String>,
 }
 
 struct Root<'a>(&'a Path);
@@ -265,6 +266,7 @@ pub fn read(root: &Path) -> Shape {
         repo: crate::anchor::Anchor(root).repo(),
         named: crate::anchor::Anchor(root).names(),
         derived: crate::anchor::Anchor(root).derives(),
+        entries: crate::anchor::Anchor(root).entries(),
         listed: seat.listed(),
         bounds: bounds(doc.as_ref()),
         root: root.to_path_buf(),
