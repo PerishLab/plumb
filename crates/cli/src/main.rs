@@ -1,4 +1,5 @@
 mod anchor;
+mod dispatch;
 mod judge;
 mod pack;
 mod rules;

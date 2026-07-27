@@ -1,5 +1,4 @@
-use crate::rules::RULES;
-use crate::shape;
+use crate::{rules::RULES, shape};
 use std::collections::BTreeSet;
 
 pub struct Note {
@@ -19,6 +18,7 @@ pub fn judge(held: &shape::Shape) -> Vec<Note> {
         ("env", held.env()),
         ("structure", held.structure()),
         ("deps", held.deps()),
+        ("dispatch", held.dispatch.clone().unwrap_or_default()),
     ] {
         for (grade, line) in found {
             notes.push(Note { grade, dim, line });

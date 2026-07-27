@@ -2,7 +2,7 @@
 # row added here, not a function rewritten. Whitelists of legal names; a name in
 # none of them is unknown shape.
 
-dirs = ["apps", "charts", "crates", "docs", "lib", "packages", "tests"]
+dirs = ["apps", "charts", "crates", "deploy", "docs", "lib", "packages", "tests"]
 wrappers = ["guard", "init", "land", "release", "ship", "bake"]
 required = ["guard", "init", "land"]
 hooks = ["pre-commit", "commit-msg"]
