@@ -119,8 +119,11 @@ const app = <Views source={source} />;
     .expect("guard should be written");
     std::fs::write(root.join("deploy/api.Dockerfile"), "FROM scratch\n")
         .expect("api image should be written");
-    std::fs::write(root.join("deploy/web.Dockerfile"), "FROM scratch\n")
-        .expect("web image should be written");
+    std::fs::write(
+        root.join("deploy/web.Dockerfile"),
+        "FROM node\nCMD [\"node\", \"dist/.perish/server.mjs\", \"dist\"]\n",
+    )
+    .expect("web image should be written");
     std::fs::write(
         root.join("charts/specimen/Chart.yaml"),
         "version: 0.1.0\nappVersion: \"0.1.0\"\n",
@@ -138,7 +141,20 @@ const app = <Views source={source} />;
     .expect("web workload should be written");
     std::fs::write(
         root.join("charts/specimen/templates/ingress.yaml"),
-        "kind: Ingress\nbackend:\n  service:\n    name: specimen-web\n",
+        r#"kind: Ingress
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /api
+            backend:
+              service:
+                name: specimen-api
+          - path: /
+            backend:
+              service:
+                name: specimen-web
+"#,
     )
     .expect("ingress should be written");
 
@@ -244,7 +260,7 @@ export default { server: { port, proxy: { "/api": api } } };
         "production has no api image seat",
         "production has no web image seat",
         "chart does not split api and web workloads",
-        "chart ingress does not target web",
+        "chart ingress does not split /api and / between api and web",
         "Cargo and chart do not share one version train",
     ] {
         assert!(out.contains(&format!("{line} [dispatch]")), "{out}");

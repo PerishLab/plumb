@@ -5,8 +5,16 @@ pub(super) fn read(root: &Path, found: &mut Found) {
     if !root.join("deploy/api.Dockerfile").is_file() {
         wrong(found, "production has no api image seat");
     }
-    if !root.join("deploy/web.Dockerfile").is_file() {
+    let web_image = root.join("deploy/web.Dockerfile");
+    if !web_image.is_file() {
         wrong(found, "production has no web image seat");
+    } else if let Ok(text) = std::fs::read_to_string(web_image) {
+        if !text.contains("dist/.perish/server.mjs") {
+            wrong(found, "web image does not run the emitted design runtime");
+        }
+        if owns_public_dispatch(&text) {
+            wrong(found, "web image still owns public proxy dispatch");
+        }
     }
 
     let templates = chart_templates(root);
@@ -21,9 +29,12 @@ pub(super) fn read(root: &Path, found: &mut Found) {
     }
     let ingress = templates
         .iter()
-        .any(|text| text.contains("kind: Ingress") && role(text, "web"));
+        .any(|text| ingress_route(text, "/api", "api") && ingress_route(text, "/", "web"));
     if !ingress {
-        wrong(found, "chart ingress does not target web");
+        wrong(
+            found,
+            "chart ingress does not split /api and / between api and web",
+        );
     }
 
     let cargo = cargo_version(root);
@@ -108,4 +119,32 @@ fn workload(text: &str) -> bool {
 
 fn role(text: &str, name: &str) -> bool {
     text.contains(&format!("-{name}")) || text.contains(&format!("name: {name}"))
+}
+
+fn owns_public_dispatch(text: &str) -> bool {
+    let text = text.to_ascii_lowercase();
+    text.contains("nginx") || text.contains("api_upstream") || text.contains("proxy_pass")
+}
+
+fn ingress_route(text: &str, path: &str, target: &str) -> bool {
+    if !text.contains("kind: Ingress") {
+        return false;
+    }
+    let lines = text.lines().collect::<Vec<_>>();
+    lines.iter().enumerate().any(|(index, line)| {
+        if route_path(line) != Some(path) {
+            return false;
+        }
+        let end = lines[index + 1..]
+            .iter()
+            .position(|line| route_path(line).is_some())
+            .map_or(lines.len(), |offset| index + 1 + offset);
+        role(&lines[index..end].join("\n"), target)
+    })
+}
+
+fn route_path(line: &str) -> Option<&str> {
+    let line = line.trim().strip_prefix("- ").unwrap_or(line.trim());
+    let (key, value) = line.split_once(':')?;
+    (key.trim() == "path").then(|| value.trim().trim_matches(['"', '\'']))
 }
