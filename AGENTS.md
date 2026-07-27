@@ -49,6 +49,8 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   newer than stable metadata.
 - Stable tags are created only after R2 publish, metadata verification, and
   manager smoke.
+- `release-verify` rechecks one immutable published version on Linux, macOS,
+  and Windows without publishing, advancing channel metadata, or tagging.
 - Forgejo needs the `PLUMB_RELEASES_PUBLIC_URL` repository variable and the
   four `PLUMB_RELEASES_S3_*` repository secrets. Keep local source values in
   the ignored `.forgejo/release.env`, initialized from

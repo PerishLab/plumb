@@ -38,6 +38,7 @@ await init({
     ".forgejo/workflows/guard.yml",
     ".forgejo/workflows/release-beta.yml",
     ".forgejo/workflows/release-stable.yml",
+    ".forgejo/workflows/release-verify.yml",
     ".forgejo/scripts/release/assets/checksums.sh",
     ".forgejo/scripts/release/assets/package.ps1",
     ".forgejo/scripts/release/assets/package.sh",

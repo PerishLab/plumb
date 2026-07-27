@@ -33,7 +33,9 @@ install versioned binaries under the user's local data directory and expose
 
 Releases are R2-backed. `release-beta` advances `-beta.N` from beta metadata;
 `release-stable` publishes the Cargo workspace version and tags it only after
-R2 verification and an install smoke pass.
+R2 verification and an install smoke pass. If a runner or public edge fails
+after publication, `release-verify` can recheck an exact immutable version on
+Linux, macOS, and Windows without advancing the channel.
 
 ## Paired Web/API dispatch
 
