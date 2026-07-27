@@ -39,3 +39,17 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   become unremovable, or its justification decays from finding to story.
 - plumb MUST PASS ITSELF. Running the CLI here has to come back clean, or the
   debt relation above does not hold for the one repo that declares it.
+
+## Release
+
+- `manage.sh` and `manage.ps1` are the public install/update/uninstall
+  entrypoints.
+- R2 metadata and immutable version assets are release truth. Beta advances
+  from beta metadata; stable advances only when the Cargo workspace version is
+  newer than stable metadata.
+- Stable tags are created only after R2 publish, metadata verification, and
+  manager smoke.
+- Forgejo needs the `PLUMB_RELEASES_PUBLIC_URL` repository variable and the
+  four `PLUMB_RELEASES_S3_*` repository secrets. Keep local source values in
+  the ignored `.forgejo/release.env`, initialized from
+  `.forgejo/release.env.example`.

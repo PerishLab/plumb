@@ -1,5 +1,6 @@
 .task/
 .local/
+.forgejo/release.env
 .playwright-cli/
 node_modules/
 dist/

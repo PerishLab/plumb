@@ -1,0 +1,222 @@
+name: release-stable
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_override:
+        description: "Optional stable version override, for example v0.4.0"
+        required: false
+        default: ""
+        type: string
+
+concurrency:
+  group: plumb-release-stable
+  cancel-in-progress: false
+
+env:
+  RELEASE_CHANNEL: stable
+
+jobs:
+  metadata:
+    runs-on: docker
+    container:
+      image: mirror.perish.lan/ci/deno
+    env:
+      PLUMB_RELEASES_PUBLIC_URL: ${{ vars.PLUMB_RELEASES_PUBLIC_URL }}
+      PLUMB_RELEASES_S3_AK: ${{ secrets.PLUMB_RELEASES_S3_AK }}
+      PLUMB_RELEASES_S3_BUCKET: ${{ secrets.PLUMB_RELEASES_S3_BUCKET }}
+      PLUMB_RELEASES_S3_SK: ${{ secrets.PLUMB_RELEASES_S3_SK }}
+      PLUMB_RELEASES_S3_URL: ${{ secrets.PLUMB_RELEASES_S3_URL }}
+      R2_ACCESS_PROBE_NAME: release-stable
+      STABLE_VERSION_OVERRIDE: ${{ inputs.version_override }}
+    outputs:
+      base_version: ${{ steps.stable.outputs.base_version }}
+      release_version: ${{ steps.stable.outputs.release_version }}
+      state_source: ${{ steps.stable.outputs.state_source }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate R2 access
+        run: bash .forgejo/scripts/release/r2/check.sh
+
+      - name: Resolve stable metadata
+        id: stable
+        run: deno run --allow-env --allow-read --allow-net --allow-write="$GITHUB_OUTPUT" .forgejo/scripts/release/metadata/stable.ts
+
+  build:
+    needs: metadata
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos
+            target: aarch64-apple-darwin
+            archive: plumb-aarch64-apple-darwin.tar.gz
+          - runner: macos
+            target: x86_64-apple-darwin
+            archive: plumb-x86_64-apple-darwin.tar.gz
+          - runner: windows
+            target: x86_64-pc-windows-msvc
+            archive: plumb-x86_64-pc-windows-msvc.zip
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Add target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Package
+        if: runner.os != 'Windows'
+        env:
+          RELEASE_VERSION: ${{ needs.metadata.outputs.release_version }}
+          TARGET: ${{ matrix.target }}
+        run: sh .forgejo/scripts/release/assets/package.sh "$RELEASE_VERSION"
+
+      - name: Package
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ needs.metadata.outputs.release_version }}
+          TARGET: ${{ matrix.target }}
+        run: ./.forgejo/scripts/release/assets/package.ps1 "$env:RELEASE_VERSION"
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/${{ needs.metadata.outputs.release_version }}/${{ matrix.archive }}
+
+  release:
+    needs: [metadata, build]
+    runs-on: docker
+    container:
+      image: mirror.perish.lan/ci/deno
+    env:
+      CI_COMMIT: ${{ github.sha }}
+      CI_REPOSITORY: ${{ github.repository }}
+      CI_RUN_ATTEMPT: ${{ github.run_attempt }}
+      CI_RUN_ID: ${{ github.run_id }}
+      CI_WORKFLOW: release-stable
+      PLUMB_RELEASES_PUBLIC_URL: ${{ vars.PLUMB_RELEASES_PUBLIC_URL }}
+      PLUMB_RELEASES_S3_AK: ${{ secrets.PLUMB_RELEASES_S3_AK }}
+      PLUMB_RELEASES_S3_BUCKET: ${{ secrets.PLUMB_RELEASES_S3_BUCKET }}
+      PLUMB_RELEASES_S3_SK: ${{ secrets.PLUMB_RELEASES_S3_SK }}
+      PLUMB_RELEASES_S3_URL: ${{ secrets.PLUMB_RELEASES_S3_URL }}
+      SMOKE_LATEST: "1"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install negentropy
+        run: |
+          set -eu
+          curl -fsSL https://releases.negentropy.perish.uk/manage.sh -o "$RUNNER_TEMP/manage-negentropy.sh"
+          sh "$RUNNER_TEMP/manage-negentropy.sh" install --channel stable --bin-dir "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install JS dependencies
+        run: |
+          set -eu
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Guard
+        run: |
+          set -eu
+          deno run --allow-read "--allow-write=." --allow-env --allow-net "--allow-run=git,cargo,negentropy,deno,tea,sh,bash,pnpm,node,runseal,sed,grep" --config .runseal/deno.json --lock .runseal/deno.lock --frozen=true .runseal/wrappers/guard.ts --fresh
+
+      - name: Package Linux
+        env:
+          RELEASE_VERSION: ${{ needs.metadata.outputs.release_version }}
+          TARGET: x86_64-unknown-linux-gnu
+        run: sh .forgejo/scripts/release/assets/package.sh "$RELEASE_VERSION"
+
+      - uses: actions/download-artifact@v3
+        with:
+          path: dist/${{ needs.metadata.outputs.release_version }}
+
+      - name: Gather artifacts
+        env:
+          RELEASE_ROOT: dist/${{ needs.metadata.outputs.release_version }}
+        run: |
+          set -eu
+          for dir in "$RELEASE_ROOT"/release-*; do
+            [ -d "$dir" ] || continue
+            mv "$dir"/* "$RELEASE_ROOT"/
+            rmdir "$dir"
+          done
+          ls -l "$RELEASE_ROOT"
+
+      - name: Publish
+        env:
+          BASE_VERSION: ${{ needs.metadata.outputs.base_version }}
+          RELEASE_ROOT: dist/${{ needs.metadata.outputs.release_version }}
+          RELEASE_VERSION: ${{ needs.metadata.outputs.release_version }}
+          STATE_SOURCE: ${{ needs.metadata.outputs.state_source }}
+        run: |
+          set -eu
+          sh .forgejo/scripts/release/assets/checksums.sh "$RELEASE_VERSION" "$RELEASE_ROOT"
+          sh .forgejo/scripts/release/assets/verify.sh accept "$RELEASE_VERSION" "$RELEASE_ROOT"
+          sh .forgejo/scripts/release/assets/verify.sh verify "$RELEASE_VERSION" "$RELEASE_ROOT"
+          bash .forgejo/scripts/release/r2/publish.sh
+
+      - name: Verify R2 publish
+        env:
+          R2_METADATA_URL: ${{ vars.PLUMB_RELEASES_PUBLIC_URL }}/stable/latest/metadata.json
+          RELEASE_VERSION: ${{ needs.metadata.outputs.release_version }}
+        run: bash .forgejo/scripts/release/r2/verify.sh
+
+      - name: Smoke install
+        run: sh .forgejo/scripts/release/smoke/smoke.sh "${{ needs.metadata.outputs.release_version }}" stable
+
+  platform-smoke:
+    needs: [metadata, release]
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos, windows]
+    runs-on: ${{ matrix.runner }}
+    env:
+      SMOKE_LATEST: "1"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Smoke install
+        if: runner.os != 'Windows'
+        run: sh .forgejo/scripts/release/smoke/smoke.sh "${{ needs.metadata.outputs.release_version }}" stable
+
+      - name: Smoke install
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./.forgejo/scripts/release/smoke/smoke.ps1 "${{ needs.metadata.outputs.release_version }}" stable
+
+  finalize:
+    needs: [metadata, release, platform-smoke]
+    runs-on: docker
+    container:
+      image: mirror.perish.lan/ci/deno
+    env:
+      PLUMB_RELEASES_PUBLIC_URL: ${{ vars.PLUMB_RELEASES_PUBLIC_URL }}
+      RELEASE_CHANNEL: stable
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Tag release
+        env:
+          RELEASE_VERSION: ${{ needs.metadata.outputs.release_version }}
+        run: |
+          set -eu
+          git config user.name "forgejo-actions"
+          git config user.email "actions@git.perish.top"
+          if ! git rev-parse --verify --quiet "refs/tags/$RELEASE_VERSION" >/dev/null; then
+            git tag -a "$RELEASE_VERSION" -m "$RELEASE_VERSION"
+          fi
+          git push origin "refs/tags/$RELEASE_VERSION"
+
+      - name: Publish summary
+        env:
+          BASE_VERSION: ${{ needs.metadata.outputs.base_version }}
+          R2_METADATA_URL: ${{ vars.PLUMB_RELEASES_PUBLIC_URL }}/stable/latest/metadata.json
+          R2_VERSION_METADATA_URL: ${{ vars.PLUMB_RELEASES_PUBLIC_URL }}/stable/versions/${{ needs.metadata.outputs.release_version }}/metadata.json
+          R2_VERSION_PREFIX: stable/versions/${{ needs.metadata.outputs.release_version }}
+          RELEASE_VERSION: ${{ needs.metadata.outputs.release_version }}
+          STATE_SOURCE: ${{ needs.metadata.outputs.state_source }}
+        run: bash .forgejo/scripts/release/r2/summary.sh

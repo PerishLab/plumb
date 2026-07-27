@@ -14,6 +14,27 @@ cannot, that is plumb's debt, not the repository's exception.
 
 A template that is only copied rots. This one is run.
 
+## Install the CLI
+
+```sh
+curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+```
+
+Select beta or one exact release when needed:
+
+```sh
+curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install --channel beta
+curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install --version v0.4.0-beta.1
+```
+
+Windows uses `https://releases.plumb.perish.uk/manage.ps1`. Both managers
+install versioned binaries under the user's local data directory and expose
+`plumb` from the user's local bin directory.
+
+Releases are R2-backed. `release-beta` advances `-beta.N` from beta metadata;
+`release-stable` publishes the Cargo workspace version and tags it only after
+R2 verification and an install smoke pass.
+
 ## Paired Web/API dispatch
 
 When a repository holds both a React/Vite application at `apps/web` and an

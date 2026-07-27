@@ -11,7 +11,14 @@ await guard(
     { label: "biome", runs: [["pnpm", ["biome", "ci", "."]]] },
     { label: "tsc", runs: [["pnpm", ["-r", "exec", "tsc", "--noEmit"]]] },
     { label: "vitest", runs: [["pnpm", ["-r", "test"]]] },
-    { label: "deno fmt", runs: [["deno", ["fmt", "--check", ".runseal"]]] },
+    {
+      label: "release smoke",
+      runs: [["sh", [".forgejo/scripts/release/smoke/local.sh"]]],
+    },
+    {
+      label: "deno fmt",
+      runs: [["deno", ["fmt", "--check", ".runseal"]]],
+    },
     {
       label: "deno check",
       runs: [["deno", [
@@ -24,7 +31,10 @@ await guard(
         ".runseal/wrappers/guard.ts",
         ".runseal/wrappers/init.ts",
         ".runseal/wrappers/land.ts",
+        ".runseal/wrappers/release.ts",
         ".runseal/wrappers/ship.ts",
+        ".forgejo/scripts/release/metadata/beta.ts",
+        ".forgejo/scripts/release/metadata/stable.ts",
       ]]],
     },
   ],
