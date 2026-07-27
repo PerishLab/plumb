@@ -1,4 +1,4 @@
-use plumb::config::{self, Kind, Listen, Store};
+use plumb::config;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
@@ -76,26 +76,4 @@ fn rebases() {
         config::rebase(Path::new("/abs/x"), base),
         PathBuf::from("/abs/x")
     );
-}
-
-#[test]
-fn listens() {
-    let listen = Listen::default();
-    assert_eq!(listen.host, "127.0.0.1");
-    assert_eq!(listen.port, 3000);
-    assert_eq!(listen.address(), "127.0.0.1:3000");
-    let partial: Listen = toml::from_str("port = 8080\n").expect("parse");
-    assert_eq!(partial.host, "127.0.0.1");
-    assert_eq!(partial.port, 8080);
-}
-
-#[test]
-fn stores() {
-    let store: Store = toml::from_str("kind = \"file\"\npath = \"db.sqlite\"\n").expect("parse");
-    assert_eq!(store.kind, Kind::File);
-    assert_eq!(
-        store.rebased(Path::new("/var")),
-        PathBuf::from("/var/db.sqlite")
-    );
-    assert_eq!(Store::default().kind, Kind::Memory);
 }

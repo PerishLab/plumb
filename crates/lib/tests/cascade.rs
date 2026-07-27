@@ -1,12 +1,30 @@
-use plumb::config::{Cascade, Env, Kind, Listen};
+use plumb::config::Cascade;
+use serde::Deserialize;
 use std::collections::BTreeMap;
+
+#[derive(Debug, Deserialize, PartialEq, plumb::config::Cascade)]
+#[cascade(section)]
+#[serde(default)]
+struct Bind {
+    host: String,
+    port: u16,
+}
+
+impl Default for Bind {
+    fn default() -> Self {
+        Bind {
+            host: "127.0.0.1".to_string(),
+            port: 3000,
+        }
+    }
+}
 
 #[derive(Debug, PartialEq, plumb::config::Cascade)]
 struct Rig {
     name: String,
     count: u16,
     #[cascade(section)]
-    listen: Listen,
+    listen: Bind,
     #[cascade(arg)]
     theme: String,
     #[cascade(arg)]
@@ -19,7 +37,7 @@ impl Default for Rig {
         Rig {
             name: "base".to_string(),
             count: 4,
-            listen: Listen::default(),
+            listen: Bind::default(),
             theme: "plain".to_string(),
             tag: None,
             extras: BTreeMap::new(),
@@ -129,13 +147,6 @@ fn blind() {
     let get = |key: &str| (key == "RIG_EXTRAS").then(|| "poked".to_string());
     let held = Rig::default().merge(Rig::lookup("RIG", &get).expect("env should read"));
     assert!(held.extras.is_empty());
-}
-
-#[test]
-fn kinds() {
-    assert_eq!(Kind::read("file"), Ok(Kind::File));
-    assert_eq!(Kind::read("memory"), Ok(Kind::Memory));
-    assert!(Kind::read("shelf").is_err());
 }
 
 #[test]

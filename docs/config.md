@@ -51,3 +51,23 @@ the surface it reads back through the door.
 The mechanized wall (a negentropy built-in class denying `environment`
 syntax outside granted territory, with its refusal routing here) is
 declared law but not yet running; until it lands, this page is the wall.
+
+## Vocabulary
+
+The crate exports mechanism only: the derive, the two doors, `discover`,
+`rebase`. It exports no config vocabulary — no listen struct, no store
+struct, no backend enum. A shape frozen here is a closed set at the one
+layer that cannot open it: which backends exist, which sections a binary
+carries, what a listen block holds — every one of those is the binary's
+own property, expanding under pressure this crate never feels. The 0.4
+`Listen` and `Store` types were that mistake, and 0.5 removes them.
+
+Shape alignment across the ecosystem is a norm, not a type. The norm
+lives in prose here and travels with the CLI as a check, the same
+relation negentropy holds for syntax: a repo-rooted `<name>.toml` per
+binary, section names in the file mirrored by `#[cascade(section)]`
+structs the binary declares itself, and the conventional shapes —
+`[listen]` as `host`/`port`/`prefix` defaulting to `127.0.0.1:3000`,
+`[store]` naming the binary's own backend set — kept alike by
+convention and, when the shape check lands, by the traveling CLI.
+Until it lands, this section is the wall.

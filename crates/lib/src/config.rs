@@ -1,4 +1,3 @@
-use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -152,62 +151,5 @@ pub fn rebase(path: &Path, base: &Path) -> PathBuf {
         base.join(path)
     } else {
         path.to_path_buf()
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Cascade)]
-#[cascade(section)]
-#[serde(default)]
-pub struct Listen {
-    pub host: String,
-    pub port: u16,
-    pub prefix: String,
-}
-
-impl Default for Listen {
-    fn default() -> Self {
-        Listen {
-            host: "127.0.0.1".to_string(),
-            port: 3000,
-            prefix: String::new(),
-        }
-    }
-}
-
-impl Listen {
-    pub fn address(&self) -> String {
-        format!("{}:{}", self.host, self.port)
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum Kind {
-    #[default]
-    Memory,
-    File,
-}
-
-impl Env for Kind {
-    fn read(value: &str) -> Result<Self, String> {
-        match value {
-            "memory" => Ok(Kind::Memory),
-            "file" => Ok(Kind::File),
-            _ => Err("neither memory nor file".to_string()),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Cascade)]
-#[cascade(section)]
-#[serde(default)]
-pub struct Store {
-    pub kind: Kind,
-    pub path: String,
-}
-
-impl Store {
-    pub fn rebased(&self, base: &Path) -> PathBuf {
-        rebase(Path::new(&self.path), base)
     }
 }
