@@ -4,6 +4,7 @@ pub mod cancel;
 pub mod cli;
 pub mod config;
 pub mod context;
+pub mod fill;
 pub mod trace;
 
 pub use serde;
