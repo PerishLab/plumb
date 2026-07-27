@@ -56,12 +56,31 @@ impl Anchor<'_> {
     }
 
     pub fn repo(&self) -> Option<String> {
+        if let Some(name) = declared(self.0) {
+            return Some(name);
+        }
         let root = std::fs::canonicalize(self.0).ok()?;
         home(&root)
             .unwrap_or(root)
             .file_name()
             .map(|name| name.to_string_lossy().to_string())
     }
+}
+
+fn declared(root: &Path) -> Option<String> {
+    let text = std::fs::read_to_string(root.join("Cargo.toml")).ok()?;
+    let doc = text.parse::<toml::Table>().ok()?;
+    let package = doc
+        .get("workspace")
+        .and_then(|value| value.get("package"))
+        .or_else(|| doc.get("package"))?;
+    let repository = package.get("repository")?.as_str()?;
+    repository
+        .trim_end_matches('/')
+        .rsplit(['/', ':'])
+        .next()
+        .map(|name| name.strip_suffix(".git").unwrap_or(name).to_string())
+        .filter(|name| !name.is_empty())
 }
 
 fn home(root: &Path) -> Option<PathBuf> {

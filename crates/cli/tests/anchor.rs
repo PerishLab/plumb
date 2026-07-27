@@ -66,6 +66,27 @@ fn seated() {
 }
 
 #[test]
+fn declared() {
+    let dir = std::env::temp_dir().join("hostexecutor");
+    std::fs::create_dir_all(dir.join("crates/anchor/src")).expect("fixture should be made");
+    std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
+    std::fs::write(
+        dir.join("Cargo.toml"),
+        "[workspace]\nmembers = [\"crates/anchor\"]\n\
+         [workspace.package]\nrepository = \"https://git.example/owner/reality.git\"\n",
+    )
+    .expect("manifest should be written");
+    std::fs::write(
+        dir.join("crates/anchor/Cargo.toml"),
+        "[package]\nname = \"reality\"\n",
+    )
+    .expect("manifest should be written");
+    let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
+    assert!(!held.contains("anchor is missing"), "{held}");
+}
+
+#[test]
 fn strayed() {
     let dir = std::env::temp_dir().join("plumb-strayed");
     std::fs::create_dir_all(dir.join("crates/anchor/src")).expect("fixture should be made");

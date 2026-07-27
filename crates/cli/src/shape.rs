@@ -253,7 +253,9 @@ pub fn read(root: &Path) -> Shape {
         ignore: std::fs::read_to_string(root.join(".gitignore")).unwrap_or_default(),
         rust: root.join("Cargo.toml").exists(),
         runseal: root.join(".runseal").is_dir(),
-        lane: std::fs::read_to_string(root.join(".forgejo/workflows/guard.yml")).ok(),
+        lane: std::fs::read_to_string(root.join(".forgejo/workflows/guard.yml"))
+            .ok()
+            .map(|text| text.replace("\r\n", "\n")),
         edition: seat.edition(),
         binary: seat.binary(),
         clap: seat.manifests().iter().any(|text| {

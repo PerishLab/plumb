@@ -69,14 +69,14 @@ fn concurrency() {
         "{bare}"
     );
 
-    std::fs::write(
-        &lane,
-        "name: guard\non:\n  pull_request:\n\nconcurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true\n\njobs:\n  guard: {}\n",
-    )
-    .expect("lane should be written");
+    let complete = "name: guard\non:\n  pull_request:\n\nconcurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true\n\njobs:\n  guard: {}\n";
+    std::fs::write(&lane, complete).expect("lane should be written");
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    std::fs::write(&lane, complete.replace('\n', "\r\n")).expect("lane should be written");
+    let windows = run(&["doctor", dir.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("concurrency block"), "{held}");
+    assert!(!windows.contains("concurrency block"), "{windows}");
 }
 
 #[test]

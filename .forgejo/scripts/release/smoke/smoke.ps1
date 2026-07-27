@@ -12,9 +12,12 @@ try {
     & (Join-Path $root 'manage.ps1') install --channel $channel --version $version
     $bin = Join-Path $env:PLUMB_LOCAL_BIN_DIR 'plumb.exe'
     & $bin --version
+    if ($LASTEXITCODE -ne 0) { throw 'installed plumb --version failed' }
     & $bin doctor $root
+    if ($LASTEXITCODE -ne 0) { throw 'installed plumb doctor failed' }
     & (Join-Path $root 'manage.ps1') update --channel $channel --version $version
     & $bin doctor $root
+    if ($LASTEXITCODE -ne 0) { throw 'updated plumb doctor failed' }
     & (Join-Path $root 'manage.ps1') uninstall --version $version
     if (Test-Path (Join-Path $env:PLUMB_INSTALL_ROOT $version)) {
         throw "version uninstall left $(Join-Path $env:PLUMB_INSTALL_ROOT $version)"
@@ -22,6 +25,7 @@ try {
     if ($env:SMOKE_LATEST -eq '1') {
         & (Join-Path $root 'manage.ps1') install --channel $channel
         & $bin doctor $root
+        if ($LASTEXITCODE -ne 0) { throw 'latest plumb doctor failed' }
         & (Join-Path $root 'manage.ps1') uninstall
         if (Test-Path $env:PLUMB_INSTALL_ROOT) {
             throw "full uninstall left $env:PLUMB_INSTALL_ROOT"
@@ -31,3 +35,4 @@ try {
 finally {
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $tmpdir
 }
+exit 0
