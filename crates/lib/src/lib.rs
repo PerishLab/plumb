@@ -5,6 +5,10 @@ pub mod cli;
 pub mod config;
 pub mod context;
 pub mod fill;
+#[cfg(feature = "skill")]
+pub mod rig;
+#[cfg(feature = "skill")]
+pub mod skill;
 pub mod trace;
 
 pub use serde;

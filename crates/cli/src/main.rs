@@ -9,6 +9,8 @@ mod web;
 use clap::{Parser, Subcommand};
 use judge::{judge, show};
 use plumb::cli::Root;
+use plumb::rig::Rig;
+use plumb::skill::{Ask, Done, Kit};
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -29,6 +31,10 @@ enum Command {
         target: Root,
         #[arg(long)]
         write: bool,
+    },
+    Skill {
+        #[command(subcommand)]
+        deed: Deed,
     },
 }
 
@@ -108,6 +114,112 @@ fn main() {
     let code = match Cli::parse().command {
         Command::Doctor { target } => doctor(PathBuf::from(target.root)),
         Command::Policy { target, write } => policy(PathBuf::from(target.root), write),
+        Command::Skill { deed } => skill(deed),
     };
     std::process::exit(code);
+}
+
+#[derive(Subcommand)]
+enum Deed {
+    Install {
+        #[arg(long, default_value = "stable")]
+        channel: String,
+        #[arg(long)]
+        version: Option<String>,
+        #[arg(long)]
+        path: Option<PathBuf>,
+        #[arg(long)]
+        force: bool,
+    },
+    Upgrade {
+        #[arg(long, default_value = "stable")]
+        channel: String,
+        #[arg(long)]
+        version: Option<String>,
+    },
+    List,
+    Uninstall,
+}
+
+fn skill(deed: Deed) -> i32 {
+    let rig = match Rig::resolve(None) {
+        Ok(rig) => rig,
+        Err(error) => return sour(&error.to_string()),
+    };
+    if rig.home.is_empty() {
+        return sour("no data home; set PLUMB_HOME");
+    }
+    let kit = Kit {
+        name: "plumb".to_string(),
+        home: seat(),
+        state: PathBuf::from(&rig.home).join("state").join("skills.json"),
+        url: rig.releases.clone(),
+    };
+    run(&kit, deed)
+}
+
+fn run(kit: &Kit, deed: Deed) -> i32 {
+    match deed {
+        Deed::Install {
+            channel,
+            version,
+            path,
+            force,
+        } => told(kit.install(&Ask {
+            channel,
+            version,
+            path,
+            force,
+        })),
+        Deed::Upgrade { channel, version } => told(kit.upgrade(&Ask {
+            channel,
+            version,
+            ..Ask::default()
+        })),
+        Deed::List => tell(kit),
+        Deed::Uninstall => told(kit.uninstall()),
+    }
+}
+
+fn tell(kit: &Kit) -> i32 {
+    match kit.list() {
+        Ok(records) => {
+            for record in &records {
+                println!(
+                    "  {} {} {}",
+                    record.agent,
+                    record.version,
+                    record.path.display()
+                );
+            }
+            if records.is_empty() {
+                println!("  no managed skill");
+            }
+            0
+        }
+        Err(error) => sour(&error.to_string()),
+    }
+}
+
+fn told(held: Result<Done, plumb::skill::Error>) -> i32 {
+    let done = match held {
+        Ok(done) => done,
+        Err(error) => return sour(&error.to_string()),
+    };
+    for seat in &done.kept {
+        println!("  {} {}", seat.agent, seat.path.display());
+    }
+    for skip in &done.left {
+        println!("  skipped {}: {}", skip.path.display(), skip.note);
+    }
+    i32::from(done.kept.is_empty())
+}
+
+fn seat() -> PathBuf {
+    plumb::config::home().unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn sour(note: &str) -> i32 {
+    eprintln!("plumb skill: {note}");
+    1
 }

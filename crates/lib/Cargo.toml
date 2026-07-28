@@ -6,14 +6,24 @@ license.workspace = true
 repository.workspace = true
 publish = ["perish"]
 
+[features]
+skill = ["dep:flate2", "dep:serde_json", "dep:sha2", "dep:tar", "dep:ureq"]
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
+flate2 = { version = "1", optional = true }
+serde_json = { version = "1", optional = true }
+sha2 = { version = "0.10", optional = true }
+tar = { version = "0.4", optional = true }
+ureq = { version = "3", optional = true }
 pin-project-lite = "0.2"
-plumb-macro = { path = "../macro", version = "0.9.0", registry = "perish" }
+plumb-macro = { path = "../macro", version = "0.10.0", registry = "perish" }
 serde = { version = "1", features = ["derive"] }
 toml = "0.9"
 
 [dev-dependencies]
 clap = { version = "4", features = ["derive"] }
+flate2 = "1"
+tar = "0.4"
 serde = { version = "1", features = ["derive"] }
 toml = "0.9"

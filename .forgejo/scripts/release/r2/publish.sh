@@ -60,13 +60,33 @@ artifact() {
     '{contentType: $contentType, name: $name, size: $size, url: $url}'
 }
 
+sha() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$root/$1" | awk '{print $1}'
+  else
+    shasum -a 256 "$root/$1" | awk '{print $1}'
+  fi
+}
+
+skill() {
+  local name="plumb-skill.tar.gz"
+  jq -n \
+    --arg contentType application/gzip \
+    --arg name "$name" \
+    --argjson size "$(stat -c %s "$root/$name")" \
+    --arg url "$public/$version_prefix/$name" \
+    --arg sha256 "$(sha "$name")" \
+    '{contentType: $contentType, name: $name, size: $size, url: $url, sha256: $sha256}'
+}
+
 artifacts=$(jq -n \
   --argjson linuxX64 "$(artifact plumb-x86_64-unknown-linux-gnu.tar.gz application/gzip)" \
   --argjson darwinArm64 "$(artifact plumb-aarch64-apple-darwin.tar.gz application/gzip)" \
   --argjson darwinX64 "$(artifact plumb-x86_64-apple-darwin.tar.gz application/gzip)" \
   --argjson windowsX64 "$(artifact plumb-x86_64-pc-windows-msvc.zip application/zip)" \
   --argjson checksums "$(artifact checksums.txt 'text/plain; charset=utf-8')" \
-  '{linuxX64: $linuxX64, darwinArm64: $darwinArm64, darwinX64: $darwinX64, windowsX64: $windowsX64, checksums: $checksums}')
+  --argjson skillTarGz "$(skill)" \
+  '{linuxX64: $linuxX64, darwinArm64: $darwinArm64, darwinX64: $darwinX64, windowsX64: $windowsX64, checksums: $checksums, skillTarGz: $skillTarGz}')
 
 held=$(jq -n \
   --arg channel "$RELEASE_CHANNEL" \

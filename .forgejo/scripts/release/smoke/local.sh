@@ -26,6 +26,7 @@ import zipfile
 with zipfile.ZipFile(sys.argv[1], "w") as archive:
     archive.writestr("plumb.exe", b"fixture")
 PY
+sh .forgejo/scripts/release/assets/skill.sh "$VERSION" "$fixture/assets/$VERSION"
 sh .forgejo/scripts/release/assets/checksums.sh "$VERSION" "$fixture/assets/$VERSION"
 sh .forgejo/scripts/release/assets/verify.sh accept "$VERSION" "$fixture/assets/$VERSION"
 sh .forgejo/scripts/release/assets/verify.sh verify "$VERSION" "$fixture/assets/$VERSION"
@@ -54,7 +55,8 @@ jq -e \
     and .betaVersion == $version
     and .baseVersion == "0.4.0"
     and .betaNumber == 1
-    and (.artifacts | length == 5)' \
+    and (.artifacts | length == 6)
+    and (.artifacts.skillTarGz.sha256 | length == 64)' \
   "$fixture/assets/$VERSION/metadata.json" >/dev/null
 
 export HOME="$fixture/home"

@@ -16,6 +16,7 @@ dirs = [
   "lib",
   "packages",
   "repos",
+  "skills",
   "tests",
 ]
 wrappers = [

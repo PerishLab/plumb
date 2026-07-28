@@ -11,7 +11,7 @@ name = "plumb"
 path = "src/main.rs"
 
 [dependencies]
-plumb = { path = "../lib" }
+plumb = { path = "../lib", features = ["skill"] }
 clap = { version = "4", features = ["derive"] }
 serde_json = "1"
 toml = "0.9"

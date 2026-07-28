@@ -9,7 +9,7 @@ ARTIFACT_DIR=${3:-}
 [ -d "$ARTIFACT_DIR" ] || { echo "artifact dir missing: $ARTIFACT_DIR" >&2; exit 1; }
 
 TARBALLS="plumb-x86_64-unknown-linux-gnu.tar.gz plumb-aarch64-apple-darwin.tar.gz plumb-x86_64-apple-darwin.tar.gz"
-ASSETS="$TARBALLS plumb-x86_64-pc-windows-msvc.zip"
+ASSETS="$TARBALLS plumb-skill.tar.gz plumb-x86_64-pc-windows-msvc.zip"
 
 require() {
   [ -f "$ARTIFACT_DIR/$1" ] || { echo "missing artifact: $1" >&2; exit 1; }

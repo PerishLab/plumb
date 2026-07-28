@@ -155,6 +155,7 @@ jobs:
           STATE_SOURCE: ${{ needs.metadata.outputs.state_source }}
         run: |
           set -eu
+          sh .forgejo/scripts/release/assets/skill.sh "$RELEASE_VERSION" "$RELEASE_ROOT"
           sh .forgejo/scripts/release/assets/checksums.sh "$RELEASE_VERSION" "$RELEASE_ROOT"
           sh .forgejo/scripts/release/assets/verify.sh accept "$RELEASE_VERSION" "$RELEASE_ROOT"
           sh .forgejo/scripts/release/assets/verify.sh verify "$RELEASE_VERSION" "$RELEASE_ROOT"

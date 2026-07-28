@@ -153,3 +153,21 @@ pub fn rebase(path: &Path, base: &Path) -> PathBuf {
         path.to_path_buf()
     }
 }
+
+pub fn home() -> Option<PathBuf> {
+    let key = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+    seat(key)
+}
+
+pub fn data(tool: &str) -> Option<PathBuf> {
+    if cfg!(windows) {
+        return seat("LOCALAPPDATA").map(|base| base.join(tool));
+    }
+    home().map(|base| base.join(format!(".{tool}")))
+}
+
+fn seat(key: &str) -> Option<PathBuf> {
+    std::env::var_os(key)
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+}
