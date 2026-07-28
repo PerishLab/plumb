@@ -338,8 +338,17 @@ async function ensureDomain(
       io.print(`domain: present (${domain})`);
     }
   }
+}
+
+async function waitDomain(
+  admin: string,
+  account: string,
+  bucket: string,
+  domain: string,
+): Promise<void> {
+  const path = `/accounts/${account}/r2/buckets/${bucket}/domains/custom/${domain}`;
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    const held = record(await api(admin, "GET", `${path}/${domain}`));
+    const held = record(await api(admin, "GET", path));
     const state = record(held.status);
     if (state.ownership === "active" && state.ssl === "active") {
       io.print("domain: active");
@@ -412,25 +421,42 @@ async function command(
 }
 
 async function verifyS3(release: Release): Promise<void> {
-  await command(
-    "aws",
-    [
-      "--endpoint-url",
-      release.endpoint,
-      "s3api",
-      "list-objects-v2",
-      "--bucket",
-      release.bucket,
-      "--max-keys",
-      "1",
-    ],
-    {
-      AWS_ACCESS_KEY_ID: release.accessKey,
-      AWS_SECRET_ACCESS_KEY: release.secretKey,
-      AWS_DEFAULT_REGION: "auto",
-    },
-  );
-  io.print("s3 credential: ok");
+  const args = [
+    "--endpoint-url",
+    release.endpoint,
+    "s3api",
+    "list-objects-v2",
+    "--bucket",
+    release.bucket,
+    "--max-keys",
+    "1",
+  ];
+  const held = {
+    AWS_ACCESS_KEY_ID: release.accessKey,
+    AWS_SECRET_ACCESS_KEY: release.secretKey,
+    AWS_DEFAULT_REGION: "auto",
+  };
+  const delays = [1000, 2000, 4000, 8000];
+  for (let attempt = 0;; attempt += 1) {
+    const output = await new Deno.Command("aws", {
+      args,
+      env: held,
+      stdin: "null",
+      stdout: "piped",
+      stderr: "piped",
+    }).output();
+    if (output.success) {
+      io.print("s3 credential: ok");
+      return;
+    }
+    if (attempt < delays.length) {
+      io.print(`s3 credential: waiting for propagation (${attempt + 1}/${delays.length})`);
+      await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+      continue;
+    }
+    const diagnostic = new TextDecoder().decode(output.stderr).trim();
+    throw new Error(`aws failed (${output.code}): ${diagnostic}`);
+  }
 }
 
 async function syncForgejo(options: Options, prefix: string, release: Release): Promise<void> {
@@ -613,6 +639,12 @@ async function main(): Promise<void> {
     }
     await verifyS3(release);
     await syncForgejo(options, prefix, release);
+    await waitDomain(
+      temporary.value,
+      keys.account,
+      options.bucket,
+      options.domain,
+    );
     io.print("cold-start: ok");
   } catch (error) {
     if (writerCreated !== undefined && !escrowed) {
