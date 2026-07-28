@@ -131,7 +131,8 @@ plumb skill uninstall         # remove only what is recorded as managed
 Install and upgrade take `--channel` (default stable) and `--version` to pin a
 published version; `--path` installs to one explicit directory, which must end
 with `plumb`. `--force` replaces an install that is already managed, and never
-touches a path that is not.
+touches a path that is not; upgrade already owns what it replaces, so it needs
+no flag and still refuses a path that is not provably managed.
 
 The binary is the truth about its own flags: prefer `plumb <command> --help`
 over assuming.

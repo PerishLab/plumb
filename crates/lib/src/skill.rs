@@ -91,7 +91,7 @@ impl Kit {
         if seats.is_empty() {
             return Err(Error::Bare);
         }
-        self.lay(ask, seats)
+        self.lay(&held(ask), seats)
     }
 
     pub fn list(&self) -> Result<Vec<Record>, Error> {
@@ -157,6 +157,15 @@ impl Kit {
             agent: "chosen".to_string(),
             path: path.to_path_buf(),
         }])
+    }
+}
+
+fn held(ask: &Ask) -> Ask {
+    Ask {
+        channel: ask.channel.clone(),
+        version: ask.version.clone(),
+        path: None,
+        force: true,
     }
 }
 

@@ -44,12 +44,21 @@ fn serve(archive: Vec<u8>, digest: String) -> String {
 
 fn answer(head: &str, archive: &[u8], digest: &str, port: u16) -> Vec<u8> {
     if head.contains("metadata.json") {
+        let version = asked(head);
         return format!(
-            r#"{{"releaseVersion":"v1.2.3","artifacts":{{"skillTarGz":{{"name":"plumb.tar.gz","url":"http://127.0.0.1:{port}/plumb.tar.gz","sha256":"{digest}"}}}}}}"#
+            r#"{{"releaseVersion":"{version}","artifacts":{{"skillTarGz":{{"name":"plumb.tar.gz","url":"http://127.0.0.1:{port}/plumb.tar.gz","sha256":"{digest}"}}}}}}"#
         )
         .into_bytes();
     }
     archive.to_vec()
+}
+
+fn asked(head: &str) -> String {
+    let Some(seat) = head.find("/versions/") else {
+        return "v1.2.3".to_string();
+    };
+    let rest = &head[seat + "/versions/".len()..];
+    format!("v{}", rest.split('/').next().unwrap_or("1.2.3"))
 }
 
 fn rig(root: &Path, url: &str) -> Kit {
@@ -157,6 +166,63 @@ fn refuses() {
         ..ask()
     });
     assert!(named.is_err(), "an explicit path must end with the name");
+
+    let _ = fs::remove_dir_all(&seat);
+}
+
+#[test]
+fn climbs() {
+    let archive = pack();
+    let digest = plumb::skill::stamp(&archive);
+    let url = serve(archive, digest);
+    let seat = root("climbs");
+    let kit = rig(&seat, &url);
+
+    kit.install(&Ask {
+        version: Some("1.0.0".to_string()),
+        ..ask()
+    })
+    .expect("install");
+    assert_eq!(kit.list().expect("list")[0].version, "v1.0.0");
+
+    let done = kit.upgrade(&ask()).expect("upgrade");
+    assert_eq!(done.kept.len(), 1, "upgrade replaces a managed seat");
+    assert!(done.left.is_empty(), "upgrade never skips what it owns");
+    assert_eq!(kit.list().expect("list")[0].version, "v1.2.3");
+
+    let held = seat
+        .join("home")
+        .join(".claude")
+        .join("skills")
+        .join("plumb")
+        .join("metadata.json");
+    let text = fs::read_to_string(held).expect("marker");
+    assert!(text.contains("v1.2.3"), "the marker moves with the seat");
+
+    let _ = fs::remove_dir_all(&seat);
+}
+
+#[test]
+fn keeps() {
+    let archive = pack();
+    let digest = plumb::skill::stamp(&archive);
+    let url = serve(archive, digest);
+    let seat = root("keeps");
+    let kit = rig(&seat, &url);
+    kit.install(&ask()).expect("install");
+
+    let held = seat
+        .join("home")
+        .join(".claude")
+        .join("skills")
+        .join("plumb");
+    fs::write(held.join("metadata.json"), "{}").expect("spoil");
+    let done = kit.upgrade(&ask()).expect("upgrade");
+    assert!(
+        done.kept.is_empty(),
+        "upgrade does not force past ownership"
+    );
+    assert!(done.left[0].note.contains("unmanaged"));
 
     let _ = fs::remove_dir_all(&seat);
 }
