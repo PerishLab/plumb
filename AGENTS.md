@@ -19,7 +19,8 @@ link, and it is the only one.
 ## Layout
 
 - `crates/plumb` — the CLI, published as a binary through the release lanes.
-- `apps/web` — the site at plumb.perish.uk.
+- `apps/web` — the site source for plumb.perish.uk, built by the guard and not
+  yet published; the domain is unenabled and `wrangler.jsonc` binds no route.
 - `packages/*` — publishable specimens, when they earn their place.
 
 The layout is not invented; it is the union already demonstrated by codehull and

@@ -9,8 +9,10 @@ cannot, that is plumb's debt, not the repository's exception.
 
 - `crates/plumb` — the CLI. Hold a repo against the skeleton and report where it
   hangs untrue. Checking lands before scaffolding.
-- `apps/web` — plumb.perish.uk, answering why, what and how. Deployed, so the
-  skeleton's web path is exercised and not merely claimed.
+- `apps/web` — the site source, answering why, what and how. Built and
+  prerendered by the guard on every change, so the skeleton's web path is
+  exercised; not yet published, so plumb.perish.uk does not answer and the
+  deploy half of that path is still a claim.
 
 A template that is only copied rots. This one is run.
 
