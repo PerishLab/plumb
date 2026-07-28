@@ -30,6 +30,7 @@ await init({
     ".runseal/hooks/pre-commit",
     ".runseal/hooks/commit-msg",
     ".runseal/wrappers/guard.ts",
+    ".runseal/wrappers/cold-start.ts",
     ".runseal/wrappers/init.ts",
     ".runseal/wrappers/land.ts",
     ".runseal/wrappers/release.ts",

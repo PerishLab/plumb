@@ -55,3 +55,30 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   four `PLUMB_RELEASES_S3_*` repository secrets. Keep local source values in
   the ignored `.forgejo/release.env`, initialized from
   `.forgejo/release.env.example`.
+
+## Ecosystem release cold-start
+
+`runseal :cold-start release` is the explicit low-frequency control-plane
+entrypoint for a new R2-backed Forgejo release chain. The permanent Cloudflare
+authority lives only in the main checkout at
+`.local/secrets/cloudflare-token-factory.env`, with mode `0600`, as the
+account-owned token `super:perish.code`. It has only
+`Account API Tokens Write`.
+
+The naming and authority split is fixed:
+
+- `super:perish.code` — permanent token factory; never enters CI or performs
+  business-resource operations directly.
+- `tmp:<bucket>` — 15-minute account-scoped R2 administration token, revoked
+  on every completion path.
+- `w:<bucket>` — permanent object read/write token scoped to exactly one
+  bucket.
+
+The wrapper creates or verifies the bucket and TLS 1.2 custom domain, derives
+the S3 credentials from the one-time `w:` token response, verifies S3 access,
+stores the local escrow at
+`.local/secrets/releases/<product>.env`, and syncs only the derived
+bucket-scoped values into Forgejo. Permission-group IDs are discovered by
+exact name and resource scope at runtime. An existing `w:` token without its
+matching local escrow is a fail-closed recovery case; its secret cannot be
+reconstructed.

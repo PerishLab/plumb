@@ -29,6 +29,7 @@ await guard(
         ".runseal/deno.lock",
         "--frozen=true",
         ".runseal/wrappers/guard.ts",
+        ".runseal/wrappers/cold-start.ts",
         ".runseal/wrappers/init.ts",
         ".runseal/wrappers/land.ts",
         ".runseal/wrappers/release.ts",

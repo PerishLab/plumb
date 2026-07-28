@@ -3,7 +3,7 @@
 # none of them is unknown shape.
 
 dirs = ["apps", "charts", "crates", "deploy", "docs", "lib", "packages", "tests"]
-wrappers = ["guard", "init", "land", "release", "ship", "bake"]
+wrappers = ["guard", "init", "land", "release", "ship", "bake", "cold-start"]
 required = ["guard", "init", "land"]
 hooks = ["pre-commit", "commit-msg"]
 lanes = ["guard", "release-beta", "release-stable", "release-verify", "probe"]
