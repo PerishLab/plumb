@@ -5,7 +5,6 @@ import { env } from "@perish/sealkit/env";
 import { fs } from "@perish/sealkit/fs";
 import { io } from "@perish/sealkit/io";
 import { doc } from "@perish/sealkit/json";
-import { runseal } from "@perish/sealkit/runseal";
 import { family, kind, run } from "@perish/shield";
 
 const app = "apps/web";
@@ -65,18 +64,19 @@ type Vault = {
 async function vault(): Promise<Vault> {
   const site = await secrets("ship.env");
   const cloud = await secrets("cloudflare.env");
-  const empty = [
-    ...unfilled(site, ["PLUMB_SITE_DOMAIN"]).map((key) => `ship.env: ${key}`),
-    ...unfilled(cloud, ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]).map(
-      (key) => `cloudflare.env: ${key}`,
-    ),
-  ];
-  return {
-    domain: site.PLUMB_SITE_DOMAIN ?? "",
-    account: cloud.CLOUDFLARE_ACCOUNT_ID ?? "",
-    token: cloud.CLOUDFLARE_API_TOKEN ?? "",
-    empty,
+  const held = {
+    domain: door("PLUMB_SITE_DOMAIN", site.PLUMB_SITE_DOMAIN),
+    account: door("PLUMB_SITE_ACCOUNT", cloud.CLOUDFLARE_ACCOUNT_ID),
+    token: door("PLUMB_SITE_TOKEN", cloud.CLOUDFLARE_API_TOKEN),
   };
+  const empty = (["domain", "account", "token"] as const)
+    .filter((name) => held[name] === "")
+    .map((name) => `PLUMB_SITE_${name.toUpperCase()}`);
+  return { ...held, empty };
+}
+
+function door(key: string, filed: string | undefined): string {
+  return env.get(key, "") || filed || "";
 }
 
 async function worker(): Promise<string> {
