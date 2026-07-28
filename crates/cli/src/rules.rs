@@ -12,6 +12,23 @@ pub struct Rules {
     pub scope: String,
 }
 
+impl Rules {
+    pub fn pinned(&self, deno: &str) -> BTreeSet<String> {
+        let marker = format!("jsr:{}/", self.scope);
+        let mut found = BTreeSet::new();
+        for chunk in deno.split(marker.as_str()).skip(1) {
+            let name: String = chunk
+                .chars()
+                .take_while(|c| c.is_ascii_alphanumeric() || *c == '-')
+                .collect();
+            if chunk[name.len()..].starts_with('@') {
+                found.insert(format!("{}/{name}", self.scope));
+            }
+        }
+        found
+    }
+}
+
 pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
     let doc: toml::Table = include_str!("../rules/structure.toml")
         .parse()

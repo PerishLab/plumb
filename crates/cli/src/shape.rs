@@ -2,12 +2,15 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 mod node;
+mod operator;
 mod policy;
 
 pub struct Shape {
     pub wrappers: BTreeSet<String>,
     pub hooks: BTreeSet<String>,
     pub dirs: BTreeSet<String>,
+    pub actions: BTreeSet<String>,
+    pub operator_tests: Vec<String>,
     pub block: Option<i64>,
     pub path: Option<i64>,
     pub grants: BTreeSet<String>,
@@ -38,6 +41,8 @@ pub struct Shape {
     pub dispatch: Option<Vec<(&'static str, String)>>,
     pub web: Option<Vec<(&'static str, String)>>,
     pub policy: Vec<String>,
+    pub guard: String,
+    pub init: String,
 }
 
 struct Root<'a>(&'a Path);
@@ -199,27 +204,6 @@ impl Root<'_> {
     }
 }
 
-fn bounds(doc: Option<&toml::Value>) -> Vec<String> {
-    let mut found = Vec::new();
-    let Some(list) = doc
-        .and_then(|value| value.get("boundary"))
-        .and_then(toml::Value::as_array)
-    else {
-        return found;
-    };
-    for edge in list {
-        let Some(paths) = edge.get("paths").and_then(toml::Value::as_array) else {
-            continue;
-        };
-        for path in paths.iter().filter_map(toml::Value::as_str) {
-            if !path.contains('*') {
-                found.push(path.to_string());
-            }
-        }
-    }
-    found
-}
-
 pub fn read(root: &Path) -> Shape {
     let seat = Root(root);
     let laws = root.join("ectropy.toml");
@@ -256,6 +240,8 @@ pub fn read(root: &Path) -> Shape {
         wrappers: seat.names(".runseal/wrappers", ".ts"),
         hooks: seat.names(".runseal/hooks", ""),
         dirs: seat.dirs(),
+        actions: operator::actions(root),
+        operator_tests: operator::tests(root),
         block: limit("block"),
         path: limit("path"),
         grants,
@@ -288,9 +274,15 @@ pub fn read(root: &Path) -> Shape {
         web: crate::web::read(root),
         policy,
         listed: seat.listed(),
-        bounds: bounds(doc.as_ref()),
+        bounds: policy::bounds(doc.as_ref()),
         root: root.to_path_buf(),
         inits: root.join(".runseal/wrappers/init.ts").exists()
             || root.join(".runseal/lib/init/init.ts").exists(),
+        guard: std::fs::read_to_string(root.join(".runseal/wrappers/guard.ts")).unwrap_or_default(),
+        init: std::fs::read_to_string(root.join(".runseal/wrappers/init.ts")).unwrap_or_default(),
     }
+}
+
+pub fn reconcile(root: &Path, text: &str) -> Result<String, String> {
+    policy::render(root, text)
 }

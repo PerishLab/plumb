@@ -71,6 +71,14 @@ impl shape::Shape {
             if !self.laws {
                 found.push(("out of true", "no ectropy.toml".to_string()));
             }
+            if self.wrappers.contains("guard")
+                && !(self.guard.contains("plumb") && self.guard.contains("doctor"))
+            {
+                found.push(("out of true", "guard does not run plumb doctor".to_string()));
+            }
+            if self.wrappers.contains("init") && !self.init.contains("\"plumb\"") {
+                found.push(("out of true", "init does not require plumb".to_string()));
+            }
             if self
                 .lane
                 .as_ref()
@@ -116,12 +124,18 @@ impl shape::Shape {
             }
         }
         for name in &self.dirs {
-            if !RULES.dirs.contains(name) {
+            if !RULES.dirs.contains(name) && !self.actions.contains(name) {
                 found.push((
                     "unknown shape",
                     format!("directory {name} has no shadow in the skeleton"),
                 ));
             }
+        }
+        for path in &self.operator_tests {
+            found.push((
+                "out of true",
+                format!("{path} is a .runseal test; tested logic belongs in sealkit"),
+            ));
         }
         for name in &self.wrappers {
             if !RULES.wrappers.contains(name) {
@@ -166,7 +180,7 @@ impl shape::Shape {
                 ));
             }
         }
-        for name in pinned(&self.deno) {
+        for name in RULES.pinned(&self.deno) {
             found.push((
                 "out of true",
                 format!("self-built {name} is version-pinned, the skeleton tracks latest"),
@@ -276,20 +290,6 @@ impl shape::Shape {
             }
         }
     }
-}
-fn pinned(deno: &str) -> BTreeSet<String> {
-    let marker = format!("jsr:{}/", RULES.scope);
-    let mut found = BTreeSet::new();
-    for chunk in deno.split(marker.as_str()).skip(1) {
-        let name: String = chunk
-            .chars()
-            .take_while(|c| c.is_ascii_alphanumeric() || *c == '-')
-            .collect();
-        if chunk[name.len()..].starts_with('@') {
-            found.insert(format!("{}/{name}", RULES.scope));
-        }
-    }
-    found
 }
 
 pub fn show(set: &BTreeSet<String>) -> String {

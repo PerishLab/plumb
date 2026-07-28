@@ -67,6 +67,10 @@ required syntax bans semantically; ordering and formatting do not matter.
 Repository-specific boundaries, vocabulary, and additional non-test grants
 remain local allowances rather than becoming skeleton defaults.
 
+`plumb policy` prints the reconciled policy; `plumb policy --write` updates the
+repo-root `ectropy.toml` atomically. The reconciliation owns only the canonical
+shape-derived sections and preserves those local allowances.
+
 Application Web code keeps lowercase `views/**/*.tsx`,
 `lib/components/**/*.tsx`, and lowercase `lib/hooks/**/use-*.ts` roles.
 `lib/components` is style-free through ectropy's path-scoped style ban.
@@ -77,3 +81,6 @@ guesses package identity from names such as `stylex` or `css`.
 The reusable component seat is the independent design system.
 `packages/components` is therefore invalid in the general skeleton; Plumb does
 not encode any repository identity or special Design layout to make that rule.
+
+`.runseal` is adapter territory. Test files are forbidden there; logic that
+needs dedicated tests belongs in `@perish/sealkit` and wrappers remain thin.

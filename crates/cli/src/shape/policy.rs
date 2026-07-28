@@ -1,6 +1,30 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
+mod render;
+pub use render::render;
+
+pub fn bounds(doc: Option<&toml::Value>) -> Vec<String> {
+    let mut found = Vec::new();
+    let Some(list) = doc
+        .and_then(|value| value.get("boundary"))
+        .and_then(toml::Value::as_array)
+    else {
+        return found;
+    };
+    for edge in list {
+        let Some(paths) = edge.get("paths").and_then(toml::Value::as_array) else {
+            continue;
+        };
+        for path in paths.iter().filter_map(toml::Value::as_str) {
+            if !path.contains('*') {
+                found.push(path.to_string());
+            }
+        }
+    }
+    found
+}
+
 pub fn check(root: &Path, doc: &toml::Value) -> Vec<String> {
     let want = Expected::read(root);
     let mut found = Vec::new();
@@ -75,7 +99,6 @@ impl Expected {
             if root.join(".runseal").is_dir() {
                 held.include.insert(".runseal/**".to_string());
                 held.roots.insert(".runseal".to_string());
-                held.tests.insert(".runseal/**/*.test.ts".to_string());
             }
         }
         if root.join("apps").is_dir() {

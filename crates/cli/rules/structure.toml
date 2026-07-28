@@ -2,8 +2,56 @@
 # row added here, not a function rewritten. Whitelists of legal names; a name in
 # none of them is unknown shape.
 
-dirs = ["apps", "charts", "crates", "deploy", "docs", "lib", "packages", "tests"]
-wrappers = ["guard", "init", "land", "release", "ship", "bake", "cold-start"]
+dirs = [
+  "app",
+  "apps",
+  "charts",
+  "clusters",
+  "crates",
+  "deploy",
+  "dist",
+  "docs",
+  "examples",
+  "hosts",
+  "lib",
+  "packages",
+  "repos",
+  "tests",
+]
+wrappers = [
+  "act",
+  "admin",
+  "audit",
+  "authentik",
+  "bake",
+  "cloudflare",
+  "cold-start",
+  "course",
+  "deploy",
+  "dev",
+  "forge",
+  "forgejo",
+  "guard",
+  "helm",
+  "init",
+  "kube",
+  "land",
+  "looper",
+  "release",
+  "release-ci",
+  "release-env",
+  "retire",
+  "rollback",
+  "santi",
+  "scp",
+  "ship",
+  "smoke",
+  "ssh",
+  "task",
+  "vmpool",
+  "vpn",
+  "word-debt",
+]
 required = ["guard", "init", "land"]
 hooks = ["pre-commit", "commit-msg"]
 lanes = ["guard", "release-beta", "release-stable", "release-verify", "probe"]

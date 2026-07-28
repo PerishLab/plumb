@@ -16,6 +16,10 @@ await guard(
       runs: [["pnpm", ["--filter", "@plumb/web", "build"]]],
     },
     {
+      label: "plumb doctor",
+      runs: [["cargo", ["run", "--quiet", "-p", "plumb-cli", "--", "doctor", "."]]],
+    },
+    {
       label: "release smoke",
       runs: [["sh", [".forgejo/scripts/release/smoke/local.sh"]]],
     },
@@ -37,6 +41,7 @@ await guard(
         ".runseal/wrappers/init.ts",
         ".runseal/wrappers/land.ts",
         ".runseal/wrappers/release.ts",
+        ".runseal/wrappers/retire.ts",
         ".runseal/wrappers/ship.ts",
         ".forgejo/scripts/release/metadata/beta.ts",
         ".forgejo/scripts/release/metadata/stable.ts",

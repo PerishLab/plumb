@@ -12,7 +12,7 @@ if (flags(args).help()) {
 }
 
 await init({
-  tools: ["git", "tea", "deno", "node", "pnpm", "ectropy", "runseal", "sh", "bash"],
+  tools: ["git", "tea", "deno", "node", "pnpm", "ectropy", "plumb", "runseal", "sh", "bash"],
   paths: [
     "package.json",
     "pnpm-workspace.yaml",
@@ -33,6 +33,7 @@ await init({
     ".runseal/wrappers/init.ts",
     ".runseal/wrappers/land.ts",
     ".runseal/wrappers/release.ts",
+    ".runseal/wrappers/retire.ts",
     ".runseal/wrappers/ship.ts",
     ".forgejo/release.env.example",
     ".forgejo/workflows/guard.yml",

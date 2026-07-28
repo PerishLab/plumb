@@ -82,3 +82,9 @@ bucket-scoped values into Forgejo. Permission-group IDs are discovered by
 exact name and resource scope at runtime. An existing `w:` token without its
 matching local escrow is a fail-closed recovery case; its secret cannot be
 reconstructed.
+
+`runseal :retire` is the symmetric destructive control-plane entrypoint,
+implemented and tested by `@perish/sealkit/retire`. It defaults to a
+credential-free dry run and requires `--execute` plus exact repo, bucket, and
+domain confirmations. Plumb keeps only the thin wrapper; `.runseal` owns no
+retirement implementation or tests.

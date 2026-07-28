@@ -9,6 +9,15 @@ fn run(root: &Path) -> String {
     String::from_utf8_lossy(&output.stdout).to_string()
 }
 
+fn policy(root: &Path, write: bool) -> std::process::Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
+    command.args(["policy", root.to_str().expect("path should be utf8")]);
+    if write {
+        command.arg("--write");
+    }
+    command.output().expect("plumb should run")
+}
+
 #[test]
 fn blacklist() {
     let root = std::env::temp_dir().join("plumb-blacklist");
@@ -78,4 +87,64 @@ paths = ["packages/react-components/**"]
     let out = run(&root);
     std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(out.contains("true to the skeleton"), "{out}");
+}
+
+#[test]
+fn reconciliation() {
+    let root = std::env::temp_dir().join("plumb-policy-reconciliation");
+    std::fs::create_dir_all(root.join("apps/web/src/lib/components"))
+        .expect("fixture should be made");
+    std::fs::create_dir_all(root.join("apps/web/tests")).expect("fixture should be made");
+    std::fs::write(root.join("apps/web/vite.config.ts"), "").expect("fixture should be made");
+    std::fs::write(
+        root.join("ectropy.toml"),
+        r#"
+[scan]
+include = ["old"]
+
+[[grant]]
+syntax = "style"
+paths = ["packages/react-components/**"]
+
+[[grant]]
+syntax = "environment"
+paths = ["apps/web/vite.config.ts"]
+
+[[boundary]]
+paths = ["apps/web/vite.config.ts"]
+note = "vite config"
+allow = ["path"]
+
+[[vocabulary.term]]
+name = "vite_config"
+description = "fixture"
+"#,
+    )
+    .expect("policy should be written");
+    let output = policy(&root, true);
+    assert!(output.status.success(), "{output:?}");
+    let text = std::fs::read_to_string(root.join("ectropy.toml"))
+        .expect("reconciled policy should be readable");
+    let out = run(&root);
+    std::fs::remove_dir_all(&root).expect("fixture should be swept");
+    assert!(text.contains("apps/**/*.ts"), "{text}");
+    assert!(text.contains("apps/web/vite.config.ts"), "{text}");
+    assert!(text.contains("packages/react-components/**"), "{text}");
+    assert!(text.contains("apps/web/src/lib/components/**"), "{text}");
+    assert!(text.contains("name = \"vite_config\""), "{text}");
+    assert!(!out.contains("missing ectropy"), "{out}");
+    assert!(!out.contains("unexpected ectropy"), "{out}");
+}
+
+#[test]
+fn malformed_policy_is_not_replaced() {
+    let root = std::env::temp_dir().join("plumb-policy-malformed");
+    std::fs::create_dir_all(&root).expect("fixture should be made");
+    let path = root.join("ectropy.toml");
+    std::fs::write(&path, "[limit\n").expect("policy should be written");
+    let output = policy(&root, true);
+    let text = std::fs::read_to_string(&path).expect("policy should remain readable");
+    std::fs::remove_dir_all(&root).expect("fixture should be swept");
+    assert!(!output.status.success(), "{output:?}");
+    assert_eq!(text, "[limit\n");
 }
