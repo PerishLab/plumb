@@ -68,3 +68,17 @@ metadata file naming the schema, skill, and release version, and publishes it as
 `artifacts.skillTarGz` with a name, url, and sha256 alongside the binaries. The
 artifact map is assembled by hand in most lanes — adding an entry usually means
 touching both the assembly and whatever asserts its length.
+
+## Site lanes
+
+A site lane is the same spine with a different registry: build, deploy, then
+read back from the edge. Its verification differs in one way worth stating —
+the control plane can report a domain as bound while the edge still routes
+elsewhere, so *bound* and *reachable* are separate findings and only the second
+is evidence that the site answers. Compare the fingerprinted asset in the
+served page against the built one; a status code alone proves only that
+something replied.
+
+A stuck binding usually clears on a second, identical ship. If the lane runs
+somewhere that cannot reach the public edge, it must declare that blindness
+rather than treat an unreachable site as success.

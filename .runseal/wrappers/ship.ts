@@ -16,6 +16,7 @@ const fault = family("ship", {
   unfilled: kind<{ missing: string[] }>(),
   build: kind<{ path: string }>(),
   unreached: kind<{ domain: string }>(),
+  unbound: kind<{ domain: string }>(),
 });
 
 function usage(): void {
@@ -195,6 +196,12 @@ async function ship(): Promise<void> {
     },
   });
   io.print("==> verify");
+  io.print("  deployed  yes");
+  const bound = await anchored(keys);
+  io.print(`  bound     ${bound ? "yes" : "no"}`);
+  if (!bound) {
+    throw fault.unbound({ domain: keys.domain });
+  }
   const paths = await routes();
   const mark = await stamp();
   let reached = await probe(`https://${keys.domain}/`, mark);
@@ -202,25 +209,31 @@ async function ship(): Promise<void> {
   if (reached && route !== undefined) {
     reached = await probe(`https://${keys.domain}${route}`, mark);
   }
+  io.print(`  reachable ${reached ? "yes" : "no"}`);
+  if (!reached && !blind()) {
+    throw fault.unreached({ domain: keys.domain });
+  }
   if (!reached) {
-    await anchored(keys);
+    io.print("  vantage declared blind: this lane did not prove the site answers");
   }
   io.print("ship: ok");
 }
 
-async function anchored(keys: { account: string; token: string; domain: string }): Promise<void> {
+function blind(): boolean {
+  return env.get("PLUMB_SITE_BLIND", "") !== "";
+}
+
+async function anchored(
+  keys: { account: string; token: string; domain: string },
+): Promise<boolean> {
   const base = "https://api.cloudflare.com/client/v4";
   const response = await fetch(`${base}/accounts/${keys.account}/workers/domains`, {
     headers: { authorization: `Bearer ${keys.token}` },
   });
   const body = await response.json();
-  const bound = (body.result ?? []).some(
+  return (body.result ?? []).some(
     (entry: { hostname?: string }) => entry.hostname === keys.domain,
   );
-  if (!bound) {
-    throw fault.unreached({ domain: keys.domain });
-  }
-  io.print(`  edge unreachable from here; API confirms ${keys.domain} is attached (local proxy?)`);
 }
 
 function seated(value: unknown): Record<string, unknown> {
@@ -296,7 +309,11 @@ if (flags(args).boolean("check")) {
     build: (thrown) => io.fail(`ship: build produced no ${thrown.meta.path}`),
     unreached: (thrown) =>
       io.fail(
-        `ship: edge unreachable and ${thrown.meta.domain} is not attached; deploy likely failed`,
+        `ship: ${thrown.meta.domain} is attached but did not serve this build; a stuck binding often clears on a second ship, and PLUMB_SITE_BLIND=1 declares a vantage that cannot see the edge`,
+      ),
+    unbound: (thrown) =>
+      io.fail(
+        `ship: ${thrown.meta.domain} is not attached to the worker; the deploy did not bind it`,
       ),
   }));
 }

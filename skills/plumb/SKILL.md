@@ -82,6 +82,14 @@ that has not run since a rename is already broken. See `references/lane.md`.
 the workshop already demonstrates rather than each repository's invention. Most
 of this clause is enforced; see below.
 
+**Sites.** A repository carrying `apps/web` ships it through one dispatch-only
+lane calling the same wrapper an operator runs, with a purpose-scoped key the
+lane holds and the operator does not. The build stamps its commit into the
+health document and its routes into the sitemap; the shipper reads those and
+never application source. A deploy reports three separate states — deployed,
+bound, reachable — and a lane that cannot prove the last one says so rather
+than implying it (`docs/site.md`).
+
 **Locks.** A pair bound across a boundary no compiler crosses — a brief and the
 binary it describes, a chart and an environment key — is declared in
 `plumb.toml` with the version and hash of its last reading. Drift on either
@@ -110,6 +118,7 @@ What `plumb doctor` catches today:
 - `Cargo.toml` without `target/` in `.gitignore`
 - a declared lock whose covered paths changed, or whose affirmed version has
   been left behind by the repository
+- an unknown workflow: the skeleton now knows the deploy lane by name
 
 What is **prose only** — no machine will stop you:
 
@@ -117,7 +126,9 @@ What is **prose only** — no machine will stop you:
   instead of declaring your own
 - template variables and their spelling in manifests
 - the home and state clauses, including the two-sided ownership proof
-- every clause of the release lane anatomy
+- every clause of the release lane anatomy, and every clause of the site lane:
+  nothing yet checks that a repository with `apps/web` carries a deploy lane, a
+  bound route, or a readback step
 - the accuracy of this section in any skill, including this one — a lock makes
   someone re-read it when the version moves, which is attention, not proof
 
