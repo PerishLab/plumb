@@ -11,7 +11,7 @@ import { family, kind, run } from "@perish/shield";
 const app = "apps/web";
 const dist = `${app}/dist`;
 const config = `${app}/wrangler.jsonc`;
-const table = `${app}/src/lib/routes.ts`;
+const atlas = `${dist}/sitemap.xml`;
 
 const fault = family("ship", {
   unfilled: kind<{ missing: string[] }>(),
@@ -89,12 +89,13 @@ async function worker(): Promise<string> {
 }
 
 async function routes(): Promise<string[]> {
-  const text = await Deno.readTextFile(table);
-  const paths = [...text.matchAll(/path:\s*"([^"]+)"/g)].map((found) => found[1]);
-  if (paths.length === 0) {
-    io.fail(`ship: no routes found in ${table}`);
+  if (!(await fs.file.exists(atlas))) {
+    return [];
   }
-  return paths;
+  const text = await Deno.readTextFile(atlas);
+  return [...text.matchAll(/<loc>([^<]+)<\/loc>/g)]
+    .map((found) => new URL(found[1]).pathname)
+    .map((path) => (path.length > 1 ? path.replace(/\/$/, "") : path));
 }
 
 function deep(paths: string[]): string | undefined {
@@ -148,6 +149,13 @@ async function probe(url: string, mark: string): Promise<boolean> {
   return false;
 }
 
+async function marks(): Promise<Record<string, string>> {
+  const commit = await bin("git").text(["rev-parse", "--short", "HEAD"]);
+  const text = await Deno.readTextFile("Cargo.toml");
+  const found = /^version = "([^"]+)"$/m.exec(text);
+  return { BUILD_COMMIT: commit, BUILD_VERSION: found?.[1] ?? "" };
+}
+
 async function stamp(): Promise<string> {
   const html = await Deno.readTextFile(`${dist}/index.html`);
   const found = /\/assets\/index-[A-Za-z0-9_-]+\.js/.exec(html);
@@ -173,9 +181,8 @@ async function ship(): Promise<void> {
   if (keys.empty.length > 0) {
     throw fault.unfilled({ missing: keys.empty });
   }
-  const paths = await routes();
   io.print("==> build");
-  await bin("pnpm").run(["--filter", "@plumb/web", "build"]);
+  await bin("pnpm").run(["--filter", "@plumb/web", "build"], { env: await marks() });
   if (!(await fs.file.exists(`${dist}/index.html`))) {
     throw fault.build({ path: `${dist}/index.html` });
   }
@@ -188,6 +195,7 @@ async function ship(): Promise<void> {
     },
   });
   io.print("==> verify");
+  const paths = await routes();
   const mark = await stamp();
   let reached = await probe(`https://${keys.domain}/`, mark);
   const route = deep(paths);
