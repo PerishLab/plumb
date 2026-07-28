@@ -8,14 +8,34 @@ fixture=$(mktemp -d)
 trap 'rm -rf "$fixture"' EXIT INT TERM
 cd "$ROOT"
 
+source="$fixture/source"
+mkdir -p "$source"
+tar \
+  --exclude=.git \
+  --exclude=.local \
+  --exclude=.forgejo/release.env \
+  --exclude=.task \
+  --exclude=dist \
+  --exclude=node_modules \
+  --exclude=target \
+  -cf - . | tar -xf - -C "$source"
+BASE_VERSION=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)
+(
+  cd "$source"
+  RELEASE_CHANNEL=rehearsal \
+  RELEASE_VERSION="v$BASE_VERSION-rehearsal.1" \
+    deno run --allow-env --allow-read --allow-write --allow-run=cargo,tar \
+      .forgejo/scripts/release/cargo/publish.ts rehearse
+)
+
 DIST_DIR="$fixture/assets" TARGET="$TARGET" \
   sh "$ROOT/.forgejo/scripts/release/assets/package.sh" "$VERSION"
 archive="plumb-$TARGET.tar.gz"
 release="$fixture/releases"
-seat="$release/stable/versions/$VERSION"
-mkdir -p "$seat" "$release/stable/latest"
+seat="$release/beta/versions/$VERSION"
+mkdir -p "$seat" "$release/beta/latest"
 cp "$fixture/assets/$VERSION/$archive" "$seat/$archive"
-printf '{"releaseVersion":"%s"}\n' "$VERSION" > "$release/stable/latest/metadata.json"
+printf '{"releaseVersion":"%s"}\n' "$VERSION" > "$release/beta/latest/metadata.json"
 
 cp "$seat/$archive" "$fixture/assets/$VERSION/plumb-aarch64-apple-darwin.tar.gz"
 cp "$seat/$archive" "$fixture/assets/$VERSION/plumb-x86_64-apple-darwin.tar.gz"
@@ -67,14 +87,18 @@ if sh "$ROOT/manage.sh" install --channel nightly >/dev/null 2>&1; then
   echo "manager accepted an invalid channel" >&2
   exit 1
 fi
+if sh "$ROOT/manage.sh" install --channel beta >/dev/null 2>&1; then
+  echo "manager accepted a floating prerelease channel" >&2
+  exit 1
+fi
 if sh "$ROOT/manage.sh" uninstall --version ../../escape >/dev/null 2>&1; then
   echo "manager accepted an invalid version" >&2
   exit 1
 fi
-sh "$ROOT/manage.sh" install --public-url "file://$release"
+sh "$ROOT/manage.sh" install --public-url "file://$release" --channel beta --version "$VERSION"
 "$PLUMB_LOCAL_BIN_DIR/plumb" --version | grep -F "$VERSION"
 "$PLUMB_LOCAL_BIN_DIR/plumb" doctor "$ROOT"
-sh "$ROOT/manage.sh" update --public-url "file://$release" --version "$VERSION"
+sh "$ROOT/manage.sh" update --public-url "file://$release" --channel beta --version "$VERSION"
 sh "$ROOT/manage.sh" uninstall --version "$VERSION"
 [ ! -e "$PLUMB_INSTALL_ROOT/$VERSION" ] || {
   echo "local smoke left $PLUMB_INSTALL_ROOT/$VERSION" >&2

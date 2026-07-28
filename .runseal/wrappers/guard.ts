@@ -43,6 +43,7 @@ await guard(
         ".runseal/wrappers/release.ts",
         ".runseal/wrappers/retire.ts",
         ".runseal/wrappers/ship.ts",
+        ".forgejo/scripts/release/cargo/publish.ts",
         ".forgejo/scripts/release/metadata/beta.ts",
         ".forgejo/scripts/release/metadata/stable.ts",
       ]]],

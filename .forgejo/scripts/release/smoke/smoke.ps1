@@ -23,12 +23,26 @@ try {
         throw "version uninstall left $(Join-Path $env:PLUMB_INSTALL_ROOT $version)"
     }
     if ($env:SMOKE_LATEST -eq '1') {
-        & (Join-Path $root 'manage.ps1') install --channel $channel
-        & $bin doctor $root
-        if ($LASTEXITCODE -ne 0) { throw 'latest plumb doctor failed' }
-        & (Join-Path $root 'manage.ps1') uninstall
-        if (Test-Path $env:PLUMB_INSTALL_ROOT) {
-            throw "full uninstall left $env:PLUMB_INSTALL_ROOT"
+        if ($channel -eq 'stable') {
+            & (Join-Path $root 'manage.ps1') install --channel $channel
+            & $bin doctor $root
+            if ($LASTEXITCODE -ne 0) { throw 'latest plumb doctor failed' }
+            & (Join-Path $root 'manage.ps1') uninstall
+            if (Test-Path $env:PLUMB_INSTALL_ROOT) {
+                throw "full uninstall left $env:PLUMB_INSTALL_ROOT"
+            }
+        }
+        else {
+            $refused = $false
+            try {
+                & (Join-Path $root 'manage.ps1') install --channel $channel
+            }
+            catch {
+                $refused = $true
+            }
+            if (!$refused) {
+                throw "manager accepted floating $channel install"
+            }
         }
     }
 }

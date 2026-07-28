@@ -239,6 +239,34 @@ fn preserves_unprefixed_versions() {
 }
 
 #[test]
+fn prerelease_channels_require_the_exact_version() {
+    let seat = root("prerelease-pin");
+    let kit = rig(&seat, "http://127.0.0.1:1");
+    let loose = kit.install(&Ask {
+        channel: "beta".to_string(),
+        ..Ask::default()
+    });
+    assert!(
+        matches!(loose, Err(plumb::skill::Error::Floating(channel)) if channel == "beta"),
+        "a prerelease latest pointer is discovery, not an install intent"
+    );
+
+    let archive = pack();
+    let digest = plumb::skill::stamp(&archive);
+    let url = serve(archive, digest);
+    let kit = rig(&seat, &url);
+    kit.install(&Ask {
+        channel: "beta".to_string(),
+        version: Some("v1.2.3-beta.1".to_string()),
+        ..Ask::default()
+    })
+    .expect("an exact prerelease installs");
+    assert_eq!(kit.list().expect("list")[0].version, "v1.2.3-beta.1");
+
+    let _ = fs::remove_dir_all(&seat);
+}
+
+#[test]
 fn keeps() {
     let archive = pack();
     let digest = plumb::skill::stamp(&archive);

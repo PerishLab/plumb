@@ -31,7 +31,9 @@ failure, so a repair rerun is safe.
 
 **6. Verify by readback.** Confirm from the registry, not from local state.
 
-**7. Seal.** Tag, and record what was released.
+**7. Seal.** Record every immutable release identity. A stable release also
+gets a Git tag; a prerelease does not. Tags are promotion anchors, not an
+inventory of disposable validation cuts.
 
 **8. Report failure outward.** Emit the lane log where an operator can reach it
 without CI log access — an issue, an artifact, a notification. On systems whose
@@ -56,10 +58,31 @@ run its packaging script locally.
 
 ## Channels
 
-Two channels, one direction: beta proves, stable promotes. A beta cut computes
-its own suffix from the registry and stamps it only inside the runner; a base
-version already stable refuses further betas. Promotion runs the same spine
-against the same commit.
+One stable sink, zero or more prerelease channels, and one direction. Stable is
+`X.Y.Z`; a prerelease is `X.Y.Z-<channel>.N`. Products own which channel names
+exist and how they promote. The lane owns the grammar, the monotonic sequence,
+runner-only stamping, publishing, readback, and refusal once the base version
+is stable.
+
+Stable may be selected through its moving channel metadata. A non-stable
+consumer must name the exact immutable version; its channel latest pointer is
+discovery, not an install intent. Strongly coupled packages published across a
+compiler boundary use exact internal requirements as well.
+
+Prerelease sealing stops at verified immutable artifacts and metadata. Stable
+promotion runs the same spine against the same commit and adds the one durable
+Git tag.
+
+## Coupled Cargo packages
+
+When a library and its procedural macro share one release identity, stamp and
+assert both manifests before publishing either, then fully package and dry-run
+the macro. Publish the macro first and wait until the registry reads it back
+with the expected checksum. Only then can Cargo resolve the library's exact
+registry dependency, so perform the library's full package and dry run there
+before publishing it. A repair rerun verifies and skips an already matching
+package; an absent macro beneath a present library or a same-version checksum
+mismatch refuses.
 
 ## Skill artifacts
 

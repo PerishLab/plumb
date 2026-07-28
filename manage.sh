@@ -27,9 +27,9 @@ while [ $# -gt 0 ]; do
 plumb manager
 
 Usage:
-  manage.sh install [--channel stable|beta] [--version vX.Y.Z]
-  manage.sh update [--channel stable|beta] [--version vX.Y.Z]
-  manage.sh uninstall [--version vX.Y.Z]
+  manage.sh install [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
+  manage.sh update [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
+  manage.sh uninstall [--version vX.Y.Z[-beta.N]]
 
 Options:
   --public-url <url>     release metadata and artifact base URL
@@ -55,6 +55,13 @@ done
 case "$CHANNEL" in
   stable|beta) ;;
   *) echo "invalid channel: $CHANNEL" >&2; exit 1 ;;
+esac
+case "$COMMAND:$CHANNEL:$VERSION" in
+  install:stable:*|update:stable:*|uninstall:*) ;;
+  install:*:|update:*:)
+    echo "non-stable channel $CHANNEL requires an exact version" >&2
+    exit 1
+    ;;
 esac
 PUBLIC_URL=${PUBLIC_URL%/}
 
@@ -91,6 +98,11 @@ install_plumb() {
     [ -n "$VERSION" ] || { echo "failed to resolve latest plumb version" >&2; exit 1; }
   fi
   VERSION=$(normalize_version "$VERSION")
+  case "$CHANNEL:$VERSION" in
+    stable:v*-*) echo "stable channel cannot install prerelease $VERSION" >&2; exit 1 ;;
+    beta:v*-beta.[1-9]*) ;;
+    beta:*) echo "version $VERSION does not belong to beta" >&2; exit 1 ;;
+  esac
   name=$(archive)
   prefix="$PUBLIC_URL/$CHANNEL/versions/$VERSION"
   curl -fsSL "$prefix/$name" -o "$tmpdir/$name"

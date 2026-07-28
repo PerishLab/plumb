@@ -40,9 +40,9 @@ for ($index = 0; $index -lt $rest.Length; $index++) {
 plumb manager
 
 Usage:
-  manage.ps1 install [--channel stable|beta] [--version vX.Y.Z]
-  manage.ps1 update [--channel stable|beta] [--version vX.Y.Z]
-  manage.ps1 uninstall [--version vX.Y.Z]
+  manage.ps1 install [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
+  manage.ps1 update [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
+  manage.ps1 uninstall [--version vX.Y.Z[-beta.N]]
 '@ | Write-Output
             exit 0
         }
@@ -52,6 +52,9 @@ Usage:
 
 if ($channel -notin @('stable', 'beta')) {
     throw "invalid channel: $channel"
+}
+if ($command -in @('install', 'update') -and $channel -ne 'stable' -and [string]::IsNullOrWhiteSpace($version)) {
+    throw "non-stable channel $channel requires an exact version"
 }
 
 function Normalize-Version([string]$Value) {
@@ -73,6 +76,12 @@ function Install-Plumb {
         throw 'failed to resolve latest plumb version'
     }
     $resolved = Normalize-Version $resolved
+    if ($channel -eq 'stable' -and $resolved -match '-') {
+        throw "stable channel cannot install prerelease $resolved"
+    }
+    if ($channel -eq 'beta' -and $resolved -notmatch '-beta\.[1-9][0-9]*$') {
+        throw "version $resolved does not belong to beta"
+    }
     $archive = 'plumb-x86_64-pc-windows-msvc.zip'
     $tmpdir = Join-Path ([System.IO.Path]::GetTempPath()) ("plumb-" + [System.Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $tmpdir | Out-Null

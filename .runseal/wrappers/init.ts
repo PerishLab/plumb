@@ -45,6 +45,7 @@ await init({
     ".forgejo/scripts/release/assets/package.ps1",
     ".forgejo/scripts/release/assets/package.sh",
     ".forgejo/scripts/release/assets/verify.sh",
+    ".forgejo/scripts/release/cargo/publish.ts",
     ".forgejo/scripts/release/metadata/beta.ts",
     ".forgejo/scripts/release/metadata/stable.ts",
     ".forgejo/scripts/release/r2/check.sh",

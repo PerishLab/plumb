@@ -103,6 +103,47 @@ function prior(metadata: Record<string, unknown>): string {
 	return parseStable(value, "R2 stable metadata");
 }
 
+async function proven(cargo: string): Promise<string> {
+	const publicUrl = (Deno.env.get("PLUMB_RELEASES_PUBLIC_URL") ?? "").replace(
+		/\/+$/,
+		"",
+	);
+	const url =
+		Deno.env.get("PLUMB_BETA_METADATA_URL") ||
+		(publicUrl ? `${publicUrl}/beta/latest/metadata.json` : "");
+	if (!url) {
+		fail("PLUMB_RELEASES_PUBLIC_URL is required");
+	}
+	console.log(`[release-stable] beta proof url: ${url}`);
+	const text = await optional(url);
+	if (text === null) {
+		fail(`stable ${cargo} has no beta proof`);
+	}
+	let metadata: Record<string, unknown>;
+	try {
+		metadata = JSON.parse(text) as Record<string, unknown>;
+	} catch (error) {
+		fail(`R2 beta metadata is invalid JSON: ${error}`);
+	}
+	const raw = metadata.betaVersion || metadata.releaseVersion;
+	const match =
+		typeof raw === "string"
+			? /^v?(\d+\.\d+\.\d+)-beta\.([1-9][0-9]*)$/.exec(raw)
+			: null;
+	if (!match || match[1] !== cargo || metadata.baseVersion !== cargo) {
+		fail(`latest beta does not prove stable base ${cargo}`);
+	}
+	const commit = (metadata.ci as Record<string, unknown> | undefined)?.commit;
+	const expected = (Deno.env.get("GITHUB_SHA") ?? "").trim();
+	if (!expected) {
+		fail("GITHUB_SHA is required to prove stable promotion");
+	}
+	if (commit !== expected) {
+		fail(`latest beta ${raw} came from ${String(commit)}, not ${expected}`);
+	}
+	return raw as string;
+}
+
 async function next(cargo: string): Promise<[string, string, string]> {
 	const publicUrl = (Deno.env.get("PLUMB_RELEASES_PUBLIC_URL") ?? "").replace(
 		/\/+$/,
@@ -142,6 +183,7 @@ async function next(cargo: string): Promise<[string, string, string]> {
 }
 
 const cargo = await cargoVersion();
+const beta = await proven(cargo);
 const override = (Deno.env.get("STABLE_VERSION_OVERRIDE") ?? "").trim();
 let base: string;
 let version: string;
@@ -152,9 +194,10 @@ if (override) {
 		fail(`override base ${base} does not match Cargo version ${cargo}`);
 	}
 	version = `v${base}`;
-	source = "workflow override";
+	source = `workflow override after ${beta}`;
 } else {
 	[base, version, source] = await next(cargo);
+	source = `${source}; proved by ${beta}`;
 }
 console.log(`[release-stable] ${version} from ${source}`);
 await output("base_version", base);

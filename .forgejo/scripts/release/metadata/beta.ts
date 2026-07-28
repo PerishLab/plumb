@@ -1,6 +1,7 @@
 const USER_AGENT = "plumb-release-beta/1.0";
 const RETRY_MS = 15_000;
 const STABLE = /^(\d+)\.(\d+)\.(\d+)$/;
+const STABLE_RELEASE = /^v?(\d+\.\d+\.\d+)$/;
 const BETA = /^v?(\d+\.\d+\.\d+)-beta\.([1-9][0-9]*)$/;
 
 function fail(message: string): never {
@@ -156,7 +157,42 @@ async function next(cargo: string): Promise<[string, number, string, string]> {
 			];
 }
 
+async function requireUnstableBase(cargo: string): Promise<void> {
+	const publicUrl = (Deno.env.get("PLUMB_RELEASES_PUBLIC_URL") ?? "").replace(
+		/\/+$/,
+		"",
+	);
+	if (!publicUrl) {
+		fail("PLUMB_RELEASES_PUBLIC_URL is required");
+	}
+	const stableUrl =
+		Deno.env.get("PLUMB_STABLE_METADATA_URL") ||
+		`${publicUrl}/stable/latest/metadata.json`;
+	const stableText = await optional(stableUrl);
+	if (stableText !== null) {
+		let stableMetadata: Record<string, unknown>;
+		try {
+			stableMetadata = JSON.parse(stableText) as Record<string, unknown>;
+		} catch (error) {
+			fail(`R2 stable metadata is invalid JSON: ${error}`);
+		}
+		const raw =
+			stableMetadata.stableVersion ||
+			stableMetadata.releaseVersion ||
+			stableMetadata.baseVersion;
+		const match = typeof raw === "string" ? STABLE_RELEASE.exec(raw) : null;
+		if (!match) {
+			fail("R2 stable metadata has no usable stable version");
+		}
+		const ranked = order(cargo, match[1]);
+		if (ranked <= 0) {
+			fail(`Cargo version ${cargo} is not newer than stable ${match[1]}`);
+		}
+	}
+}
+
 const cargo = await cargoVersion();
+await requireUnstableBase(cargo);
 const override = (Deno.env.get("BETA_VERSION_OVERRIDE") ?? "").trim();
 let base: string;
 let number: number;

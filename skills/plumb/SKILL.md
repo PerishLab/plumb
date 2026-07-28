@@ -158,7 +158,8 @@ no flag and still refuses a path that is not provably managed. Status and
 upgrade dry-run fetch metadata but never the skill artifact and never write
 state. Upgrade leaves current seats untouched, refuses an implicit rollback or
 same-version artifact drift, and treats an explicit older `--version` as a
-deliberate rollback.
+deliberate rollback. Stable may resolve through latest metadata; every
+non-stable channel requires an exact `--version`.
 
 The binary is the truth about its own flags: prefer `plumb <command> --help`
 over assuming.

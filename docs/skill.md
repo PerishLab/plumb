@@ -88,6 +88,10 @@ an available newer release upgrades; a missing managed path restores. Same-versi
 an implicit channel rollback refuse. An explicit older `--version` is a deliberate rollback. Real
 upgrade downloads the artifact only when at least one owned seat needs to move.
 
+Stable is the only moving install intent. A non-stable channel is useful for discovering immutable
+validation cuts, but installing, checking, or upgrading through one requires its exact version.
+That keeps a beta or release candidate from moving underneath a repository between two runs.
+
 The mechanized checks — package shape, frontmatter, standing accuracy, and the release metadata
 carrying its skill artifact — are declared here and not yet running; until they land, this page is
 the wall.

@@ -51,6 +51,8 @@ pub enum Error {
     Absent,
     Loose,
     Shape(String),
+    Channel(String),
+    Floating(String),
     Version(String),
     Bare,
     Named(PathBuf),
@@ -69,6 +71,10 @@ impl std::fmt::Display for Error {
             Self::Absent => write!(f, "release carries no skill artifact"),
             Self::Loose => write!(f, "release names no digest for the skill artifact"),
             Self::Shape(name) => write!(f, "unexpected artifact {name}"),
+            Self::Channel(channel) => write!(f, "invalid release channel: {channel}"),
+            Self::Floating(channel) => {
+                write!(f, "non-stable channel {channel} requires an exact version")
+            }
             Self::Version(version) => write!(f, "invalid release version: {version}"),
             Self::Bare => write!(f, "no agent skill directory was found"),
             Self::Named(path) => write!(f, "path must end with the skill name: {}", path.display()),

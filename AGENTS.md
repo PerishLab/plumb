@@ -45,16 +45,23 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 
 - `manage.sh` and `manage.ps1` are the public install/update/uninstall
   entrypoints.
-- R2 metadata and immutable version assets are release truth. Beta advances
-  from beta metadata; stable advances only when the Cargo workspace version is
-  newer than stable metadata.
+- R2 metadata, immutable version assets, and the Cargo registry share one
+  release identity. Beta advances from beta metadata; stable advances only
+  when the Cargo workspace version is newer than stable metadata.
+- Stable is `X.Y.Z`. Every non-stable release is
+  `X.Y.Z-<channel>.N`, and every non-stable consumer must name that exact
+  version. Discovery metadata is not an install intent.
+- Cargo publishes `plumb-macro` before `plumb`, reads both back from the
+  registry, and locks their coupled versions exactly.
+- Non-stable releases do not create Git tags.
 - Stable tags are created only after R2 publish, metadata verification, and
   manager smoke.
 - `release-verify` rechecks one immutable published version on Linux, macOS,
   and Windows without publishing, advancing channel metadata, or tagging.
-- Forgejo needs the `PLUMB_RELEASES_PUBLIC_URL` repository variable and the
-  four `PLUMB_RELEASES_S3_*` repository secrets. Keep local source values in
-  the ignored `.forgejo/release.env`, initialized from
+- Forgejo needs the `PLUMB_RELEASES_PUBLIC_URL` repository variable, the four
+  `PLUMB_RELEASES_S3_*` repository secrets, and a
+  `PLUMB_CARGO_REGISTRY_TOKEN` secret whose token has `write:packages`. Keep
+  local source values in the ignored `.forgejo/release.env`, initialized from
   `.forgejo/release.env.example`.
 
 ## Ecosystem release cold-start
