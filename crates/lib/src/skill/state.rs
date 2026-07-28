@@ -47,9 +47,29 @@ pub fn write(path: &Path, ledger: &Ledger) -> Result<(), Error> {
             .map_err(|error| Error::Write(parent.to_path_buf(), error.to_string()))?;
     }
     let beside = path.with_extension("part");
-    fs::write(&beside, format!("{text}\n"))
+    private(&beside, format!("{text}\n").as_bytes())
         .map_err(|error| Error::Write(beside.clone(), error.to_string()))?;
     fs::rename(&beside, path).map_err(|error| Error::Write(path.to_path_buf(), error.to_string()))
+}
+
+#[cfg(unix)]
+fn private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(path)?;
+    file.set_permissions(fs::Permissions::from_mode(0o600))?;
+    file.write_all(bytes)
+}
+
+#[cfg(not(unix))]
+fn private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    fs::write(path, bytes)
 }
 
 pub fn keep(ledger: &mut Ledger, record: Record) {

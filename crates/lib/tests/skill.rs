@@ -106,9 +106,30 @@ fn lands() {
     assert_eq!(records.len(), 1);
     assert_eq!(records[0].version, "v1.2.3");
 
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let state = seat.join("state").join("skills.json");
+        assert_eq!(
+            fs::metadata(&state).expect("state").permissions().mode() & 0o777,
+            0o600
+        );
+        fs::set_permissions(&state, fs::Permissions::from_mode(0o666)).expect("loosen state");
+    }
     let again = kit.install(&ask()).expect("again");
     assert!(again.kept.is_empty(), "second install needs force");
     assert_eq!(again.left.len(), 1);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let state = seat.join("state").join("skills.json");
+        assert_eq!(
+            fs::metadata(state).expect("state").permissions().mode() & 0o777,
+            0o600
+        );
+    }
 
     let forced = kit
         .install(&Ask {
