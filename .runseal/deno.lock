@@ -1,14 +1,14 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@perish/sealkit@*": "0.1.9",
+    "jsr:@perish/sealkit@*": "0.1.10",
     "jsr:@perish/shield@*": "0.1.1",
     "jsr:@perish/shield@0.1.0": "0.1.0",
     "jsr:@std/cli@1.0.30": "1.0.30"
   },
   "jsr": {
-    "@perish/sealkit@0.1.9": {
-      "integrity": "60bb36892027eca2583b811615162dfb5bb2511fc4ef861885384f206309d5ea",
+    "@perish/sealkit@0.1.10": {
+      "integrity": "c058caf35d6c1d74ae4dbe2920b671d8ff938074150875153e08ac79bdf3d00a",
       "dependencies": [
         "jsr:@perish/shield@0.1.0",
         "jsr:@std/cli"
