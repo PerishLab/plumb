@@ -45,8 +45,9 @@ one product shape:
 
 - `sidecar.toml` leases both development ports, waits for API endpoint
   readiness at `/api/health`, and passes that endpoint to Web as `API_URL`;
-- API consumes `SIDECAR_PORT`, accepts the sidecar stamp, emits its endpoint as
-  API readiness, and mounts its whole public surface under `/api`;
+- API consumes the leased port through `SIDECAR_PORT` or an explicit
+  `"{port}"` environment mapping, accepts the sidecar stamp, emits its endpoint
+  as API readiness, and mounts its whole public surface under `/api`;
 - Web consumes `@perish/react-components`, activates
   `@perish/vite-plugin-design`, loads the in-memory views manifest, and leaves
   sidecar port and API proxy handling to the plugin;

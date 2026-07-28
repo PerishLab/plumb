@@ -167,8 +167,9 @@ spec:
 [[sidecars]]
 name = "api"
 command = "sh"
-args = ["-c", "LISTEN_PORT=$SIDECAR_PORT exec cargo run -p api"]
+args = ["-c", "exec cargo run -p api"]
 port = 0
+env = { KEEL_LISTEN_PORT = "{port}" }
 health_url = "http://127.0.0.1:{port}/api/health"
 ready = { role = "api" }
 

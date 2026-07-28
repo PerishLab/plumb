@@ -145,7 +145,7 @@ fn uses_port(value: Option<&toml::Value>, path: Option<&str>) -> bool {
 fn api(root: &Path, found: &mut Found) {
     let source = source(&root.join("crates/api/src"), "rs");
     let launch = std::fs::read_to_string(root.join("sidecar.toml")).unwrap_or_default();
-    if !source.contains("SIDECAR_PORT") && !launch.contains("SIDECAR_PORT") {
+    if !source.contains("SIDECAR_PORT") && !launch.contains("SIDECAR_PORT") && !maps_port(&launch) {
         wrong(found, "api does not consume SIDECAR_PORT");
     }
     if !source.contains("sidecar_stamp") && !source.contains("sidecar-stamp") {
@@ -160,6 +160,21 @@ fn api(root: &Path, found: &mut Found) {
     if !source.contains("\"/api\"") || !source.contains(".nest(") {
         wrong(found, "api does not mount the /api namespace");
     }
+}
+
+fn maps_port(launch: &str) -> bool {
+    let Ok(doc) = launch.parse::<toml::Table>() else {
+        return false;
+    };
+    doc.get("sidecars")
+        .and_then(toml::Value::as_array)
+        .and_then(|list| {
+            list.iter()
+                .find(|entry| entry.get("name").and_then(toml::Value::as_str) == Some("api"))
+        })
+        .and_then(|api| api.get("env"))
+        .and_then(toml::Value::as_table)
+        .is_some_and(|env| env.values().any(|value| value.as_str() == Some("{port}")))
 }
 
 fn source(root: &Path, extension: &str) -> String {
