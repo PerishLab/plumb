@@ -42,18 +42,19 @@ pub fn resolve(base: &str, channel: &str, version: Option<&str>) -> Result<Grant
     if !piece.name.ends_with(".tar.gz") {
         return Err(Error::Shape(piece.name));
     }
-    Ok(Grant {
+    let grant = Grant {
         version: release.version,
         url: piece.url,
         sha: piece.sha256.unwrap_or_default(),
-    })
+    };
+    if grant.sha.is_empty() {
+        return Err(Error::Loose);
+    }
+    Ok(grant)
 }
 
 pub fn take(grant: &Grant) -> Result<Vec<u8>, Error> {
     let bytes = draw(&grant.url)?;
-    if grant.sha.is_empty() {
-        return Err(Error::Loose);
-    }
     let seen = stamp(&bytes);
     if seen != grant.sha {
         return Err(Error::Digest(grant.sha.clone(), seen));

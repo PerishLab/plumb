@@ -28,8 +28,16 @@ fn serve(archive: Vec<u8>, digest: String) -> String {
             let mut stream = stream.expect("stream");
             let mut buffer = [0u8; 1024];
             let read = stream.read(&mut buffer).unwrap_or(0);
-            let head = String::from_utf8_lossy(&buffer[..read]).to_string();
-            let body = answer(&head, &archive, &digest, port);
+            let head = String::from_utf8_lossy(&buffer[..read]);
+            let body = if head.contains("metadata.json") {
+                let version = asked(&head);
+                format!(
+                    r#"{{"releaseVersion":"{version}","artifacts":{{"skillTarGz":{{"name":"plumb.tar.gz","url":"http://127.0.0.1:{port}/plumb.tar.gz","sha256":"{digest}"}}}}}}"#
+                )
+                .into_bytes()
+            } else {
+                archive.clone()
+            };
             let mut out = format!(
                 "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
                 body.len()
@@ -40,17 +48,6 @@ fn serve(archive: Vec<u8>, digest: String) -> String {
         }
     });
     format!("http://127.0.0.1:{port}")
-}
-
-fn answer(head: &str, archive: &[u8], digest: &str, port: u16) -> Vec<u8> {
-    if head.contains("metadata.json") {
-        let version = asked(head);
-        return format!(
-            r#"{{"releaseVersion":"{version}","artifacts":{{"skillTarGz":{{"name":"plumb.tar.gz","url":"http://127.0.0.1:{port}/plumb.tar.gz","sha256":"{digest}"}}}}}}"#
-        )
-        .into_bytes();
-    }
-    archive.to_vec()
 }
 
 fn asked(head: &str) -> String {

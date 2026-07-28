@@ -2,10 +2,12 @@ mod agent;
 mod fetch;
 mod place;
 mod state;
+mod survey;
 
 pub use agent::Seat;
 pub use fetch::stamp;
 pub use state::Record;
+pub use survey::{Action, Report, Standing, Status, Target};
 
 use state::Ledger;
 use std::path::PathBuf;
@@ -33,6 +35,7 @@ pub struct Skip {
 #[derive(Default)]
 pub struct Done {
     pub kept: Vec<Seat>,
+    pub same: Vec<Seat>,
     pub left: Vec<Skip>,
 }
 
@@ -48,6 +51,7 @@ pub enum Error {
     Absent,
     Loose,
     Shape(String),
+    Version(String),
     Bare,
     Named(PathBuf),
 }
@@ -65,6 +69,7 @@ impl std::fmt::Display for Error {
             Self::Absent => write!(f, "release carries no skill artifact"),
             Self::Loose => write!(f, "release names no digest for the skill artifact"),
             Self::Shape(name) => write!(f, "unexpected artifact {name}"),
+            Self::Version(version) => write!(f, "invalid release version: {version}"),
             Self::Bare => write!(f, "no agent skill directory was found"),
             Self::Named(path) => write!(f, "path must end with the skill name: {}", path.display()),
         }
@@ -86,12 +91,52 @@ impl Kit {
     }
 
     pub fn upgrade(&self, ask: &Ask) -> Result<Done, Error> {
+        let grant = fetch::resolve(&self.url, &ask.channel, ask.version.as_deref())?;
         let ledger = state::read(&self.state)?;
-        let seats = ledger.records.iter().map(worn).collect::<Vec<_>>();
-        if seats.is_empty() {
+        if ledger.records.is_empty() {
             return Err(Error::Bare);
         }
-        self.lay(&held(ask), seats)
+        let report = survey::inspect(self, ask, &grant, &ledger)?;
+        let changes = report.seats.iter().any(|status| {
+            matches!(
+                status.action,
+                Action::Upgrade | Action::Rollback | Action::Restore
+            )
+        });
+        let bytes = changes.then(|| fetch::take(&grant)).transpose()?;
+        let mut ledger = ledger;
+        let mut done = Done::default();
+        for status in report.seats {
+            let seat = Seat {
+                agent: status.agent,
+                path: status.path,
+            };
+            match status.action {
+                Action::None => done.same.push(seat),
+                Action::Refuse => done.left.push(Skip {
+                    path: seat.path,
+                    note: status.note,
+                }),
+                Action::Upgrade | Action::Rollback | Action::Restore => {
+                    let bytes = bytes
+                        .as_deref()
+                        .expect("a changing report fetched its artifact");
+                    place::place(self, &seat, bytes, &grant.version)?;
+                    state::keep(&mut ledger, mark(&seat, &grant));
+                    done.kept.push(seat);
+                }
+            }
+        }
+        if !done.kept.is_empty() {
+            state::write(&self.state, &ledger)?;
+        }
+        Ok(done)
+    }
+
+    pub fn status(&self, ask: &Ask) -> Result<Report, Error> {
+        let grant = fetch::resolve(&self.url, &ask.channel, ask.version.as_deref())?;
+        let ledger = state::read(&self.state)?;
+        survey::inspect(self, ask, &grant, &ledger)
     }
 
     pub fn list(&self) -> Result<Vec<Record>, Error> {
@@ -157,15 +202,6 @@ impl Kit {
             agent: "chosen".to_string(),
             path: path.to_path_buf(),
         }])
-    }
-}
-
-fn held(ask: &Ask) -> Ask {
-    Ask {
-        channel: ask.channel.clone(),
-        version: ask.version.clone(),
-        path: None,
-        force: true,
     }
 }
 

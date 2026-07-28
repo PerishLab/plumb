@@ -4,6 +4,7 @@ use std::path::Path;
 mod lock;
 mod node;
 mod operator;
+mod pack;
 mod policy;
 
 pub use lock::{Found, Lock, locked, seal};
@@ -98,7 +99,7 @@ impl Root<'_> {
                 if entry.path().join("deno.json").exists() {
                     found.insert("jsr".to_string());
                 }
-                if crate::pack::minted(&entry.path().join("package.json")) {
+                if pack::minted(&entry.path().join("package.json")) {
                     found.insert("npm".to_string());
                 }
             }
@@ -132,7 +133,7 @@ impl Root<'_> {
         };
         for entry in entries.flatten() {
             let dir = entry.file_name().to_string_lossy().to_string();
-            if let Some(name) = crate::pack::name(&entry.path()) {
+            if let Some(name) = pack::name(&entry.path()) {
                 held.push((dir, name));
             }
         }
@@ -143,12 +144,12 @@ impl Root<'_> {
         if let Ok(text) = std::fs::read_to_string(self.0.join("deno.json"))
             && text.contains("\"exports\"")
         {
-            return crate::pack::field(&text, "name");
+            return pack::field(&text, "name");
         }
-        if crate::pack::minted(&self.0.join("package.json"))
+        if pack::minted(&self.0.join("package.json"))
             && let Ok(text) = std::fs::read_to_string(self.0.join("package.json"))
         {
-            return crate::pack::field(&text, "name");
+            return pack::field(&text, "name");
         }
         None
     }

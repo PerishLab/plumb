@@ -87,6 +87,20 @@ whole posture is that of a guest:
 - **Partial success is recorded.** When one target succeeds and another is
   refused, the success is written down and the refusal is reported.
 
+## Observation and upgrade
+
+`skill status` reads the managed ledger, ownership markers, and the selected
+channel metadata. It does not download the skill artifact or write state.
+`skill upgrade --dry-run` renders the same per-seat decisions without applying
+them.
+
+The selected release is compared by semantic version and artifact digest.
+Current seats are no-ops; an available newer release upgrades; a missing
+managed path restores. Same-version digest drift and an implicit channel
+rollback refuse. An explicit older `--version` is a deliberate rollback.
+Real upgrade downloads the artifact only when at least one owned seat needs to
+move.
+
 The mechanized checks — package shape, frontmatter, standing accuracy, and the
 release metadata carrying its skill artifact — are declared here and not yet
 running; until they land, this page is the wall.

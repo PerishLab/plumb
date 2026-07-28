@@ -16,7 +16,8 @@ each law — whether a machine catches a violation or only you will.
 
 Repository: https://git.perish.top/PerishLab/plumb
 
-Report defects, missing shapes, and unclear guidance there as issues. When a
+Report defects, missing shapes, and unclear guidance there as issues. Use
+`plumb skill status` to check stable without changing an installation. When a
 newer stable release is available, run `plumb skill upgrade` and validate it
 before preserving compatibility with an older managed installation.
 
@@ -131,6 +132,8 @@ plumb doctor [ROOT]           # shape report; nonzero when something is out of t
 plumb lock [ROOT]             # print what a fresh affirmation would record
 plumb policy [ROOT] --write   # reconcile ectropy.toml against the repository
 plumb skill install           # install this brief into detected agent directories
+plumb skill status            # compare managed installs with stable, read-only
+plumb skill upgrade --dry-run # print the exact stable movement without applying it
 plumb skill upgrade           # move managed installs to the selected version
 plumb skill list              # show managed installs
 plumb skill uninstall         # remove only what is recorded as managed
@@ -140,7 +143,11 @@ Install and upgrade take `--channel` (default stable) and `--version` to pin a
 published version; `--path` installs to one explicit directory, which must end
 with `plumb`. `--force` replaces an install that is already managed, and never
 touches a path that is not; upgrade already owns what it replaces, so it needs
-no flag and still refuses a path that is not provably managed.
+no flag and still refuses a path that is not provably managed. Status and
+upgrade dry-run fetch metadata but never the skill artifact and never write
+state. Upgrade leaves current seats untouched, refuses an implicit rollback or
+same-version artifact drift, and treats an explicit older `--version` as a
+deliberate rollback.
 
 The binary is the truth about its own flags: prefer `plumb <command> --help`
 over assuming.

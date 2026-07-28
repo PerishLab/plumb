@@ -17,13 +17,17 @@ pub struct Mark {
 }
 
 pub fn owned(path: &Path, name: &str) -> bool {
+    marker(path, name).is_some()
+}
+
+pub fn marker(path: &Path, name: &str) -> Option<Mark> {
     let text = match fs::read_to_string(path.join(MARK)) {
         Ok(text) => text,
-        Err(_) => return false,
+        Err(_) => return None,
     };
     match serde_json::from_str::<Mark>(&text) {
-        Ok(mark) => mark.keeper == name && mark.name == name,
-        Err(_) => false,
+        Ok(mark) if mark.keeper == name && mark.name == name => Some(mark),
+        _ => None,
     }
 }
 
