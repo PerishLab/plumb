@@ -73,6 +73,12 @@ that has not run since a rename is already broken. See `references/lane.md`.
 the workshop already demonstrates rather than each repository's invention. Most
 of this clause is enforced; see below.
 
+**Locks.** A pair bound across a boundary no compiler crosses — a brief and the
+binary it describes, a chart and an environment key — is declared in
+`plumb.toml` with the version and hash of its last reading. Drift on either
+side refuses. Affirmation is a human act and never automatic
+(`references/laws.md`).
+
 ## Standing
 
 What `plumb doctor` catches today:
@@ -93,6 +99,8 @@ What `plumb doctor` catches today:
 - a boundary naming a path that does not exist; a `.runseal` test that belongs
   in sealkit
 - `Cargo.toml` without `target/` in `.gitignore`
+- a declared lock whose covered paths changed, or whose affirmed version has
+  been left behind by the repository
 
 What is **prose only** — no machine will stop you:
 
@@ -101,7 +109,8 @@ What is **prose only** — no machine will stop you:
 - template variables and their spelling in manifests
 - the home and state clauses, including the two-sided ownership proof
 - every clause of the release lane anatomy
-- the accuracy of this section in any skill, including this one
+- the accuracy of this section in any skill, including this one — a lock makes
+  someone re-read it when the version moves, which is attention, not proof
 
 When a walled clause becomes mechanized, its line moves up and its prose
 shrinks to the check's name. A clause claimed as enforced that is not is the
@@ -111,6 +120,7 @@ one defect this document cannot afford.
 
 ```bash
 plumb doctor [ROOT]           # shape report; nonzero when something is out of true
+plumb lock [ROOT]             # print what a fresh affirmation would record
 plumb policy [ROOT] --write   # reconcile ectropy.toml against the repository
 plumb skill install           # install this brief into detected agent directories
 plumb skill upgrade           # move managed installs to the selected version

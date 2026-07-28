@@ -1,4 +1,5 @@
 use crate::{rules::RULES, shape};
+use shape::Found;
 use std::collections::BTreeSet;
 
 pub struct Note {
@@ -6,8 +7,6 @@ pub struct Note {
     pub dim: &'static str,
     pub line: String,
 }
-
-type Found = Vec<(&'static str, String)>;
 
 const CONCURRENCY: &str = "concurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true";
 const CONTAINER: &str = "mirror.perish.lan/ci/deno";
@@ -22,6 +21,7 @@ pub fn judge(held: &shape::Shape) -> Vec<Note> {
         ("deps", held.deps()),
         ("web", held.web.clone().unwrap_or_default()),
         ("dispatch", held.dispatch.clone().unwrap_or_default()),
+        ("lock", shape::locked(held)),
     ] {
         for (grade, line) in found {
             notes.push(Note { grade, dim, line });

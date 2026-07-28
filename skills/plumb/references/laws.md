@@ -74,3 +74,20 @@ absence. When a clause becomes mechanized its prose demotes to the check's name.
 A skill declares its own tool's law and its own binary's checks, and references
 another tool's clauses rather than restating them: a restated clause in a second
 repository has nobody to keep it true.
+
+## Locks
+
+A lock declares a pair bound across a boundary no compiler crosses, stamped
+with the version and hash of its last reading (`plumb.toml`). The doctor
+refuses when the covered paths change or the repository cuts a version past
+the affirmation.
+
+It buys attention, not accuracy: a machine cannot check that a brief still
+describes a binary, only that somebody was made to look when the question
+became askable. So affirmation is never automatic — not in CI, not behind a
+write flag — and the guarantee stops at version boundaries, leaving mid-version
+drift uncaught until the next cut.
+
+A pair earns a lock when both sides are genuinely bound, no checker can verify
+the binding, and drift has already cost something. When a binding becomes
+checkable, its lock retires.

@@ -36,6 +36,10 @@ enum Command {
         #[command(subcommand)]
         deed: Deed,
     },
+    Lock {
+        #[command(flatten)]
+        target: Root,
+    },
 }
 
 fn doctor(root: PathBuf) -> i32 {
@@ -77,6 +81,29 @@ fn doctor(root: PathBuf) -> i32 {
     i32::from(wrong > 0)
 }
 
+fn locks(root: PathBuf) -> i32 {
+    let held = shape::read(&root);
+    println!("plumb lock {}", root.display());
+    println!();
+    if held.locks.is_empty() {
+        println!("  no lock is declared");
+        return 0;
+    }
+    let seen = held.version.unwrap_or_default();
+    for lock in &held.locks {
+        match shape::seal(&root, lock) {
+            Ok(hash) => println!(
+                "  {} version = \"{seen}\"\n  {} hash = \"{hash}\"",
+                lock.name, lock.name
+            ),
+            Err(why) => println!("  {} {why}", lock.name),
+        }
+    }
+    println!();
+    println!("  record these in plumb.toml only after reading what they cover");
+    0
+}
+
 fn policy(root: PathBuf, write: bool) -> i32 {
     let path = root.join("ectropy.toml");
     let text = match std::fs::read_to_string(&path) {
@@ -115,6 +142,7 @@ fn main() {
         Command::Doctor { target } => doctor(PathBuf::from(target.root)),
         Command::Policy { target, write } => policy(PathBuf::from(target.root), write),
         Command::Skill { deed } => skill(deed),
+        Command::Lock { target } => locks(PathBuf::from(target.root)),
     };
     std::process::exit(code);
 }

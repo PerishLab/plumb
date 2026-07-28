@@ -1,9 +1,12 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
+mod lock;
 mod node;
 mod operator;
 mod policy;
+
+pub use lock::{Found, Lock, locked, seal};
 
 pub struct Shape {
     pub wrappers: BTreeSet<String>,
@@ -22,6 +25,8 @@ pub struct Shape {
     pub listed: BTreeSet<String>,
     pub bounds: Vec<String>,
     pub root: std::path::PathBuf,
+    pub locks: Vec<Lock>,
+    pub version: Option<String>,
     pub inits: bool,
     pub rust: bool,
     pub runseal: bool,
@@ -276,6 +281,8 @@ pub fn read(root: &Path) -> Shape {
         listed: seat.listed(),
         bounds: policy::bounds(doc.as_ref()),
         root: root.to_path_buf(),
+        locks: lock::read(root),
+        version: lock::held(root),
         inits: root.join(".runseal/wrappers/init.ts").exists()
             || root.join(".runseal/lib/init/init.ts").exists(),
         guard: std::fs::read_to_string(root.join(".runseal/wrappers/guard.ts")).unwrap_or_default(),
