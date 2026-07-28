@@ -48,12 +48,24 @@ pub fn seal(root: &Path, lock: &Lock) -> Result<String, String> {
         let rel = path.strip_prefix(root).unwrap_or(path);
         bytes.extend_from_slice(rel.to_string_lossy().replace('\\', "/").as_bytes());
         bytes.push(0);
-        let body = std::fs::read(path).map_err(|error| error.to_string())?;
+        let body = flat(std::fs::read(path).map_err(|error| error.to_string())?);
         bytes.extend_from_slice(body.len().to_string().as_bytes());
         bytes.push(0);
         bytes.extend_from_slice(&body);
     }
     Ok(stamp(&bytes))
+}
+
+fn flat(body: Vec<u8>) -> Vec<u8> {
+    let mut out = Vec::with_capacity(body.len());
+    let mut held = body.iter().peekable();
+    while let Some(byte) = held.next() {
+        if *byte == b'\r' && held.peek() == Some(&&b'\n') {
+            continue;
+        }
+        out.push(*byte);
+    }
+    out
 }
 
 fn walk(seat: &Path, found: &mut Vec<PathBuf>) -> Result<(), String> {

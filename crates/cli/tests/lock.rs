@@ -88,3 +88,17 @@ fn absent() {
     assert!(shown.contains("does not exist"), "{shown}");
     let _ = fs::remove_dir_all(&root);
 }
+
+#[test]
+fn crlf() {
+    let root = seat("crlf");
+    declare(&root, "1.2.3", "seed");
+    let held = hash(&root);
+    fs::write(root.join("skills/plumb/SKILL.md"), "brief\r\n").expect("windows");
+    assert_eq!(
+        hash(&root),
+        held,
+        "a checkout that carries crlf digests the same"
+    );
+    let _ = fs::remove_dir_all(&root);
+}

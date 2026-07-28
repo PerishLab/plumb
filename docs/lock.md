@@ -23,9 +23,11 @@ hash = "317b2a9c..."
 ```
 
 The hash covers the declared paths, walked in full, sorted by path, each file
-contributing its relative path, its length, and its bytes. The normalization is
-part of the contract: two machines must agree on the digest or the mechanism
-becomes noise.
+contributing its relative path, its length, and its bytes. Path separators read
+as `/` and `\r\n` reads as `\n`, so a checkout that carries windows line endings
+digests the same as one that does not. The normalization is part of the
+contract: two machines must agree on the digest or the mechanism becomes noise,
+and a checkout setting is not a change to what the paths hold.
 
 ## The check
 
