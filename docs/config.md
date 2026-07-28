@@ -48,9 +48,10 @@ the caller's parser, not by reading `std::env::args` mid-program.
 Tests are the granted territory — a test builds its terrain and may seed
 the surface it reads back through the door.
 
-The mechanized wall (an ectropy built-in class denying `environment`
-syntax outside granted territory, with its refusal routing here) is
-declared law but not yet running; until it lands, this page is the wall.
+The mechanized wall is ectropy's sealed `environment` syntax class. Direct
+access outside granted territory is a fault whose refusal routes here.
+Plumb owns the repository-shaped grants in `ectropy.toml`; ectropy executes
+them without repository knowledge.
 
 ## Vocabulary
 

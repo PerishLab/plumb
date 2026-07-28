@@ -8,6 +8,7 @@ pub struct Rules {
     pub hooks: BTreeSet<String>,
     pub lanes: BTreeSet<String>,
     pub retired: Vec<(String, String)>,
+    pub blacklist: BTreeSet<String>,
     pub scope: String,
 }
 
@@ -47,6 +48,16 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
         .and_then(toml::Value::as_str)
         .unwrap_or_default()
         .to_string();
+    let blacklist = deps
+        .get("blacklist")
+        .and_then(toml::Value::as_array)
+        .map(|list| {
+            list.iter()
+                .filter_map(toml::Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
     Rules {
         dirs: set("dirs"),
         wrappers: set("wrappers"),
@@ -54,6 +65,7 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
         hooks: set("hooks"),
         lanes: set("lanes"),
         retired,
+        blacklist,
         scope,
     }
 });

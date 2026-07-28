@@ -1,6 +1,9 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
+mod node;
+mod policy;
+
 pub struct Shape {
     pub wrappers: BTreeSet<String>,
     pub hooks: BTreeSet<String>,
@@ -27,12 +30,14 @@ pub struct Shape {
     pub deno: String,
     pub mint: Option<String>,
     pub packages: Vec<(String, String)>,
+    pub node: Vec<(String, String)>,
     pub repo: Option<String>,
     pub named: Vec<(String, String)>,
     pub derived: Vec<String>,
     pub entries: Vec<String>,
     pub dispatch: Option<Vec<(&'static str, String)>>,
     pub web: Option<Vec<(&'static str, String)>>,
+    pub policy: Vec<String>,
 }
 
 struct Root<'a>(&'a Path);
@@ -222,6 +227,13 @@ pub fn read(root: &Path) -> Shape {
     let read = text.parse::<toml::Table>();
     let unread = read.as_ref().err().map(|error| error.to_string());
     let doc = read.ok().map(toml::Value::Table);
+    let policy = if laws.exists() {
+        doc.as_ref()
+            .map(|doc| policy::check(root, doc))
+            .unwrap_or_default()
+    } else {
+        Vec::new()
+    };
     let limit = |key: &str| {
         doc.as_ref()
             .and_then(|value| value.get("limit"))
@@ -267,12 +279,14 @@ pub fn read(root: &Path) -> Shape {
         deno: seat.denos(),
         mint: seat.mint(),
         packages: seat.packages(),
+        node: node::read(root),
         repo: crate::anchor::Anchor(root).repo(),
         named: crate::anchor::Anchor(root).names(),
         derived: crate::anchor::Anchor(root).derives(),
         entries: crate::anchor::Anchor(root).entries(),
         dispatch: crate::dispatch::read(root),
         web: crate::web::read(root),
+        policy,
         listed: seat.listed(),
         bounds: bounds(doc.as_ref()),
         root: root.to_path_buf(),

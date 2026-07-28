@@ -92,8 +92,8 @@ impl Web<'_> {
         let source = self.0.join("apps/web/src");
         self.views(&source.join("views"), found);
         self.direct(&source.join("lib"), found);
-        self.named(&source.join("lib/components"), false, found);
-        self.named(&source.join("lib/hooks"), true, found);
+        self.components(&source.join("lib/components"), found);
+        self.hooks(&source.join("lib/hooks"), found);
     }
 
     fn views(&self, root: &Path, found: &mut Found) {
@@ -136,7 +136,7 @@ impl Web<'_> {
         }
     }
 
-    fn named(&self, root: &Path, hooks: bool, found: &mut Found) {
+    fn components(&self, root: &Path, found: &mut Found) {
         let Ok(entries) = std::fs::read_dir(root) else {
             return;
         };
@@ -147,8 +147,26 @@ impl Web<'_> {
                 wrong(found, "web convention paths must be lowercase");
             }
             if path.is_dir() {
-                self.named(&path, hooks, found);
-            } else if hooks {
+                self.components(&path, found);
+            } else if path.extension().and_then(|value| value.to_str()) != Some("tsx") {
+                wrong(found, "web components only hold lowercase tsx files");
+            }
+        }
+    }
+
+    fn hooks(&self, root: &Path, found: &mut Found) {
+        let Ok(entries) = std::fs::read_dir(root) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name != name.to_ascii_lowercase() {
+                wrong(found, "web convention paths must be lowercase");
+            }
+            if path.is_dir() {
+                self.hooks(&path, found);
+            } else {
                 let stem = path
                     .file_stem()
                     .and_then(|value| value.to_str())

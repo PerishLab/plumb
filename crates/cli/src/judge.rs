@@ -11,6 +11,8 @@ type Found = Vec<(&'static str, String)>;
 
 const CONCURRENCY: &str = "concurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true";
 const CONTAINER: &str = "mirror.perish.lan/ci/deno";
+const COMPONENTS: &str =
+    "packages/components is reserved; reusable components belong to the design system";
 
 pub fn judge(held: &shape::Shape) -> Vec<Note> {
     let mut notes = Vec::new();
@@ -53,7 +55,6 @@ impl shape::Shape {
         }
         found
     }
-
     fn structure(&self) -> Found {
         let mut found = Found::new();
         if self.runseal {
@@ -98,6 +99,9 @@ impl shape::Shape {
                 ));
             }
         }
+        if self.root.join("packages/components").is_dir() {
+            found.push(("out of true", COMPONENTS.to_string()));
+        }
         if let Some(why) = &self.unread {
             found.push((
                 "blind",
@@ -107,19 +111,8 @@ impl shape::Shape {
                 ),
             ));
         } else {
-            for (key, seen, want) in [("block", self.block, 4), ("path", self.path, 4)] {
-                if seen.is_some_and(|value| value != want) {
-                    found.push((
-                        "out of true",
-                        format!(
-                            "limit {key} is {}, the skeleton holds {want}",
-                            seen.unwrap_or(0)
-                        ),
-                    ));
-                }
-            }
-            if self.laws && !self.grants.contains("test") {
-                found.push(("out of true", "no test grant".to_string()));
+            for line in &self.policy {
+                found.push(("out of true", line.clone()));
             }
         }
         for name in &self.dirs {
@@ -151,7 +144,6 @@ impl shape::Shape {
         }
         found
     }
-
     fn deps(&self) -> Found {
         let mut found = Found::new();
         if self.binary && !self.clap {
@@ -179,6 +171,14 @@ impl shape::Shape {
                 "out of true",
                 format!("self-built {name} is version-pinned, the skeleton tracks latest"),
             ));
+        }
+        for (seat, name) in &self.node {
+            if RULES.blacklist.contains(name) {
+                found.push((
+                    "out of true",
+                    format!("{seat} depends on blacklisted styling package {name}"),
+                ));
+            }
         }
         found
     }

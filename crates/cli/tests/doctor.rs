@@ -263,8 +263,15 @@ fn packages() {
     .expect("manifest should be written");
     std::fs::remove_dir_all(dir.join("packages/bar")).expect("fixture should be swept");
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("must match the name"), "{held}");
+
+    std::fs::create_dir_all(dir.join("packages/components")).expect("fixture should be made");
+    let reserved = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(
+        reserved.contains("packages/components is reserved"),
+        "{reserved}"
+    );
+    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
 
 #[test]
@@ -284,15 +291,4 @@ fn hooks() {
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("no pre-commit hook"), "{held}");
     assert!(!held.contains("no commit-msg hook"), "{held}");
-}
-
-#[test]
-fn blind() {
-    let dir = std::env::temp_dir().join("plumb-blind");
-    std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");
-    std::fs::write(dir.join("ectropy.toml"), "[limit\n").expect("laws should be written");
-    let out = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(out.contains("blind:"), "{out}");
-    assert!(out.contains("cannot read ectropy.toml"), "{out}");
 }

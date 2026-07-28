@@ -4,6 +4,21 @@
 
 scope = "@perish"
 
+blacklist = [
+  "@compiled/react",
+  "@emotion/css",
+  "@emotion/react",
+  "@emotion/styled",
+  "@linaria/core",
+  "@linaria/react",
+  "@stylexjs/stylex",
+  "@vanilla-extract/css",
+  "goober",
+  "jss",
+  "styled-components",
+  "styled-jsx",
+]
+
 [[retired]]
 name = "@perish/harness"
 use = "@perish/sealkit"

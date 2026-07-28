@@ -57,3 +57,23 @@ one product shape:
 
 The rule is about the dispatch relationship. Product routes, image names, and
 application-specific infrastructure remain the product's own shape.
+
+## Ectropy policy
+
+Plumb owns the repository-shaped `ectropy.toml` template while ectropy remains
+the independent AST executor. `plumb doctor` compares scan sets, module roots,
+all limits, comment and word settings, test and environment territory, and
+required syntax bans semantically; ordering and formatting do not matter.
+Repository-specific boundaries, vocabulary, and additional non-test grants
+remain local allowances rather than becoming skeleton defaults.
+
+Application Web code keeps lowercase `views/**/*.tsx`,
+`lib/components/**/*.tsx`, and lowercase `lib/hooks/**/use-*.ts` roles.
+`lib/components` is style-free through ectropy's path-scoped style ban.
+Package-specific styling systems such as StyleX are dependency policy instead:
+Plumb rejects their manifests through its styling blacklist, and ectropy never
+guesses package identity from names such as `stylex` or `css`.
+
+The reusable component seat is the independent design system.
+`packages/components` is therefore invalid in the general skeleton; Plumb does
+not encode any repository identity or special Design layout to make that rule.
