@@ -82,13 +82,15 @@ that has not run since a rename is already broken. See `references/lane.md`.
 the workshop already demonstrates rather than each repository's invention. Most
 of this clause is enforced; see below.
 
-**Sites.** A repository carrying `apps/web` ships it through one dispatch-only
-lane calling the same wrapper an operator runs, with a purpose-scoped key the
-lane holds and the operator does not. The build stamps its commit into the
-health document and its routes into the sitemap; the shipper reads those and
-never application source. A deploy reports three separate states — deployed,
-bound, reachable — and a lane that cannot prove the last one says so rather
-than implying it (`docs/site.md`).
+**Sites.** An app declaring a site ships through one dispatch-only lane calling
+the same wrapper an operator runs, with a purpose-scoped key the lane holds and
+the operator does not. The build stamps its commit into the health document and
+declares its routes in the artifact — a sitemap, or the prerendered documents
+themselves; the shipper reads those and never application source. A deploy
+reports three separate states — deployed, bound, reachable — each proven on its
+own. Binding admits `unknown`, because a credential that cannot ask has not
+learned `no`, and an unprovable deploy says so rather than implying success
+(`docs/site.md`).
 
 **Locks.** A pair bound across a boundary no compiler crosses — a brief and the
 binary it describes, a chart and an environment key — is declared in
@@ -119,6 +121,7 @@ What `plumb doctor` catches today:
 - a declared lock whose covered paths changed, or whose affirmed version has
   been left behind by the repository
 - an unknown workflow: the skeleton now knows the deploy lane by name
+- an app declaring a site without a ship wrapper or without a deploy lane
 
 What is **prose only** — no machine will stop you:
 
@@ -126,9 +129,10 @@ What is **prose only** — no machine will stop you:
   instead of declaring your own
 - template variables and their spelling in manifests
 - the home and state clauses, including the two-sided ownership proof
-- every clause of the release lane anatomy, and every clause of the site lane:
-  nothing yet checks that a repository with `apps/web` carries a deploy lane, a
-  bound route, or a readback step
+- every clause of the release lane anatomy, and every clause of the site lane
+  below the pairing above: nothing checks that the route is bound in the
+  repository, that the shipper reads the artifact instead of source, or that a
+  readback happens at all
 - the accuracy of this section in any skill, including this one — a lock makes
   someone re-read it when the version moves, which is attention, not proof
 

@@ -105,3 +105,10 @@ something replied.
 A stuck binding usually clears on a second, identical ship. If the lane runs
 somewhere that cannot reach the public edge, it must declare that blindness
 rather than treat an unreachable site as success.
+
+Reading the binding is itself a permission. A credential without it gets a
+refusal, and a refusal parsed for a result set yields an empty one, which reads
+as *not bound* — so a healthy site fails on a finding the lane never actually
+made. Keep `unknown` distinct from `no`, and when binding is unknown the
+readback becomes the only evidence there is: blindness cannot excuse it, because
+a ship that could neither ask nor look has proved nothing at all.

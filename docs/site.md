@@ -44,8 +44,10 @@ A status code proves something answered; only the fingerprint proves the answer 
 A deploy has three outcomes and they are not one outcome:
 
 - **deployed** — the upload succeeded.
-- **bound** — the platform reports the domain attached to this worker. The lane can prove this from
-  the API and refuses when it is false.
+- **bound** — the platform reports the domain attached to this worker. Reading this needs a
+  credential that can, so the finding is `yes`, `no`, or `unknown`, and the three are not two. A
+  denied request and an empty result set arrive looking alike; treating them alike reports a bound
+  domain as unbound and fails a healthy deploy. Only `no` is a refusal.
 - **reachable** — the edge serves this build to a client. Only a readback proves it, and only from a
   vantage that can see the public edge.
 
@@ -53,6 +55,10 @@ Collapsing these is how a lane comes to report success over a site that does not
 readback fails the lane fails, and the escape is explicit: `PLUMB_SITE_BLIND=1` declares a vantage
 that cannot see the edge, and the lane then says plainly that it did not prove the site answers. A
 lane that cannot prove liveness must say so rather than imply it.
+
+The escape has a floor. When binding is `unknown` the readback is the only evidence left, so a blind
+vantage cannot excuse it: a ship that could neither ask the control plane nor look at the edge has
+proved nothing, and saying so is the only honest outcome.
 
 _Incident:_ the first binding of a new domain went through the API cleanly — enabled, certificate
 active, DNS proxied, deployment current, every field identical to a sibling that worked — and the

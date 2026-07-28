@@ -5,6 +5,7 @@ mod lock;
 mod node;
 mod operator;
 mod pack;
+pub mod pair;
 mod policy;
 
 pub use lock::{Found, Lock, locked, seal};
@@ -22,6 +23,7 @@ pub struct Shape {
     pub unread: Option<String>,
     pub lanes: BTreeSet<String>,
     pub ships: BTreeSet<String>,
+    pub sites: BTreeSet<String>,
     pub ignore: String,
     pub listed: BTreeSet<String>,
     pub bounds: Vec<String>,
@@ -255,6 +257,7 @@ pub fn read(root: &Path) -> Shape {
         unread,
         lanes: seat.names(".forgejo/workflows", ".yml"),
         ships: seat.ships(),
+        sites: pair::sites(root),
         ignore: std::fs::read_to_string(root.join(".gitignore")).unwrap_or_default(),
         rust: root.join("Cargo.toml").exists(),
         runseal: root.join(".runseal").is_dir(),

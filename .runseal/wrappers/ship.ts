@@ -17,6 +17,7 @@ const fault = family("ship", {
   build: kind<{ path: string }>(),
   unreached: kind<{ domain: string }>(),
   unbound: kind<{ domain: string }>(),
+  unproven: kind<{ domain: string }>(),
 });
 
 function usage(): void {
@@ -197,43 +198,59 @@ async function ship(): Promise<void> {
   });
   io.print("==> verify");
   io.print("  deployed  yes");
-  const bound = await anchored(keys);
-  io.print(`  bound     ${bound ? "yes" : "no"}`);
-  if (!bound) {
+  const bond = await anchored(keys);
+  io.print(`  bound     ${bond}`);
+  if (bond === "no") {
     throw fault.unbound({ domain: keys.domain });
   }
-  const paths = await routes();
-  const mark = await stamp();
-  let reached = await probe(`https://${keys.domain}/`, mark);
-  const route = deep(paths);
-  if (reached && route !== undefined) {
-    reached = await probe(`https://${keys.domain}${route}`, mark);
+  if (bond === "unknown") {
+    io.print("  this credential cannot read workers domains; reachability must carry the proof");
   }
-  io.print(`  reachable ${reached ? "yes" : "no"}`);
-  if (!reached && !blind()) {
+  io.print(`  reachable ${await reached(keys, bond) ? "yes" : "no"}`);
+  io.print("ship: ok");
+}
+
+async function reached(keys: Vault, bond: Bond): Promise<boolean> {
+  const mark = await stamp();
+  let live = await probe(`https://${keys.domain}/`, mark);
+  const route = deep(await routes());
+  if (live && route !== undefined) {
+    live = await probe(`https://${keys.domain}${route}`, mark);
+  }
+  if (live) {
+    return true;
+  }
+  if (bond === "unknown") {
+    throw fault.unproven({ domain: keys.domain });
+  }
+  if (!blind()) {
     throw fault.unreached({ domain: keys.domain });
   }
-  if (!reached) {
-    io.print("  vantage declared blind: this lane did not prove the site answers");
-  }
-  io.print("ship: ok");
+  io.print("  vantage declared blind: this lane did not prove the site answers");
+  return false;
 }
 
 function blind(): boolean {
   return env.get("PLUMB_SITE_BLIND", "") !== "";
 }
 
+type Bond = "yes" | "no" | "unknown";
+
 async function anchored(
   keys: { account: string; token: string; domain: string },
-): Promise<boolean> {
+): Promise<Bond> {
   const base = "https://api.cloudflare.com/client/v4";
   const response = await fetch(`${base}/accounts/${keys.account}/workers/domains`, {
     headers: { authorization: `Bearer ${keys.token}` },
   });
-  const body = await response.json();
-  return (body.result ?? []).some(
+  const body = await response.json().catch(() => null);
+  if (!response.ok || body === null || body.success !== true) {
+    return "unknown";
+  }
+  const held = (body.result ?? []).some(
     (entry: { hostname?: string }) => entry.hostname === keys.domain,
   );
+  return held ? "yes" : "no";
 }
 
 function seated(value: unknown): Record<string, unknown> {
@@ -314,6 +331,10 @@ if (flags(args).boolean("check")) {
     unbound: (thrown) =>
       io.fail(
         `ship: ${thrown.meta.domain} is not attached to the worker; the deploy did not bind it`,
+      ),
+    unproven: (thrown) =>
+      io.fail(
+        `ship: nothing proved ${thrown.meta.domain} is serving this build — this credential cannot read workers domains and the readback did not answer, so PLUMB_SITE_BLIND does not apply`,
       ),
   }));
 }

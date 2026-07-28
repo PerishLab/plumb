@@ -48,6 +48,9 @@ fn doctor(root: PathBuf) -> i32 {
     println!("  layout    {}", show(&held.dirs));
     println!("  lanes     {}", show(&held.lanes));
     println!("  publishes {}", show(&held.ships));
+    if !held.sites.is_empty() {
+        println!("  sites     {}", show(&held.sites));
+    }
     println!(
         "  law       block={} path={} grants={}",
         held.block.unwrap_or(0),

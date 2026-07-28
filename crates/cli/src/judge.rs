@@ -145,7 +145,7 @@ impl shape::Shape {
                 ));
             }
         }
-        self.paired(&mut found);
+        found.extend(shape::pair::judge(self));
         self.matched(&mut found);
         self.anchored(&mut found);
         for name in &self.lanes {
@@ -195,31 +195,6 @@ impl shape::Shape {
             }
         }
         found
-    }
-
-    fn paired(&self, found: &mut Found) {
-        if self.rust && !self.ignore.lines().any(|line| line.trim() == "target/") {
-            found.push((
-                "out of true",
-                "Cargo.toml without target/ in .gitignore".to_string(),
-            ));
-        }
-        if self.wrappers.contains("release") {
-            for lane in ["release-beta", "release-stable"] {
-                if !self.lanes.contains(lane) {
-                    found.push((
-                        "out of true",
-                        format!("release wrapper without a {lane} lane"),
-                    ));
-                }
-            }
-        }
-        if !self.ships.is_empty() && !self.wrappers.contains("release") {
-            found.push((
-                "out of true",
-                format!("declares {} without a release wrapper", show(&self.ships)),
-            ));
-        }
     }
 
     fn matched(&self, found: &mut Found) {
