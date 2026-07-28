@@ -84,5 +84,5 @@ fn draw(url: &str) -> Result<Vec<u8>, Error> {
 }
 
 fn tidy(version: &str) -> String {
-    version.trim().trim_start_matches('v').to_string()
+    version.trim().to_string()
 }

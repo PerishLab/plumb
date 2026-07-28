@@ -55,7 +55,7 @@ fn asked(head: &str) -> String {
         return "v1.2.3".to_string();
     };
     let rest = &head[seat + "/versions/".len()..];
-    format!("v{}", rest.split('/').next().unwrap_or("1.2.3"))
+    rest.split('/').next().unwrap_or("v1.2.3").to_string()
 }
 
 fn rig(root: &Path, url: &str) -> Kit {
@@ -197,7 +197,7 @@ fn climbs() {
     let kit = rig(&seat, &url);
 
     kit.install(&Ask {
-        version: Some("1.0.0".to_string()),
+        version: Some("v1.0.0".to_string()),
         ..ask()
     })
     .expect("install");
@@ -216,6 +216,24 @@ fn climbs() {
         .join("metadata.json");
     let text = fs::read_to_string(held).expect("marker");
     assert!(text.contains("v1.2.3"), "the marker moves with the seat");
+
+    let _ = fs::remove_dir_all(&seat);
+}
+
+#[test]
+fn preserves_unprefixed_versions() {
+    let archive = pack();
+    let digest = plumb::skill::stamp(&archive);
+    let url = serve(archive, digest);
+    let seat = root("unprefixed");
+    let kit = rig(&seat, &url);
+
+    kit.install(&Ask {
+        version: Some("1.0.0".to_string()),
+        ..ask()
+    })
+    .expect("install");
+    assert_eq!(kit.list().expect("list")[0].version, "1.0.0");
 
     let _ = fs::remove_dir_all(&seat);
 }
