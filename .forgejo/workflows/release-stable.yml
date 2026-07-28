@@ -203,6 +203,7 @@ jobs:
           set -eu
           exec > >(tee -a "$RUNNER_TEMP/lane.log") 2>&1
           deno run --allow-env --allow-read --allow-write=Cargo.toml,crates/lib/Cargo.toml --allow-net=git.perish.top --allow-run=cargo,tar .forgejo/scripts/release/cargo/publish.ts publish
+          git restore --source=HEAD -- Cargo.toml Cargo.lock crates/lib/Cargo.toml
 
       - name: Package Linux
         env:
