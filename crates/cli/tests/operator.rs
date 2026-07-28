@@ -54,13 +54,28 @@ fn adoption() {
 fn tests_are_forbidden() {
     let dir = std::env::temp_dir().join("plumb-operator-test");
     std::fs::create_dir_all(dir.join(".runseal/lib")).expect("fixture should be made");
-    std::fs::write(dir.join(".runseal/lib/control.test.ts"), "").expect("test should be written");
+    for name in [
+        "control.test.ts",
+        "control_test.ts",
+        "control.test.tsx",
+        "control_test.tsx",
+    ] {
+        std::fs::write(dir.join(format!(".runseal/lib/{name}")), "")
+            .expect("test should be written");
+    }
     let held = run(&dir);
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(
-        held.contains(
-            ".runseal/lib/control.test.ts is a .runseal test; tested logic belongs in sealkit"
-        ),
-        "{held}"
-    );
+    for name in [
+        "control.test.ts",
+        "control_test.ts",
+        "control.test.tsx",
+        "control_test.tsx",
+    ] {
+        assert!(
+            held.contains(&format!(
+                ".runseal/lib/{name} is a .runseal test; tested logic belongs in sealkit"
+            )),
+            "{held}"
+        );
+    }
 }

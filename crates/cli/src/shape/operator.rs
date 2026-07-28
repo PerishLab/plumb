@@ -35,7 +35,10 @@ fn collect(root: &Path, at: &Path, found: &mut Vec<String>) {
         }
         let name = entry.file_name();
         let name = name.to_string_lossy();
-        if (name.ends_with(".test.ts") || name.ends_with(".test.tsx"))
+        if (name.ends_with(".test.ts")
+            || name.ends_with("_test.ts")
+            || name.ends_with(".test.tsx")
+            || name.ends_with("_test.tsx"))
             && let Ok(relative) = path.strip_prefix(root)
         {
             found.push(relative.to_string_lossy().to_string());
