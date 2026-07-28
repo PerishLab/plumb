@@ -202,9 +202,10 @@ async function packageCrate(
 	}
 	if (name === "plumb") {
 		const dependency = manifestSection(manifest, "dependencies.plumb-macro");
+		const index = await registryIndex();
 		if (
 			!dependency.includes(`version = "=${identity.version}"`) ||
-			!dependency.includes(`registry = "${REGISTRY}"`)
+			!dependency.includes(`registry-index = "${index}"`)
 		) {
 			fail(`${archive} does not lock plumb-macro to =${identity.version}`);
 		}
@@ -244,13 +245,17 @@ async function sha256(path: string): Promise<string> {
 		.join("");
 }
 
-async function registryUrl(): Promise<string> {
+async function registryIndex(): Promise<string> {
 	const config = await text(".cargo/config.toml");
-	const match = /^\s*index\s*=\s*"sparse\+([^"]+)"\s*$/m.exec(config);
-	if (!match) {
+	const match = /^\s*index\s*=\s*"(sparse\+[^"]+)"\s*$/m.exec(config);
+	if (!match?.[1].endsWith("/")) {
 		fail("missing sparse perish registry in .cargo/config.toml");
 	}
-	return match[1].replace(/\/+$/, "");
+	return match[1];
+}
+
+async function registryUrl(): Promise<string> {
+	return (await registryIndex()).replace(/^sparse\+/, "").replace(/\/+$/, "");
 }
 
 function indexPath(name: string): string {
