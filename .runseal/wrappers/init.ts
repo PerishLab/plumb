@@ -28,6 +28,7 @@ await init({
     ".runseal/deno.lock",
     ".runseal/hooks/pre-commit",
     ".runseal/hooks/commit-msg",
+    ".runseal/lib/cold-start/project.ts",
     ".runseal/wrappers/guard.ts",
     ".runseal/wrappers/cold-start.ts",
     ".runseal/wrappers/init.ts",

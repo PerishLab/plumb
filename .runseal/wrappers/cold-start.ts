@@ -1,5 +1,8 @@
 import { cli, flags } from "@perish/sealkit/cli";
+import { Forgejo, type Remote, token } from "@perish/sealkit/forgejo";
+import { upsertSecret, upsertVariable } from "@perish/sealkit/forgejo-project";
 import { io } from "@perish/sealkit/io";
+import { project } from "../lib/cold-start/project.ts";
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 type RecordJson = { [key: string]: Json };
@@ -12,6 +15,7 @@ type Options = {
   zoneId: string;
   factoryEnv: string;
   output: string;
+  forgejoUrl: string;
   dryRun: boolean;
 };
 
@@ -53,6 +57,7 @@ function usage(): void {
     "  --factory-env <path>  default: .local/secrets/cloudflare-token-factory.env",
   );
   io.print("  --output <path>       default: .local/secrets/releases/<product>.env");
+  io.print("  --forgejo-url <url>   default: https://git.perish.top");
   io.print("  --dry-run             print the exact plan without reading credentials");
 }
 
@@ -67,6 +72,7 @@ function parse(): Options {
       "zone-id",
       "factory-env",
       "output",
+      "forgejo-url",
     ],
   });
   const held = flags(args);
@@ -116,6 +122,7 @@ function parse(): Options {
       ".local/secrets/cloudflare-token-factory.env",
     ),
     output: held.string("output", `.local/secrets/releases/${product}.env`),
+    forgejoUrl: held.string("forgejo-url", "https://git.perish.top"),
     dryRun: held.boolean("dry-run"),
   };
 }
@@ -402,24 +409,6 @@ async function writeAtomic(path: string, text: string): Promise<void> {
   }
 }
 
-async function command(
-  program: string,
-  args: string[],
-  extraEnv: Record<string, string> = {},
-): Promise<void> {
-  const output = await new Deno.Command(program, {
-    args,
-    env: extraEnv,
-    stdin: "null",
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
-  if (!output.success) {
-    const diagnostic = new TextDecoder().decode(output.stderr).trim();
-    throw new Error(`${program} failed (${output.code}): ${diagnostic}`);
-  }
-}
-
 async function verifyS3(release: Release): Promise<void> {
   const args = [
     "--endpoint-url",
@@ -460,6 +449,8 @@ async function verifyS3(release: Release): Promise<void> {
 }
 
 async function syncForgejo(options: Options, prefix: string, release: Release): Promise<void> {
+  const remote = forgejo(options);
+  const api = new Forgejo(remote, await token(remote));
   const values: Record<string, string> = {
     [`${prefix}_RELEASES_PUBLIC_URL`]: release.publicUrl,
     [`${prefix}_RELEASES_S3_AK`]: release.accessKey,
@@ -467,18 +458,9 @@ async function syncForgejo(options: Options, prefix: string, release: Release): 
     [`${prefix}_RELEASES_S3_BUCKET`]: release.bucket,
     [`${prefix}_RELEASES_S3_URL`]: release.endpoint,
   };
-  await command("runseal", [
-    "@tool",
-    "forgejo",
-    "variable",
-    "upsert",
-    "--repo",
-    options.repo,
-    "--name",
-    `${prefix}_RELEASES_PUBLIC_URL`,
-    "--value-env",
-    `${prefix}_RELEASES_PUBLIC_URL`,
-  ], values);
+  const variable = `${prefix}_RELEASES_PUBLIC_URL`;
+  const state = await upsertVariable(api, variable, values[variable]);
+  io.print(`forgejo variable: ${state} (${variable})`);
   for (
     const name of [
       `${prefix}_RELEASES_S3_AK`,
@@ -487,20 +469,21 @@ async function syncForgejo(options: Options, prefix: string, release: Release): 
       `${prefix}_RELEASES_S3_URL`,
     ]
   ) {
-    await command("runseal", [
-      "@tool",
-      "forgejo",
-      "secret",
-      "upsert",
-      "--repo",
-      options.repo,
-      "--name",
-      name,
-      "--value-env",
-      name,
-    ], values);
+    await upsertSecret(api, name, values[name]);
+    io.print(`forgejo secret: upserted (${name})`);
   }
   io.print(`forgejo: synced (${options.repo})`);
+}
+
+function forgejo(options: Options): Remote {
+  const url = new URL(options.forgejoUrl);
+  const names = options.repo.split("/");
+  return {
+    scheme: url.protocol.slice(0, -1),
+    host: url.port === "" ? url.hostname : `${url.hostname}:${url.port}`,
+    owner: names[0],
+    repo: names[1],
+  };
 }
 
 async function existingRelease(
@@ -547,7 +530,7 @@ async function existingRelease(
   };
 }
 
-async function main(): Promise<void> {
+async function release(): Promise<void> {
   const options = parse();
   const prefix = envPrefix(options.product);
   const tempName = `tmp:${options.bucket}`;
@@ -655,6 +638,14 @@ async function main(): Promise<void> {
     await revoke(keys, temporary.id);
     io.print(`temporary token: revoked (${tempName})`);
   }
+}
+
+async function main(): Promise<void> {
+  if (Deno.args[0] === "project") {
+    await project(Deno.args.slice(1));
+    return;
+  }
+  await release();
 }
 
 await main().catch((error) => {

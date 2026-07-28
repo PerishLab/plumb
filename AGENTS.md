@@ -58,6 +58,11 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 
 ## Ecosystem release cold-start
 
+`runseal :cold-start project` creates or verifies one exact empty Forgejo
+repository before its integration checkout and first task member exist. It is
+credential-free in dry-run mode and refuses a nonempty, archived, differently
+described, or differently visible existing repository.
+
 `runseal :cold-start release` is the explicit low-frequency control-plane
 entrypoint for a new R2-backed Forgejo release chain. The permanent Cloudflare
 authority lives only in the main checkout at
