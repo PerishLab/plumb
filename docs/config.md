@@ -48,7 +48,7 @@ the caller's parser, not by reading `std::env::args` mid-program.
 Tests are the granted territory — a test builds its terrain and may seed
 the surface it reads back through the door.
 
-The mechanized wall (a negentropy built-in class denying `environment`
+The mechanized wall (an ectropy built-in class denying `environment`
 syntax outside granted territory, with its refusal routing here) is
 declared law but not yet running; until it lands, this page is the wall.
 
@@ -64,7 +64,7 @@ own property, expanding under pressure this crate never feels. The 0.4
 
 Shape alignment across the ecosystem is a norm, not a type. The norm
 lives in prose here and travels with the CLI as a check, the same
-relation negentropy holds for syntax: a repo-rooted `<name>.toml` per
+relation ectropy holds for syntax: a repo-rooted `<name>.toml` per
 binary, section names in the file mirrored by `#[cascade(section)]`
 structs the binary declares itself, and the conventional shapes —
 `[listen]` as `host`/`port`/`prefix` defaulting to `127.0.0.1:3000`,

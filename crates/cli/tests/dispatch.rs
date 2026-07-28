@@ -246,17 +246,21 @@ export default { server: { port, proxy: { "/api": api } } };
     std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(!success, "{out}");
     for line in [
-        "web/api pair has no sidecar.toml",
-        "api does not consume SIDECAR_PORT",
-        "api does not accept --sidecar-stamp",
-        "api does not emit api endpoint readiness",
-        "api does not mount the /api namespace",
         "vite does not activate the design plugin",
         "vite manually consumes sidecar dispatch environment",
         "web does not load the virtual views manifest",
         "web does not render the views manifest",
         "web compiler does not include @perish/react-components/client",
         "guard does not build the web app",
+    ] {
+        assert!(out.contains(&format!("{line} [web]")), "{out}");
+    }
+    for line in [
+        "web/api pair has no sidecar.toml",
+        "api does not consume SIDECAR_PORT",
+        "api does not accept --sidecar-stamp",
+        "api does not emit api endpoint readiness",
+        "api does not mount the /api namespace",
         "production has no api image seat",
         "production has no web image seat",
         "chart does not split api and web workloads",

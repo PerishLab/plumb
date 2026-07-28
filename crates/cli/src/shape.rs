@@ -32,6 +32,7 @@ pub struct Shape {
     pub derived: Vec<String>,
     pub entries: Vec<String>,
     pub dispatch: Option<Vec<(&'static str, String)>>,
+    pub web: Option<Vec<(&'static str, String)>>,
 }
 
 struct Root<'a>(&'a Path);
@@ -216,7 +217,7 @@ fn bounds(doc: Option<&toml::Value>) -> Vec<String> {
 
 pub fn read(root: &Path) -> Shape {
     let seat = Root(root);
-    let laws = root.join("negentropy.toml");
+    let laws = root.join("ectropy.toml");
     let text = std::fs::read_to_string(&laws).unwrap_or_default();
     let read = text.parse::<toml::Table>();
     let unread = read.as_ref().err().map(|error| error.to_string());
@@ -271,6 +272,7 @@ pub fn read(root: &Path) -> Shape {
         derived: crate::anchor::Anchor(root).derives(),
         entries: crate::anchor::Anchor(root).entries(),
         dispatch: crate::dispatch::read(root),
+        web: crate::web::read(root),
         listed: seat.listed(),
         bounds: bounds(doc.as_ref()),
         root: root.to_path_buf(),

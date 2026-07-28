@@ -1,19 +1,10 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { renderToString } from "react-dom/server";
-import { MemoryRouter, useRoutes } from "react-router";
 import { type Page, pages } from "./lib/meta";
-import { routes } from "./lib/routes";
-
-function Site() {
-	return useRoutes(routes);
-}
+import Home from "./views/index";
 
 function render(path: string): string {
-	return renderToString(
-		<MemoryRouter initialEntries={[path]}>
-			<Site />
-		</MemoryRouter>,
-	);
+	return path === "/" ? renderToString(<Home />) : "";
 }
 
 function head(page: Page): string {
@@ -39,9 +30,9 @@ const guide = `# open-web
 
 ## tools
 
-- [negentropy](https://plumb.perish.uk/negentropy/): structural checker, eleven
-  mechanical laws, five languages. install:
-  curl -fsSL https://releases.negentropy.perish.uk/manage.sh | sh
+- [ectropy](https://plumb.perish.uk/ectropy/): structural checker, thirteen
+  mechanical laws, four language adapters. install:
+  curl -fsSL https://releases.ectropy.perish.uk/manage.sh | sh
 - [runseal](https://plumb.perish.uk/runseal/): operator toolbelt - explicit
   profile, named wrappers, forge tools. install:
   curl -fsSL https://runseal.perish.uk/manage.sh | sh
@@ -61,7 +52,7 @@ const guide = `# open-web
 
 ## source
 
-- https://git.perish.top/PerishFire/negentropy
+- https://git.perish.top/PerishFire/ectropy
 - https://git.perish.top/PerishFire/runseal
 - https://git.perish.top/PerishFire/sidecar
 - https://git.perish.top/PerishFire/shield
@@ -73,27 +64,28 @@ const manual = `# open-web - full reference for agents
 > the short card. rules live in checkable structure and a reviewed vocabulary,
 > not in prose comments.
 
-## negentropy - structural checker
+## ectropy - structural checker
 
-what: eleven mechanical laws judged over one parser substrate; five languages
-(rust, typescript, tsx, scss, markdown). a violation lands as fault (fails the
-run), debt (reported, tolerated), or blindspot (unparsed region).
+what: thirteen mechanical laws judged over one parser substrate; rust,
+typescript/tsx, scss, and markdown adapters. a violation lands as fault (fails
+the run), debt (reported, tolerated), or blindspot (unparsed region).
 
 install (see /llms.txt for the live platform list; sha256 sums sit in
 checksums.txt beside every artifact):
-  curl -fsSL https://releases.negentropy.perish.uk/manage.sh | sh
-installs under ~/.local/share/negentropy and links into ~/.local/bin.
+  curl -fsSL https://releases.ectropy.perish.uk/manage.sh | sh
+installs under ~/.local/share/ectropy and links into ~/.local/bin.
 
 surface:
-  negentropy [OPTIONS] [ROOT]   (ROOT defaults to .)
+  ectropy [OPTIONS] [ROOT]      (ROOT defaults to .)
     --strict       blindspots become fatal
     --debt         list tolerated debt lines
-    --json         print structure trees, one {"path","tree"} line per file
-    --vocabulary   print the living dictionary per module root
+  ectropy shape [ROOT]          print structure JSON lines
+  ectropy vocabulary [ROOT]     print the living dictionary
+  ectropy cookbook [ENTRY]      print procedural moves and their EXIT clauses
 exit codes: 0 = clean or debt only; 1 = any fault, or any blindspot under
---strict.
+--strict; 2 = invalid input, configuration, schema, or source IO.
 
-config (negentropy.toml at the repo root; without one, defaults judge the
+config (ectropy.toml at the repo root; without one, defaults judge the
 whole tree):
   [scan] include / exclude globs
   [module] roots (the depth coordinate system)
@@ -102,9 +94,9 @@ whole tree):
   [word] single = true
   [[grant]] syntax = "test" | "style", paths - confine a syntax class
   [[boundary]] paths, allow, note - a declared exemption
-  vocabulary.toml: [compound] name = "rationale" registers a compound;
-  an empty rationale does not register.
-source: https://git.perish.top/PerishFire/negentropy
+  [[vocabulary.term]] name / description registers one explained compound;
+  both fields are required and duplicates are rejected.
+source: https://git.perish.top/PerishFire/ectropy
 
 ## runseal - operator toolbelt
 

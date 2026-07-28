@@ -12,6 +12,10 @@ await guard(
     { label: "tsc", runs: [["pnpm", ["-r", "exec", "tsc", "--noEmit"]]] },
     { label: "vitest", runs: [["pnpm", ["-r", "test"]]] },
     {
+      label: "web build",
+      runs: [["pnpm", ["--filter", "@plumb/web", "build"]]],
+    },
+    {
       label: "release smoke",
       runs: [["sh", [".forgejo/scripts/release/smoke/local.sh"]]],
     },
@@ -40,4 +44,5 @@ await guard(
     },
   ],
   Deno.args,
+  { checker: ["ectropy", ["--strict", "."]] },
 );

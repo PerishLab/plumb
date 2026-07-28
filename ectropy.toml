@@ -62,3 +62,4 @@ paths = [
 note = "vite and vitest require root-level config files; path law anchors to src and tests"
 allow = ["path"]
 
+[vocabulary]

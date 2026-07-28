@@ -35,7 +35,7 @@ fn governs() {
     let out = run(&["doctor", bare.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&bare).expect("fixture should be swept");
     assert!(!out.contains("no guard wrapper"), "{out}");
-    assert!(!out.contains("no negentropy.toml"), "{out}");
+    assert!(!out.contains("no ectropy.toml"), "{out}");
     assert!(out.contains("true to the skeleton"), "{out}");
 
     let seat = std::env::temp_dir().join("plumb-governed");
@@ -43,7 +43,7 @@ fn governs() {
     let out = run(&["doctor", seat.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&seat).expect("fixture should be swept");
     assert!(out.contains("no guard wrapper"), "{out}");
-    assert!(out.contains("no negentropy.toml"), "{out}");
+    assert!(out.contains("no ectropy.toml"), "{out}");
 }
 
 #[test]
@@ -55,7 +55,7 @@ fn concurrency() {
         std::fs::write(dir.join(format!(".runseal/wrappers/{name}.ts")), "")
             .expect("wrapper should be written");
     }
-    std::fs::write(dir.join("negentropy.toml"), "").expect("laws should be written");
+    std::fs::write(dir.join("ectropy.toml"), "").expect("laws should be written");
     let lane = dir.join(".forgejo/workflows/guard.yml");
 
     std::fs::write(
@@ -290,9 +290,9 @@ fn hooks() {
 fn blind() {
     let dir = std::env::temp_dir().join("plumb-blind");
     std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");
-    std::fs::write(dir.join("negentropy.toml"), "[limit\n").expect("laws should be written");
+    std::fs::write(dir.join("ectropy.toml"), "[limit\n").expect("laws should be written");
     let out = run(&["doctor", dir.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(out.contains("blind:"), "{out}");
-    assert!(out.contains("cannot read negentropy.toml"), "{out}");
+    assert!(out.contains("cannot read ectropy.toml"), "{out}");
 }

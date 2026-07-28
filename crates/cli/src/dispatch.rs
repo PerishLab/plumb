@@ -14,7 +14,6 @@ pub fn read(root: &Path) -> Option<Found> {
     let mut found = Found::new();
     sidecar(root, &mut found);
     api(root, &mut found);
-    web_plane(root, &web, &mut found);
     production::read(root, &mut found);
     Some(found)
 }
@@ -185,72 +184,6 @@ fn collect(root: &Path, extension: &str, found: &mut Vec<PathBuf>) {
         } else if path.extension().and_then(|value| value.to_str()) == Some(extension) {
             found.push(path);
         }
-    }
-}
-
-fn web_plane(root: &Path, package: &Json, found: &mut Found) {
-    if !has_package(package, "@perish/react-components") {
-        wrong(found, "web does not depend on @perish/react-components");
-    }
-    let plugin = [
-        "@perish/vite-plugin-design",
-        "@jsr/perish__vite-plugin-design",
-    ]
-    .iter()
-    .any(|name| has_package(package, name));
-    if !plugin {
-        wrong(found, "web does not depend on @perish/vite-plugin-design");
-    }
-
-    let config = [
-        "vite.config.ts",
-        "vite.config.mts",
-        "vite.config.js",
-        "vite.config.mjs",
-    ]
-    .iter()
-    .find_map(|name| std::fs::read_to_string(root.join("apps/web").join(name)).ok())
-    .unwrap_or_default();
-    if !config.contains("design(") {
-        wrong(found, "vite does not activate the design plugin");
-    }
-    if config.contains("SIDECAR_PORT") || config.contains("API_URL") {
-        wrong(found, "vite manually consumes sidecar dispatch environment");
-    }
-
-    let source = format!(
-        "{}\n{}",
-        source(&root.join("apps/web/src"), "ts"),
-        source(&root.join("apps/web/src"), "tsx")
-    );
-    if !source.contains("virtual:perish/views") {
-        wrong(found, "web does not load the virtual views manifest");
-    }
-    if !source.contains("Views") || !source.contains("@perish/react-components") {
-        wrong(found, "web does not render the views manifest");
-    }
-
-    let compiler = std::fs::read_to_string(root.join("apps/web/tsconfig.json")).unwrap_or_default();
-    if !compiler.contains("@perish/react-components/client") {
-        wrong(
-            found,
-            "web compiler does not include @perish/react-components/client",
-        );
-    }
-
-    if package
-        .get("scripts")
-        .and_then(|scripts| scripts.get("build"))
-        .and_then(Json::as_str)
-        .is_none()
-    {
-        wrong(found, "web has no build script");
-    }
-    let guard =
-        std::fs::read_to_string(root.join(".runseal/wrappers/guard.ts")).unwrap_or_default();
-    let name = package.get("name").and_then(Json::as_str);
-    if !guard.contains("\"build\"") || name.is_none_or(|name| !guard.contains(name)) {
-        wrong(found, "guard does not build the web app");
     }
 }
 

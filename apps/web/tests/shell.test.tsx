@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
 import { pages } from "../src/lib/meta";
-import { Home } from "../src/views/Home";
+import Home from "../src/views/index";
 
 test("home", () => {
 	const markup = renderToStaticMarkup(<Home />);

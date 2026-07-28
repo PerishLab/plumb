@@ -1,12 +1,12 @@
 # Agents
 
-This repository is the workshop's living skeleton. `negentropy --strict .` must
+This repository is the workshop's living skeleton. `ectropy --strict .` must
 print `clean` before anything lands, and CI runs the same guard the pre-commit
 hook runs.
 
 ## The relation
 
-negentropy owns its blindspots: a construct it cannot parse is the checker's
+ectropy owns its blindspots: a construct it cannot parse is the checker's
 debt, not the author's exception. plumb inherits that relation for SHAPES. If a
 repository in this ecosystem has no shadow here, plumb owes the shape.
 Divergence is the skeleton's debt.

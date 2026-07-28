@@ -18,6 +18,7 @@ pub fn judge(held: &shape::Shape) -> Vec<Note> {
         ("env", held.env()),
         ("structure", held.structure()),
         ("deps", held.deps()),
+        ("web", held.web.clone().unwrap_or_default()),
         ("dispatch", held.dispatch.clone().unwrap_or_default()),
     ] {
         for (grade, line) in found {
@@ -67,7 +68,7 @@ impl shape::Shape {
                 }
             }
             if !self.laws {
-                found.push(("out of true", "no negentropy.toml".to_string()));
+                found.push(("out of true", "no ectropy.toml".to_string()));
             }
             if self
                 .lane
@@ -101,7 +102,7 @@ impl shape::Shape {
             found.push((
                 "blind",
                 format!(
-                    "cannot read negentropy.toml: {}",
+                    "cannot read ectropy.toml: {}",
                     why.lines().next().unwrap_or("")
                 ),
             ));
@@ -276,7 +277,6 @@ impl shape::Shape {
         }
     }
 }
-
 fn pinned(deno: &str) -> BTreeSet<String> {
     let marker = format!("jsr:{}/", RULES.scope);
     let mut found = BTreeSet::new();

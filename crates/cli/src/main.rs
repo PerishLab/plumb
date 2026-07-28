@@ -4,6 +4,7 @@ mod judge;
 mod pack;
 mod rules;
 mod shape;
+mod web;
 
 use clap::{Parser, Subcommand};
 use judge::{judge, show};

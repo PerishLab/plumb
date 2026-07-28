@@ -1,6 +1,6 @@
 # Design
 
-The design system is itself negentropic. This site is judged twice: once in
+The design system is itself ectropic. This site is judged twice: once in
 its source, by the checker, and once on its face, by anyone who opens it. The
 face answers to the same constitution — a closed vocabulary, declared
 territories, and violations a freshman can point at.
@@ -122,6 +122,6 @@ suspect.
 
 Adding a token, a seam, a whitelist entry, or a fork is a reviewed contract
 change: name the seat, state the rationale, land it with the change that
-needs it. These rules are not yet negentropy law — precedent first, law
+needs it. These rules are not yet ectropy law — precedent first, law
 after; when the violations have been pointed at often enough, the grant-law
 shape is already visible.
