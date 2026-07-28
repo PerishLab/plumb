@@ -12,6 +12,14 @@ travels to them. This brief carries what the binary cannot enforce: the
 principles the workshop is built on, the laws that follow from them, and — for
 each law — whether a machine catches a violation or only you will.
 
+## Upstream
+
+Repository: https://git.perish.top/PerishLab/plumb
+
+Report defects, missing shapes, and unclear guidance there as issues. When a
+newer stable release is available, run `plumb skill upgrade` and validate it
+before preserving compatibility with an older managed installation.
+
 Read `Standing` before trusting any clause to be caught for you. Run
 `plumb doctor` in a repository before changing its shape.
 
