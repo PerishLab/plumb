@@ -43,6 +43,42 @@ jobs:
         id: stable
         run: deno run --allow-env --allow-read --allow-net --allow-write="$GITHUB_OUTPUT" .forgejo/scripts/release/metadata/stable.ts
 
+      - name: Report failure
+        if: failure()
+        env:
+          PROBE_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          deno eval '
+            const temp = Deno.env.get("RUNNER_TEMP");
+            const log = await Deno.readTextFile(`${temp}/lane.log`).catch(() => "(no lane.log captured)");
+            const keys = ["PLUMB_RELEASES_S3_AK", "PLUMB_RELEASES_S3_SK"];
+            let safe = log;
+            for (const key of keys) {
+              const held = Deno.env.get(key) ?? "";
+              if (held !== "") safe = safe.split(held).join("<secret>");
+            }
+            const tail = safe.split("\n").slice(-120).join("\n");
+            const api = Deno.env.get("GITHUB_API_URL");
+            const repo = Deno.env.get("GITHUB_REPOSITORY");
+            const flow = Deno.env.get("GITHUB_WORKFLOW");
+            const run = Deno.env.get("GITHUB_RUN_NUMBER");
+            const job = Deno.env.get("GITHUB_JOB");
+            const res = await fetch(`${api}/repos/${repo}/issues`, {
+              method: "POST",
+              headers: {
+                Authorization: `token ${Deno.env.get("PROBE_TOKEN")}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                title: `${flow} run ${run}: ${job} failed`,
+                body: "```\n" + tail + "\n```",
+              }),
+            });
+            console.log(`failure report: HTTP ${res.status}`);
+            await res.body?.cancel();
+          '
+
   build:
     needs: metadata
     strategy:
@@ -84,6 +120,42 @@ jobs:
         with:
           name: release-${{ matrix.target }}
           path: dist/${{ needs.metadata.outputs.release_version }}/${{ matrix.archive }}
+
+      - name: Report failure
+        if: failure()
+        env:
+          PROBE_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          deno eval '
+            const temp = Deno.env.get("RUNNER_TEMP");
+            const log = await Deno.readTextFile(`${temp}/lane.log`).catch(() => "(no lane.log captured)");
+            const keys = ["PLUMB_RELEASES_S3_AK", "PLUMB_RELEASES_S3_SK"];
+            let safe = log;
+            for (const key of keys) {
+              const held = Deno.env.get(key) ?? "";
+              if (held !== "") safe = safe.split(held).join("<secret>");
+            }
+            const tail = safe.split("\n").slice(-120).join("\n");
+            const api = Deno.env.get("GITHUB_API_URL");
+            const repo = Deno.env.get("GITHUB_REPOSITORY");
+            const flow = Deno.env.get("GITHUB_WORKFLOW");
+            const run = Deno.env.get("GITHUB_RUN_NUMBER");
+            const job = Deno.env.get("GITHUB_JOB");
+            const res = await fetch(`${api}/repos/${repo}/issues`, {
+              method: "POST",
+              headers: {
+                Authorization: `token ${Deno.env.get("PROBE_TOKEN")}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                title: `${flow} run ${run}: ${job} failed`,
+                body: "```\n" + tail + "\n```",
+              }),
+            });
+            console.log(`failure report: HTTP ${res.status}`);
+            await res.body?.cancel();
+          '
 
   release:
     needs: [metadata, build]
@@ -138,6 +210,7 @@ jobs:
           RELEASE_ROOT: dist/${{ needs.metadata.outputs.release_version }}
         run: |
           set -eu
+          exec > >(tee -a "$RUNNER_TEMP/lane.log") 2>&1
           for dir in "$RELEASE_ROOT"/release-*; do
             [ -d "$dir" ] || continue
             mv "$dir"/* "$RELEASE_ROOT"/
@@ -153,6 +226,7 @@ jobs:
           STATE_SOURCE: ${{ needs.metadata.outputs.state_source }}
         run: |
           set -eu
+          exec > >(tee -a "$RUNNER_TEMP/lane.log") 2>&1
           sh .forgejo/scripts/release/assets/skill.sh "$RELEASE_VERSION" "$RELEASE_ROOT"
           sh .forgejo/scripts/release/assets/checksums.sh "$RELEASE_VERSION" "$RELEASE_ROOT"
           sh .forgejo/scripts/release/assets/verify.sh accept "$RELEASE_VERSION" "$RELEASE_ROOT"
@@ -167,6 +241,42 @@ jobs:
 
       - name: Smoke install
         run: sh .forgejo/scripts/release/smoke/smoke.sh "${{ needs.metadata.outputs.release_version }}" stable
+
+      - name: Report failure
+        if: failure()
+        env:
+          PROBE_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          deno eval '
+            const temp = Deno.env.get("RUNNER_TEMP");
+            const log = await Deno.readTextFile(`${temp}/lane.log`).catch(() => "(no lane.log captured)");
+            const keys = ["PLUMB_RELEASES_S3_AK", "PLUMB_RELEASES_S3_SK"];
+            let safe = log;
+            for (const key of keys) {
+              const held = Deno.env.get(key) ?? "";
+              if (held !== "") safe = safe.split(held).join("<secret>");
+            }
+            const tail = safe.split("\n").slice(-120).join("\n");
+            const api = Deno.env.get("GITHUB_API_URL");
+            const repo = Deno.env.get("GITHUB_REPOSITORY");
+            const flow = Deno.env.get("GITHUB_WORKFLOW");
+            const run = Deno.env.get("GITHUB_RUN_NUMBER");
+            const job = Deno.env.get("GITHUB_JOB");
+            const res = await fetch(`${api}/repos/${repo}/issues`, {
+              method: "POST",
+              headers: {
+                Authorization: `token ${Deno.env.get("PROBE_TOKEN")}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                title: `${flow} run ${run}: ${job} failed`,
+                body: "```\n" + tail + "\n```",
+              }),
+            });
+            console.log(`failure report: HTTP ${res.status}`);
+            await res.body?.cancel();
+          '
 
   platform-smoke:
     needs: [metadata, release]
@@ -188,6 +298,42 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./.forgejo/scripts/release/smoke/smoke.ps1 "${{ needs.metadata.outputs.release_version }}" stable
+
+      - name: Report failure
+        if: failure()
+        env:
+          PROBE_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          deno eval '
+            const temp = Deno.env.get("RUNNER_TEMP");
+            const log = await Deno.readTextFile(`${temp}/lane.log`).catch(() => "(no lane.log captured)");
+            const keys = ["PLUMB_RELEASES_S3_AK", "PLUMB_RELEASES_S3_SK"];
+            let safe = log;
+            for (const key of keys) {
+              const held = Deno.env.get(key) ?? "";
+              if (held !== "") safe = safe.split(held).join("<secret>");
+            }
+            const tail = safe.split("\n").slice(-120).join("\n");
+            const api = Deno.env.get("GITHUB_API_URL");
+            const repo = Deno.env.get("GITHUB_REPOSITORY");
+            const flow = Deno.env.get("GITHUB_WORKFLOW");
+            const run = Deno.env.get("GITHUB_RUN_NUMBER");
+            const job = Deno.env.get("GITHUB_JOB");
+            const res = await fetch(`${api}/repos/${repo}/issues`, {
+              method: "POST",
+              headers: {
+                Authorization: `token ${Deno.env.get("PROBE_TOKEN")}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                title: `${flow} run ${run}: ${job} failed`,
+                body: "```\n" + tail + "\n```",
+              }),
+            });
+            console.log(`failure report: HTTP ${res.status}`);
+            await res.body?.cancel();
+          '
 
   finalize:
     needs: [metadata, release, platform-smoke]
@@ -221,3 +367,39 @@ jobs:
           RELEASE_VERSION: ${{ needs.metadata.outputs.release_version }}
           STATE_SOURCE: ${{ needs.metadata.outputs.state_source }}
         run: bash .forgejo/scripts/release/r2/summary.sh
+
+      - name: Report failure
+        if: failure()
+        env:
+          PROBE_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          deno eval '
+            const temp = Deno.env.get("RUNNER_TEMP");
+            const log = await Deno.readTextFile(`${temp}/lane.log`).catch(() => "(no lane.log captured)");
+            const keys = ["PLUMB_RELEASES_S3_AK", "PLUMB_RELEASES_S3_SK"];
+            let safe = log;
+            for (const key of keys) {
+              const held = Deno.env.get(key) ?? "";
+              if (held !== "") safe = safe.split(held).join("<secret>");
+            }
+            const tail = safe.split("\n").slice(-120).join("\n");
+            const api = Deno.env.get("GITHUB_API_URL");
+            const repo = Deno.env.get("GITHUB_REPOSITORY");
+            const flow = Deno.env.get("GITHUB_WORKFLOW");
+            const run = Deno.env.get("GITHUB_RUN_NUMBER");
+            const job = Deno.env.get("GITHUB_JOB");
+            const res = await fetch(`${api}/repos/${repo}/issues`, {
+              method: "POST",
+              headers: {
+                Authorization: `token ${Deno.env.get("PROBE_TOKEN")}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                title: `${flow} run ${run}: ${job} failed`,
+                body: "```\n" + tail + "\n```",
+              }),
+            });
+            console.log(`failure report: HTTP ${res.status}`);
+            await res.body?.cancel();
+          '
