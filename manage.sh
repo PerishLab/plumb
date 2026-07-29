@@ -20,6 +20,12 @@ Usage:
   manage.sh update [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
   manage.sh uninstall [--version vX.Y.Z[-beta.N]]
 
+install and update leave exactly one version on disk. Whatever was installed
+before is swept once the new binary is linked and answers --version. Rolling
+back is install --version <older>, which fetches that version again; released
+artifacts are immutable and always retrievable, so nothing is lost by not
+hoarding them.
+
 Options:
   --public-url <url>     release metadata and artifact base URL
   --install-root <path>  versioned install root
@@ -132,6 +138,22 @@ install_plumb() {
   ln -s "$INSTALL_ROOT/$VERSION/plumb" "$LOCAL_BIN_DIR/plumb"
   "$LOCAL_BIN_DIR/plumb" --version
   printf 'installed plumb to %s\n' "$LOCAL_BIN_DIR/plumb"
+  sweep
+}
+
+sweep() {
+  swept=""
+  for seat in "$INSTALL_ROOT"/*; do
+    [ -d "$seat" ] || continue
+    held=$(basename "$seat")
+    if [ "$held" != "$VERSION" ]; then
+      rm -rf "$seat"
+      swept="$swept $held"
+    fi
+  done
+  if [ -n "$swept" ]; then
+    printf 'swept:%s\n' "$swept"
+  fi
 }
 
 uninstall_plumb() {

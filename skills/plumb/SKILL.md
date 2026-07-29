@@ -92,6 +92,15 @@ own. Binding admits `unknown`, because a credential that cannot ask has not
 learned `no`, and an unprovable deploy says so rather than implying success
 (`docs/site.md`).
 
+**Changelogs.** A stable release carries
+`docs/CHANGELOG/v<version>/<lang>/{INDEX.md, MIGRATION.md}` before it goes out,
+because afterwards the release is immutable and there is nowhere to put it. `en`
+and `zh` are the floor and not the set. A release requiring nothing of anyone
+still writes MIGRATION.md saying so — that sentence is a conclusion somebody
+reached, and a file nobody wrote is not the same artifact. Prereleases are
+exempt, and the rule does not reach back past the version that introduced it
+(`docs/changelog.md`).
+
 **Locks.** A pair bound across a boundary no compiler crosses — a brief and the
 binary it describes, a chart and an environment key — is declared in
 `plumb.toml` with the version and hash of its last reading. Drift on either
@@ -123,6 +132,16 @@ What `plumb doctor` catches today:
 - an unknown workflow: the skeleton now knows the deploy lane by name
 - an app declaring a site without a ship wrapper or without a deploy lane
 
+What the **release lane** catches, which is not the same as the doctor catching
+it — the working tree stays green and the refusal arrives only when you try to
+publish:
+
+- a stable release whose `docs/CHANGELOG/v<version>/` is missing any of
+  `{en,zh}/{INDEX.md,MIGRATION.md}`, or holds one that is empty. Today only
+  plumb's own lane carries this step; a repository adopts it by adding
+  `plumb changelog . --version "$RELEASE_VERSION"` before its first irreversible
+  step, and nothing forces that adoption.
+
 What is **prose only** — no machine will stop you:
 
 - the config vocabulary rule: importing section shapes from the substrate
@@ -137,14 +156,18 @@ What is **prose only** — no machine will stop you:
   someone re-read it when the version moves, which is attention, not proof
 
 When a walled clause becomes mechanized, its line moves up and its prose
-shrinks to the check's name. A clause claimed as enforced that is not is the
-one defect this document cannot afford.
+shrinks to the check's name. Which of the three lists it moves into matters:
+saying the doctor catches something the release lane catches is still a false
+claim, because it tells a reader their working tree will warn them and it will
+not. A clause claimed as enforced that is not is the one defect this document
+cannot afford.
 
 ## Invocation
 
 ```bash
 plumb doctor [ROOT]           # shape report; nonzero when something is out of true
 plumb lock [ROOT]             # print what a fresh affirmation would record
+plumb changelog [ROOT]        # refuse a version whose en+zh changelog is absent or empty
 plumb policy [ROOT] --write   # reconcile ectropy.toml against the repository
 plumb skill install           # install this brief into detected agent directories
 plumb skill status            # compare managed installs with stable, read-only

@@ -44,7 +44,16 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 ## Release
 
 - `manage.sh` and `manage.ps1` are the public install/update/uninstall
-  entrypoints.
+  entrypoints. Both leave exactly one version under the install root: whatever
+  was there before is swept once the new binary is linked and answers
+  `--version`, and the sweep names what it removed. The versioned root is not a
+  rollback cache and never was — `install --version <older>` deletes that
+  directory and refetches, so nothing ever read what accumulated there.
+- A stable release refuses to publish without
+  `docs/CHANGELOG/v<version>/{en,zh}/{INDEX.md,MIGRATION.md}`, enforced by the
+  `Changelog` step in `release-stable.yml` before the first irreversible action.
+  `plumb doctor` does not check this: a changelog is owed by a release, not by a
+  working tree. See `docs/changelog.md`.
 - R2 metadata, immutable version assets, and the Cargo registry share one
   release identity. Beta advances from beta metadata; stable advances only
   when the Cargo workspace version is newer than stable metadata.

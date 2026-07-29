@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
+pub mod changelog;
 mod lock;
 mod node;
 mod operator;

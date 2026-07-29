@@ -17,6 +17,11 @@ Usage:
   manage.ps1 install [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
   manage.ps1 update [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
   manage.ps1 uninstall [--version vX.Y.Z[-beta.N]]
+
+install and update leave exactly one version on disk. Whatever was installed
+before is swept once the new binary is in place and answers --version. Rolling
+back is install --version <older>, which fetches that version again; released
+artifacts are immutable and always retrievable.
 '@ | Write-Output
 }
 
@@ -117,6 +122,14 @@ function Install-Plumb {
         Copy-Item -Force (Join-Path $versionRoot 'plumb.exe') (Join-Path $localBinDir 'plumb.exe')
         & (Join-Path $localBinDir 'plumb.exe') --version
         Write-Output "installed plumb to $(Join-Path $localBinDir 'plumb.exe')"
+        $swept = Get-ChildItem -Directory -ErrorAction SilentlyContinue $installRoot |
+            Where-Object { $_.Name -ne $resolved }
+        foreach ($seat in $swept) {
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $seat.FullName
+        }
+        if ($swept) {
+            Write-Output "swept: $($swept.Name -join ' ')"
+        }
     }
     finally {
         Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $tmpdir

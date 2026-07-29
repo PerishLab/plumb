@@ -196,6 +196,14 @@ jobs:
           set -eu
           deno run --allow-read "--allow-write=." --allow-env --allow-net "--allow-run=git,cargo,rustc,ectropy,deno,tea,sh,bash,pnpm,node,runseal,sed,grep" --config .runseal/deno.json --lock .runseal/deno.lock --frozen=true .runseal/wrappers/guard.ts --fresh
 
+      - name: Changelog
+        env:
+          RELEASE_VERSION: ${{ needs.metadata.outputs.release_version }}
+        run: |
+          set -eu
+          exec > >(tee -a "$RUNNER_TEMP/lane.log") 2>&1
+          cargo run --quiet -p plumb-cli -- changelog . --version "$RELEASE_VERSION"
+
       - name: Publish Cargo substrate
         env:
           RELEASE_VERSION: ${{ needs.metadata.outputs.release_version }}

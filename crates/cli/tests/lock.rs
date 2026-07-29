@@ -102,3 +102,42 @@ fn crlf() {
     );
     let _ = fs::remove_dir_all(&root);
 }
+
+fn logged(root: &Path, tongue: &str, leaf: &str, text: &str) {
+    let home = root.join("docs/CHANGELOG/v1.2.3").join(tongue);
+    fs::create_dir_all(&home).expect("home");
+    fs::write(home.join(leaf), text).expect("leaf");
+}
+
+fn graded(root: &Path) -> (String, bool) {
+    let out = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["changelog", root.to_str().expect("path")])
+        .output()
+        .expect("run");
+    let shown = String::from_utf8_lossy(&out.stdout).to_string();
+    (shown, out.status.success())
+}
+
+#[test]
+fn changelog() {
+    let root = seat("changelog");
+    let (bare, held) = graded(&root);
+    assert!(!held, "{bare}");
+    assert!(bare.contains("en/INDEX.md is missing"), "{bare}");
+    assert!(bare.contains("zh/MIGRATION.md is missing"), "{bare}");
+
+    for tongue in ["en", "zh"] {
+        for leaf in ["INDEX.md", "MIGRATION.md"] {
+            logged(&root, tongue, leaf, "written\n");
+        }
+    }
+    let (full, done) = graded(&root);
+    assert!(done, "{full}");
+    assert!(full.contains("v1.2.3 is documented in en and zh"), "{full}");
+
+    logged(&root, "zh", "MIGRATION.md", "   \n");
+    let (blank, refused) = graded(&root);
+    let _ = fs::remove_dir_all(&root);
+    assert!(!refused, "{blank}");
+    assert!(blank.contains("zh/MIGRATION.md is empty"), "{blank}");
+}

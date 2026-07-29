@@ -38,6 +38,12 @@ enum Command {
         #[command(flatten)]
         target: Root,
     },
+    Changelog {
+        #[command(flatten)]
+        target: Root,
+        #[arg(long)]
+        version: Option<String>,
+    },
 }
 
 fn doctor(root: PathBuf) -> i32 {
@@ -105,6 +111,34 @@ fn locks(root: PathBuf) -> i32 {
     0
 }
 
+fn changelog(root: PathBuf, version: Option<String>) -> i32 {
+    let held = version
+        .or_else(|| shape::read(&root).version)
+        .unwrap_or_default();
+    println!("plumb changelog {}", root.display());
+    println!();
+    if held.is_empty() {
+        println!("  no version to read: the repository declares none, so pass --version");
+        return 1;
+    }
+    let seat = shape::changelog::seat(&root, &held);
+    let found = shape::changelog::read(&root, &held);
+    if found.is_empty() {
+        println!(
+            "  {} is documented in en and zh",
+            shape::changelog::stamped(&held)
+        );
+        return 0;
+    }
+    println!("  {}", seat.display());
+    for line in &found {
+        println!("    {line}");
+    }
+    println!();
+    println!("  a stable release is immutable; what it changed cannot be written afterwards");
+    1
+}
+
 fn policy(root: PathBuf, write: bool) -> i32 {
     let path = root.join("ectropy.toml");
     let text = match std::fs::read_to_string(&path) {
@@ -144,6 +178,7 @@ fn main() {
         Command::Policy { target, write } => policy(PathBuf::from(target.root), write),
         Command::Skill { deed } => skill::run(deed),
         Command::Lock { target } => locks(PathBuf::from(target.root)),
+        Command::Changelog { target, version } => changelog(PathBuf::from(target.root), version),
     };
     std::process::exit(code);
 }
