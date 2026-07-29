@@ -8,6 +8,22 @@ $publicUrl = if ($env:PLUMB_RELEASES_PUBLIC_URL) { $env:PLUMB_RELEASES_PUBLIC_UR
 $installRoot = if ($env:PLUMB_INSTALL_ROOT) { $env:PLUMB_INSTALL_ROOT } else { Join-Path $HOME '.local/share/plumb' }
 $localBinDir = if ($env:PLUMB_LOCAL_BIN_DIR) { $env:PLUMB_LOCAL_BIN_DIR } else { Join-Path $HOME '.local/bin' }
 
+function Show-Help {
+    @'
+plumb manager
+
+Usage:
+  manage.ps1 install [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
+  manage.ps1 update [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
+  manage.ps1 uninstall [--version vX.Y.Z[-beta.N]]
+'@ | Write-Output
+}
+
+if ($command -in @('-h', '--help', 'help')) {
+    Show-Help
+    return
+}
+
 for ($index = 0; $index -lt $rest.Length; $index++) {
     switch -Regex ($rest[$index]) {
         '^--channel$' {
@@ -36,15 +52,8 @@ for ($index = 0; $index -lt $rest.Length; $index++) {
         }
         '^--bin-dir=(.+)$' { $localBinDir = $Matches[1]; continue }
         '^(-h|--help|help)$' {
-            @'
-plumb manager
-
-Usage:
-  manage.ps1 install [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
-  manage.ps1 update [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
-  manage.ps1 uninstall [--version vX.Y.Z[-beta.N]]
-'@ | Write-Output
-            exit 0
+            Show-Help
+            return
         }
         default { throw "unknown argument: $($rest[$index])" }
     }

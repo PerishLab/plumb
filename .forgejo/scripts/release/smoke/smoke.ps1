@@ -9,6 +9,10 @@ New-Item -ItemType Directory -Path $tmpdir | Out-Null
 try {
     $env:PLUMB_INSTALL_ROOT = Join-Path $tmpdir 'install'
     $env:PLUMB_LOCAL_BIN_DIR = Join-Path $tmpdir 'bin'
+    $help = & (Join-Path $root 'manage.ps1') --help | Out-String
+    if ($help -notmatch 'Usage:') { throw 'top-level manager help is absent' }
+    $help = & (Join-Path $root 'manage.ps1') install --help | Out-String
+    if ($help -notmatch 'Usage:') { throw 'command manager help is absent' }
     & (Join-Path $root 'manage.ps1') install --channel $channel --version $version
     $bin = Join-Path $env:PLUMB_LOCAL_BIN_DIR 'plumb.exe'
     & $bin --version

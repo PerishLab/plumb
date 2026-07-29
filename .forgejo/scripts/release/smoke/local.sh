@@ -83,6 +83,8 @@ export HOME="$fixture/home"
 export PLUMB_INSTALL_ROOT="$fixture/install"
 export PLUMB_LOCAL_BIN_DIR="$fixture/local-bin"
 mkdir -p "$HOME"
+sh "$ROOT/manage.sh" --help | grep -F "Usage:"
+sh "$ROOT/manage.sh" install --help | grep -F "Usage:"
 if sh "$ROOT/manage.sh" install --channel nightly >/dev/null 2>&1; then
   echo "manager accepted an invalid channel" >&2
   exit 1

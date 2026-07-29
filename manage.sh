@@ -10,20 +10,8 @@ PUBLIC_URL=${PLUMB_RELEASES_PUBLIC_URL:-https://releases.plumb.perish.uk}
 INSTALL_ROOT=${PLUMB_INSTALL_ROOT:-"$HOME/.local/share/plumb"}
 LOCAL_BIN_DIR=${PLUMB_LOCAL_BIN_DIR:-"$HOME/.local/bin"}
 
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --channel) CHANNEL=${2:-}; shift 2 ;;
-    --channel=*) CHANNEL=${1#--channel=}; shift ;;
-    --version) VERSION=${2:-}; shift 2 ;;
-    --version=*) VERSION=${1#--version=}; shift ;;
-    --public-url) PUBLIC_URL=${2:-}; shift 2 ;;
-    --public-url=*) PUBLIC_URL=${1#--public-url=}; shift ;;
-    --install-root) INSTALL_ROOT=${2:-}; shift 2 ;;
-    --install-root=*) INSTALL_ROOT=${1#--install-root=}; shift ;;
-    --bin-dir) LOCAL_BIN_DIR=${2:-}; shift 2 ;;
-    --bin-dir=*) LOCAL_BIN_DIR=${1#--bin-dir=}; shift ;;
-    -h|--help|help)
-      cat <<'EOF'
+usage() {
+  cat <<'EOF'
 plumb manager
 
 Usage:
@@ -43,8 +31,25 @@ Environment:
   PLUMB_INSTALL_ROOT
   PLUMB_LOCAL_BIN_DIR
 EOF
-      exit 0
-      ;;
+}
+
+case "$COMMAND" in
+  -h|--help|help) usage; exit 0 ;;
+esac
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --channel) CHANNEL=${2:-}; shift 2 ;;
+    --channel=*) CHANNEL=${1#--channel=}; shift ;;
+    --version) VERSION=${2:-}; shift 2 ;;
+    --version=*) VERSION=${1#--version=}; shift ;;
+    --public-url) PUBLIC_URL=${2:-}; shift 2 ;;
+    --public-url=*) PUBLIC_URL=${1#--public-url=}; shift ;;
+    --install-root) INSTALL_ROOT=${2:-}; shift 2 ;;
+    --install-root=*) INSTALL_ROOT=${1#--install-root=}; shift ;;
+    --bin-dir) LOCAL_BIN_DIR=${2:-}; shift 2 ;;
+    --bin-dir=*) LOCAL_BIN_DIR=${1#--bin-dir=}; shift ;;
+    -h|--help|help) usage; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 1 ;;
   esac
 done
