@@ -26,35 +26,22 @@ impl Registry<'_> {
         }
         self.stamp(cargo, version)?;
         let identity = release(version)?;
-        for (index, package) in cargo.packages.iter().enumerate() {
-            if index == 0 {
-                self.command(
-                    [
-                        "package",
-                        "--registry",
-                        &cargo.registry,
-                        "--package",
-                        package,
-                        "--allow-dirty",
-                    ],
-                    token,
-                )?;
-            } else {
-                self.command(
-                    [
-                        "package",
-                        "--registry",
-                        &cargo.registry,
-                        "--package",
-                        package,
-                        "--allow-dirty",
-                        "--no-verify",
-                    ],
-                    token,
-                )?;
-            }
-            inspect(&self.archive(package, &identity), package, &identity)?;
-        }
+        let package = cargo
+            .packages
+            .first()
+            .ok_or_else(|| "Cargo attachment must declare ordered packages".to_string())?;
+        self.command(
+            [
+                "package",
+                "--registry",
+                &cargo.registry,
+                "--package",
+                package,
+                "--allow-dirty",
+            ],
+            token,
+        )?;
+        inspect(&self.archive(package, &identity), package, &identity)?;
         Ok(format!("rehearsed Cargo attachment for {version}"))
     }
 

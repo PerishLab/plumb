@@ -88,8 +88,11 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - `plumb release smoke` performs the shared cross-platform generated-manager
   install, exact `--version` probe, update, and uninstall cycle from the product
   declaration.
-- Cargo publishes `plumb-macro` before `plumb`, reads both back from the
-  registry, and locks their coupled versions exactly.
+- Cargo rehearses the head of each ordered attachment before publication, then
+  publishes and reads back every package before preparing its dependent.
+  Plumb therefore publishes `plumb-macro` before `plumb` and locks their
+  coupled versions exactly without requiring an unpublished dependency to
+  exist during rehearsal.
 - Non-stable releases do not create Git tags.
 - Stable tags are created only after exact publish, stable activation, and
   manager smoke.
