@@ -13,13 +13,14 @@ function Show-Help {
 plumb manager
 
 Usage:
+  manage.ps1 -Help
   manage.ps1 install [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
   manage.ps1 update [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
   manage.ps1 uninstall [--version vX.Y.Z[-beta.N]]
 '@ | Write-Output
 }
 
-if ($command -in @('-h', '--help', 'help')) {
+if ($command -in @('-h', '-help', '--help', 'help')) {
     Show-Help
     return
 }
@@ -51,7 +52,7 @@ for ($index = 0; $index -lt $rest.Length; $index++) {
             $index++; $localBinDir = $rest[$index]; continue
         }
         '^--bin-dir=(.+)$' { $localBinDir = $Matches[1]; continue }
-        '^(-h|--help|help)$' {
+        '^(-h|-help|--help|help)$' {
             Show-Help
             return
         }

@@ -15,6 +15,7 @@ usage() {
 plumb manager
 
 Usage:
+  manage.sh --help
   manage.sh install [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
   manage.sh update [--channel stable|beta] [--version vX.Y.Z[-beta.N]]
   manage.sh uninstall [--version vX.Y.Z[-beta.N]]
