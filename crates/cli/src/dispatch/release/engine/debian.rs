@@ -53,6 +53,8 @@ pub fn build(
         .args(["--root-owner-group", "--build"])
         .arg(root)
         .arg(output)
+        .env("SOURCE_DATE_EPOCH", "0")
+        .env("TZ", "UTC")
         .status()
         .map_err(|error| format!("cannot run dpkg-deb: {error}"))?;
     if !status.success() {

@@ -1,38 +1,27 @@
 use super::super::model::Spec;
-use flate2::Compression;
-use flate2::write::GzEncoder;
+use super::archive::{Member, bundle};
+use std::collections::BTreeMap;
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub fn build(spec: &Spec, version: &str, output: &Path) -> Result<(), String> {
     let source = spec.root.join("skills").join(&spec.product);
-    let stage = tempfile::tempdir().map_err(|error| error.to_string())?;
-    let target = stage.path().join(&spec.product);
-    copy(&source, &target)?;
+    let mut members = BTreeMap::new();
+    collect(&source, &source, &spec.product, &mut members)?;
     let metadata = serde_json::json!({
         "schema": 1,
         "name": spec.product,
         "version": version,
         "keeper": spec.product,
     });
-    std::fs::write(
-        target.join("metadata.json"),
-        serde_json::to_vec_pretty(&metadata).map_err(|error| error.to_string())?,
-    )
-    .map_err(|error| format!("cannot write skill metadata: {error}"))?;
-    let file = File::create(output)
-        .map_err(|error| format!("cannot create {}: {error}", output.display()))?;
-    let encoder = GzEncoder::new(file, Compression::default());
-    let mut archive = tar::Builder::new(encoder);
-    archive
-        .append_dir_all(&spec.product, &target)
-        .map_err(|error| format!("cannot archive skill: {error}"))?;
-    let encoder = archive
-        .into_inner()
-        .map_err(|error| format!("cannot finish skill archive: {error}"))?;
-    encoder
-        .finish()
-        .map_err(|error| format!("cannot finish skill compression: {error}"))?;
+    members.insert(
+        PathBuf::from(&spec.product).join("metadata.json"),
+        Member {
+            bytes: serde_json::to_vec_pretty(&metadata).map_err(|error| error.to_string())?,
+            mode: 0o644,
+        },
+    );
+    bundle(output, &members)?;
     verify(spec, output)
 }
 
@@ -66,14 +55,19 @@ pub fn verify(spec: &Spec, path: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn copy(source: &Path, target: &Path) -> Result<(), String> {
-    std::fs::create_dir_all(target).map_err(|error| error.to_string())?;
-    for entry in std::fs::read_dir(source)
+fn collect(
+    root: &Path,
+    source: &Path,
+    product: &str,
+    members: &mut BTreeMap<PathBuf, Member>,
+) -> Result<(), String> {
+    let mut entries = std::fs::read_dir(source)
         .map_err(|error| format!("cannot read skill source {}: {error}", source.display()))?
-    {
-        let entry = entry.map_err(|error| error.to_string())?;
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())?;
+    entries.sort_by_key(std::fs::DirEntry::file_name);
+    for entry in entries {
         let kind = entry.file_type().map_err(|error| error.to_string())?;
-        let to = target.join(entry.file_name());
         if kind.is_symlink() {
             return Err(format!(
                 "skill source refuses symbolic link {}",
@@ -81,9 +75,19 @@ fn copy(source: &Path, target: &Path) -> Result<(), String> {
             ));
         }
         if kind.is_dir() {
-            copy(&entry.path(), &to)?;
+            collect(root, &entry.path(), product, members)?;
         } else if kind.is_file() {
-            std::fs::copy(entry.path(), to).map_err(|error| error.to_string())?;
+            let relative = entry
+                .path()
+                .strip_prefix(root)
+                .map_err(|error| error.to_string())?
+                .to_path_buf();
+            let mode = mode(&entry)?;
+            let bytes = std::fs::read(entry.path()).map_err(|error| error.to_string())?;
+            members.insert(
+                PathBuf::from(product).join(relative),
+                Member { bytes, mode },
+            );
         } else {
             return Err(format!(
                 "skill source refuses special file {}",
@@ -92,4 +96,22 @@ fn copy(source: &Path, target: &Path) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+fn mode(entry: &std::fs::DirEntry) -> Result<u32, String> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let held = entry
+            .metadata()
+            .map_err(|error| error.to_string())?
+            .permissions()
+            .mode();
+        Ok(if held & 0o111 == 0 { 0o644 } else { 0o755 })
+    }
+    #[cfg(not(unix))]
+    {
+        entry.metadata().map_err(|error| error.to_string())?;
+        Ok(0o644)
+    }
 }

@@ -1,10 +1,14 @@
 use super::super::model::Format;
-use flate2::Compression;
-use flate2::write::GzEncoder;
+use flate2::{Compression, GzBuilder};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+
+pub(super) struct Member {
+    pub bytes: Vec<u8>,
+    pub mode: u32,
+}
 
 pub fn write(
     format: Format,
@@ -54,14 +58,37 @@ pub fn names(format: Format, path: &Path) -> Result<Vec<String>, String> {
 }
 
 fn tar(path: &Path, binaries: &BTreeMap<String, PathBuf>) -> Result<(), String> {
+    let members = binaries
+        .iter()
+        .map(|(name, source)| {
+            let bytes = std::fs::read(source)
+                .map_err(|error| format!("cannot read {}: {error}", source.display()))?;
+            Ok((PathBuf::from(name), Member { bytes, mode: 0o755 }))
+        })
+        .collect::<Result<BTreeMap<_, _>, String>>()?;
+    bundle(path, &members)
+}
+
+pub(super) fn bundle(path: &Path, members: &BTreeMap<PathBuf, Member>) -> Result<(), String> {
     let file =
         File::create(path).map_err(|error| format!("cannot create {}: {error}", path.display()))?;
-    let encoder = GzEncoder::new(file, Compression::default());
+    let encoder = GzBuilder::new()
+        .mtime(0)
+        .operating_system(255)
+        .write(file, Compression::default());
     let mut archive = tar::Builder::new(encoder);
-    for (name, source) in binaries {
+    for (name, member) in members {
+        let mut header = tar::Header::new_gnu();
+        header.set_entry_type(tar::EntryType::Regular);
+        header.set_mode(member.mode);
+        header.set_uid(0);
+        header.set_gid(0);
+        header.set_mtime(0);
+        header.set_size(member.bytes.len() as u64);
+        header.set_cksum();
         archive
-            .append_path_with_name(source, name)
-            .map_err(|error| format!("cannot archive {name}: {error}"))?;
+            .append_data(&mut header, name, member.bytes.as_slice())
+            .map_err(|error| format!("cannot archive {}: {error}", name.display()))?;
     }
     let encoder = archive
         .into_inner()
@@ -78,6 +105,7 @@ fn zip(path: &Path, binaries: &BTreeMap<String, PathBuf>) -> Result<(), String> 
     let mut archive = zip::ZipWriter::new(file);
     let options = zip::write::SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated)
+        .last_modified_time(zip::DateTime::default())
         .unix_permissions(0o755);
     for (name, source) in binaries {
         archive

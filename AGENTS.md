@@ -54,6 +54,9 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   Debian assembly, manager generation, capsules, storage, verification,
   activation, smoke, and stable tags. Those mechanisms do not live in product
   scripts.
+- Every Plumb-owned archive is byte-reproducible from the declared payload:
+  members are ordered and carry canonical timestamps, owners, and modes.
+  Rebuilding one exact version from one commit must produce the same seal.
 - Actions owns the reusable target matrix, artifact transport, credential
   binding, and release sequencing. Product repositories expose only
   `release-exact.yml` and `release-stable.yml` as thin callers.
