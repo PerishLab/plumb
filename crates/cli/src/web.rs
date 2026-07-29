@@ -1,4 +1,4 @@
-use crate::judge::catalog::model::MechanizedRule;
+use crate::judge::catalog::model::Mechanism;
 use crate::judge::catalog::rules::web as rule;
 use crate::judge::finding::{Found, Seed};
 use serde_json::Value as Json;
@@ -295,6 +295,6 @@ fn has(doc: &Json, name: &str) -> bool {
     !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
 }
 
-fn wrong(found: &mut Found, rule: &'static MechanizedRule, evidence: &str) {
+fn wrong(found: &mut Found, rule: &'static Mechanism, evidence: &str) {
     found.push(Seed::wrong(rule, evidence));
 }

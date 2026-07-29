@@ -32,11 +32,14 @@ pub struct Status {
 #[serde(rename_all = "snake_case")]
 pub enum Standing {
     Current,
-    UpdateAvailable,
+    #[serde(rename = "update_available")]
+    Available,
     Ahead,
     Missing,
-    OwnershipMismatch,
-    MetadataDrift,
+    #[serde(rename = "ownership_mismatch")]
+    Ownership,
+    #[serde(rename = "metadata_drift")]
+    Drift,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -53,11 +56,11 @@ impl std::fmt::Display for Standing {
     fn fmt(&self, out: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         out.write_str(match self {
             Self::Current => "current",
-            Self::UpdateAvailable => "update_available",
+            Self::Available => "update_available",
             Self::Ahead => "ahead",
             Self::Missing => "missing",
-            Self::OwnershipMismatch => "ownership_mismatch",
-            Self::MetadataDrift => "metadata_drift",
+            Self::Ownership => "ownership_mismatch",
+            Self::Drift => "metadata_drift",
         })
     }
 }
@@ -82,10 +85,16 @@ pub(super) fn inspect(
 ) -> Result<Report, Error> {
     let target = version(&grant.version)?;
     let explicit = ask.version.is_some();
+    let survey = Survey {
+        kit,
+        grant,
+        target: &target,
+        explicit,
+    };
     let seats = ledger
         .records
         .iter()
-        .map(|record| inspect_seat(kit, record, grant, &target, explicit))
+        .map(|record| survey.inspect(record))
         .collect::<Result<_, _>>()?;
     Ok(Report {
         channel: ask.channel.clone(),
@@ -99,66 +108,69 @@ pub(super) fn inspect(
     })
 }
 
-fn inspect_seat(
-    kit: &Kit,
-    record: &Record,
-    grant: &fetch::Grant,
-    target: &Version,
+struct Survey<'a> {
+    kit: &'a Kit,
+    grant: &'a fetch::Grant,
+    target: &'a Version,
     explicit: bool,
-) -> Result<Status, Error> {
-    if !record.path.exists() {
-        return Ok(status(
-            record,
-            Standing::Missing,
-            Action::Restore,
-            "managed path is absent; restore the selected release",
-        ));
+}
+
+impl Survey<'_> {
+    fn inspect(&self, record: &Record) -> Result<Status, Error> {
+        if !record.path.exists() {
+            return Ok(status(
+                record,
+                Standing::Missing,
+                Action::Restore,
+                "managed path is absent; restore the selected release",
+            ));
+        }
+        let Some(marker) = place::marker(&record.path, &self.kit.name) else {
+            return Ok(status(
+                record,
+                Standing::Ownership,
+                Action::Refuse,
+                "unmanaged path; matching ownership marker is absent",
+            ));
+        };
+        if marker.version != record.version {
+            return Ok(status(
+                record,
+                Standing::Drift,
+                Action::Refuse,
+                "ledger and ownership marker name different installed versions",
+            ));
+        }
+        let installed = version(&record.version)?;
+        let (standing, action, note) = match installed.cmp(self.target) {
+            std::cmp::Ordering::Equal if record.sha == self.grant.sha => (
+                Standing::Current,
+                Action::None,
+                "installed release and artifact digest are current",
+            ),
+            std::cmp::Ordering::Equal => (
+                Standing::Drift,
+                Action::Refuse,
+                "the selected immutable version names a different artifact digest",
+            ),
+            std::cmp::Ordering::Less => (
+                Standing::Available,
+                Action::Upgrade,
+                "a newer selected release is available",
+            ),
+            std::cmp::Ordering::Greater if self.explicit => (
+                Standing::Ahead,
+                Action::Rollback,
+                "the explicit version selects a rollback",
+            ),
+            std::cmp::Ordering::Greater => (
+                Standing::Ahead,
+                Action::Refuse,
+                "channel metadata is older than the installed release",
+            ),
+        };
+        Ok(status(record, standing, action, note))
     }
-    let Some(marker) = place::marker(&record.path, &kit.name) else {
-        return Ok(status(
-            record,
-            Standing::OwnershipMismatch,
-            Action::Refuse,
-            "unmanaged path; matching ownership marker is absent",
-        ));
-    };
-    if marker.version != record.version {
-        return Ok(status(
-            record,
-            Standing::MetadataDrift,
-            Action::Refuse,
-            "ledger and ownership marker name different installed versions",
-        ));
-    }
-    let installed = version(&record.version)?;
-    let (standing, action, note) = match installed.cmp(target) {
-        std::cmp::Ordering::Equal if record.sha == grant.sha => (
-            Standing::Current,
-            Action::None,
-            "installed release and artifact digest are current",
-        ),
-        std::cmp::Ordering::Equal => (
-            Standing::MetadataDrift,
-            Action::Refuse,
-            "the selected immutable version names a different artifact digest",
-        ),
-        std::cmp::Ordering::Less => (
-            Standing::UpdateAvailable,
-            Action::Upgrade,
-            "a newer selected release is available",
-        ),
-        std::cmp::Ordering::Greater if explicit => (
-            Standing::Ahead,
-            Action::Rollback,
-            "the explicit version selects a rollback",
-        ),
-        std::cmp::Ordering::Greater => (
-            Standing::Ahead,
-            Action::Refuse,
-            "channel metadata is older than the installed release",
-        ),
-    };
-    Ok(status(record, standing, action, note))
 }
 
 fn version(raw: &str) -> Result<Version, Error> {

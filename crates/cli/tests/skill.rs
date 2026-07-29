@@ -60,7 +60,7 @@ fn plumb(home: &Path, releases: &str, arguments: &[&str]) -> Output {
 }
 
 #[test]
-fn status_and_dry_run_expose_the_read_only_contract() {
+fn contract() {
     let fixture = tempfile::tempdir().expect("fixture");
     let releases = releases();
     let (home, _) = managed(fixture.path(), "v1.2.3");
@@ -91,7 +91,7 @@ fn status_and_dry_run_expose_the_read_only_contract() {
 }
 
 #[test]
-fn status_diagnoses_ahead_while_dry_run_refuses_it() {
+fn ahead() {
     let fixture = tempfile::tempdir().expect("fixture");
     let releases = releases();
     let (home, _) = managed(fixture.path(), "v2.0.0");
@@ -113,7 +113,7 @@ fn status_diagnoses_ahead_while_dry_run_refuses_it() {
 }
 
 #[test]
-fn unmanaged_status_is_observable_but_upgrade_dry_run_is_not_actionable() {
+fn unmanaged() {
     let fixture = tempfile::tempdir().expect("fixture");
     let releases = releases();
     let home = fixture.path().join("plumb");

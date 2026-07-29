@@ -19,7 +19,7 @@ fn json(args: &[&str]) -> Value {
 }
 
 #[test]
-fn show_explains_one_stable_rule() {
+fn show() {
     let report = json(&["rule", "show", "structure.missing-wrapper", "--json"]);
     assert_eq!(report["schema"], "plumb.rule/v1");
     let rule = &report["rule"];
@@ -38,7 +38,7 @@ fn show_explains_one_stable_rule() {
 }
 
 #[test]
-fn unknown_rule_and_taxonomy_quick_fail() {
+fn invalid() {
     for args in [
         vec!["rule", "show", "structure.not-a-rule"],
         vec!["rule", "list", "--namespace", "missing"],
@@ -57,7 +57,7 @@ fn unknown_rule_and_taxonomy_quick_fail() {
 }
 
 #[test]
-fn selectors_compose_without_a_query_language() {
+fn select() {
     let report = json(&[
         "rule",
         "list",
@@ -89,13 +89,13 @@ fn selectors_compose_without_a_query_language() {
 }
 
 #[test]
-fn catalog_and_taxonomy_have_versioned_json_surfaces() {
+fn catalog() {
     let all = json(&["rule", "list", "--json"]);
     let mechanized = json(&["rule", "list", "--standing", "mechanized", "--json"]);
     let prose = json(&["rule", "list", "--standing", "prose-only", "--json"]);
     assert_eq!(all["schema"], "plumb.rule-list/v1");
-    assert_eq!(all["rules"].as_array().map(Vec::len), Some(101));
-    assert_eq!(mechanized["rules"].as_array().map(Vec::len), Some(73));
+    assert_eq!(all["rules"].as_array().map(Vec::len), Some(103));
+    assert_eq!(mechanized["rules"].as_array().map(Vec::len), Some(75));
     assert_eq!(prose["rules"].as_array().map(Vec::len), Some(28));
 
     for (deed, schema, field) in [

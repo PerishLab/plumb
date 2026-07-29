@@ -31,7 +31,7 @@ struct Piece {
 
 pub fn resolve(base: &str, channel: &str, version: Option<&str>) -> Result<Grant, Error> {
     let channel = channel.trim();
-    if !valid_channel(channel) {
+    if !valid(channel) {
         return Err(Error::Channel(channel.to_string()));
     }
     if channel != "stable" && version.is_none() {
@@ -55,7 +55,7 @@ pub fn resolve(base: &str, channel: &str, version: Option<&str>) -> Result<Grant
         sha: piece.sha256.unwrap_or_default(),
     };
     if let Some(wanted) = version
-        && !same_version(wanted, &grant.version)
+        && !same(wanted, &grant.version)
     {
         return Err(Error::Version(grant.version));
     }
@@ -102,7 +102,7 @@ fn tidy(version: &str) -> String {
     version.trim().to_string()
 }
 
-fn valid_channel(channel: &str) -> bool {
+fn valid(channel: &str) -> bool {
     let mut bytes = channel.bytes();
     matches!(bytes.next(), Some(b'a'..=b'z'))
         && bytes.all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
@@ -123,7 +123,7 @@ fn belongs(channel: &str, release: &str) -> bool {
         && parts.next().is_none()
 }
 
-fn same_version(left: &str, right: &str) -> bool {
+fn same(left: &str, right: &str) -> bool {
     let parse = |raw: &str| semver::Version::parse(raw.trim().trim_start_matches('v'));
     matches!((parse(left), parse(right)), (Ok(left), Ok(right)) if left == right)
 }

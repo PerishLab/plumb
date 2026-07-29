@@ -1,5 +1,5 @@
-use super::model::{Rule, RuleView, Standing};
-use super::taxonomy::{self, NamespaceView, OwnerView, TagView};
+use super::model::{Rule, Standing, View};
+use super::taxonomy::{self, Label, Ownership, Scope};
 use clap::{Args, Subcommand};
 use serde::Serialize;
 use std::collections::BTreeSet;
@@ -46,13 +46,13 @@ pub struct Select {
         value_delimiter = ',',
         help = "Require at least one tag from this group"
     )]
-    any_tags: Vec<String>,
+    any: Vec<String>,
     #[arg(
         long = "without-tag",
         value_delimiter = ',',
         help = "Exclude rules carrying any of these tags"
     )]
-    without_tags: Vec<String>,
+    without: Vec<String>,
     #[arg(long = "standing", value_delimiter = ',')]
     standings: Vec<String>,
     #[arg(long = "owner", value_delimiter = ',')]
@@ -60,33 +60,33 @@ pub struct Select {
 }
 
 #[derive(Serialize)]
-struct ListReport {
+struct List {
     schema: &'static str,
-    rules: Vec<RuleView>,
+    rules: Vec<View>,
 }
 
 #[derive(Serialize)]
-struct ShowReport {
+struct Detail {
     schema: &'static str,
-    rule: RuleView,
+    rule: View,
 }
 
 #[derive(Serialize)]
-struct NamespaceReport {
+struct Namespaces {
     schema: &'static str,
-    namespaces: Vec<NamespaceView>,
+    namespaces: Vec<Scope>,
 }
 
 #[derive(Serialize)]
-struct TagReport {
+struct Tags {
     schema: &'static str,
-    tags: Vec<TagView>,
+    tags: Vec<Label>,
 }
 
 #[derive(Serialize)]
-struct OwnerReport {
+struct Owners {
     schema: &'static str,
-    owners: Vec<OwnerView>,
+    owners: Vec<Ownership>,
 }
 
 pub fn run(deed: Deed) -> i32 {
@@ -112,9 +112,9 @@ fn list(select: Select, json: bool) -> i32 {
         .filter(|rule| select.matches(rule))
         .collect::<Vec<_>>();
     if json {
-        emit(&ListReport {
+        emit(&List {
             schema: "plumb.rule-list/v1",
-            rules: rules.into_iter().map(RuleView::from).collect(),
+            rules: rules.into_iter().map(View::from).collect(),
         });
     } else if rules.is_empty() {
         println!("  no rules match");
@@ -131,9 +131,9 @@ fn show(id: &str, json: bool) -> i32 {
         return sour(&format!("unknown rule {id}"));
     };
     if json {
-        emit(&ShowReport {
+        emit(&Detail {
             schema: "plumb.rule/v1",
-            rule: RuleView::from(rule),
+            rule: View::from(rule),
         });
     } else {
         println!("{}", rule.id);
@@ -157,10 +157,10 @@ fn namespaces(json: bool) -> i32 {
     let values = taxonomy::NAMESPACES
         .iter()
         .copied()
-        .map(NamespaceView::from)
+        .map(Scope::from)
         .collect::<Vec<_>>();
     if json {
-        emit(&NamespaceReport {
+        emit(&Namespaces {
             schema: "plumb.rule-namespaces/v1",
             namespaces: values,
         });
@@ -176,10 +176,10 @@ fn tags(json: bool) -> i32 {
     let values = taxonomy::TAGS
         .iter()
         .copied()
-        .map(TagView::from)
+        .map(Label::from)
         .collect::<Vec<_>>();
     if json {
-        emit(&TagReport {
+        emit(&Tags {
             schema: "plumb.rule-tags/v1",
             tags: values,
         });
@@ -193,10 +193,10 @@ fn owners(json: bool) -> i32 {
     let values = taxonomy::OWNERS
         .iter()
         .copied()
-        .map(OwnerView::from)
+        .map(Ownership::from)
         .collect::<Vec<_>>();
     if json {
-        emit(&OwnerReport {
+        emit(&Owners {
             schema: "plumb.rule-owners/v1",
             owners: values,
         });
@@ -227,8 +227,8 @@ fn sour(note: &str) -> i32 {
 struct Selector {
     namespace: Option<String>,
     tags: BTreeSet<String>,
-    any_tags: BTreeSet<String>,
-    without_tags: BTreeSet<String>,
+    any: BTreeSet<String>,
+    without: BTreeSet<String>,
     standings: BTreeSet<String>,
     owners: BTreeSet<String>,
 }
@@ -242,12 +242,7 @@ impl Selector {
                 taxonomy::NAMESPACES.iter().map(|item| item.id),
             )?;
         }
-        for tag in raw
-            .tags
-            .iter()
-            .chain(&raw.any_tags)
-            .chain(&raw.without_tags)
-        {
+        for tag in raw.tags.iter().chain(&raw.any).chain(&raw.without) {
             known("tag", tag, taxonomy::TAGS.iter().map(|item| item.id))?;
         }
         for owner in &raw.owners {
@@ -261,8 +256,8 @@ impl Selector {
         Ok(Self {
             namespace: raw.namespace,
             tags: raw.tags.into_iter().collect(),
-            any_tags: raw.any_tags.into_iter().collect(),
-            without_tags: raw.without_tags.into_iter().collect(),
+            any: raw.any.into_iter().collect(),
+            without: raw.without.into_iter().collect(),
             standings: raw.standings.into_iter().collect(),
             owners: raw.owners.into_iter().collect(),
         })
@@ -274,12 +269,8 @@ impl Selector {
             .as_deref()
             .is_none_or(|namespace| rule.namespace() == namespace)
             && self.tags.iter().all(|tag| tags.contains(tag.as_str()))
-            && (self.any_tags.is_empty()
-                || self.any_tags.iter().any(|tag| tags.contains(tag.as_str())))
-            && self
-                .without_tags
-                .iter()
-                .all(|tag| !tags.contains(tag.as_str()))
+            && (self.any.is_empty() || self.any.iter().any(|tag| tags.contains(tag.as_str())))
+            && self.without.iter().all(|tag| !tags.contains(tag.as_str()))
             && (self.standings.is_empty() || self.standings.contains(rule.standing.id()))
             && (self.owners.is_empty() || self.owners.contains(rule.owner.id))
     }

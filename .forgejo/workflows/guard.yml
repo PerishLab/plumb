@@ -22,7 +22,7 @@ jobs:
       - name: Install ectropy
         run: |
           set -eu
-          curl -fsSL https://releases.ectropy.perish.uk/manage.sh | sh -s -- install --channel stable --bin-dir $HOME/.local/bin
+          curl -fsSL https://releases.ectropy.perish.uk/manage.sh | sh -s -- install --channel beta --version v0.4.0-beta.1 --bin-dir $HOME/.local/bin
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Install JS dependencies

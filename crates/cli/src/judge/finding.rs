@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use super::catalog::model::{MechanizedRule, Rule, Standing};
+use super::catalog::model::{Mechanism, Rule, Standing};
 
 pub type Found = Vec<Seed>;
 
@@ -23,7 +23,7 @@ pub struct Finding {
 }
 
 impl Seed {
-    pub fn wrong(rule: &'static MechanizedRule, evidence: impl Into<String>) -> Self {
+    pub fn wrong(rule: &'static Mechanism, evidence: impl Into<String>) -> Self {
         Self {
             rule: &rule.0,
             grade: "out of true",
@@ -31,7 +31,7 @@ impl Seed {
         }
     }
 
-    pub fn blind(rule: &'static MechanizedRule, evidence: impl Into<String>) -> Self {
+    pub fn blind(rule: &'static Mechanism, evidence: impl Into<String>) -> Self {
         Self {
             rule: &rule.0,
             grade: "blind",
@@ -39,7 +39,7 @@ impl Seed {
         }
     }
 
-    pub fn unknown(rule: &'static MechanizedRule, evidence: impl Into<String>) -> Self {
+    pub fn unknown(rule: &'static Mechanism, evidence: impl Into<String>) -> Self {
         Self {
             rule: &rule.0,
             grade: "unknown shape",
@@ -62,14 +62,14 @@ impl Finding {
     }
 }
 
-pub fn wrong(rule: &'static MechanizedRule, evidence: impl Into<String>) -> Seed {
+pub fn wrong(rule: &'static Mechanism, evidence: impl Into<String>) -> Seed {
     Seed::wrong(rule, evidence)
 }
 
-pub fn blind(rule: &'static MechanizedRule, evidence: impl Into<String>) -> Seed {
+pub fn blind(rule: &'static Mechanism, evidence: impl Into<String>) -> Seed {
     Seed::blind(rule, evidence)
 }
 
-pub fn unknown(rule: &'static MechanizedRule, evidence: impl Into<String>) -> Seed {
+pub fn unknown(rule: &'static Mechanism, evidence: impl Into<String>) -> Seed {
     Seed::unknown(rule, evidence)
 }

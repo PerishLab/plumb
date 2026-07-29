@@ -6,7 +6,7 @@ rule!(
     "Products own config vocabulary",
     "The substrate exports config mechanism; each binary declares its own sections and values.",
     "Product config types and imports from the substrate.",
-    ProseOnly,
+    Prose,
     PRODUCT,
     [CONFIGURATION, OWNERSHIP]
 );
@@ -16,7 +16,7 @@ rule!(
     "Products own template variables",
     "The substrate owns template grammar while each caller owns the variables it supplies.",
     "Manifest documentation and the variable table passed to fill.",
-    ProseOnly,
+    Prose,
     PRODUCT,
     [CONFIGURATION, OWNERSHIP]
 );
@@ -26,7 +26,7 @@ rule!(
     "Manifest variables match product vocabulary",
     "A manifest spells every injected environment key exactly as the target product derives it.",
     "Manifest templates compared with the target's cascade vocabulary.",
-    ProseOnly,
+    Prose,
     PRODUCT,
     [CONFIGURATION]
 );
@@ -36,7 +36,7 @@ rule!(
     "Data home enters through the cascade",
     "A stateful tool resolves one data home as ordinary four-layer configuration.",
     "Home resolution code and the product config surface.",
-    ProseOnly,
+    Prose,
     PRODUCT,
     [CONFIGURATION, STATE]
 );
@@ -46,7 +46,7 @@ rule!(
     "Machine records live under state/",
     "Machine-written records live below the tool's data-home state directory.",
     "The product's data-home layout.",
-    ProseOnly,
+    Prose,
     PRODUCT,
     [STATE]
 );
@@ -56,7 +56,7 @@ rule!(
     "State records carry schema versions",
     "Each machine-owned record names its shape version and unknown versions refuse.",
     "Serialized state shapes and their readers.",
-    ProseOnly,
+    Prose,
     PRODUCT,
     [STATE]
 );
@@ -66,7 +66,7 @@ rule!(
     "State records are replaced atomically",
     "A state write lands beside the target and replaces it whole.",
     "Every durable state write path.",
-    ProseOnly,
+    Prose,
     PRODUCT,
     [STATE]
 );
@@ -76,7 +76,7 @@ rule!(
     "State is not a config surface",
     "Machine state may be rewritten; human policy enters through the cascade.",
     "State and configuration documentation and code paths.",
-    ProseOnly,
+    Prose,
     PRODUCT,
     [CONFIGURATION, STATE]
 );
@@ -86,7 +86,7 @@ rule!(
     "Destructive ownership proof is two-sided",
     "Acting on a managed path requires both a registry record and an in-path marker naming the tool.",
     "The managed registry, target marker, and destructive operation.",
-    ProseOnly,
+    Prose,
     PRODUCT,
     [OWNERSHIP, STATE]
 );
@@ -96,7 +96,7 @@ rule!(
     "Release metadata moves forward",
     "A release resolves prior published state and refuses regression or an accidental same-version rerun.",
     "Registry metadata and the computed release version.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [RELEASE_TAG]
 );
@@ -106,7 +106,7 @@ rule!(
     "Release guard runs fresh",
     "A release runs the full guard without inheriting stale incremental artifacts.",
     "The release lane's guard invocation and cache posture.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [RELEASE_TAG]
 );
@@ -116,7 +116,7 @@ rule!(
     "The published manifest is stamped",
     "A release stamps the manifest the publisher actually reads.",
     "The release stamp target and packaged manifest.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [CARGO_TAG, RELEASE_TAG]
 );
@@ -126,7 +126,7 @@ rule!(
     "Dry run proves the intended version",
     "Before publishing, the lane requires the publisher dry run to name the intended version.",
     "Dry-run output before the first irreversible action.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [RELEASE_TAG]
 );
@@ -136,7 +136,7 @@ rule!(
     "Publishing is idempotent",
     "An already-present matching artifact is verified and skipped so repair reruns are safe.",
     "Registry presence and checksums before each publish.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [RELEASE_TAG]
 );
@@ -146,7 +146,7 @@ rule!(
     "Published artifacts are read back",
     "A lane verifies immutable artifacts from their registry rather than local state.",
     "Registry responses after publish.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [RELEASE_TAG]
 );
@@ -156,7 +156,7 @@ rule!(
     "Release identity is sealed last",
     "A lane records tags and moving metadata only after immutable artifacts verify.",
     "Ordering of publish, verification, metadata, and tags.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [RELEASE_TAG]
 );
@@ -166,7 +166,7 @@ rule!(
     "Release failures leave an operator trail",
     "A failed lane reports evidence somewhere operators can reach outside ephemeral CI logs.",
     "Failure handlers, issue or artifact output, and notification paths.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [RELEASE_TAG]
 );
@@ -176,7 +176,7 @@ rule!(
     "Release lanes offer rehearsal",
     "A release lane can exercise packaging without publishing, tagging, or touching credentials.",
     "Workflow inputs and the guarded irreversible steps.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [RELEASE_TAG]
 );
@@ -186,7 +186,7 @@ rule!(
     "Idle release lanes are rehearsed",
     "A lane idle across renames or restructuring is exercised before it is trusted.",
     "Recent lane execution and local packaging rehearsal.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [RELEASE_TAG]
 );
@@ -196,7 +196,7 @@ rule!(
     "Site deployment is deliberate",
     "The deploy lane runs on explicit dispatch rather than every landing.",
     "The site deployment workflow triggers.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [RELEASE_TAG, SITE_TAG]
 );
@@ -206,7 +206,7 @@ rule!(
     "Site credentials are purpose-scoped",
     "The deploy key carries only the account and zone permissions one site needs.",
     "Provider token policy and the workflow secret surface.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [OWNERSHIP, SITE_TAG]
 );
@@ -216,7 +216,7 @@ rule!(
     "Site artifacts declare identity",
     "The built health document carries the commit and version that produced it.",
     "Built health documents.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [SITE_TAG, WEB_TAG]
 );
@@ -226,7 +226,7 @@ rule!(
     "Site artifacts declare routes",
     "Published routes are discoverable from the built artifact.",
     "Built sitemap or prerendered documents.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [SITE_TAG, WEB_TAG]
 );
@@ -236,7 +236,7 @@ rule!(
     "Shippers inspect artifacts, not source",
     "The site shipper derives identity and routes from build output rather than application source.",
     "The ship wrapper's inputs and inspection paths.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [RELEASE_TAG, SITE_TAG]
 );
@@ -246,7 +246,7 @@ rule!(
     "Deploy, binding, and reachability stay separate",
     "A site ship reports upload, platform binding, and edge reachability as distinct states.",
     "The ship report and its three evidence sources.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [SITE_TAG]
 );
@@ -256,7 +256,7 @@ rule!(
     "Binding admits unknown",
     "A denied control-plane read is unknown rather than evidence that a domain is unbound.",
     "Provider binding lookup results and permission failures.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [SITE_TAG]
 );
@@ -266,7 +266,7 @@ rule!(
     "Readback proves the served build",
     "Reachability compares a fingerprinted served asset with the built page.",
     "Built and edge-served asset fingerprints.",
-    ProseOnly,
+    Prose,
     RELEASE,
     [SITE_TAG, WEB_TAG]
 );
@@ -276,7 +276,7 @@ rule!(
     "Skill standing matches its binary",
     "A released skill never claims enforcement its matching binary does not provide.",
     "The skill's standing references compared with the binary rule catalog.",
-    ProseOnly,
+    Prose,
     SKILL,
     [SKILL_TAG]
 );

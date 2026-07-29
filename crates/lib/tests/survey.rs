@@ -99,7 +99,7 @@ fn root(name: &str) -> PathBuf {
 }
 
 #[test]
-fn current_status_and_upgrade_do_not_fetch_the_archive() {
+fn current() {
     let archive = pack();
     let (url, hits) = serve(archive.clone(), plumb::skill::stamp(&archive));
     let seat = root("current");
@@ -121,7 +121,7 @@ fn current_status_and_upgrade_do_not_fetch_the_archive() {
 }
 
 #[test]
-fn direction_selects_upgrade_explicit_rollback_or_refusal() {
+fn direction() {
     let archive = pack();
     let (url, hits) = serve(archive.clone(), plumb::skill::stamp(&archive));
     let seat = root("direction");
@@ -163,7 +163,7 @@ fn direction_selects_upgrade_explicit_rollback_or_refusal() {
 }
 
 #[test]
-fn drift_missing_and_ownership_are_distinct() {
+fn drift() {
     let archive = pack();
     let (url, _) = serve(archive.clone(), plumb::skill::stamp(&archive));
     let seat = root("shape");
@@ -181,7 +181,7 @@ fn drift_missing_and_ownership_are_distinct() {
     fs::write(held.join("metadata.json"), "{}").expect("spoil");
     assert_eq!(
         kit.status(&ask()).expect("ownership").seats[0].state,
-        Standing::OwnershipMismatch
+        Standing::Ownership
     );
 
     let changed = {
@@ -196,7 +196,7 @@ fn drift_missing_and_ownership_are_distinct() {
     )
     .expect("restore marker");
     let drift = rig(&seat, &changed_url).status(&ask()).expect("drift");
-    assert_eq!(drift.seats[0].state, Standing::MetadataDrift);
+    assert_eq!(drift.seats[0].state, Standing::Drift);
     assert_eq!(drift.seats[0].action, Action::Refuse);
     assert_eq!(hits.archive.load(Ordering::SeqCst), 0);
     let _ = fs::remove_dir_all(seat);

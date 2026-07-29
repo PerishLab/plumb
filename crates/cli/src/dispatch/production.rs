@@ -3,6 +3,7 @@ use crate::judge::catalog::rules::dispatch as rule;
 use std::path::{Path, PathBuf};
 
 pub(super) fn read(root: &Path, found: &mut Found) {
+    let production = Production(root);
     if !root.join("deploy/api.Dockerfile").is_file() {
         wrong(
             found,
@@ -10,14 +11,14 @@ pub(super) fn read(root: &Path, found: &mut Found) {
             "production has no api image seat",
         );
     }
-    let web_image = root.join("deploy/web.Dockerfile");
-    if !web_image.is_file() {
+    let image = root.join("deploy/web.Dockerfile");
+    if !image.is_file() {
         wrong(
             found,
             &rule::WEB_IMAGE_PRESENT,
             "production has no web image seat",
         );
-    } else if let Ok(text) = std::fs::read_to_string(web_image) {
+    } else if let Ok(text) = std::fs::read_to_string(image) {
         if !text.contains("dist/.perish/server.mjs") {
             wrong(
                 found,
@@ -25,7 +26,7 @@ pub(super) fn read(root: &Path, found: &mut Found) {
                 "web image does not run the emitted design runtime",
             );
         }
-        if owns_public_dispatch(&text) {
+        if Manifest(&text).proxy() {
             wrong(
                 found,
                 &rule::WEB_IMAGE_DOES_NOT_OWN_DISPATCH,
@@ -34,13 +35,13 @@ pub(super) fn read(root: &Path, found: &mut Found) {
         }
     }
 
-    let templates = chart_templates(root);
+    let templates = production.templates();
     let api = templates
         .iter()
-        .any(|text| workload(text) && role(text, "api"));
+        .any(|text| Manifest(text).workload() && Manifest(text).role("api"));
     let web = templates
         .iter()
-        .any(|text| workload(text) && role(text, "web"));
+        .any(|text| Manifest(text).workload() && Manifest(text).role("web"));
     if !api || !web {
         wrong(
             found,
@@ -50,7 +51,7 @@ pub(super) fn read(root: &Path, found: &mut Found) {
     }
     let ingress = templates
         .iter()
-        .any(|text| ingress_route(text, "/api", "api") && ingress_route(text, "/", "web"));
+        .any(|text| Manifest(text).ingress("/api", "api") && Manifest(text).ingress("/", "web"));
     if !ingress {
         wrong(
             found,
@@ -59,13 +60,13 @@ pub(super) fn read(root: &Path, found: &mut Found) {
         );
     }
 
-    let cargo = cargo_version(root);
-    let aligned = chart_files(root).iter().any(|path| {
+    let cargo = production.version();
+    let aligned = production.charts().iter().any(|path| {
         let Ok(text) = std::fs::read_to_string(path) else {
             return false;
         };
-        let version = yaml_value(&text, "version");
-        let app = yaml_value(&text, "appVersion");
+        let version = Manifest(&text).value("version");
+        let app = Manifest(&text).value("appVersion");
         cargo.as_deref() == version.as_deref() && version == app
     });
     if !aligned {
@@ -77,52 +78,49 @@ pub(super) fn read(root: &Path, found: &mut Found) {
     }
 }
 
-fn chart_templates(root: &Path) -> Vec<String> {
-    let mut paths = Vec::new();
-    let Ok(charts) = std::fs::read_dir(root.join("charts")) else {
-        return Vec::new();
-    };
-    for chart in charts.flatten() {
-        collect(&chart.path().join("templates"), "yaml", &mut paths);
-        collect(&chart.path().join("templates"), "yml", &mut paths);
+struct Production<'a>(&'a Path);
+
+impl Production<'_> {
+    fn templates(&self) -> Vec<String> {
+        let mut paths = Vec::new();
+        let Ok(charts) = std::fs::read_dir(self.0.join("charts")) else {
+            return Vec::new();
+        };
+        for chart in charts.flatten() {
+            collect(&chart.path().join("templates"), "yaml", &mut paths);
+            collect(&chart.path().join("templates"), "yml", &mut paths);
+        }
+        paths.sort();
+        paths
+            .iter()
+            .filter_map(|path| std::fs::read_to_string(path).ok())
+            .collect()
     }
-    paths.sort();
-    paths
-        .iter()
-        .filter_map(|path| std::fs::read_to_string(path).ok())
-        .collect()
-}
 
-fn chart_files(root: &Path) -> Vec<PathBuf> {
-    let Ok(charts) = std::fs::read_dir(root.join("charts")) else {
-        return Vec::new();
-    };
-    charts
-        .flatten()
-        .map(|entry| entry.path().join("Chart.yaml"))
-        .filter(|path| path.is_file())
-        .collect()
-}
+    fn charts(&self) -> Vec<PathBuf> {
+        let Ok(charts) = std::fs::read_dir(self.0.join("charts")) else {
+            return Vec::new();
+        };
+        charts
+            .flatten()
+            .map(|entry| entry.path().join("Chart.yaml"))
+            .filter(|path| path.is_file())
+            .collect()
+    }
 
-fn cargo_version(root: &Path) -> Option<String> {
-    let text = std::fs::read_to_string(root.join("Cargo.toml")).ok()?;
-    let doc = text.parse::<toml::Table>().ok()?;
-    doc.get("workspace")
-        .and_then(|workspace| workspace.get("package"))
-        .and_then(|package| package.get("version"))
-        .or_else(|| {
-            doc.get("package")
-                .and_then(|package| package.get("version"))
-        })
-        .and_then(toml::Value::as_str)
-        .map(str::to_string)
-}
-
-fn yaml_value(text: &str, key: &str) -> Option<String> {
-    text.lines().find_map(|line| {
-        let (held, value) = line.split_once(':')?;
-        (held.trim() == key).then(|| value.trim().trim_matches(['"', '\'']).to_string())
-    })
+    fn version(&self) -> Option<String> {
+        let text = std::fs::read_to_string(self.0.join("Cargo.toml")).ok()?;
+        let doc = text.parse::<toml::Table>().ok()?;
+        doc.get("workspace")
+            .and_then(|workspace| workspace.get("package"))
+            .and_then(|package| package.get("version"))
+            .or_else(|| {
+                doc.get("package")
+                    .and_then(|package| package.get("version"))
+            })
+            .and_then(toml::Value::as_str)
+            .map(str::to_string)
+    }
 }
 
 fn collect(root: &Path, extension: &str, found: &mut Vec<PathBuf>) {
@@ -139,37 +137,48 @@ fn collect(root: &Path, extension: &str, found: &mut Vec<PathBuf>) {
     }
 }
 
-fn workload(text: &str) -> bool {
-    text.contains("kind: Deployment") || text.contains("kind: StatefulSet")
-}
+struct Manifest<'a>(&'a str);
 
-fn role(text: &str, name: &str) -> bool {
-    text.contains(&format!("-{name}")) || text.contains(&format!("name: {name}"))
-}
-
-fn owns_public_dispatch(text: &str) -> bool {
-    let text = text.to_ascii_lowercase();
-    text.contains("nginx") || text.contains("api_upstream") || text.contains("proxy_pass")
-}
-
-fn ingress_route(text: &str, path: &str, target: &str) -> bool {
-    if !text.contains("kind: Ingress") {
-        return false;
+impl Manifest<'_> {
+    fn value(&self, key: &str) -> Option<String> {
+        self.0.lines().find_map(|line| {
+            let (held, value) = line.split_once(':')?;
+            (held.trim() == key).then(|| value.trim().trim_matches(['"', '\'']).to_string())
+        })
     }
-    let lines = text.lines().collect::<Vec<_>>();
-    lines.iter().enumerate().any(|(index, line)| {
-        if route_path(line) != Some(path) {
+
+    fn workload(&self) -> bool {
+        self.0.contains("kind: Deployment") || self.0.contains("kind: StatefulSet")
+    }
+
+    fn role(&self, name: &str) -> bool {
+        self.0.contains(&format!("-{name}")) || self.0.contains(&format!("name: {name}"))
+    }
+
+    fn proxy(&self) -> bool {
+        let text = self.0.to_ascii_lowercase();
+        text.contains("nginx") || text.contains("api_upstream") || text.contains("proxy_pass")
+    }
+
+    fn ingress(&self, path: &str, target: &str) -> bool {
+        if !self.0.contains("kind: Ingress") {
             return false;
         }
-        let end = lines[index + 1..]
-            .iter()
-            .position(|line| route_path(line).is_some())
-            .map_or(lines.len(), |offset| index + 1 + offset);
-        role(&lines[index..end].join("\n"), target)
-    })
+        let lines = self.0.lines().collect::<Vec<_>>();
+        lines.iter().enumerate().any(|(index, line)| {
+            if route(line) != Some(path) {
+                return false;
+            }
+            let end = lines[index + 1..]
+                .iter()
+                .position(|line| route(line).is_some())
+                .map_or(lines.len(), |offset| index + 1 + offset);
+            Manifest(&lines[index..end].join("\n")).role(target)
+        })
+    }
 }
 
-fn route_path(line: &str) -> Option<&str> {
+fn route(line: &str) -> Option<&str> {
     let line = line.trim().strip_prefix("- ").unwrap_or(line.trim());
     let (key, value) = line.split_once(':')?;
     (key.trim() == "path").then(|| value.trim().trim_matches(['"', '\'']))

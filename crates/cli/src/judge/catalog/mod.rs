@@ -18,13 +18,13 @@ pub fn find(id: &str) -> Option<&'static Rule> {
 
 pub fn coverage() -> Coverage {
     let mut coverage = Coverage {
-        prose_only: 0,
+        prose: 0,
         observed: 0,
         mechanized: 0,
     };
     for rule in all() {
         match rule.standing {
-            Standing::ProseOnly => coverage.prose_only += 1,
+            Standing::Prose => coverage.prose += 1,
             Standing::Observed => coverage.observed += 1,
             Standing::Mechanized => coverage.mechanized += 1,
         }

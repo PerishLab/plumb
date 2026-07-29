@@ -3,15 +3,14 @@ use crate::{rules::RULES, shape};
 use catalog::rules::{deps as deps_rule, env as env_rule, structure as structure_rule};
 use shape::Found;
 use std::collections::BTreeSet;
+use text::{COMPONENTS, CONCURRENCY, CONTAINER};
 
 pub(crate) mod catalog;
 pub(crate) mod doctor;
 pub(crate) mod finding;
+mod text;
 
-const CONCURRENCY: &str = "concurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true";
-const CONTAINER: &str = "mirror.perish.lan/ci/deno";
-const COMPONENTS: &str =
-    "packages/components is reserved; reusable components belong to the design system";
+pub use text::show;
 
 pub fn judge(held: &shape::Shape) -> Vec<Finding> {
     let mut notes = Vec::new();
@@ -88,6 +87,20 @@ impl shape::Shape {
                     "guard does not run plumb doctor",
                 ));
             }
+            if self.wrappers.contains("guard") && !self.guard.contains("\"ectropy\"") {
+                found.push(wrong(
+                    &structure_rule::GUARD_RUNS_ECTROPY,
+                    "guard does not run ectropy explicitly",
+                ));
+            }
+            if self.wrappers.contains("guard")
+                && (self.guard.contains("\"--strict\"") || self.guard.contains("\"--debt\""))
+            {
+                found.push(wrong(
+                    &structure_rule::GUARD_USES_CURRENT_ECTROPY_MODE,
+                    "guard uses an obsolete ectropy mode",
+                ));
+            }
             if self.wrappers.contains("init") && !self.init.contains("\"plumb\"") {
                 found.push(wrong(
                     &structure_rule::INIT_REQUIRES_PLUMB,
@@ -146,7 +159,7 @@ impl shape::Shape {
                 ));
             }
         }
-        for path in &self.operator_tests {
+        for path in &self.tests {
             found.push(wrong(
                 &structure_rule::OPERATOR_TEST_OWNED_BY_SEALKIT,
                 format!("{path} is a .runseal test; tested logic belongs in sealkit"),
@@ -283,11 +296,4 @@ impl shape::Shape {
             }
         }
     }
-}
-
-pub fn show(set: &BTreeSet<String>) -> String {
-    if set.is_empty() {
-        return "-".to_string();
-    }
-    set.iter().cloned().collect::<Vec<_>>().join(" ")
 }

@@ -137,25 +137,25 @@ pub static NAMESPACES: &[&Namespace] = &[
 ];
 
 #[derive(Serialize)]
-pub struct OwnerView {
+pub struct Ownership {
     pub id: &'static str,
     pub summary: &'static str,
 }
 
 #[derive(Serialize)]
-pub struct TagView {
+pub struct Label {
     pub id: &'static str,
     pub summary: &'static str,
 }
 
 #[derive(Serialize)]
-pub struct NamespaceView {
+pub struct Scope {
     pub id: &'static str,
     pub summary: &'static str,
     pub owner: &'static str,
 }
 
-impl From<&'static Owner> for OwnerView {
+impl From<&'static Owner> for Ownership {
     fn from(owner: &'static Owner) -> Self {
         Self {
             id: owner.id,
@@ -164,7 +164,7 @@ impl From<&'static Owner> for OwnerView {
     }
 }
 
-impl From<&'static Tag> for TagView {
+impl From<&'static Tag> for Label {
     fn from(tag: &'static Tag) -> Self {
         Self {
             id: tag.id,
@@ -173,7 +173,7 @@ impl From<&'static Tag> for TagView {
     }
 }
 
-impl From<&'static Namespace> for NamespaceView {
+impl From<&'static Namespace> for Scope {
     fn from(namespace: &'static Namespace) -> Self {
         Self {
             id: namespace.id,

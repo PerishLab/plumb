@@ -109,7 +109,7 @@ pub trait Opaque<T> {
 }
 
 impl<T> Opaque<T> for &Sniff<T> {
-    fn take(&self, _held: Option<String>, _key: &str) -> Result<Option<T>, Error> {
+    fn take(&self, _: Option<String>, _: &str) -> Result<Option<T>, Error> {
         Ok(None)
     }
 }

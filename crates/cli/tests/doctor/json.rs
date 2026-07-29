@@ -10,7 +10,7 @@ fn run(root: &Path) -> Output {
 }
 
 #[test]
-fn clean_doctor_report_is_positive_and_replayable() {
+fn clean() {
     let fixture = tempfile::tempdir().expect("fixture");
     let output = run(fixture.path());
     assert!(output.status.success());
@@ -24,7 +24,7 @@ fn clean_doctor_report_is_positive_and_replayable() {
     assert_eq!(report["summary"]["out_of_true"], 0);
     assert_eq!(report["summary"]["unknown"], 0);
     assert_eq!(report["summary"]["blind"], 0);
-    assert_eq!(report["coverage"]["mechanized"], 73);
+    assert_eq!(report["coverage"]["mechanized"], 75);
     assert_eq!(report["coverage"]["observed"], 0);
     assert_eq!(report["coverage"]["prose_only"], 28);
     assert!(report["shape"]["wrappers"].is_array());
@@ -32,7 +32,7 @@ fn clean_doctor_report_is_positive_and_replayable() {
 }
 
 #[test]
-fn failing_doctor_report_has_stable_codes_and_preserves_exit_status() {
+fn failing() {
     let fixture = tempfile::tempdir().expect("fixture");
     std::fs::create_dir_all(fixture.path().join(".runseal/wrappers"))
         .expect("create governed fixture");
@@ -64,7 +64,7 @@ fn failing_doctor_report_has_stable_codes_and_preserves_exit_status() {
 }
 
 #[test]
-fn unknown_shape_remains_nonfatal_but_is_not_clean() {
+fn unknown() {
     let fixture = tempfile::tempdir().expect("fixture");
     std::fs::create_dir(fixture.path().join("novel")).expect("create unknown shape");
     let output = run(fixture.path());

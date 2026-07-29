@@ -2,7 +2,7 @@ use std::path::Path;
 use std::process::Command;
 
 #[test]
-fn boundary_debt_is_composite() {
+fn boundary() {
     let root = std::env::temp_dir().join("plumb-production-boundary");
     let _ = std::fs::remove_dir_all(&root);
     for path in [
@@ -47,7 +47,7 @@ fn boundary_debt_is_composite() {
 }
 
 #[test]
-fn sites_are_paired_with_release_surfaces() {
+fn sites() {
     let root = std::env::temp_dir().join("plumb-siteless");
     std::fs::create_dir_all(root.join("apps/web")).expect("fixture should be made");
     std::fs::create_dir_all(root.join(".runseal/wrappers")).expect("fixture should be made");

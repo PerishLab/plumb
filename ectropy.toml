@@ -6,6 +6,7 @@ include = [
   "apps/**/*.css",
   "apps/**/*.scss",
   "docs/**/*.md",
+  "skills/**/*.md",
 ]
 exclude = [
   "**/target/**",
@@ -20,6 +21,7 @@ roots = [
   "crates/*/src",
   "crates/*/tests",
   "docs",
+  "skills/*",
 ]
 
 [limit]

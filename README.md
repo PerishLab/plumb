@@ -5,10 +5,11 @@ A plumb line for repositories.
 This is the workshop's living skeleton: the operational envelope is worked out
 here, published as a CLI, and kept honest by being run rather than described.
 Every repository in the ecosystem should find its shadow here — and when one
-cannot, that is plumb's debt, not the repository's exception.
+cannot, that is plumb's responsibility, not the repository's exception.
 
-- `crates/plumb` — the CLI. Hold a repo against the skeleton and report where it
+- `crates/cli` — the CLI. Hold a repo against the skeleton and report where it
   hangs untrue. Checking lands before scaffolding.
+- `crates/lib` and `crates/macro` — the shared substrate and derive.
 - `apps/web` — plumb.perish.uk, answering why, what and how. Built and
   prerendered by the guard, shipped by its own lane, and read back after every
   deploy against the fingerprint it just built — so the skeleton's web path is
@@ -37,7 +38,7 @@ curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
 Select an exact beta or stable release when needed:
 
 ```sh
-curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install --channel beta --version v0.14.0-beta.1
+curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install --channel beta --version v0.15.0-beta.1
 curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install --version v0.13.1
 ```
 
@@ -80,6 +81,8 @@ Plumb owns the repository-shaped `ectropy.toml` template while ectropy remains
 the independent AST executor. `plumb doctor` compares scan sets, module roots,
 all limits, comment and word settings, test and environment territory, and
 required syntax bans semantically; ordering and formatting do not matter.
+When `skills/` exists, its Markdown briefs and per-skill roots are part of that
+canonical policy.
 Repository-specific boundaries, vocabulary, and additional non-test grants
 remain local allowances rather than becoming skeleton defaults.
 

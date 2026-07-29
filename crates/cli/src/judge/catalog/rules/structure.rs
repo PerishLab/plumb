@@ -1,5 +1,9 @@
 use super::{Rule, rule};
 
+mod site;
+
+pub use site::{SITE_DEPLOY_LANE, SITE_SHIP_WRAPPER};
+
 rule!(
     MISSING_WRAPPER,
     "structure.missing-wrapper",
@@ -39,6 +43,26 @@ rule!(
     Mechanized,
     PLUMB,
     [ADOPTION, REPOSITORY]
+);
+rule!(
+    GUARD_RUNS_ECTROPY,
+    "structure.guard-runs-ectropy",
+    "Guard runs Ectropy explicitly",
+    "The repository guard invokes Ectropy's errors-only checker directly.",
+    "The guard wrapper source.",
+    Mechanized,
+    ECTROPY,
+    [ADOPTION, ECTROPY_TAG, REPOSITORY]
+);
+rule!(
+    GUARD_USES_CURRENT_ECTROPY_MODE,
+    "structure.guard-uses-current-ectropy-mode",
+    "Guard uses the current Ectropy mode",
+    "The repository guard carries neither the retired strict mode nor debt mode.",
+    "The guard wrapper Ectropy invocation.",
+    Mechanized,
+    ECTROPY,
+    [ADOPTION, ECTROPY_TAG, REPOSITORY]
 );
 rule!(
     INIT_REQUIRES_PLUMB,
@@ -250,38 +274,17 @@ rule!(
     RELEASE,
     [ADOPTION, RELEASE_TAG]
 );
-rule!(
-    SITE_SHIP_WRAPPER,
-    "structure.site-ship-wrapper",
-    "Sites have a ship wrapper",
-    "A repository declaring a site exposes one operator ship entrypoint.",
-    "Site applications and the ship wrapper seat.",
-    Mechanized,
-    RELEASE,
-    [ADOPTION, SITE_TAG, WEB_TAG]
-);
-rule!(
-    SITE_DEPLOY_LANE,
-    "structure.site-deploy-lane",
-    "Sites have a deploy lane",
-    "A repository declaring a site carries a deploy workflow.",
-    "Site applications and workflow names.",
-    Mechanized,
-    RELEASE,
-    [RELEASE_TAG, SITE_TAG, WEB_TAG]
-);
-
 #[rustfmt::skip]
 pub fn all() -> Vec<&'static Rule> {
     vec![
         &ANCHOR_PRESENT, &ANCHOR_UNIQUE, &API_ENTRYPOINT, &BOUNDARY_EXISTS,
         &CARGO_TARGET_IGNORED, &CASCADE_DERIVES_IN_ANCHOR, &ECTROPY_POLICY,
         &ECTROPY_POLICY_PRESENT, &ECTROPY_POLICY_READABLE, &GUARD_CONCURRENCY,
-        &GUARD_RUNS_DOCTOR, &INIT_PATHS_READABLE, &INIT_REQUIRES_EXISTING_WRAPPER,
-        &INIT_REQUIRES_PLUMB, &KNOWN_DIRECTORY, &KNOWN_WORKFLOW, &KNOWN_WRAPPER,
-        &MISSING_HOOK, &MISSING_WRAPPER, &OPERATOR_TEST_OWNED_BY_SEALKIT,
-        &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES, &RELEASE_LANE_PRESENT,
-        &RELEASE_WRAPPER_PRESENT, &RESERVED_COMPONENTS_SEAT, &SITE_DEPLOY_LANE,
-        &SITE_SHIP_WRAPPER,
+        &GUARD_RUNS_DOCTOR, &GUARD_RUNS_ECTROPY, &GUARD_USES_CURRENT_ECTROPY_MODE,
+        &INIT_PATHS_READABLE, &INIT_REQUIRES_EXISTING_WRAPPER, &INIT_REQUIRES_PLUMB,
+        &KNOWN_DIRECTORY, &KNOWN_WORKFLOW, &KNOWN_WRAPPER, &MISSING_HOOK, &MISSING_WRAPPER,
+        &OPERATOR_TEST_OWNED_BY_SEALKIT, &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
+        &RELEASE_LANE_PRESENT, &RELEASE_WRAPPER_PRESENT, &RESERVED_COMPONENTS_SEAT,
+        &SITE_DEPLOY_LANE, &SITE_SHIP_WRAPPER,
     ]
 }

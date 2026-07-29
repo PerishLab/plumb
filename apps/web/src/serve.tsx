@@ -30,7 +30,7 @@ const guide = `# open-web
 
 ## tools
 
-- [ectropy](https://plumb.perish.uk/ectropy/): structural checker, thirteen
+- [ectropy](https://plumb.perish.uk/ectropy/): structural checker, fifteen
   mechanical laws, four language adapters. install:
   curl -fsSL https://releases.ectropy.perish.uk/manage.sh | sh
 - [runseal](https://plumb.perish.uk/runseal/): operator toolbelt - explicit
@@ -66,9 +66,9 @@ const manual = `# open-web - full reference for agents
 
 ## ectropy - structural checker
 
-what: thirteen mechanical laws judged over one parser substrate; rust,
-typescript/tsx, scss, and markdown adapters. a violation lands as fault (fails
-the run), debt (reported, tolerated), or blindspot (unparsed region).
+what: fifteen mechanical laws judged over one parser substrate; rust,
+typescript/tsx, scss, and markdown adapters. every finding is an error and
+fails the run.
 
 install (see /llms.txt for the live platform list; sha256 sums sit in
 checksums.txt beside every artifact):
@@ -76,14 +76,13 @@ checksums.txt beside every artifact):
 installs under ~/.local/share/ectropy and links into ~/.local/bin.
 
 surface:
-  ectropy [OPTIONS] [ROOT]      (ROOT defaults to .)
-    --strict       blindspots become fatal
-    --debt         list tolerated debt lines
+  ectropy [ROOT]                judge every configured law (ROOT defaults to .)
   ectropy shape [ROOT]          print structure JSON lines
   ectropy vocabulary [ROOT]     print the living dictionary
   ectropy cookbook [ENTRY]      print procedural moves and their EXIT clauses
-exit codes: 0 = clean or debt only; 1 = any fault, or any blindspot under
---strict; 2 = invalid input, configuration, schema, or source IO.
+  ectropy skill <COMMAND>       manage the ectropy agent brief
+exit codes: 0 = clean; 1 = one or more findings; 2 = invalid input,
+configuration, schema, or source IO.
 
 config (ectropy.toml at the repo root; without one, defaults judge the
 whole tree):

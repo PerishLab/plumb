@@ -221,7 +221,7 @@ fn climbs() {
 }
 
 #[test]
-fn preserves_unprefixed_versions() {
+fn unprefixed() {
     let archive = pack();
     let digest = plumb::skill::stamp(&archive);
     let url = serve(archive, digest);
@@ -239,7 +239,7 @@ fn preserves_unprefixed_versions() {
 }
 
 #[test]
-fn prerelease_channels_require_the_exact_version() {
+fn prerelease() {
     let seat = root("prerelease-pin");
     let kit = rig(&seat, "http://127.0.0.1:1");
     let loose = kit.install(&Ask {

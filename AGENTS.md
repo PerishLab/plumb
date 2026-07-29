@@ -1,15 +1,15 @@
 # Agents
 
-This repository is the workshop's living skeleton. `ectropy --strict .` must
-print `clean` before anything lands, and CI runs the same guard the pre-commit
-hook runs.
+This repository is the workshop's living skeleton. `ectropy .` must print
+`clean` before anything lands, and CI runs the same guard the pre-commit hook
+runs. Ectropy has one severity: every finding is an error.
 
 ## The relation
 
 ectropy owns its blindspots: a construct it cannot parse is the checker's
-debt, not the author's exception. plumb inherits that relation for SHAPES. If a
-repository in this ecosystem has no shadow here, plumb owes the shape.
-Divergence is the skeleton's debt.
+responsibility, not the author's exception. plumb inherits that relation for
+SHAPES. If a repository in this ecosystem has no shadow here, plumb owes the
+shape. Divergence is an error in the skeleton.
 
 Downstream repositories do not get scanned by plumb, and plumb does not know
 they exist. The CLI travels to them: install it, run it in a repository, read
@@ -18,7 +18,9 @@ link, and it is the only one.
 
 ## Layout
 
-- `crates/plumb` — the CLI, published as a binary through the release lanes.
+- `crates/cli` — the CLI, published as a binary through the release lanes.
+- `crates/lib` and `crates/macro` — the substrate and derive consumed by the
+  ecosystem.
 - `apps/web` — the site at plumb.perish.uk, shipped by the deploy lane on
   dispatch and verified by readback (`docs/site.md`).
 - `packages/*` — publishable specimens, when they earn their place.
@@ -39,7 +41,7 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   choices here are only defensible together, not alone — but no element may
   become unremovable, or its justification decays from finding to story.
 - plumb MUST PASS ITSELF. Running the CLI here has to come back clean, or the
-  debt relation above does not hold for the one repo that declares it.
+  relation above does not hold for the one repo that declares it.
 
 ## Release
 

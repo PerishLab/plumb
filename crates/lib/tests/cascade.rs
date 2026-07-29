@@ -45,7 +45,7 @@ impl Default for Rig {
     }
 }
 
-fn nothing(_key: &str) -> Option<String> {
+fn nothing(_: &str) -> Option<String> {
     None
 }
 

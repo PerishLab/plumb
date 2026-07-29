@@ -35,7 +35,8 @@ struct Law {
 
 #[derive(Serialize)]
 struct Summary {
-    out_of_true: usize,
+    #[serde(rename = "out_of_true")]
+    wrong: usize,
     unknown: usize,
     blind: usize,
 }
@@ -44,7 +45,7 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
     let held = shape::read(&root);
     let findings = judge(&held);
     let summary = Summary::new(&findings);
-    let ok = summary.out_of_true == 0;
+    let ok = summary.wrong == 0;
     if json {
         let report = Report {
             operation: "doctor",
@@ -86,7 +87,7 @@ impl Shape {
 impl Summary {
     fn new(findings: &[finding::Finding]) -> Self {
         Self {
-            out_of_true: findings
+            wrong: findings
                 .iter()
                 .filter(|finding| finding.grade == "out of true")
                 .count(),
@@ -132,6 +133,6 @@ fn human(root: &Path, held: &shape::Shape, findings: &[finding::Finding], summar
     println!();
     println!(
         "  {} out of true, {} unknown to the skeleton, {} blind",
-        summary.out_of_true, summary.unknown, summary.blind
+        summary.wrong, summary.unknown, summary.blind
     );
 }

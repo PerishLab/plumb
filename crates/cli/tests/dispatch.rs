@@ -53,7 +53,7 @@ fn fixture(name: &str) -> PathBuf {
 }
 
 #[test]
-fn complete_pair_is_true() {
+fn complete() {
     let root = fixture("plumb-dispatch-complete");
     std::fs::write(
         root.join("Cargo.toml"),
@@ -223,7 +223,7 @@ inherits_env = [{ name = "SPECIMEN_API", from = "api.endpoint" }]
 }
 
 #[test]
-fn incomplete_pair_reports_the_composite_debt() {
+fn incomplete() {
     let root = fixture("plumb-dispatch-incomplete");
     std::fs::write(
         root.join("Cargo.toml"),
@@ -273,7 +273,7 @@ export default { server: { port, proxy: { "/api": api } } };
 }
 
 #[test]
-fn malformed_sidecar_is_blind() {
+fn malformed() {
     let root = fixture("plumb-dispatch-blind");
     std::fs::write(root.join("sidecar.toml"), "[[sidecars]\n").expect("sidecar should be written");
     std::fs::write(root.join("crates/api/src/main.rs"), "fn main() {}\n")

@@ -27,43 +27,44 @@ pub fn bounds(doc: Option<&toml::Value>) -> Vec<String> {
 
 pub fn check(root: &Path, doc: &toml::Value) -> Vec<String> {
     let want = Expected::read(root);
+    let policy = Policy(doc);
     let mut found = Vec::new();
     compare(
         "scan include",
-        list(doc, "scan", "include"),
+        policy.list("scan", "include"),
         want.include,
         &mut found,
     );
     compare(
         "scan exclude",
-        list(doc, "scan", "exclude"),
+        policy.list("scan", "exclude"),
         want.exclude,
         &mut found,
     );
     compare(
         "module roots",
-        list(doc, "module", "roots"),
+        policy.list("module", "roots"),
         want.roots,
         &mut found,
     );
-    limits(doc, &mut found);
-    setting(doc, "comment", "allow", false, &mut found);
-    setting(doc, "word", "single", true, &mut found);
+    policy.limits(&mut found);
+    policy.setting(("comment", "allow"), false, &mut found);
+    policy.setting(("word", "single"), true, &mut found);
     compare(
         "test grant",
-        syntax(doc, "grant", "test"),
+        policy.syntax("grant", "test"),
         want.tests.clone(),
         &mut found,
     );
     require(
         "environment grant",
-        syntax(doc, "grant", "environment"),
+        policy.syntax("grant", "environment"),
         want.tests,
         &mut found,
     );
     require(
         "style ban",
-        syntax(doc, "ban", "style"),
+        policy.syntax("ban", "style"),
         want.bans,
         &mut found,
     );
@@ -123,6 +124,10 @@ impl Expected {
             held.include.insert("docs/**/*.md".to_string());
             held.roots.insert("docs".to_string());
         }
+        if root.join("skills").is_dir() {
+            held.include.insert("skills/**/*.md".to_string());
+            held.roots.insert("skills/*".to_string());
+        }
         if root.join("crates").is_dir() || root.join("app").is_dir() {
             held.exclude.insert("**/target/**".to_string());
         }
@@ -166,54 +171,61 @@ impl Expected {
     }
 }
 
-fn limits(doc: &toml::Value, found: &mut Vec<String>) {
-    let want = BTreeMap::from([
-        ("block", 4),
-        ("fanout", 10),
-        ("file", 300),
-        ("markup", 8),
-        ("param", 4),
-        ("path", 4),
-    ]);
-    for (name, value) in want {
-        let seen = doc
-            .get("limit")
-            .and_then(|table| table.get(name))
-            .and_then(toml::Value::as_integer);
-        if seen != Some(value) {
-            found.push(format!("ectropy limit {name} must be {value}"));
+struct Policy<'a>(&'a toml::Value);
+
+impl Policy<'_> {
+    fn limits(&self, found: &mut Vec<String>) {
+        let want = BTreeMap::from([
+            ("block", 4),
+            ("fanout", 10),
+            ("file", 300),
+            ("markup", 8),
+            ("param", 4),
+            ("path", 4),
+        ]);
+        for (name, value) in want {
+            let seen = self
+                .0
+                .get("limit")
+                .and_then(|table| table.get(name))
+                .and_then(toml::Value::as_integer);
+            if seen != Some(value) {
+                found.push(format!("ectropy limit {name} must be {value}"));
+            }
         }
     }
-}
 
-fn setting(doc: &toml::Value, table: &str, key: &str, want: bool, found: &mut Vec<String>) {
-    let seen = doc
-        .get(table)
-        .and_then(|value| value.get(key))
-        .and_then(toml::Value::as_bool);
-    if seen != Some(want) {
-        found.push(format!("ectropy {table}.{key} must be {want}"));
+    fn setting(&self, key: (&str, &str), want: bool, found: &mut Vec<String>) {
+        let seen = self
+            .0
+            .get(key.0)
+            .and_then(|value| value.get(key.1))
+            .and_then(toml::Value::as_bool);
+        if seen != Some(want) {
+            found.push(format!("ectropy {}.{} must be {want}", key.0, key.1));
+        }
     }
-}
 
-fn list(doc: &toml::Value, table: &str, key: &str) -> BTreeSet<String> {
-    doc.get(table)
-        .and_then(|value| value.get(key))
-        .and_then(toml::Value::as_array)
-        .map(|values| strings(values))
-        .unwrap_or_default()
-}
+    fn list(&self, table: &str, key: &str) -> BTreeSet<String> {
+        self.0
+            .get(table)
+            .and_then(|value| value.get(key))
+            .and_then(toml::Value::as_array)
+            .map(|values| strings(values))
+            .unwrap_or_default()
+    }
 
-fn syntax(doc: &toml::Value, table: &str, name: &str) -> BTreeSet<String> {
-    let Some(entries) = doc.get(table).and_then(toml::Value::as_array) else {
-        return BTreeSet::new();
-    };
-    entries
-        .iter()
-        .filter(|entry| entry.get("syntax").and_then(toml::Value::as_str) == Some(name))
-        .filter_map(|entry| entry.get("paths").and_then(toml::Value::as_array))
-        .flat_map(|values| strings(values))
-        .collect()
+    fn syntax(&self, table: &str, name: &str) -> BTreeSet<String> {
+        let Some(entries) = self.0.get(table).and_then(toml::Value::as_array) else {
+            return BTreeSet::new();
+        };
+        entries
+            .iter()
+            .filter(|entry| entry.get("syntax").and_then(toml::Value::as_str) == Some(name))
+            .filter_map(|entry| entry.get("paths").and_then(toml::Value::as_array))
+            .flat_map(|values| strings(values))
+            .collect()
+    }
 }
 
 fn strings(values: &[toml::Value]) -> BTreeSet<String> {

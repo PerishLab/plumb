@@ -46,19 +46,14 @@ pub fn render(root: &Path, text: &str) -> Result<String, String> {
             toml::Value::Boolean(true),
         )])),
     );
-    merge(&mut doc, "grant", "test", want.tests.clone(), false);
-    merge(&mut doc, "grant", "environment", want.tests, true);
-    merge(&mut doc, "ban", "style", want.bans, true);
+    merge(&mut doc, ("grant", "test"), want.tests.clone(), false);
+    merge(&mut doc, ("grant", "environment"), want.tests, true);
+    merge(&mut doc, ("ban", "style"), want.bans, true);
     toml::to_string_pretty(&doc).map_err(|error| error.to_string())
 }
 
-fn merge(
-    doc: &mut toml::Table,
-    table: &str,
-    name: &str,
-    mut paths: BTreeSet<String>,
-    preserve: bool,
-) {
+fn merge(doc: &mut toml::Table, syntax: (&str, &str), mut paths: BTreeSet<String>, preserve: bool) {
+    let (table, name) = syntax;
     let mut kept = Vec::new();
     let entries = doc
         .remove(table)

@@ -50,5 +50,5 @@ await guard(
     },
   ],
   Deno.args,
-  { checker: ["ectropy", ["--strict", "."]] },
+  { checker: ["ectropy", ["."]] },
 );

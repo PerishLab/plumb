@@ -95,6 +95,7 @@ fn reconciliation() {
     std::fs::create_dir_all(root.join("apps/web/src/lib/components"))
         .expect("fixture should be made");
     std::fs::create_dir_all(root.join("apps/web/tests")).expect("fixture should be made");
+    std::fs::create_dir_all(root.join("skills/plumb")).expect("fixture should be made");
     std::fs::write(root.join("apps/web/vite.config.ts"), "").expect("fixture should be made");
     std::fs::write(
         root.join("ectropy.toml"),
@@ -131,13 +132,15 @@ description = "fixture"
     assert!(text.contains("apps/web/vite.config.ts"), "{text}");
     assert!(text.contains("packages/react-components/**"), "{text}");
     assert!(text.contains("apps/web/src/lib/components/**"), "{text}");
+    assert!(text.contains("skills/**/*.md"), "{text}");
+    assert!(text.contains("skills/*"), "{text}");
     assert!(text.contains("name = \"vite_config\""), "{text}");
     assert!(!out.contains("missing ectropy"), "{out}");
     assert!(!out.contains("unexpected ectropy"), "{out}");
 }
 
 #[test]
-fn malformed_policy_is_not_replaced() {
+fn malformed() {
     let root = std::env::temp_dir().join("plumb-policy-malformed");
     std::fs::create_dir_all(&root).expect("fixture should be made");
     let path = root.join("ectropy.toml");

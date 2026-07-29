@@ -13,8 +13,8 @@ macro_rules! rule {
         $name:ident, $id:literal, $summary:literal, $law:literal,
         $evidence:literal, Mechanized, $owner:ident, [$($tag:ident),+ $(,)?]
     ) => {
-        pub static $name: $crate::judge::catalog::model::MechanizedRule =
-            $crate::judge::catalog::model::MechanizedRule(
+        pub static $name: $crate::judge::catalog::model::Mechanism =
+            $crate::judge::catalog::model::Mechanism(
                 $crate::judge::catalog::model::Rule {
                     id: $id,
                     summary: $summary,

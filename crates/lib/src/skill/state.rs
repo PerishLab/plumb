@@ -39,21 +39,22 @@ pub fn read(path: &Path) -> Result<Ledger, Error> {
     Ok(ledger)
 }
 
-pub fn write(path: &Path, ledger: &Ledger) -> Result<(), Error> {
+pub fn write(target: &Path, ledger: &Ledger) -> Result<(), Error> {
     let text =
         serde_json::to_string_pretty(ledger).map_err(|error| Error::Parse(error.to_string()))?;
-    if let Some(parent) = path.parent() {
+    if let Some(parent) = target.parent() {
         fs::create_dir_all(parent)
             .map_err(|error| Error::Write(parent.to_path_buf(), error.to_string()))?;
     }
-    let beside = path.with_extension("part");
+    let beside = target.with_extension("part");
     private(&beside, format!("{text}\n").as_bytes())
         .map_err(|error| Error::Write(beside.clone(), error.to_string()))?;
-    fs::rename(&beside, path).map_err(|error| Error::Write(path.to_path_buf(), error.to_string()))
+    fs::rename(&beside, target)
+        .map_err(|error| Error::Write(target.to_path_buf(), error.to_string()))
 }
 
 #[cfg(unix)]
-fn private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+fn private(seat: &Path, bytes: &[u8]) -> std::io::Result<()> {
     use std::io::Write;
     use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 
@@ -62,14 +63,14 @@ fn private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
         .create(true)
         .truncate(true)
         .mode(0o600)
-        .open(path)?;
+        .open(seat)?;
     file.set_permissions(fs::Permissions::from_mode(0o600))?;
     file.write_all(bytes)
 }
 
 #[cfg(not(unix))]
-fn private(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    fs::write(path, bytes)
+fn private(seat: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    fs::write(seat, bytes)
 }
 
 pub fn keep(ledger: &mut Ledger, record: Record) {

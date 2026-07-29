@@ -103,15 +103,15 @@ fn crlf() {
     let _ = fs::remove_dir_all(&root);
 }
 
-fn logged(root: &Path, tongue: &str, leaf: &str, text: &str) {
-    let home = root.join("docs/CHANGELOG/v1.2.3").join(tongue);
+fn logged(workspace: &Path, tongue: &str, leaf: &str, text: &str) {
+    let home = workspace.join("docs/CHANGELOG/v1.2.3").join(tongue);
     fs::create_dir_all(&home).expect("home");
     fs::write(home.join(leaf), text).expect("leaf");
 }
 
-fn graded(root: &Path) -> (String, bool) {
+fn graded(workspace: &Path) -> (String, bool) {
     let out = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["changelog", root.to_str().expect("path")])
+        .args(["changelog", workspace.to_str().expect("path")])
         .output()
         .expect("run");
     let shown = String::from_utf8_lossy(&out.stdout).to_string();

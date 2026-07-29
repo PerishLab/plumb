@@ -5,7 +5,8 @@ use std::ops::Deref;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Standing {
-    ProseOnly,
+    #[serde(rename = "prose-only")]
+    Prose,
     Observed,
     Mechanized,
 }
@@ -13,7 +14,7 @@ pub enum Standing {
 impl Standing {
     pub fn id(self) -> &'static str {
         match self {
-            Self::ProseOnly => "prose-only",
+            Self::Prose => "prose-only",
             Self::Observed => "observed",
             Self::Mechanized => "mechanized",
         }
@@ -21,7 +22,7 @@ impl Standing {
 
     pub fn parse(value: &str) -> Option<Self> {
         match value {
-            "prose-only" => Some(Self::ProseOnly),
+            "prose-only" => Some(Self::Prose),
             "observed" => Some(Self::Observed),
             "mechanized" => Some(Self::Mechanized),
             _ => None,
@@ -39,9 +40,9 @@ pub struct Rule {
     pub tags: &'static [&'static Tag],
 }
 
-pub struct MechanizedRule(pub Rule);
+pub struct Mechanism(pub Rule);
 
-impl Deref for MechanizedRule {
+impl Deref for Mechanism {
     type Target = Rule;
 
     fn deref(&self) -> &Self::Target {
@@ -66,7 +67,7 @@ impl Rule {
 }
 
 #[derive(Serialize)]
-pub struct RuleView {
+pub struct View {
     pub id: &'static str,
     pub namespace: &'static str,
     pub name: &'static str,
@@ -78,7 +79,7 @@ pub struct RuleView {
     pub tags: Vec<&'static str>,
 }
 
-impl From<&'static Rule> for RuleView {
+impl From<&'static Rule> for View {
     fn from(rule: &'static Rule) -> Self {
         Self {
             id: rule.id,
@@ -96,7 +97,8 @@ impl From<&'static Rule> for RuleView {
 
 #[derive(Serialize)]
 pub struct Coverage {
-    pub prose_only: usize,
+    #[serde(rename = "prose_only")]
+    pub prose: usize,
     pub observed: usize,
     pub mechanized: usize,
 }

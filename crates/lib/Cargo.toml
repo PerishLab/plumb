@@ -41,5 +41,5 @@ name = "skill"
 required-features = ["skill"]
 
 [[test]]
-name = "skill_status"
+name = "survey"
 required-features = ["skill"]
