@@ -9,7 +9,8 @@ mod pack;
 pub mod pair;
 mod policy;
 
-pub use lock::{Found, Lock, locked, seal};
+pub use crate::judge::finding::Found;
+pub use lock::{Lock, locked, seal};
 
 pub struct Shape {
     pub wrappers: BTreeSet<String>,
@@ -47,8 +48,8 @@ pub struct Shape {
     pub named: Vec<(String, String)>,
     pub derived: Vec<String>,
     pub entries: Vec<String>,
-    pub dispatch: Option<Vec<(&'static str, String)>>,
-    pub web: Option<Vec<(&'static str, String)>>,
+    pub dispatch: Option<Found>,
+    pub web: Option<Found>,
     pub policy: Vec<String>,
     pub guard: String,
     pub init: String,
@@ -155,10 +156,6 @@ impl Root<'_> {
             return pack::field(&text, "name");
         }
         None
-    }
-
-    fn denos(&self) -> String {
-        std::fs::read_to_string(self.0.join(".runseal/deno.json")).unwrap_or_default()
     }
 
     fn manifests(&self) -> Vec<String> {
@@ -272,7 +269,7 @@ pub fn read(root: &Path) -> Shape {
                 .any(|line| line.trim_start().starts_with("clap"))
         }),
         substrate: seat.substrate(),
-        deno: seat.denos(),
+        deno: std::fs::read_to_string(root.join(".runseal/deno.json")).unwrap_or_default(),
         mint: seat.mint(),
         packages: seat.packages(),
         node: node::read(root),

@@ -35,12 +35,8 @@ fn boundary_debt_is_composite() {
         "kind: Ingress\n- path: /\n  service:\n    name: specimen-web\n",
     );
 
-    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["doctor", root.to_str().unwrap()])
-        .output()
-        .unwrap();
+    let out = doctor(&root);
     std::fs::remove_dir_all(&root).unwrap();
-    let out = String::from_utf8_lossy(&output.stdout);
     for message in [
         "web image does not run the emitted design runtime",
         "web image still owns public proxy dispatch",
@@ -48,6 +44,42 @@ fn boundary_debt_is_composite() {
     ] {
         assert!(out.contains(&format!("{message} [dispatch]")), "{out}");
     }
+}
+
+#[test]
+fn sites_are_paired_with_release_surfaces() {
+    let root = std::env::temp_dir().join("plumb-siteless");
+    std::fs::create_dir_all(root.join("apps/web")).expect("fixture should be made");
+    std::fs::create_dir_all(root.join(".runseal/wrappers")).expect("fixture should be made");
+    let bare = doctor(&root);
+    assert!(!bare.contains("declares a site"), "{bare}");
+
+    std::fs::write(root.join("apps/web/wrangler.jsonc"), "{}").expect("config should be written");
+    let held = doctor(&root);
+    assert!(
+        held.contains("web declares a site without a ship wrapper"),
+        "{held}"
+    );
+    assert!(
+        held.contains("web declares a site without a deploy lane"),
+        "{held}"
+    );
+
+    std::fs::write(root.join(".runseal/wrappers/ship.ts"), "").expect("wrapper should be written");
+    std::fs::create_dir_all(root.join(".forgejo/workflows")).expect("fixture should be made");
+    std::fs::write(root.join(".forgejo/workflows/deploy.yml"), "").expect("lane should be written");
+    let paired = doctor(&root);
+    std::fs::remove_dir_all(&root).expect("fixture should be swept");
+    assert!(!paired.contains("declares a site"), "{paired}");
+    assert!(paired.contains("sites     web"), "{paired}");
+}
+
+fn doctor(root: &Path) -> String {
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["doctor", root.to_str().expect("path should be utf8")])
+        .output()
+        .expect("plumb should run");
+    String::from_utf8_lossy(&output.stdout).to_string()
 }
 
 fn write(root: &Path, path: &str, text: &str) {

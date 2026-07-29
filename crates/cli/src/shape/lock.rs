@@ -1,3 +1,4 @@
+use crate::judge::finding::{Found, Seed};
 use plumb::skill::stamp;
 use std::path::{Path, PathBuf};
 
@@ -120,24 +121,28 @@ fn quoted(text: &str) -> Option<String> {
     text[seat..].split('"').nth(3).map(str::to_string)
 }
 
-pub type Found = Vec<(&'static str, String)>;
-
 pub fn locked(held: &super::Shape) -> Found {
     let mut found = Vec::new();
     for lock in &held.locks {
         let seen = match seal(&held.root, lock) {
             Ok(seen) => seen,
             Err(why) => {
-                found.push(("out of true", format!("lock {} {why}", lock.name)));
+                found.push(Seed::wrong(
+                    "paths-valid",
+                    format!("lock {} {why}", lock.name),
+                ));
                 continue;
             }
         };
         if seen != lock.hash {
-            found.push(("out of true", stale(lock)));
+            found.push(Seed::wrong("content-current", stale(lock)));
             continue;
         }
         if held.version.as_deref().unwrap_or_default() != lock.version {
-            found.push(("out of true", moved(lock, held.version.as_deref())));
+            found.push(Seed::wrong(
+                "version-current",
+                moved(lock, held.version.as_deref()),
+            ));
         }
     }
     found

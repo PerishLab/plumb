@@ -7,7 +7,6 @@ mod skill;
 mod web;
 
 use clap::{Parser, Subcommand};
-use judge::{judge, show};
 use plumb::cli::Root;
 use std::path::PathBuf;
 
@@ -23,6 +22,8 @@ enum Command {
     Doctor {
         #[command(flatten)]
         target: Root,
+        #[arg(long)]
+        json: bool,
     },
     Policy {
         #[command(flatten)]
@@ -44,48 +45,6 @@ enum Command {
         #[arg(long)]
         version: Option<String>,
     },
-}
-
-fn doctor(root: PathBuf) -> i32 {
-    let held = shape::read(&root);
-    println!("plumb doctor {}", root.display());
-    println!();
-    println!("  wrappers  {}", show(&held.wrappers));
-    println!("  layout    {}", show(&held.dirs));
-    println!("  lanes     {}", show(&held.lanes));
-    println!("  publishes {}", show(&held.ships));
-    if !held.sites.is_empty() {
-        println!("  sites     {}", show(&held.sites));
-    }
-    println!(
-        "  law       block={} path={} grants={}",
-        held.block.unwrap_or(0),
-        held.path.unwrap_or(0),
-        show(&held.grants)
-    );
-    println!();
-    let notes = judge(&held);
-    if notes.is_empty() {
-        println!("  true to the skeleton");
-        return 0;
-    }
-    let mut wrong = 0;
-    let mut blind = 0;
-    for note in &notes {
-        println!("  {}: {} [{}]", note.grade, note.line, note.dim);
-        if note.grade == "out of true" {
-            wrong += 1;
-        }
-        if note.grade == "blind" {
-            blind += 1;
-        }
-    }
-    println!();
-    println!(
-        "  {wrong} out of true, {} unknown to the skeleton, {blind} blind",
-        notes.len() - wrong - blind
-    );
-    i32::from(wrong > 0)
 }
 
 fn locks(root: PathBuf) -> i32 {
@@ -174,7 +133,7 @@ fn policy(root: PathBuf, write: bool) -> i32 {
 
 fn main() {
     let code = match Cli::parse().command {
-        Command::Doctor { target } => doctor(PathBuf::from(target.root)),
+        Command::Doctor { target, json } => judge::doctor::run(PathBuf::from(target.root), json),
         Command::Policy { target, write } => policy(PathBuf::from(target.root), write),
         Command::Skill { deed } => skill::run(deed),
         Command::Lock { target } => locks(PathBuf::from(target.root)),

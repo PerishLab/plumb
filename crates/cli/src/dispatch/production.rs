@@ -3,17 +3,33 @@ use std::path::{Path, PathBuf};
 
 pub(super) fn read(root: &Path, found: &mut Found) {
     if !root.join("deploy/api.Dockerfile").is_file() {
-        wrong(found, "production has no api image seat");
+        wrong(
+            found,
+            "api-image-present",
+            "production has no api image seat",
+        );
     }
     let web_image = root.join("deploy/web.Dockerfile");
     if !web_image.is_file() {
-        wrong(found, "production has no web image seat");
+        wrong(
+            found,
+            "web-image-present",
+            "production has no web image seat",
+        );
     } else if let Ok(text) = std::fs::read_to_string(web_image) {
         if !text.contains("dist/.perish/server.mjs") {
-            wrong(found, "web image does not run the emitted design runtime");
+            wrong(
+                found,
+                "web-image-runs-design-runtime",
+                "web image does not run the emitted design runtime",
+            );
         }
         if owns_public_dispatch(&text) {
-            wrong(found, "web image still owns public proxy dispatch");
+            wrong(
+                found,
+                "web-image-does-not-own-dispatch",
+                "web image still owns public proxy dispatch",
+            );
         }
     }
 
@@ -25,7 +41,11 @@ pub(super) fn read(root: &Path, found: &mut Found) {
         .iter()
         .any(|text| workload(text) && role(text, "web"));
     if !api || !web {
-        wrong(found, "chart does not split api and web workloads");
+        wrong(
+            found,
+            "chart-splits-workloads",
+            "chart does not split api and web workloads",
+        );
     }
     let ingress = templates
         .iter()
@@ -33,6 +53,7 @@ pub(super) fn read(root: &Path, found: &mut Found) {
     if !ingress {
         wrong(
             found,
+            "chart-splits-ingress",
             "chart ingress does not split /api and / between api and web",
         );
     }
@@ -47,7 +68,11 @@ pub(super) fn read(root: &Path, found: &mut Found) {
         cargo.as_deref() == version.as_deref() && version == app
     });
     if !aligned {
-        wrong(found, "Cargo and chart do not share one version train");
+        wrong(
+            found,
+            "cargo-chart-version-train",
+            "Cargo and chart do not share one version train",
+        );
     }
 }
 

@@ -16,6 +16,11 @@ cannot, that is plumb's debt, not the repository's exception.
 
 A template that is only copied rots. This one is run.
 
+`plumb doctor --json [ROOT]` emits the same verdict as the default human
+report with a positive shape snapshot, stable finding codes, evidence, scope,
+and mechanized standing. `ok` follows the command exit status; `clean` is true
+only when no out-of-true, unknown, or blind finding remains.
+
 ## Install the CLI
 
 ```sh

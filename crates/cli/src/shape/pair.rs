@@ -1,4 +1,5 @@
 use super::{Found, Shape};
+use crate::judge::finding::Seed;
 use crate::judge::show;
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -19,24 +20,24 @@ pub fn sites(root: &Path) -> BTreeSet<String> {
 pub fn judge(held: &Shape) -> Found {
     let mut found = Found::new();
     if held.rust && !held.ignore.lines().any(|line| line.trim() == "target/") {
-        found.push((
-            "out of true",
+        found.push(Seed::wrong(
+            "cargo-target-ignored",
             "Cargo.toml without target/ in .gitignore".to_string(),
         ));
     }
     if held.wrappers.contains("release") {
         for lane in ["release-beta", "release-stable"] {
             if !held.lanes.contains(lane) {
-                found.push((
-                    "out of true",
+                found.push(Seed::wrong(
+                    "release-lane-present",
                     format!("release wrapper without a {lane} lane"),
                 ));
             }
         }
     }
     if !held.ships.is_empty() && !held.wrappers.contains("release") {
-        found.push((
-            "out of true",
+        found.push(Seed::wrong(
+            "release-wrapper-present",
             format!("declares {} without a release wrapper", show(&held.ships)),
         ));
     }
@@ -48,13 +49,21 @@ fn site(held: &Shape, found: &mut Found) {
     if held.sites.is_empty() {
         return;
     }
-    for (want, seated) in [
-        ("a ship wrapper", held.wrappers.contains("ship")),
-        ("a deploy lane", held.lanes.contains("deploy")),
+    for (code, want, seated) in [
+        (
+            "site-ship-wrapper",
+            "a ship wrapper",
+            held.wrappers.contains("ship"),
+        ),
+        (
+            "site-deploy-lane",
+            "a deploy lane",
+            held.lanes.contains("deploy"),
+        ),
     ] {
         if !seated {
-            found.push((
-                "out of true",
+            found.push(Seed::wrong(
+                code,
                 format!("{} declares a site without {want}", show(&held.sites)),
             ));
         }

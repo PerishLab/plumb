@@ -1,7 +1,6 @@
+use crate::judge::finding::{Found, Seed};
 use serde_json::Value as Json;
 use std::path::{Path, PathBuf};
-
-type Found = Vec<(&'static str, String)>;
 
 pub fn read(root: &Path) -> Option<Found> {
     Web(root).read()
@@ -28,7 +27,11 @@ impl Web<'_> {
 
     fn plane(&self, package: &Json, found: &mut Found) {
         if !has(package, "@perish/react-components") {
-            wrong(found, "web does not depend on @perish/react-components");
+            wrong(
+                found,
+                "react-components-dependency",
+                "web does not depend on @perish/react-components",
+            );
         }
         if ![
             "@perish/vite-plugin-design",
@@ -37,9 +40,12 @@ impl Web<'_> {
         .iter()
         .any(|name| has(package, name))
         {
-            wrong(found, "web does not depend on @perish/vite-plugin-design");
+            wrong(
+                found,
+                "design-plugin-dependency",
+                "web does not depend on @perish/vite-plugin-design",
+            );
         }
-
         let config = [
             "vite.config.ts",
             "vite.config.mts",
@@ -50,18 +56,33 @@ impl Web<'_> {
         .find_map(|name| std::fs::read_to_string(self.0.join("apps/web").join(name)).ok())
         .unwrap_or_default();
         if !config.contains("design(") {
-            wrong(found, "vite does not activate the design plugin");
+            wrong(
+                found,
+                "design-plugin-active",
+                "vite does not activate the design plugin",
+            );
         }
         if config.contains("SIDECAR_PORT") || config.contains("API_URL") {
-            wrong(found, "vite manually consumes sidecar dispatch environment");
+            wrong(
+                found,
+                "vite-does-not-own-dispatch",
+                "vite manually consumes sidecar dispatch environment",
+            );
         }
-
         let source = self.sources(&self.0.join("apps/web/src"));
         if !source.contains("virtual:perish/views") {
-            wrong(found, "web does not load the virtual views manifest");
+            wrong(
+                found,
+                "views-manifest-loaded",
+                "web does not load the virtual views manifest",
+            );
         }
         if !source.contains("Views") || !source.contains("@perish/react-components") {
-            wrong(found, "web does not render the views manifest");
+            wrong(
+                found,
+                "views-manifest-rendered",
+                "web does not render the views manifest",
+            );
         }
 
         let compiler =
@@ -69,6 +90,7 @@ impl Web<'_> {
         if !compiler.contains("@perish/react-components/client") {
             wrong(
                 found,
+                "client-types-present",
                 "web compiler does not include @perish/react-components/client",
             );
         }
@@ -78,13 +100,17 @@ impl Web<'_> {
             .and_then(Json::as_str)
             .is_none()
         {
-            wrong(found, "web has no build script");
+            wrong(found, "build-script-present", "web has no build script");
         }
         let guard =
             std::fs::read_to_string(self.0.join(".runseal/wrappers/guard.ts")).unwrap_or_default();
         let name = package.get("name").and_then(Json::as_str);
         if !guard.contains("\"build\"") || name.is_none_or(|name| !guard.contains(name)) {
-            wrong(found, "guard does not build the web app");
+            wrong(
+                found,
+                "guard-builds-web",
+                "guard does not build the web app",
+            );
         }
     }
 
@@ -105,13 +131,21 @@ impl Web<'_> {
             let name = entry.file_name().to_string_lossy().to_string();
             if path.is_dir() {
                 if !segment(&name) {
-                    wrong(found, "web view paths must be lowercase route segments");
+                    wrong(
+                        found,
+                        "view-path-segment",
+                        "web view paths must be lowercase route segments",
+                    );
                 }
                 self.views(&path, found);
                 continue;
             }
             if path.extension().and_then(|value| value.to_str()) != Some("tsx") {
-                wrong(found, "web views only hold route tsx files");
+                wrong(
+                    found,
+                    "view-file-kind",
+                    "web views only hold route tsx files",
+                );
                 continue;
             }
             let stem = path
@@ -119,7 +153,11 @@ impl Web<'_> {
                 .and_then(|value| value.to_str())
                 .unwrap_or("");
             if stem != "index" && !segment(stem) {
-                wrong(found, "web view paths must be lowercase route segments");
+                wrong(
+                    found,
+                    "view-path-segment",
+                    "web view paths must be lowercase route segments",
+                );
             }
         }
     }
@@ -132,7 +170,11 @@ impl Web<'_> {
             .flatten()
             .any(|entry| entry.path().extension().and_then(|value| value.to_str()) == Some("tsx"))
         {
-            wrong(found, "web lib tsx must live under lib/components");
+            wrong(
+                found,
+                "tsx-under-components",
+                "web lib tsx must live under lib/components",
+            );
         }
     }
 
@@ -144,12 +186,20 @@ impl Web<'_> {
             let path = entry.path();
             let name = entry.file_name().to_string_lossy().to_string();
             if name != name.to_ascii_lowercase() {
-                wrong(found, "web convention paths must be lowercase");
+                wrong(
+                    found,
+                    "convention-path-lowercase",
+                    "web convention paths must be lowercase",
+                );
             }
             if path.is_dir() {
                 self.components(&path, found);
             } else if path.extension().and_then(|value| value.to_str()) != Some("tsx") {
-                wrong(found, "web components only hold lowercase tsx files");
+                wrong(
+                    found,
+                    "component-file-kind",
+                    "web components only hold lowercase tsx files",
+                );
             }
         }
     }
@@ -162,7 +212,11 @@ impl Web<'_> {
             let path = entry.path();
             let name = entry.file_name().to_string_lossy().to_string();
             if name != name.to_ascii_lowercase() {
-                wrong(found, "web convention paths must be lowercase");
+                wrong(
+                    found,
+                    "convention-path-lowercase",
+                    "web convention paths must be lowercase",
+                );
             }
             if path.is_dir() {
                 self.hooks(&path, found);
@@ -174,7 +228,11 @@ impl Web<'_> {
                 if path.extension().and_then(|value| value.to_str()) != Some("ts")
                     || !stem.starts_with("use-")
                 {
-                    wrong(found, "web hooks must be lowercase use-*.ts files");
+                    wrong(
+                        found,
+                        "hook-file-kind",
+                        "web hooks must be lowercase use-*.ts files",
+                    );
                 }
             }
         }
@@ -223,21 +281,20 @@ fn has(doc: &Json, name: &str) -> bool {
 fn segment(name: &str) -> bool {
     if let Some(held) = name
         .strip_prefix('{')
-        .and_then(|name| name.strip_suffix('}'))
+        .and_then(|value| value.strip_suffix('}'))
     {
-        return !held.is_empty()
-            && held.chars().enumerate().all(|(index, value)| {
-                value.is_ascii_lowercase() || (index > 0 && value.is_ascii_digit())
-            });
+        return word(held) && held.as_bytes()[0].is_ascii_lowercase();
     }
-    name.split('-').all(|part| {
-        !part.is_empty()
-            && part
-                .chars()
-                .all(|value| value.is_ascii_lowercase() || value.is_ascii_digit())
-    })
+    name.split('-').all(word)
 }
 
-fn wrong(found: &mut Found, line: &str) {
-    found.push(("out of true", line.to_string()));
+fn word(value: &str) -> bool {
+    !value.is_empty()
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
+}
+
+fn wrong(found: &mut Found, code: &'static str, evidence: &str) {
+    found.push(Seed::wrong(code, evidence));
 }
