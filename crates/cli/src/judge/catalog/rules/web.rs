@@ -143,8 +143,8 @@ rule!(
 rule!(
     HOOK_FILE_KIND,
     "web.hook-file-kind",
-    "Hooks are use-*.ts files",
-    "The web hook tree contains lowercase use-*.ts files.",
+    "Hooks are lowercase .ts files",
+    "The web hook tree contains lowercase .ts files. The directory identifies a hook, so the file name does not carry a use- prefix; that spelling is two words and the single-word law refuses it. Name the file for the subject and let it export the hooks: health.ts exports useHealth.",
     "Files below apps/web/src/lib/hooks.",
     Mechanized,
     WEB,

@@ -232,12 +232,12 @@ impl Web<'_> {
                     .and_then(|value| value.to_str())
                     .unwrap_or("");
                 if path.extension().and_then(|value| value.to_str()) != Some("ts")
-                    || !stem.starts_with("use-")
+                    || stem.is_empty()
                 {
                     wrong(
                         found,
                         &rule::HOOK_FILE_KIND,
-                        "web hooks must be lowercase use-*.ts files",
+                        "web hooks must be lowercase .ts files",
                     );
                 }
             }

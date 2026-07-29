@@ -70,6 +70,8 @@ fn roles() {
         .expect("component should be written");
     std::fs::write(root.join("apps/web/src/lib/hooks/Hush.ts"), "")
         .expect("hook should be written");
+    std::fs::write(root.join("apps/web/src/lib/hooks/hush.tsx"), "")
+        .expect("hook should be written");
     std::fs::write(root.join("apps/web/src/lib/components/card.ts"), "")
         .expect("component should be written");
     std::fs::write(root.join("apps/web/src/lib/components/card.scss"), "")
@@ -80,7 +82,7 @@ fn roles() {
         "web views only hold route tsx files",
         "web lib tsx must live under lib/components",
         "web convention paths must be lowercase",
-        "web hooks must be lowercase use-*.ts files",
+        "web hooks must be lowercase .ts files",
         "web components only hold lowercase tsx files",
     ] {
         assert!(out.contains(&format!("{line} [web]")), "{out}");

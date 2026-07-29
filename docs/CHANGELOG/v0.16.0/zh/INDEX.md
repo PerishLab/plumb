@@ -28,3 +28,11 @@ plumb 交付的那份 brief 与交付它的代码受同一套语法法约束。
 这个缺陷是在把变更日志门控推广到其余六个 manager 时暴露的。`stim` 把
 `inputs.version_override` 直接接到 `RELEASE_VERSION`，而该输入是可选的，
 所以操作者一旦忘记填，旗标就是空的。拒绝本身是对的，给出的理由是编的。
+
+## web hooks 以主题命名
+
+`web.hook-file-kind` 不再要求 `use-` 前缀。目录本身已经标识了 hook，而带前缀的
+拼写是**两个词**——单词法会拒绝它，于是两条法叠加起来让这棵树无法被满足。
+
+以主题命名文件，由它导出 hooks：`health.ts` 导出 `useHealth`。文件仍须是小写
+`.ts`。

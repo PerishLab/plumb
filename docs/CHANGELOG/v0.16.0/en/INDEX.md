@@ -34,3 +34,12 @@ This surfaced while rolling the changelog gate out to the other six managers.
 `stim` threads `inputs.version_override` straight into `RELEASE_VERSION`, and
 that input is optional, so the flag arrives blank whenever an operator forgets
 it. The refusal was correct; the reason given for it was invented.
+
+## Web hooks are named for their subject
+
+`web.hook-file-kind` no longer requires a `use-` prefix. The directory already
+identifies a hook, and the prefixed spelling is two words — which the
+single-word law refuses, so the two laws together made the tree unsatisfiable.
+
+Name the file for its subject and let it export the hooks: `health.ts` exports
+`useHealth`. Files still have to be lowercase `.ts`.

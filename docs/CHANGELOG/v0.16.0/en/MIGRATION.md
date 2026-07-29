@@ -23,3 +23,13 @@ Nothing to do. A blank flag now falls back to the repository's declared version
 instead of refusing with a wrong explanation. A lane passing a real version is
 unaffected, and a repository declaring no version at all still refuses — with an
 accurate reason this time.
+
+## If you have web hooks named `use-*.ts`
+
+Rename them for their subject — `use-health.ts` becomes `health.ts` — and drop
+any ectropy boundary you added to waive the word law for that directory. The
+exported hook keeps its React spelling: `useHealth`.
+
+Nothing forces the rename; the check only refuses non-`.ts` or uppercase files
+now. But a repository that keeps the old spelling still needs the boundary,
+which is the waiver this release makes unnecessary.
