@@ -75,6 +75,31 @@ A skill declares its own tool's law and its own binary's checks, and references
 another tool's clauses rather than restating them: a restated clause in a second
 repository has nobody to keep it true.
 
+Managed skill seats are stable consensus. Install, status, and upgrade admit
+stable releases only. A non-stable brief enters through `skill stage`, which
+requires one exact version and a new explicit path, uses a distinct staged
+marker, and never enters the global ledger. Staged ownership never enters
+managed ownership.
+
+## Stable consensus seats
+
+Stable is a pair: the `stable` channel and the canonical release authority.
+Only that pair may write a tool's default install root, default command
+entrypoint, and root public manager. A custom authority is isolated even when
+it calls its channel stable, and it must name an exact version.
+
+Every non-stable channel requires an exact immutable version and explicit
+install and bin paths. Effective paths are normalized through relative
+segments and symlinks and must be disjoint from stable defaults and from each
+other. The refusal happens before network access or filesystem mutation.
+
+A default stable seat is a singleton. Its manager locks mutation, proves
+authority-and-channel-bound root, version, and entrypoint ownership, verifies a
+staged binary, switches the entrypoint atomically, and only then sweeps old
+owned versions. An implicit stable-pointer selection never moves backwards; an
+exact stable version is a deliberate rollback. Unowned state refuses rather
+than being adopted.
+
 ## Locks
 
 A lock declares a pair bound across a boundary no compiler crosses, stamped

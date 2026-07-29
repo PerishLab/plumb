@@ -1,6 +1,6 @@
 import { cli, flags } from "@perish/sealkit/cli";
 import { Forgejo, type Remote, token } from "@perish/sealkit/forgejo";
-import { upsertSecret, upsertVariable } from "@perish/sealkit/forgejo-project";
+import { upsertSecret } from "@perish/sealkit/forgejo-project";
 import { io } from "@perish/sealkit/io";
 import { project } from "../lib/cold-start/project.ts";
 
@@ -29,12 +29,17 @@ type Token = {
   name: string;
 };
 
-type Release = {
-  publicUrl: string;
+type Capability = {
   accessKey: string;
   secretKey: string;
   bucket: string;
   endpoint: string;
+};
+
+type Release = {
+  publicUrl: string;
+  publish: Capability;
+  activate: Capability;
 };
 
 const API = Deno.env.get("CLOUDFLARE_API_BASE") ?? "https://api.cloudflare.com/client/v4";
@@ -46,7 +51,7 @@ function usage(): void {
   io.print("Cold-start one R2-backed Forgejo release delivery chain.");
   io.print("");
   io.print("Required:");
-  io.print("  --product <name>       product/env prefix, for example ectropy");
+  io.print("  --product <name>       binary product, for example ectropy");
   io.print("  --repo <owner/name>    Forgejo repository");
   io.print("  --bucket <name>        exact R2 bucket name");
   io.print("  --domain <host>        exact public custom domain");
@@ -125,10 +130,6 @@ function parse(): Options {
     forgejoUrl: held.string("forgejo-url", "https://git.perish.top"),
     dryRun: held.boolean("dry-run"),
   };
-}
-
-function envPrefix(product: string): string {
-  return product.replace(/-/g, "_").toUpperCase();
 }
 
 async function readEnv(path: string): Promise<Record<string, string>> {
@@ -373,13 +374,16 @@ async function sha256(value: string): Promise<string> {
     .join("");
 }
 
-function releaseText(prefix: string, release: Release): string {
+function releaseText(release: Release): string {
   return [
-    `${prefix}_RELEASES_PUBLIC_URL=${release.publicUrl}`,
-    `${prefix}_RELEASES_S3_AK=${release.accessKey}`,
-    `${prefix}_RELEASES_S3_SK=${release.secretKey}`,
-    `${prefix}_RELEASES_S3_BUCKET=${release.bucket}`,
-    `${prefix}_RELEASES_S3_URL=${release.endpoint}`,
+    `RELEASE_PUBLISH_S3_ACCESS_KEY=${release.publish.accessKey}`,
+    `RELEASE_PUBLISH_S3_SECRET_KEY=${release.publish.secretKey}`,
+    `RELEASE_PUBLISH_S3_BUCKET=${release.publish.bucket}`,
+    `RELEASE_PUBLISH_S3_ENDPOINT=${release.publish.endpoint}`,
+    `RELEASE_ACTIVATE_S3_ACCESS_KEY=${release.activate.accessKey}`,
+    `RELEASE_ACTIVATE_S3_SECRET_KEY=${release.activate.secretKey}`,
+    `RELEASE_ACTIVATE_S3_BUCKET=${release.activate.bucket}`,
+    `RELEASE_ACTIVATE_S3_ENDPOINT=${release.activate.endpoint}`,
     "",
   ].join("\n");
 }
@@ -409,20 +413,20 @@ async function writeAtomic(path: string, text: string): Promise<void> {
   }
 }
 
-async function verifyS3(release: Release): Promise<void> {
+async function verifyS3(name: string, capability: Capability): Promise<void> {
   const args = [
     "--endpoint-url",
-    release.endpoint,
+    capability.endpoint,
     "s3api",
     "list-objects-v2",
     "--bucket",
-    release.bucket,
+    capability.bucket,
     "--max-keys",
     "1",
   ];
   const held = {
-    AWS_ACCESS_KEY_ID: release.accessKey,
-    AWS_SECRET_ACCESS_KEY: release.secretKey,
+    AWS_ACCESS_KEY_ID: capability.accessKey,
+    AWS_SECRET_ACCESS_KEY: capability.secretKey,
     AWS_DEFAULT_REGION: "auto",
   };
   const delays = [1000, 2000, 4000, 8000];
@@ -435,11 +439,11 @@ async function verifyS3(release: Release): Promise<void> {
       stderr: "piped",
     }).output();
     if (output.success) {
-      io.print("s3 credential: ok");
+      io.print(`${name} credential: ok`);
       return;
     }
     if (attempt < delays.length) {
-      io.print(`s3 credential: waiting for propagation (${attempt + 1}/${delays.length})`);
+      io.print(`${name} credential: waiting for propagation (${attempt + 1}/${delays.length})`);
       await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
       continue;
     }
@@ -448,25 +452,29 @@ async function verifyS3(release: Release): Promise<void> {
   }
 }
 
-async function syncForgejo(options: Options, prefix: string, release: Release): Promise<void> {
+async function syncForgejo(options: Options, release: Release): Promise<void> {
   const remote = forgejo(options);
   const api = new Forgejo(remote, await token(remote));
   const values: Record<string, string> = {
-    [`${prefix}_RELEASES_PUBLIC_URL`]: release.publicUrl,
-    [`${prefix}_RELEASES_S3_AK`]: release.accessKey,
-    [`${prefix}_RELEASES_S3_SK`]: release.secretKey,
-    [`${prefix}_RELEASES_S3_BUCKET`]: release.bucket,
-    [`${prefix}_RELEASES_S3_URL`]: release.endpoint,
+    RELEASE_PUBLISH_S3_ACCESS_KEY: release.publish.accessKey,
+    RELEASE_PUBLISH_S3_SECRET_KEY: release.publish.secretKey,
+    RELEASE_PUBLISH_S3_BUCKET: release.publish.bucket,
+    RELEASE_PUBLISH_S3_ENDPOINT: release.publish.endpoint,
+    RELEASE_ACTIVATE_S3_ACCESS_KEY: release.activate.accessKey,
+    RELEASE_ACTIVATE_S3_SECRET_KEY: release.activate.secretKey,
+    RELEASE_ACTIVATE_S3_BUCKET: release.activate.bucket,
+    RELEASE_ACTIVATE_S3_ENDPOINT: release.activate.endpoint,
   };
-  const variable = `${prefix}_RELEASES_PUBLIC_URL`;
-  const state = await upsertVariable(api, variable, values[variable]);
-  io.print(`forgejo variable: ${state} (${variable})`);
   for (
     const name of [
-      `${prefix}_RELEASES_S3_AK`,
-      `${prefix}_RELEASES_S3_SK`,
-      `${prefix}_RELEASES_S3_BUCKET`,
-      `${prefix}_RELEASES_S3_URL`,
+      "RELEASE_PUBLISH_S3_ACCESS_KEY",
+      "RELEASE_PUBLISH_S3_SECRET_KEY",
+      "RELEASE_PUBLISH_S3_BUCKET",
+      "RELEASE_PUBLISH_S3_ENDPOINT",
+      "RELEASE_ACTIVATE_S3_ACCESS_KEY",
+      "RELEASE_ACTIVATE_S3_SECRET_KEY",
+      "RELEASE_ACTIVATE_S3_BUCKET",
+      "RELEASE_ACTIVATE_S3_ENDPOINT",
     ]
   ) {
     await upsertSecret(api, name, values[name]);
@@ -488,8 +496,8 @@ function forgejo(options: Options): Remote {
 
 async function existingRelease(
   options: Options,
-  prefix: string,
-  writer: Token | undefined,
+  publisher: Token | undefined,
+  activator: Token | undefined,
 ): Promise<Release | undefined> {
   let values: Record<string, string>;
   try {
@@ -502,39 +510,53 @@ async function existingRelease(
     }
   }
   const names = [
-    `${prefix}_RELEASES_PUBLIC_URL`,
-    `${prefix}_RELEASES_S3_AK`,
-    `${prefix}_RELEASES_S3_SK`,
-    `${prefix}_RELEASES_S3_BUCKET`,
-    `${prefix}_RELEASES_S3_URL`,
+    "RELEASE_PUBLISH_S3_ACCESS_KEY",
+    "RELEASE_PUBLISH_S3_SECRET_KEY",
+    "RELEASE_PUBLISH_S3_BUCKET",
+    "RELEASE_PUBLISH_S3_ENDPOINT",
+    "RELEASE_ACTIVATE_S3_ACCESS_KEY",
+    "RELEASE_ACTIVATE_S3_SECRET_KEY",
+    "RELEASE_ACTIVATE_S3_BUCKET",
+    "RELEASE_ACTIVATE_S3_ENDPOINT",
   ];
   const present = names.filter((name) => (values[name] ?? "") !== "");
-  if (present.length === 0 && writer === undefined) {
+  if (present.length === 0 && publisher === undefined && activator === undefined) {
     return undefined;
   }
   if (present.length !== names.length) {
     throw new Error(`cold-start: incomplete release escrow at ${options.output}`);
   }
-  if (writer === undefined) {
-    throw new Error(`cold-start: release escrow exists but w:${options.bucket} does not`);
+  if (publisher === undefined || activator === undefined) {
+    throw new Error(`cold-start: release escrow and persistent capabilities disagree`);
   }
-  if (values[`${prefix}_RELEASES_S3_AK`] !== writer.id) {
-    throw new Error(`cold-start: release escrow does not match w:${options.bucket}`);
+  if (
+    values.RELEASE_PUBLISH_S3_ACCESS_KEY !== publisher.id ||
+    values.RELEASE_ACTIVATE_S3_ACCESS_KEY !== activator.id
+  ) {
+    throw new Error(`cold-start: release escrow does not match persistent capabilities`);
   }
   return {
-    publicUrl: values[`${prefix}_RELEASES_PUBLIC_URL`],
-    accessKey: values[`${prefix}_RELEASES_S3_AK`],
-    secretKey: values[`${prefix}_RELEASES_S3_SK`],
-    bucket: values[`${prefix}_RELEASES_S3_BUCKET`],
-    endpoint: values[`${prefix}_RELEASES_S3_URL`],
+    publicUrl: `https://${options.domain}`,
+    publish: {
+      accessKey: values.RELEASE_PUBLISH_S3_ACCESS_KEY,
+      secretKey: values.RELEASE_PUBLISH_S3_SECRET_KEY,
+      bucket: values.RELEASE_PUBLISH_S3_BUCKET,
+      endpoint: values.RELEASE_PUBLISH_S3_ENDPOINT,
+    },
+    activate: {
+      accessKey: values.RELEASE_ACTIVATE_S3_ACCESS_KEY,
+      secretKey: values.RELEASE_ACTIVATE_S3_SECRET_KEY,
+      bucket: values.RELEASE_ACTIVATE_S3_BUCKET,
+      endpoint: values.RELEASE_ACTIVATE_S3_ENDPOINT,
+    },
   };
 }
 
 async function release(): Promise<void> {
   const options = parse();
-  const prefix = envPrefix(options.product);
   const tempName = `tmp:${options.bucket}`;
-  const writerName = `w:${options.bucket}`;
+  const publishName = `publish:${options.bucket}`;
+  const activateName = `activate:${options.bucket}`;
   io.print("==> release cold-start");
   io.print(`product: ${options.product}`);
   io.print(`repo: ${options.repo}`);
@@ -542,7 +564,8 @@ async function release(): Promise<void> {
   io.print(`domain: ${options.domain}`);
   io.print(`factory token: super:perish.code (${options.factoryEnv})`);
   io.print(`temporary token: ${tempName}`);
-  io.print(`persistent token: ${writerName}`);
+  io.print(`publish capability: ${publishName}`);
+  io.print(`activate capability: ${activateName}`);
   io.print(`escrow: ${options.output}`);
   if (options.dryRun) {
     io.print("dry-run: no credentials read and no state changed");
@@ -556,14 +579,15 @@ async function release(): Promise<void> {
     await revoke(keys, stale.id);
     io.print(`temporary token: cleared stale ${tempName}`);
   }
-  const writers = all.filter((token) => token.name === writerName);
-  if (writers.length > 1) {
-    throw new Error(`cold-start: duplicate persistent token name ${writerName}`);
+  const publishers = all.filter((token) => token.name === publishName);
+  const activators = all.filter((token) => token.name === activateName);
+  if (publishers.length > 1 || activators.length > 1) {
+    throw new Error(`cold-start: duplicate persistent capability name`);
   }
-  const existing = await existingRelease(options, prefix, writers[0]);
-  if (writers.length === 1 && existing === undefined) {
+  const existing = await existingRelease(options, publishers[0], activators[0]);
+  if ((publishers.length === 1 || activators.length === 1) && existing === undefined) {
     throw new Error(
-      `cold-start: ${writerName} exists but ${options.output} cannot recover its one-time secret`,
+      `cold-start: persistent capability exists but ${options.output} cannot recover its one-time secret`,
     );
   }
 
@@ -572,7 +596,7 @@ async function release(): Promise<void> {
     "Workers R2 Storage Write",
     "com.cloudflare.api.account",
   );
-  const writerPermission = await permission(
+  const objectPermission = await permission(
     keys,
     "Workers R2 Storage Bucket Item Write",
     "com.cloudflare.edge.r2.bucket",
@@ -585,7 +609,7 @@ async function release(): Promise<void> {
     `com.cloudflare.api.account.${keys.account}`,
     expires,
   );
-  let writerCreated: string | undefined;
+  const created: string[] = [];
   let escrowed = existing !== undefined;
   try {
     io.print(`temporary token: active until ${expires}`);
@@ -600,28 +624,45 @@ async function release(): Promise<void> {
 
     let release = existing;
     if (release === undefined) {
-      const created = await createToken(
+      const publisher = await createToken(
         keys,
-        writerName,
-        writerPermission,
+        publishName,
+        objectPermission,
         `com.cloudflare.edge.r2.bucket.${keys.account}_default_${options.bucket}`,
       );
-      writerCreated = created.id;
+      created.push(publisher.id);
+      const activator = await createToken(
+        keys,
+        activateName,
+        objectPermission,
+        `com.cloudflare.edge.r2.bucket.${keys.account}_default_${options.bucket}`,
+      );
+      created.push(activator.id);
+      const endpoint = `https://${keys.account}.r2.cloudflarestorage.com`;
       release = {
         publicUrl: `https://${options.domain}`,
-        accessKey: created.id,
-        secretKey: await sha256(created.value),
-        bucket: options.bucket,
-        endpoint: `https://${keys.account}.r2.cloudflarestorage.com`,
+        publish: {
+          accessKey: publisher.id,
+          secretKey: await sha256(publisher.value),
+          bucket: options.bucket,
+          endpoint,
+        },
+        activate: {
+          accessKey: activator.id,
+          secretKey: await sha256(activator.value),
+          bucket: options.bucket,
+          endpoint,
+        },
       };
-      await writeAtomic(options.output, releaseText(prefix, release));
+      await writeAtomic(options.output, releaseText(release));
       escrowed = true;
       io.print(`release escrow: written (${options.output})`);
     } else {
       io.print(`release escrow: resumed (${options.output})`);
     }
-    await verifyS3(release);
-    await syncForgejo(options, prefix, release);
+    await verifyS3("publish", release.publish);
+    await verifyS3("activate", release.activate);
+    await syncForgejo(options, release);
     await waitDomain(
       temporary.value,
       keys.account,
@@ -630,8 +671,10 @@ async function release(): Promise<void> {
     );
     io.print("cold-start: ok");
   } catch (error) {
-    if (writerCreated !== undefined && !escrowed) {
-      await revoke(keys, writerCreated);
+    if (!escrowed) {
+      for (const id of created) {
+        await revoke(keys, id);
+      }
     }
     throw error;
   } finally {

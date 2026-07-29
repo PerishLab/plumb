@@ -5,6 +5,7 @@ use serde_json::Value as Json;
 use std::path::{Path, PathBuf};
 
 mod production;
+pub mod release;
 
 pub fn read(root: &Path) -> Option<Found> {
     let workspace = Workspace(root);

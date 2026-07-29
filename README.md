@@ -35,10 +35,9 @@ refuse. See `docs/rules.md`.
 curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
 ```
 
-Select an exact beta or stable release when needed:
+Select an exact stable release for a deliberate rollback:
 
 ```sh
-curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install --channel beta --version v0.15.0-beta.1
 curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install --version v0.13.1
 ```
 
@@ -46,12 +45,31 @@ Windows uses `https://releases.plumb.perish.uk/manage.ps1`. Both managers
 install versioned binaries under the user's local data directory and expose
 `plumb` from the user's local bin directory.
 
-Releases publish one identity to R2 and the private Cargo registry.
-`release-beta` advances `-beta.N` from beta metadata without creating a tag;
-`release-stable` promotes the Cargo workspace version and tags it only after
-registry readback, R2 verification, and install smoke passes. If a runner or
-public edge fails after publication, `release-verify` can recheck an exact
-immutable version on Linux, macOS, and Windows without advancing the channel.
+Non-stable releases are disposable validation candidates. Name the channel and
+exact version and give both seats an explicit isolation root:
+
+```sh
+isolation=$(mktemp -d)
+curl -fsSL https://releases.plumb.perish.uk/manage.sh -o "$isolation/manage.sh"
+sh "$isolation/manage.sh" install \
+  --channel beta \
+  --version v0.16.0-beta.1 \
+  --install-root "$isolation/install" \
+  --bin-dir "$isolation/bin"
+"$isolation/bin/plumb" doctor .
+```
+
+The root manager is stable-owned but can express an exact isolated install for
+any channel. The exact release seal also records content-addressed generated
+managers for reproducible validation.
+
+Releases publish one identity to object storage and the private Cargo registry.
+Every channel first creates
+`v1/releases/<channel>/<exact-version>/seal.json`; non-stable stops there.
+Stable promotion proves one exact candidate from the same commit, then moves
+`v1/channels/stable.json` and the root managers. The stable tag is created only
+after public verification and install smoke. Public inspection and generated
+manager smoke are reusable Plumb operations rather than a third workflow lane.
 
 ## Paired Web/API dispatch
 

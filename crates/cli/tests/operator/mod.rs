@@ -1,5 +1,8 @@
 use std::process::Command;
 
+mod fixture;
+mod release;
+
 fn run(root: &std::path::Path) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("path should be utf8")])

@@ -53,9 +53,12 @@ pub enum Error {
     Shape(String),
     Channel(String),
     Floating(String),
+    Managed(String),
+    Stage,
     Version(String),
     Bare,
     Named(PathBuf),
+    Occupied(PathBuf),
 }
 
 impl std::fmt::Display for Error {
@@ -75,9 +78,16 @@ impl std::fmt::Display for Error {
             Self::Floating(channel) => {
                 write!(f, "non-stable channel {channel} requires an exact version")
             }
+            Self::Managed(channel) => {
+                write!(f, "managed skills only admit stable, not {channel}")
+            }
+            Self::Stage => write!(f, "stable belongs in managed skill seats, not staging"),
             Self::Version(version) => write!(f, "invalid release version: {version}"),
             Self::Bare => write!(f, "no agent skill directory was found"),
             Self::Named(path) => write!(f, "path must end with the skill name: {}", path.display()),
+            Self::Occupied(path) => {
+                write!(f, "staging path must not exist: {}", path.display())
+            }
         }
     }
 }
@@ -86,6 +96,7 @@ impl std::error::Error for Error {}
 
 impl Kit {
     pub fn install(&self, ask: &Ask) -> Result<Done, Error> {
+        managed(ask)?;
         let seats = match &ask.path {
             Some(path) => self.chosen(path)?,
             None => agent::seats(&self.home, &self.name),
@@ -97,6 +108,7 @@ impl Kit {
     }
 
     pub fn upgrade(&self, ask: &Ask) -> Result<Done, Error> {
+        managed(ask)?;
         let grant = fetch::resolve(&self.url, &ask.channel, ask.version.as_deref())?;
         let ledger = state::read(&self.state)?;
         if ledger.records.is_empty() {
@@ -140,9 +152,29 @@ impl Kit {
     }
 
     pub fn status(&self, ask: &Ask) -> Result<Report, Error> {
+        managed(ask)?;
         let grant = fetch::resolve(&self.url, &ask.channel, ask.version.as_deref())?;
         let ledger = state::read(&self.state)?;
         survey::inspect(self, ask, &grant, &ledger)
+    }
+
+    pub fn stage(&self, ask: &Ask) -> Result<Done, Error> {
+        if ask.channel.trim() == "stable" {
+            return Err(Error::Stage);
+        }
+        let path = ask.path.as_ref().ok_or(Error::Bare)?;
+        let seats = self.chosen(path)?;
+        if path.exists() {
+            return Err(Error::Occupied(path.clone()));
+        }
+        let grant = fetch::resolve(&self.url, &ask.channel, ask.version.as_deref())?;
+        let bytes = fetch::take(&grant)?;
+        let seat = seats.into_iter().next().expect("a chosen path is one seat");
+        place::stage(self, &seat, &bytes, &grant.version)?;
+        Ok(Done {
+            kept: vec![seat],
+            ..Done::default()
+        })
     }
 
     pub fn list(&self) -> Result<Vec<Record>, Error> {
@@ -209,6 +241,14 @@ impl Kit {
             path: path.to_path_buf(),
         }])
     }
+}
+
+fn managed(ask: &Ask) -> Result<(), Error> {
+    let channel = ask.channel.trim();
+    if channel != "stable" {
+        return Err(Error::Managed(channel.to_string()));
+    }
+    Ok(())
 }
 
 fn worn(record: &Record) -> Seat {

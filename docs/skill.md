@@ -54,18 +54,20 @@ repository has nobody to keep it true.
 ## Package
 
 The source lives in the tool's own repository at `skills/<tool>/`, holding `SKILL.md` and, when it
-needs them, `references/`. The release packages that directory verbatim and adds `metadata.json`
-naming the schema, the skill, and the release version.
+needs them, `references/`. The release packages that directory verbatim and adds an internal
+`metadata.json` marker naming the schema, skill, and release version.
 
-The published artifact enters the release metadata as `artifacts.skillTarGz` with a name, a url, and
-a sha256, and it resolves through the same channel and version surface as the binary. One release,
-one version, both faces of it.
+The published artifact enters the exact release seal as `artifacts.skill` with a name, URL, digest,
+and size. It resolves through the same exact seal as the binary. One release, one version, both
+faces of it.
 
 ## Installation
 
 Installation is a managed act under the home law (`docs/home.md`), and its whole posture is that of
 a guest:
 
+- **Managed means stable.** Install, status, and upgrade select stable releases only. A non-stable
+  brief cannot enter the global ledger or any detected agent seat.
 - **Targets are found, not assumed.** A candidate agent directory is a target only when that agent
   is present on the machine. An explicit path is honored when it ends with the skill's own name.
 - **Nothing unmanaged is touched.** Overwrite requires both the registry entry and the marker inside
@@ -77,21 +79,31 @@ a guest:
 - **Partial success is recorded.** When one target succeeds and another is refused, the success is
   written down and the refusal is reported.
 
+## Candidate staging
+
+`skill stage` is the deliberately separate non-stable path. It requires a channel, exact version,
+and explicit path ending in the skill name. That target must not exist. The unpacked brief receives
+a staged marker distinct from managed ownership and no state ledger is read or written. The caller
+gives an isolated agent that path and removes the surrounding temporary root afterwards.
+
+Stable refuses to stage because it belongs in managed seats. A candidate refuses managed install,
+status, and upgrade even when its version is exact. Staged and managed ownership remain disjoint.
+
 ## Observation and upgrade
 
-`skill status` reads the managed ledger, ownership markers, and the selected channel metadata. It
-does not download the skill artifact or write state. `skill upgrade --dry-run` renders the same
-per-seat decisions without applying them.
+`skill status` reads the managed ledger, ownership markers, and the stable pointer plus its exact
+seal. It does not download the skill artifact or write state. `skill upgrade --dry-run` renders the
+same per-seat decisions without applying them.
 
 The selected release is compared by semantic version and artifact digest. Current seats are no-ops;
 an available newer release upgrades; a missing managed path restores. Same-version digest drift and
 an implicit channel rollback refuse. An explicit older `--version` is a deliberate rollback. Real
 upgrade downloads the artifact only when at least one owned seat needs to move.
 
-Stable is the only moving install intent. A non-stable channel is useful for discovering immutable
-validation cuts, but installing, checking, or upgrading through one requires its exact version.
-That keeps a beta or release candidate from moving underneath a repository between two runs.
+Stable is the only managed install intent. A non-stable channel is useful for discovering immutable
+validation cuts, but consuming one means staging its exact version outside managed state. That
+keeps a beta or release candidate from becoming an agent-wide consensus by accident.
 
-The mechanized checks — package shape, frontmatter, standing accuracy, and the release metadata
+The mechanized checks — package shape, frontmatter, standing accuracy, and the release spec and seal
 carrying its skill artifact — are declared here and not yet running; until they land, this page is
 the wall.

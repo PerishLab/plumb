@@ -45,48 +45,58 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 
 ## Release
 
-- `manage.sh` and `manage.ps1` are the public install/update/uninstall
-  entrypoints. Both leave exactly one version under the install root: whatever
-  was there before is swept once the new binary is linked and answers
-  `--version`, and the sweep names what it removed. The versioned root is not a
-  rollback cache and never was — `install --version <older>` deletes that
-  directory and refetches, so nothing ever read what accumulated there.
-- POWERSHELL COLLAPSES A ONE-ELEMENT SLICE INTO A SCALAR. `$args[1..1]` returns
-  the string, not an array of one, so `.Length` becomes the character count and
-  `[0]` becomes the first character — an argument list of exactly one option
-  parsed as `-`. `@(...)` around the slice does not save you when the value
-  leaves an `if` expression, because a one-element array unrolls on the way out.
-  Constrain the variable instead: `[string[]]$rest = ...`. This cost three
-  commits of guessing at the wrong cause, because the failure only appears with
-  exactly one argument and CI was the only place anyone ran the script.
-- DO NOT EDIT `manage.ps1` BLIND. A Linux workstation can run the real thing:
-  `docker run --rm -v $PWD:/probe:ro mcr.microsoft.com/powershell:latest pwsh
-  -File /probe/<script>.ps1`. Argument parsing, help paths, and the install-root
-  sweep are all verifiable there in seconds; only the parts that need a Windows
-  binary have to wait for `platform-smoke`.
-- A stable release refuses to publish without
+- The root `plumb.toml` `[release]` table is the complete product-owned binary
+  release declaration: product, authority, binaries, Rust targets, and typed
+  product inputs such as a skill, Cargo attachment, or Debian payload.
+  Platform keys, archive names, environment prefixes, and artifact metadata
+  are derived.
+- Plumb owns Cargo discovery and stamping, target builds, archives, skill and
+  Debian assembly, manager generation, capsules, storage, verification,
+  activation, smoke, and stable tags. Those mechanisms do not live in product
+  scripts.
+- Actions owns the reusable target matrix, artifact transport, credential
+  binding, and release sequencing. Product repositories expose only
+  `release-exact.yml` and `release-stable.yml` as thin callers.
+- Every permanent release resolves canonical stable Plumb once and freezes that
+  exact stable version across all jobs. The source-built Plumb genesis ceremony
+  is one-shot and leaves no alternate lane behind.
+- Exact releases live at `v1/releases/<channel>/<exact-version>/seal.json`.
+  Non-stable has no moving pointer and no activation operation. Consumers name
+  both channel and exact version.
+- Stable alone owns `v1/channels/stable.json`, `/manage.sh`, and
+  `/manage.ps1`. Stable activation conditionally updates the generated root
+  managers, then commits consensus by compare-and-swap of the stable pointer.
+  The pointer is the only moving truth.
+- The default install and bin seats admit only stable from the canonical
+  release authority. Every other channel requires an exact version plus
+  explicit install and bin paths disjoint from the defaults. Default stable
+  mutation holds one lock, stages before switching, proves ownership on every
+  destructive path, and refuses an implicit rollback.
+- A stable capsule refuses to compile without
   `docs/CHANGELOG/v<version>/{en,zh}/{INDEX.md,MIGRATION.md}`, enforced by the
-  `Changelog` step in `release-stable.yml` before the first irreversible action.
+  Plumb compiler before the first irreversible action.
   `plumb doctor` does not check this: a changelog is owed by a release, not by a
   working tree. See `docs/changelog.md`.
-- R2 metadata, immutable version assets, and the Cargo registry share one
-  release identity. Beta advances from beta metadata; stable advances only
-  when the Cargo workspace version is newer than stable metadata.
 - Stable is `X.Y.Z`. Every non-stable release is
-  `X.Y.Z-<channel>.N`, and every non-stable consumer must name that exact
-  version. Discovery metadata is not an install intent.
+  `X.Y.Z-<channel>.N`. Stable promotion embeds the complete exact candidate
+  seal and its digest, and requires the same product, base version, and commit.
+  Stable binaries are rebuilt with stable identity from that commit.
+- Exact seal creation is create-only and idempotent by content. Publish and
+  stable activation use separate credentials and separate Plumb commands.
+- `plumb release inspect` takes its exact or stable public URL from the release
+  environment and verifies the whole public surface.
+- `plumb release smoke` performs the shared cross-platform generated-manager
+  install, exact `--version` probe, update, and uninstall cycle from the product
+  declaration.
 - Cargo publishes `plumb-macro` before `plumb`, reads both back from the
   registry, and locks their coupled versions exactly.
 - Non-stable releases do not create Git tags.
-- Stable tags are created only after R2 publish, metadata verification, and
+- Stable tags are created only after exact publish, stable activation, and
   manager smoke.
-- `release-verify` rechecks one immutable published version on Linux, macOS,
-  and Windows without publishing, advancing channel metadata, or tagging.
-- Forgejo needs the `PLUMB_RELEASES_PUBLIC_URL` repository variable, the four
-  `PLUMB_RELEASES_S3_*` repository secrets, and a
-  `PLUMB_CARGO_REGISTRY_TOKEN` secret whose token has `write:packages`. Keep
-  local source values in the ignored `.forgejo/release.env`, initialized from
-  `.forgejo/release.env.example`.
+- Every product repository uses the same Forgejo secret names:
+  `RELEASE_PUBLISH_S3_*`, `RELEASE_ACTIVATE_S3_*`, and optional
+  `RELEASE_REGISTRY_TOKEN`. Authority comes from `plumb.toml`, not a repository
+  variable.
 
 ## Ecosystem release cold-start
 
@@ -108,17 +118,23 @@ The naming and authority split is fixed:
   business-resource operations directly.
 - `tmp:<bucket>` — 15-minute account-scoped R2 administration token, revoked
   on every completion path.
-- `w:<bucket>` — permanent object read/write token scoped to exactly one
-  bucket.
+- `publish:<bucket>` — permanent exact-object publication capability scoped to
+  one bucket.
+- `activate:<bucket>` — permanent stable-consensus activation capability
+  scoped to one bucket.
 
 The wrapper creates or verifies the bucket and TLS 1.2 custom domain, derives
-the S3 credentials from the one-time `w:` token response, verifies S3 access,
-stores the local escrow at
+two independent S3 credential sets, verifies each, stores the local escrow at
 `.local/secrets/releases/<product>.env`, and syncs only the derived
 bucket-scoped values into Forgejo. Permission-group IDs are discovered by
-exact name and resource scope at runtime. An existing `w:` token without its
-matching local escrow is a fail-closed recovery case; its secret cannot be
-reconstructed.
+exact name and resource scope at runtime. A persistent capability without its
+matching local escrow is a fail-closed recovery case because its secret cannot
+be reconstructed.
+
+Plumb itself needs one explicit genesis ceremony to publish and activate the
+first release that contains this substrate. The ceremony runs the source-built
+binary once with the same capsule protocol and separate credentials. No
+bootstrap branch or alternate permanent workflow survives genesis.
 
 `runseal :retire` is the symmetric destructive control-plane entrypoint,
 implemented and tested by `@perish/sealkit/retire`. It defaults to a

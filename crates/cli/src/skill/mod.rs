@@ -33,6 +33,14 @@ pub enum Deed {
         #[arg(long)]
         json: bool,
     },
+    Stage {
+        #[arg(long)]
+        channel: String,
+        #[arg(long)]
+        version: String,
+        #[arg(long)]
+        path: PathBuf,
+    },
     List,
     Uninstall,
 }
@@ -100,6 +108,20 @@ fn act(kit: &Kit, deed: Deed) -> i32 {
                 ..Ask::default()
             }),
             json,
+        ),
+        Deed::Stage {
+            channel,
+            version,
+            path,
+        } => told(
+            "staged",
+            kit.stage(&Ask {
+                channel,
+                version: Some(version),
+                path: Some(path),
+                ..Ask::default()
+            }),
+            false,
         ),
         Deed::List => tell(kit),
         Deed::Uninstall => told("removed", kit.uninstall(), false),

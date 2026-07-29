@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Default)]
 struct Hits {
-    metadata: AtomicUsize,
+    record: AtomicUsize,
     archive: AtomicUsize,
 }
 
@@ -39,18 +39,21 @@ fn serve(archive: Vec<u8>, digest: String) -> (String, Arc<Hits>) {
             let mut buffer = [0u8; 1024];
             let read = stream.read(&mut buffer).unwrap_or(0);
             let head = String::from_utf8_lossy(&buffer[..read]);
-            let metadata = head.contains("metadata.json");
-            if metadata {
-                seen.metadata.fetch_add(1, Ordering::SeqCst);
+            let record = head.contains("/v1/");
+            if record {
+                seen.record.fetch_add(1, Ordering::SeqCst);
             } else {
                 seen.archive.fetch_add(1, Ordering::SeqCst);
             }
-            let body = if metadata {
-                let version = asked(&head);
+            let stable = seal(port, &digest, "stable", "v1.2.3");
+            let body = if head.contains("/v1/channels/stable.json") {
                 format!(
-                    r#"{{"releaseVersion":"{version}","artifacts":{{"skillTarGz":{{"name":"plumb.tar.gz","url":"http://127.0.0.1:{port}/plumb.tar.gz","sha256":"{digest}"}}}}}}"#
+                    r#"{{"schema":1,"channel":"stable","releaseVersion":"v1.2.3","seal":{{"name":"seal.json","url":"http://127.0.0.1:{port}/v1/releases/stable/v1.2.3/seal.json","sha256":"{}"}}}}"#,
+                    plumb::skill::stamp(&stable)
                 )
                 .into_bytes()
+            } else if let Some((channel, version)) = route(&head) {
+                seal(port, &digest, channel, version)
             } else {
                 archive.clone()
             };
@@ -66,12 +69,17 @@ fn serve(archive: Vec<u8>, digest: String) -> (String, Arc<Hits>) {
     (format!("http://127.0.0.1:{port}"), hits)
 }
 
-fn asked(head: &str) -> String {
-    let Some(seat) = head.find("/versions/") else {
-        return "v1.2.3".to_string();
-    };
-    let rest = &head[seat + "/versions/".len()..];
-    format!("v{}", rest.split('/').next().unwrap_or("1.2.3"))
+fn seal(port: u16, digest: &str, channel: &str, version: &str) -> Vec<u8> {
+    format!(
+        r#"{{"schema":1,"channel":"{channel}","releaseVersion":"{version}","artifacts":{{"skill":{{"name":"plumb-skill.tar.gz","url":"http://127.0.0.1:{port}/plumb-skill.tar.gz","sha256":"{digest}"}}}}}}"#
+    )
+    .into_bytes()
+}
+
+fn route(head: &str) -> Option<(&str, &str)> {
+    let rest = head.split("/v1/releases/").nth(1)?;
+    let mut parts = rest.split('/');
+    Some((parts.next()?, parts.next()?))
 }
 
 fn rig(root: &Path, url: &str) -> Kit {
@@ -106,7 +114,7 @@ fn current() {
     let kit = rig(&seat, &url);
     kit.install(&ask()).expect("install");
 
-    hits.metadata.store(0, Ordering::SeqCst);
+    hits.record.store(0, Ordering::SeqCst);
     hits.archive.store(0, Ordering::SeqCst);
     let report = kit.status(&ask()).expect("status");
     assert_eq!(report.seats[0].state, Standing::Current);
@@ -115,7 +123,7 @@ fn current() {
 
     let done = kit.upgrade(&ask()).expect("no-op");
     assert_eq!(done.same.len(), 1);
-    assert_eq!(hits.metadata.load(Ordering::SeqCst), 2);
+    assert_eq!(hits.record.load(Ordering::SeqCst), 4);
     assert_eq!(hits.archive.load(Ordering::SeqCst), 0);
     let _ = fs::remove_dir_all(seat);
 }
@@ -127,7 +135,7 @@ fn direction() {
     let seat = root("direction");
     let kit = rig(&seat, &url);
     kit.install(&Ask {
-        version: Some("1.0.0".to_string()),
+        version: Some("v1.0.0".to_string()),
         ..ask()
     })
     .expect("old");
@@ -138,7 +146,7 @@ fn direction() {
     kit.upgrade(&ask()).expect("upgrade");
 
     let exact = Ask {
-        version: Some("1.0.0".to_string()),
+        version: Some("v1.0.0".to_string()),
         ..ask()
     };
     assert_eq!(
@@ -147,7 +155,7 @@ fn direction() {
     );
     kit.upgrade(&exact).expect("rollback");
     kit.upgrade(&Ask {
-        version: Some("2.0.0".to_string()),
+        version: Some("v2.0.0".to_string()),
         ..ask()
     })
     .expect("ahead");

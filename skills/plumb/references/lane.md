@@ -1,77 +1,110 @@
 # Release lane anatomy
 
-A release lane lives in each repository's CI, in YAML, on a system the binary
-never sees. Nothing here can be compiled; all of it can be checked by reading,
-and every clause below was paid for by an incident.
+Release delivery is common Plumb substrate. A product repository supplies a
+strict `[release]` table in its root `plumb.toml`, genuine product asset inputs,
+and two thin callers into the shared Actions workflow. It does not carry build,
+archive, skill, package, manager, storage, channel, verification, or
+release-record implementations.
 
-## The spine
+## Product declaration
 
-**1. Resolve metadata.** Compute the target version from the prior published
-state — the registry itself, not a local file. Refuse a version that regresses,
-and refuse a rerun of a version already published unless the lane is explicitly
-repairing it.
+The release table declares one product, canonical authority, binary set,
+supported Rust targets, and typed attachments such as a skill, Cargo packages,
+or a Debian payload root. Platform keys, archive names, environment identity,
+version probes, and artifact metadata are derived by Plumb. Unknown fields
+refuse. Capsule compilation also refuses a missing or extra artifact, so the
+declaration is the one inventory used by build, managers, records, and
+verification.
 
-**2. Guard fresh.** Run the full check, not an incremental one. A release must
-not inherit a cache that hides a stale artifact.
+Generated managers and capsules are release-run artifacts. They are not source
+files and are never checked in.
 
-**3. Stamp the manifest the publisher reads.** In a workspace, the root
-manifest is often not the published one. A stamp written to the wrong file is
-invisible to the publisher and to any grep that reads the same wrong file back.
+## Generator resolution
 
-*Incident:* a workspace migration left the stamp on the root manifest. The lane
-published the bare base version to an immutable registry and only the
-post-publish verify noticed — after the escape.
+Every permanent release lane installs canonical stable Plumb through the root
+manager. It does not pin Plumb: stable is the workshop's reliability anchor and
+Plumb owns the correctness of its current compiler.
 
-**4. Assert the dry run.** Run the publisher's dry run and require its output
-to name the intended version before the lane may proceed. This is the last
-point at which a mistake is still free.
+One release run resolves Plumb once. The exact seal records that binary's
+reported version and the manager-template digest. A compiled capsule is sealed:
+a retry publishes that capsule rather than silently recompiling it with a
+different generator.
 
-**5. Publish idempotently.** A version already present is a skip, not a
-failure, so a repair rerun is safe.
+Plumb's first release of this substrate is a one-time genesis ceremony using
+the source-built binary. Genesis uses the same capsule, conditional storage,
+public verification, and separate capabilities as every subsequent release.
+No permanent bootstrap lane exists.
 
-**6. Verify by readback.** Confirm from the registry, not from local state.
+## Lane spine
 
-**7. Seal.** Record every immutable release identity. A stable release also
-gets a Git tag; a prerelease does not. Tags are promotion anchors, not an
-inventory of disposable validation cuts.
+Actions asks Plumb for the target matrix. Platform jobs call
+`plumb release build`; Cargo discovery, version stamping, target builds,
+archives, and inspection stay in Plumb.
 
-**8. Report failure outward.** Emit the lane log where an operator can reach it
-without CI log access — an issue, an artifact, a notification. On systems whose
-API does not expose job logs, this is the only forensic trail that survives.
+One coordinator performs the stateful sequence:
 
-**9. Offer a rehearsal.** A switch that runs the whole lane without publishing,
-tagging, or touching credentials.
+1. Resolve current stable Plumb once.
+2. Run the repository's fresh guard.
+3. Stamp and dry-run any declared registry attachment.
+4. Gather target archives and build declared skill or package attachments.
+5. Inspect the exact declared artifact set.
+6. Compile one capsule with the product commit and exact release identity.
+7. Publish content-addressed objects and the exact seal.
+8. Verify every published object through the public authority.
+9. Publish and read back any registry attachment.
+10. For stable only, activate the root managers and stable pointer.
+11. Smoke the generated manager on every supported platform.
+12. For stable only, create the durable Git tag after activation and smoke.
 
-## The rehearsal clause
+Arbitrary hooks do not run inside capsule publication or stable activation.
+Those phases stay small enough for their invariants to remain auditable.
 
-A lane that has not run is not known to work. Packaging scripts reference crate
-names, paths, and flags that ordinary development changes freely, and nothing
-outside the lane exercises them.
+## Immutable publication
 
-*Incident:* a crate was renamed in one commit. The packaging scripts kept
-building the old package name and the release lane was broken for five versions
-— until someone triggered a release and the lane failed on every non-Linux
-runner at once. The local packaging script would have shown it in seconds.
+Product bytes and generated exact managers live under
+`v1/objects/sha256/<digest>/<name>`. One exact release seal lives at
+`v1/releases/<channel>/<exact-version>/seal.json`.
 
-Before triggering a lane that has been idle across renames or restructuring,
-run its packaging script locally.
+Object publication is idempotent by digest. Exact seal creation is conditional
+on absence; an existing byte-identical seal makes a rerun a no-op, while any
+same-identity drift refuses. The seal records product, channel, exact version,
+source commit, generator provenance, artifacts, managers, and stable promotion
+proof when present.
 
-## Channels
+Public readback fetches the seal and every named object, then proves byte count
+and SHA-256. It does not trust the publisher's local workspace as evidence of
+what the authority serves.
 
-One stable sink, zero or more prerelease channels, and one direction. Stable is
-`X.Y.Z`; a prerelease is `X.Y.Z-<channel>.N`. Products own which channel names
-exist and how they promote. The lane owns the grammar, the monotonic sequence,
-runner-only stamping, publishing, readback, and refusal once the base version
-is stable.
+## Stable consensus
 
-Stable may be selected through its moving channel metadata. A non-stable
-consumer must name the exact immutable version; its channel latest pointer is
-discovery, not an install intent. Strongly coupled packages published across a
-compiler boundary use exact internal requirements as well.
+Stable is the only moving release intent. Its pointer lives at
+`v1/channels/stable.json`; its generated public entrypoints live at
+`/manage.sh` and `/manage.ps1`.
 
-Prerelease sealing stops at verified immutable artifacts and metadata. Stable
-promotion runs the same spine against the same commit and adds the one durable
-Git tag.
+Stable promotion embeds the complete exact candidate seal plus its digest. The
+candidate must name the same product, base version, source commit, and a
+non-stable exact channel. Stable binaries are rebuilt from that commit with
+stable version identity.
+
+Activation conditionally updates the root managers before compare-and-swap of
+the stable pointer. Every root-manager version can interpret both the prior and
+next current record, so a failed attempt before pointer movement leaves the
+prior consensus valid. The pointer is the sole consensus commit.
+
+Publishing exact objects and activating stable use different commands,
+environment names, and persistent credentials. A non-stable lane never receives
+the activation capability.
+
+## Channel isolation
+
+Stable is `vX.Y.Z`. A non-stable exact release is
+`vX.Y.Z-<channel>.N`. Non-stable has no pointer, activation, or implied
+version.
+
+The canonical root manager may express an exact release for any channel.
+Non-stable and custom-authority installs require exact identity plus explicit
+install and bin paths disjoint from the stable defaults. Only canonical stable
+may use the default seats and omit an exact version.
 
 ## Coupled Cargo packages
 
@@ -79,36 +112,27 @@ When a library and its procedural macro share one release identity, stamp and
 assert both manifests before publishing either, then fully package and dry-run
 the macro. Publish the macro first and wait until the registry reads it back
 with the expected checksum. Only then can Cargo resolve the library's exact
-registry dependency, so perform the library's full package and dry run there
-before publishing it. A repair rerun verifies and skips an already matching
-package; an absent macro beneath a present library or a same-version checksum
-mismatch refuses.
+registry dependency. A rerun verifies and skips an already matching package;
+an absent macro beneath a present library or a same-version checksum mismatch
+refuses.
 
 ## Skill artifacts
 
-A repository that ships a skill packages `skills/<tool>/` verbatim, adds a
-metadata file naming the schema, skill, and release version, and publishes it as
-`artifacts.skillTarGz` with a name, url, and sha256 alongside the binaries. The
-artifact map is assembled by hand in most lanes — adding an entry usually means
-touching both the assembly and whatever asserts its length.
+A repository that ships a skill packages `skills/<tool>/` verbatim and adds a
+small internal marker naming its schema, skill, and release version. The
+release spec declares that archive once under the `skill` artifact key. The
+exact seal supplies its URL, digest, and size to skill installation.
 
 ## Site lanes
 
-A site lane is the same spine with a different registry: build, deploy, then
-read back from the edge. Its verification differs in one way worth stating —
-the control plane can report a domain as bound while the edge still routes
-elsewhere, so *bound* and *reachable* are separate findings and only the second
-is evidence that the site answers. Compare the fingerprinted asset in the
-served page against the built one; a status code alone proves only that
-something replied.
+A site lane uses the same product-owned build and public-readback boundary with
+a different registry. The control plane can report a domain as bound while the
+edge still routes elsewhere, so *bound* and *reachable* are separate findings
+and only the second proves that the site answers. Compare the fingerprinted
+asset in the served page against the built one; a status code alone proves only
+that something replied.
 
-A stuck binding usually clears on a second, identical ship. If the lane runs
-somewhere that cannot reach the public edge, it must declare that blindness
-rather than treat an unreachable site as success.
-
-Reading the binding is itself a permission. A credential without it gets a
-refusal, and a refusal parsed for a result set yields an empty one, which reads
-as *not bound* — so a healthy site fails on a finding the lane never actually
-made. Keep `unknown` distinct from `no`, and when binding is unknown the
-readback becomes the only evidence there is: blindness cannot excuse it, because
-a ship that could neither ask nor look has proved nothing at all.
+If the lane cannot reach the public edge, it declares that blindness rather
+than treating an unreachable site as success. Reading the binding is itself a
+permission: keep `unknown` distinct from `no`, and when binding is unknown,
+readback is the only remaining evidence.

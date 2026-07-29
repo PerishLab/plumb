@@ -89,7 +89,7 @@ impl Root<'_> {
 
     fn ships(&self) -> BTreeSet<String> {
         let mut found = BTreeSet::new();
-        if self.0.join("manage.sh").exists() {
+        if pair::release(self.0) {
             found.insert("binary".to_string());
         }
         if self.0.join("deno.json").exists() {

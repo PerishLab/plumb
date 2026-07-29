@@ -5,6 +5,13 @@ use crate::judge::show;
 use std::collections::BTreeSet;
 use std::path::Path;
 
+pub fn release(root: &Path) -> bool {
+    std::fs::read_to_string(root.join("plumb.toml"))
+        .ok()
+        .and_then(|text| text.parse::<toml::Table>().ok())
+        .is_some_and(|manifest| manifest.contains_key("release"))
+}
+
 pub fn sites(root: &Path) -> BTreeSet<String> {
     let mut found = BTreeSet::new();
     let Ok(entries) = std::fs::read_dir(root.join("apps")) else {
@@ -26,20 +33,26 @@ pub fn judge(held: &Shape) -> Found {
             "Cargo.toml without target/ in .gitignore".to_string(),
         ));
     }
-    if held.wrappers.contains("release") {
-        for lane in ["release-beta", "release-stable"] {
+    if held.ships.contains("binary") {
+        for lane in ["release-exact", "release-stable"] {
             if !held.lanes.contains(lane) {
                 found.push(Seed::wrong(
                     &rule::RELEASE_LANE_PRESENT,
-                    format!("release wrapper without a {lane} lane"),
+                    format!("binary release without a {lane} lane"),
                 ));
             }
         }
     }
-    if !held.ships.is_empty() && !held.wrappers.contains("release") {
+    let registries = held
+        .ships
+        .iter()
+        .filter(|held| held.as_str() != "binary")
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    if !registries.is_empty() && !held.wrappers.contains("release") {
         found.push(Seed::wrong(
-            &rule::RELEASE_WRAPPER_PRESENT,
-            format!("declares {} without a release wrapper", show(&held.ships)),
+            &rule::REGISTRY_RELEASE_WRAPPER_PRESENT,
+            format!("declares {} without a release wrapper", show(&registries)),
         ));
     }
     site(held, &mut found);

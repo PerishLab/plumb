@@ -2,4 +2,20 @@
 name = "skill"
 paths = ["skills/plumb"]
 version = "0.16.0"
-hash = "9bac3dafef4df83153a2806cdf75f37ec2822dbba0d50e69185ef01d434cc79c"
+hash = "3b5f1134176160a8d9b5bd81902180f71b98721e3b429f3b04914695d257ddd2"
+
+[release]
+product = "plumb"
+authority = "https://releases.plumb.perish.uk"
+binaries = ["plumb"]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-apple-darwin",
+  "x86_64-apple-darwin",
+  "x86_64-pc-windows-msvc",
+]
+skill = true
+
+[release.cargo]
+registry = "perish"
+packages = ["plumb-macro", "plumb"]

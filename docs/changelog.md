@@ -33,9 +33,10 @@ property of a **release**, not of a working tree; gating the working tree would
 turn a repository red the moment someone bumped a version number, for a document
 that is not owed until the release actually happens.
 
-`release-stable.yml` runs `plumb changelog` before its first irreversible step —
+`plumb release compile` checks the stable version before it creates a capsule —
 the same position as the dry-run assertion, and for the same reason: it is the
-last moment at which the omission is still free.
+last moment at which the omission is still free. `plumb changelog` remains the
+direct operator probe for that contract.
 
 Prereleases are exempt. A beta is a disposable validation cut that carries no
 tag; demanding migration notes for something nobody is asked to migrate to would

@@ -18,15 +18,14 @@ Repository: https://git.perish.top/PerishLab/plumb
 
 Report defects, missing shapes, and unclear guidance there as issues. Use
 `plumb skill status` to check stable without changing an installation. When a
-newer stable release is available, run `plumb skill upgrade` and validate it
-before preserving compatibility with an older managed installation.
+newer stable release is available, run `plumb skill upgrade` and validate it.
 
 Read `Standing` before trusting any clause to be caught for you. Run
 `plumb doctor` in a repository before changing its shape.
 
 ## Principles
 
-Four hold, and most specific questions fall out of them.
+Five hold, and most specific questions fall out of them.
 
 **Mechanism at the substrate, vocabulary with the product.** plumb exports the
 derive, the doors, the template grammar, the install machinery. It exports no
@@ -39,6 +38,12 @@ pressure the substrate never feels.
 lives with plumb because plumb can be amended when the shape must change. A law
 about a product's own sections lives with the product. Putting either in the
 other's house means the party who needs the change cannot make it.
+
+**Repetition is an ownership signal.** When several repositories repeat a
+Plumb-shaped mechanism nearly verbatim, surface the repeated shape to the
+caller and consider absorbing it at the substrate. Do not force an abstraction
+whose closure is still unclear; a strong signal starts an ownership decision,
+not an automatic rewrite.
 
 **Refusal over repair.** A policy half-read is a policy misread. Malformed
 config refuses to boot; an unknown template variable refuses to resolve; a state
@@ -70,13 +75,20 @@ their schema, and writes them whole. State is not a config surface. A record
 alone does not prove ownership: acting on a path requires the registry entry
 **and** a marker inside the path, both naming the tool.
 
-**Release lanes.** A lane has an anatomy, and every clause in it was bought
-with an incident: resolve metadata that refuses regressions and same-version
-reruns, guard fresh rather than incremental, stamp the manifest the publisher
-actually reads, assert the dry run names the version **before** the
-irreversible step, publish idempotently, verify by reading back from the
-registry, then seal. Rehearse the lane when nothing has exercised it — a lane
-that has not run since a rename is already broken. See `references/lane.md`.
+**Release lanes.** A binary product declares only its identity, binaries,
+targets, and genuine product assets in the root `plumb.toml`. Plumb owns build
+discovery, archives, attachments, managers, capsules, storage, verification,
+activation, smoke, and tags. Actions owns the shared matrix, credentials, and
+sequencing; product workflows are thin callers. Stable activation remains a
+separate capability and operation. See `references/lane.md`.
+
+**Stable consensus.** Stable from the canonical release authority alone may
+occupy default install seats and root manager entrypoints. Every other channel
+is an exact immutable validation candidate with explicit task-isolated install
+and bin paths. Stable default mutation is single-writer, ownership-proven,
+staged, atomic, and monotonic unless an exact rollback is explicit. Promotion
+embeds the exact candidate seal and requires the same source commit. See
+`references/lane.md`.
 
 **Repository shape.** Wrappers, hooks, lanes, and layout follow the skeleton
 the workshop already demonstrates rather than each repository's invention. Most
@@ -133,10 +145,8 @@ standing list into prose or infer completeness from a clean doctor report:
 `clean` means this repository emitted no finding, while
 `plumb doctor --json` reports whole-catalog coverage separately.
 
-The release changelog gate remains lane-local rather than a doctor rule. A
-repository adopts it by running
-`plumb changelog . --version "$RELEASE_VERSION"` before its first irreversible
-release step.
+The release changelog gate remains release-local rather than a doctor rule.
+`plumb release compile` enforces it for stable before capsule creation.
 
 ## Invocation
 
@@ -150,7 +160,16 @@ plumb rule owners             # registered owner vocabulary
 plumb lock [ROOT]             # print what a fresh affirmation would record
 plumb changelog [ROOT]        # refuse a version whose en+zh changelog is absent or empty
 plumb policy [ROOT] --write   # reconcile ectropy.toml against the repository
+plumb release matrix          # derive the shared target matrix from plumb.toml
+plumb release build           # build and archive one declared target
+plumb release assemble        # gather targets and build declared attachments
+plumb release compile         # seal one exact declared product artifact set
+plumb release publish         # publish immutable objects and the exact seal
+plumb release activate        # move stable consensus with its separate authority
+plumb release inspect         # verify an exact seal or stable public surface
+plumb release smoke           # exercise a generated manager on this platform
 plumb skill install           # install this brief into detected agent directories
+plumb skill stage             # unpack one exact candidate into a new explicit path
 plumb skill status            # compare managed installs with stable, read-only
 plumb skill upgrade --dry-run # print the exact stable movement without applying it
 plumb skill upgrade           # move managed installs to the selected version
@@ -158,16 +177,17 @@ plumb skill list              # show managed installs
 plumb skill uninstall         # remove only what is recorded as managed
 ```
 
-Install and upgrade take `--channel` (default stable) and `--version` to pin a
-published version; `--path` installs to one explicit directory, which must end
-with `plumb`. `--force` replaces an install that is already managed, and never
-touches a path that is not; upgrade already owns what it replaces, so it needs
-no flag and still refuses a path that is not provably managed. Status and
-upgrade dry-run fetch metadata but never the skill artifact and never write
-state. Upgrade leaves current seats untouched, refuses an implicit rollback or
-same-version artifact drift, and treats an explicit older `--version` as a
-deliberate rollback. Stable may resolve through latest metadata; every
-non-stable channel requires an exact `--version`.
+Install, status, and upgrade admit stable only; `--version` pins an exact
+stable release, while no version resolves the stable pointer. `--path` installs
+to one explicit managed directory ending with `plumb`. `--force` replaces only
+a seat proved by the ledger and marker. Upgrade leaves current seats untouched,
+refuses an implicit rollback or same-version artifact drift, and treats an
+explicit older stable version as deliberate rollback.
+
+`stage` requires `--channel`, `--version`, and `--path`. Its channel must be
+non-stable, its version exact, and its target absent and ending with `plumb`.
+It writes a staged marker but never the managed ledger. The caller owns cleanup
+of the surrounding isolated root.
 
 The binary is the truth about its own flags: prefer `plumb <command> --help`
 over assuming.

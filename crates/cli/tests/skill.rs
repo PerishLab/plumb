@@ -8,13 +8,22 @@ fn releases() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
     let port = listener.local_addr().expect("address").port();
     std::thread::spawn(move || {
+        let seal = format!(
+            r#"{{"schema":1,"channel":"stable","releaseVersion":"v1.2.3","artifacts":{{"skill":{{"name":"plumb-skill.tar.gz","url":"http://127.0.0.1:{port}/plumb-skill.tar.gz","sha256":"abc"}}}}}}"#
+        );
         for stream in listener.incoming() {
             let mut stream = stream.expect("stream");
             let mut request = [0u8; 2048];
-            let _ = stream.read(&mut request).expect("request");
-            let body = format!(
-                r#"{{"releaseVersion":"v1.2.3","artifacts":{{"skillTarGz":{{"name":"plumb-skill.tar.gz","url":"http://127.0.0.1:{port}/plumb-skill.tar.gz","sha256":"abc"}}}}}}"#
-            );
+            let read = stream.read(&mut request).expect("request");
+            let request = String::from_utf8_lossy(&request[..read]);
+            let body = if request.contains("/v1/channels/stable.json") {
+                format!(
+                    r#"{{"schema":1,"channel":"stable","releaseVersion":"v1.2.3","seal":{{"name":"seal.json","url":"http://127.0.0.1:{port}/v1/releases/stable/v1.2.3/seal.json","sha256":"{}"}}}}"#,
+                    plumb::skill::stamp(seal.as_bytes())
+                )
+            } else {
+                seal.clone()
+            };
             let head = format!(
                 "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
                 body.len()

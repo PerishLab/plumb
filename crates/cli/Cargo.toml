@@ -10,12 +10,23 @@ publish = false
 name = "plumb"
 path = "src/main.rs"
 
+[[test]]
+name = "operator"
+path = "tests/operator/mod.rs"
+
 [dependencies]
 plumb = { path = "../lib", features = ["skill"] }
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
+flate2 = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+semver = "1"
+sha2 = "0.10"
+tar = "0.4"
+tempfile = "3"
 toml = "0.9"
+toml_edit = "0.23"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
 tempfile = "3"

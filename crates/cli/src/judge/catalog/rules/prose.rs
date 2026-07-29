@@ -91,14 +91,14 @@ rule!(
     [OWNERSHIP, STATE]
 );
 rule!(
-    METADATA_MONOTONIC,
-    "release.metadata-monotonic",
-    "Release metadata moves forward",
-    "A release resolves prior published state and refuses regression or an accidental same-version rerun.",
-    "Registry metadata and the computed release version.",
+    RELEASE_SPEC_DECLARED,
+    "release.spec-declared",
+    "Products declare release inputs once",
+    "One strict product spec owns authority, version probe, binaries, platform archives, and extra assets.",
+    "The release spec compared with product archives and generated records.",
     Prose,
     RELEASE,
-    [RELEASE_TAG]
+    [OWNERSHIP, RELEASE_TAG]
 );
 rule!(
     GUARD_FRESH,
@@ -131,64 +131,64 @@ rule!(
     [RELEASE_TAG]
 );
 rule!(
-    PUBLISH_IDEMPOTENT,
-    "release.publish-idempotent",
-    "Publishing is idempotent",
-    "An already-present matching artifact is verified and skipped so repair reruns are safe.",
-    "Registry presence and checksums before each publish.",
+    GENERATOR_STABLE,
+    "release.generator-stable",
+    "Release compilation uses current stable Plumb",
+    "A permanent release lane resolves canonical stable Plumb once and records its version and template digest.",
+    "Generator installation, capsule provenance, and retry boundaries.",
     Prose,
     RELEASE,
     [RELEASE_TAG]
 );
 rule!(
-    REGISTRY_READBACK,
-    "release.registry-readback",
-    "Published artifacts are read back",
-    "A lane verifies immutable artifacts from their registry rather than local state.",
-    "Registry responses after publish.",
+    EXACT_CREATE_ONLY,
+    "release.exact-create-only",
+    "Exact release identity is immutable",
+    "Content objects are addressed by digest and an exact seal is created only when absent or already byte-identical.",
+    "Object keys, exact seal conditionals, digests, and rerun behavior.",
     Prose,
     RELEASE,
     [RELEASE_TAG]
 );
 rule!(
-    SEAL_LAST,
-    "release.seal-last",
-    "Release identity is sealed last",
-    "A lane records tags and moving metadata only after immutable artifacts verify.",
-    "Ordering of publish, verification, metadata, and tags.",
+    PUBLIC_READBACK,
+    "release.public-readback",
+    "Published objects are read back publicly",
+    "A release fetches its exact seal and every named object through the public authority and verifies size and digest.",
+    "Public responses compared with the exact seal.",
     Prose,
     RELEASE,
     [RELEASE_TAG]
 );
 rule!(
-    FAILURE_REPORTED,
-    "release.failure-reported",
-    "Release failures leave an operator trail",
-    "A failed lane reports evidence somewhere operators can reach outside ephemeral CI logs.",
-    "Failure handlers, issue or artifact output, and notification paths.",
+    CAPSULE_SEALED,
+    "release.capsule-sealed",
+    "A compiled capsule does not drift",
+    "A release run compiles once and retries the same capsule rather than resolving a new generator or artifact set.",
+    "Capsule creation boundary and retry inputs.",
     Prose,
     RELEASE,
     [RELEASE_TAG]
 );
 rule!(
-    REHEARSAL_AVAILABLE,
-    "release.rehearsal-available",
-    "Release lanes offer rehearsal",
-    "A release lane can exercise packaging without publishing, tagging, or touching credentials.",
-    "Workflow inputs and the guarded irreversible steps.",
+    COORDINATOR_SINGLE,
+    "release.coordinator-single",
+    "One coordinator owns release state",
+    "Platform jobs only produce product artifacts; one coordinator compiles, publishes, verifies, and activates.",
+    "Workflow job graph and credential placement.",
     Prose,
     RELEASE,
     [RELEASE_TAG]
 );
 rule!(
-    LANE_REHEARSED,
-    "release.lane-rehearsed",
-    "Idle release lanes are rehearsed",
-    "A lane idle across renames or restructuring is exercised before it is trusted.",
-    "Recent lane execution and local packaging rehearsal.",
+    GENERATED_EPHEMERAL,
+    "release.generated-ephemeral",
+    "Generated delivery files stay out of source",
+    "Managers, capsules, seals, and pointers are release outputs rather than checked-in product files.",
+    "Repository paths compared with capsule output.",
     Prose,
     RELEASE,
-    [RELEASE_TAG]
+    [OWNERSHIP, RELEASE_TAG]
 );
 rule!(
     SITE_DISPATCH_ONLY,
@@ -280,17 +280,17 @@ rule!(
     SKILL,
     [SKILL_TAG]
 );
-
 #[rustfmt::skip]
 pub fn all() -> Vec<&'static Rule> {
     vec![
-        &CONFIG_VOCABULARY, &DRY_RUN_ASSERTED, &FAILURE_REPORTED, &GUARD_FRESH,
-        &HOME_CASCADE, &LANE_REHEARSED, &MANIFEST_STAMPED, &METADATA_MONOTONIC,
-        &OWNERSHIP_TWO_SIDED, &PUBLISH_IDEMPOTENT, &RECORDS_NOT_CONFIG,
+        &CAPSULE_SEALED, &CONFIG_VOCABULARY, &COORDINATOR_SINGLE, &DRY_RUN_ASSERTED,
+        &EXACT_CREATE_ONLY, &GENERATED_EPHEMERAL, &GENERATOR_STABLE, &GUARD_FRESH,
+        &HOME_CASCADE, &MANIFEST_STAMPED, &OWNERSHIP_TWO_SIDED, &PUBLIC_READBACK,
+        &RECORDS_NOT_CONFIG, &RELEASE_SPEC_DECLARED,
         &RECORDS_SCHEMA_VERSIONED, &RECORDS_UNDER_STATE, &RECORDS_WRITTEN_WHOLE,
-        &REGISTRY_READBACK, &REHEARSAL_AVAILABLE, &SEAL_LAST, &SITE_ARTIFACT_IDENTITY,
-        &SITE_BINDING_THREE_VALUED, &SITE_DISPATCH_ONLY, &SITE_PURPOSE_KEY,
-        &SITE_READBACK, &SITE_ROUTES_ARTIFACT, &SITE_SHIPPER_ARTIFACT,
-        &SITE_STATES_SEPARATE, &SKILL_STANDING, &TEMPLATE_ALIGNED, &TEMPLATE_VARIABLES,
+        &SITE_ARTIFACT_IDENTITY, &SITE_BINDING_THREE_VALUED, &SITE_DISPATCH_ONLY,
+        &SITE_PURPOSE_KEY, &SITE_READBACK, &SITE_ROUTES_ARTIFACT,
+        &SITE_SHIPPER_ARTIFACT, &SITE_STATES_SEPARATE, &SKILL_STANDING,
+        &TEMPLATE_ALIGNED, &TEMPLATE_VARIABLES,
     ]
 }

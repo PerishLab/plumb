@@ -70,3 +70,10 @@ note = "vite and vitest require root-level config files; path law anchors to src
 allow = ["path"]
 
 [vocabulary]
+term = [
+  { name = "manifest_path", description = "Cargo metadata names a package manifest path as one schema field." },
+  { name = "promotion_channel", description = "An exact promotion channel is one release proof field." },
+  { name = "promotion_version", description = "An exact promotion version is one release proof field." },
+  { name = "registry_token", description = "The Cargo registry token is one release authority field." },
+  { name = "target_directory", description = "Cargo metadata names its build target directory as one schema field." },
+]

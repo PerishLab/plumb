@@ -1,6 +1,7 @@
 use super::Error;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
 
 #[derive(Clone, Debug)]
 pub struct Grant {
@@ -10,23 +11,30 @@ pub struct Grant {
 }
 
 #[derive(Deserialize)]
-struct Release {
+#[serde(rename_all = "camelCase")]
+struct Seal {
+    schema: u32,
+    channel: String,
     #[serde(rename = "releaseVersion")]
     version: String,
-    artifacts: Bundle,
+    artifacts: BTreeMap<String, Piece>,
 }
 
 #[derive(Deserialize)]
-struct Bundle {
-    #[serde(rename = "skillTarGz")]
-    skill: Option<Piece>,
+#[serde(rename_all = "camelCase")]
+struct Pointer {
+    schema: u32,
+    channel: String,
+    #[serde(rename = "releaseVersion")]
+    version: String,
+    seal: Piece,
 }
 
 #[derive(Deserialize)]
 struct Piece {
     name: String,
     url: String,
-    sha256: Option<String>,
+    sha256: String,
 }
 
 pub fn resolve(base: &str, channel: &str, version: Option<&str>) -> Result<Grant, Error> {
@@ -34,47 +42,51 @@ pub fn resolve(base: &str, channel: &str, version: Option<&str>) -> Result<Grant
     if !valid(channel) {
         return Err(Error::Channel(channel.to_string()));
     }
+    let version = version.map(str::trim);
     if channel != "stable" && version.is_none() {
         return Err(Error::Floating(channel.to_string()));
     }
-    let base = base.trim_end_matches('/');
-    let url = match version {
-        Some(version) => format!("{base}/{channel}/versions/{}/metadata.json", tidy(version)),
-        None => format!("{base}/{channel}/latest/metadata.json"),
-    };
-    let body = draw(&url)?;
-    let release: Release =
-        serde_json::from_slice(&body).map_err(|error| Error::Parse(error.to_string()))?;
-    let piece = release.artifacts.skill.ok_or(Error::Absent)?;
-    if !piece.name.ends_with(".tar.gz") {
-        return Err(Error::Shape(piece.name));
-    }
-    let grant = Grant {
-        version: release.version,
-        url: piece.url,
-        sha: piece.sha256.unwrap_or_default(),
-    };
     if let Some(wanted) = version
-        && !same(wanted, &grant.version)
+        && !belongs(channel, wanted)
     {
-        return Err(Error::Version(grant.version));
+        return Err(Error::Version(wanted.to_string()));
     }
-    if !belongs(channel, &grant.version) {
-        return Err(Error::Version(grant.version));
+
+    let base = base.trim_end_matches('/');
+    let seal = match version {
+        Some(wanted) => read(&format!("{base}/v1/releases/{channel}/{wanted}/seal.json"))?,
+        None => current(base)?,
+    };
+    if seal.schema != 1 {
+        return Err(Error::Schema(seal.schema));
     }
-    if grant.sha.is_empty() {
+    if seal.channel != channel {
+        return Err(Error::Channel(seal.channel));
+    }
+    if let Some(wanted) = version
+        && wanted != seal.version
+    {
+        return Err(Error::Version(seal.version));
+    }
+    if !belongs(channel, &seal.version) {
+        return Err(Error::Version(seal.version));
+    }
+    let piece = seal.artifacts.get("skill").ok_or(Error::Absent)?;
+    if !piece.name.ends_with(".tar.gz") {
+        return Err(Error::Shape(piece.name.clone()));
+    }
+    if piece.sha256.is_empty() {
         return Err(Error::Loose);
     }
-    Ok(grant)
+    Ok(Grant {
+        version: seal.version,
+        url: piece.url.clone(),
+        sha: piece.sha256.clone(),
+    })
 }
 
 pub fn take(grant: &Grant) -> Result<Vec<u8>, Error> {
-    let bytes = draw(&grant.url)?;
-    let seen = stamp(&bytes);
-    if seen != grant.sha {
-        return Err(Error::Digest(grant.sha.clone(), seen));
-    }
-    Ok(bytes)
+    exact(&grant.url, &grant.sha)
 }
 
 pub fn stamp(bytes: &[u8]) -> String {
@@ -85,6 +97,37 @@ pub fn stamp(bytes: &[u8]) -> String {
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect()
+}
+
+fn current(base: &str) -> Result<Seal, Error> {
+    let pointer: Pointer = read(&format!("{base}/v1/channels/stable.json"))?;
+    if pointer.schema != 1 || pointer.channel != "stable" {
+        return Err(Error::Channel(pointer.channel));
+    }
+    let body = exact(&pointer.seal.url, &pointer.seal.sha256)?;
+    let seal: Seal =
+        serde_json::from_slice(&body).map_err(|error| Error::Parse(error.to_string()))?;
+    if seal.version != pointer.version {
+        return Err(Error::Version(seal.version));
+    }
+    Ok(seal)
+}
+
+fn read<T: serde::de::DeserializeOwned>(url: &str) -> Result<T, Error> {
+    let body = draw(url)?;
+    serde_json::from_slice(&body).map_err(|error| Error::Parse(error.to_string()))
+}
+
+fn exact(url: &str, sha: &str) -> Result<Vec<u8>, Error> {
+    if sha.is_empty() {
+        return Err(Error::Loose);
+    }
+    let bytes = draw(url)?;
+    let seen = stamp(&bytes);
+    if seen != sha {
+        return Err(Error::Digest(sha.to_string(), seen));
+    }
+    Ok(bytes)
 }
 
 fn draw(url: &str) -> Result<Vec<u8>, Error> {
@@ -98,10 +141,6 @@ fn draw(url: &str) -> Result<Vec<u8>, Error> {
     Ok(bytes)
 }
 
-fn tidy(version: &str) -> String {
-    version.trim().to_string()
-}
-
 fn valid(channel: &str) -> bool {
     let mut bytes = channel.bytes();
     matches!(bytes.next(), Some(b'a'..=b'z'))
@@ -109,7 +148,10 @@ fn valid(channel: &str) -> bool {
 }
 
 fn belongs(channel: &str, release: &str) -> bool {
-    let Ok(version) = semver::Version::parse(release.trim_start_matches('v')) else {
+    let Some(raw) = release.strip_prefix('v') else {
+        return false;
+    };
+    let Ok(version) = semver::Version::parse(raw) else {
         return false;
     };
     if channel == "stable" {
@@ -121,9 +163,4 @@ fn belongs(channel: &str, release: &str) -> bool {
             .next()
             .is_some_and(|number| number.parse::<u64>().is_ok_and(|number| number > 0))
         && parts.next().is_none()
-}
-
-fn same(left: &str, right: &str) -> bool {
-    let parse = |raw: &str| semver::Version::parse(raw.trim().trim_start_matches('v'));
-    matches!((parse(left), parse(right)), (Ok(left), Ok(right)) if left == right)
 }

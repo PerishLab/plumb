@@ -49,6 +49,10 @@ enum Command {
         #[arg(long)]
         version: Option<String>,
     },
+    Release {
+        #[command(subcommand)]
+        deed: dispatch::release::Deed,
+    },
 }
 
 fn locks(root: PathBuf) -> i32 {
@@ -144,6 +148,7 @@ fn main() {
         Command::Rule { deed } => judge::catalog::query::run(deed),
         Command::Lock { target } => locks(PathBuf::from(target.root)),
         Command::Changelog { target, version } => changelog(PathBuf::from(target.root), version),
+        Command::Release { deed } => dispatch::release::run(deed),
     };
     std::process::exit(code);
 }

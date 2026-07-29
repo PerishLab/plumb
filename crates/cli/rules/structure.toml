@@ -55,4 +55,4 @@ wrappers = [
 ]
 required = ["guard", "init", "land"]
 hooks = ["pre-commit", "commit-msg"]
-lanes = ["deploy", "guard", "release-beta", "release-stable", "release-verify", "probe"]
+lanes = ["deploy", "guard", "release-binary", "release-exact", "release-stable", "probe"]
