@@ -2,8 +2,9 @@ $ErrorActionPreference = 'Stop'
 
 $arguments = @()
 for ($index = 0; $index -lt $args.Length; $index++) {
-    if ($args[$index] -eq '-' -and $index + 1 -lt $args.Length -and $args[$index + 1] -match '^-[^-]') {
-        $arguments += "-$($args[$index + 1])"
+    if ($args[$index] -eq '-' -and $index + 1 -lt $args.Length -and $args[$index + 1] -match '^-?[A-Za-z]') {
+        $name = $args[$index + 1] -replace '^-', ''
+        $arguments += "--$name"
         $index++
         continue
     }
