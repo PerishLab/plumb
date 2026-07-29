@@ -49,6 +49,19 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   `--version`, and the sweep names what it removed. The versioned root is not a
   rollback cache and never was — `install --version <older>` deletes that
   directory and refetches, so nothing ever read what accumulated there.
+- POWERSHELL COLLAPSES A ONE-ELEMENT SLICE INTO A SCALAR. `$args[1..1]` returns
+  the string, not an array of one, so `.Length` becomes the character count and
+  `[0]` becomes the first character — an argument list of exactly one option
+  parsed as `-`. `@(...)` around the slice does not save you when the value
+  leaves an `if` expression, because a one-element array unrolls on the way out.
+  Constrain the variable instead: `[string[]]$rest = ...`. This cost three
+  commits of guessing at the wrong cause, because the failure only appears with
+  exactly one argument and CI was the only place anyone ran the script.
+- DO NOT EDIT `manage.ps1` BLIND. A Linux workstation can run the real thing:
+  `docker run --rm -v $PWD:/probe:ro mcr.microsoft.com/powershell:latest pwsh
+  -File /probe/<script>.ps1`. Argument parsing, help paths, and the install-root
+  sweep are all verifiable there in seconds; only the parts that need a Windows
+  binary have to wait for `platform-smoke`.
 - A stable release refuses to publish without
   `docs/CHANGELOG/v<version>/{en,zh}/{INDEX.md,MIGRATION.md}`, enforced by the
   `Changelog` step in `release-stable.yml` before the first irreversible action.

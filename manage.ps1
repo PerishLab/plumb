@@ -12,7 +12,10 @@ for ($index = 0; $index -lt $args.Length; $index++) {
 }
 
 $command = if ($arguments.Length -gt 0) { $arguments[0] } else { 'install' }
-$rest = if ($arguments.Length -gt 1) { $arguments[1..($arguments.Length - 1)] } else { @() }
+[string[]]$rest = @()
+if ($arguments.Length -gt 1) {
+    [string[]]$rest = $arguments[1..($arguments.Length - 1)]
+}
 $channel = if ($env:PLUMB_CHANNEL) { $env:PLUMB_CHANNEL } else { 'stable' }
 $version = if ($env:PLUMB_VERSION) { $env:PLUMB_VERSION } else { '' }
 $publicUrl = if ($env:PLUMB_RELEASES_PUBLIC_URL) { $env:PLUMB_RELEASES_PUBLIC_URL } else { 'https://releases.plumb.perish.uk' }
