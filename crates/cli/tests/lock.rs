@@ -110,8 +110,14 @@ fn logged(workspace: &Path, tongue: &str, leaf: &str, text: &str) {
 }
 
 fn graded(workspace: &Path) -> (String, bool) {
+    marked(workspace, &[])
+}
+
+fn marked(workspace: &Path, extra: &[&str]) -> (String, bool) {
+    let mut args = vec!["changelog", workspace.to_str().expect("path")];
+    args.extend_from_slice(extra);
     let out = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["changelog", workspace.to_str().expect("path")])
+        .args(&args)
         .output()
         .expect("run");
     let shown = String::from_utf8_lossy(&out.stdout).to_string();
@@ -140,4 +146,21 @@ fn changelog() {
     let _ = fs::remove_dir_all(&root);
     assert!(!refused, "{blank}");
     assert!(blank.contains("zh/MIGRATION.md is empty"), "{blank}");
+}
+
+#[test]
+fn blank() {
+    let workspace = seat("blank");
+    for tongue in ["en", "zh"] {
+        for leaf in ["INDEX.md", "MIGRATION.md"] {
+            logged(&workspace, tongue, leaf, "written\n");
+        }
+    }
+    let (empty, held) = marked(&workspace, &["--version", ""]);
+    let (spaced, worn) = marked(&workspace, &["--version", "  "]);
+    let _ = fs::remove_dir_all(&workspace);
+    assert!(held, "{empty}");
+    assert!(empty.contains("v1.2.3 is documented"), "{empty}");
+    assert!(worn, "{spaced}");
+    assert!(spaced.contains("v1.2.3 is documented"), "{spaced}");
 }

@@ -76,6 +76,7 @@ fn locks(root: PathBuf) -> i32 {
 
 fn changelog(root: PathBuf, version: Option<String>) -> i32 {
     let held = version
+        .filter(|held| !held.trim().is_empty())
         .or_else(|| shape::read(&root).version)
         .unwrap_or_default();
     println!("plumb changelog {}", root.display());
