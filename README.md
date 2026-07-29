@@ -18,8 +18,15 @@ A template that is only copied rots. This one is run.
 
 `plumb doctor --json [ROOT]` emits the same verdict as the default human
 report with a positive shape snapshot, stable finding codes, evidence, scope,
-and mechanized standing. `ok` follows the command exit status; `clean` is true
-only when no out-of-true, unknown, or blind finding remains.
+mechanized standing, owner, tags, and whole-catalog coverage. `ok` follows the
+command exit status; `clean` is true only when no out-of-true, unknown, or blind
+finding remains.
+
+`plumb rule list` queries the complete version-matched law catalog, including
+prose-only laws that do not affect the doctor verdict. `plumb rule show RULE_ID`
+explains one rule's law, standing, evidence, and owner. Namespace, tag,
+standing, and owner selectors are closed typed vocabularies; unknown values
+refuse. See `docs/rules.md`.
 
 ## Install the CLI
 

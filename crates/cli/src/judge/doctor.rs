@@ -1,4 +1,5 @@
-use super::{finding, judge, show};
+use super::catalog::model::Coverage;
+use super::{catalog, finding, judge, show};
 use crate::shape;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -12,6 +13,7 @@ struct Report {
     shape: Shape,
     findings: Vec<finding::Finding>,
     summary: Summary,
+    coverage: Coverage,
 }
 
 #[derive(Serialize)]
@@ -52,6 +54,7 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
             shape: Shape::new(&held),
             findings,
             summary,
+            coverage: catalog::coverage(),
         };
         println!(
             "{}",

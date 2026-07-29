@@ -1,3 +1,4 @@
+use crate::judge::catalog::rules::lock as rule;
 use crate::judge::finding::{Found, Seed};
 use plumb::skill::stamp;
 use std::path::{Path, PathBuf};
@@ -128,19 +129,19 @@ pub fn locked(held: &super::Shape) -> Found {
             Ok(seen) => seen,
             Err(why) => {
                 found.push(Seed::wrong(
-                    "paths-valid",
+                    &rule::PATHS_VALID,
                     format!("lock {} {why}", lock.name),
                 ));
                 continue;
             }
         };
         if seen != lock.hash {
-            found.push(Seed::wrong("content-current", stale(lock)));
+            found.push(Seed::wrong(&rule::CONTENT_CURRENT, stale(lock)));
             continue;
         }
         if held.version.as_deref().unwrap_or_default() != lock.version {
             found.push(Seed::wrong(
-                "version-current",
+                &rule::VERSION_CURRENT,
                 moved(lock, held.version.as_deref()),
             ));
         }

@@ -109,63 +109,44 @@ side refuses. Affirmation is a human act and never automatic
 
 ## Standing
 
-What `plumb doctor` catches today:
+The catalog compiled into the matching binary is the complete source for
+standing. Run `plumb rule list` to inspect it, or select the part relevant to
+the current work:
 
-- missing guard, init, land, or release wrappers, and missing git hooks
-- a guard wrapper that does not run `plumb doctor`; an init that does not
-  require plumb
-- a missing or unreadable `ectropy.toml`
-- a guard lane without its concurrency block; a CI container pinned to a tag
-- an edition other than 2024
-- a publishable package at the root instead of under `packages/`, or one whose
-  directory does not match its name
-- a rust binary shipping without clap or without plumb
-- a `Cascade` derive outside the anchor crate; a repository with no crate named
-  after itself
-- a release wrapper without its lane, or a lane without its wrapper
-- a dependency renamed upstream; a self-built dependency pinned to a version
-- a boundary naming a path that does not exist; a `.runseal` test that belongs
-  in sealkit
-- `Cargo.toml` without `target/` in `.gitignore`
-- a declared lock whose covered paths changed, or whose affirmed version has
-  been left behind by the repository
-- an unknown workflow: the skeleton now knows the deploy lane by name
-- an app declaring a site without a ship wrapper or without a deploy lane
+```bash
+plumb rule list --standing mechanized
+plumb rule list --standing prose-only
+plumb rule list --namespace site --tag site
+plumb rule show structure.missing-wrapper
+```
 
-What the **release lane** catches, which is not the same as the doctor catching
-it — the working tree stays green and the refusal arrives only when you try to
-publish:
+`mechanized` means the doctor owns an evaluator and may emit a verdict.
+`prose-only` means the law is indexed but no finding or exit status follows
+from it. `observed` is reserved for evidence gathered without a verdict.
+`blind` is not a fourth standing: it means a mechanized evaluator ran but could
+not read enough evidence. A prose-only rule is never blind merely because no
+evaluator exists.
 
-- a stable release whose `docs/CHANGELOG/v<version>/` is missing any of
-  `{en,zh}/{INDEX.md,MIGRATION.md}`, or holds one that is empty. Today only
-  plumb's own lane carries this step; a repository adopts it by adding
-  `plumb changelog . --version "$RELEASE_VERSION"` before its first irreversible
-  step, and nothing forces that adoption.
+The catalog also names the evidence and owning layer. Namespace, tag, standing,
+and owner selectors quick-fail when their vocabulary is unknown. Do not copy a
+standing list into prose or infer completeness from a clean doctor report:
+`clean` means this repository emitted no finding, while
+`plumb doctor --json` reports whole-catalog coverage separately.
 
-What is **prose only** — no machine will stop you:
-
-- the config vocabulary rule: importing section shapes from the substrate
-  instead of declaring your own
-- template variables and their spelling in manifests
-- the home and state clauses, including the two-sided ownership proof
-- every clause of the release lane anatomy, and every clause of the site lane
-  below the pairing above: nothing checks that the route is bound in the
-  repository, that the shipper reads the artifact instead of source, or that a
-  readback happens at all
-- the accuracy of this section in any skill, including this one — a lock makes
-  someone re-read it when the version moves, which is attention, not proof
-
-When a walled clause becomes mechanized, its line moves up and its prose
-shrinks to the check's name. Which of the three lists it moves into matters:
-saying the doctor catches something the release lane catches is still a false
-claim, because it tells a reader their working tree will warn them and it will
-not. A clause claimed as enforced that is not is the one defect this document
-cannot afford.
+The release changelog gate remains lane-local rather than a doctor rule. A
+repository adopts it by running
+`plumb changelog . --version "$RELEASE_VERSION"` before its first irreversible
+release step.
 
 ## Invocation
 
 ```bash
 plumb doctor [ROOT]           # shape report; nonzero when something is out of true
+plumb rule list               # complete catalog; compose typed selectors
+plumb rule show RULE_ID       # law, standing, evidence, owner, and tags
+plumb rule namespaces         # registered namespace vocabulary
+plumb rule tags               # registered tag vocabulary
+plumb rule owners             # registered owner vocabulary
 plumb lock [ROOT]             # print what a fresh affirmation would record
 plumb changelog [ROOT]        # refuse a version whose en+zh changelog is absent or empty
 plumb policy [ROOT] --write   # reconcile ectropy.toml against the repository

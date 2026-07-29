@@ -1,4 +1,5 @@
 use super::{Found, Shape};
+use crate::judge::catalog::rules::structure as rule;
 use crate::judge::finding::Seed;
 use crate::judge::show;
 use std::collections::BTreeSet;
@@ -21,7 +22,7 @@ pub fn judge(held: &Shape) -> Found {
     let mut found = Found::new();
     if held.rust && !held.ignore.lines().any(|line| line.trim() == "target/") {
         found.push(Seed::wrong(
-            "cargo-target-ignored",
+            &rule::CARGO_TARGET_IGNORED,
             "Cargo.toml without target/ in .gitignore".to_string(),
         ));
     }
@@ -29,7 +30,7 @@ pub fn judge(held: &Shape) -> Found {
         for lane in ["release-beta", "release-stable"] {
             if !held.lanes.contains(lane) {
                 found.push(Seed::wrong(
-                    "release-lane-present",
+                    &rule::RELEASE_LANE_PRESENT,
                     format!("release wrapper without a {lane} lane"),
                 ));
             }
@@ -37,7 +38,7 @@ pub fn judge(held: &Shape) -> Found {
     }
     if !held.ships.is_empty() && !held.wrappers.contains("release") {
         found.push(Seed::wrong(
-            "release-wrapper-present",
+            &rule::RELEASE_WRAPPER_PRESENT,
             format!("declares {} without a release wrapper", show(&held.ships)),
         ));
     }
@@ -49,21 +50,21 @@ fn site(held: &Shape, found: &mut Found) {
     if held.sites.is_empty() {
         return;
     }
-    for (code, want, seated) in [
+    for (rule, want, seated) in [
         (
-            "site-ship-wrapper",
+            &rule::SITE_SHIP_WRAPPER,
             "a ship wrapper",
             held.wrappers.contains("ship"),
         ),
         (
-            "site-deploy-lane",
+            &rule::SITE_DEPLOY_LANE,
             "a deploy lane",
             held.lanes.contains("deploy"),
         ),
     ] {
         if !seated {
             found.push(Seed::wrong(
-                code,
+                rule,
                 format!("{} declares a site without {want}", show(&held.sites)),
             ));
         }

@@ -1,10 +1,12 @@
 use serde::Serialize;
 
+use super::catalog::model::{MechanizedRule, Rule, Standing};
+
 pub type Found = Vec<Seed>;
 
 #[derive(Clone)]
 pub struct Seed {
-    pub code: &'static str,
+    pub rule: &'static Rule,
     pub grade: &'static str,
     pub evidence: String,
 }
@@ -15,29 +17,31 @@ pub struct Finding {
     pub grade: &'static str,
     pub scope: &'static str,
     pub evidence: String,
-    pub standing: &'static str,
+    pub standing: Standing,
+    pub owner: &'static str,
+    pub tags: Vec<&'static str>,
 }
 
 impl Seed {
-    pub fn wrong(code: &'static str, evidence: impl Into<String>) -> Self {
+    pub fn wrong(rule: &'static MechanizedRule, evidence: impl Into<String>) -> Self {
         Self {
-            code,
+            rule: &rule.0,
             grade: "out of true",
             evidence: evidence.into(),
         }
     }
 
-    pub fn blind(code: &'static str, evidence: impl Into<String>) -> Self {
+    pub fn blind(rule: &'static MechanizedRule, evidence: impl Into<String>) -> Self {
         Self {
-            code,
+            rule: &rule.0,
             grade: "blind",
             evidence: evidence.into(),
         }
     }
 
-    pub fn unknown(code: &'static str, evidence: impl Into<String>) -> Self {
+    pub fn unknown(rule: &'static MechanizedRule, evidence: impl Into<String>) -> Self {
         Self {
-            code,
+            rule: &rule.0,
             grade: "unknown shape",
             evidence: evidence.into(),
         }
@@ -45,13 +49,27 @@ impl Seed {
 }
 
 impl Finding {
-    pub fn new(scope: &'static str, seed: Seed) -> Self {
+    pub fn new(seed: Seed) -> Self {
         Self {
-            code: format!("{scope}.{}", seed.code),
+            code: seed.rule.id.to_string(),
             grade: seed.grade,
-            scope,
+            scope: seed.rule.namespace(),
             evidence: seed.evidence,
-            standing: "mechanized",
+            standing: seed.rule.standing,
+            owner: seed.rule.owner.id,
+            tags: seed.rule.tags.iter().map(|tag| tag.id).collect(),
         }
     }
+}
+
+pub fn wrong(rule: &'static MechanizedRule, evidence: impl Into<String>) -> Seed {
+    Seed::wrong(rule, evidence)
+}
+
+pub fn blind(rule: &'static MechanizedRule, evidence: impl Into<String>) -> Seed {
+    Seed::blind(rule, evidence)
+}
+
+pub fn unknown(rule: &'static MechanizedRule, evidence: impl Into<String>) -> Seed {
+    Seed::unknown(rule, evidence)
 }

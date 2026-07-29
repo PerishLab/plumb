@@ -35,6 +35,10 @@ enum Command {
         #[command(subcommand)]
         deed: skill::Deed,
     },
+    Rule {
+        #[command(subcommand)]
+        deed: judge::catalog::query::Deed,
+    },
     Lock {
         #[command(flatten)]
         target: Root,
@@ -136,6 +140,7 @@ fn main() {
         Command::Doctor { target, json } => judge::doctor::run(PathBuf::from(target.root), json),
         Command::Policy { target, write } => policy(PathBuf::from(target.root), write),
         Command::Skill { deed } => skill::run(deed),
+        Command::Rule { deed } => judge::catalog::query::run(deed),
         Command::Lock { target } => locks(PathBuf::from(target.root)),
         Command::Changelog { target, version } => changelog(PathBuf::from(target.root), version),
     };

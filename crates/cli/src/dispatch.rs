@@ -1,3 +1,5 @@
+use crate::judge::catalog::model::MechanizedRule;
+use crate::judge::catalog::rules::dispatch as rule;
 use crate::judge::finding::{Found, Seed};
 use serde_json::Value as Json;
 use std::path::{Path, PathBuf};
@@ -57,7 +59,7 @@ fn sidecar(root: &Path, found: &mut Found) {
     let Ok(text) = std::fs::read_to_string(&path) else {
         wrong(
             found,
-            "sidecar-manifest-present",
+            &rule::SIDECAR_MANIFEST_PRESENT,
             "web/api pair has no sidecar.toml",
         );
         return;
@@ -66,7 +68,7 @@ fn sidecar(root: &Path, found: &mut Found) {
         Ok(doc) => toml::Value::Table(doc),
         Err(error) => {
             found.push(Seed::blind(
-                "sidecar-manifest-readable",
+                &rule::SIDECAR_MANIFEST_READABLE,
                 format!(
                     "cannot read sidecar.toml: {}",
                     error.to_string().lines().next().unwrap_or("")
@@ -86,12 +88,16 @@ fn sidecar(root: &Path, found: &mut Found) {
     match api {
         None => wrong(
             found,
-            "api-role-declared",
+            &rule::API_ROLE_DECLARED,
             "sidecar does not declare the api role",
         ),
         Some(api) => {
             if api.get("port").and_then(toml::Value::as_integer) != Some(0) {
-                wrong(found, "api-port-leased", "sidecar api must lease port 0");
+                wrong(
+                    found,
+                    &rule::API_PORT_LEASED,
+                    "sidecar api must lease port 0",
+                );
             }
             if api
                 .get("ready")
@@ -101,14 +107,14 @@ fn sidecar(root: &Path, found: &mut Found) {
             {
                 wrong(
                     found,
-                    "api-ready-role",
+                    &rule::API_READY_ROLE,
                     "sidecar api must declare ready role api",
                 );
             }
             if !uses_port(api.get("health_url"), Some("/api/health")) {
                 wrong(
                     found,
-                    "api-health-route",
+                    &rule::API_HEALTH_ROUTE,
                     "sidecar api health_url must target {port}/api/health",
                 );
             }
@@ -123,7 +129,7 @@ fn sidecar(root: &Path, found: &mut Found) {
     {
         wrong(
             found,
-            "web-app-declared",
+            &rule::WEB_APP_DECLARED,
             "sidecar does not declare the web app",
         );
     }
@@ -132,12 +138,16 @@ fn sidecar(root: &Path, found: &mut Found) {
         .and_then(toml::Value::as_integer)
         != Some(0)
     {
-        wrong(found, "web-port-leased", "sidecar web must lease port 0");
+        wrong(
+            found,
+            &rule::WEB_PORT_LEASED,
+            "sidecar web must lease port 0",
+        );
     }
     if !uses_port(app.and_then(|app| app.get("health_url")), None) {
         wrong(
             found,
-            "web-health-port",
+            &rule::WEB_HEALTH_PORT,
             "sidecar web health_url must use {port}",
         );
     }
@@ -154,7 +164,7 @@ fn sidecar(root: &Path, found: &mut Found) {
     if !binding {
         wrong(
             found,
-            "web-inherits-api-endpoint",
+            &rule::WEB_INHERITS_API_ENDPOINT,
             "sidecar web must inherit api.endpoint as API_URL",
         );
     }
@@ -172,14 +182,14 @@ fn api(root: &Path, found: &mut Found) {
     if !source.contains("SIDECAR_PORT") && !launch.contains("SIDECAR_PORT") && !maps_port(&launch) {
         wrong(
             found,
-            "api-consumes-port",
+            &rule::API_CONSUMES_PORT,
             "api does not consume SIDECAR_PORT",
         );
     }
     if !source.contains("sidecar_stamp") && !source.contains("sidecar-stamp") {
         wrong(
             found,
-            "api-accepts-stamp",
+            &rule::API_ACCEPTS_STAMP,
             "api does not accept --sidecar-stamp",
         );
     }
@@ -189,14 +199,14 @@ fn api(root: &Path, found: &mut Found) {
     {
         wrong(
             found,
-            "api-emits-readiness",
+            &rule::API_EMITS_READINESS,
             "api does not emit api endpoint readiness",
         );
     }
     if !source.contains("\"/api\"") || !source.contains(".nest(") {
         wrong(
             found,
-            "api-namespace-mounted",
+            &rule::API_NAMESPACE_MOUNTED,
             "api does not mount the /api namespace",
         );
     }
@@ -242,6 +252,6 @@ fn collect(root: &Path, extension: &str, found: &mut Vec<PathBuf>) {
     }
 }
 
-fn wrong(found: &mut Found, code: &'static str, evidence: &str) {
-    found.push(Seed::wrong(code, evidence));
+fn wrong(found: &mut Found, rule: &'static MechanizedRule, evidence: &str) {
+    found.push(Seed::wrong(rule, evidence));
 }

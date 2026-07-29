@@ -1,11 +1,12 @@
 use super::{Found, wrong};
+use crate::judge::catalog::rules::dispatch as rule;
 use std::path::{Path, PathBuf};
 
 pub(super) fn read(root: &Path, found: &mut Found) {
     if !root.join("deploy/api.Dockerfile").is_file() {
         wrong(
             found,
-            "api-image-present",
+            &rule::API_IMAGE_PRESENT,
             "production has no api image seat",
         );
     }
@@ -13,21 +14,21 @@ pub(super) fn read(root: &Path, found: &mut Found) {
     if !web_image.is_file() {
         wrong(
             found,
-            "web-image-present",
+            &rule::WEB_IMAGE_PRESENT,
             "production has no web image seat",
         );
     } else if let Ok(text) = std::fs::read_to_string(web_image) {
         if !text.contains("dist/.perish/server.mjs") {
             wrong(
                 found,
-                "web-image-runs-design-runtime",
+                &rule::WEB_IMAGE_RUNS_DESIGN_RUNTIME,
                 "web image does not run the emitted design runtime",
             );
         }
         if owns_public_dispatch(&text) {
             wrong(
                 found,
-                "web-image-does-not-own-dispatch",
+                &rule::WEB_IMAGE_DOES_NOT_OWN_DISPATCH,
                 "web image still owns public proxy dispatch",
             );
         }
@@ -43,7 +44,7 @@ pub(super) fn read(root: &Path, found: &mut Found) {
     if !api || !web {
         wrong(
             found,
-            "chart-splits-workloads",
+            &rule::CHART_SPLITS_WORKLOADS,
             "chart does not split api and web workloads",
         );
     }
@@ -53,7 +54,7 @@ pub(super) fn read(root: &Path, found: &mut Found) {
     if !ingress {
         wrong(
             found,
-            "chart-splits-ingress",
+            &rule::CHART_SPLITS_INGRESS,
             "chart ingress does not split /api and / between api and web",
         );
     }
@@ -70,7 +71,7 @@ pub(super) fn read(root: &Path, found: &mut Found) {
     if !aligned {
         wrong(
             found,
-            "cargo-chart-version-train",
+            &rule::CARGO_CHART_VERSION_TRAIN,
             "Cargo and chart do not share one version train",
         );
     }

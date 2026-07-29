@@ -2,6 +2,8 @@ use std::process::Command;
 
 #[path = "doctor/json.rs"]
 mod json;
+#[path = "doctor/rule.rs"]
+mod rule;
 
 fn seat() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
