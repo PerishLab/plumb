@@ -1,5 +1,5 @@
 [[lock]]
 name = "skill"
 paths = ["skills/plumb"]
-version = "0.15.0"
+version = "0.16.0"
 hash = "9bac3dafef4df83153a2806cdf75f37ec2822dbba0d50e69185ef01d434cc79c"
