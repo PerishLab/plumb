@@ -11,8 +11,9 @@ smoke, and stable tags. Operational values enter `plumb release` through typed
 environment fields.
 
 Every Plumb-owned archive now has canonical ordering, timestamps, ownership,
-and modes. Rebuilding one exact version from one commit therefore reproduces
-the same immutable seal instead of depending on runner filesystem metadata.
+and modes, while MSVC binaries use reproducible linking. Rebuilding one exact
+version from one commit therefore reproduces the same immutable seal instead
+of depending on runner or linker timestamps.
 
 The Plumb skill also records repetition as an ownership signal: strongly
 repeated Plumb-shaped mechanisms should be surfaced for possible substrate

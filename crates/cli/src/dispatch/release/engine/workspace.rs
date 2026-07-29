@@ -83,9 +83,11 @@ impl Workspace {
                     input.version, package.name, package.version
                 ));
             }
-            let status = Command::new("cargo")
+            let msvc = input.triple.ends_with("-msvc");
+            let mut command = Command::new("cargo");
+            command
+                .arg(if msvc { "rustc" } else { "build" })
                 .args([
-                    "build",
                     "--release",
                     "--locked",
                     "--target",
@@ -108,7 +110,11 @@ impl Workspace {
                     format!("{}_BUILD_AUTHORITY", spec.environment()),
                     &spec.authority,
                 )
-                .env(format!("{}_BUILD_COMMIT", spec.environment()), input.commit)
+                .env(format!("{}_BUILD_COMMIT", spec.environment()), input.commit);
+            if msvc {
+                command.args(["--", "-C", "link-arg=/Brepro"]);
+            }
+            let status = command
                 .status()
                 .map_err(|error| format!("cannot build {binary}: {error}"))?;
             if !status.success() {
