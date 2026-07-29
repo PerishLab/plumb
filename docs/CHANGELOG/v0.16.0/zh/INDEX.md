@@ -6,7 +6,7 @@
 Plumb 现在完整拥有 binary 发布机制：Cargo 发现与版本固化、target 构建、
 归档、skill、Debian 包、Cargo 附件、manager 生成、密封存储、验证、
 激活、smoke 与 stable tag。`plumb release` 的运行值统一通过类型化环境
-字段注入。
+字段注入，promotion proof 的声明输出席位也由 Plumb 自行创建。
 
 所有由 Plumb 生成的归档现在都使用规范化的顺序、时间戳、所有权与权限，
 MSVC binary 也统一使用可重现链接。因此，同一 commit 的同一 exact version

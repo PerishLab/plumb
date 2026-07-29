@@ -13,6 +13,10 @@ pub fn fetch(spec: &Spec, channel: &str, version: &str, output: &Path) -> Result
             output.display()
         ));
     }
+    if let Some(parent) = output.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|error| format!("cannot create {}: {error}", parent.display()))?;
+    }
     let url = format!(
         "{}/v1/releases/{channel}/{version}/seal.json",
         spec.authority

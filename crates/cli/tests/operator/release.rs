@@ -143,6 +143,14 @@ fn cycle() {
         authority(&mut held, &manifest, "PUBLISH");
         run(&mut held);
     }
+    let proof = root.join("promotion/nested/seal.json");
+    run(fixture
+        .command()
+        .args(["release", "promote"])
+        .env("PLUMB_RELEASE_PROMOTION_CHANNEL", "beta")
+        .env("PLUMB_RELEASE_PROMOTION_VERSION", "v1.2.0-beta.7")
+        .env("PLUMB_RELEASE_PROMOTION", &proof));
+    assert!(proof.is_file());
     let seal: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(beta.join("seal.json")).expect("seal"))
             .expect("seal json");
@@ -158,7 +166,6 @@ fn cycle() {
     fixture.archive(&artifacts, "v1.2.0");
     fixture.changelog("v1.2.0");
     let stable = root.join("stable");
-    let proof = beta.join("seal.json");
     compile(Compile {
         fixture: &fixture,
         artifacts: &artifacts,

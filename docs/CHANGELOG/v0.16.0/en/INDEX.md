@@ -8,7 +8,8 @@ Plumb now owns the complete binary release mechanism: Cargo discovery and
 version stamping, target builds, archives, skills, Debian packages, Cargo
 attachments, generated managers, sealed storage, verification, activation,
 smoke, and stable tags. Operational values enter `plumb release` through typed
-environment fields.
+environment fields, and Plumb creates the declared promotion-proof output
+seat itself.
 
 Every Plumb-owned archive now has canonical ordering, timestamps, ownership,
 and modes, while MSVC binaries use reproducible linking. Rebuilding one exact
