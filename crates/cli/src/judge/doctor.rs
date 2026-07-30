@@ -23,7 +23,15 @@ struct Shape {
     lanes: Vec<String>,
     publishes: Vec<String>,
     sites: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sealkit: Option<Sealkit>,
     law: Law,
+}
+
+#[derive(Serialize)]
+struct Sealkit {
+    requirement: String,
+    resolution: String,
 }
 
 #[derive(Serialize)]
@@ -75,6 +83,13 @@ impl Shape {
             lanes: held.lanes.iter().cloned().collect(),
             publishes: held.ships.iter().cloned().collect(),
             sites: held.sites.iter().cloned().collect(),
+            sealkit: match &held.sealkit {
+                shape::Sealkit::Held(dependency) => Some(Sealkit {
+                    requirement: dependency.requirement.clone(),
+                    resolution: dependency.resolution.clone(),
+                }),
+                shape::Sealkit::Absent | shape::Sealkit::Blind(_) => None,
+            },
             law: Law {
                 block: held.block.unwrap_or(0),
                 path: held.path.unwrap_or(0),
@@ -112,6 +127,12 @@ fn human(root: &Path, held: &shape::Shape, findings: &[finding::Finding], summar
     println!("  publishes {}", show(&held.ships));
     if !held.sites.is_empty() {
         println!("  sites     {}", show(&held.sites));
+    }
+    if let shape::Sealkit::Held(dependency) = &held.sealkit {
+        println!(
+            "  sealkit  {} -> {}",
+            dependency.requirement, dependency.resolution
+        );
     }
     println!(
         "  law       block={} path={} grants={}",

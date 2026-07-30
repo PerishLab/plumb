@@ -48,6 +48,25 @@ one.
 The substrate owns the grammar and the resolver and knows no variable. What
 `{port}` or `{namespace}` mean belongs to the tool that supplies them.
 
+## Deno dependency support
+
+A frozen lock and an import requirement answer different questions. The
+requirement names the admitted compatibility line; the lock names the exact
+code ordinary guards reproduce. Plumb reads both and changes neither.
+
+Workspace-owned Deno dependencies normally carry no version requirement and
+track stable through deliberate Deno lock refreshes. A dependency earns a
+compiled support declaration when compatibility must move as a governed line.
+The declaration names its canonical requirement, minimum resolution, and any
+temporary legacy line. A valid reading is positive doctor shape evidence.
+Missing or malformed lock evidence is blind, while a requirement or resolution
+outside the declaration refuses.
+
+Sealkit's transition admits existing unversioned stable `0.1` locks and the
+canonical `^0.2.1` line at or above `0.2.1`. This overlap exists only so the
+workshop can migrate one repository at a time without a red interval. Once
+legacy consumers are gone, tightening the declaration is a Plumb release.
+
 ## Home and state
 
 The data home is an ordinary cascade field: platform default, then a repo-rooted

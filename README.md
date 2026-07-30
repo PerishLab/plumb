@@ -29,6 +29,11 @@ explains one rule's law, standing, evidence, and owner. Namespace, tag,
 standing, and owner selectors are closed typed vocabularies; unknown values
 refuse. See `docs/rules.md`.
 
+For Sealkit consumers, the positive shape snapshot includes both the import
+requirement and the exact resolution read from `.runseal/deno.lock`. Plumb
+judges those bytes offline. It never resolves a registry version or edits the
+lock; deliberate movement remains a standard Deno operation.
+
 ## Install the CLI
 
 ```sh

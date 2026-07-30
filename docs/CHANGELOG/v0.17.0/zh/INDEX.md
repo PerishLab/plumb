@@ -17,6 +17,16 @@ skill 现在写明了自己的管辖。它此前说自己治理「这里的每�
 拿这句话去检验眼前的目录，于是带着这份 brief 的 agent 就把它带去了每个地方。
 plumb 管辖根上有 `plumb.toml` 的仓库；在别处这些法沉默，而它们的沉默不值一提。
 
+Plumb 现在把 Sealkit 消费读成一对证据：`.runseal/deno.json` 中的 import requirement，
+以及 `.runseal/deno.lock` 中的精确 resolution。Doctor 会在正向 shape evidence
+中展示这一对值，并且全程离线判断。分阶段迁移期间，现有未写版本、冻结在稳定
+`0.1` 的锁，以及新的 `^0.2.1` 版本线（resolution 不低于 `0.2.1`）都被接纳。
+缺失或损坏的 lock 是 blind；不受支持的 requirement 或 resolution 是 out of true。
+
+这修正了此前「所有工坊自建 Deno 依赖都必须不写版本」的一刀切规则。没有显式
+编译 support declaration 的依赖仍受旧规则治理。Sealkit 因为公开 `0.2` surface
+需要逐仓主动迁移，所以拥有一条声明过的兼容版本线。
+
 生成的 manager 现在可以直接接管旧格式的 stable 安装，不再要求操作者先卸载。
 接管边界刻意收紧：必须同时证明 canonical stable authority、旧 root 与 version
 marker，以及所有当前入口都属于同一个 version seat。自定义 authority、预发布渠道、

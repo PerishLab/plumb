@@ -4,6 +4,8 @@ use std::process::Command;
 mod json;
 #[path = "doctor/rule.rs"]
 mod rule;
+#[path = "doctor/sealkit.rs"]
+mod sealkit;
 #[path = "doctor/ships.rs"]
 mod ships;
 

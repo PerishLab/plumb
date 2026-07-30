@@ -106,6 +106,15 @@ embeds the exact candidate seal and requires the same source commit. See
 the workshop already demonstrates rather than each repository's invention. Most
 of this clause is enforced; see below.
 
+**Dependencies.** Workspace-owned Deno dependencies track stable without a
+version requirement unless Plumb compiles an explicit support line. Sealkit is
+in a staged transition: an unversioned requirement resolving to stable `0.1`
+remains admitted, while new movement uses `^0.2.1` with a minimum locked
+resolution of `0.2.1`. The doctor reads the requirement and matching frozen
+lock offline and reports them as positive shape evidence. An unread lock is
+blind; an unsupported requirement or resolution refuses. Deno alone mutates
+the lock.
+
 **Sites.** An app declaring a site ships through one dispatch-only lane calling
 the same wrapper an operator runs, with a purpose-scoped key the lane holds and
 the operator does not. The build stamps its commit into the health document and

@@ -22,6 +22,20 @@ an agent carrying the brief carried it everywhere. plumb manages a repository
 carrying `plumb.toml` at its root; elsewhere these laws are silent, and their
 silence is not worth remarking on.
 
+Plumb now reads Sealkit consumption as a pair: the import requirement in
+`.runseal/deno.json` and the exact resolution in `.runseal/deno.lock`. Doctor
+shows the pair in its positive shape evidence and judges it without registry
+access. During the staged transition, existing unversioned stable `0.1` locks
+and the new `^0.2.1` line at or above `0.2.1` are both admitted. A missing or
+malformed lock is blind; an unsupported requirement or resolution is out of
+true.
+
+This changes the old blanket rule that every workspace-owned Deno dependency
+must be unversioned. That rule still governs dependencies without an explicit
+compiled support declaration. Sealkit owns a declared compatibility line
+because its public `0.2` surface requires deliberate, repository-by-repository
+migration.
+
 Generated managers can now adopt a legacy stable installation without asking
 the operator to uninstall it first. Adoption is deliberately narrow: the
 canonical stable authority, the legacy root and version markers, and every

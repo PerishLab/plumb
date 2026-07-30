@@ -1,5 +1,40 @@
 # Migrating to v0.17.0
 
+## If your repository consumes Sealkit
+
+Existing unversioned imports with a frozen stable `0.1` resolution require no
+immediate edit. Doctor keeps them green during the transition and now prints
+the held requirement and resolution.
+
+When deliberately migrating a repository, use the supported line:
+
+```json
+{
+  "imports": {
+    "@perish/sealkit": "jsr:@perish/sealkit@^0.2.1"
+  }
+}
+```
+
+Then let Deno replace the matching frozen resolution:
+
+```sh
+deno install \
+  --config .runseal/deno.json \
+  --lock .runseal/deno.lock \
+  --frozen=false \
+  --minimum-dependency-age=0
+```
+
+The age override is for the deliberate refresh immediately after a new
+release. Ordinary guards continue to use the frozen lock and do not resolve the
+registry. Plumb neither edits the lock nor asks the network.
+
+A missing or malformed matching lock is reported as blind without creating the
+workshop-wide red interval this transition avoids. An unsupported requirement,
+a supported requirement resolving below `0.2.1`, or a resolution outside
+stable `0.1` and `^0.2.1` is out of true.
+
 ## If your repository publishes crates
 
 Declare the surface so Plumb can see it, and name the operator entry `release`:

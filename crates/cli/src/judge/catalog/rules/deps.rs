@@ -34,8 +34,18 @@ rule!(
     SELF_BUILT_DEPENDENCY_UNPINNED,
     "deps.self-built-dependency-unpinned",
     "Self-built dependencies track latest",
-    "Workspace-owned Deno dependencies are not pinned to a published version.",
+    "Workspace-owned Deno dependencies without a declared support line are not pinned to a published version.",
     "Dependency requirements in Deno configuration.",
+    Mechanized,
+    PLUMB,
+    [DEPENDENCY]
+);
+rule!(
+    SUPPORTED_DEPENDENCY_LINE,
+    "deps.supported-dependency-line",
+    "Supported dependencies use an admitted line",
+    "A dependency with a compiled support declaration uses an admitted requirement and resolves to an admitted locked version.",
+    "The dependency requirement in Deno configuration and its matching frozen lock resolution.",
     Mechanized,
     PLUMB,
     [DEPENDENCY]
@@ -57,6 +67,7 @@ pub fn all() -> Vec<&'static Rule> {
         &RUST_BINARY_USES_CLAP,
         &RUST_BINARY_USES_PLUMB,
         &SELF_BUILT_DEPENDENCY_UNPINNED,
+        &SUPPORTED_DEPENDENCY_LINE,
         &STYLING_PACKAGE_ALLOWED,
     ]
 }

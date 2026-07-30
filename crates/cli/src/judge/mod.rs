@@ -1,11 +1,12 @@
 use self::finding::{Finding, blind, unknown, wrong};
 use crate::{rules::RULES, shape};
-use catalog::rules::{deps as deps_rule, env as env_rule, structure as structure_rule};
+use catalog::rules::{env as env_rule, structure as structure_rule};
 use shape::Found;
 use std::collections::BTreeSet;
 use text::{COMPONENTS, CONCURRENCY, CONTAINER};
 
 pub(crate) mod catalog;
+mod deps;
 pub(crate) mod doctor;
 pub(crate) mod finding;
 mod text;
@@ -17,7 +18,7 @@ pub fn judge(held: &shape::Shape) -> Vec<Finding> {
     for found in [
         held.env(),
         held.structure(),
-        held.deps(),
+        deps::check(held),
         held.web.clone().unwrap_or_default(),
         held.dispatch.clone().unwrap_or_default(),
         shape::locked(held),
@@ -186,45 +187,6 @@ impl shape::Shape {
         }
         found
     }
-    fn deps(&self) -> Found {
-        let mut found = Found::new();
-        if self.binary && !self.clap {
-            found.push(wrong(
-                &deps_rule::RUST_BINARY_USES_CLAP,
-                "ships a rust binary without clap".to_string(),
-            ));
-        }
-        if self.binary && !self.substrate {
-            found.push(wrong(
-                &deps_rule::RUST_BINARY_USES_PLUMB,
-                "ships a rust binary without plumb".to_string(),
-            ));
-        }
-        for (name, held) in &RULES.retired {
-            if self.deno.contains(name.as_str()) {
-                found.push(wrong(
-                    &deps_rule::CURRENT_DEPENDENCY_NAME,
-                    format!("depends on {name}, renamed to {held}"),
-                ));
-            }
-        }
-        for name in RULES.pinned(&self.deno) {
-            found.push(wrong(
-                &deps_rule::SELF_BUILT_DEPENDENCY_UNPINNED,
-                format!("self-built {name} is version-pinned, the skeleton tracks latest"),
-            ));
-        }
-        for (seat, name) in &self.node {
-            if RULES.blacklist.contains(name) {
-                found.push(wrong(
-                    &deps_rule::STYLING_PACKAGE_ALLOWED,
-                    format!("{seat} depends on blacklisted styling package {name}"),
-                ));
-            }
-        }
-        found
-    }
-
     fn matched(&self, found: &mut Found) {
         if self.inits && self.listed.is_empty() {
             found.push(blind(

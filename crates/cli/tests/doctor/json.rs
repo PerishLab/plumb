@@ -24,7 +24,7 @@ fn clean() {
     assert_eq!(report["summary"]["out_of_true"], 0);
     assert_eq!(report["summary"]["unknown"], 0);
     assert_eq!(report["summary"]["blind"], 0);
-    assert_eq!(report["coverage"]["mechanized"], 75);
+    assert_eq!(report["coverage"]["mechanized"], 76);
     assert_eq!(report["coverage"]["observed"], 0);
     assert_eq!(report["coverage"]["prose_only"], 37);
     assert!(report["shape"]["wrappers"].is_array());
@@ -75,4 +75,19 @@ fn unknown() {
     assert_eq!(report["summary"]["unknown"], 1);
     assert_eq!(report["findings"][0]["code"], "structure.known-directory");
     assert_eq!(report["findings"][0]["grade"], "unknown shape");
+}
+
+#[test]
+fn evidence() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    super::sealkit::write(fixture.path(), "^0.2.1", "0.2.1");
+    let output = run(fixture.path());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("doctor json");
+    assert_eq!(
+        report["shape"]["sealkit"],
+        serde_json::json!({
+            "requirement": "^0.2.1",
+            "resolution": "0.2.1",
+        })
+    );
 }

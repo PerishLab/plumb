@@ -1,5 +1,5 @@
 # The deps dimension's self-built policy. Self-built packages live under this
-# scope and track latest-stable — a version-pinned specifier is out of true.
+# scope and track latest-stable unless a support line is declared here.
 # Retired names must migrate to their replacement.
 
 scope = "@perish"
@@ -22,3 +22,10 @@ blacklist = [
 [[retired]]
 name = "@perish/harness"
 use = "@perish/sealkit"
+
+[[support]]
+name = "@perish/sealkit"
+requirement = "^0.2.1"
+minimum = "0.2.1"
+legacy = "*"
+line = "0.1"

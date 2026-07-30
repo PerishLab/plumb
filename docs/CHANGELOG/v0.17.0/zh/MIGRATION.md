@@ -1,5 +1,37 @@
 # 迁移到 v0.17.0
 
+## 如果你的仓库消费 Sealkit
+
+现有未写版本、冻结在稳定 `0.1` resolution 的 import 暂时无需修改。Doctor 在
+过渡期保持它们为绿色，并开始展示已持有的 requirement 与 resolution。
+
+主动迁移某个仓库时，使用受支持的版本线：
+
+```json
+{
+  "imports": {
+    "@perish/sealkit": "jsr:@perish/sealkit@^0.2.1"
+  }
+}
+```
+
+然后让 Deno 替换对应的冻结 resolution：
+
+```sh
+deno install \
+  --config .runseal/deno.json \
+  --lock .runseal/deno.lock \
+  --frozen=false \
+  --minimum-dependency-age=0
+```
+
+Age override 用于新版本刚发布后的这次主动刷新。普通 guard 继续使用冻结 lock，
+不会重新查询 registry。Plumb 既不编辑 lock，也不访问网络。
+
+匹配 lock 缺失或损坏时会报告 blind，不制造本次迁移刻意避免的全工坊红区。
+Requirement 不受支持、受支持版本线却解析到 `0.2.1` 以下，或者 resolution 落在
+稳定 `0.1` 与 `^0.2.1` 之外时，都会成为 out of true。
+
 ## 如果你的仓库发布 crate
 
 声明发布面让 Plumb 看得见，并把 operator 入口命名为 `release`：
