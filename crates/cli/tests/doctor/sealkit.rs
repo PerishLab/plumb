@@ -2,6 +2,10 @@ use super::run;
 use std::path::Path;
 
 pub(super) fn write(root: &Path, requirement: &str, resolution: &str) {
+    lock(root, requirement, requirement, resolution);
+}
+
+fn lock(root: &Path, requirement: &str, lock_requirement: &str, resolution: &str) {
     std::fs::create_dir_all(root.join(".runseal")).expect("runseal fixture should be made");
     let specifier = if requirement == "*" {
         "jsr:@perish/sealkit".to_string()
@@ -23,7 +27,12 @@ pub(super) fn write(root: &Path, requirement: &str, resolution: &str) {
         serde_json::json!({
             "version": "5",
             "specifiers": {
-                format!("jsr:@perish/sealkit@{requirement}"): resolution,
+                format!("jsr:@perish/sealkit@{lock_requirement}"): resolution,
+            },
+            "workspace": {
+                "dependencies": [
+                    format!("jsr:@perish/sealkit@{lock_requirement}"),
+                ],
             },
         })
         .to_string(),
@@ -59,6 +68,50 @@ fn lines() {
     write(fixture.path(), "^0.2.1", "0.2.2");
     let patch = doctor(fixture.path());
     assert!(!patch.contains("unsupported Sealkit resolution"), "{patch}");
+}
+
+#[test]
+fn canonical() {
+    let fixture = tempfile::tempdir().expect("fixture should be made");
+
+    lock(fixture.path(), "^0.2.1", "~0.2.1", "0.2.1");
+    let normalized = doctor(fixture.path());
+    assert!(
+        normalized.contains("sealkit  ^0.2.1 -> 0.2.1"),
+        "{normalized}"
+    );
+    assert!(normalized.contains("0 blind"), "{normalized}");
+}
+
+#[test]
+fn ambiguous() {
+    let fixture = tempfile::tempdir().expect("fixture should be made");
+    lock(fixture.path(), "^0.2.1", "~0.2.1", "0.2.1");
+    std::fs::write(
+        fixture.path().join(".runseal/deno.lock"),
+        serde_json::json!({
+            "version": "5",
+            "specifiers": {
+                "jsr:@perish/sealkit@~0.2.1": "0.2.1",
+                "jsr:@perish/sealkit@>=0.2.1, <0.3.0": "0.2.2",
+            },
+            "workspace": {
+                "dependencies": [
+                    "jsr:@perish/sealkit@~0.2.1",
+                    "jsr:@perish/sealkit@>=0.2.1, <0.3.0",
+                ],
+            },
+        })
+        .to_string(),
+    )
+    .expect("ambiguous lock should be written");
+
+    let ambiguous = doctor(fixture.path());
+    assert!(
+        ambiguous.contains("workspace Sealkit requirement is absent or ambiguous"),
+        "{ambiguous}"
+    );
+    assert!(ambiguous.contains("1 blind"), "{ambiguous}");
 }
 
 #[test]

@@ -1,3 +1,4 @@
+use semver::VersionReq;
 use serde_json::Value;
 use std::path::Path;
 
@@ -89,9 +90,36 @@ fn resolution(root: &Path, requirement: &str) -> Result<String, String> {
         .and_then(Value::as_object)
         .ok_or_else(|| "cannot read Sealkit lock: specifiers is not an object".to_string())?;
     let key = format!("{SOURCE}@{requirement}");
+    if let Some(resolution) = specifiers.get(&key).and_then(Value::as_str) {
+        return Ok(resolution.to_string());
+    }
+    direct(&doc, specifiers)
+        .map_err(|error| format!("cannot read Sealkit lock: {error}; no resolution for {key}"))
+}
+
+fn direct(doc: &Value, specifiers: &serde_json::Map<String, Value>) -> Result<String, String> {
+    let Some(workspace) = doc.get("workspace") else {
+        return Err("workspace evidence is missing".into());
+    };
+    let dependencies = workspace
+        .get("dependencies")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "workspace dependencies are not an array".to_string())?;
+    let prefix = format!("{SOURCE}@");
+    let keys: Vec<_> = dependencies
+        .iter()
+        .filter_map(Value::as_str)
+        .filter(|key| {
+            key.strip_prefix(&prefix)
+                .is_some_and(|requirement| VersionReq::parse(requirement).is_ok())
+        })
+        .collect();
+    let [key] = keys.as_slice() else {
+        return Err("workspace Sealkit requirement is absent or ambiguous".into());
+    };
     specifiers
-        .get(&key)
+        .get(*key)
         .and_then(Value::as_str)
         .map(str::to_string)
-        .ok_or_else(|| format!("cannot read Sealkit lock: no resolution for {key}"))
+        .ok_or_else(|| format!("workspace Sealkit requirement has no resolution: {key}"))
 }

@@ -32,7 +32,9 @@ refuse. See `docs/rules.md`.
 For Sealkit consumers, the positive shape snapshot includes both the import
 requirement and the exact resolution read from `.runseal/deno.lock`. Plumb
 judges those bytes offline. It never resolves a registry version or edits the
-lock; deliberate movement remains a standard Deno operation.
+lock; deliberate movement remains a standard Deno operation. When Deno
+normalizes a requirement in the lock, Plumb follows the unique direct
+workspace dependency instead of guessing among package resolutions.
 
 ## Install the CLI
 
