@@ -384,9 +384,9 @@ checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 
 [[package]]
 name = "locus"
-version = "0.1.1"
+version = "0.1.2"
 source = "sparse+https://git.perish.top/api/packages/PerishLab/cargo/"
-checksum = "02c543676937fd34cfa87e63b15078fbd887efb2bfe976b6511e5d94faf1fb0b"
+checksum = "526430e047de7f1c52b58a055f137663e1a8e3f4466c9de3bb3d5b546387e2c7"
 dependencies = [
  "getrandom 0.3.4",
  "locus-macro",
@@ -396,9 +396,9 @@ dependencies = [
 
 [[package]]
 name = "locus-macro"
-version = "0.1.1"
+version = "0.1.2"
 source = "sparse+https://git.perish.top/api/packages/PerishLab/cargo/"
-checksum = "fda995205469e0a4ccc2fc40ef572cc1a55e0057fb7c2f18d359cb360154a3cb"
+checksum = "e4252db6eef92a9c379b936392ffb2ba0d09e2e07f4ac54150eeda49bd0531c6"
 dependencies = [
  "proc-macro2",
  "quote",
