@@ -24,8 +24,6 @@ jobs:
   release:
     uses: PerishLab/actions/.forgejo/workflows/release-binary.yml@main
     with:
-      source_ref: ${{ github.ref }}
-      source_commit: ${{ github.sha }}
       channel: stable
       version: ${{ inputs.version }}
       promotion_channel: ${{ inputs.promotion_channel }}

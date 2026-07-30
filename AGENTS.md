@@ -85,11 +85,12 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   `X.Y.Z-<channel>.N`. Stable promotion embeds the complete exact candidate
   seal and its digest, and requires the same product, base version, and commit.
   Stable binaries are rebuilt with stable identity from that commit.
-- Exact publication may bind any operator-selected branch ref; the event ref
-  and commit are frozen once and every job checks out that commit. Stable alone
-  must originate from `refs/heads/release/vX.Y.Z`. A stable release line is
-  prepared by linear `cherry-pick -x`, frozen before publication, and remains
-  independent from an unblocked `main`.
+- Exact publication may bind any operator-selected branch ref; the called
+  shared workflow freezes its direct event ref and commit once and every job
+  checks out that commit. Product callers expose and forward no second source.
+  Stable alone must originate from `refs/heads/release/vX.Y.Z`. A stable
+  release line is prepared by linear `cherry-pick -x`, frozen before
+  publication, and remains independent from an unblocked `main`.
 - Exact seal creation is create-only and idempotent by content. Publish and
   stable activation use separate credentials and separate Plumb commands.
 - `plumb release inspect` takes its exact or stable public URL from the release

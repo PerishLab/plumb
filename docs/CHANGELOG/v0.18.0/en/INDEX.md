@@ -3,8 +3,9 @@
 ## Dynamic stable assembly
 
 Exact publication keeps its source freedom: the workflow dispatch ref is the
-only selected source, and the event ref plus SHA bind every shared job to one
-immutable commit. Exact channels do not consult release-branch state.
+only selected source, and the called workflow's direct event ref plus SHA bind
+every shared job to one immutable commit. Exact channels do not consult
+release-branch state.
 
 Stable publication alone is bound to `release/vX.Y.Z`. A local operator prepares
 the line, appends selected changes through linear `cherry-pick -x`, and freezes

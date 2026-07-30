@@ -9,8 +9,8 @@ deno install --config .runseal/deno.json --lock .runseal/deno.lock \
 ```
 
 产品 exact 与 stable workflow 不再声明第二个 `ref` 输入。应在所需来源分支上
-dispatch workflow，只传 exact version 或 promotion inputs；caller 会把事件 ref
-与 SHA 交给共享 workflow。
+dispatch workflow，只传 exact version 或 promotion inputs。Caller 不转发来源值；
+被调用的共享 workflow 直接读取其事件 ref 与 SHA。
 
 在本地准备 stable 发布线：
 

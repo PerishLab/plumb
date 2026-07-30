@@ -2,9 +2,9 @@
 
 ## 动态 stable 装配
 
-Exact 发布保持来源自由：workflow dispatch ref 是唯一选择的来源，事件 ref 与 SHA
-会把所有共享 job 绑定到同一个不可变 commit。Exact channel 不读取 release branch
-状态。
+Exact 发布保持来源自由：workflow dispatch ref 是唯一选择的来源，被调用 workflow
+的直接事件 ref 与 SHA 会把所有共享 job 绑定到同一个不可变 commit。Exact channel
+不读取 release branch 状态。
 
 只有 stable 发布绑定到 `release/vX.Y.Z`。本地操作者负责准备发布线、通过线性
 `cherry-pick -x` 加入选定变更，并在 dispatch 前冻结。Plumb 会在发布前校验 stable
