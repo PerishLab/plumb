@@ -11,8 +11,8 @@ deno install --config .runseal/deno.json --lock .runseal/deno.lock \
 
 Product exact and stable workflows no longer declare a second `ref` input.
 Dispatch the workflow on the desired source branch and pass only the exact
-version or promotion inputs; the caller forwards the event ref and SHA to the
-shared workflow.
+version or promotion inputs. The caller forwards no source values; the called
+shared workflow reads its direct event ref and SHA.
 
 Prepare a stable line locally:
 

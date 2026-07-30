@@ -2,7 +2,7 @@
 name = "skill"
 paths = ["skills/plumb"]
 version = "0.18.0"
-hash = "2cd09c0b1e6a391735435832d04d49ccebfced2340fa2aebdd8850ed16a78e7b"
+hash = "d47d52470396052d941186ef8e8c3d3ed8f817fdac313ad48b3f2ac3bd690fe3"
 
 [release]
 product = "plumb"

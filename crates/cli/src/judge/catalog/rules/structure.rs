@@ -267,9 +267,9 @@ rule!(
 rule!(
     RELEASE_SOURCE_BOUND,
     "structure.release-source-bound",
-    "Release callers bind the event source",
-    "Exact and stable product workflows pass the dispatch event's full branch ref and commit to the shared lane and expose no second ref input.",
-    "The release-exact.yml and release-stable.yml caller inputs and workflow_call bindings.",
+    "Release callers leave one event source",
+    "Exact and stable product workflows expose and forward no source or second ref input; the called shared workflow binds its direct event ref and commit.",
+    "The release-exact.yml and release-stable.yml caller inputs and workflow_call bindings, plus the called workflow event context.",
     Mechanized,
     RELEASE,
     [RELEASE_TAG, REPOSITORY]

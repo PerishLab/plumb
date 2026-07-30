@@ -44,7 +44,7 @@ archives, and inspection stay in Plumb.
 One coordinator performs the stateful sequence:
 
 1. Resolve current stable Plumb once.
-2. Bind the dispatch event's full branch ref and commit once.
+2. Bind the called workflow's direct event ref and commit once.
 3. Run the repository's fresh guard.
 4. Stamp and dry-run any declared registry attachment.
 5. Gather target archives and build declared skill or package attachments.

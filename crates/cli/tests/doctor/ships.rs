@@ -23,20 +23,30 @@ fn cargo() {
     }
     let stale = crate::run(&["doctor", path]);
     assert!(
-        stale.contains("does not bind github.ref and github.sha"),
+        stale.contains("exposes or forwards a second source binding"),
         "{stale}"
     );
     for lane in ["release-exact", "release-stable"] {
         std::fs::write(
             dir.join(format!(".forgejo/workflows/{lane}.yml")),
-            "jobs:\n  release:\n    with:\n      source_ref: ${{ github.ref }}\n      source_commit: ${{ github.sha }}\n",
+            "jobs:\n  release:\n    with:\n      channel: beta\n      version: v1.2.3-beta.1\n",
         )
         .expect("lane should be written");
     }
     let bound = crate::run(&["doctor", path]);
     assert!(
-        !bound.contains("does not bind github.ref and github.sha"),
+        !bound.contains("exposes or forwards a second source binding"),
         "{bound}"
+    );
+    std::fs::write(
+        dir.join(".forgejo/workflows/release-exact.yml"),
+        "jobs:\n  release:\n    with:\n      source_ref: ${{ github.ref }}\n      source_commit: ${{ github.sha }}\n",
+    )
+    .expect("lane should be written");
+    let forwarded = crate::run(&["doctor", path]);
+    assert!(
+        forwarded.contains("exposes or forwards a second source binding"),
+        "{forwarded}"
     );
 
     std::fs::write(

@@ -58,7 +58,7 @@ pub fn judge(held: &Shape) -> Found {
             } else if !bound(held, lane) {
                 found.push(Seed::wrong(
                     &rule::RELEASE_SOURCE_BOUND,
-                    format!("{lane} does not bind github.ref and github.sha exactly once"),
+                    format!("{lane} exposes or forwards a second source binding"),
                 ));
             }
         }
@@ -86,8 +86,8 @@ fn bound(held: &Shape, lane: &str) -> bool {
             .join(format!("{lane}.yml")),
     )
     .map(|text| {
-        text.contains("source_ref: ${{ github.ref }}")
-            && text.contains("source_commit: ${{ github.sha }}")
+        !text.contains("source_ref:")
+            && !text.contains("source_commit:")
             && !text.contains("${{ inputs.ref }}")
             && !text.contains("\n      ref:\n")
     })
