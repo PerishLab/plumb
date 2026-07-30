@@ -134,6 +134,10 @@ pub fn load<T: DeserializeOwned>(path: &Path) -> Result<T, Error> {
     })
 }
 
+pub fn value(key: &str) -> Option<String> {
+    std::env::var(key).ok().filter(|value| !value.is_empty())
+}
+
 pub fn discover(start: &Path, name: &str) -> Result<PathBuf, Vec<PathBuf>> {
     let mut searched = Vec::new();
     for dir in start.ancestors() {

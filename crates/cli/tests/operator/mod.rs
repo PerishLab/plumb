@@ -1,5 +1,6 @@
 use std::process::Command;
 
+mod audit;
 #[cfg(unix)]
 mod fixture;
 #[cfg(unix)]

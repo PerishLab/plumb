@@ -10,6 +10,68 @@ use clap::{Parser, Subcommand};
 use plumb::cli::Root;
 use std::path::PathBuf;
 
+mod audit {
+    use locus::generator;
+    use locus::reporter;
+    use locus::{Candidate, Config, Context, Engine, Key, Policy, Role};
+    use serde_json::json;
+
+    pub(crate) struct Run {
+        engine: Engine,
+        context: Context,
+        command: &'static str,
+    }
+
+    impl Run {
+        pub(crate) fn start(command: &'static str) -> Option<Self> {
+            let (engine, explicit) = bootstrap()?;
+            let mut candidate = Candidate::event(json!({
+                "event": "cli.start",
+                "command": command,
+            }))
+            .ensure(Role::trace())
+            .ensure(Role::span());
+            if let Some(key) = explicit {
+                candidate = candidate.explicit(Role::trace(), key);
+            }
+            let accepted = locus::record!(&engine, &Context::empty(), candidate).ok()?;
+            Some(Self {
+                engine,
+                context: accepted.context(),
+                command,
+            })
+        }
+
+        pub(crate) fn finish(self, code: i32) {
+            let candidate = Candidate::event(json!({
+                "event": "cli.finish",
+                "command": self.command,
+                "code": code,
+            }))
+            .ensure(Role::trace())
+            .ensure(Role::span());
+            let _ = locus::record!(&self.engine, &self.context, candidate);
+        }
+    }
+
+    fn bootstrap() -> Option<(Engine, Option<Key>)> {
+        let mut policy = Policy::default();
+        if let Some(path) = plumb::config::value("PLUMB_LOCUS_TRACE_FILE") {
+            policy = policy.generator(Role::trace(), generator::Spec::shared(path));
+        }
+        if let Some(path) = plumb::config::value("PLUMB_LOCUS_REPORT_FILE") {
+            policy = policy.reporter(reporter::Spec::file(path));
+        }
+        let explicit = plumb::config::value("PLUMB_LOCUS_TRACE_ID")
+            .map(Key::new)
+            .transpose()
+            .ok()?;
+        Engine::bootstrap(Config::new(policy))
+            .ok()
+            .map(|engine| (engine, explicit))
+    }
+}
+
 #[derive(Parser)]
 #[command(name = "plumb", version = plumb::version!("PLUMB"))]
 struct Cli {
@@ -53,6 +115,20 @@ enum Command {
         #[command(subcommand)]
         deed: dispatch::release::Deed,
     },
+}
+
+impl Command {
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Doctor { .. } => "doctor",
+            Self::Policy { .. } => "policy",
+            Self::Skill { .. } => "skill",
+            Self::Rule { .. } => "rule",
+            Self::Lock { .. } => "lock",
+            Self::Changelog { .. } => "changelog",
+            Self::Release { .. } => "release",
+        }
+    }
 }
 
 fn locks(root: PathBuf) -> i32 {
@@ -140,8 +216,8 @@ fn policy(root: PathBuf, write: bool) -> i32 {
     0
 }
 
-fn main() {
-    let code = match Cli::parse().command {
+fn execute(command: Command) -> i32 {
+    match command {
         Command::Doctor { target, json } => judge::doctor::run(PathBuf::from(target.root), json),
         Command::Policy { target, write } => policy(PathBuf::from(target.root), write),
         Command::Skill { deed } => skill::run(deed),
@@ -149,6 +225,26 @@ fn main() {
         Command::Lock { target } => locks(PathBuf::from(target.root)),
         Command::Changelog { target, version } => changelog(PathBuf::from(target.root), version),
         Command::Release { deed } => dispatch::release::run(deed),
+    }
+}
+
+fn main() {
+    let command = match Cli::try_parse() {
+        Ok(cli) => cli.command,
+        Err(error) => {
+            let code = error.exit_code();
+            let run = audit::Run::start("parse");
+            let _ = error.print();
+            if let Some(run) = run {
+                run.finish(code);
+            }
+            std::process::exit(code);
+        }
     };
+    let run = audit::Run::start(command.name());
+    let code = execute(command);
+    if let Some(run) = run {
+        run.finish(code);
+    }
     std::process::exit(code);
 }
