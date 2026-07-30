@@ -4,6 +4,8 @@ use std::process::Command;
 mod json;
 #[path = "doctor/rule.rs"]
 mod rule;
+#[path = "doctor/ships.rs"]
+mod ships;
 
 fn seat() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -229,54 +231,6 @@ fn pinned() {
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("version-pinned"), "{held}");
-}
-
-#[test]
-fn packages() {
-    let dir = std::env::temp_dir().join("plumb-packages");
-    std::fs::create_dir_all(&dir).expect("fixture should be made");
-
-    std::fs::write(
-        dir.join("deno.json"),
-        "{\"name\":\"@perish/foo\",\"exports\":\"./mod.ts\"}",
-    )
-    .expect("manifest should be written");
-    let root = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    assert!(
-        root.contains("publishable package @perish/foo at the root"),
-        "{root}"
-    );
-    std::fs::remove_file(dir.join("deno.json")).expect("manifest should be swept");
-
-    std::fs::create_dir_all(dir.join("packages/bar")).expect("fixture should be made");
-    std::fs::write(
-        dir.join("packages/bar/deno.json"),
-        "{\"name\":\"@perish/foo\"}",
-    )
-    .expect("manifest should be written");
-    let wrong = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    assert!(
-        wrong.contains("package @perish/foo sits in packages/bar"),
-        "{wrong}"
-    );
-
-    std::fs::create_dir_all(dir.join("packages/foo")).expect("fixture should be made");
-    std::fs::write(
-        dir.join("packages/foo/deno.json"),
-        "{\"name\":\"@perish/foo\"}",
-    )
-    .expect("manifest should be written");
-    std::fs::remove_dir_all(dir.join("packages/bar")).expect("fixture should be swept");
-    let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    assert!(!held.contains("must match the name"), "{held}");
-
-    std::fs::create_dir_all(dir.join("packages/components")).expect("fixture should be made");
-    let reserved = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    assert!(
-        reserved.contains("packages/components is reserved"),
-        "{reserved}"
-    );
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
 
 #[test]

@@ -5,11 +5,26 @@ use crate::judge::show;
 use std::collections::BTreeSet;
 use std::path::Path;
 
-pub fn release(root: &Path) -> bool {
+pub fn ships(root: &Path) -> BTreeSet<String> {
+    let mut found = BTreeSet::new();
+    let Some(held) = declared(root) else {
+        return found;
+    };
+    if held.contains_key("binaries") {
+        found.insert("binary".to_string());
+    }
+    if held.contains_key("cargo") {
+        found.insert("cargo".to_string());
+    }
+    found
+}
+
+fn declared(root: &Path) -> Option<toml::Table> {
     std::fs::read_to_string(root.join("plumb.toml"))
         .ok()
         .and_then(|text| text.parse::<toml::Table>().ok())
-        .is_some_and(|manifest| manifest.contains_key("release"))
+        .and_then(|manifest| manifest.get("release").cloned())
+        .and_then(|held| held.as_table().cloned())
 }
 
 pub fn sites(root: &Path) -> BTreeSet<String> {

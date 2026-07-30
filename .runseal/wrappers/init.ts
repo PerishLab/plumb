@@ -31,6 +31,7 @@ await init({
     ".runseal/wrappers/cold-start.ts",
     ".runseal/wrappers/init.ts",
     ".runseal/wrappers/land.ts",
+    ".runseal/wrappers/release.ts",
     ".runseal/wrappers/retire.ts",
     ".runseal/wrappers/ship.ts",
     "plumb.toml",
