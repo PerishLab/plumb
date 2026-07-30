@@ -1,4 +1,5 @@
 use super::{Dependencies, Dependency, Ecosystem};
+use semver::{Version, VersionReq};
 use serde_json::Value;
 use std::path::{Component, Path, PathBuf};
 
@@ -64,6 +65,21 @@ pub fn read(root: &Path, scope: &str) -> Dependencies {
     found
 }
 
+fn pick(
+    specifiers: &serde_json::Map<String, Value>,
+    keep: impl Fn(&String) -> bool,
+) -> Vec<String> {
+    let mut held = specifiers
+        .iter()
+        .filter(|(seat, value)| keep(seat) && value.is_string())
+        .filter_map(|(_, value)| value.as_str())
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+    held.sort();
+    held.dedup();
+    held
+}
+
 fn inspect(repo: &Path, config: &Path, lock: &Path, scope: &str) -> Dependencies {
     let mut found = Dependencies::default();
     let source = match document(config) {
@@ -117,16 +133,16 @@ fn inspect(repo: &Path, config: &Path, lock: &Path, scope: &str) -> Dependencies
     };
     for (name, requirement, requirement_explicit) in declarations {
         let key = format!("jsr:{name}@{requirement}");
-        let mut resolutions = specifiers
-            .iter()
-            .filter(|(held, value)| {
-                (**held == key || held.starts_with(&format!("{key}/"))) && value.is_string()
-            })
-            .filter_map(|(_, value)| value.as_str())
-            .map(str::to_string)
-            .collect::<Vec<_>>();
-        resolutions.sort();
-        resolutions.dedup();
+        let mut resolutions = pick(specifiers, |held| {
+            *held == key || held.starts_with(&format!("{key}/"))
+        });
+        if resolutions.is_empty()
+            && let Ok(want) = VersionReq::parse(&requirement)
+        {
+            let head = format!("jsr:{name}@");
+            resolutions = pick(specifiers, |held| held.starts_with(&head));
+            resolutions.retain(|held| Version::parse(held).is_ok_and(|held| want.matches(&held)));
+        }
         let [resolution] = resolutions.as_slice() else {
             found.blind.push(format!(
                 "cannot read {}: {name} has {} matching resolutions for {key}",
