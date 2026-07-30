@@ -265,6 +265,16 @@ rule!(
     [RELEASE_TAG, REPOSITORY]
 );
 rule!(
+    RELEASE_SOURCE_BOUND,
+    "structure.release-source-bound",
+    "Release callers bind the event source",
+    "Exact and stable product workflows pass the dispatch event's full branch ref and commit to the shared lane and expose no second ref input.",
+    "The release-exact.yml and release-stable.yml caller inputs and workflow_call bindings.",
+    Mechanized,
+    RELEASE,
+    [RELEASE_TAG, REPOSITORY]
+);
+rule!(
     REGISTRY_RELEASE_WRAPPER_PRESENT,
     "structure.registry-release-wrapper-present",
     "Registry releases have an operator wrapper",
@@ -284,7 +294,7 @@ pub fn all() -> Vec<&'static Rule> {
         &INIT_PATHS_READABLE, &INIT_REQUIRES_EXISTING_WRAPPER, &INIT_REQUIRES_PLUMB,
         &KNOWN_DIRECTORY, &KNOWN_WORKFLOW, &KNOWN_WRAPPER, &MISSING_HOOK, &MISSING_WRAPPER,
         &OPERATOR_TEST_OWNED_BY_SEALKIT, &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
-        &REGISTRY_RELEASE_WRAPPER_PRESENT, &RELEASE_LANE_PRESENT, &RESERVED_COMPONENTS_SEAT,
-        &SITE_DEPLOY_LANE, &SITE_SHIP_WRAPPER,
+        &REGISTRY_RELEASE_WRAPPER_PRESENT, &RELEASE_LANE_PRESENT, &RELEASE_SOURCE_BOUND,
+        &RESERVED_COMPONENTS_SEAT, &SITE_DEPLOY_LANE, &SITE_SHIP_WRAPPER,
     ]
 }

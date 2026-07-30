@@ -90,9 +90,12 @@ alone does not prove ownership: acting on a path requires the registry entry
 **Release lanes.** A binary product declares only its identity, binaries,
 targets, and genuine product assets in the root `plumb.toml`. Plumb owns build
 discovery, archives, attachments, managers, capsules, storage, verification,
-activation, smoke, and tags. Actions owns the shared matrix, credentials, and
-sequencing; product workflows are thin callers. Stable activation remains a
-separate capability and operation. See `references/lane.md`.
+activation, smoke, source binding, and packport topology checks. Actions owns
+the shared matrix, credentials, and sequencing; product workflows are thin
+callers. Stable activation remains a separate capability and operation. Exact
+may bind any selected branch; stable binds only `release/vX.Y.Z`, and its
+commit must be packported into `main` before the next stable activation. See
+`references/lane.md`.
 
 **Stable consensus.** Stable from the canonical release authority alone may
 occupy default install seats and root manager entrypoints. Every other channel
@@ -181,14 +184,17 @@ plumb rule owners             # registered owner vocabulary
 plumb lock [ROOT]             # print what a fresh affirmation would record
 plumb changelog [ROOT]        # refuse a version whose en+zh changelog is absent or empty
 plumb policy [ROOT] --write   # reconcile ectropy.toml against the repository
+plumb release authority       # print the product's canonical public release authority
 plumb release matrix          # derive the shared target matrix from plumb.toml
 plumb release build           # build and archive one declared target
 plumb release assemble        # gather targets and build declared attachments
+plumb release source          # bind the frozen event branch, commit, channel, and version
 plumb release compile         # seal one exact declared product artifact set
 plumb release publish         # publish immutable objects and the exact seal
 plumb release activate        # move stable consensus with its separate authority
 plumb release inspect         # verify an exact seal or stable public surface
 plumb release smoke           # exercise a generated manager on this platform
+plumb release packport        # prove a stable commit is now an ancestor of main
 plumb skill install           # install this brief into detected agent directories
 plumb skill stage             # unpack one exact candidate into a new explicit path
 plumb skill status            # compare managed installs with stable, read-only

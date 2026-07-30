@@ -74,9 +74,12 @@ Releases publish one identity to object storage and the private Cargo registry.
 Every channel first creates
 `v1/releases/<channel>/<exact-version>/seal.json`; non-stable stops there.
 Stable promotion proves one exact candidate from the same commit, then moves
-`v1/channels/stable.json` and the root managers. The stable tag is created only
-after public verification and install smoke. Public inspection and generated
-manager smoke are reusable Plumb operations rather than a third workflow lane.
+`v1/channels/stable.json` and the root managers. Release identity is carried by
+exact seals and the stable pointer rather than new Git tags. Public inspection
+and generated manager smoke are reusable Plumb operations rather than a third
+workflow lane. Stable is sourced only from `release/vX.Y.Z`; after activation a
+local operator merges that line into `main` and proves the stable commit is now
+an ancestor before the next stable activation.
 
 ## Paired Web/API dispatch
 

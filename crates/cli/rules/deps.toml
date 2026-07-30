@@ -25,7 +25,7 @@ use = "@perish/sealkit"
 
 [[support]]
 name = "@perish/sealkit"
-requirement = "^0.2.1"
-minimum = "0.2.1"
-legacy = "*"
-line = "0.1"
+requirement = "^0.3.1"
+minimum = "0.3.1"
+legacy = "^0.2.1"
+line = "0.2"

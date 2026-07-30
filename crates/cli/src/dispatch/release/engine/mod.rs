@@ -1,7 +1,7 @@
 pub mod package;
 pub mod promotion;
 pub mod registry;
-pub mod tag;
+pub mod topology;
 
 mod archive;
 mod debian;

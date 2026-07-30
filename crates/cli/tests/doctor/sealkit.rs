@@ -48,24 +48,24 @@ fn doctor(root: &Path) -> String {
 fn lines() {
     let fixture = tempfile::tempdir().expect("fixture should be made");
 
-    write(fixture.path(), "*", "0.1.4");
+    write(fixture.path(), "^0.2.1", "0.2.1");
     let legacy = doctor(fixture.path());
-    assert!(legacy.contains("sealkit  * -> 0.1.4"), "{legacy}");
+    assert!(legacy.contains("sealkit  ^0.2.1 -> 0.2.1"), "{legacy}");
     assert!(
         !legacy.contains("unsupported Sealkit requirement"),
         "{legacy}"
     );
 
-    write(fixture.path(), "^0.2.1", "0.2.1");
+    write(fixture.path(), "^0.3.1", "0.3.1");
     let floor = doctor(fixture.path());
-    assert!(floor.contains("sealkit  ^0.2.1 -> 0.2.1"), "{floor}");
+    assert!(floor.contains("sealkit  ^0.3.1 -> 0.3.1"), "{floor}");
     assert!(
         !floor.contains("unsupported Sealkit requirement"),
         "{floor}"
     );
     assert!(!floor.contains("below supported Sealkit floor"), "{floor}");
 
-    write(fixture.path(), "^0.2.1", "0.2.2");
+    write(fixture.path(), "^0.3.1", "0.3.2");
     let patch = doctor(fixture.path());
     assert!(!patch.contains("unsupported Sealkit resolution"), "{patch}");
 }
@@ -74,10 +74,10 @@ fn lines() {
 fn canonical() {
     let fixture = tempfile::tempdir().expect("fixture should be made");
 
-    lock(fixture.path(), "^0.2.1", "~0.2.1", "0.2.1");
+    lock(fixture.path(), "^0.3.1", "~0.3.1", "0.3.1");
     let normalized = doctor(fixture.path());
     assert!(
-        normalized.contains("sealkit  ^0.2.1 -> 0.2.1"),
+        normalized.contains("sealkit  ^0.3.1 -> 0.3.1"),
         "{normalized}"
     );
     assert!(normalized.contains("0 blind"), "{normalized}");
@@ -86,19 +86,19 @@ fn canonical() {
 #[test]
 fn ambiguous() {
     let fixture = tempfile::tempdir().expect("fixture should be made");
-    lock(fixture.path(), "^0.2.1", "~0.2.1", "0.2.1");
+    lock(fixture.path(), "^0.3.1", "~0.3.1", "0.3.1");
     std::fs::write(
         fixture.path().join(".runseal/deno.lock"),
         serde_json::json!({
             "version": "5",
             "specifiers": {
-                "jsr:@perish/sealkit@~0.2.1": "0.2.1",
-                "jsr:@perish/sealkit@>=0.2.1, <0.3.0": "0.2.2",
+                "jsr:@perish/sealkit@~0.3.1": "0.3.1",
+                "jsr:@perish/sealkit@>=0.3.1, <0.4.0": "0.3.2",
             },
             "workspace": {
                 "dependencies": [
-                    "jsr:@perish/sealkit@~0.2.1",
-                    "jsr:@perish/sealkit@>=0.2.1, <0.3.0",
+                    "jsr:@perish/sealkit@~0.3.1",
+                    "jsr:@perish/sealkit@>=0.3.1, <0.4.0",
                 ],
             },
         })
@@ -121,21 +121,21 @@ fn refusals() {
     write(fixture.path(), "^0.1.14", "0.1.14");
     let requirement = doctor(fixture.path());
     assert!(
-        requirement.contains("unsupported Sealkit requirement ^0.1.14; use * or ^0.2.1"),
+        requirement.contains("unsupported Sealkit requirement ^0.1.14; use ^0.2.1 or ^0.3.1"),
         "{requirement}"
     );
 
-    write(fixture.path(), "^0.2.1", "0.2.0");
+    write(fixture.path(), "^0.3.1", "0.3.0");
     let floor = doctor(fixture.path());
     assert!(
-        floor.contains("Sealkit resolution 0.2.0 is below supported Sealkit floor 0.2.1"),
+        floor.contains("Sealkit resolution 0.3.0 is below supported Sealkit floor 0.3.1"),
         "{floor}"
     );
 
-    write(fixture.path(), "*", "0.3.0");
+    write(fixture.path(), "^0.2.1", "0.4.0");
     let outside = doctor(fixture.path());
     assert!(
-        outside.contains("unsupported Sealkit resolution 0.3.0; transition admits 0.1 or ^0.2.1"),
+        outside.contains("unsupported Sealkit resolution 0.4.0; transition admits 0.2 or ^0.3.1"),
         "{outside}"
     );
 }
@@ -143,7 +143,7 @@ fn refusals() {
 #[test]
 fn blind() {
     let fixture = tempfile::tempdir().expect("fixture should be made");
-    write(fixture.path(), "*", "0.1.14");
+    write(fixture.path(), "^0.2.1", "0.2.1");
 
     std::fs::remove_file(fixture.path().join(".runseal/deno.lock"))
         .expect("lock should be removed");

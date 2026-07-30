@@ -13,6 +13,32 @@ fn cargo() {
     assert!(binary.contains("publishes binary"), "{binary}");
     assert!(!binary.contains("cargo"), "{binary}");
 
+    std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("lanes should be made");
+    for lane in ["release-exact", "release-stable"] {
+        std::fs::write(
+            dir.join(format!(".forgejo/workflows/{lane}.yml")),
+            "jobs:\n  release:\n    with:\n      ref: ${{ inputs.ref }}\n",
+        )
+        .expect("lane should be written");
+    }
+    let stale = crate::run(&["doctor", path]);
+    assert!(
+        stale.contains("does not bind github.ref and github.sha"),
+        "{stale}"
+    );
+    for lane in ["release-exact", "release-stable"] {
+        std::fs::write(
+            dir.join(format!(".forgejo/workflows/{lane}.yml")),
+            "jobs:\n  release:\n    with:\n      source_ref: ${{ github.ref }}\n      source_commit: ${{ github.sha }}\n",
+        )
+        .expect("lane should be written");
+    }
+    let bound = crate::run(&["doctor", path]);
+    assert!(
+        !bound.contains("does not bind github.ref and github.sha"),
+        "{bound}"
+    );
+
     std::fs::write(
         dir.join("plumb.toml"),
         "[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n",

@@ -22,6 +22,8 @@ pub struct Release {
     pub channel: String,
     pub version: String,
     pub commit: String,
+    pub source: String,
+    pub base: String,
     pub target: String,
     pub artifacts: PathBuf,
     pub output: PathBuf,
@@ -52,6 +54,7 @@ impl Default for Rig {
             releases: RELEASES.to_string(),
             release: Release {
                 root: PathBuf::from("."),
+                base: "origin/main".to_string(),
                 ..Release::default()
             },
             publish: Authority::default(),

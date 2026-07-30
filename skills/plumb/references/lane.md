@@ -44,20 +44,33 @@ archives, and inspection stay in Plumb.
 One coordinator performs the stateful sequence:
 
 1. Resolve current stable Plumb once.
-2. Run the repository's fresh guard.
-3. Stamp and dry-run any declared registry attachment.
-4. Gather target archives and build declared skill or package attachments.
-5. Inspect the exact declared artifact set.
-6. Compile one capsule with the product commit and exact release identity.
-7. Publish content-addressed objects and the exact seal.
-8. Verify every published object through the public authority.
-9. Publish and read back any registry attachment.
-10. For stable only, activate the root managers and stable pointer.
-11. Smoke the generated manager on every supported platform.
-12. For stable only, create the durable Git tag after activation and smoke.
+2. Bind the dispatch event's full branch ref and commit once.
+3. Run the repository's fresh guard.
+4. Stamp and dry-run any declared registry attachment.
+5. Gather target archives and build declared skill or package attachments.
+6. Inspect the exact declared artifact set.
+7. Compile one capsule with the product commit and exact release identity.
+8. Publish content-addressed objects and the exact seal.
+9. Verify every published object through the public authority.
+10. Publish and read back any registry attachment.
+11. For stable only, activate the root managers and stable pointer.
+12. Smoke the generated manager on every supported platform.
 
 Arbitrary hooks do not run inside capsule publication or stable activation.
 Those phases stay small enough for their invariants to remain auditable.
+
+Exact publication may bind any selected branch under `refs/heads/`; that
+freedom does not weaken its immutable identity. Stable alone binds
+`refs/heads/release/vX.Y.Z`. The release line is prepared by linear
+`cherry-pick -x`, frozen before stable publication, and does not block ordinary
+movement on `main`.
+
+After activation and smoke, a local operator merges the release line into
+`main` without flattening its topology and proves the published stable commit
+is an ancestor. Packport is settlement, not an Actions tail job: a failed or
+interrupted packport does not rewrite a successful stable result, block exact
+publication, or block ordinary `main` work. It does block activation of the
+next stable line. A settled release branch may be deleted.
 
 ## Immutable publication
 
@@ -90,6 +103,10 @@ Activation conditionally updates the root managers before compare-and-swap of
 the stable pointer. Every root-manager version can interpret both the prior and
 next current record, so a failed attempt before pointer movement leaves the
 prior consensus valid. The pointer is the sole consensus commit.
+
+Exact seals and the stable pointer are also the complete release identity.
+Permanent lanes create no new Git tags; historical tags remain historical
+records and are not consulted as consensus.
 
 Publishing exact objects and activating stable use different commands,
 environment names, and persistent credentials. A non-stable lane never receives

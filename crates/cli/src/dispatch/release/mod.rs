@@ -16,11 +16,13 @@ use std::path::{Path, PathBuf};
 pub enum Deed {
     Activate,
     Assemble,
+    Authority,
     Build,
     Compile,
     Inspect,
     Managers,
     Matrix,
+    Packport,
     Promote,
     Publish,
     Registry {
@@ -28,7 +30,7 @@ pub enum Deed {
         deed: Registry,
     },
     Smoke,
-    Tag,
+    Source,
     Verify,
 }
 
@@ -63,6 +65,7 @@ fn execute(deed: Deed) -> Result<String, String> {
             required("PLUMB_RELEASE_VERSION", &release.version)?,
             &artifacts(release)?,
         ),
+        Deed::Authority => Ok(spec.authority.clone()),
         Deed::Build => engine::package::product(&spec).build(engine::package::Build {
             target: required("PLUMB_RELEASE_TARGET", &release.target)?,
             version: required("PLUMB_RELEASE_VERSION", &release.version)?,
@@ -82,6 +85,12 @@ fn execute(deed: Deed) -> Result<String, String> {
             &output(release)?,
         ),
         Deed::Matrix => engine::package::product(&spec).matrix(),
+        Deed::Packport => engine::topology::packport(
+            &spec.root,
+            required("PLUMB_RELEASE_VERSION", &release.version)?,
+            required("PLUMB_RELEASE_COMMIT", &release.commit)?,
+            required("PLUMB_RELEASE_BASE", &release.base)?,
+        ),
         Deed::Promote => engine::promotion::fetch(
             &spec,
             required(
@@ -113,12 +122,13 @@ fn execute(deed: Deed) -> Result<String, String> {
             required("PLUMB_RELEASE_URL", &release.url)?,
             required("PLUMB_RELEASE_VERSION", &release.version)?,
         ),
-        Deed::Tag => engine::tag::run(
-            &spec.root,
-            required("PLUMB_RELEASE_CHANNEL", &release.channel)?,
-            required("PLUMB_RELEASE_VERSION", &release.version)?,
-            required("PLUMB_RELEASE_COMMIT", &release.commit)?,
-        ),
+        Deed::Source => engine::topology::source(engine::topology::Source {
+            root: &spec.root,
+            channel: required("PLUMB_RELEASE_CHANNEL", &release.channel)?,
+            version: required("PLUMB_RELEASE_VERSION", &release.version)?,
+            commit: required("PLUMB_RELEASE_COMMIT", &release.commit)?,
+            reference: required("PLUMB_RELEASE_SOURCE", &release.source)?,
+        }),
         Deed::Verify => verify::run(&capsule(release)?, release.activated),
     }
 }

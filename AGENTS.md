@@ -52,8 +52,8 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   are derived.
 - Plumb owns Cargo discovery and stamping, target builds, archives, skill and
   Debian assembly, manager generation, capsules, storage, verification,
-  activation, smoke, and stable tags. Those mechanisms do not live in product
-  scripts.
+  activation, smoke, source binding, and packport topology checks. Those
+  mechanisms do not live in product scripts.
 - Every Plumb-owned artifact is byte-reproducible from the declared payload.
   Archive members are ordered and carry canonical timestamps, owners, and
   modes; MSVC binaries use the reproducible linker mode. Rebuilding one exact
@@ -85,6 +85,11 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   `X.Y.Z-<channel>.N`. Stable promotion embeds the complete exact candidate
   seal and its digest, and requires the same product, base version, and commit.
   Stable binaries are rebuilt with stable identity from that commit.
+- Exact publication may bind any operator-selected branch ref; the event ref
+  and commit are frozen once and every job checks out that commit. Stable alone
+  must originate from `refs/heads/release/vX.Y.Z`. A stable release line is
+  prepared by linear `cherry-pick -x`, frozen before publication, and remains
+  independent from an unblocked `main`.
 - Exact seal creation is create-only and idempotent by content. Publish and
   stable activation use separate credentials and separate Plumb commands.
 - `plumb release inspect` takes its exact or stable public URL from the release
@@ -97,9 +102,13 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   Plumb therefore publishes `plumb-macro` before `plumb` and locks their
   coupled versions exactly without requiring an unpublished dependency to
   exist during rehearsal.
-- Non-stable releases do not create Git tags.
-- Stable tags are created only after exact publish, stable activation, and
-  manager smoke.
+- Release identity lives in exact seals and the stable pointer; new releases do
+  not create Git tags. Historical tags are retained as history, not consensus.
+- After stable succeeds, a local operator packports the release line into
+  `main` with a topology-preserving merge. The stable commit must become an
+  ancestor of `main` before another stable line can activate. This settlement
+  is independent from the Actions lane; exact publication and ordinary `main`
+  work remain unblocked. The settled release branch may be deleted.
 - Every product repository uses the same Forgejo secret names:
   `RELEASE_PUBLISH_S3_*`, `RELEASE_ACTIVATE_S3_*`, and optional
   `RELEASE_REGISTRY_TOKEN`. Authority comes from `plumb.toml`, not a repository

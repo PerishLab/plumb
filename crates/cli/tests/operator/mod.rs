@@ -4,6 +4,8 @@ use std::process::Command;
 mod fixture;
 #[cfg(unix)]
 mod release;
+#[cfg(unix)]
+mod topology;
 
 fn run(root: &std::path::Path) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))

@@ -55,6 +55,11 @@ pub fn judge(held: &Shape) -> Found {
                     &rule::RELEASE_LANE_PRESENT,
                     format!("binary release without a {lane} lane"),
                 ));
+            } else if !bound(held, lane) {
+                found.push(Seed::wrong(
+                    &rule::RELEASE_SOURCE_BOUND,
+                    format!("{lane} does not bind github.ref and github.sha exactly once"),
+                ));
             }
         }
     }
@@ -72,6 +77,21 @@ pub fn judge(held: &Shape) -> Found {
     }
     site(held, &mut found);
     found
+}
+
+fn bound(held: &Shape, lane: &str) -> bool {
+    std::fs::read_to_string(
+        held.root
+            .join(".forgejo/workflows")
+            .join(format!("{lane}.yml")),
+    )
+    .map(|text| {
+        text.contains("source_ref: ${{ github.ref }}")
+            && text.contains("source_commit: ${{ github.sha }}")
+            && !text.contains("${{ inputs.ref }}")
+            && !text.contains("\n      ref:\n")
+    })
+    .unwrap_or(false)
 }
 
 fn site(held: &Shape, found: &mut Found) {

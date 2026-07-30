@@ -1,6 +1,6 @@
 import { cli, flags } from "@perish/sealkit/cli";
 import { Forgejo, type Remote, token } from "@perish/sealkit/forgejo";
-import { upsertSecret } from "@perish/sealkit/forgejo-project";
+import { Project } from "@perish/sealkit/forgejo-project";
 import { io } from "@perish/sealkit/io";
 import { project } from "../lib/cold-start/project.ts";
 
@@ -455,6 +455,7 @@ async function verifyS3(name: string, capability: Capability): Promise<void> {
 async function syncForgejo(options: Options, release: Release): Promise<void> {
   const remote = forgejo(options);
   const api = new Forgejo(remote, await token(remote));
+  const project = new Project(api);
   const values: Record<string, string> = {
     RELEASE_PUBLISH_S3_ACCESS_KEY: release.publish.accessKey,
     RELEASE_PUBLISH_S3_SECRET_KEY: release.publish.secretKey,
@@ -477,7 +478,7 @@ async function syncForgejo(options: Options, release: Release): Promise<void> {
       "RELEASE_ACTIVATE_S3_ENDPOINT",
     ]
   ) {
-    await upsertSecret(api, name, values[name]);
+    await project.secret(name, values[name]);
     io.print(`forgejo secret: upserted (${name})`);
   }
   io.print(`forgejo: synced (${options.repo})`);

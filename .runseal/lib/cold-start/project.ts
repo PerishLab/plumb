@@ -1,6 +1,6 @@
 import { cli, flags } from "@perish/sealkit/cli";
 import { Forgejo, type Remote, token } from "@perish/sealkit/forgejo";
-import { ensureRepository } from "@perish/sealkit/forgejo-project";
+import { Project } from "@perish/sealkit/forgejo-project";
 import { io } from "@perish/sealkit/io";
 
 type Options = {
@@ -25,7 +25,7 @@ export async function project(raw: string[]): Promise<void> {
   }
   const remote = forgejo(options);
   const api = new Forgejo(remote, await token(remote));
-  const result = await ensureRepository(api, {
+  const result = await new Project(api).ensure({
     description: options.description,
     private: options.private,
   });
