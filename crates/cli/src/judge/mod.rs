@@ -94,6 +94,13 @@ impl shape::Shape {
                     "guard does not run ectropy explicitly",
                 ));
             }
+            if self.rust && self.wrappers.contains("guard") && !self.guard.contains("\"--release\"")
+            {
+                found.push(wrong(
+                    &structure_rule::GUARD_CHECKS_RELEASE_PROFILE,
+                    "guard does not exercise the release profile",
+                ));
+            }
             if self.wrappers.contains("guard")
                 && (self.guard.contains("\"--strict\"") || self.guard.contains("\"--debt\""))
             {

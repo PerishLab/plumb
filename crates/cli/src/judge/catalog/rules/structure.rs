@@ -1,7 +1,12 @@
 use super::{Rule, rule};
 
+mod guard;
 mod site;
 
+pub use guard::{
+    GUARD_CHECKS_RELEASE_PROFILE, GUARD_CONCURRENCY, GUARD_RUNS_DOCTOR, GUARD_RUNS_ECTROPY,
+    GUARD_USES_CURRENT_ECTROPY_MODE,
+};
 pub use site::{SITE_DEPLOY_LANE, SITE_SHIP_WRAPPER};
 
 rule!(
@@ -35,36 +40,6 @@ rule!(
     [ECTROPY_TAG, REPOSITORY]
 );
 rule!(
-    GUARD_RUNS_DOCTOR,
-    "structure.guard-runs-doctor",
-    "Guard runs plumb doctor",
-    "The repository guard invokes the travelling shape check.",
-    "The guard wrapper source.",
-    Mechanized,
-    PLUMB,
-    [ADOPTION, REPOSITORY]
-);
-rule!(
-    GUARD_RUNS_ECTROPY,
-    "structure.guard-runs-ectropy",
-    "Guard runs Ectropy explicitly",
-    "The repository guard invokes Ectropy's errors-only checker directly.",
-    "The guard wrapper source.",
-    Mechanized,
-    ECTROPY,
-    [ADOPTION, ECTROPY_TAG, REPOSITORY]
-);
-rule!(
-    GUARD_USES_CURRENT_ECTROPY_MODE,
-    "structure.guard-uses-current-ectropy-mode",
-    "Guard uses the current Ectropy mode",
-    "The repository guard carries neither the retired strict mode nor debt mode.",
-    "The guard wrapper Ectropy invocation.",
-    Mechanized,
-    ECTROPY,
-    [ADOPTION, ECTROPY_TAG, REPOSITORY]
-);
-rule!(
     INIT_REQUIRES_PLUMB,
     "structure.init-requires-plumb",
     "Init requires plumb",
@@ -73,16 +48,6 @@ rule!(
     Mechanized,
     PLUMB,
     [ADOPTION, REPOSITORY]
-);
-rule!(
-    GUARD_CONCURRENCY,
-    "structure.guard-concurrency",
-    "Guard cancels superseded runs",
-    "The guard workflow shares the canonical concurrency group and cancels superseded work.",
-    "The guard workflow concurrency block.",
-    Mechanized,
-    PLUMB,
-    [REPOSITORY]
 );
 rule!(
     PACKAGE_UNDER_PACKAGES,
@@ -289,7 +254,8 @@ pub fn all() -> Vec<&'static Rule> {
     vec![
         &ANCHOR_PRESENT, &ANCHOR_UNIQUE, &API_ENTRYPOINT, &BOUNDARY_EXISTS,
         &CARGO_TARGET_IGNORED, &CASCADE_DERIVES_IN_ANCHOR, &ECTROPY_POLICY,
-        &ECTROPY_POLICY_PRESENT, &ECTROPY_POLICY_READABLE, &GUARD_CONCURRENCY,
+        &ECTROPY_POLICY_PRESENT, &ECTROPY_POLICY_READABLE,
+        &GUARD_CHECKS_RELEASE_PROFILE, &GUARD_CONCURRENCY,
         &GUARD_RUNS_DOCTOR, &GUARD_RUNS_ECTROPY, &GUARD_USES_CURRENT_ECTROPY_MODE,
         &INIT_PATHS_READABLE, &INIT_REQUIRES_EXISTING_WRAPPER, &INIT_REQUIRES_PLUMB,
         &KNOWN_DIRECTORY, &KNOWN_WORKFLOW, &KNOWN_WRAPPER, &MISSING_HOOK, &MISSING_WRAPPER,

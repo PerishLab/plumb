@@ -67,6 +67,34 @@ fn adoption() {
 }
 
 #[test]
+fn profile() {
+    let dir = std::env::temp_dir().join("plumb-profile");
+    std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");
+    std::fs::write(dir.join("Cargo.toml"), "[workspace]\n").expect("manifest should be written");
+    for name in ["guard", "init", "land"] {
+        std::fs::write(dir.join(format!(".runseal/wrappers/{name}.ts")), "")
+            .expect("wrapper should be written");
+    }
+    let bare = run(&dir);
+    assert!(
+        bare.contains("guard does not exercise the release profile"),
+        "{bare}"
+    );
+
+    std::fs::write(
+        dir.join(".runseal/wrappers/guard.ts"),
+        "await bin(\"cargo\").run([\"check\", \"--workspace\", \"--release\"]);\n",
+    )
+    .expect("guard should be written");
+    let held = run(&dir);
+    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
+    assert!(
+        !held.contains("guard does not exercise the release profile"),
+        "{held}"
+    );
+}
+
+#[test]
 fn forbidden() {
     let dir = std::env::temp_dir().join("plumb-operator-test");
     std::fs::create_dir_all(dir.join(".runseal/lib")).expect("fixture should be made");

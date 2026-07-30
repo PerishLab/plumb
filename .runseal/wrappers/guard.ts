@@ -8,6 +8,10 @@ await guard(
       runs: [["cargo", ["clippy", "--all-targets", "--", "-D", "warnings"]]],
     },
     { label: "cargo test", runs: [["cargo", ["test", "--locked"]]] },
+    {
+      label: "cargo release",
+      runs: [["cargo", ["check", "--locked", "--workspace", "--all-targets", "--release"]]],
+    },
     { label: "biome", runs: [["pnpm", ["biome", "ci", "."]]] },
     { label: "tsc", runs: [["pnpm", ["-r", "exec", "tsc", "--noEmit"]]] },
     { label: "vitest", runs: [["pnpm", ["-r", "test"]]] },
