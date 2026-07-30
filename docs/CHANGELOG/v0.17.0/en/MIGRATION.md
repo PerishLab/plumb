@@ -36,3 +36,11 @@ is not, and the laws do not bind it either way.
 Declaring costs one file. An empty `plumb.toml` is a complete declaration when
 there is no release surface, site, or lock to name; the tables come later if
 they ever apply. Nothing changes for a repository that already carries it.
+
+## If a stable manager reports an old installation as unowned
+
+Run the current canonical stable manager again. It now adopts the old marker
+format when the root marker, version marker, and installed entrypoint all prove
+one stable seat. No manual uninstall is needed. A custom authority, prerelease
+channel, ambiguous seat, or changed entrypoint is intentionally not adopted;
+inspect those installations rather than weakening the ownership proof.

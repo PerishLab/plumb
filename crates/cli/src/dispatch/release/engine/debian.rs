@@ -113,6 +113,8 @@ fn copy(source: &Path, target: &Path) -> Result<(), String> {
 }
 
 fn executable(path: &Path) -> Result<(), String> {
+    #[cfg(not(unix))]
+    let _ = path;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;

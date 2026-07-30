@@ -55,6 +55,9 @@ fn cycle(spec: &Spec, url: &str, version: &str, root: &Path) -> Result<(), Strin
     };
     seat.call("install", false)?;
     probe(spec, version, root)?;
+    if stable(version) {
+        seat.legacy(version)?;
+    }
     seat.call("update", false)?;
     probe(spec, version, root)?;
     seat.call("uninstall", true)?;
@@ -65,6 +68,19 @@ fn cycle(spec: &Spec, url: &str, version: &str, root: &Path) -> Result<(), Strin
 }
 
 impl Seat<'_> {
+    fn legacy(&self, version: &str) -> Result<(), String> {
+        let signature = format!("{}-manager-v1", self.spec.product);
+        let marker = format!(".{}-manager", self.spec.product);
+        let install = self.root.join("install");
+        std::fs::write(install.join(&marker), format!("{signature}\n"))
+            .map_err(|error| format!("cannot write legacy root marker: {error}"))?;
+        std::fs::write(
+            install.join(version).join(&marker),
+            format!("{signature}\nversion={version}\n"),
+        )
+        .map_err(|error| format!("cannot write legacy version marker: {error}"))
+    }
+
     fn call(&self, deed: &str, empty: bool) -> Result<(), String> {
         let mut command = if cfg!(windows) {
             let mut held = Command::new("pwsh");
@@ -100,6 +116,15 @@ impl Seat<'_> {
             ))
         }
     }
+}
+
+fn stable(version: &str) -> bool {
+    let held = version.strip_prefix('v').unwrap_or(version);
+    let parts = held.split('.').collect::<Vec<_>>();
+    parts.len() == 3
+        && parts
+            .iter()
+            .all(|part| !part.is_empty() && part.chars().all(|found| found.is_ascii_digit()))
 }
 
 fn probe(spec: &Spec, version: &str, root: &Path) -> Result<(), String> {

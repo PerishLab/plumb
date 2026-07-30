@@ -34,3 +34,22 @@ jobs:
         run: |
           set -eu
           deno run --allow-read "--allow-write=." --allow-env --allow-net "--allow-run=git,cargo,rustc,ectropy,deno,tea,sh,bash,pnpm,node,runseal,sed,grep" --config .runseal/deno.json --lock .runseal/deno.lock --frozen=true .runseal/wrappers/guard.ts --fresh
+
+  guard-windows:
+    runs-on: windows
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install stable Ectropy
+        uses: PerishLab/actions/setup-binary@main
+        env:
+          PERISH_SETUP_PRODUCT: ectropy
+
+      - name: Rust
+        run: |
+          cargo fmt --all --check
+          cargo clippy --all-targets --locked -- -D warnings
+          cargo test --locked
+          cargo run --quiet --locked -p plumb-cli -- doctor .
+          ectropy .

@@ -136,6 +136,8 @@ pub(super) fn intent(channel: &str, value: &str) -> Result<(), String> {
 fn store(path: &Path, text: &str, executable: bool) -> Result<(), String> {
     std::fs::write(path, text)
         .map_err(|error| format!("cannot write {}: {error}", path.display()))?;
+    #[cfg(not(unix))]
+    let _ = executable;
     #[cfg(unix)]
     if executable {
         use std::os::unix::fs::PermissionsExt;

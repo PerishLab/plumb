@@ -29,3 +29,10 @@ packages = ["your-macro", "your-lib"]
 想清楚你要的是哪一个。把构建挂在 doctor 结论上的仓库受这些法治理，应当声明；
 只想要那份报告的仓库不受治理，法对它两种情况下都不约束。声明的代价是一个文件。
 没有发布面要命名时，一个空表就是完整的声明。已经带着这个文件的仓库无事发生。
+
+## 如果 stable manager 把旧安装报告成无主
+
+重新运行当前 canonical stable manager。只要 root marker、version marker 与已安装
+入口共同证明同一个 stable seat，新 manager 就会接管旧 marker 格式，无需手动卸载。
+自定义 authority、预发布渠道、多义 seat 或已变更入口不会被自动接管；此时应检查
+安装状态，而不是放宽所有权证明。

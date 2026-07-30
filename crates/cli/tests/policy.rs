@@ -29,8 +29,12 @@ fn blacklist() {
     .expect("manifest should be written");
     let out = run(&root);
     std::fs::remove_dir_all(&root).expect("fixture should be swept");
-    let line = "apps/web/package.json depends on blacklisted styling package @stylexjs/stylex";
-    assert!(out.contains(line), "{out}");
+    let manifest = Path::new("apps").join("web").join("package.json");
+    let line = format!(
+        "{} depends on blacklisted styling package @stylexjs/stylex",
+        manifest.display()
+    );
+    assert!(out.contains(&line), "{out}");
 }
 
 #[test]

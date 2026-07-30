@@ -16,3 +16,8 @@ wrapper」的法，补上了该有的 wrapper。它调用本地构建——与 g
 skill 现在写明了自己的管辖。它此前说自己治理「这里的每个仓库」，而读者无法
 拿这句话去检验眼前的目录，于是带着这份 brief 的 agent 就把它带去了每个地方。
 plumb 管辖根上有 `plumb.toml` 的仓库；在别处这些法沉默，而它们的沉默不值一提。
+
+生成的 manager 现在可以直接接管旧格式的 stable 安装，不再要求操作者先卸载。
+接管边界刻意收紧：必须同时证明 canonical stable authority、旧 root 与 version
+marker，以及所有当前入口都属于同一个 version seat。自定义 authority、预发布渠道、
+多义 seat 或已经漂移的入口仍会被拒绝。

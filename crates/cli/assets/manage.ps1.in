@@ -307,6 +307,113 @@ function File-Hash {{
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
 }}
 
+function Set-Manager-Marker {{
+    param([string]$Path, [string[]]$Lines)
+    $nextMarker = "$Path.$([System.Guid]::NewGuid().ToString('N')).tmp"
+    try {{
+        Set-Content -LiteralPath $nextMarker -Value $Lines
+        Move-Item -Force -LiteralPath $nextMarker -Destination $Path
+    }}
+    finally {{
+        Remove-Item -Force -ErrorAction SilentlyContinue -LiteralPath $nextMarker
+    }}
+}}
+
+function Legacy-Root-Owned {{
+    $path = Join-Path $installRoot $markerName
+    if (![System.IO.File]::Exists($path)) {{
+        return $false
+    }}
+    $lines = @(Get-Content -LiteralPath $path)
+    return $lines.Length -eq 1 -and $lines[0] -eq $marker
+}}
+
+function Legacy-Version-Owned {{
+    param([string]$Seat)
+    if ($Seat -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') {{
+        return $false
+    }}
+    $root = Join-Path $installRoot $Seat
+    if (![System.IO.Directory]::Exists($root)) {{
+        return $false
+    }}
+    $item = Get-Item -Force -LiteralPath $root
+    if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {{
+        return $false
+    }}
+    $path = Join-Path $root $markerName
+    if (![System.IO.File]::Exists($path)) {{
+        return $false
+    }}
+    $lines = @(Get-Content -LiteralPath $path)
+    return $lines.Length -eq 2 -and
+        $lines[0] -eq $marker -and
+        $lines[1] -ceq "version=$Seat"
+}}
+
+function Adopt-Legacy-Stable {{
+    if ($channel -ne 'stable' -or $publicUrl -cne $canonicalPublicUrl) {{
+        return
+    }}
+    $legacyRoot = Legacy-Root-Owned
+    $currentRoot = Root-Owned
+    if (!$legacyRoot -and !$currentRoot) {{
+        return
+    }}
+
+    $entry = Join-Path $localBinDir '{product}.exe'
+    if (![System.IO.File]::Exists($entry)) {{
+        return
+    }}
+    $entryItem = Get-Item -Force -LiteralPath $entry
+    if (($entryItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {{
+        return
+    }}
+    $entryHash = File-Hash $entry
+    $candidates = @()
+    foreach ($found in @(Get-ChildItem -LiteralPath $installRoot -Directory -ErrorAction SilentlyContinue)) {{
+        $legacySeat = Legacy-Version-Owned $found.Name
+        $currentSeat = Version-Owned $found.Name
+        $recoverable = ($legacyRoot -and ($legacySeat -or $currentSeat)) -or
+            ($currentRoot -and $legacySeat)
+        if (!$recoverable) {{
+            continue
+        }}
+        $candidate = Join-Path $found.FullName '{product}.exe'
+        if (![System.IO.File]::Exists($candidate)) {{
+            continue
+        }}
+        $candidateItem = Get-Item -Force -LiteralPath $candidate
+        if (($candidateItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {{
+            continue
+        }}
+        if ((File-Hash $candidate) -eq $entryHash) {{
+            $candidates += $found.Name
+        }}
+    }}
+    if ($candidates.Length -ne 1) {{
+        return
+    }}
+
+    $seat = $candidates[0]
+    if (!(Version-Owned $seat)) {{
+        Set-Manager-Marker (Join-Path (Join-Path $installRoot $seat) $markerName) @(
+            $marker,
+            "authority=$publicUrl",
+            "channel=$channel",
+            "version=$seat"
+        )
+    }}
+    if (!(Root-Owned)) {{
+        Set-Manager-Marker (Join-Path $installRoot $markerName) @(
+            $marker,
+            "authority=$publicUrl",
+            "channel=$channel"
+        )
+    }}
+    Write-Output "adopted legacy stable {product} $seat at $installRoot"
+}}
+
 function Entry-Version {{
     $entry = Join-Path $localBinDir '{product}.exe'
     if (![System.IO.File]::Exists($entry) -or !(Root-Owned)) {{
@@ -360,6 +467,7 @@ function Install-Product {{
     $stage = $null
     $next = $null
     try {{
+        Adopt-Legacy-Stable
         $tmpdir = Join-Path ([System.IO.Path]::GetTempPath()) ("{product}-" + [System.Guid]::NewGuid().ToString('N'))
         New-Item -ItemType Directory -Path $tmpdir | Out-Null
 
@@ -502,6 +610,7 @@ function Install-Product {{
 function Uninstall-Product {{
     Acquire-Lock
     try {{
+        Adopt-Legacy-Stable
         $entry = Join-Path $localBinDir '{product}.exe'
         if (![string]::IsNullOrWhiteSpace($version)) {{
             $target = Join-Path $installRoot $version

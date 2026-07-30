@@ -21,3 +21,9 @@ here, which no reader can evaluate against the directory in front of them, so
 an agent carrying the brief carried it everywhere. plumb manages a repository
 carrying `plumb.toml` at its root; elsewhere these laws are silent, and their
 silence is not worth remarking on.
+
+Generated managers can now adopt a legacy stable installation without asking
+the operator to uninstall it first. Adoption is deliberately narrow: the
+canonical stable authority, the legacy root and version markers, and every
+installed entrypoint must all prove the same version seat. Custom authorities,
+prerelease channels, ambiguous seats, and drifted entrypoints remain refused.

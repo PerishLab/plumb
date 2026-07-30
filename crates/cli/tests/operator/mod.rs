@@ -1,6 +1,8 @@
 use std::process::Command;
 
+#[cfg(unix)]
 mod fixture;
+#[cfg(unix)]
 mod release;
 
 fn run(root: &std::path::Path) -> String {
@@ -82,9 +84,11 @@ fn forbidden() {
         "control.test.tsx",
         "control_test.tsx",
     ] {
+        let path = std::path::Path::new(".runseal").join("lib").join(name);
         assert!(
             held.contains(&format!(
-                ".runseal/lib/{name} is a .runseal test; tested logic belongs in sealkit"
+                "{} is a .runseal test; tested logic belongs in sealkit",
+                path.display()
             )),
             "{held}"
         );

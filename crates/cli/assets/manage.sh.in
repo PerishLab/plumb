@@ -321,6 +321,79 @@ version_owned() {{
     [ "$(sed -n '4p' "$INSTALL_ROOT/$seat/$VERSION_MARKER")" = "version=$seat" ]
 }}
 
+legacy_root_owned() {{
+  [ -f "$INSTALL_ROOT/$ROOT_MARKER" ] &&
+    [ "$(awk 'END {{ print NR }}' "$INSTALL_ROOT/$ROOT_MARKER")" = 1 ] &&
+    [ "$(sed -n '1p' "$INSTALL_ROOT/$ROOT_MARKER")" = "$MARKER" ]
+}}
+
+legacy_version_owned() {{
+  seat=$1
+  printf '%s\n' "$seat" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' &&
+    [ -d "$INSTALL_ROOT/$seat" ] &&
+    [ ! -L "$INSTALL_ROOT/$seat" ] &&
+    [ -f "$INSTALL_ROOT/$seat/$VERSION_MARKER" ] &&
+    [ "$(awk 'END {{ print NR }}' "$INSTALL_ROOT/$seat/$VERSION_MARKER")" = 2 ] &&
+    [ "$(sed -n '1p' "$INSTALL_ROOT/$seat/$VERSION_MARKER")" = "$MARKER" ] &&
+    [ "$(sed -n '2p' "$INSTALL_ROOT/$seat/$VERSION_MARKER")" = "version=$seat" ]
+}}
+
+adopt_legacy_stable() {{
+  [ "$CHANNEL" = stable ] && [ "$PUBLIC_URL" = "$CANONICAL_PUBLIC_URL" ] || return 0
+  legacy_root=false
+  current_root=false
+  legacy_root_owned && legacy_root=true
+  root_owned && current_root=true
+  [ "$legacy_root" = true ] || [ "$current_root" = true ] || return 0
+
+  matched=
+  matches=0
+  for path in "$INSTALL_ROOT"/v*; do
+    [ -d "$path" ] && [ ! -L "$path" ] || continue
+    seat=$(basename "$path")
+    legacy_seat=false
+    current_seat=false
+    legacy_version_owned "$seat" && legacy_seat=true
+    version_owned "$seat" && current_seat=true
+    recoverable=false
+    if [ "$legacy_root" = true ] &&
+      {{ [ "$legacy_seat" = true ] || [ "$current_seat" = true ]; }}; then
+      recoverable=true
+    fi
+    if [ "$current_root" = true ] && [ "$legacy_seat" = true ]; then
+      recoverable=true
+    fi
+    [ "$recoverable" = true ] || continue
+
+    entry_match=true
+    for name in $BINARIES; do
+      entry="$LOCAL_BIN_DIR/$name"
+      [ -L "$entry" ] &&
+        [ "$(readlink "$entry" || true)" = "$path/$name" ] || entry_match=false
+    done
+    [ "$entry_match" = true ] || continue
+    matched=$seat
+    matches=$((matches + 1))
+  done
+  [ "$matches" -eq 1 ] || return 0
+
+  if ! version_owned "$matched"; then
+    MIGRATION_MARKER="$INSTALL_ROOT/$matched/.$VERSION_MARKER-migrate-$$"
+    printf '%s\nauthority=%s\nchannel=%s\nversion=%s\n' \
+      "$MARKER" "$PUBLIC_URL" "$CHANNEL" "$matched" > "$MIGRATION_MARKER"
+    mv -f "$MIGRATION_MARKER" "$INSTALL_ROOT/$matched/$VERSION_MARKER"
+    MIGRATION_MARKER=
+  fi
+  if ! root_owned; then
+    MIGRATION_MARKER="$INSTALL_ROOT/.$ROOT_MARKER-migrate-$$"
+    printf '%s\nauthority=%s\nchannel=%s\n' \
+      "$MARKER" "$PUBLIC_URL" "$CHANNEL" > "$MIGRATION_MARKER"
+    mv -f "$MIGRATION_MARKER" "$INSTALL_ROOT/$ROOT_MARKER"
+    MIGRATION_MARKER=
+  fi
+  printf 'adopted legacy stable {product} %s at %s\n' "$matched" "$INSTALL_ROOT"
+}}
+
 ensure_root() {{
   if [ -e "$INSTALL_ROOT" ]; then
     [ -d "$INSTALL_ROOT" ] || {{
@@ -382,12 +455,14 @@ stable_order() {{
 WORK_TMP=
 STAGE=
 ENTRY_STAGE=
+MIGRATION_MARKER=
 LOCK_DIR="${{INSTALL_ROOT}}.{product}-lock"
 LOCK_HELD=false
 cleanup() {{
   [ -z "$WORK_TMP" ] || rm -rf "$WORK_TMP"
   [ -z "$STAGE" ] || rm -rf "$STAGE"
   [ -z "$ENTRY_STAGE" ] || rm -f "$ENTRY_STAGE"
+  [ -z "$MIGRATION_MARKER" ] || rm -f "$MIGRATION_MARKER"
   if [ "$LOCK_HELD" = true ]; then
     rm -rf "$LOCK_DIR"
   fi
@@ -422,6 +497,7 @@ install_{product}() {{
   explicit_version=false
   [ -z "$VERSION" ] || explicit_version=true
   acquire_lock
+  adopt_legacy_stable
   WORK_TMP=$(mktemp -d)
 
   if [ -z "$VERSION" ]; then
@@ -573,6 +649,7 @@ install_{product}() {{
 
 uninstall_{product}() {{
   acquire_lock
+  adopt_legacy_stable
   if [ -n "$VERSION" ]; then
     target="$INSTALL_ROOT/$VERSION"
     proven=false
