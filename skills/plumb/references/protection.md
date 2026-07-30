@@ -53,4 +53,6 @@ protected_file_patterns unprotected_file_patterns apply_to_admins
 Serialize the projection as two-space JSON with one trailing newline and
 compare bytes with the corresponding document. `created_at` and `updated_at`
 are server observations and are the only omitted response fields. Do not sort,
-coerce, default, or otherwise normalize a value.
+coerce, default, or otherwise normalize a value. Forgejo reports an empty
+`branch_name` for the `release/**` glob; the canonical bytes retain that empty
+server value while `rule_name` carries the required glob.
