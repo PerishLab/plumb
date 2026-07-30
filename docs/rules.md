@@ -27,7 +27,8 @@ returning an empty result that could be mistaken for knowledge.
 
 `blind` is a finding grade, not a standing. It means a mechanized evaluator ran
 but could not read the evidence needed for its verdict. An unimplemented
-prose-only rule is not blind.
+prose-only rule is not blind. Both `out of true` and `blind` make doctor exit
+nonzero; `unknown shape` remains non-blocking.
 
 `plumb doctor --json` includes whole-catalog counts under `coverage`.
 `clean` continues to mean that the current repository produced no finding; it

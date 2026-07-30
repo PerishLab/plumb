@@ -1,8 +1,5 @@
-# The deps dimension's self-built policy. Self-built packages live under this
-# scope and track latest-stable unless a support line is declared here.
-# Retired names must migrate to their replacement.
-
-scope = "@perish"
+# The deps dimension's first-party policy. The authorities are compiled; their
+# live stable versions are not. Retired names must migrate to their replacement.
 
 blacklist = [
   "@compiled/react",
@@ -23,9 +20,10 @@ blacklist = [
 name = "@perish/harness"
 use = "@perish/sealkit"
 
-[[support]]
-name = "@perish/sealkit"
-requirement = "^0.3.1"
-minimum = "0.3.1"
-legacy = "^0.2.1"
-line = "0.2"
+[stable.jsr]
+scope = "@perish"
+authority = "https://jsr.io"
+
+[stable.cargo]
+registry = "perish"
+index = "sparse+https://git.perish.top/api/packages/PerishLab/cargo/"

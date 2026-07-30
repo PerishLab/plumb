@@ -1,8 +1,8 @@
 use super::catalog::rules::deps as rule;
 use super::finding::{blind, wrong};
 use crate::rules::RULES;
-use crate::shape::{self, Found};
-use semver::{Version, VersionReq};
+use crate::shape::{self, Dependency, Found};
+use plumb_cli::Verdict;
 
 pub fn check(held: &shape::Shape) -> Found {
     let mut found = Found::new();
@@ -18,20 +18,11 @@ pub fn check(held: &shape::Shape) -> Found {
             "ships a rust binary without plumb",
         ));
     }
-    for (name, current) in &RULES.retired {
-        if held.deno.contains(name.as_str()) {
-            found.push(wrong(
-                &rule::CURRENT_DEPENDENCY_NAME,
-                format!("depends on {name}, renamed to {current}"),
-            ));
-        }
+    for error in &held.dependencies.blind {
+        found.push(blind(&rule::FIRST_PARTY_STABLE_LATEST, error.clone()));
     }
-    sealkit(held, &mut found);
-    for name in RULES.pinned(&held.deno) {
-        found.push(wrong(
-            &rule::SELF_BUILT_DEPENDENCY_UNPINNED,
-            format!("self-built {name} is version-pinned, the skeleton tracks latest"),
-        ));
+    for dependency in &held.dependencies.held {
+        currency(dependency, &mut found);
     }
     for (seat, name) in &held.node {
         if RULES.blacklist.contains(name) {
@@ -44,66 +35,44 @@ pub fn check(held: &shape::Shape) -> Found {
     found
 }
 
-fn sealkit(held: &shape::Shape, found: &mut Found) {
-    let Some(support) = RULES.support("@perish/sealkit") else {
+fn currency(dependency: &Dependency, found: &mut Found) {
+    if let Some((_, current)) = RULES
+        .retired
+        .iter()
+        .find(|(name, _)| name == &dependency.name)
+    {
+        found.push(wrong(
+            &rule::CURRENT_DEPENDENCY_NAME,
+            format!("depends on {}, renamed to {current}", dependency.name),
+        ));
         return;
-    };
-    let dependency = match &held.sealkit {
-        shape::Sealkit::Absent => return,
-        shape::Sealkit::Blind(error) => {
-            found.push(blind(&rule::SUPPORTED_DEPENDENCY_LINE, error.clone()));
-            return;
+    }
+    for verdict in plumb_cli::judge(dependency) {
+        match verdict {
+            Verdict::Pinned => found.push(wrong(
+                &rule::SELF_BUILT_DEPENDENCY_UNPINNED,
+                format!(
+                    "self-built {} is version-pinned at {} in {}",
+                    dependency.name, dependency.requirement, dependency.seat
+                ),
+            )),
+            Verdict::Stale { resolution, latest } => found.push(wrong(
+                &rule::FIRST_PARTY_STABLE_LATEST,
+                format!(
+                    "{} {} resolves to {resolution}, stable latest is {latest} [{}]",
+                    dependency.ecosystem.name(),
+                    dependency.name,
+                    dependency.seat
+                ),
+            )),
+            Verdict::Unread(error) => found.push(blind(
+                &rule::FIRST_PARTY_STABLE_LATEST,
+                format!(
+                    "cannot compare {} {} {error}",
+                    dependency.ecosystem.name(),
+                    dependency.name
+                ),
+            )),
         }
-        shape::Sealkit::Held(dependency) => dependency,
-    };
-    if dependency.requirement != support.legacy && dependency.requirement != support.requirement {
-        found.push(wrong(
-            &rule::SUPPORTED_DEPENDENCY_LINE,
-            format!(
-                "unsupported Sealkit requirement {}; use {} or {}",
-                dependency.requirement, support.legacy, support.requirement
-            ),
-        ));
-        return;
     }
-    let Ok(resolution) = Version::parse(&dependency.resolution) else {
-        refuse(&dependency.resolution, support, found);
-        return;
-    };
-    let minimum =
-        Version::parse(&support.minimum).expect("support minimum must be a semantic version");
-    if dependency.requirement == support.requirement && resolution < minimum {
-        found.push(wrong(
-            &rule::SUPPORTED_DEPENDENCY_LINE,
-            format!("Sealkit resolution {resolution} is below supported Sealkit floor {minimum}"),
-        ));
-        return;
-    }
-    let admitted = VersionReq::parse(&support.requirement)
-        .expect("support requirement must be a semantic version requirement")
-        .matches(&resolution)
-        || precedent(&support.line, &resolution);
-    if !admitted {
-        refuse(&resolution.to_string(), support, found);
-    }
-}
-
-fn refuse(resolution: &str, support: &crate::rules::Support, found: &mut Found) {
-    found.push(wrong(
-        &rule::SUPPORTED_DEPENDENCY_LINE,
-        format!(
-            "unsupported Sealkit resolution {resolution}; transition admits {} or {}",
-            support.line, support.requirement
-        ),
-    ));
-}
-
-fn precedent(line: &str, version: &Version) -> bool {
-    let mut parts = line.split('.');
-    let major = parts.next().and_then(|part| part.parse::<u64>().ok());
-    let minor = parts.next().and_then(|part| part.parse::<u64>().ok());
-    parts.next().is_none()
-        && major == Some(version.major)
-        && minor == Some(version.minor)
-        && version.pre.is_empty()
 }

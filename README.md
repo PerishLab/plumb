@@ -29,12 +29,13 @@ explains one rule's law, standing, evidence, and owner. Namespace, tag,
 standing, and owner selectors are closed typed vocabularies; unknown values
 refuse. See `docs/rules.md`.
 
-For Sealkit consumers, the positive shape snapshot includes both the import
-requirement and the exact resolution read from `.runseal/deno.lock`. Plumb
-judges those bytes offline. It never resolves a registry version or edits the
-lock; deliberate movement remains a standard Deno operation. When Deno
-normalizes a requirement in the lock, Plumb follows the unique direct
-workspace dependency instead of guessing among package resolutions.
+First-party dependencies in the `@perish` JSR scope and `perish` Cargo
+registry track live stable latest. Deno declarations carry no version
+requirement; Cargo keeps its native requirement spelling. In both ecosystems,
+the exact lock resolution must equal the latest stable registry version.
+`plumb doctor` reads registry metadata but never edits a manifest or lock.
+Missing manifest, lock, or registry evidence is blind and blocks the command;
+deliberate movement remains a standard Deno or Cargo operation.
 
 ## Install the CLI
 

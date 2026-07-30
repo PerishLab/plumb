@@ -48,24 +48,27 @@ one.
 The substrate owns the grammar and the resolver and knows no variable. What
 `{port}` or `{namespace}` mean belongs to the tool that supplies them.
 
-## Deno dependency support
+## First-party dependency currency
 
-A frozen lock and an import requirement answer different questions. The
-requirement names the admitted compatibility line; the lock names the exact
-code ordinary guards reproduce. Plumb reads both and changes neither.
+Published dependencies owned by perish.code move under a stable-latest norm.
+The compiled policy names authorities—the `@perish` JSR scope and `perish`
+Cargo registry—but deliberately contains no package-version inventory.
+Registry metadata remains the live authority.
 
-Workspace-owned Deno dependencies normally carry no version requirement and
-track stable through deliberate Deno lock refreshes. A dependency earns a
-compiled support declaration when compatibility must move as a governed line.
-The declaration names its canonical requirement, minimum resolution, and any
-temporary legacy line. A valid reading is positive doctor shape evidence.
-Missing or malformed lock evidence is blind, while a requirement or resolution
-outside the declaration refuses.
+A Deno import requirement and its frozen lock answer different questions.
+First-party imports carry no version requirement, while the lock records the
+exact code a guard reproduces. Cargo keeps native requirement spelling because
+its manifest constraint and exact lock resolution are distinct concerns. In
+both ecosystems, each direct published edge resolves exactly to the latest
+non-prerelease, non-yanked version. Same-workspace path edges belong to the
+release train and are excluded.
 
-Sealkit's transition admits existing unversioned stable `0.1` locks and the
-canonical `^0.2.1` line at or above `0.2.1`. This overlap exists only so the
-workshop can migrate one repository at a time without a red interval. Once
-legacy consumers are gone, tightening the declaration is a Plumb release.
+Plumb discovers shape offline outside doctor. Doctor reads registry metadata
+with bounded retries and caches each package once, then compares the direct
+lock resolution. It changes no manifest or lock. Missing or malformed
+manifest, lock, or registry evidence is blind and blocks. A stale resolution
+or a versioned first-party Deno declaration refuses. Transitive staleness is
+routed to the direct upstream owner instead of being guessed from a consumer.
 
 ## Home and state
 

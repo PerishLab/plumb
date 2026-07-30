@@ -1,11 +1,11 @@
 use std::process::Command;
 
+#[path = "doctor/dependency.rs"]
+mod dependency;
 #[path = "doctor/json.rs"]
 mod json;
 #[path = "doctor/rule.rs"]
 mod rule;
-#[path = "doctor/sealkit.rs"]
-mod sealkit;
 #[path = "doctor/ships.rs"]
 mod ships;
 
@@ -31,6 +31,7 @@ fn version() {
 }
 
 #[test]
+#[ignore = "exercises live first-party registries in the repository guard"]
 fn itself() {
     let out = run(&["doctor", seat().to_str().expect("path should be utf8")]);
     assert!(out.contains("true to the skeleton"), "{out}");
@@ -185,54 +186,22 @@ fn substrate() {
 fn retired() {
     let dir = std::env::temp_dir().join("plumb-retired");
     std::fs::create_dir_all(dir.join(".runseal")).expect("fixture should be made");
-    let map = dir.join(".runseal/deno.json");
-
     std::fs::write(
-        &map,
-        "{\"imports\":{\"@perish/harness\":\"jsr:@perish/harness@0.4.0\"}}",
+        dir.join(".runseal/deno.json"),
+        r#"{"imports":{"@perish/harness":"jsr:@perish/harness@0.4.0"}}"#,
     )
     .expect("map should be written");
-    let old = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    assert!(
-        old.contains("depends on @perish/harness, renamed to @perish/sealkit"),
-        "{old}"
-    );
-
     std::fs::write(
-        &map,
-        "{\"imports\":{\"@perish/sealkit\":\"jsr:@perish/sealkit\"}}",
+        dir.join(".runseal/deno.lock"),
+        r#"{"specifiers":{"jsr:@perish/harness@0.4.0":"0.4.0"}}"#,
     )
-    .expect("map should be written");
-    let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    .expect("lock should be written");
+    let output = run(&["doctor", dir.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(!held.contains("renamed to"), "{held}");
-}
-
-#[test]
-fn pinned() {
-    let dir = std::env::temp_dir().join("plumb-pinned");
-    std::fs::create_dir_all(dir.join(".runseal")).expect("fixture should be made");
-    let map = dir.join(".runseal/deno.json");
-
-    std::fs::write(
-        &map,
-        "{\"imports\":{\"@perish/shield\":\"jsr:@perish/shield@0.1.0\"}}",
-    )
-    .expect("map should be written");
-    let pin = run(&["doctor", dir.to_str().expect("path should be utf8")]);
     assert!(
-        pin.contains("self-built @perish/shield is version-pinned"),
-        "{pin}"
+        output.contains("depends on @perish/harness, renamed to @perish/sealkit"),
+        "{output}"
     );
-
-    std::fs::write(
-        &map,
-        "{\"imports\":{\"@perish/shield\":\"jsr:@perish/shield\",\"@std/cli\":\"jsr:@std/cli@1.0.0\"}}",
-    )
-    .expect("map should be written");
-    let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(!held.contains("version-pinned"), "{held}");
 }
 
 #[test]

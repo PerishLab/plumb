@@ -117,14 +117,15 @@ embeds the exact candidate seal and requires the same source commit. See
 the workshop already demonstrates rather than each repository's invention. Most
 of this clause is enforced; see below.
 
-**Dependencies.** Workspace-owned Deno dependencies track stable without a
-version requirement unless Plumb compiles an explicit support line. Sealkit is
-in a staged transition: an unversioned requirement resolving to stable `0.1`
-remains admitted, while new movement uses `^0.3.1` with a minimum locked
-resolution of `0.3.1`. The doctor reads the requirement and matching frozen
-lock offline and reports them as positive shape evidence. An unread lock is
-blind; an unsupported requirement or resolution refuses. Deno alone mutates
-the lock.
+**Dependencies.** Direct first-party dependencies across the `@perish` JSR
+scope and `perish` Cargo registry track live stable latest. Deno declarations
+carry no version requirement; Cargo retains native requirement syntax. In both
+ecosystems the exact lock resolution equals the latest non-prerelease,
+non-yanked registry version. The compiled policy names registry authorities,
+not package versions. Doctor reads registry, manifest, and lock evidence but
+mutates none of them. Unread evidence is blind and blocks; stale or pinned
+shape refuses. Same-workspace path edges remain a release-train concern rather
+than a published dependency edge.
 
 **Sites.** An app declaring a site ships through one dispatch-only lane calling
 the same wrapper an operator runs, with a purpose-scoped key the lane holds and
@@ -183,7 +184,7 @@ The release changelog gate remains release-local rather than a doctor rule.
 ## Invocation
 
 ```bash
-plumb doctor [ROOT]           # shape report; nonzero when something is out of true
+plumb doctor [ROOT]           # shape report; nonzero when out of true or blind
 plumb rule list               # complete catalog; compose typed selectors
 plumb rule show RULE_ID       # law, standing, evidence, owner, and tags
 plumb rule namespaces         # registered namespace vocabulary

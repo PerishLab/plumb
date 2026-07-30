@@ -80,14 +80,42 @@ fn unknown() {
 #[test]
 fn evidence() {
     let fixture = tempfile::tempdir().expect("fixture");
-    super::sealkit::write(fixture.path(), "^0.2.1", "0.2.1");
     let output = run(fixture.path());
     let report: Value = serde_json::from_slice(&output.stdout).expect("doctor json");
-    assert_eq!(
-        report["shape"]["sealkit"],
-        serde_json::json!({
-            "requirement": "^0.2.1",
-            "resolution": "0.2.1",
-        })
+    assert_eq!(report["shape"]["dependencies"], serde_json::json!([]));
+}
+
+#[test]
+fn blind() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    std::fs::write(fixture.path().join("ectropy.toml"), "{").expect("malformed policy");
+    let output = run(fixture.path());
+    assert!(!output.status.success());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("doctor json");
+    assert_eq!(report["ok"], false);
+    assert_eq!(report["summary"]["out_of_true"], 0);
+    assert_eq!(report["summary"]["blind"], 1);
+}
+
+#[test]
+fn currency() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    std::fs::create_dir(fixture.path().join(".runseal")).expect("runseal");
+    std::fs::write(
+        fixture.path().join(".runseal/deno.json"),
+        r#"{"imports":{"@perish/sealkit":"jsr:@perish/sealkit"}}"#,
+    )
+    .expect("dependency");
+    let output = run(fixture.path());
+    assert!(!output.status.success());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("doctor json");
+    assert_eq!(report["ok"], false);
+    assert_eq!(report["summary"]["blind"], 1);
+    assert!(
+        report["findings"]
+            .as_array()
+            .expect("findings")
+            .iter()
+            .any(|finding| finding["code"] == "deps.first-party-stable-latest")
     );
 }

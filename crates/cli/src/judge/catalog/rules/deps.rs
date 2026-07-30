@@ -34,18 +34,18 @@ rule!(
     SELF_BUILT_DEPENDENCY_UNPINNED,
     "deps.self-built-dependency-unpinned",
     "Self-built dependencies track latest",
-    "Workspace-owned Deno dependencies without a declared support line are not pinned to a published version.",
+    "First-party Deno dependencies carry no version requirement so their exact stable version is owned by the lock.",
     "Dependency requirements in Deno configuration.",
     Mechanized,
     PLUMB,
     [DEPENDENCY]
 );
 rule!(
-    SUPPORTED_DEPENDENCY_LINE,
-    "deps.supported-dependency-line",
-    "Supported dependencies use an admitted line",
-    "A dependency with a compiled support declaration uses an admitted requirement and resolves to an admitted locked version.",
-    "The dependency requirement in Deno configuration and its matching frozen lock resolution.",
+    FIRST_PARTY_STABLE_LATEST,
+    "deps.first-party-stable-latest",
+    "First-party dependencies resolve to stable latest",
+    "A direct dependency published by perish.code resolves exactly to the live latest non-prerelease, non-yanked version at its compiled registry authority.",
+    "Direct Deno and Cargo declarations, their exact lock resolutions, and live registry metadata.",
     Mechanized,
     PLUMB,
     [DEPENDENCY]
@@ -67,7 +67,7 @@ pub fn all() -> Vec<&'static Rule> {
         &RUST_BINARY_USES_CLAP,
         &RUST_BINARY_USES_PLUMB,
         &SELF_BUILT_DEPENDENCY_UNPINNED,
-        &SUPPORTED_DEPENDENCY_LINE,
+        &FIRST_PARTY_STABLE_LATEST,
         &STYLING_PACKAGE_ALLOWED,
     ]
 }

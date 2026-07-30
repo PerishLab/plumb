@@ -9,40 +9,22 @@ pub struct Rules {
     pub lanes: BTreeSet<String>,
     pub retired: Vec<(String, String)>,
     pub blacklist: BTreeSet<String>,
+    pub stable: Stable,
+}
+
+pub struct Stable {
+    pub jsr: Jsr,
+    pub cargo: Cargo,
+}
+
+pub struct Jsr {
     pub scope: String,
-    pub support: Vec<Support>,
+    pub authority: String,
 }
 
-pub struct Support {
-    pub name: String,
-    pub requirement: String,
-    pub minimum: String,
-    pub legacy: String,
-    pub line: String,
-}
-
-impl Rules {
-    pub fn pinned(&self, deno: &str) -> BTreeSet<String> {
-        let marker = format!("jsr:{}/", self.scope);
-        let mut found = BTreeSet::new();
-        for chunk in deno.split(marker.as_str()).skip(1) {
-            let name: String = chunk
-                .chars()
-                .take_while(|c| c.is_ascii_alphanumeric() || *c == '-')
-                .collect();
-            let package = format!("{}/{name}", self.scope);
-            if chunk[name.len()..].starts_with('@')
-                && !self.support.iter().any(|support| support.name == package)
-            {
-                found.insert(package);
-            }
-        }
-        found
-    }
-
-    pub fn support(&self, name: &str) -> Option<&Support> {
-        self.support.iter().find(|support| support.name == name)
-    }
+pub struct Cargo {
+    pub registry: String,
+    pub index: String,
 }
 
 pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
@@ -76,11 +58,15 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
                 .collect()
         })
         .unwrap_or_default();
-    let scope = deps
-        .get("scope")
-        .and_then(toml::Value::as_str)
-        .unwrap_or_default()
-        .to_string();
+    let stable = deps
+        .get("stable")
+        .unwrap_or_else(|| panic!("rules/deps.toml must name stable authorities"));
+    let jsr = stable
+        .get("jsr")
+        .unwrap_or_else(|| panic!("rules/deps.toml must name stable.jsr"));
+    let cargo = stable
+        .get("cargo")
+        .unwrap_or_else(|| panic!("rules/deps.toml must name stable.cargo"));
     let blacklist = deps
         .get("blacklist")
         .and_then(toml::Value::as_array)
@@ -88,21 +74,6 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
             list.iter()
                 .filter_map(toml::Value::as_str)
                 .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default();
-    let support = deps
-        .get("support")
-        .and_then(toml::Value::as_array)
-        .map(|list| {
-            list.iter()
-                .map(|entry| Support {
-                    name: required(entry, "name"),
-                    requirement: required(entry, "requirement"),
-                    minimum: required(entry, "minimum"),
-                    legacy: required(entry, "legacy"),
-                    line: required(entry, "line"),
-                })
                 .collect()
         })
         .unwrap_or_default();
@@ -114,8 +85,16 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
         lanes: set("lanes"),
         retired,
         blacklist,
-        scope,
-        support,
+        stable: Stable {
+            jsr: Jsr {
+                scope: required(jsr, "scope"),
+                authority: required(jsr, "authority"),
+            },
+            cargo: Cargo {
+                registry: required(cargo, "registry"),
+                index: required(cargo, "index"),
+            },
+        },
     }
 });
 
@@ -123,6 +102,6 @@ fn required(value: &toml::Value, key: &str) -> String {
     value
         .get(key)
         .and_then(toml::Value::as_str)
-        .unwrap_or_else(|| panic!("rules/deps.toml support must name {key}"))
+        .unwrap_or_else(|| panic!("rules/deps.toml stable authority must name {key}"))
         .to_string()
 }

@@ -23,15 +23,19 @@ struct Shape {
     lanes: Vec<String>,
     publishes: Vec<String>,
     sites: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    sealkit: Option<Sealkit>,
+    dependencies: Vec<Dependency>,
     law: Law,
 }
 
 #[derive(Serialize)]
-struct Sealkit {
+struct Dependency {
+    ecosystem: &'static str,
+    name: String,
     requirement: String,
+    pinned: bool,
     resolution: String,
+    latest: Option<String>,
+    seat: String,
 }
 
 #[derive(Serialize)]
@@ -50,10 +54,11 @@ struct Summary {
 }
 
 pub fn run(root: PathBuf, json: bool) -> i32 {
-    let held = shape::read(&root);
+    let mut held = shape::read(&root);
+    held.dependencies.current();
     let findings = judge(&held);
     let summary = Summary::new(&findings);
-    let ok = summary.wrong == 0;
+    let ok = summary.wrong == 0 && summary.blind == 0;
     if json {
         let report = Report {
             operation: "doctor",
@@ -83,13 +88,20 @@ impl Shape {
             lanes: held.lanes.iter().cloned().collect(),
             publishes: held.ships.iter().cloned().collect(),
             sites: held.sites.iter().cloned().collect(),
-            sealkit: match &held.sealkit {
-                shape::Sealkit::Held(dependency) => Some(Sealkit {
+            dependencies: held
+                .dependencies
+                .held
+                .iter()
+                .map(|dependency| Dependency {
+                    ecosystem: dependency.ecosystem.name(),
+                    name: dependency.name.clone(),
                     requirement: dependency.requirement.clone(),
+                    pinned: dependency.pinned,
                     resolution: dependency.resolution.clone(),
-                }),
-                shape::Sealkit::Absent | shape::Sealkit::Blind(_) => None,
-            },
+                    latest: dependency.latest.clone(),
+                    seat: dependency.seat.clone(),
+                })
+                .collect(),
             law: Law {
                 block: held.block.unwrap_or(0),
                 path: held.path.unwrap_or(0),
@@ -128,10 +140,15 @@ fn human(root: &Path, held: &shape::Shape, findings: &[finding::Finding], summar
     if !held.sites.is_empty() {
         println!("  sites     {}", show(&held.sites));
     }
-    if let shape::Sealkit::Held(dependency) = &held.sealkit {
+    for dependency in &held.dependencies.held {
         println!(
-            "  sealkit  {} -> {}",
-            dependency.requirement, dependency.resolution
+            "  deps      {} {} {} -> {} (latest {}) [{}]",
+            dependency.ecosystem.name(),
+            dependency.name,
+            dependency.requirement,
+            dependency.resolution,
+            dependency.latest.as_deref().unwrap_or("?"),
+            dependency.seat,
         );
     }
     println!(

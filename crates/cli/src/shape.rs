@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 pub mod changelog;
-mod deno;
+mod dependency;
 mod lock;
 mod node;
 mod operator;
@@ -11,7 +11,7 @@ pub mod pair;
 mod policy;
 
 pub use crate::judge::finding::Found;
-pub use deno::Sealkit;
+pub use dependency::{Dependencies, Dependency};
 pub use lock::{Lock, locked, seal};
 
 pub struct Shape {
@@ -42,8 +42,7 @@ pub struct Shape {
     pub binary: bool,
     pub clap: bool,
     pub substrate: bool,
-    pub deno: String,
-    pub sealkit: Sealkit,
+    pub dependencies: Dependencies,
     pub mint: Option<String>,
     pub packages: Vec<(String, String)>,
     pub node: Vec<(String, String)>,
@@ -270,8 +269,7 @@ pub fn read(root: &Path) -> Shape {
                 .any(|line| line.trim_start().starts_with("clap"))
         }),
         substrate: seat.substrate(),
-        deno: std::fs::read_to_string(root.join(".runseal/deno.json")).unwrap_or_default(),
-        sealkit: deno::sealkit(root),
+        dependencies: dependency::read(root),
         mint: seat.mint(),
         packages: seat.packages(),
         node: node::read(root),

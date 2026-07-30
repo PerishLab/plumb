@@ -6,6 +6,10 @@ license.workspace = true
 repository.workspace = true
 publish = false
 
+[lib]
+name = "plumb_cli"
+path = "src/shape/dependency/protocol.rs"
+
 [[bin]]
 name = "plumb"
 path = "src/main.rs"
