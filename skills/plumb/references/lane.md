@@ -63,14 +63,15 @@ Exact publication may bind any selected branch under `refs/heads/`; that
 freedom does not weaken its immutable identity. Stable alone binds
 `refs/heads/release/vX.Y.Z`. The release line is prepared by linear
 `cherry-pick -x`, frozen before stable publication, and does not block ordinary
-movement on `main`.
+movement on `main`. Its exact protection remains frozen after publication.
 
 After activation and smoke, a local operator merges the release line into
 `main` without flattening its topology and proves the published stable commit
 is an ancestor. Packport is settlement, not an Actions tail job: a failed or
 interrupted packport does not rewrite a successful stable result, block exact
 publication, or block ordinary `main` work. It does block activation of the
-next stable line. A settled release branch may be deleted.
+next stable line. The settled release branch remains permanently as the
+stable version's source and audit boundary.
 
 ## Immutable publication
 

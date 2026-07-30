@@ -109,7 +109,8 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   `main` with a topology-preserving merge. The stable commit must become an
   ancestor of `main` before another stable line can activate. This settlement
   is independent from the Actions lane; exact publication and ordinary `main`
-  work remain unblocked. The settled release branch may be deleted.
+  work remain unblocked. The settled release branch remains permanently frozen
+  as the stable version's source and audit boundary.
 - Every product repository uses the same Forgejo secret names:
   `RELEASE_PUBLISH_S3_*`, `RELEASE_ACTIVATE_S3_*`, and optional
   `RELEASE_REGISTRY_TOKEN`. Authority comes from `plumb.toml`, not a repository

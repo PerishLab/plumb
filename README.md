@@ -79,7 +79,8 @@ exact seals and the stable pointer rather than new Git tags. Public inspection
 and generated manager smoke are reusable Plumb operations rather than a third
 workflow lane. Stable is sourced only from `release/vX.Y.Z`; after activation a
 local operator merges that line into `main` and proves the stable commit is now
-an ancestor before the next stable activation.
+an ancestor before the next stable activation. The settled release branch stays
+permanently frozen as the version's source and audit boundary.
 
 ## Paired Web/API dispatch
 

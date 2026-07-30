@@ -81,6 +81,16 @@ rule!(
     [OWNERSHIP, RELEASE_TAG, STATE]
 );
 rule!(
+    CANONICAL_BRANCH_PROTECTION,
+    "structure.canonical-branch-protection",
+    "Managed repositories share branch protection",
+    "Every Plumb-managed repository carries byte-identical main and release/** baseline rules; exact release rules follow only PREPARING or FROZEN state, and settled release branches remain frozen.",
+    "Forgejo branch-protection responses projected onto the canonical skill documents, existing release branches, and stable consensus.",
+    Prose,
+    PLUMB,
+    [RELEASE_TAG, REPOSITORY, STATE]
+);
+rule!(
     STABLE_PACKPORT,
     "release.stable-packport",
     "Stable settles back into main",
@@ -114,9 +124,9 @@ rule!(
 #[rustfmt::skip]
 pub fn all() -> Vec<&'static Rule> {
     vec![
-        &CANONICAL_AUTHORITY, &CANONICAL_MANAGER_STABLE, &DEFAULT_SEAT_STABLE,
-        &NONSTABLE_EXACT, &NONSTABLE_ISOLATED, &PROMOTION_PROOF_EXACT,
-        &SKILL_CANDIDATE_STAGE, &SKILL_MANAGED_STABLE, &STABLE_PACKPORT,
-        &STABLE_SINGLE_WRITER, &STABLE_SOURCE_LINE,
+        &CANONICAL_AUTHORITY, &CANONICAL_BRANCH_PROTECTION, &CANONICAL_MANAGER_STABLE,
+        &DEFAULT_SEAT_STABLE, &NONSTABLE_EXACT, &NONSTABLE_ISOLATED,
+        &PROMOTION_PROOF_EXACT, &SKILL_CANDIDATE_STAGE, &SKILL_MANAGED_STABLE,
+        &STABLE_PACKPORT, &STABLE_SINGLE_WRITER, &STABLE_SOURCE_LINE,
     ]
 }

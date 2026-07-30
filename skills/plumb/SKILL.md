@@ -94,8 +94,16 @@ activation, smoke, source binding, and packport topology checks. Actions owns
 the shared matrix, credentials, and sequencing; product workflows are thin
 callers. Stable activation remains a separate capability and operation. Exact
 may bind any selected branch; stable binds only `release/vX.Y.Z`, and its
-commit must be packported into `main` before the next stable activation. See
+commit must be packported into `main` before the next stable activation. The
+release branch remains as a permanent frozen source and audit boundary. See
 `references/lane.md`.
+
+**Repository protection.** Every managed repository carries the same
+byte-identical `main` and `release/**` baseline rules. Active release lines add
+only the exact PREPARING or FROZEN rule derived from their state; settled lines
+stay frozen and are never deleted. This is a prose-only operator obligation:
+`plumb doctor` does not read Forgejo. Apply and read it back with a local
+credential as specified in `references/protection.md`.
 
 **Stable consensus.** Stable from the canonical release authority alone may
 occupy default install seats and root manager entrypoints. Every other channel
@@ -112,8 +120,8 @@ of this clause is enforced; see below.
 **Dependencies.** Workspace-owned Deno dependencies track stable without a
 version requirement unless Plumb compiles an explicit support line. Sealkit is
 in a staged transition: an unversioned requirement resolving to stable `0.1`
-remains admitted, while new movement uses `^0.2.1` with a minimum locked
-resolution of `0.2.1`. The doctor reads the requirement and matching frozen
+remains admitted, while new movement uses `^0.3.1` with a minimum locked
+resolution of `0.3.1`. The doctor reads the requirement and matching frozen
 lock offline and reports them as positive shape evidence. An unread lock is
 blind; an unsupported requirement or resolution refuses. Deno alone mutates
 the lock.
