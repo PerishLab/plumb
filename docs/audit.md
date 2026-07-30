@@ -1,6 +1,9 @@
 # Audit
 
-Plumb emits no audit record by default. Its Locus surface is an opt-in
+Plumb emits no audit record by default. `PLUMB_LOCUS_ENABLED` is the typed
+master gate and accepts only `true` or `false`. When it is absent or `false`,
+Plumb returns before Locus bootstrap: no collector or generator runs, no
+reporter opens, and no audit file is created. Its enabled Locus surface is an
 observation path around one CLI invocation; it does not alter the command,
 judge its result, or infer a repository identity.
 
@@ -32,6 +35,7 @@ The caller owns the sensitivity and stability of the fact it selects. For
 example, this records an opaque repository label without exposing a path:
 
 ```sh
+PLUMB_LOCUS_ENABLED=true \
 PLUMB_AUDIT_TARGET=repository-a \
 PLUMB_LOCUS_TARGET_COLLECTORS=environment:PLUMB_AUDIT_TARGET \
 PLUMB_LOCUS_REPORT_FILE=/tmp/plumb-audit.jsonl \

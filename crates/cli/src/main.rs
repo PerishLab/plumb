@@ -10,99 +10,6 @@ use clap::{Parser, Subcommand};
 use plumb::cli::Root;
 use std::path::PathBuf;
 
-mod audit {
-    use locus::collector;
-    use locus::generator;
-    use locus::reporter;
-    use locus::{Candidate, Config, Context, Engine, Key, Policy, Role};
-    use serde_json::json;
-
-    const TARGET: &str = "target";
-    const LIMIT: usize = 512;
-
-    pub(crate) struct Run {
-        engine: Engine,
-        context: Context,
-        command: &'static str,
-    }
-
-    impl Run {
-        pub(crate) fn start(command: &'static str) -> Option<Self> {
-            let (engine, explicit, target) = bootstrap()?;
-            let mut candidate = Candidate::event(json!({
-                "event": "cli.start",
-                "command": command,
-            }))
-            .ensure(Role::trace())
-            .ensure(Role::span());
-            if let Some(role) = target {
-                candidate = candidate.collect(role, TARGET);
-            }
-            if let Some(key) = explicit {
-                candidate = candidate.explicit(Role::trace(), key);
-            }
-            let accepted = locus::record!(&engine, &Context::empty(), candidate).ok()?;
-            Some(Self {
-                engine,
-                context: accepted.context(),
-                command,
-            })
-        }
-
-        pub(crate) fn finish(self, code: i32) {
-            let candidate = Candidate::event(json!({
-                "event": "cli.finish",
-                "command": self.command,
-                "code": code,
-            }))
-            .ensure(Role::trace())
-            .ensure(Role::span());
-            let _ = locus::record!(&self.engine, &self.context, candidate);
-        }
-    }
-
-    fn bootstrap() -> Option<(Engine, Option<Key>, Option<Role>)> {
-        let mut policy = Policy::default();
-        if let Some(path) = plumb::config::value("PLUMB_LOCUS_TRACE_FILE") {
-            policy = policy.generator(Role::trace(), generator::Spec::shared(path));
-        }
-        if let Some(path) = plumb::config::value("PLUMB_LOCUS_REPORT_FILE") {
-            policy = policy.reporter(reporter::Spec::file(path));
-        }
-        let explicit = plumb::config::value("PLUMB_LOCUS_TRACE_ID")
-            .map(Key::new)
-            .transpose()
-            .ok()?;
-        let target = plumb::config::value("PLUMB_LOCUS_TARGET_COLLECTORS");
-        let role = target
-            .as_ref()
-            .map(|_| Role::new("plumb.target"))
-            .transpose()
-            .ok()?;
-        for held in target.iter().flat_map(|value| value.split(',')) {
-            policy = policy.collector(TARGET, spec(held.trim()));
-        }
-        Engine::bootstrap(Config::new(policy))
-            .ok()
-            .map(|engine| (engine, explicit, role))
-    }
-
-    fn spec(value: &str) -> collector::Spec {
-        let Some((name, selector)) = value.split_once(':') else {
-            return collector::Spec::new(value, json!({}));
-        };
-        match name {
-            "environment" => collector::Spec::environment(selector, LIMIT),
-            "argv" => match selector.parse() {
-                Ok(index) => collector::Spec::argument(index, LIMIT),
-                Err(_) => collector::Spec::new("argv", json!({"index": selector, "limit": LIMIT})),
-            },
-            "process" => collector::Spec::process(selector, LIMIT),
-            _ => collector::Spec::new(name, json!({})),
-        }
-    }
-}
-
 #[derive(Parser)]
 #[command(name = "plumb", version = plumb::version!("PLUMB"))]
 struct Cli {
@@ -264,7 +171,7 @@ fn main() {
         Ok(cli) => cli.command,
         Err(error) => {
             let code = error.exit_code();
-            let run = audit::Run::start("parse");
+            let run = dispatch::audit::Run::start("parse");
             let _ = error.print();
             if let Some(run) = run {
                 run.finish(code);
@@ -272,7 +179,7 @@ fn main() {
             std::process::exit(code);
         }
     };
-    let run = audit::Run::start(command.name());
+    let run = dispatch::audit::Run::start(command.name());
     let code = execute(command);
     if let Some(run) = run {
         run.finish(code);

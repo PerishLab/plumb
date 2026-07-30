@@ -76,6 +76,12 @@ doors and no third — a parsed file and the typed environment. A direct read of
 the environment bypasses both; so does a key the cascade cannot derive. Tests
 are the granted territory. See `references/laws.md`.
 
+**Audit.** Plumb's Locus observation surface inherits one downstream-owned,
+typed environment section. Its master gate defaults muted and returns before
+Locus bootstrap, collection, generation, or reporting. The skill names the
+contract but does not choose whether, where, or what an operator observes. See
+`references/audit.md`.
+
 **Templates.** Values reach config text through one grammar: `{name}` against
 the caller's own variable table, `{{` and `}}` for the literals, and refusal for
 anything unknown, unclosed, bare, or empty. The grammar is the substrate's; the

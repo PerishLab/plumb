@@ -4,6 +4,7 @@ use crate::judge::finding::{Found, Seed};
 use serde_json::Value as Json;
 use std::path::{Path, PathBuf};
 
+pub(crate) mod audit;
 mod production;
 pub mod release;
 

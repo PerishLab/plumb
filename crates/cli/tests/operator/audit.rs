@@ -9,6 +9,7 @@ fn atoms() {
     let report = home.path().join("audit.jsonl");
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", home.path().to_str().expect("path")])
+        .env("PLUMB_LOCUS_ENABLED", "true")
         .env("PLUMB_LOCUS_TRACE_FILE", &trace)
         .env("PLUMB_LOCUS_REPORT_FILE", &report)
         .output()
@@ -48,7 +49,7 @@ fn atoms() {
             .source()
             .expect("source")
             .file()
-            .ends_with("main.rs")
+            .ends_with("audit.rs")
     );
     assert!(trace.is_file());
 }
@@ -59,6 +60,7 @@ fn explicit() {
     let report = home.path().join("audit.jsonl");
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .arg("--version")
+        .env("PLUMB_LOCUS_ENABLED", "true")
         .env("PLUMB_LOCUS_TRACE_ID", "manual-trace")
         .env("PLUMB_LOCUS_REPORT_FILE", &report)
         .output()
@@ -74,6 +76,49 @@ fn explicit() {
         .expect("trace");
     assert_eq!(trace.key(), "manual-trace");
     assert_eq!(trace.origin(), &Origin::Explicit);
+}
+
+#[test]
+fn muted() {
+    for enabled in [None, Some("false")] {
+        let home = tempfile::tempdir().expect("temp");
+        let trace = home.path().join("trace.json");
+        let report = home.path().join("audit.jsonl");
+        let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
+        command
+            .args(["doctor", home.path().to_str().expect("path")])
+            .env_remove("PLUMB_LOCUS_ENABLED")
+            .env("PLUMB_LOCUS_TRACE_FILE", &trace)
+            .env("PLUMB_LOCUS_REPORT_FILE", &report)
+            .env("PLUMB_LOCUS_TARGET_COLLECTORS", "process:parent");
+        if let Some(value) = enabled {
+            command.env("PLUMB_LOCUS_ENABLED", value);
+        }
+        let output = command.output().expect("plumb");
+        assert!(output.status.success());
+        assert!(!trace.exists());
+        assert!(!report.exists());
+        assert!(!String::from_utf8_lossy(&output.stderr).contains("locus engine diagnostic"));
+    }
+}
+
+#[test]
+fn malformed() {
+    let home = tempfile::tempdir().expect("temp");
+    let report = home.path().join("audit.jsonl");
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["doctor", home.path().to_str().expect("path")])
+        .env("PLUMB_LOCUS_ENABLED", "yes")
+        .env("PLUMB_LOCUS_REPORT_FILE", &report)
+        .output()
+        .expect("plumb");
+
+    assert!(output.status.success());
+    assert!(!report.exists());
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("cannot parse PLUMB_LOCUS_ENABLED: neither true nor false")
+    );
 }
 
 #[test]
@@ -118,6 +163,7 @@ fn invalid() {
     let report = home.path().join("audit.jsonl");
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", home.path().to_str().expect("path")])
+        .env("PLUMB_LOCUS_ENABLED", "true")
         .env("PLUMB_LOCUS_TARGET_COLLECTORS", "process:parent")
         .env("PLUMB_LOCUS_REPORT_FILE", &report)
         .output()
@@ -136,6 +182,7 @@ fn invoke(root: &std::path::Path, collectors: &str, value: Option<(&str, &str)>)
     let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
     command
         .args(["doctor", root.to_str().expect("path")])
+        .env("PLUMB_LOCUS_ENABLED", "true")
         .env("PLUMB_LOCUS_TRACE_ID", "collector-trace")
         .env("PLUMB_LOCUS_TARGET_COLLECTORS", collectors)
         .env("PLUMB_LOCUS_REPORT_FILE", &report)

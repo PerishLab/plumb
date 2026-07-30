@@ -99,6 +99,32 @@ fn veiled() {
 }
 
 #[test]
+#[cfg(feature = "skill")]
+fn locus() {
+    let get = |key: &str| match key {
+        "PLUMB_LOCUS_ENABLED" => Some("true".to_string()),
+        "PLUMB_LOCUS_REPORT_FILE" => Some("/tmp/audit.jsonl".to_string()),
+        "PLUMB_LOCUS_TRACE_FILE" => Some("/tmp/trace.json".to_string()),
+        "PLUMB_LOCUS_TRACE_ID" => Some("trace-a".to_string()),
+        "PLUMB_LOCUS_TARGET_COLLECTORS" => Some("process:id".to_string()),
+        _ => None,
+    };
+    let held = plumb::rig::Rig::default()
+        .merge(plumb::rig::Rig::lookup("PLUMB", &get).expect("locus environment should read"));
+    assert!(held.locus.enabled);
+    assert_eq!(
+        held.locus.report.file,
+        std::path::PathBuf::from("/tmp/audit.jsonl")
+    );
+    assert_eq!(
+        held.locus.trace.file,
+        std::path::PathBuf::from("/tmp/trace.json")
+    );
+    assert_eq!(held.locus.trace.id, "trace-a");
+    assert_eq!(held.locus.target.collectors, "process:id");
+}
+
+#[test]
 fn armed() {
     let get = |key: &str| (key == "RIG_THEME").then(|| "enved".to_string());
     let args = RigArgs {
