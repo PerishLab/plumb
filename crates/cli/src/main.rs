@@ -11,10 +11,14 @@ use plumb::cli::Root;
 use std::path::PathBuf;
 
 mod audit {
+    use locus::collector;
     use locus::generator;
     use locus::reporter;
     use locus::{Candidate, Config, Context, Engine, Key, Policy, Role};
     use serde_json::json;
+
+    const TARGET: &str = "target";
+    const LIMIT: usize = 512;
 
     pub(crate) struct Run {
         engine: Engine,
@@ -24,13 +28,16 @@ mod audit {
 
     impl Run {
         pub(crate) fn start(command: &'static str) -> Option<Self> {
-            let (engine, explicit) = bootstrap()?;
+            let (engine, explicit, target) = bootstrap()?;
             let mut candidate = Candidate::event(json!({
                 "event": "cli.start",
                 "command": command,
             }))
             .ensure(Role::trace())
             .ensure(Role::span());
+            if let Some(role) = target {
+                candidate = candidate.collect(role, TARGET);
+            }
             if let Some(key) = explicit {
                 candidate = candidate.explicit(Role::trace(), key);
             }
@@ -54,7 +61,7 @@ mod audit {
         }
     }
 
-    fn bootstrap() -> Option<(Engine, Option<Key>)> {
+    fn bootstrap() -> Option<(Engine, Option<Key>, Option<Role>)> {
         let mut policy = Policy::default();
         if let Some(path) = plumb::config::value("PLUMB_LOCUS_TRACE_FILE") {
             policy = policy.generator(Role::trace(), generator::Spec::shared(path));
@@ -66,9 +73,33 @@ mod audit {
             .map(Key::new)
             .transpose()
             .ok()?;
+        let target = plumb::config::value("PLUMB_LOCUS_TARGET_COLLECTORS");
+        let role = target
+            .as_ref()
+            .map(|_| Role::new("plumb.target"))
+            .transpose()
+            .ok()?;
+        for held in target.iter().flat_map(|value| value.split(',')) {
+            policy = policy.collector(TARGET, spec(held.trim()));
+        }
         Engine::bootstrap(Config::new(policy))
             .ok()
-            .map(|engine| (engine, explicit))
+            .map(|engine| (engine, explicit, role))
+    }
+
+    fn spec(value: &str) -> collector::Spec {
+        let Some((name, selector)) = value.split_once(':') else {
+            return collector::Spec::new(value, json!({}));
+        };
+        match name {
+            "environment" => collector::Spec::environment(selector, LIMIT),
+            "argv" => match selector.parse() {
+                Ok(index) => collector::Spec::argument(index, LIMIT),
+                Err(_) => collector::Spec::new("argv", json!({"index": selector, "limit": LIMIT})),
+            },
+            "process" => collector::Spec::process(selector, LIMIT),
+            _ => collector::Spec::new(name, json!({})),
+        }
     }
 }
 

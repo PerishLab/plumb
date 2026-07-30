@@ -21,6 +21,7 @@ link, and it is the only one.
 - `crates/cli` — the CLI, published as a binary through the release lanes.
 - `crates/lib` and `crates/macro` — the substrate and derive consumed by the
   ecosystem.
+- `docs/audit.md` — the opt-in Locus audit surface and its observation boundary.
 - `apps/web` — the site at plumb.perish.uk, shipped by the deploy lane on
   dispatch and verified by readback (`docs/site.md`).
 - `packages/*` — publishable specimens, when they earn their place.

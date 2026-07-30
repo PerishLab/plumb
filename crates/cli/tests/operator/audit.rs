@@ -26,6 +26,9 @@ fn atoms() {
     assert_eq!(atoms[0].payload().expect("payload")["command"], "doctor");
     assert_eq!(atoms[1].payload().expect("payload")["code"], 0);
     assert_eq!(atoms[0].context(), atoms[1].context());
+    assert!(!atoms[0].context().contains_key("plumb.target"));
+    assert!(atoms[0].collections().is_empty());
+    assert!(atoms[1].collections().is_empty());
     assert_eq!(atoms[0].choices().len(), 2);
     assert_eq!(atoms[1].choices().len(), 2);
     assert!(
@@ -71,4 +74,79 @@ fn explicit() {
         .expect("trace");
     assert_eq!(trace.key(), "manual-trace");
     assert_eq!(trace.origin(), &Origin::Explicit);
+}
+
+#[test]
+fn collectors() {
+    let home = tempfile::tempdir().expect("temp");
+    let atoms = invoke(
+        home.path(),
+        "environment:PLUMB_AUDIT_TARGET",
+        Some(("PLUMB_AUDIT_TARGET", "repository-a")),
+    );
+    assert_eq!(atoms[0].context()["plumb.target"], "repository-a");
+    assert_eq!(atoms[1].context()["plumb.target"], "repository-a");
+    assert_eq!(atoms[0].collections()[0].role(), "plumb.target");
+    assert_eq!(atoms[0].collections()[0].binding(), "target");
+    assert_eq!(atoms[0].collections()[0].collector(), "environment");
+    assert_eq!(atoms[0].collections()[0].selector(), "PLUMB_AUDIT_TARGET");
+    assert!(atoms[1].collections().is_empty());
+
+    let home = tempfile::tempdir().expect("temp");
+    let atoms = invoke(home.path(), "argv:1", None);
+    assert_eq!(
+        atoms[0].context()["plumb.target"],
+        home.path().to_string_lossy()
+    );
+    assert_eq!(atoms[0].collections()[0].collector(), "argv");
+    assert_eq!(atoms[0].collections()[0].selector(), "1");
+
+    let home = tempfile::tempdir().expect("temp");
+    let atoms = invoke(
+        home.path(),
+        "environment:PLUMB_AUDIT_MISSING,process:id",
+        None,
+    );
+    assert!(atoms[0].context()["plumb.target"].parse::<u32>().is_ok());
+    assert_eq!(atoms[0].collections()[0].collector(), "process");
+    assert_eq!(atoms[0].collections()[0].selector(), "id");
+}
+
+#[test]
+fn invalid() {
+    let home = tempfile::tempdir().expect("temp");
+    let report = home.path().join("audit.jsonl");
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["doctor", home.path().to_str().expect("path")])
+        .env("PLUMB_LOCUS_TARGET_COLLECTORS", "process:parent")
+        .env("PLUMB_LOCUS_REPORT_FILE", &report)
+        .output()
+        .expect("plumb");
+
+    assert!(output.status.success());
+    assert!(!report.exists());
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("unknown process collector selector: parent")
+    );
+}
+
+fn invoke(root: &std::path::Path, collectors: &str, value: Option<(&str, &str)>) -> Vec<Atom> {
+    let report = root.join("audit.jsonl");
+    let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
+    command
+        .args(["doctor", root.to_str().expect("path")])
+        .env("PLUMB_LOCUS_TRACE_ID", "collector-trace")
+        .env("PLUMB_LOCUS_TARGET_COLLECTORS", collectors)
+        .env("PLUMB_LOCUS_REPORT_FILE", &report)
+        .env_remove("PLUMB_AUDIT_MISSING");
+    if let Some((name, held)) = value {
+        command.env(name, held);
+    }
+    let output = command.output().expect("plumb");
+    assert!(output.status.success());
+    let text = fs::read_to_string(report).expect("report");
+    text.lines()
+        .map(|line| serde_json::from_str(line).expect("atom"))
+        .collect()
 }
