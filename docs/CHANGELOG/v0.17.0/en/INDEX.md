@@ -15,3 +15,9 @@ Plumb declares both surfaces and now carries the operator wrapper its own law
 asks of any repository publishing registry packages. The wrapper calls the
 local build, the way the guard already calls its own doctor, because a tool
 cannot route its own release through a copy of itself that does not exist yet.
+
+The skill now states its jurisdiction. It said it governed every repository
+here, which no reader can evaluate against the directory in front of them, so
+an agent carrying the brief carried it everywhere. plumb manages a repository
+carrying `plumb.toml` at its root; elsewhere these laws are silent, and their
+silence is not worth remarking on.

@@ -26,3 +26,13 @@ is not any more, which is the point.
 Declare the cargo surface only after this version is installed. An older Plumb
 reads any release key as a binary release and will ask for `release-exact` and
 `release-stable` lanes that a crate family does not use.
+
+## If your guard runs `plumb doctor` without a `plumb.toml`
+
+Decide which you meant. A repository that gates its build on a doctor finding
+is governed by these laws and should declare so; one that only wants the report
+is not, and the laws do not bind it either way.
+
+Declaring costs one file. An empty `plumb.toml` is a complete declaration when
+there is no release surface, site, or lock to name; the tables come later if
+they ever apply. Nothing changes for a repository that already carries it.

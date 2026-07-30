@@ -23,3 +23,9 @@ packages = ["your-macro", "your-lib"]
 
 请在装上本版本之后再声明 cargo 面。旧版 Plumb 会把任何 release 键读成 binary
 发布，并要求一个 crate 家族用不上的 `release-exact` 与 `release-stable` lane。
+
+## 如果你的 guard 跑 `plumb doctor` 却没有 `plumb.toml`
+
+想清楚你要的是哪一个。把构建挂在 doctor 结论上的仓库受这些法治理，应当声明；
+只想要那份报告的仓库不受治理，法对它两种情况下都不约束。声明的代价是一个文件。
+没有发布面要命名时，一个空表就是完整的声明。已经带着这个文件的仓库无事发生。

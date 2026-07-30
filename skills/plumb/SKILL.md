@@ -7,10 +7,22 @@ metadata:
 
 # plumb
 
-`plumb` is the substrate every repository here depends on and the doctor that
-travels to them. This brief carries what the binary cannot enforce: the
+`plumb` is the substrate a managed repository builds on and the doctor that
+travels to it. This brief carries what the binary cannot enforce: the
 principles the workshop is built on, the laws that follow from them, and — for
 each law — whether a machine catches a violation or only you will.
+
+## Jurisdiction
+
+These laws bind only the spaces this tool manages. Its owner defines what
+managed means, states that test here, and keeps it answerable by looking
+rather than by running.
+
+plumb manages a repository carrying `plumb.toml` at its root.
+
+Settle jurisdiction before you act. Inside, read these laws first and hold
+them. Outside, they are silent, and their silence is not worth remarking on.
+Only an unsettled answer asks.
 
 ## Upstream
 
