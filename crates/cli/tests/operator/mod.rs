@@ -12,6 +12,7 @@ mod settlement;
 mod site;
 #[cfg(unix)]
 mod stable;
+mod token;
 #[cfg(unix)]
 mod topology;
 

@@ -16,3 +16,8 @@ Doctor 现在报告随 Plumb release 锁定的 `p64-v1` retired 域词典，并�
 true，证据不可读为 blind；JSON 报告会绑定 dictionary digest 与扫描 coverage。
 
 本版本刻意携带空 retired 集合，只建立机制，不启动任何词汇迁移。
+
+## Forgejo authority 发现
+
+stable operator 现在既会读取后面仍有条目的 Tea login，也会读取最后一条 login。
+因此普通的单登录 `tea.yml` 可以直接提供既有 Forgejo token，不再需要重复配置。

@@ -20,3 +20,9 @@ dictionary digest and scan coverage.
 
 This release intentionally carries an empty retired set. It establishes the
 mechanism without beginning a vocabulary transition.
+
+## Forgejo authority discovery
+
+Stable operators now consume the final Tea login entry as well as entries that
+precede another login. A normal single-login `tea.yml` therefore supplies its
+existing Forgejo token without requiring duplicate configuration.
