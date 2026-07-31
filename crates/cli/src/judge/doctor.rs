@@ -11,9 +11,22 @@ struct Report {
     ok: bool,
     clean: bool,
     shape: Shape,
+    vocabulary: Vocabulary,
     findings: Vec<finding::Finding>,
     summary: Summary,
     coverage: Coverage,
+}
+
+#[derive(Serialize)]
+struct Vocabulary {
+    schema: &'static str,
+    codec: &'static str,
+    dictionary_digest: Option<String>,
+    retired: Option<usize>,
+    coverage: Option<plumb::vocabulary::Coverage>,
+    hits: Vec<plumb::vocabulary::Hit>,
+    ok: bool,
+    refusal: Option<plumb::vocabulary::Refusal>,
 }
 
 #[derive(Serialize)]
@@ -56,7 +69,9 @@ struct Summary {
 pub fn run(root: PathBuf, json: bool) -> i32 {
     let mut held = shape::read(&root);
     held.dependencies.current();
-    let findings = judge(&held);
+    let vocabulary = plumb::vocabulary::inspect(&root);
+    let mut findings = judge(&held);
+    findings.extend(retired(&vocabulary));
     let summary = Summary::new(&findings);
     let ok = summary.wrong == 0 && summary.blind == 0;
     if json {
@@ -66,6 +81,7 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
             ok,
             clean: findings.is_empty(),
             shape: Shape::new(&held),
+            vocabulary: Vocabulary::new(vocabulary),
             findings,
             summary,
             coverage: catalog::coverage(),
@@ -75,9 +91,62 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
             serde_json::to_string_pretty(&report).expect("doctor report should encode")
         );
     } else {
-        human(&root, &held, &findings, &summary);
+        human(&root, &held, &vocabulary, &findings);
     }
     i32::from(!ok)
+}
+
+impl Vocabulary {
+    fn new(result: Result<plumb::vocabulary::Report, plumb::vocabulary::Refusal>) -> Self {
+        match result {
+            Ok(report) => Self {
+                schema: report.schema,
+                codec: report.codec,
+                dictionary_digest: Some(report.dictionary_digest),
+                retired: Some(report.retired),
+                coverage: Some(report.coverage),
+                hits: report.hits,
+                ok: report.ok,
+                refusal: None,
+            },
+            Err(refusal) => Self {
+                schema: plumb::vocabulary::SCHEMA,
+                codec: plumb::vocabulary::CODEC,
+                dictionary_digest: None,
+                retired: None,
+                coverage: None,
+                hits: Vec::new(),
+                ok: false,
+                refusal: Some(refusal),
+            },
+        }
+    }
+}
+
+fn retired(
+    result: &Result<plumb::vocabulary::Report, plumb::vocabulary::Refusal>,
+) -> Vec<finding::Finding> {
+    use super::catalog::rules::vocabulary::RETIRED_TERM_ABSENT;
+
+    match result {
+        Ok(report) => report
+            .hits
+            .iter()
+            .map(|hit| {
+                finding::Finding::new(finding::wrong(
+                    &RETIRED_TERM_ABSENT,
+                    format!(
+                        "{} contains retired domain term {} in {}",
+                        hit.path, hit.term, hit.surface
+                    ),
+                ))
+            })
+            .collect(),
+        Err(error) => vec![finding::Finding::new(finding::blind(
+            &RETIRED_TERM_ABSENT,
+            error.to_string(),
+        ))],
+    }
 }
 
 impl Shape {
@@ -130,7 +199,13 @@ impl Summary {
     }
 }
 
-fn human(root: &Path, held: &shape::Shape, findings: &[finding::Finding], summary: &Summary) {
+fn human(
+    root: &Path,
+    held: &shape::Shape,
+    vocabulary: &Result<plumb::vocabulary::Report, plumb::vocabulary::Refusal>,
+    findings: &[finding::Finding],
+) {
+    let summary = Summary::new(findings);
     println!("plumb doctor {}", root.display());
     println!();
     println!("  wrappers  {}", show(&held.wrappers));
@@ -157,6 +232,17 @@ fn human(root: &Path, held: &shape::Shape, findings: &[finding::Finding], summar
         held.path.unwrap_or(0),
         show(&held.grants)
     );
+    match vocabulary {
+        Ok(report) => println!(
+            "  vocabulary {} {} retired={} scanned={}/{}",
+            report.codec,
+            &report.dictionary_digest[..12],
+            report.retired,
+            report.coverage.scanned,
+            report.coverage.tracked
+        ),
+        Err(error) => println!("  vocabulary blind: {error}"),
+    }
     println!();
     if findings.is_empty() {
         println!("  true to the skeleton");

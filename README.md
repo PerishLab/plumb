@@ -37,6 +37,50 @@ the exact lock resolution must equal the latest stable registry version.
 Missing manifest, lock, or registry evidence is blind and blocks the command;
 deliberate movement remains a standard Deno or Cargo operation.
 
+## Change boundaries
+
+`plumb precommit` proves that one committed Git delta stays inside an explicit
+set of repository-relative write prefixes:
+
+```sh
+plumb precommit . \
+  --base <exact-commit-oid> \
+  --head <exact-commit-oid> \
+  --write crates/lib \
+  --write crates/cli
+```
+
+The repository HEAD must equal `--head`, the worktree must be clean including
+untracked files, and `--base` must be its ancestor. Add, delete, type change,
+and gitlink paths enter the delta; rename and copy enter both their old and new
+paths. `.` explicitly claims the whole repository. Malformed boundaries,
+symbolic revisions, non-UTF-8 paths, and unread Git evidence refuse.
+
+`--json` emits `plumb.precommit/v1` with resolved OIDs and normalized `write`,
+`changed`, and `outside` sets. This is an operation-local evaluator, not a Git
+hook or a Doctor rule. A coordinator such as Concord owns the claim lifecycle
+and calls the same library API; Plumb neither reads that control plane nor
+assigns claims.
+
+## Domain vocabulary transitions
+
+Doctor also compares a Plumb-bundled transitional domain dictionary with the
+active Git closure. Configuration stores only canonical `p64-v1` values: `~`
+plus unpadded Base64URL over a lowercase ASCII atom. Decode then encode must be
+byte-identical; malformed, noncanonical, or duplicate decoded terms refuse.
+
+Each decoded term is matched as an ASCII case-insensitive byte substring over
+tracked path and current worktree bytes. Symlinks contribute their link-target
+bytes without being followed; gitlinks contribute only their tracked path.
+`docs/CHANGELOG/**` is the fixed historical exemption. Repositories cannot add
+dictionary entries or exclusions. A hit is out of true and unread closure
+evidence is blind.
+
+Retirement is deliberately temporary. After the domain either removes a term
+or restores it to live use, its encoded dictionary entry is deleted. The first
+release of this mechanism carries an empty retired set, so it adds the proof
+surface without beginning a vocabulary transition.
+
 ## Install the CLI
 
 ```sh
@@ -142,8 +186,10 @@ all limits, comment and word settings, test and environment territory, and
 required syntax bans semantically; ordering and formatting do not matter.
 When `skills/` exists, its Markdown briefs and per-skill roots are part of that
 canonical policy.
-Repository-specific boundaries, vocabulary, and additional non-test grants
-remain local allowances rather than becoming skeleton defaults.
+Repository-specific syntax boundaries, Ectropy vocabulary, and additional
+non-test grants remain local allowances rather than becoming skeleton defaults.
+The Plumb-bundled retired domain dictionary is a separate workshop transition
+mechanism and is not configurable by repositories.
 
 `plumb policy` prints the reconciled policy; `plumb policy --write` updates the
 repo-root `ectropy.toml` atomically. The reconciliation owns only the canonical

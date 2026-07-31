@@ -453,8 +453,9 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "plumb"
-version = "0.18.8"
+version = "0.18.9"
 dependencies = [
+ "base64",
  "clap",
  "flate2",
  "pin-project-lite",
@@ -464,13 +465,14 @@ dependencies = [
  "serde_json",
  "sha2",
  "tar",
+ "tempfile",
  "toml",
  "ureq",
 ]
 
 [[package]]
 name = "plumb-cli"
-version = "0.18.8"
+version = "0.18.9"
 dependencies = [
  "clap",
  "flate2",
@@ -489,7 +491,7 @@ dependencies = [
 
 [[package]]
 name = "plumb-macro"
-version = "0.18.8"
+version = "0.18.9"
 dependencies = [
  "proc-macro2",
  "quote",

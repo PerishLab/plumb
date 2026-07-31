@@ -34,6 +34,19 @@ nonzero; `unknown shape` remains non-blocking.
 `clean` continues to mean that the current repository produced no finding; it
 does not claim that every catalogued law is mechanized.
 
+## Operation-local mechanisms
+
+Not every proof has repository-wide Doctor context. `plumb precommit` evaluates
+one explicit Git change-boundary request and emits `plumb.precommit/v1`; it is
+mechanized code but not a catalog rule because Doctor has no claim, comparison
+base, or member head to evaluate. A clean Doctor report therefore says nothing
+about a pending delivery boundary.
+
+The retired domain vocabulary is different: its dictionary is compiled into
+the Plumb version and its active-closure evidence is available from a repository
+root, so `vocabulary.retired-term-absent` is a mechanized Doctor rule. The JSON
+report includes codec, dictionary digest, retired count, coverage, and hits.
+
 ## Query
 
 ```sh

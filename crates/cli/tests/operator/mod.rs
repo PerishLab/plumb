@@ -3,6 +3,7 @@ use std::process::Command;
 mod audit;
 #[cfg(unix)]
 mod fixture;
+mod precommit;
 #[cfg(unix)]
 mod release;
 #[cfg(unix)]

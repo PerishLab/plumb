@@ -24,11 +24,21 @@ fn clean() {
     assert_eq!(report["summary"]["out_of_true"], 0);
     assert_eq!(report["summary"]["unknown"], 0);
     assert_eq!(report["summary"]["blind"], 0);
-    assert_eq!(report["coverage"]["mechanized"], 75);
+    assert_eq!(report["coverage"]["mechanized"], 76);
     assert_eq!(report["coverage"]["observed"], 0);
     assert_eq!(report["coverage"]["prose_only"], 40);
     assert!(report["shape"]["wrappers"].is_array());
     assert!(report["shape"]["layout"].is_array());
+    assert_eq!(report["vocabulary"]["schema"], "plumb.vocabulary/v1");
+    assert_eq!(report["vocabulary"]["codec"], "p64-v1");
+    assert!(
+        report["vocabulary"]["dictionary_digest"]
+            .as_str()
+            .is_some_and(|digest| digest.len() == 64)
+    );
+    assert_eq!(report["vocabulary"]["retired"], 0);
+    assert_eq!(report["vocabulary"]["coverage"]["tracked"], 0);
+    assert_eq!(report["vocabulary"]["hits"], serde_json::json!([]));
 }
 
 #[test]

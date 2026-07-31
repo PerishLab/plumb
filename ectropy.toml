@@ -76,6 +76,7 @@ allow = ["fanout"]
 
 [vocabulary]
 term = [
+  { name = "dictionary_digest", description = "A domain vocabulary report binds its scan to the exact bundled dictionary bytes." },
   { name = "manifest_path", description = "Cargo metadata names a package manifest path as one schema field." },
   { name = "guard_pending_ms", description = "The operator harness names its pending guard poll interval in milliseconds." },
   { name = "guard_register_ms", description = "The operator harness names its absent guard registration poll interval in milliseconds." },

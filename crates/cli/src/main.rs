@@ -25,6 +25,18 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    Precommit {
+        #[command(flatten)]
+        target: Root,
+        #[arg(long)]
+        base: String,
+        #[arg(long)]
+        head: String,
+        #[arg(long, required = true)]
+        write: Vec<String>,
+        #[arg(long)]
+        json: bool,
+    },
     Policy {
         #[command(flatten)]
         target: Root,
@@ -67,6 +79,7 @@ impl Command {
     fn name(&self) -> &'static str {
         match self {
             Self::Doctor { .. } => "doctor",
+            Self::Precommit { .. } => "precommit",
             Self::Policy { .. } => "policy",
             Self::Skill { .. } => "skill",
             Self::Rule { .. } => "rule",
@@ -167,6 +180,19 @@ fn policy(root: PathBuf, write: bool) -> i32 {
 fn execute(command: Command) -> i32 {
     match command {
         Command::Doctor { target, json } => judge::doctor::run(PathBuf::from(target.root), json),
+        Command::Precommit {
+            target,
+            base,
+            head,
+            write,
+            json,
+        } => judge::precommit::run(judge::precommit::Input {
+            root: PathBuf::from(target.root),
+            base,
+            head,
+            write,
+            json,
+        }),
         Command::Policy { target, write } => policy(PathBuf::from(target.root), write),
         Command::Skill { deed } => skill::run(deed),
         Command::Rule { deed } => judge::catalog::query::run(deed),

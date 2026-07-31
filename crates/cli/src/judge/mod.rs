@@ -9,6 +9,7 @@ pub(crate) mod catalog;
 mod deps;
 pub(crate) mod doctor;
 pub(crate) mod finding;
+pub(crate) mod precommit;
 mod text;
 
 pub use text::show;

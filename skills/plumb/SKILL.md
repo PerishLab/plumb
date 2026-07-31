@@ -141,6 +141,25 @@ mutates none of them. Unread evidence is blind and blocks; stale or pinned
 shape refuses. Same-workspace path edges remain a release-train concern rather
 than a published dependency edge.
 
+**Change boundaries.** A delivery coordinator declares repository-relative
+write prefixes and calls Plumb with an exact comparison base and member head.
+`plumb precommit` requires that head to be current, the worktree to be clean,
+the base to be its ancestor, and every changed path to lie inside the declared
+prefixes. Rename and copy count both old and new paths. Missing Git evidence,
+malformed boundaries, symbolic revisions, and non-UTF-8 paths refuse. This is
+an operation-local proof, not a Doctor rule or Git hook; Plumb validates the
+boundary but does not own claims or coordination.
+
+**Domain vocabulary transitions.** Plumb carries one release-locked retired
+domain dictionary encoded with canonical `p64-v1`: `~` plus unpadded Base64URL
+over a lowercase ASCII atom. Doctor scans Git-tracked path and current worktree
+bytes with ASCII case-insensitive substring matching. Symlinks contribute their
+target bytes without being followed, gitlinks only their path, and
+`docs/CHANGELOG/**` is the sole historical exemption. Hits are out of true;
+unread evidence is blind. Repositories cannot configure entries or exclusions.
+Retired is a transition rather than a permanent vocabulary state: after domain
+removal or restoration, delete the encoded entry.
+
 **Sites.** An app declaring a site ships through one dispatch-only lane calling
 `plumb site deploy`, the same CLI entry an operator runs, with a purpose-scoped
 key the lane holds and the operator does not. Plumb derives the application,
@@ -201,6 +220,7 @@ The release changelog gate remains release-local rather than a doctor rule.
 
 ```bash
 plumb doctor [ROOT]           # shape report; nonzero when out of true or blind
+plumb precommit [ROOT]        # prove exact committed changes stay inside --write prefixes
 plumb rule list               # complete catalog; compose typed selectors
 plumb rule show RULE_ID       # law, standing, evidence, owner, and tags
 plumb rule namespaces         # registered namespace vocabulary

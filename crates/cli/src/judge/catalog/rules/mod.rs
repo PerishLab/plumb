@@ -1,13 +1,15 @@
 use super::model::Rule;
 
 pub mod consensus;
-pub mod deps;
 pub mod dispatch;
+mod domain;
 pub mod env;
 pub mod lock;
 pub mod prose;
 pub mod structure;
 pub mod web;
+
+pub use domain::{deps, vocabulary};
 
 macro_rules! rule {
     (
@@ -56,6 +58,7 @@ pub fn all() -> Vec<&'static Rule> {
         dispatch::all(),
         lock::all(),
         prose::all(),
+        vocabulary::all(),
     ]
     .into_iter()
     .flatten()

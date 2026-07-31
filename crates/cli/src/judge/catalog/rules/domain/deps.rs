@@ -1,4 +1,4 @@
-use super::{Rule, rule};
+use super::super::{Rule, rule};
 
 rule!(
     RUST_BINARY_USES_CLAP,

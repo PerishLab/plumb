@@ -80,6 +80,12 @@ item!(REPOSITORY, Tag, "repository", "repository skeleton shape");
 item!(SITE_TAG, Tag, "site", "site build and deployment shape");
 item!(SKILL_TAG, Tag, "skill", "agent operating briefs");
 item!(STATE, Tag, "state", "machine-owned durable state");
+item!(
+    VOCABULARY_TAG,
+    Tag,
+    "vocabulary",
+    "domain vocabulary lifecycle"
+);
 item!(WEB_TAG, Tag, "web", "web application and site shape");
 
 pub static TAGS: &[&Tag] = &[
@@ -95,6 +101,7 @@ pub static TAGS: &[&Tag] = &[
     &SITE_TAG,
     &SKILL_TAG,
     &STATE,
+    &VOCABULARY_TAG,
     &WEB_TAG,
 ];
 
@@ -119,6 +126,12 @@ namespace!(STATE_NS, "state", "machine-owned state", PRODUCT);
 namespace!(STRUCTURE, "structure", "repository skeleton", PLUMB);
 namespace!(TEMPLATE, "template", "config text variables", PRODUCT);
 namespace!(SITE, "site", "site deployment semantics", RELEASE);
+namespace!(
+    VOCABULARY_NS,
+    "vocabulary",
+    "domain vocabulary lifecycle",
+    PLUMB
+);
 namespace!(WEB_NS, "web", "web application shape", WEB);
 
 pub static NAMESPACES: &[&Namespace] = &[
@@ -133,6 +146,7 @@ pub static NAMESPACES: &[&Namespace] = &[
     &STATE_NS,
     &STRUCTURE,
     &TEMPLATE,
+    &VOCABULARY_NS,
     &WEB_NS,
 ];
 
