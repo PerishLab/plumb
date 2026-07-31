@@ -69,6 +69,11 @@ paths = [
 note = "vite and vitest require root-level config files; path law anchors to src and tests"
 allow = ["path"]
 
+[[boundary]]
+paths = ["docs/CHANGELOG"]
+note = "stable release identity requires one immutable version seat directly under docs/CHANGELOG"
+allow = ["fanout"]
+
 [vocabulary]
 term = [
   { name = "manifest_path", description = "Cargo metadata names a package manifest path as one schema field." },
