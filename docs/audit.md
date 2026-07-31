@@ -52,3 +52,20 @@ The reporter output is a JSONL-like stream of Locus atoms. Pairing start and
 finish by context, grouping by `plumb.target`, measuring duration, and deciding
 whether a result is an efficiency problem are downstream derivations. This
 surface performs none of those interpretations.
+
+The root `locus.toml` is Plumb's read-side inspection declaration. It is not
+part of the runtime config cascade and cannot enable collection. It applies the
+same coarse size and repetition mappings at two identity resolutions:
+
+- `locus.trace` exposes excess across the caller-managed cross-process context.
+- `locus.span` exposes excess inside one Plumb command invocation.
+
+Inspect an explicitly obtained report without changing it:
+
+```sh
+locus inspect . < /path/to/plumb-audit.jsonl
+```
+
+Every complete inspection ends with a coverage summary. A trace finding with
+clean spans means the aggregate crossed the sieve while no individual
+invocation did; it does not attribute a cause or require splitting the trace.

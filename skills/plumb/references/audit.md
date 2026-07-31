@@ -44,3 +44,19 @@ host muted.
 This skill does not write the profile, choose an enabled state, select a report
 path, or nominate a collector. Those are operator facts. Per-invocation
 overrides use the same variables and do not create a second config surface.
+
+## Consumption
+
+Plumb's root `locus.toml` is a separate read-side declaration. It cannot enable
+the runtime audit surface. Its coarse size and repetition analyzers inspect
+both `locus.trace`, the caller-managed cross-process context, and `locus.span`,
+one Plumb command invocation:
+
+```sh
+locus inspect /path/to/plumb < /path/to/plumb-audit.jsonl
+```
+
+Every complete inspection emits a coverage summary. A trace finding with clean
+spans says only that the aggregate crossed the declared sieve while no single
+invocation did. Inspection does not infer a cause, judge the command, mutate
+the report, or authorize collection.
