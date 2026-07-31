@@ -108,12 +108,7 @@ impl Web<'_> {
                 "web has no build script",
             );
         }
-        let guard = format!(
-            "{}\n{}",
-            std::fs::read_to_string(self.0.join(".runseal/wrappers/guard.ts")).unwrap_or_default(),
-            std::fs::read_to_string(self.0.join(".forgejo/workflows/guard.yml"))
-                .unwrap_or_default()
-        );
+        let guard = crate::shape::operator::Operator(self.0).guard().source;
         let name = package.get("name").and_then(Json::as_str);
         if !guard.contains("build") || name.is_none_or(|name| !guard.contains(name)) {
             wrong(

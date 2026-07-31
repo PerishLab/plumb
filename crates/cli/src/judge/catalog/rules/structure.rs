@@ -12,9 +12,9 @@ pub use site::{SITE_DEPLOY_LANE, SITE_SHIP_WRAPPER};
 rule!(
     GUARD_LANE_PRESENT,
     "structure.guard-lane-present",
-    "Guard has one workflow lane",
-    "A governed repository carries the canonical guard workflow without requiring a repository-local wrapper.",
-    "The .forgejo/workflows/guard.yml seat.",
+    "Guard has one authority workflow lane",
+    "A governed repository carries one canonical guard workflow at its repository authority's seat without requiring a repository-local wrapper.",
+    "The Forgejo guard or GitHub quality workflow seat.",
     Mechanized,
     PLUMB,
     [ADOPTION, REPOSITORY]

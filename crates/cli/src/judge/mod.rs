@@ -47,7 +47,11 @@ impl shape::Shape {
             ));
         }
         let pinned = format!("{CONTAINER}:");
-        if self.lane.as_ref().is_some_and(|yml| yml.contains(&pinned)) {
+        if self
+            .guards
+            .iter()
+            .any(|(_, workflow)| workflow.contains(&pinned))
+        {
             found.push(wrong(
                 &env_rule::ROLLING_CI_CONTAINER,
                 "CI container pinned to a tag, the skeleton tracks latest".to_string(),
@@ -58,11 +62,24 @@ impl shape::Shape {
     fn structure(&self) -> Found {
         let mut found = Found::new();
         if self.runseal {
-            let guarded = self.lanes.contains("guard") || self.wrappers.contains("guard");
-            if !self.lanes.contains("guard") {
+            let guarded = !self.guards.is_empty() || self.wrappers.contains("guard");
+            if self.guards.is_empty() {
                 found.push(wrong(
                     &structure_rule::GUARD_LANE_PRESENT,
                     "no guard workflow",
+                ));
+            }
+            if self.guards.len() > 1 {
+                found.push(wrong(
+                    &structure_rule::GUARD_LANE_PRESENT,
+                    format!(
+                        "multiple guard workflows: {}",
+                        self.guards
+                            .iter()
+                            .map(|(seat, _)| seat.as_str())
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ),
                 ));
             }
             if !self.laws {
@@ -101,15 +118,13 @@ impl shape::Shape {
                     "init does not require plumb",
                 ));
             }
-            if self
-                .lane
-                .as_ref()
-                .is_some_and(|yml| !yml.contains(CONCURRENCY))
-            {
-                found.push(wrong(
-                    &structure_rule::GUARD_CONCURRENCY,
-                    "guard lane without the concurrency block".to_string(),
-                ));
+            for (seat, workflow) in &self.guards {
+                if !workflow.contains(CONCURRENCY) {
+                    found.push(wrong(
+                        &structure_rule::GUARD_CONCURRENCY,
+                        format!("{seat} lacks the concurrency block"),
+                    ));
+                }
             }
         }
         if let Some(name) = &self.mint {

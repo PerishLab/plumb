@@ -5,7 +5,7 @@ pub mod changelog;
 mod dependency;
 mod lock;
 mod node;
-mod operator;
+pub(crate) mod operator;
 mod pack;
 pub mod pair;
 mod policy;
@@ -36,7 +36,7 @@ pub struct Shape {
     pub inits: bool,
     pub rust: bool,
     pub runseal: bool,
-    pub lane: Option<String>,
+    pub guards: Vec<(String, String)>,
     pub edition: Option<String>,
     pub binary: bool,
     pub clap: bool,
@@ -211,6 +211,8 @@ impl Root<'_> {
 
 pub fn read(root: &Path) -> Shape {
     let seat = Root(root);
+    let operator = operator::Operator(root);
+    let guarded = operator.guard();
     let laws = root.join("ectropy.toml");
     let text = std::fs::read_to_string(&laws).unwrap_or_default();
     let read = text.parse::<toml::Table>();
@@ -241,19 +243,11 @@ pub fn read(root: &Path) -> Shape {
             }
         }
     }
-    let lane = std::fs::read_to_string(root.join(".forgejo/workflows/guard.yml"))
-        .ok()
-        .map(|text| text.replace("\r\n", "\n"));
-    let guard = format!(
-        "{}\n{}",
-        std::fs::read_to_string(root.join(".runseal/wrappers/guard.ts")).unwrap_or_default(),
-        lane.as_deref().unwrap_or_default()
-    );
     Shape {
         wrappers: seat.names(".runseal/wrappers", ".ts"),
         dirs: seat.dirs(),
-        actions: operator::actions(root),
-        tests: operator::tests(root),
+        actions: operator.actions(),
+        tests: operator.tests(),
         block: limit("block"),
         path: limit("path"),
         grants,
@@ -265,7 +259,7 @@ pub fn read(root: &Path) -> Shape {
         ignore: std::fs::read_to_string(root.join(".gitignore")).unwrap_or_default(),
         rust: root.join("Cargo.toml").exists(),
         runseal: root.join(".runseal").is_dir(),
-        lane,
+        guards: guarded.lanes,
         edition: seat.edition(),
         binary: seat.binary(),
         clap: seat.manifests().iter().any(|text| {
@@ -291,7 +285,7 @@ pub fn read(root: &Path) -> Shape {
         version: lock::held(root),
         inits: root.join(".runseal/wrappers/init.ts").exists()
             || root.join(".runseal/lib/init/init.ts").exists(),
-        guard,
+        guard: guarded.source,
         init: std::fs::read_to_string(root.join(".runseal/wrappers/init.ts")).unwrap_or_default(),
     }
 }

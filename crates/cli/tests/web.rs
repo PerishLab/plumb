@@ -63,6 +63,20 @@ fn standalone() {
 }
 
 #[test]
+fn hosted() {
+    let root = fixture("plumb-web-hosted");
+    std::fs::create_dir_all(root.join(".github/workflows")).expect("github should be made");
+    std::fs::rename(
+        root.join(".forgejo/workflows/guard.yml"),
+        root.join(".github/workflows/quality.yml"),
+    )
+    .expect("guard should move");
+    let out = run(&root);
+    std::fs::remove_dir_all(&root).expect("fixture should be swept");
+    assert!(!out.contains("[web]"), "{out}");
+}
+
+#[test]
 fn roles() {
     let root = fixture("plumb-web-roles");
     std::fs::write(root.join("apps/web/src/views/helper.ts"), "")

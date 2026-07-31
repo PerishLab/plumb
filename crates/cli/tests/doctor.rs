@@ -75,7 +75,7 @@ fn concurrency() {
     .expect("lane should be written");
     let bare = run(&["doctor", dir.to_str().expect("path should be utf8")]);
     assert!(
-        bare.contains("guard lane without the concurrency block"),
+        bare.contains(".forgejo/workflows/guard.yml lacks the concurrency block"),
         "{bare}"
     );
 
@@ -87,6 +87,36 @@ fn concurrency() {
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("concurrency block"), "{held}");
     assert!(!windows.contains("concurrency block"), "{windows}");
+}
+
+#[test]
+fn authorities() {
+    let fixture = tempfile::tempdir().expect("fixture should be made");
+    let root = fixture.path();
+    std::fs::create_dir_all(root.join(".runseal")).expect("runseal should be made");
+    std::fs::create_dir_all(root.join(".github/workflows")).expect("github should be made");
+    std::fs::create_dir_all(root.join(".forgejo/workflows")).expect("forgejo should be made");
+    std::fs::write(root.join("ectropy.toml"), "").expect("laws should be written");
+    let complete = "name: quality\nconcurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true\njobs:\n  quality:\n    steps:\n      - run: plumb doctor . && ectropy .\n";
+    let github = root.join(".github/workflows/quality.yml");
+    let forgejo = root.join(".forgejo/workflows/guard.yml");
+
+    std::fs::write(&github, complete).expect("github guard should be written");
+    let hosted = run(&["doctor", root.to_str().expect("path should be utf8")]);
+    assert!(!hosted.contains("no guard workflow"), "{hosted}");
+    assert!(!hosted.contains("concurrency block"), "{hosted}");
+
+    std::fs::write(&forgejo, complete).expect("forgejo guard should be written");
+    let ambiguous = run(&["doctor", root.to_str().expect("path should be utf8")]);
+    assert!(
+        ambiguous.contains("multiple guard workflows"),
+        "{ambiguous}"
+    );
+
+    std::fs::remove_file(&github).expect("github guard should be removed");
+    let forgejo = run(&["doctor", root.to_str().expect("path should be utf8")]);
+    assert!(!forgejo.contains("no guard workflow"), "{forgejo}");
+    assert!(!forgejo.contains("multiple guard workflows"), "{forgejo}");
 }
 
 #[test]
