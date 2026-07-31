@@ -6,6 +6,12 @@ mod fixture;
 #[cfg(unix)]
 mod release;
 #[cfg(unix)]
+mod settlement;
+#[cfg(unix)]
+mod site;
+#[cfg(unix)]
+mod stable;
+#[cfg(unix)]
 mod topology;
 
 fn run(root: &std::path::Path) -> String {

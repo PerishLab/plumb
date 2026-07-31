@@ -19,6 +19,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Install stable Plumb
+        uses: PerishLab/actions/setup-binary@main
+        env:
+          PERISH_SETUP_PRODUCT: plumb
+
       - name: Install JS dependencies
         run: |
           set -eu
@@ -30,7 +35,7 @@ jobs:
         run: |
           set -eu
           exec > >(tee -a "$RUNNER_TEMP/lane.log") 2>&1
-          deno run --allow-read "--allow-write=." --allow-env --allow-net "--allow-run=git,deno,sh,bash,pnpm,node" --config .runseal/deno.json --lock .runseal/deno.lock --frozen=true .runseal/wrappers/ship.ts
+          plumb site deploy
 
       - name: Report failure
         if: failure()

@@ -83,6 +83,35 @@ local operator merges that line into `main` and proves the stable commit is now
 an ancestor before the next stable activation. The settled release branch stays
 permanently frozen as the version's source and audit boundary.
 
+Generic release operation lives in the CLI rather than repository wrappers:
+
+```sh
+plumb release dispatch --channel beta --version vX.Y.Z-beta.N --ref <branch>
+plumb stable prepare --version vX.Y.Z
+plumb stable pick --version vX.Y.Z --commit <full-sha>
+plumb stable freeze --version vX.Y.Z
+plumb release dispatch --channel stable --version vX.Y.Z \
+  --promotion-channel beta --promotion-version vX.Y.Z-beta.N
+plumb stable packport --version vX.Y.Z
+```
+
+Exact dispatch keeps channel and branch selection open. Only stable derives and
+walls `release/vX.Y.Z`; packport retains that frozen branch after a
+topology-preserving merge.
+
+Site operation is also CLI-owned:
+
+```sh
+plumb site plan
+plumb site inspect
+plumb site deploy
+```
+
+Plumb derives the one `apps/*/wrangler.jsonc` application and keeps upload,
+Cloudflare binding, and public fingerprint readback as three separate results.
+Product repositories carry only the dispatch lane and declaration, not a ship
+wrapper.
+
 ## Paired Web/API dispatch
 
 When a repository holds both a React/Vite application at `apps/web` and an

@@ -63,18 +63,6 @@ pub fn judge(held: &Shape) -> Found {
             }
         }
     }
-    let registries = held
-        .ships
-        .iter()
-        .filter(|held| held.as_str() != "binary")
-        .cloned()
-        .collect::<BTreeSet<_>>();
-    if !registries.is_empty() && !held.wrappers.contains("release") {
-        found.push(Seed::wrong(
-            &rule::REGISTRY_RELEASE_WRAPPER_PRESENT,
-            format!("declares {} without a release wrapper", show(&registries)),
-        ));
-    }
     site(held, &mut found);
     found
 }
@@ -86,10 +74,13 @@ fn bound(held: &Shape, lane: &str) -> bool {
             .join(format!("{lane}.yml")),
     )
     .map(|text| {
-        !text.contains("source_ref:")
-            && !text.contains("source_commit:")
-            && !text.contains("${{ inputs.ref }}")
-            && !text.contains("\n      ref:\n")
+        let loose = [
+            "source_ref:",
+            "source_commit:",
+            "${{ inputs.ref }}",
+            "\n      ref:\n",
+        ];
+        !loose.iter().any(|value| text.contains(value))
     })
     .unwrap_or(false)
 }
@@ -98,23 +89,13 @@ fn site(held: &Shape, found: &mut Found) {
     if held.sites.is_empty() {
         return;
     }
-    for (rule, want, seated) in [
-        (
-            &rule::SITE_SHIP_WRAPPER,
-            "a ship wrapper",
-            held.wrappers.contains("ship"),
-        ),
-        (
+    if !held.lanes.contains("deploy") {
+        found.push(Seed::wrong(
             &rule::SITE_DEPLOY_LANE,
-            "a deploy lane",
-            held.lanes.contains("deploy"),
-        ),
-    ] {
-        if !seated {
-            found.push(Seed::wrong(
-                rule,
-                format!("{} declares a site without {want}", show(&held.sites)),
-            ));
-        }
+            format!(
+                "{} declares a site without a deploy lane",
+                show(&held.sites)
+            ),
+        ));
     }
 }

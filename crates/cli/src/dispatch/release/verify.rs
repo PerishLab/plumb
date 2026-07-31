@@ -46,12 +46,9 @@ pub fn inspect(url: &str, stable: bool) -> Result<String, String> {
             return Err("stable pointer is not current".into());
         }
         let seal: Seal = remote(&pointer.seal)?;
-        if seal.schema != 1
-            || seal.channel != "stable"
-            || seal.product != pointer.product
-            || seal.version != pointer.version
-            || seal.commit != pointer.commit
-        {
+        let current = seal.schema == 1 && seal.channel == "stable";
+        let product = seal.product == pointer.product && seal.version == pointer.version;
+        if !current || !product || seal.commit != pointer.commit {
             return Err("stable pointer and exact seal disagree".into());
         }
         audit(&seal)?;

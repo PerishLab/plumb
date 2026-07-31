@@ -235,7 +235,7 @@ rule!(
     "site.shipper-reads-artifact",
     "Shippers inspect artifacts, not source",
     "The site shipper derives identity and routes from build output rather than application source.",
-    "The ship wrapper's inputs and inspection paths.",
+    "The site CLI inputs and artifact inspection paths.",
     Prose,
     RELEASE,
     [RELEASE_TAG, SITE_TAG]

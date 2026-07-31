@@ -5,8 +5,10 @@ use serde_json::Value as Json;
 use std::path::{Path, PathBuf};
 
 pub(crate) mod audit;
+pub mod operator;
 mod production;
 pub mod release;
+pub mod site;
 
 pub fn read(root: &Path) -> Option<Found> {
     let workspace = Workspace(root);
@@ -54,10 +56,14 @@ impl Workspace<'_> {
             .and_then(|package| package.get("name"))
             .and_then(toml::Value::as_str)
             == Some("api");
-        named
-            && (seat.join("src/main.rs").is_file()
-                || seat.join("src/bin").is_dir()
-                || doc.get("bin").and_then(toml::Value::as_array).is_some())
+        let target = [
+            seat.join("src/main.rs").is_file(),
+            seat.join("src/bin").is_dir(),
+        ]
+        .into_iter()
+        .any(|held| held)
+            || doc.get("bin").and_then(toml::Value::as_array).is_some();
+        named && target
     }
 
     fn sidecar(&self, found: &mut Found) {

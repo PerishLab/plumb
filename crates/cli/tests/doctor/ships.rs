@@ -57,10 +57,7 @@ fn cargo() {
     let crates = crate::run(&["doctor", path]);
     assert!(crates.contains("publishes cargo"), "{crates}");
     assert!(!crates.contains("publishes binary"), "{crates}");
-    assert!(
-        crates.contains("declares cargo without a release wrapper"),
-        "{crates}"
-    );
+    assert!(!crates.contains("release wrapper"), "{crates}");
 
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }

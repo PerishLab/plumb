@@ -67,12 +67,10 @@ fn collect(root: &Path, at: &Path, found: &mut Vec<String>) {
         }
         let name = entry.file_name();
         let name = name.to_string_lossy();
-        if (name.ends_with(".test.ts")
-            || name.ends_with("_test.ts")
-            || name.ends_with(".test.tsx")
-            || name.ends_with("_test.tsx"))
-            && let Ok(relative) = path.strip_prefix(root)
-        {
+        let test = [".test.ts", "_test.ts", ".test.tsx", "_test.tsx"]
+            .iter()
+            .any(|suffix| name.ends_with(suffix));
+        if test && let Ok(relative) = path.strip_prefix(root) {
             found.push(relative.to_string_lossy().to_string());
         }
     }

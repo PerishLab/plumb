@@ -19,6 +19,12 @@ verification.
 Generated managers and capsules are release-run artifacts. They are not source
 files and are never checked in.
 
+Release authority is an input, not a resource Plumb provisions. Repository
+creation and resource, domain, token, escrow, and secret synchronization remain
+with their owning control planes. Product repositories carry no cold-start
+wrapper, and Plumb refuses missing publication authority rather than inferring
+or repairing external state.
+
 ## Generator resolution
 
 Every permanent release lane installs canonical stable Plumb through the root
@@ -64,6 +70,9 @@ freedom does not weaken its immutable identity. Stable alone binds
 `refs/heads/release/vX.Y.Z`. The release line is prepared by linear
 `cherry-pick -x`, frozen before stable publication, and does not block ordinary
 movement on `main`. Its exact protection remains frozen after publication.
+`plumb release dispatch` owns workflow dispatch; `plumb stable
+prepare|pick|freeze|packport` owns the stable branch lifecycle. Product
+repositories carry neither operation in a local wrapper.
 
 After activation and smoke, a local operator merges the release line into
 `main` without flattening its topology and proves the published stable commit
@@ -143,12 +152,14 @@ exact seal supplies its URL, digest, and size to skill installation.
 
 ## Site lanes
 
-A site lane uses the same product-owned build and public-readback boundary with
-a different registry. The control plane can report a domain as bound while the
-edge still routes elsewhere, so *bound* and *reachable* are separate findings
-and only the second proves that the site answers. Compare the fingerprinted
-asset in the served page against the built one; a status code alone proves only
-that something replied.
+A site lane installs stable Plumb and calls `plumb site deploy`; repositories
+carry the `apps/*/wrangler.jsonc` declaration and dispatch lane but no ship
+wrapper. The CLI derives the product-owned build and public-readback boundary.
+The control plane can report a domain as bound while the edge still routes
+elsewhere, so *bound* and *reachable* are separate findings and only the second
+proves that the site answers. Compare the fingerprinted asset in the served
+page against the built one; a status code alone proves only that something
+replied.
 
 If the lane cannot reach the public edge, it declares that blindness rather
 than treating an unreachable site as success. Reading the binding is itself a

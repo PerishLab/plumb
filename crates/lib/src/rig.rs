@@ -15,6 +15,8 @@ pub struct Rig {
     pub publish: Authority,
     #[cascade(section)]
     pub activate: Authority,
+    #[cascade(section)]
+    pub site: Site,
 }
 
 #[derive(Debug, Default, PartialEq, Cascade)]
@@ -46,6 +48,58 @@ pub struct Trace {
 #[cascade(section)]
 pub struct Target {
     pub collectors: String,
+}
+
+#[derive(Debug, Default, PartialEq, Cascade)]
+pub struct Forgejo {
+    pub token: String,
+}
+
+#[derive(Debug, PartialEq, Cascade)]
+pub struct Harness {
+    pub run_poll_ms: u64,
+    pub run_timeout_ms: u64,
+    pub guard_register_ms: u64,
+    pub guard_pending_ms: u64,
+    pub guard_timeout_ms: u64,
+}
+
+#[derive(Debug, PartialEq, Cascade)]
+#[cascade(section)]
+pub struct Site {
+    pub account: String,
+    pub api: String,
+    pub blind: bool,
+    pub delay: u64,
+    pub domain: String,
+    pub token: String,
+    pub turns: usize,
+}
+
+impl Default for Site {
+    fn default() -> Self {
+        Self {
+            account: String::new(),
+            api: "https://api.cloudflare.com/client/v4".to_string(),
+            blind: false,
+            delay: 5_000,
+            domain: String::new(),
+            token: String::new(),
+            turns: 10,
+        }
+    }
+}
+
+impl Default for Harness {
+    fn default() -> Self {
+        Self {
+            run_poll_ms: 10_000,
+            run_timeout_ms: 3_600_000,
+            guard_register_ms: 5_000,
+            guard_pending_ms: 10_000,
+            guard_timeout_ms: 240_000,
+        }
+    }
 }
 
 #[derive(Debug, Default, PartialEq, Cascade)]
@@ -93,6 +147,7 @@ impl Default for Rig {
             },
             publish: Authority::default(),
             activate: Authority::default(),
+            site: Site::default(),
         }
     }
 }

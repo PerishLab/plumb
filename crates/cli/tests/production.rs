@@ -57,15 +57,10 @@ fn sites() {
     std::fs::write(root.join("apps/web/wrangler.jsonc"), "{}").expect("config should be written");
     let held = doctor(&root);
     assert!(
-        held.contains("web declares a site without a ship wrapper"),
-        "{held}"
-    );
-    assert!(
         held.contains("web declares a site without a deploy lane"),
         "{held}"
     );
 
-    std::fs::write(root.join(".runseal/wrappers/ship.ts"), "").expect("wrapper should be written");
     std::fs::create_dir_all(root.join(".forgejo/workflows")).expect("fixture should be made");
     std::fs::write(root.join(".forgejo/workflows/deploy.yml"), "").expect("lane should be written");
     let paired = doctor(&root);

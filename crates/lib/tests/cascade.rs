@@ -142,6 +142,28 @@ fn locus() {
 }
 
 #[test]
+#[cfg(feature = "skill")]
+fn site() {
+    let get = |key: &str| match key {
+        "PLUMB_SITE_ACCOUNT" => Some("account".to_string()),
+        "PLUMB_SITE_BLIND" => Some("true".to_string()),
+        "PLUMB_SITE_DELAY" => Some("25".to_string()),
+        "PLUMB_SITE_DOMAIN" => Some("site.test".to_string()),
+        "PLUMB_SITE_TOKEN" => Some("secret".to_string()),
+        "PLUMB_SITE_TURNS" => Some("3".to_string()),
+        _ => None,
+    };
+    let held = plumb::rig::Rig::default()
+        .merge(plumb::rig::Rig::lookup("PLUMB", &get).expect("site environment should read"));
+    assert_eq!(held.site.account, "account");
+    assert!(held.site.blind);
+    assert_eq!(held.site.delay, 25);
+    assert_eq!(held.site.domain, "site.test");
+    assert_eq!(held.site.token, "secret");
+    assert_eq!(held.site.turns, 3);
+}
+
+#[test]
 fn armed() {
     let get = |key: &str| (key == "RIG_THEME").then(|| "enved".to_string());
     let args = RigArgs {

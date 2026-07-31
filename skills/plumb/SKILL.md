@@ -99,7 +99,10 @@ targets, and genuine product assets in the root `plumb.toml`. Plumb owns build
 discovery, archives, attachments, managers, capsules, storage, verification,
 activation, smoke, source binding, and packport topology checks. Actions owns
 the shared matrix, credentials, and sequencing; product workflows are thin
-callers. Stable activation remains a separate capability and operation. Exact
+callers. Release authorities are provisioned inputs: repository creation and
+resource, domain, token, escrow, and secret synchronization remain with their
+owning control planes, never Plumb or a product wrapper. Stable activation
+remains a separate capability and operation. Exact
 may bind any selected branch; stable binds only `release/vX.Y.Z`, and its
 commit must be packported into `main` before the next stable activation. The
 release branch remains as a permanent frozen source and audit boundary. See
@@ -139,8 +142,10 @@ shape refuses. Same-workspace path edges remain a release-train concern rather
 than a published dependency edge.
 
 **Sites.** An app declaring a site ships through one dispatch-only lane calling
-the same wrapper an operator runs, with a purpose-scoped key the lane holds and
-the operator does not. The build stamps its commit into the health document and
+`plumb site deploy`, the same CLI entry an operator runs, with a purpose-scoped
+key the lane holds and the operator does not. Plumb derives the application,
+package, assets, and worker from `apps/*/wrangler.jsonc`; repositories carry no
+ship wrapper. The build stamps its commit into the health document and
 declares its routes in the artifact — a sitemap, or the prerendered documents
 themselves; the shipper reads those and never application source. A deploy
 reports three separate states — deployed, bound, reachable — each proven on its
@@ -205,6 +210,7 @@ plumb lock [ROOT]             # print what a fresh affirmation would record
 plumb changelog [ROOT]        # refuse a version whose en+zh changelog is absent or empty
 plumb policy [ROOT] --write   # reconcile ectropy.toml against the repository
 plumb release authority       # print the product's canonical public release authority
+plumb release dispatch        # dispatch an exact or stable Forgejo release workflow
 plumb release matrix          # derive the shared target matrix from plumb.toml
 plumb release build           # build and archive one declared target
 plumb release assemble        # gather targets and build declared attachments
@@ -214,7 +220,14 @@ plumb release publish         # publish immutable objects and the exact seal
 plumb release activate        # move stable consensus with its separate authority
 plumb release inspect         # verify an exact seal or stable public surface
 plumb release smoke           # exercise a generated manager on this platform
-plumb release packport        # prove a stable commit is now an ancestor of main
+plumb release packport        # CI proof that stable is already an ancestor of main
+plumb stable prepare          # create a writable operator-only stable release line
+plumb stable pick             # append one cherry-pick -x candidate commit
+plumb stable freeze           # make the stable release line immutable
+plumb stable packport         # merge published stable into main and retain its line
+plumb site plan               # derive the build, deploy, and readback plan
+plumb site inspect            # read token, worker, and domain binding state
+plumb site deploy             # build, deploy, and prove the public fingerprint
 plumb skill install           # install this brief into detected agent directories
 plumb skill stage             # unpack one exact candidate into a new explicit path
 plumb skill status            # compare managed installs with stable, read-only

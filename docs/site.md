@@ -9,10 +9,14 @@ what answers is what was built.
 `deploy.yml` runs on dispatch alone. Landing changes main; shipping the site is a separate,
 deliberate act, so a documentation change never moves what the world sees.
 
-The lane calls the repository's own ship wrapper — the same entry an operator runs locally. One
-implementation serves both callers, which is why the wrapper takes its credentials through the env
-door: the operator's come from `.local/secrets`, the lane's from repository secrets and variables,
-and neither path is a second implementation.
+The lane installs stable Plumb and calls `plumb site deploy` — the same entry an operator runs
+locally. Plumb discovers the one `apps/*/wrangler.jsonc` declaration and derives the application
+seat, package name, assets directory, and worker name. Product repositories carry no ship wrapper
+and no product-specific deployment mechanism.
+
+`plumb site plan` is credential-free. It prints the derived build, deployment, and readback plan and
+runs Wrangler's dry run when a built index exists. `plumb site inspect` reads token, worker, and
+binding state without deploying.
 
 ## Credentials
 
@@ -26,7 +30,10 @@ nested under the account resource, or named by zone id directly. A flat
 `com.cloudflare.api.account.zone.*` is refused with code 1001.
 
 Secrets carry what must not be read back; variables carry what merely must be correct. The domain
-and the account identifier are variables. Only the key is a secret.
+and the account identifier are variables. Only the key is a secret. The CLI reads
+`PLUMB_SITE_TOKEN`, `PLUMB_SITE_ACCOUNT`, and `PLUMB_SITE_DOMAIN` through its typed configuration
+boundary. The token is passed to Wrangler through its environment and to the control plane through
+curl configuration input, never as an argument.
 
 ## The artifact declares itself
 
@@ -52,7 +59,7 @@ A deploy has three outcomes and they are not one outcome:
   vantage that can see the public edge.
 
 Collapsing these is how a lane comes to report success over a site that does not answer. When the
-readback fails the lane fails, and the escape is explicit: `PLUMB_SITE_BLIND=1` declares a vantage
+readback fails the lane fails, and the escape is explicit: `PLUMB_SITE_BLIND=true` declares a vantage
 that cannot see the edge, and the lane then says plainly that it did not prove the site answers. A
 lane that cannot prove liveness must say so rather than imply it.
 

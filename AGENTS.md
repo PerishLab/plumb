@@ -23,7 +23,8 @@ link, and it is the only one.
   ecosystem.
 - `docs/audit.md` — the opt-in Locus audit surface and its observation boundary.
 - `apps/web` — the site at plumb.perish.uk, shipped by the deploy lane on
-  dispatch and verified by readback (`docs/site.md`).
+  dispatch through `plumb site deploy` and verified by readback
+  (`docs/site.md`).
 - `packages/*` — publishable specimens, when they earn their place.
 
 The layout is not invented; it is the union already demonstrated by codehull and
@@ -89,9 +90,12 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - Exact publication may bind any operator-selected branch ref; the called
   shared workflow freezes its direct event ref and commit once and every job
   checks out that commit. Product callers expose and forward no second source.
+  `plumb release dispatch` is the generic Forgejo entrypoint and preserves
+  arbitrary exact channel and branch selection.
   Stable alone must originate from `refs/heads/release/vX.Y.Z`. A stable
-  release line is prepared by linear `cherry-pick -x`, frozen before
-  publication, and remains independent from an unblocked `main`.
+  release line is managed by `plumb stable prepare|pick|freeze|packport`,
+  prepared by linear `cherry-pick -x`, frozen before publication, and remains
+  independent from an unblocked `main`.
 - Exact seal creation is create-only and idempotent by content. Publish and
   stable activation use separate credentials and separate Plumb commands.
 - `plumb release inspect` takes its exact or stable public URL from the release
@@ -111,44 +115,40 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   ancestor of `main` before another stable line can activate. This settlement
   is independent from the Actions lane; exact publication and ordinary `main`
   work remain unblocked. The settled release branch remains permanently frozen
-  as the stable version's source and audit boundary.
+  as the stable version's source and audit boundary; the merge request never
+  asks Forgejo to delete it.
 - Every product repository uses the same Forgejo secret names:
   `RELEASE_PUBLISH_S3_*`, `RELEASE_ACTIVATE_S3_*`, and optional
   `RELEASE_REGISTRY_TOKEN`. Authority comes from `plumb.toml`, not a repository
   variable.
 
-## Ecosystem release cold-start
+## Site
 
-`runseal :cold-start project` creates or verifies one exact empty Forgejo
-repository before its integration checkout and first task member exist. It is
-credential-free in dry-run mode and refuses a nonempty, archived, differently
-described, or differently visible existing repository.
+- A repository declares one site with `apps/*/wrangler.jsonc`; Plumb derives
+  its package, assets, worker, routes, and fingerprint without a repository
+  ship wrapper.
+- `plumb site plan` is credential-free, `plumb site inspect` reads Cloudflare
+  state, and `plumb site deploy` builds, uploads, reads binding, and proves the
+  public edge serves the built fingerprint.
+- Site authority enters only through `PLUMB_SITE_TOKEN`,
+  `PLUMB_SITE_ACCOUNT`, and `PLUMB_SITE_DOMAIN`. The token never enters command
+  arguments or logs.
+- Deploy, bound, and reachable are separate outcomes. Binding is
+  `yes|no|unknown`; `PLUMB_SITE_BLIND=true` can excuse failed reachability only
+  when binding is positively known.
 
-`runseal :cold-start release` is the explicit low-frequency control-plane
-entrypoint for a new R2-backed Forgejo release chain. The permanent Cloudflare
-authority lives only in the main checkout at
-`.local/secrets/cloudflare-token-factory.env`, with mode `0600`, as the
-account-owned token `super:perish.code`. It has only
-`Account API Tokens Write`.
+## Control-plane cold-start
 
-The naming and authority split is fixed:
+Repository creation belongs to the Forgejo control plane. Bucket, domain,
+token, and credential lifecycle belongs to the declared infrastructure
+resource owner. Plumb neither creates those resources nor writes their
+credentials into Forgejo; it consumes the already provisioned
+`RELEASE_PUBLISH_S3_*` and `RELEASE_ACTIVATE_S3_*` authority at publication
+time.
 
-- `super:perish.code` — permanent token factory; never enters CI or performs
-  business-resource operations directly.
-- `tmp:<bucket>` — 15-minute account-scoped R2 administration token, revoked
-  on every completion path.
-- `publish:<bucket>` — permanent exact-object publication capability scoped to
-  one bucket.
-- `activate:<bucket>` — permanent stable-consensus activation capability
-  scoped to one bucket.
-
-The wrapper creates or verifies the bucket and TLS 1.2 custom domain, derives
-two independent S3 credential sets, verifies each, stores the local escrow at
-`.local/secrets/releases/<product>.env`, and syncs only the derived
-bucket-scoped values into Forgejo. Permission-group IDs are discovered by
-exact name and resource scope at runtime. A persistent capability without its
-matching local escrow is a fail-closed recovery case because its secret cannot
-be reconstructed.
+No cold-start wrapper or token factory belongs in this repository. A missing
+authority blocks release setup at its owning control plane rather than
+inviting Plumb to infer or repair external state.
 
 Plumb itself needs one explicit genesis ceremony to publish and activate the
 first release that contains this substrate. The ceremony runs the source-built

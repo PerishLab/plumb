@@ -19,6 +19,10 @@ pub enum Deed {
     Authority,
     Build,
     Compile,
+    Dispatch {
+        #[command(flatten)]
+        options: super::operator::Dispatch,
+    },
     Inspect,
     Managers,
     Matrix,
@@ -74,6 +78,7 @@ fn execute(deed: Deed) -> Result<String, String> {
             artifacts: &artifacts(release)?,
         }),
         Deed::Compile => compile(&spec, release),
+        Deed::Dispatch { options } => super::operator::dispatch(options),
         Deed::Inspect => verify::inspect(
             required("PLUMB_RELEASE_URL", &release.url)?,
             release.activated,
@@ -193,6 +198,18 @@ fn rebase(root: &Path, path: &Path) -> PathBuf {
     } else {
         path.to_path_buf()
     }
+}
+
+pub(super) fn authority(root: &Path) -> Result<String, String> {
+    model::Spec::read(&root.join("plumb.toml")).map(|spec| spec.authority)
+}
+
+pub(super) fn inspect(url: &str) -> Result<String, String> {
+    verify::inspect(url, true)
+}
+
+pub(super) fn settled(root: &Path, version: &str, commit: &str) -> Result<String, String> {
+    engine::topology::packport(root, version, commit, "origin/main")
 }
 
 impl storage::Authority for Authority {

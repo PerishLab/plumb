@@ -40,13 +40,11 @@ pub fn promotion(input: Claim<'_>) -> Result<Option<Promotion>, String> {
         Version::parse(input.version.trim_start_matches('v')).map_err(|error| error.to_string())?;
     let candidate =
         Version::parse(proof.version.trim_start_matches('v')).map_err(|error| error.to_string())?;
-    if proof.schema != 1
-        || proof.product != input.spec.product
-        || proof.channel == "stable"
-        || proof.commit != input.commit
-        || (stable.major, stable.minor, stable.patch)
-            != (candidate.major, candidate.minor, candidate.patch)
-    {
+    let release = (stable.major, stable.minor, stable.patch);
+    let source = (candidate.major, candidate.minor, candidate.patch);
+    let current = proof.schema == 1 && proof.channel != "stable";
+    let identity = proof.product == input.spec.product && proof.commit == input.commit;
+    if !current || !identity || release != source {
         return Err("promotion seal does not prove this stable release".into());
     }
     Ok(Some(Promotion {
@@ -59,12 +57,9 @@ pub fn advance(
     current: &super::record::Pointer,
     next: &super::record::Pointer,
 ) -> Result<(), String> {
-    if current.schema != 1
-        || next.schema != 1
-        || current.product != next.product
-        || current.channel != "stable"
-        || next.channel != "stable"
-    {
+    let schema = current.schema == 1 && next.schema == 1;
+    let stable = current.channel == "stable" && next.channel == "stable";
+    if !schema || !stable || current.product != next.product {
         return Err("stable pointer identity mismatch".into());
     }
     let before = Version::parse(current.version.trim_start_matches('v'))

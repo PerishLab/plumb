@@ -54,11 +54,11 @@ struct Rule<'a> {
 
 impl<'a> Remote<'a> {
     fn new(held: &'a dyn Authority) -> Result<Self, String> {
-        if held.access().is_empty()
-            || held.secret().is_empty()
-            || held.bucket().is_empty()
-            || !held.endpoint().starts_with("https://")
-        {
+        let secrets = [held.access(), held.secret(), held.bucket()];
+        if secrets.iter().any(|value| value.is_empty()) {
+            return Err("incomplete S3 release authority".into());
+        }
+        if !held.endpoint().starts_with("https://") {
             return Err("incomplete S3 release authority".into());
         }
         Ok(Self { held })

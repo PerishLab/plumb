@@ -264,15 +264,19 @@ impl Selector {
     }
 
     fn matches(&self, rule: &Rule) -> bool {
-        let tags = rule.tags.iter().map(|tag| tag.id).collect::<BTreeSet<_>>();
-        self.namespace
+        let held = rule.tags.iter().map(|tag| tag.id).collect::<BTreeSet<_>>();
+        let namespace = self
+            .namespace
             .as_deref()
-            .is_none_or(|namespace| rule.namespace() == namespace)
-            && self.tags.iter().all(|tag| tags.contains(tag.as_str()))
-            && (self.any.is_empty() || self.any.iter().any(|tag| tags.contains(tag.as_str())))
-            && self.without.iter().all(|tag| !tags.contains(tag.as_str()))
-            && (self.standings.is_empty() || self.standings.contains(rule.standing.id()))
-            && (self.owners.is_empty() || self.owners.contains(rule.owner.id))
+            .is_none_or(|namespace| rule.namespace() == namespace);
+        let tags = self.tags.iter().all(|tag| held.contains(tag.as_str()));
+        let any = self.any.is_empty() || self.any.iter().any(|tag| held.contains(tag.as_str()));
+        let without = self.without.iter().all(|tag| !held.contains(tag.as_str()));
+        let standing = self.standings.is_empty() || self.standings.contains(rule.standing.id());
+        let owner = self.owners.is_empty() || self.owners.contains(rule.owner.id);
+        [namespace, tags, any, without, standing, owner]
+            .into_iter()
+            .all(|held| held)
     }
 }
 

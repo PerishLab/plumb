@@ -7,7 +7,7 @@ pub use guard::{
     GUARD_CHECKS_RELEASE_PROFILE, GUARD_CONCURRENCY, GUARD_RUNS_DOCTOR, GUARD_RUNS_ECTROPY,
     GUARD_USES_CURRENT_ECTROPY_MODE,
 };
-pub use site::{SITE_DEPLOY_LANE, SITE_SHIP_WRAPPER};
+pub use site::SITE_DEPLOY_LANE;
 
 rule!(
     GUARD_LANE_PRESENT,
@@ -229,16 +229,6 @@ rule!(
     RELEASE,
     [RELEASE_TAG, REPOSITORY]
 );
-rule!(
-    REGISTRY_RELEASE_WRAPPER_PRESENT,
-    "structure.registry-release-wrapper-present",
-    "Registry releases have an operator wrapper",
-    "A repository publishing registry packages exposes one operator wrapper.",
-    "Published package declarations and the wrapper seat.",
-    Mechanized,
-    RELEASE,
-    [ADOPTION, RELEASE_TAG]
-);
 #[rustfmt::skip]
 pub fn all() -> Vec<&'static Rule> {
     vec![
@@ -250,7 +240,7 @@ pub fn all() -> Vec<&'static Rule> {
         &INIT_PATHS_READABLE, &INIT_REQUIRES_EXISTING_WRAPPER, &INIT_REQUIRES_PLUMB,
         &GUARD_LANE_PRESENT, &KNOWN_DIRECTORY, &KNOWN_WORKFLOW, &KNOWN_WRAPPER,
         &OPERATOR_TEST_OWNED_BY_SEALKIT, &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
-        &REGISTRY_RELEASE_WRAPPER_PRESENT, &RELEASE_LANE_PRESENT, &RELEASE_SOURCE_BOUND,
-        &RESERVED_COMPONENTS_SEAT, &SITE_DEPLOY_LANE, &SITE_SHIP_WRAPPER,
+        &RELEASE_LANE_PRESENT, &RELEASE_SOURCE_BOUND, &RESERVED_COMPONENTS_SEAT,
+        &SITE_DEPLOY_LANE,
     ]
 }

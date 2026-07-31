@@ -77,8 +77,13 @@ allow = ["fanout"]
 [vocabulary]
 term = [
   { name = "manifest_path", description = "Cargo metadata names a package manifest path as one schema field." },
+  { name = "guard_pending_ms", description = "The operator harness names its pending guard poll interval in milliseconds." },
+  { name = "guard_register_ms", description = "The operator harness names its absent guard registration poll interval in milliseconds." },
+  { name = "guard_timeout_ms", description = "The operator harness names its guard deadline in milliseconds." },
   { name = "promotion_channel", description = "An exact promotion channel is one release proof field." },
   { name = "promotion_version", description = "An exact promotion version is one release proof field." },
   { name = "registry_token", description = "The Cargo registry token is one release authority field." },
+  { name = "run_poll_ms", description = "The operator harness names its workflow poll interval in milliseconds." },
+  { name = "run_timeout_ms", description = "The operator harness names its workflow deadline in milliseconds." },
   { name = "target_directory", description = "Cargo metadata names its build target directory as one schema field." },
 ]

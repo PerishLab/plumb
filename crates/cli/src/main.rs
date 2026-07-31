@@ -53,6 +53,14 @@ enum Command {
         #[command(subcommand)]
         deed: dispatch::release::Deed,
     },
+    Stable {
+        #[command(subcommand)]
+        deed: dispatch::operator::Stable,
+    },
+    Site {
+        #[command(subcommand)]
+        deed: dispatch::site::Deed,
+    },
 }
 
 impl Command {
@@ -65,6 +73,8 @@ impl Command {
             Self::Lock { .. } => "lock",
             Self::Changelog { .. } => "changelog",
             Self::Release { .. } => "release",
+            Self::Stable { .. } => "stable",
+            Self::Site { .. } => "site",
         }
     }
 }
@@ -163,6 +173,8 @@ fn execute(command: Command) -> i32 {
         Command::Lock { target } => locks(PathBuf::from(target.root)),
         Command::Changelog { target, version } => changelog(PathBuf::from(target.root), version),
         Command::Release { deed } => dispatch::release::run(deed),
+        Command::Stable { deed } => dispatch::operator::run(deed),
+        Command::Site { deed } => dispatch::site::run(deed),
     }
 }
 
