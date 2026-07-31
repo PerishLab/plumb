@@ -13,6 +13,10 @@ contract lives in `crates/lib/src/config.rs`. `resolve(file)` folds the layers i
 `resolve_with(file, over)` merges an arguments partial last. The environment prefix is the crate
 name, uppercased, `-` become `_` — one namespace per binary, no invented names.
 
+`#[cascade(strict)]` makes the generated file partial refuse unknown top-level fields.
+Use `#[cascade(section, strict)]` on strict nested sections. Strictness is explicit because
+some products intentionally project several independent cascades from one shared TOML document.
+
 ## Doors
 
 Two doors, one per external layer. What arrives through a door is named, typed, and refused loudly

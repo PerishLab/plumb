@@ -20,12 +20,12 @@ fn json(args: &[&str]) -> Value {
 
 #[test]
 fn show() {
-    let report = json(&["rule", "show", "structure.missing-wrapper", "--json"]);
+    let report = json(&["rule", "show", "structure.guard-lane-present", "--json"]);
     assert_eq!(report["schema"], "plumb.rule/v1");
     let rule = &report["rule"];
-    assert_eq!(rule["id"], "structure.missing-wrapper");
+    assert_eq!(rule["id"], "structure.guard-lane-present");
     assert_eq!(rule["namespace"], "structure");
-    assert_eq!(rule["name"], "missing-wrapper");
+    assert_eq!(rule["name"], "guard-lane-present");
     assert_eq!(rule["standing"], "mechanized");
     assert_eq!(rule["owner"], "plumb");
     assert!(rule["law"].as_str().is_some_and(|value| !value.is_empty()));
@@ -94,8 +94,8 @@ fn catalog() {
     let mechanized = json(&["rule", "list", "--standing", "mechanized", "--json"]);
     let prose = json(&["rule", "list", "--standing", "prose-only", "--json"]);
     assert_eq!(all["schema"], "plumb.rule-list/v1");
-    assert_eq!(all["rules"].as_array().map(Vec::len), Some(118));
-    assert_eq!(mechanized["rules"].as_array().map(Vec::len), Some(78));
+    assert_eq!(all["rules"].as_array().map(Vec::len), Some(117));
+    assert_eq!(mechanized["rules"].as_array().map(Vec::len), Some(77));
     assert_eq!(prose["rules"].as_array().map(Vec::len), Some(40));
 
     for (deed, schema, field) in [

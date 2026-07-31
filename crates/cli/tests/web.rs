@@ -16,7 +16,8 @@ fn fixture(name: &str) -> std::path::PathBuf {
         "apps/web/src/views",
         "apps/web/src/lib/components",
         "apps/web/src/lib/hooks",
-        ".runseal/wrappers",
+        ".runseal/resources",
+        ".forgejo/workflows",
     ] {
         std::fs::create_dir_all(root.join(path)).expect("fixture should be made");
     }
@@ -46,8 +47,8 @@ fn fixture(name: &str) -> std::path::PathBuf {
     )
     .expect("view should be written");
     std::fs::write(
-        root.join(".runseal/wrappers/guard.ts"),
-        r#"["pnpm", ["--filter", "@specimen/web", "build"]]"#,
+        root.join(".forgejo/workflows/guard.yml"),
+        "name: guard\njobs:\n  guard:\n    steps:\n      - run: pnpm --filter @specimen/web build\n",
     )
     .expect("guard should be written");
     root

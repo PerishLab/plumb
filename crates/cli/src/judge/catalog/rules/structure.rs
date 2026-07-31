@@ -10,21 +10,11 @@ pub use guard::{
 pub use site::{SITE_DEPLOY_LANE, SITE_SHIP_WRAPPER};
 
 rule!(
-    MISSING_WRAPPER,
-    "structure.missing-wrapper",
-    "Required wrappers exist",
-    "A governed repository carries every operator wrapper required by its shape.",
-    "Wrapper files under .runseal/wrappers.",
-    Mechanized,
-    PLUMB,
-    [ADOPTION, REPOSITORY]
-);
-rule!(
-    MISSING_HOOK,
-    "structure.missing-hook",
-    "Required git hooks exist",
-    "A governed repository carries the workshop git hooks.",
-    "Hook files under .runseal/hooks.",
+    GUARD_LANE_PRESENT,
+    "structure.guard-lane-present",
+    "Guard has one workflow lane",
+    "A governed repository carries the canonical guard workflow without requiring a repository-local wrapper.",
+    "The .forgejo/workflows/guard.yml seat.",
     Mechanized,
     PLUMB,
     [ADOPTION, REPOSITORY]
@@ -258,7 +248,7 @@ pub fn all() -> Vec<&'static Rule> {
         &GUARD_CHECKS_RELEASE_PROFILE, &GUARD_CONCURRENCY,
         &GUARD_RUNS_DOCTOR, &GUARD_RUNS_ECTROPY, &GUARD_USES_CURRENT_ECTROPY_MODE,
         &INIT_PATHS_READABLE, &INIT_REQUIRES_EXISTING_WRAPPER, &INIT_REQUIRES_PLUMB,
-        &KNOWN_DIRECTORY, &KNOWN_WORKFLOW, &KNOWN_WRAPPER, &MISSING_HOOK, &MISSING_WRAPPER,
+        &GUARD_LANE_PRESENT, &KNOWN_DIRECTORY, &KNOWN_WORKFLOW, &KNOWN_WRAPPER,
         &OPERATOR_TEST_OWNED_BY_SEALKIT, &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
         &REGISTRY_RELEASE_WRAPPER_PRESENT, &RELEASE_LANE_PRESENT, &RELEASE_SOURCE_BOUND,
         &RESERVED_COMPONENTS_SEAT, &SITE_DEPLOY_LANE, &SITE_SHIP_WRAPPER,

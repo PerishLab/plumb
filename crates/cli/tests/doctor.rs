@@ -44,15 +44,15 @@ fn governs() {
     std::fs::write(bare.join("README.md"), "# bare\n").expect("readme should be written");
     let out = run(&["doctor", bare.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&bare).expect("fixture should be swept");
-    assert!(!out.contains("no guard wrapper"), "{out}");
+    assert!(!out.contains("no guard workflow"), "{out}");
     assert!(!out.contains("no ectropy.toml"), "{out}");
     assert!(out.contains("true to the skeleton"), "{out}");
 
     let seat = std::env::temp_dir().join("plumb-governed");
-    std::fs::create_dir_all(seat.join(".runseal/wrappers")).expect("fixture should be made");
+    std::fs::create_dir_all(seat.join(".runseal")).expect("fixture should be made");
     let out = run(&["doctor", seat.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&seat).expect("fixture should be swept");
-    assert!(out.contains("no guard wrapper"), "{out}");
+    assert!(out.contains("no guard workflow"), "{out}");
     assert!(out.contains("no ectropy.toml"), "{out}");
 }
 
@@ -205,20 +205,18 @@ fn retired() {
 }
 
 #[test]
-fn hooks() {
+fn hookless() {
     let dir = std::env::temp_dir().join("plumb-hookless");
-    std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");
-    let bare = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    assert!(bare.contains("no pre-commit hook"), "{bare}");
-    assert!(bare.contains("no commit-msg hook"), "{bare}");
-
-    std::fs::create_dir_all(dir.join(".runseal/hooks")).expect("fixture should be made");
-    for name in ["pre-commit", "commit-msg"] {
-        std::fs::write(dir.join(format!(".runseal/hooks/{name}")), "#!/bin/sh\n")
-            .expect("hook should be written");
-    }
+    std::fs::create_dir_all(dir.join(".runseal")).expect("fixture should be made");
+    std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
+    std::fs::write(
+        dir.join(".forgejo/workflows/guard.yml"),
+        "name: guard\nconcurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true\njobs:\n  guard:\n    steps:\n      - run: plumb doctor . && ectropy .\n",
+    )
+    .expect("workflow should be written");
+    let policy = run(&["policy", dir.to_str().expect("path should be utf8")]);
+    std::fs::write(dir.join("ectropy.toml"), policy).expect("policy should be written");
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(!held.contains("no pre-commit hook"), "{held}");
-    assert!(!held.contains("no commit-msg hook"), "{held}");
+    assert!(held.contains("true to the skeleton"), "{held}");
 }

@@ -38,7 +38,7 @@ does not claim that every catalogued law is mechanized.
 
 ```sh
 plumb rule list
-plumb rule show structure.missing-wrapper
+plumb rule show structure.guard-lane-present
 plumb rule namespaces
 plumb rule tags
 plumb rule owners

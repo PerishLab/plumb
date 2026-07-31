@@ -58,21 +58,12 @@ impl shape::Shape {
     fn structure(&self) -> Found {
         let mut found = Found::new();
         if self.runseal {
-            for name in &RULES.required {
-                if !self.wrappers.contains(name) {
-                    found.push(wrong(
-                        &structure_rule::MISSING_WRAPPER,
-                        format!("no {name} wrapper"),
-                    ));
-                }
-            }
-            for name in &RULES.hooks {
-                if !self.hooks.contains(name) {
-                    found.push(wrong(
-                        &structure_rule::MISSING_HOOK,
-                        format!("no {name} hook"),
-                    ));
-                }
+            let guarded = self.lanes.contains("guard") || self.wrappers.contains("guard");
+            if !self.lanes.contains("guard") {
+                found.push(wrong(
+                    &structure_rule::GUARD_LANE_PRESENT,
+                    "no guard workflow",
+                ));
             }
             if !self.laws {
                 found.push(wrong(
@@ -80,30 +71,25 @@ impl shape::Shape {
                     "no ectropy.toml",
                 ));
             }
-            if self.wrappers.contains("guard")
-                && !(self.guard.contains("plumb") && self.guard.contains("doctor"))
-            {
+            if guarded && !(self.guard.contains("plumb") && self.guard.contains("doctor")) {
                 found.push(wrong(
                     &structure_rule::GUARD_RUNS_DOCTOR,
                     "guard does not run plumb doctor",
                 ));
             }
-            if self.wrappers.contains("guard") && !self.guard.contains("\"ectropy\"") {
+            if guarded && !self.guard.contains("ectropy") {
                 found.push(wrong(
                     &structure_rule::GUARD_RUNS_ECTROPY,
                     "guard does not run ectropy explicitly",
                 ));
             }
-            if self.rust && self.wrappers.contains("guard") && !self.guard.contains("\"--release\"")
-            {
+            if self.rust && guarded && !self.guard.contains("--release") {
                 found.push(wrong(
                     &structure_rule::GUARD_CHECKS_RELEASE_PROFILE,
                     "guard does not exercise the release profile",
                 ));
             }
-            if self.wrappers.contains("guard")
-                && (self.guard.contains("\"--strict\"") || self.guard.contains("\"--debt\""))
-            {
+            if guarded && (self.guard.contains("--strict") || self.guard.contains("--debt")) {
                 found.push(wrong(
                     &structure_rule::GUARD_USES_CURRENT_ECTROPY_MODE,
                     "guard uses an obsolete ectropy mode",

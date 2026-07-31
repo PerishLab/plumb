@@ -16,7 +16,6 @@ pub use lock::{Lock, locked, seal};
 
 pub struct Shape {
     pub wrappers: BTreeSet<String>,
-    pub hooks: BTreeSet<String>,
     pub dirs: BTreeSet<String>,
     pub actions: BTreeSet<String>,
     pub tests: Vec<String>,
@@ -242,9 +241,16 @@ pub fn read(root: &Path) -> Shape {
             }
         }
     }
+    let lane = std::fs::read_to_string(root.join(".forgejo/workflows/guard.yml"))
+        .ok()
+        .map(|text| text.replace("\r\n", "\n"));
+    let guard = format!(
+        "{}\n{}",
+        std::fs::read_to_string(root.join(".runseal/wrappers/guard.ts")).unwrap_or_default(),
+        lane.as_deref().unwrap_or_default()
+    );
     Shape {
         wrappers: seat.names(".runseal/wrappers", ".ts"),
-        hooks: seat.names(".runseal/hooks", ""),
         dirs: seat.dirs(),
         actions: operator::actions(root),
         tests: operator::tests(root),
@@ -259,9 +265,7 @@ pub fn read(root: &Path) -> Shape {
         ignore: std::fs::read_to_string(root.join(".gitignore")).unwrap_or_default(),
         rust: root.join("Cargo.toml").exists(),
         runseal: root.join(".runseal").is_dir(),
-        lane: std::fs::read_to_string(root.join(".forgejo/workflows/guard.yml"))
-            .ok()
-            .map(|text| text.replace("\r\n", "\n")),
+        lane,
         edition: seat.edition(),
         binary: seat.binary(),
         clap: seat.manifests().iter().any(|text| {
@@ -287,11 +291,10 @@ pub fn read(root: &Path) -> Shape {
         version: lock::held(root),
         inits: root.join(".runseal/wrappers/init.ts").exists()
             || root.join(".runseal/lib/init/init.ts").exists(),
-        guard: std::fs::read_to_string(root.join(".runseal/wrappers/guard.ts")).unwrap_or_default(),
+        guard,
         init: std::fs::read_to_string(root.join(".runseal/wrappers/init.ts")).unwrap_or_default(),
     }
 }
-
 pub fn reconcile(root: &Path, text: &str) -> Result<String, String> {
     policy::render(root, text)
 }

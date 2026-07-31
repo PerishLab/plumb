@@ -4,8 +4,6 @@ use std::sync::LazyLock;
 pub struct Rules {
     pub dirs: BTreeSet<String>,
     pub wrappers: BTreeSet<String>,
-    pub required: BTreeSet<String>,
-    pub hooks: BTreeSet<String>,
     pub lanes: BTreeSet<String>,
     pub retired: Vec<(String, String)>,
     pub blacklist: BTreeSet<String>,
@@ -80,8 +78,6 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
     Rules {
         dirs: set("dirs"),
         wrappers: set("wrappers"),
-        required: set("required"),
-        hooks: set("hooks"),
         lanes: set("lanes"),
         retired,
         blacklist,

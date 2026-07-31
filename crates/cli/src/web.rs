@@ -108,10 +108,14 @@ impl Web<'_> {
                 "web has no build script",
             );
         }
-        let guard =
-            std::fs::read_to_string(self.0.join(".runseal/wrappers/guard.ts")).unwrap_or_default();
+        let guard = format!(
+            "{}\n{}",
+            std::fs::read_to_string(self.0.join(".runseal/wrappers/guard.ts")).unwrap_or_default(),
+            std::fs::read_to_string(self.0.join(".forgejo/workflows/guard.yml"))
+                .unwrap_or_default()
+        );
         let name = package.get("name").and_then(Json::as_str);
-        if !guard.contains("\"build\"") || name.is_none_or(|name| !guard.contains(name)) {
+        if !guard.contains("build") || name.is_none_or(|name| !guard.contains(name)) {
             wrong(
                 found,
                 &rule::GUARD_BUILDS_WEB,
@@ -272,7 +276,6 @@ impl Web<'_> {
         }
     }
 }
-
 fn has(doc: &Json, name: &str) -> bool {
     [
         "dependencies",
@@ -283,18 +286,15 @@ fn has(doc: &Json, name: &str) -> bool {
     .iter()
     .any(|seat| doc.get(seat).and_then(|map| map.get(name)).is_some())
 }
-
 #[rustfmt::skip] fn segment(name: &str) -> bool {
     if let Some(held) = name.strip_prefix('{').and_then(|value| value.strip_suffix('}')) {
         return word(held) && held.as_bytes()[0].is_ascii_lowercase();
     }
     name.split('-').all(word)
 }
-
 #[rustfmt::skip] fn word(value: &str) -> bool {
     !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
 }
-
 fn wrong(found: &mut Found, rule: &'static Mechanism, evidence: &str) {
     found.push(Seed::wrong(rule, evidence));
 }

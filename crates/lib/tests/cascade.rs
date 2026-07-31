@@ -3,7 +3,7 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 
 #[derive(Debug, Deserialize, PartialEq, plumb::config::Cascade)]
-#[cascade(section)]
+#[cascade(section, strict)]
 #[serde(default)]
 struct Bind {
     host: String,
@@ -20,6 +20,7 @@ impl Default for Bind {
 }
 
 #[derive(Debug, PartialEq, plumb::config::Cascade)]
+#[cascade(strict)]
 struct Rig {
     name: String,
     count: u16,
@@ -78,6 +79,22 @@ fn filed() {
     assert_eq!(held.listen.host, "127.0.0.1");
     assert_eq!(held.count, 4);
     assert_eq!(held.extras.get("key").map(String::as_str), Some("value"));
+}
+
+#[test]
+fn strict() {
+    let dir = std::env::temp_dir().join("plumb-cascade-strict");
+    std::fs::create_dir_all(&dir).expect("fixture should be made");
+    let path = dir.join("rig.toml");
+
+    std::fs::write(&path, "unknown = true\n").expect("file should be written");
+    let root = Rig::resolve(Some(&path)).expect_err("unknown root field should fail");
+    assert!(root.to_string().contains("unknown field"), "{root}");
+
+    std::fs::write(&path, "[listen]\nunknown = true\n").expect("file should be written");
+    let section = Rig::resolve(Some(&path)).expect_err("unknown section field should fail");
+    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
+    assert!(section.to_string().contains("unknown field"), "{section}");
 }
 
 #[test]

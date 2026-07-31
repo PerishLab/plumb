@@ -12,9 +12,16 @@ struct Row {
     arg: bool,
 }
 
+#[derive(Default)]
+struct Mode {
+    section: bool,
+    strict: bool,
+}
+
 pub fn expand(item: DeriveInput) -> Result<TokenStream, syn::Error> {
     let rows = rows(&item)?;
-    let section = marked(&item.attrs)?;
+    let mode = marked(&item.attrs)?;
+    let section = mode.section;
     if section && rows.iter().any(|row| row.arg) {
         return Err(syn::Error::new_spanned(
             &item.ident,
@@ -27,9 +34,13 @@ pub fn expand(item: DeriveInput) -> Result<TokenStream, syn::Error> {
     let held = rows.iter().map(|row| row.held(vis));
     let reads = rows.iter().map(Row::read);
     let merges = rows.iter().map(Row::merge);
+    let strict = mode
+        .strict
+        .then(|| quote! { #[serde(deny_unknown_fields)] });
     let mut out = quote! {
         #[derive(Debug, Default, ::plumb::serde::Deserialize)]
         #[serde(crate = "::plumb::serde", default)]
+        #strict
         #vis struct #partial {
             #(#held,)*
         }
@@ -195,21 +206,25 @@ fn armed(item: &DeriveInput, partial: &Ident, rows: &[Row]) -> TokenStream {
     }
 }
 
-fn marked(attrs: &[Attribute]) -> Result<bool, syn::Error> {
-    let mut section = false;
+fn marked(attrs: &[Attribute]) -> Result<Mode, syn::Error> {
+    let mut mode = Mode::default();
     for attr in attrs {
         if !attr.path().is_ident("cascade") {
             continue;
         }
         attr.parse_nested_meta(|meta| {
             if meta.path.is_ident("section") {
-                section = true;
+                mode.section = true;
                 return Ok(());
             }
-            Err(meta.error("use #[cascade(section)] on the struct"))
+            if meta.path.is_ident("strict") {
+                mode.strict = true;
+                return Ok(());
+            }
+            Err(meta.error("use #[cascade(section, strict)] on the struct"))
         })?;
     }
-    Ok(section)
+    Ok(mode)
 }
 
 fn row(field: &Field) -> Result<Row, syn::Error> {

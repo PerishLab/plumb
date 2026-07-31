@@ -119,9 +119,13 @@ staged, atomic, and monotonic unless an exact rollback is explicit. Promotion
 embeds the exact candidate seal and requires the same source commit. See
 `references/lane.md`.
 
-**Repository shape.** Wrappers, hooks, lanes, and layout follow the skeleton
-the workshop already demonstrates rather than each repository's invention. Most
-of this clause is enforced; see below.
+**Repository shape.** Generic wrappers and repository-owned Git hooks are not
+repository facts. Guard keeps one canonical workflow lane and runs Plumb plus
+Ectropy directly; generic init, land, and release behavior belongs to the
+substrate entrypoint that owns it. Transitional or product-specific wrappers
+remain observed and must have a known role, but their absence is valid. Lanes
+and layout follow the skeleton the workshop already demonstrates rather than
+each repository's invention. Most of this clause is enforced; see below.
 
 **Dependencies.** Direct first-party dependencies across the `@perish` JSR
 scope and `perish` Cargo registry track live stable latest. Deno declarations
@@ -168,7 +172,7 @@ the current work:
 plumb rule list --standing mechanized
 plumb rule list --standing prose-only
 plumb rule list --namespace site --tag site
-plumb rule show structure.missing-wrapper
+plumb rule show structure.guard-lane-present
 ```
 
 `mechanized` means the doctor owns an evaluator and may emit a verdict.
