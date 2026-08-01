@@ -1,4 +1,4 @@
-#[path = "../../src/dispatch/operator/token/parser.rs"]
+#[path = "../../src/forge/token/parser.rs"]
 mod parser;
 
 #[test]

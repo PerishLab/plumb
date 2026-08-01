@@ -1,4 +1,4 @@
-mod support;
+use super::support;
 
 use plumb::context::Context;
 use plumb::trace::{Ledger, Sink, Span, span};

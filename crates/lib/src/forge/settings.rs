@@ -1,5 +1,5 @@
-use plumb::config::Cascade as _;
-use plumb::rig::{Forgejo, Harness};
+use crate::config::Cascade as _;
+use crate::rig::{Forgejo, Harness};
 
 pub fn token() -> Result<String, String> {
     Ok(Forgejo::default()

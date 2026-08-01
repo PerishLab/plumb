@@ -1,4 +1,4 @@
-use super::api::Remote;
+use super::model::Remote;
 use std::path::PathBuf;
 
 mod parser;
@@ -33,7 +33,7 @@ pub fn read(remote: &Remote) -> Result<String, String> {
 
 fn seats() -> Result<Vec<PathBuf>, String> {
     let home =
-        plumb::config::home().ok_or_else(|| "HOME is required to locate tea config".to_string())?;
+        crate::config::home().ok_or_else(|| "HOME is required to locate tea config".to_string())?;
     let mut found = Vec::new();
     if cfg!(target_os = "macos") {
         found.push(

@@ -5,11 +5,16 @@ pub mod cli;
 pub mod config;
 pub mod context;
 pub mod fill;
+#[cfg(feature = "forge")]
+pub mod forge;
 mod proof;
-#[cfg(feature = "skill")]
+#[cfg(any(feature = "forge", feature = "skill"))]
 pub mod rig;
 #[cfg(feature = "skill")]
 pub mod skill;
+
+#[cfg(feature = "forge")]
+pub use forge::land;
 
 pub use proof::{boundary, trace, vocabulary};
 

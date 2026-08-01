@@ -19,7 +19,7 @@ name = "operator"
 path = "tests/operator/mod.rs"
 
 [dependencies]
-plumb = { path = "../lib", features = ["skill"] }
+plumb = { path = "../lib", features = ["forge", "skill"] }
 locus = { version = "0", registry = "perish" }
 clap = { version = "4", features = ["derive", "env"] }
 flate2 = "1"

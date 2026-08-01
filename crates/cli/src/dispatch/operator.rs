@@ -1,13 +1,7 @@
-mod api;
-mod git;
 mod line;
-mod protection;
-mod request;
-mod settings;
-mod token;
+mod pick;
 mod trigger;
 mod value;
-mod workflow;
 
 use clap::{Args, Subcommand};
 

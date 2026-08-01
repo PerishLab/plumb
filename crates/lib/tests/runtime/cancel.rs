@@ -1,4 +1,4 @@
-mod support;
+use super::support;
 
 use plumb::cancel::Cancel;
 use plumb::context::Context;

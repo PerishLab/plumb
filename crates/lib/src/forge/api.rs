@@ -1,26 +1,10 @@
+use super::model::{Pull, Remote, State, Strategy};
 use super::request::{Response, failure, send};
 use serde_json::{Value, json};
-
-#[derive(Clone)]
-pub struct Remote {
-    pub scheme: String,
-    pub host: String,
-    pub owner: String,
-    pub repo: String,
-}
 
 pub struct Client {
     pub(super) remote: Remote,
     token: String,
-}
-
-pub struct Pull {
-    pub number: u64,
-}
-
-pub struct State {
-    pub state: String,
-    pub count: usize,
 }
 
 impl Client {
@@ -90,6 +74,10 @@ impl Client {
     }
 
     pub fn find(&self, head: &str) -> Result<Option<Pull>, String> {
+        self.opened("main", head)
+    }
+
+    pub fn opened(&self, base: &str, head: &str) -> Result<Option<Pull>, String> {
         let response = self.request("GET", "/pulls?state=open&limit=50", None)?;
         if response.status != 200 {
             return Err(failure("listing pulls", response.status, &response.value));
@@ -99,47 +87,42 @@ impl Client {
             .as_array()
             .into_iter()
             .flatten()
-            .find(|pull| {
-                pull.pointer("/head/ref").and_then(Value::as_str) == Some(head)
-                    && pull.pointer("/base/ref").and_then(Value::as_str) == Some("main")
+            .find(|held| {
+                held.pointer("/head/ref").and_then(Value::as_str) == Some(head)
+                    && held.pointer("/base/ref").and_then(Value::as_str) == Some(base)
             })
             .and_then(pull))
     }
 
     pub fn pull(&self, head: &str, version: &str, body: &str) -> Result<Pull, String> {
+        self.raise("main", head, &format!("Packport {version}"), body)
+    }
+
+    pub fn raise(&self, base: &str, head: &str, title: &str, body: &str) -> Result<Pull, String> {
         let response = self.request(
             "POST",
             "/pulls",
             Some(json!({
-                "base": "main",
+                "base": base,
                 "head": head,
-                "title": format!("Packport {version}"),
+                "title": title,
                 "body": body
             })),
         )?;
         if response.status == 201 {
             pull(&response.value).ok_or_else(|| "created pull has no number".to_string())
         } else {
-            Err(failure(
-                "creating packport pull",
-                response.status,
-                &response.value,
-            ))
+            Err(failure("creating pull", response.status, &response.value))
         }
     }
 
+    pub fn combined(&self, commit: &str) -> Result<State, String> {
+        Ok(State::read(&self.statuses(commit)?))
+    }
+
     pub fn context(&self, commit: &str, context: &str) -> Result<State, String> {
-        let route = format!("/commits/{commit}/status");
-        let response = self.request("GET", &route, None)?;
-        if response.status != 200 {
-            return Err(failure(
-                "fetching commit status",
-                response.status,
-                &response.value,
-            ));
-        }
+        let response = self.statuses(commit)?;
         let mut found = response
-            .value
             .get("statuses")
             .and_then(Value::as_array)
             .into_iter()
@@ -165,8 +148,12 @@ impl Client {
     }
 
     pub fn merge(&self, pull: u64, head: &str) -> Result<(), String> {
+        self.settle(pull, head, Strategy::Merge)
+    }
+
+    pub fn settle(&self, pull: u64, head: &str, strategy: Strategy) -> Result<(), String> {
         let body = json!({
-            "Do": "merge",
+            "Do": strategy.wire(),
             "delete_branch_after_merge": false,
             "head_commit_id": head
         });
@@ -177,13 +164,26 @@ impl Client {
             if [200, 204].contains(&response.status) {
                 return Ok(());
             }
-            last = failure("merging packport pull", response.status, &response.value);
+            last = failure("merging pull", response.status, &response.value);
             if ![405, 409].contains(&response.status) {
                 break;
             }
             std::thread::sleep(std::time::Duration::from_secs(turn));
         }
         Err(last)
+    }
+
+    fn statuses(&self, commit: &str) -> Result<Value, String> {
+        let route = format!("/commits/{commit}/status");
+        let response = self.request("GET", &route, None)?;
+        if response.status != 200 {
+            return Err(failure(
+                "fetching commit status",
+                response.status,
+                &response.value,
+            ));
+        }
+        Ok(response.value)
     }
 
     fn user(&self) -> Result<String, String> {
@@ -235,7 +235,14 @@ fn pull(value: &Value) -> Option<Pull> {
     value
         .get("number")
         .and_then(Value::as_u64)
-        .map(|number| Pull { number })
+        .map(|number| Pull {
+            number,
+            url: value
+                .get("html_url")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string(),
+        })
 }
 
 fn segment(value: &str) -> String {

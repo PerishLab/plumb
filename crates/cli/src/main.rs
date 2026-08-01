@@ -25,6 +25,22 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    Land {
+        #[command(flatten)]
+        target: Root,
+        #[arg(long, default_value = "main")]
+        base: String,
+        #[arg(long, default_value = "")]
+        title: String,
+        #[arg(long, default_value = "")]
+        body: String,
+        #[arg(long = "no-watch", action = clap::ArgAction::SetFalse)]
+        watch: bool,
+        #[arg(long = "dry-run")]
+        dry: bool,
+        #[arg(long)]
+        json: bool,
+    },
     Precommit {
         #[command(flatten)]
         target: Root,
@@ -79,6 +95,7 @@ impl Command {
     fn name(&self) -> &'static str {
         match self {
             Self::Doctor { .. } => "doctor",
+            Self::Land { .. } => "land",
             Self::Precommit { .. } => "precommit",
             Self::Policy { .. } => "policy",
             Self::Skill { .. } => "skill",
@@ -180,6 +197,23 @@ fn policy(root: PathBuf, write: bool) -> i32 {
 fn execute(command: Command) -> i32 {
     match command {
         Command::Doctor { target, json } => judge::doctor::run(PathBuf::from(target.root), json),
+        Command::Land {
+            target,
+            base,
+            title,
+            body,
+            watch,
+            dry,
+            json,
+        } => dispatch::land::run(dispatch::land::Input {
+            root: PathBuf::from(target.root),
+            base,
+            title,
+            body,
+            watch,
+            dry,
+            json,
+        }),
         Command::Precommit {
             target,
             base,

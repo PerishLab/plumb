@@ -126,8 +126,11 @@ embeds the exact candidate seal and requires the same source commit. See
 **Repository shape.** Generic wrappers and repository-owned Git hooks are not
 repository facts. Guard keeps one canonical workflow lane and runs Plumb plus
 Ectropy directly; generic init, land, and release behavior belongs to the
-substrate entrypoint that owns it. Transitional or product-specific wrappers
-remain observed and must have a known role, but their absence is valid. Lanes
+substrate entrypoint that owns it. Landing is now that entrypoint's own
+operation, so a generic `land` wrapper is transitional debt rather than a
+repository fact; its removal is the intended direction, and Doctor does not yet
+report its presence. Transitional or product-specific wrappers remain observed
+and must have a known role, but their absence is valid. Lanes
 and layout follow the skeleton the workshop already demonstrates rather than
 each repository's invention. Most of this clause is enforced; see below.
 
@@ -149,6 +152,17 @@ prefixes. Rename and copy count both old and new paths. Missing Git evidence,
 malformed boundaries, symbolic revisions, and non-UTF-8 paths refuse. This is
 an operation-local proof, not a Doctor rule or Git hook; Plumb validates the
 boundary but does not own claims or coordination.
+
+**Landing.** `plumb land` settles the current clean topic branch onto its
+base. It pushes the source branch unrebased, derives a base-relative one-commit
+projection at `land/<branch>`, waits for that projection's guard, fast-forwards
+the base onto it, and then syncs the separate worktree holding the base. The
+merge request pins the exact projection head and never asks Forgejo to delete a
+branch, so retention is a property of the mechanism rather than a caller
+choice. Refusals are typed, and a source or base that moves while the
+projection is guarded refuses rather than landing a stale snapshot. The library
+entry takes a repository path and reads no coordinator state, so a delivery
+coordinator may call it directly.
 
 **Domain vocabulary transitions.** Plumb carries one release-locked retired
 domain dictionary encoded with canonical `p64-v1`: `~` plus unpadded Base64URL
@@ -220,6 +234,7 @@ The release changelog gate remains release-local rather than a doctor rule.
 
 ```bash
 plumb doctor [ROOT]           # shape report; nonzero when out of true or blind
+plumb land [ROOT]             # land the current clean topic branch onto its base
 plumb precommit [ROOT]        # prove exact committed changes stay inside --write prefixes
 plumb rule list               # complete catalog; compose typed selectors
 plumb rule show RULE_ID       # law, standing, evidence, owner, and tags

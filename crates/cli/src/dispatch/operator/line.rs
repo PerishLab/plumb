@@ -1,6 +1,6 @@
 use super::Stable;
-use super::api::{Client, Remote};
-use super::{git, value};
+use super::value;
+use plumb::forge::{Client, Remote, git};
 use serde_json::Value;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -55,7 +55,7 @@ fn pick(version: &str, commit: &str, dry: bool) -> Result<String, String> {
     if dry {
         return Ok(format!("git cherry-pick -x {commit} on {name}, then push"));
     }
-    git::pick(&git::root()?, &name, commit)
+    super::pick::pick(&git::root()?, &name, commit)
 }
 
 fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
@@ -74,7 +74,7 @@ pub fn freeze(client: &Client, root: &Path, name: &str) -> Result<(), String> {
     if client.branch(name)?.is_none() {
         return Err(format!("branch does not exist: {name}"));
     }
-    git::validate(root, name)?;
+    super::pick::validate(root, name)?;
     client.protect(name, "frozen")
 }
 
@@ -149,7 +149,7 @@ fn pointer(root: &Path, version: &str) -> Result<Published, String> {
     let authority = super::super::release::authority(root)?;
     let url = format!("{authority}/v1/channels/stable.json");
     super::super::release::inspect(&url)?;
-    let value = super::api::public(&url)?;
+    let value = plumb::forge::public(&url)?;
     if value.get("schema").and_then(Value::as_u64) != Some(1)
         || value.get("channel").and_then(Value::as_str) != Some("stable")
         || value.get("releaseVersion").and_then(Value::as_str) != Some(version)
@@ -178,7 +178,7 @@ fn settled(root: &Path, published: &Published) -> Result<bool, String> {
 }
 
 fn guard(client: &Client, pull: u64, commit: &str) -> Result<(), String> {
-    let harness = super::settings::harness()?;
+    let harness = plumb::forge::harness()?;
     let deadline = Instant::now() + Duration::from_millis(harness.guard_timeout_ms);
     while Instant::now() < deadline {
         let state = client.context(commit, "guard / guard (pull_request)")?;
