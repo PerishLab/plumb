@@ -1,6 +1,6 @@
 use super::Stable;
 use super::value;
-use plumb::forge::{Client, Remote, git};
+use plumb::forge::{Client, Cut, Remote, git};
 use serde_json::Value;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -44,8 +44,10 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     }
     let client = Client::new(remote)?;
     client.protect(&name, "preparing")?;
-    client.create(&name, from)?;
-    Ok(format!("prepared {name} from {from}"))
+    match client.create(&name, from)? {
+        Cut::Made => Ok(format!("prepared {name} from {from}")),
+        Cut::Held => Ok(format!("{name} already stands at {from}; nothing moved")),
+    }
 }
 
 fn pick(version: &str, commit: &str, dry: bool) -> Result<String, String> {

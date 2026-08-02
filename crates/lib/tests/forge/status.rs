@@ -40,3 +40,17 @@ fn malformed() {
     assert_eq!(held.state, "");
     assert_eq!(held.count, 0);
 }
+
+#[test]
+fn cut() {
+    use plumb::forge::{Cut, settled};
+    assert_eq!(
+        settled("release/v1.0.0", "main", "abc", "abc"),
+        Ok(Cut::Held)
+    );
+    let moved = settled("release/v1.0.0", "main", "abc", "def").expect_err("a frozen line");
+    assert!(moved.contains("frozen"));
+    assert!(moved.contains("abc") && moved.contains("def"));
+    let unread = settled("release/v1.0.0", "main", "", "def").expect_err("unread commit");
+    assert!(unread.contains("could not be compared"));
+}

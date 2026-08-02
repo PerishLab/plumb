@@ -28,6 +28,12 @@ impl Strategy {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Cut {
+    Made,
+    Held,
+}
+
 pub struct State {
     pub state: String,
     pub count: usize,
