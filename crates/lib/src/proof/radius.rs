@@ -110,7 +110,11 @@ fn survey(root: &Path, product: &str, candidate: &Version) -> Result<Vec<Seat>, 
         return Err(format!("{} is not a directory", seen.display()));
     }
     let mut found = Vec::new();
-    for (name, ecosystem) in [("Cargo.lock", "cargo"), ("deno.lock", "jsr")] {
+    for (name, ecosystem) in [
+        ("Cargo.lock", "cargo"),
+        ("deno.lock", "jsr"),
+        (".runseal/deno.lock", "jsr"),
+    ] {
         let path = seen.join(name);
         if !path.exists() {
             continue;
