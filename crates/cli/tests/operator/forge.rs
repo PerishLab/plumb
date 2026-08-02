@@ -1,0 +1,144 @@
+use serde_json::{Value, json};
+use std::io::{Read, Write};
+use std::net::TcpListener;
+use std::sync::{Arc, Mutex};
+
+pub enum Court {
+    Dispatch,
+    Failed,
+    Nested(bool),
+    Paged,
+    Prepare(bool),
+}
+
+pub fn serve(court: Court, count: usize) -> (String, Arc<Mutex<Vec<String>>>) {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+    let address = listener.local_addr().expect("address");
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let seen = calls.clone();
+    std::thread::spawn(move || {
+        for mut stream in listener.incoming().take(count).flatten() {
+            let (request, body) = request(&mut stream);
+            seen.lock().expect("calls").push(request.clone());
+            let (status, value) = answer(&court, &request, body);
+            let text = value.to_string();
+            write!(
+                stream,
+                "HTTP/1.1 {status}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{text}",
+                text.len()
+            )
+            .expect("response");
+        }
+    });
+    (format!("http://{address}"), calls)
+}
+
+fn request(stream: &mut impl Read) -> (String, Value) {
+    let mut bytes = Vec::new();
+    let mut buffer = [0_u8; 4096];
+    let end = loop {
+        let count = stream.read(&mut buffer).expect("request");
+        bytes.extend_from_slice(&buffer[..count]);
+        if let Some(end) = bytes.windows(4).position(|held| held == b"\r\n\r\n") {
+            break end + 4;
+        }
+    };
+    let head = String::from_utf8_lossy(&bytes[..end]).into_owned();
+    let length = head
+        .lines()
+        .find_map(|line| {
+            let (key, value) = line.split_once(':')?;
+            key.eq_ignore_ascii_case("content-length")
+                .then(|| value.trim().parse::<usize>().ok())
+                .flatten()
+        })
+        .unwrap_or(0);
+    while bytes.len() < end + length {
+        let count = stream.read(&mut buffer).expect("body");
+        bytes.extend_from_slice(&buffer[..count]);
+    }
+    let request = head.lines().next().unwrap_or("").to_string();
+    let body = serde_json::from_slice(&bytes[end..end + length]).unwrap_or(Value::Null);
+    (request, body)
+}
+
+fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
+    match court {
+        Court::Dispatch | Court::Failed | Court::Nested(_) | Court::Paged
+            if request.contains("/dispatches ") =>
+        {
+            ("201 Created", json!({"id": 88, "run_number": 7}))
+        }
+        Court::Dispatch if request.contains("/actions/runs/88 ") => {
+            ("200 OK", json!({"id": 88, "status": "success"}))
+        }
+        Court::Failed if request.contains("/actions/runs/88 ") => (
+            "200 OK",
+            json!({"id": 88, "index_in_repo": 7, "status": "failure"}),
+        ),
+        Court::Nested(_) | Court::Paged if request.contains("/actions/runs/88 ") => (
+            "200 OK",
+            json!({"id": 88, "index_in_repo": 7, "status": "blocked"}),
+        ),
+        Court::Nested(success) if request.contains("/actions/tasks?") => {
+            let status = if *success { "success" } else { "failure" };
+            ("200 OK", tasks(status))
+        }
+        Court::Failed if request.contains("/actions/tasks?") => ("200 OK", tasks("failure")),
+        Court::Paged if request.contains("/actions/tasks?page=1") => (
+            "200 OK",
+            json!({
+                "total_count": 51,
+                "workflow_runs": vec![json!({
+                    "name": "unrelated",
+                    "run_number": 6,
+                    "status": "success"
+                }); 50]
+            }),
+        ),
+        Court::Paged if request.contains("/actions/tasks?page=2") => (
+            "200 OK",
+            json!({
+                "total_count": 51,
+                "workflow_runs": [
+                    {"name": "release", "run_number": 7, "status": "success"}
+                ]
+            }),
+        ),
+        Court::Prepare(_) if request.contains("GET /api/v1/user ") => {
+            ("200 OK", json!({"login": "operator"}))
+        }
+        Court::Prepare(_) if request.contains("GET ") && request.contains("branch_protections") => {
+            ("404 Not Found", json!({"message": "missing"}))
+        }
+        Court::Prepare(exact)
+            if request.contains("POST ") && request.contains("branch_protections") =>
+        {
+            let mut value = body;
+            value["branch_name"] = json!("release/v1.2.0");
+            if !exact {
+                value["enable_push"] = json!(false);
+            }
+            ("201 Created", value)
+        }
+        Court::Prepare(_) if request.contains("GET ") && request.contains("/branches/") => {
+            ("404 Not Found", json!({"message": "missing"}))
+        }
+        Court::Prepare(_)
+            if request.contains("POST ") && request.ends_with("/branches HTTP/1.1") =>
+        {
+            ("201 Created", json!({"name": "release/v1.2.0"}))
+        }
+        _ => ("500 Internal Server Error", json!({"message": request})),
+    }
+}
+
+fn tasks(status: &str) -> Value {
+    json!({
+        "total_count": 2,
+        "workflow_runs": [
+            {"name": "build", "run_number": 7, "status": status},
+            {"name": "release", "run_number": 7, "status": "success"}
+        ]
+    })
+}

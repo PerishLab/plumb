@@ -9,6 +9,6 @@ mod token;
 mod workflow;
 
 pub use api::{Client, public, settled};
-pub use model::{Cut, Pull, Remote, State, Strategy};
+pub use model::{Cut, Outcome, Pull, Remote, State, Strategy};
 pub use request::{Response, failure, send};
 pub use settings::{harness, token as configured};

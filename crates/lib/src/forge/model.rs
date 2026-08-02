@@ -13,6 +13,13 @@ pub struct Pull {
     pub url: String,
 }
 
+#[derive(Debug, Eq, PartialEq)]
+pub enum Outcome {
+    Waiting,
+    Success,
+    Failed { status: String, tasks: Vec<String> },
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Strategy {
     Merge,

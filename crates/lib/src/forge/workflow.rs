@@ -1,6 +1,9 @@
 use super::api::Client;
+use super::model::Outcome;
 use super::request::failure;
 use serde_json::{Value, json};
+
+const PAGE: usize = 50;
 
 impl Client {
     pub fn dispatch(
@@ -43,26 +46,64 @@ impl Client {
         }
     }
 
-    pub fn failures(&self, id: u64) -> Result<Vec<String>, String> {
-        let response = self.request("GET", &format!("/actions/runs/{id}/jobs"), None)?;
-        if response.status != 200 {
-            return Ok(Vec::new());
-        }
-        Ok(response
-            .value
-            .get("jobs")
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-            .filter(|job| {
-                ["failure", "cancelled"].iter().any(|state| {
-                    job.get("status").and_then(Value::as_str) == Some(state)
-                        || job.get("conclusion").and_then(Value::as_str) == Some(state)
+    pub fn outcome(&self, id: u64) -> Result<Outcome, String> {
+        let run = self.run(id)?;
+        let status = run
+            .get("status")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "Forgejo workflow run has no status".to_string())?;
+        match status {
+            "unknown" | "waiting" | "running" => Ok(Outcome::Waiting),
+            "success" => Ok(Outcome::Success),
+            "failure" | "cancelled" | "skipped" => {
+                let number = number(&run)?;
+                let tasks = self.tasks(number)?.unwrap_or_default();
+                Ok(Outcome::Failed {
+                    status: status.to_string(),
+                    tasks: failed(&tasks),
                 })
-            })
-            .filter_map(|job| job.get("name").and_then(Value::as_str))
-            .map(str::to_string)
-            .collect())
+            }
+            "blocked" => {
+                let number = number(&run)?;
+                blocked(self.tasks(number)?)
+            }
+            other => Err(format!("Forgejo workflow run has unknown status {other}")),
+        }
+    }
+
+    fn tasks(&self, number: u64) -> Result<Option<Vec<Value>>, String> {
+        let mut page = 1;
+        let mut seen = 0;
+        let mut found = Vec::new();
+        loop {
+            let route = format!("/actions/tasks?page={page}&limit={PAGE}");
+            let response = self.request("GET", &route, None)?;
+            if response.status != 200 {
+                return Ok(None);
+            }
+            let entries = response
+                .value
+                .get("workflow_runs")
+                .and_then(Value::as_array)
+                .ok_or_else(|| "Forgejo action task list has no workflow_runs".to_string())?;
+            let total = response
+                .value
+                .get("total_count")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| "Forgejo action task list has no total_count".to_string())?
+                as usize;
+            seen += entries.len();
+            found.extend(
+                entries
+                    .iter()
+                    .filter(|task| task.get("run_number").and_then(Value::as_u64) == Some(number))
+                    .cloned(),
+            );
+            if seen >= total || entries.len() < PAGE {
+                return Ok(Some(found));
+            }
+            page += 1;
+        }
     }
 
     pub fn link(&self, run: &Value) -> String {
@@ -80,5 +121,64 @@ impl Client {
                 )
             })
             .unwrap_or_default()
+    }
+}
+
+fn number(run: &Value) -> Result<u64, String> {
+    run.get("index_in_repo")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "Forgejo workflow run has no repository run number".to_string())
+}
+
+fn failed(tasks: &[Value]) -> Vec<String> {
+    let mut names = tasks
+        .iter()
+        .filter_map(|task| {
+            let status = task.get("status").and_then(Value::as_str)?;
+            matches!(status, "failure" | "cancelled" | "blocked").then(|| {
+                task.get("name")
+                    .and_then(Value::as_str)
+                    .unwrap_or(status)
+                    .to_string()
+            })
+        })
+        .collect::<Vec<_>>();
+    names.sort();
+    names.dedup();
+    names
+}
+
+fn blocked(tasks: Option<Vec<Value>>) -> Result<Outcome, String> {
+    let Some(tasks) = tasks else {
+        return Ok(Outcome::Failed {
+            status: "blocked".into(),
+            tasks: Vec::new(),
+        });
+    };
+    let failures = failed(&tasks);
+    if !failures.is_empty() {
+        return Ok(Outcome::Failed {
+            status: "blocked".into(),
+            tasks: failures,
+        });
+    }
+    let mut success = false;
+    for task in &tasks {
+        match task.get("status").and_then(Value::as_str) {
+            Some("success") => success = true,
+            Some("skipped") => {}
+            Some("unknown" | "waiting" | "running") => return Ok(Outcome::Waiting),
+            Some("failure" | "cancelled" | "blocked") => unreachable!(),
+            Some(other) => return Err(format!("Forgejo action task has unknown status {other}")),
+            None => return Err("Forgejo action task has no status".into()),
+        }
+    }
+    if success {
+        Ok(Outcome::Success)
+    } else {
+        Ok(Outcome::Failed {
+            status: "blocked".into(),
+            tasks: Vec::new(),
+        })
     }
 }

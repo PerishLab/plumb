@@ -1,6 +1,6 @@
 use super::Dispatch;
 use super::{line, value};
-use plumb::forge::{Client, git};
+use plumb::forge::{Client, Outcome, git};
 use serde_json::{Value, json};
 use std::time::{Duration, Instant};
 
@@ -81,27 +81,24 @@ fn watch(client: &Client, id: u64, url: &str) -> Result<String, String> {
     let harness = plumb::forge::harness()?;
     let deadline = Instant::now() + Duration::from_millis(harness.run_timeout_ms);
     while Instant::now() < deadline {
-        let run = client.run(id)?;
-        let status = run.get("status").and_then(Value::as_str).unwrap_or("");
-        if status == "success" {
-            return Ok(format!("run {id}: success"));
-        }
-        if ["failure", "cancelled", "skipped"].contains(&status) {
-            let jobs = if status == "failure" {
-                client.failures(id)?
-            } else {
-                Vec::new()
-            };
-            let detail = if jobs.is_empty() {
-                String::new()
-            } else {
-                format!("; failed jobs: {}", jobs.join(", "))
-            };
-            return Err(format!("run {id}: {status}{detail}\n{url}"));
+        match client.outcome(id)? {
+            Outcome::Success => return Ok(format!("run {id}: success")),
+            Outcome::Failed { status, tasks } => {
+                return Err(report(id, url, &status, &tasks));
+            }
+            Outcome::Waiting => {}
         }
         std::thread::sleep(Duration::from_millis(harness.run_poll_ms));
     }
     Err(format!(
         "run {id}: still running past the watch timeout\n{url}"
     ))
+}
+
+fn report(id: u64, url: &str, status: &str, tasks: &[String]) -> String {
+    let detail = tasks
+        .is_empty()
+        .then(String::new)
+        .unwrap_or_else(|| format!("; failed tasks: {}", tasks.join(", ")));
+    format!("run {id}: {status}{detail}\n{url}")
 }
