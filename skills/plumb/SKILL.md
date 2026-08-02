@@ -164,6 +164,16 @@ projection is guarded refuses rather than landing a stale snapshot. The library
 entry takes a repository path and reads no coordinator state, so a delivery
 coordinator may call it directly.
 
+**Release radius.** `plumb radius` answers, for one product and one candidate
+version over a supplied set of repository roots, which declared seats currently
+resolve below it. It reads each root's lock rather than its manifest, needs no
+registry and no network, and compares against the candidate the caller names
+rather than a fetched latest. A root that cannot be read, or a resolution that
+is not a version, is reported blind and never counted as current. The evaluator
+takes no domain vocabulary and reads no private control-plane state, so a
+delivery coordinator supplies the roots and Plumb supplies the judgment. Like
+`precommit` this is an operation, not a Doctor rule, and it emits no finding.
+
 **Domain vocabulary transitions.** Plumb carries one release-locked retired
 domain dictionary encoded with canonical `p64-v1`: `~` plus unpadded Base64URL
 over a lowercase ASCII atom. Doctor scans Git-tracked path and current worktree
@@ -236,6 +246,7 @@ The release changelog gate remains release-local rather than a doctor rule.
 plumb doctor [ROOT]           # shape report; nonzero when out of true or blind
 plumb land [ROOT]             # land the current clean topic branch onto its base
 plumb precommit [ROOT]        # prove exact committed changes stay inside --write prefixes
+plumb radius --root ...       # which supplied roots resolve a product below --candidate
 plumb rule list               # complete catalog; compose typed selectors
 plumb rule show RULE_ID       # law, standing, evidence, owner, and tags
 plumb rule namespaces         # registered namespace vocabulary

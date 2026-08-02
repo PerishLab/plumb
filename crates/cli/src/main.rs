@@ -53,6 +53,16 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    Radius {
+        #[arg(long, required = true)]
+        root: Vec<PathBuf>,
+        #[arg(long)]
+        product: String,
+        #[arg(long)]
+        candidate: String,
+        #[arg(long)]
+        json: bool,
+    },
     Policy {
         #[command(flatten)]
         target: Root,
@@ -97,6 +107,7 @@ impl Command {
             Self::Doctor { .. } => "doctor",
             Self::Land { .. } => "land",
             Self::Precommit { .. } => "precommit",
+            Self::Radius { .. } => "radius",
             Self::Policy { .. } => "policy",
             Self::Skill { .. } => "skill",
             Self::Rule { .. } => "rule",
@@ -225,6 +236,17 @@ fn execute(command: Command) -> i32 {
             base,
             head,
             write,
+            json,
+        }),
+        Command::Radius {
+            root,
+            product,
+            candidate,
+            json,
+        } => judge::radius::run(judge::radius::Input {
+            roots: root,
+            product,
+            candidate,
             json,
         }),
         Command::Policy { target, write } => policy(PathBuf::from(target.root), write),

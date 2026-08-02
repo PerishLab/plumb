@@ -10,6 +10,7 @@ mod deps;
 pub(crate) mod doctor;
 pub(crate) mod finding;
 pub(crate) mod precommit;
+pub mod radius;
 mod text;
 
 pub use text::show;

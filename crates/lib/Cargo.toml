@@ -7,6 +7,10 @@ repository.workspace = true
 publish = ["perish"]
 
 [features]
+radius = [
+  "dep:semver",
+  "dep:serde_json",
+]
 forge = [
   "dep:semver",
   "dep:serde_json",
@@ -58,6 +62,7 @@ path = "tests/runtime/mod.rs"
 [[test]]
 name = "proof"
 path = "tests/proof/mod.rs"
+required-features = ["radius"]
 
 [[test]]
 name = "survey"

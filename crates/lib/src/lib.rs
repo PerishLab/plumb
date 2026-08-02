@@ -16,6 +16,9 @@ pub mod skill;
 #[cfg(feature = "forge")]
 pub use forge::land;
 
+#[cfg(feature = "radius")]
+pub use proof::radius;
+
 pub use proof::{boundary, trace, vocabulary};
 
 pub use serde;
