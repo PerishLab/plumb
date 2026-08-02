@@ -55,7 +55,7 @@ enum Command {
     },
     Radius {
         #[arg(long, required = true)]
-        root: Vec<PathBuf>,
+        root: Vec<String>,
         #[arg(long)]
         product: String,
         #[arg(long)]

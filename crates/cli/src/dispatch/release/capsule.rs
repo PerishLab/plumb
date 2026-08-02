@@ -114,6 +114,7 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
         artifacts,
         managers,
         proof: promotion,
+        radius: None,
     };
     let path = input.out.join("seal.json");
     json(&path, &seal)?;

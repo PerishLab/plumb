@@ -1,6 +1,6 @@
-use plumb::radius::{Refusal, Report, Request};
+use plumb::radius::{Refusal, Report, Request, Root};
 use serde::Serialize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Serialize)]
 struct Failed {
@@ -11,15 +11,27 @@ struct Failed {
 }
 
 pub struct Input {
-    pub roots: Vec<PathBuf>,
+    pub roots: Vec<String>,
     pub product: String,
     pub candidate: String,
     pub json: bool,
 }
 
 pub fn run(input: Input) -> i32 {
+    let named = input
+        .roots
+        .iter()
+        .map(|held| name(held))
+        .collect::<Vec<_>>();
+    let roots = named
+        .iter()
+        .map(|(label, path)| Root {
+            label,
+            path: path.as_path(),
+        })
+        .collect::<Vec<_>>();
     let request = Request {
-        roots: &input.roots,
+        roots: &roots,
         product: &input.product,
         candidate: &input.candidate,
     };
@@ -27,6 +39,18 @@ pub fn run(input: Input) -> i32 {
         Ok(report) => render(report, input.json),
         Err(refusal) => rejected(&input.product, refusal, input.json),
     }
+}
+
+fn name(held: &str) -> (String, PathBuf) {
+    if let Some((label, path)) = held.split_once('=') {
+        return (label.to_string(), PathBuf::from(path));
+    }
+    let path = PathBuf::from(held);
+    let label = Path::new(held)
+        .file_name()
+        .map(|seen| seen.to_string_lossy().to_string())
+        .unwrap_or_else(|| held.to_string());
+    (label, path)
 }
 
 fn render(report: Report, json: bool) -> i32 {
@@ -44,11 +68,11 @@ fn render(report: Report, json: bool) -> i32 {
             "  {:8} {:10} {}",
             if seat.behind { "behind" } else { "current" },
             seat.resolution,
-            seat.root.display()
+            seat.label
         );
     }
     for held in &report.blind {
-        println!("  blind    {} [{}]", held.root.display(), held.reason);
+        println!("  blind    {} [{}]", held.label, held.reason);
     }
     if report.seats.is_empty() && report.blind.is_empty() {
         println!("  no seat declares {}", report.product);
