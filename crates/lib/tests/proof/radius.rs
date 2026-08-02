@@ -1,4 +1,4 @@
-use plumb::radius::{Request, check};
+use plumb::radius::{Request, Root, check};
 use std::path::{Path, PathBuf};
 
 struct Domain {
@@ -47,9 +47,32 @@ impl Domain {
     }
 }
 
-fn ask<'a>(roots: &'a [PathBuf], product: &'a str, candidate: &'a str) -> Request<'a> {
+fn named(roots: &[PathBuf]) -> Vec<(String, PathBuf)> {
+    roots
+        .iter()
+        .map(|held| {
+            (
+                held.file_name()
+                    .map(|seen| seen.to_string_lossy().to_string())
+                    .unwrap_or_default(),
+                held.clone(),
+            )
+        })
+        .collect()
+}
+
+fn ask<'a>(roots: &'a [(String, PathBuf)], product: &'a str, candidate: &'a str) -> Request<'a> {
     Request {
-        roots,
+        roots: Box::leak(
+            roots
+                .iter()
+                .map(|(label, path)| Root {
+                    label,
+                    path: path.as_path(),
+                })
+                .collect::<Vec<_>>()
+                .into_boxed_slice(),
+        ),
         product,
         candidate,
     }
@@ -63,7 +86,7 @@ fn behind() {
         domain.cargo("beta", "plumb", "0.18.11"),
         domain.cargo("gamma", "plumb", "0.18.5"),
     ];
-    let report = check(ask(&roots, "plumb", "v0.18.11")).expect("readable domain");
+    let report = check(ask(&named(&roots), "plumb", "v0.18.11")).expect("readable domain");
     assert_eq!(report.candidate, "0.18.11");
     assert_eq!(report.seats.len(), 3);
     assert_eq!(report.behind, 2);
@@ -74,7 +97,7 @@ fn behind() {
 fn current() {
     let domain = Domain::new();
     let roots = vec![domain.cargo("alpha", "plumb", "0.18.11")];
-    let report = check(ask(&roots, "plumb", "0.18.11")).expect("readable domain");
+    let report = check(ask(&named(&roots), "plumb", "0.18.11")).expect("readable domain");
     assert_eq!(report.behind, 0);
     assert!(!report.seats[0].behind);
 }
@@ -83,7 +106,7 @@ fn current() {
 fn absent() {
     let domain = Domain::new();
     let roots = vec![domain.cargo("alpha", "locus", "0.2.1")];
-    let report = check(ask(&roots, "plumb", "0.18.11")).expect("readable domain");
+    let report = check(ask(&named(&roots), "plumb", "0.18.11")).expect("readable domain");
     assert!(report.seats.is_empty());
     assert_eq!(report.behind, 0);
     assert!(report.blind.is_empty());
@@ -93,7 +116,7 @@ fn absent() {
 fn bare() {
     let domain = Domain::new();
     let roots = vec![domain.bare("alpha")];
-    let report = check(ask(&roots, "plumb", "0.18.11")).expect("readable domain");
+    let report = check(ask(&named(&roots), "plumb", "0.18.11")).expect("readable domain");
     assert!(report.seats.is_empty());
     assert!(report.blind.is_empty());
 }
@@ -102,7 +125,7 @@ fn bare() {
 fn jsr() {
     let domain = Domain::new();
     let roots = vec![domain.deno("alpha", "@perish/shield", "0.1.0")];
-    let report = check(ask(&roots, "@perish/shield", "0.1.1")).expect("readable domain");
+    let report = check(ask(&named(&roots), "@perish/shield", "0.1.1")).expect("readable domain");
     assert_eq!(report.seats.len(), 1);
     assert_eq!(report.seats[0].ecosystem, "jsr");
     assert!(report.seats[0].behind);
@@ -115,19 +138,21 @@ fn unreadable() {
         domain.cargo("alpha", "plumb", "0.18.9"),
         domain.root().join("missing"),
     ];
-    let report = check(ask(&roots, "plumb", "0.18.11")).expect("a blind root is not a refusal");
+    let report =
+        check(ask(&named(&roots), "plumb", "0.18.11")).expect("a blind root is not a refusal");
     assert_eq!(report.seats.len(), 1);
     assert_eq!(report.blind.len(), 1);
-    assert!(report.blind[0].reason.contains("cannot resolve"));
+    assert!(report.blind[0].reason.contains("cannot be resolved"));
 }
 
 #[test]
 fn candidate() {
     let domain = Domain::new();
     let roots = vec![domain.cargo("alpha", "plumb", "0.18.9")];
-    let refusal = check(ask(&roots, "plumb", "not-a-version")).expect_err("invalid candidate");
+    let refusal =
+        check(ask(&named(&roots), "plumb", "not-a-version")).expect_err("invalid candidate");
     assert_eq!(refusal.kind, "candidate");
-    let refusal = check(ask(&roots, "  ", "0.18.11")).expect_err("empty product");
+    let refusal = check(ask(&named(&roots), "  ", "0.18.11")).expect_err("empty product");
     assert_eq!(refusal.kind, "product");
 }
 
@@ -149,7 +174,7 @@ fn garbled() {
     )
     .expect("lock");
     let roots = vec![seat];
-    let report = check(ask(&roots, "plumb", "0.18.11")).expect("a garbled lock is blind");
+    let report = check(ask(&named(&roots), "plumb", "0.18.11")).expect("a garbled lock is blind");
     assert!(report.seats.is_empty());
     assert_eq!(report.blind.len(), 1);
     assert!(report.blind[0].reason.contains("not a version"));
@@ -166,8 +191,22 @@ fn wrapper() {
     )
     .expect("lock");
     let roots = vec![seat];
-    let report = check(ask(&roots, "@perish/sealkit", "0.4.0")).expect("readable domain");
+    let report = check(ask(&named(&roots), "@perish/sealkit", "0.4.0")).expect("readable domain");
     assert_eq!(report.seats.len(), 1);
     assert_eq!(report.seats[0].lock, ".runseal/deno.lock");
     assert!(report.seats[0].behind);
+}
+
+#[test]
+fn labelled() {
+    let domain = Domain::new();
+    let seat = domain.cargo("alpha", "plumb", "0.18.9");
+    let roots = vec![("upstream".to_string(), seat)];
+    let report = check(ask(&roots, "plumb", "0.18.11")).expect("readable domain");
+    assert_eq!(report.seats[0].label, "upstream");
+    let encoded = serde_json::to_string(&report).expect("encodes");
+    assert!(
+        !encoded.contains("/tmp") && !encoded.contains(std::env::temp_dir().to_str().unwrap()),
+        "a published record must carry no filesystem path: {encoded}"
+    );
 }

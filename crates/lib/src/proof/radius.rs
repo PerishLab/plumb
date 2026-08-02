@@ -1,19 +1,24 @@
 use semver::Version;
 use serde::Serialize;
 use std::fmt::{Display, Formatter};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub const SCHEMA: &str = "plumb.radius/v1";
 
+pub struct Root<'a> {
+    pub label: &'a str,
+    pub path: &'a Path,
+}
+
 pub struct Request<'a> {
-    pub roots: &'a [PathBuf],
+    pub roots: &'a [Root<'a>],
     pub product: &'a str,
     pub candidate: &'a str,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Seat {
-    pub root: PathBuf,
+    pub label: String,
     pub ecosystem: &'static str,
     pub lock: String,
     pub resolution: String,
@@ -22,7 +27,7 @@ pub struct Seat {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Blind {
-    pub root: PathBuf,
+    pub label: String,
     pub reason: String,
 }
 
@@ -69,14 +74,14 @@ pub fn check(request: Request<'_>) -> Result<Report, Refusal> {
         match survey(root, product, &candidate) {
             Ok(found) => seats.extend(found),
             Err(reason) => blind.push(Blind {
-                root: root.clone(),
+                label: root.label.to_string(),
                 reason,
             }),
         }
     }
     seats.sort_by(|held, other| {
-        held.root
-            .cmp(&other.root)
+        held.label
+            .cmp(&other.label)
             .then_with(|| held.lock.cmp(&other.lock))
     });
     let behind = seats.iter().filter(|seat| seat.behind).count();
@@ -103,11 +108,11 @@ fn version(raw: &str) -> Result<Version, Refusal> {
     })
 }
 
-fn survey(root: &Path, product: &str, candidate: &Version) -> Result<Vec<Seat>, String> {
-    let seen = std::fs::canonicalize(root)
-        .map_err(|error| format!("cannot resolve {}: {error}", root.display()))?;
+fn survey(root: &Root<'_>, product: &str, candidate: &Version) -> Result<Vec<Seat>, String> {
+    let seen = std::fs::canonicalize(root.path)
+        .map_err(|error| format!("root cannot be resolved: {error}"))?;
     if !seen.is_dir() {
-        return Err(format!("{} is not a directory", seen.display()));
+        return Err("root is not a directory".to_string());
     }
     let mut found = Vec::new();
     for (name, ecosystem) in [
@@ -131,7 +136,7 @@ fn survey(root: &Path, product: &str, candidate: &Version) -> Result<Vec<Seat>, 
                 )
             })?;
             found.push(Seat {
-                root: seen.clone(),
+                label: root.label.to_string(),
                 ecosystem,
                 lock: name.to_string(),
                 behind: held < *candidate,

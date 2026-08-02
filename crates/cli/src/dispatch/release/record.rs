@@ -29,6 +29,34 @@ pub struct Promotion {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct Held {
+    pub label: String,
+    pub ecosystem: String,
+    pub lock: String,
+    pub resolution: String,
+    pub behind: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct Unread {
+    pub label: String,
+    pub reason: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct Radius {
+    pub schema: String,
+    pub product: String,
+    pub candidate: String,
+    pub seats: Vec<Held>,
+    pub behind: usize,
+    pub blind: Vec<Unread>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Seal {
     pub schema: u32,
     pub product: String,
@@ -42,6 +70,8 @@ pub struct Seal {
     pub managers: BTreeMap<String, Remote>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub proof: Option<Promotion>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub radius: Option<Radius>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
