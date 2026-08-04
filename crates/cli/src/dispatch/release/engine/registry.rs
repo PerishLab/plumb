@@ -191,29 +191,43 @@ fn dependencies(
     packages: &[String],
     version: &str,
 ) -> Result<(), String> {
+    if let Some(table) = document
+        .get_mut("workspace")
+        .and_then(Item::as_table_mut)
+        .and_then(|workspace| workspace.get_mut("dependencies"))
+        .and_then(Item::as_table_mut)
+    {
+        requirements(table, packages, version);
+    }
     for section in ["dependencies", "build-dependencies", "dev-dependencies"] {
         let Some(table) = document.get_mut(section).and_then(Item::as_table_mut) else {
             continue;
         };
-        for package in packages {
-            let Some(item) = table.get_mut(package) else {
-                continue;
-            };
-            dependency(item, version);
-        }
+        requirements(table, packages, version);
     }
     Ok(())
 }
 
-fn dependency(item: &mut Item, version: &str) {
+fn requirements(table: &mut toml_edit::Table, packages: &[String], version: &str) {
+    for (name, item) in table.iter_mut() {
+        dependency(&name, item, packages, version);
+    }
+}
+
+fn dependency(name: &str, item: &mut Item, packages: &[String], version: &str) {
     if let Some(detail) = item.as_inline_table_mut() {
-        if detail.contains_key("path") {
+        let identity = detail
+            .get("package")
+            .and_then(Value::as_str)
+            .unwrap_or(name);
+        if detail.contains_key("path") && packages.iter().any(|package| package == identity) {
             detail.insert("version", Value::from(format!("={version}")));
         }
-    } else if let Some(detail) = item.as_table_mut()
-        && detail.contains_key("path")
-    {
-        detail["version"] = toml_edit::value(format!("={version}"));
+    } else if let Some(detail) = item.as_table_mut() {
+        let identity = detail.get("package").and_then(Item::as_str).unwrap_or(name);
+        if detail.contains_key("path") && packages.iter().any(|package| package == identity) {
+            detail["version"] = toml_edit::value(format!("={version}"));
+        }
     }
 }
 
