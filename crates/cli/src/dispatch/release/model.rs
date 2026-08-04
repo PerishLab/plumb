@@ -64,19 +64,17 @@ struct Manifest {
     release: Raw,
 }
 
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "kebab-case")]
+#[derive(Default, Deserialize)]
+#[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
 struct Raw {
     product: String,
     authority: String,
     binaries: Vec<String>,
     targets: Vec<String>,
-    #[serde(default)]
     skill: bool,
     cargo: Option<Cargo>,
     deb: Option<Deb>,
 }
-
 impl Spec {
     pub fn read(path: &Path) -> Result<Self, String> {
         let text = std::fs::read_to_string(path)
@@ -116,33 +114,41 @@ impl Spec {
     }
 
     fn validate(&self) -> Result<(), String> {
-        token("product", &self.product, false)?;
-        if !self.authority.starts_with("https://")
-            || self.authority.ends_with('/')
-            || self.authority.chars().any(char::is_whitespace)
-        {
-            return Err("authority must be one normalized https URL".into());
+        let fields = self.product.len() + self.authority.len();
+        let binary = fields + self.binaries.len() + self.target.len() > 0;
+        let invalid = self.skill || self.deb.is_some() || self.cargo.is_none();
+        if !binary && invalid {
+            return Err("Cargo-only release must declare only a Cargo attachment".into());
         }
-        if self.binaries.is_empty() {
-            return Err("release must declare at least one binary".into());
-        }
-        let mut binaries = BTreeSet::new();
-        for binary in &self.binaries {
-            token("binary", binary, false)?;
-            if !binaries.insert(binary) {
-                return Err(format!("duplicate binary {binary}"));
+        if binary {
+            token("product", &self.product, false)?;
+            if !self.authority.starts_with("https://")
+                || self.authority.ends_with('/')
+                || self.authority.chars().any(char::is_whitespace)
+            {
+                return Err("authority must be one normalized https URL".into());
             }
-        }
-        if self.target.is_empty() {
-            return Err("release must declare at least one target".into());
-        }
-        let mut triples = BTreeSet::new();
-        for target in &self.target {
-            if !triples.insert(&target.triple) {
-                return Err(format!("duplicate target {}", target.triple));
+            if self.binaries.is_empty() {
+                return Err("release must declare at least one binary".into());
             }
-            if target.format == Format::Zip && self.binaries.len() != 1 {
-                return Err("a Windows release currently requires exactly one binary".into());
+            let mut binaries = BTreeSet::new();
+            for binary in &self.binaries {
+                token("binary", binary, false)?;
+                if !binaries.insert(binary) {
+                    return Err(format!("duplicate binary {binary}"));
+                }
+            }
+            if self.target.is_empty() {
+                return Err("release must declare at least one target".into());
+            }
+            let mut triples = BTreeSet::new();
+            for target in &self.target {
+                if !triples.insert(&target.triple) {
+                    return Err(format!("duplicate target {}", target.triple));
+                }
+                if target.format == Format::Zip && self.binaries.len() != 1 {
+                    return Err("a Windows release currently requires exactly one binary".into());
+                }
             }
         }
         if self.skill && !self.root.join("skills").join(&self.product).is_dir() {
