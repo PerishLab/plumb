@@ -1,8 +1,8 @@
 # Agents
 
 This repository is the workshop's living skeleton. `ectropy .` must print
-`clean` before anything lands, and CI runs the same guard the pre-commit hook
-runs. Ectropy has one severity: every finding is an error.
+`clean` before anything lands, and CI runs the complete repository guard in
+explicit fail-fast order. Ectropy has one severity: every finding is an error.
 
 ## The relation
 
@@ -155,8 +155,8 @@ first release that contains this substrate. The ceremony runs the source-built
 binary once with the same capsule protocol and separate credentials. No
 bootstrap branch or alternate permanent workflow survives genesis.
 
-`runseal :retire` is the symmetric destructive control-plane entrypoint,
-implemented and tested by `@perish/sealkit/retire`. It defaults to a
-credential-free dry run and requires `--execute` plus exact repo, bucket, and
-domain confirmations. Plumb keeps only the thin wrapper; `.runseal` owns no
-retirement implementation or tests.
+Repository retirement remains a destructive control-plane responsibility.
+Plumb exposes no generic retirement command, and this repository carries no
+retirement wrapper or implementation. An operator must use the explicit
+authority and procedure of the owning control plane rather than infer a
+successor command.

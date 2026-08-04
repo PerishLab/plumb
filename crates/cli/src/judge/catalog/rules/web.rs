@@ -85,7 +85,7 @@ rule!(
     "web.guard-builds-web",
     "Guard builds the web app",
     "The repository guard builds the named web package.",
-    "The web package name, guard workflow, and any transitional guard wrapper source.",
+    "The web package name and canonical guard workflow source.",
     Mechanized,
     WEB,
     [ADOPTION, WEB_TAG]

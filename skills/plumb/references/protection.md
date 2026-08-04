@@ -12,7 +12,7 @@ Every repository carrying a root `plumb.toml` has the same two baseline rules:
 There are no repository-specific fields, status contexts, approval counts,
 users, teams, or exceptions. The `main` rule blocks direct push for admins too
 and requires the common `guard / guard (pull_request)` context. Land through
-`runseal :land`, whose aggregate status wait also keeps repository-specific
+`plumb land`, whose aggregate status wait also keeps repository-specific
 platform jobs effective without putting them into branch policy.
 
 `release/**` is the fail-closed floor. Every existing `release/vX.Y.Z` branch

@@ -22,7 +22,7 @@ fn fixture(name: &str) -> PathBuf {
         "crates/api/src",
         "deploy",
         "charts/specimen/templates",
-        ".runseal/wrappers",
+        ".forgejo/workflows",
     ] {
         std::fs::create_dir_all(root.join(path)).expect("fixture should be made");
     }
@@ -113,8 +113,8 @@ const app = <Views source={source} />;
     )
     .expect("web compiler should be written");
     std::fs::write(
-        root.join(".runseal/wrappers/guard.ts"),
-        r#"await bin("pnpm").run(["--filter", "@specimen/web", "build"]);"#,
+        root.join(".forgejo/workflows/guard.yml"),
+        "run: pnpm --filter @specimen/web build\n",
     )
     .expect("guard should be written");
     std::fs::write(root.join("deploy/api.Dockerfile"), "FROM scratch\n")

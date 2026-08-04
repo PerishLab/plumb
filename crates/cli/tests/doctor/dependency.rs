@@ -4,37 +4,43 @@ fn specimen(ecosystem: Ecosystem, requirement: &str, resolution: &str) -> Depend
     Dependency {
         ecosystem,
         name: match ecosystem {
-            Ecosystem::Jsr => "@perish/sealkit".into(),
+            Ecosystem::Jsr => "@perish/shield".into(),
             Ecosystem::Cargo => "plumb".into(),
         },
         requirement: requirement.into(),
         pinned: ecosystem == Ecosystem::Jsr && requirement != "*",
         resolution: resolution.into(),
-        latest: Some("0.3.4".into()),
+        latest: Some(
+            match ecosystem {
+                Ecosystem::Jsr => "0.1.1",
+                Ecosystem::Cargo => "0.3.4",
+            }
+            .into(),
+        ),
         seat: "Cargo.toml".into(),
     }
 }
 
 #[test]
 fn deno() {
-    let found = plumb_cli::judge(&specimen(Ecosystem::Jsr, "^0.3.1", "0.3.1"));
+    let found = plumb_cli::judge(&specimen(Ecosystem::Jsr, "^0.1.0", "0.1.0"));
     assert_eq!(
         found,
         vec![
             Verdict::Pinned,
             Verdict::Stale {
-                resolution: "0.3.1".into(),
-                latest: "0.3.4".into(),
+                resolution: "0.1.0".into(),
+                latest: "0.1.1".into(),
             },
         ]
     );
     assert_eq!(
-        plumb_cli::specifier("jsr:@perish/sealkit", "@perish"),
-        Some(("@perish/sealkit".into(), "*".into(), false))
+        plumb_cli::specifier("jsr:@perish/shield", "@perish"),
+        Some(("@perish/shield".into(), "*".into(), false))
     );
     assert_eq!(
-        plumb_cli::specifier("jsr:@perish/sealkit@*", "@perish"),
-        Some(("@perish/sealkit".into(), "*".into(), true))
+        plumb_cli::specifier("jsr:@perish/shield@*", "@perish"),
+        Some(("@perish/shield".into(), "*".into(), true))
     );
 }
 

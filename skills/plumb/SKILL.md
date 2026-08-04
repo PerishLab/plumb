@@ -125,14 +125,14 @@ embeds the exact candidate seal and requires the same source commit. See
 
 **Repository shape.** Generic wrappers and repository-owned Git hooks are not
 repository facts. Guard keeps one canonical workflow lane and runs Plumb plus
-Ectropy directly; generic init, land, and release behavior belongs to the
-substrate entrypoint that owns it. Landing is now that entrypoint's own
-operation, so a generic `land` wrapper is transitional debt rather than a
-repository fact; its removal is the intended direction, and Doctor does not yet
-report its presence. Transitional or product-specific wrappers remain observed
-and must have a known role, but their absence is valid. Lanes
-and layout follow the skeleton the workshop already demonstrates rather than
-each repository's invention. Most of this clause is enforced; see below.
+Ectropy directly. Generic init and guard wrappers are removed rather than
+ported; landing is the substrate-owned `plumb land` operation. Plumb exposes no
+generic retirement command, so do not infer a successor for a removed retire
+wrapper. Transitional or product-specific wrappers remain visible in Doctor's
+shape snapshot but are not normalized against a generic lifecycle inventory;
+their absence is valid. Lanes and layout follow the skeleton the workshop
+already demonstrates rather than each repository's invention. Most of this
+clause is enforced; see below.
 
 **Dependencies.** Direct first-party dependencies across the `@perish` JSR
 scope and `perish` Cargo registry track live stable latest. Deno declarations

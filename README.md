@@ -206,5 +206,8 @@ The reusable component seat is the independent design system.
 `packages/components` is therefore invalid in the general skeleton; Plumb does
 not encode any repository identity or special Design layout to make that rule.
 
-`.runseal` is adapter territory. Test files are forbidden there; logic that
-needs dedicated tests belongs in `@perish/sealkit` and wrappers remain thin.
+Runseal profiles provide explicit environment, argument, and symlink injection.
+Generic lifecycle wrappers and repository-owned Git hooks are not repository
+facts: guard runs directly in the canonical workflow, and landing uses
+`plumb land`. Product-specific lifecycle code remains owned and tested by the
+product that needs it.

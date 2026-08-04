@@ -54,7 +54,8 @@ fn ban() {
 #[test]
 fn blind() {
     let root = std::env::temp_dir().join("plumb-blind");
-    std::fs::create_dir_all(root.join(".runseal/wrappers")).expect("fixture should be made");
+    std::fs::create_dir_all(&root).expect("fixture should be made");
+    std::fs::write(root.join("runseal.toml"), "").expect("profile should be made");
     std::fs::write(root.join("ectropy.toml"), "[limit\n").expect("policy should be written");
     let out = run(&root);
     std::fs::remove_dir_all(&root).expect("fixture should be swept");

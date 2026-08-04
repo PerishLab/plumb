@@ -64,7 +64,7 @@ impl shape::Shape {
     fn structure(&self) -> Found {
         let mut found = Found::new();
         if self.runseal {
-            let guarded = !self.guards.is_empty() || self.wrappers.contains("guard");
+            let guarded = !self.guards.is_empty();
             if self.guards.is_empty() {
                 found.push(wrong(
                     &structure_rule::GUARD_LANE_PRESENT,
@@ -112,12 +112,6 @@ impl shape::Shape {
                 found.push(wrong(
                     &structure_rule::GUARD_USES_CURRENT_ECTROPY_MODE,
                     "guard uses an obsolete ectropy mode",
-                ));
-            }
-            if self.wrappers.contains("init") && !self.init.contains("\"plumb\"") {
-                found.push(wrong(
-                    &structure_rule::INIT_REQUIRES_PLUMB,
-                    "init does not require plumb",
                 ));
             }
             for (seat, workflow) in &self.guards {
@@ -170,20 +164,6 @@ impl shape::Shape {
                 ));
             }
         }
-        for path in &self.tests {
-            found.push(wrong(
-                &structure_rule::OPERATOR_TEST_OWNED_BY_SEALKIT,
-                format!("{path} is a .runseal test; tested logic belongs in sealkit"),
-            ));
-        }
-        for name in &self.wrappers {
-            if !RULES.wrappers.contains(name) {
-                found.push(unknown(
-                    &structure_rule::KNOWN_WRAPPER,
-                    format!("wrapper {name} has no shadow in the skeleton"),
-                ));
-            }
-        }
         found.extend(shape::pair::judge(self));
         self.matched(&mut found);
         self.anchored(&mut found);
@@ -198,18 +178,6 @@ impl shape::Shape {
         found
     }
     fn matched(&self, found: &mut Found) {
-        if self.inits && self.listed.is_empty() {
-            found.push(blind(
-                &structure_rule::INIT_PATHS_READABLE,
-                "an init wrapper is present but its required paths could not be read".to_string(),
-            ));
-        }
-        for name in self.listed.difference(&self.wrappers) {
-            found.push(wrong(
-                &structure_rule::INIT_REQUIRES_EXISTING_WRAPPER,
-                format!("init requires wrapper {name} which does not exist"),
-            ));
-        }
         for path in &self.bounds {
             if !self.root.join(path).exists() {
                 found.push(wrong(

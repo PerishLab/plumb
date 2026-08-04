@@ -3,7 +3,6 @@ use std::sync::LazyLock;
 
 pub struct Rules {
     pub dirs: BTreeSet<String>,
-    pub wrappers: BTreeSet<String>,
     pub lanes: BTreeSet<String>,
     pub retired: Vec<(String, String)>,
     pub blacklist: BTreeSet<String>,
@@ -77,7 +76,6 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
         .unwrap_or_default();
     Rules {
         dirs: set("dirs"),
-        wrappers: set("wrappers"),
         lanes: set("lanes"),
         retired,
         blacklist,

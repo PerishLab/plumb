@@ -59,12 +59,8 @@ fn governs() {
 #[test]
 fn concurrency() {
     let dir = std::env::temp_dir().join("plumb-concurrency");
-    std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");
     std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
-    for name in ["guard", "init", "land"] {
-        std::fs::write(dir.join(format!(".runseal/wrappers/{name}.ts")), "")
-            .expect("wrapper should be written");
-    }
+    std::fs::write(dir.join("runseal.toml"), "").expect("profile should be written");
     std::fs::write(dir.join("ectropy.toml"), "").expect("laws should be written");
     let lane = dir.join(".forgejo/workflows/guard.yml");
 
@@ -210,28 +206,6 @@ fn substrate() {
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("without plumb"), "{held}");
-}
-
-#[test]
-fn retired() {
-    let dir = std::env::temp_dir().join("plumb-retired");
-    std::fs::create_dir_all(dir.join(".runseal")).expect("fixture should be made");
-    std::fs::write(
-        dir.join(".runseal/deno.json"),
-        r#"{"imports":{"@perish/harness":"jsr:@perish/harness@0.4.0"}}"#,
-    )
-    .expect("map should be written");
-    std::fs::write(
-        dir.join(".runseal/deno.lock"),
-        r#"{"specifiers":{"jsr:@perish/harness@0.4.0":"0.4.0"}}"#,
-    )
-    .expect("lock should be written");
-    let output = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(
-        output.contains("depends on @perish/harness, renamed to @perish/sealkit"),
-        "{output}"
-    );
 }
 
 #[test]

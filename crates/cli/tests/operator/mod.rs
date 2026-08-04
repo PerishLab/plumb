@@ -42,29 +42,26 @@ fn actions() {
 #[test]
 fn adoption() {
     let dir = std::env::temp_dir().join("plumb-adoption");
-    std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");
-    for name in ["guard", "init", "land"] {
-        std::fs::write(dir.join(format!(".runseal/wrappers/{name}.ts")), "")
-            .expect("wrapper should be written");
-    }
+    std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
+    std::fs::write(dir.join("runseal.toml"), "").expect("profile should be written");
+    let lane = dir.join(".forgejo/workflows/guard.yml");
+    std::fs::write(
+        &lane,
+        "concurrency: guard-${{ github.event.pull_request.number || github.ref }}\n",
+    )
+    .expect("guard should be written");
     let bare = run(&dir);
     assert!(bare.contains("guard does not run plumb doctor"), "{bare}");
     assert!(
         bare.contains("guard does not run ectropy explicitly"),
         "{bare}"
     );
-    assert!(bare.contains("init does not require plumb"), "{bare}");
 
     std::fs::write(
-        dir.join(".runseal/wrappers/guard.ts"),
-        "await bin(\"plumb\").run([\"doctor\", \".\"]);\nawait bin(\"ectropy\").run([\".\"]);\n",
+        &lane,
+        "concurrency: guard-${{ github.event.pull_request.number || github.ref }}\nrun: plumb doctor . && ectropy .\n",
     )
     .expect("guard should be written");
-    std::fs::write(
-        dir.join(".runseal/wrappers/init.ts"),
-        "await init({ tools: [\"plumb\"] });\n",
-    )
-    .expect("init should be written");
     let held = run(&dir);
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("guard does not run plumb doctor"), "{held}");
@@ -72,18 +69,32 @@ fn adoption() {
         !held.contains("guard does not run ectropy explicitly"),
         "{held}"
     );
-    assert!(!held.contains("init does not require plumb"), "{held}");
+}
+
+#[test]
+fn wrappers() {
+    let fixture = tempfile::tempdir().expect("fixture should be made");
+    std::fs::create_dir_all(fixture.path().join(".runseal/wrappers"))
+        .expect("wrapper seat should be made");
+    std::fs::write(fixture.path().join(".runseal/wrappers/special.ts"), "")
+        .expect("wrapper should be written");
+    let held = run(fixture.path());
+    assert!(held.contains("wrappers  special"), "{held}");
+    assert!(!held.contains("wrapper special has no shadow"), "{held}");
 }
 
 #[test]
 fn profile() {
     let dir = std::env::temp_dir().join("plumb-profile");
-    std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");
+    std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
+    std::fs::write(dir.join("runseal.toml"), "").expect("profile should be written");
     std::fs::write(dir.join("Cargo.toml"), "[workspace]\n").expect("manifest should be written");
-    for name in ["guard", "init", "land"] {
-        std::fs::write(dir.join(format!(".runseal/wrappers/{name}.ts")), "")
-            .expect("wrapper should be written");
-    }
+    let lane = dir.join(".forgejo/workflows/guard.yml");
+    std::fs::write(
+        &lane,
+        "concurrency: guard-${{ github.event.pull_request.number || github.ref }}\n",
+    )
+    .expect("guard should be written");
     let bare = run(&dir);
     assert!(
         bare.contains("guard does not exercise the release profile"),
@@ -91,8 +102,8 @@ fn profile() {
     );
 
     std::fs::write(
-        dir.join(".runseal/wrappers/guard.ts"),
-        "await bin(\"cargo\").run([\"check\", \"--workspace\", \"--release\"]);\n",
+        &lane,
+        "concurrency: guard-${{ github.event.pull_request.number || github.ref }}\nrun: cargo check --workspace --release\n",
     )
     .expect("guard should be written");
     let held = run(&dir);
@@ -104,48 +115,13 @@ fn profile() {
 }
 
 #[test]
-fn forbidden() {
-    let dir = std::env::temp_dir().join("plumb-operator-test");
-    std::fs::create_dir_all(dir.join(".runseal/lib")).expect("fixture should be made");
-    for name in [
-        "control.test.ts",
-        "control_test.ts",
-        "control.test.tsx",
-        "control_test.tsx",
-    ] {
-        std::fs::write(dir.join(format!(".runseal/lib/{name}")), "")
-            .expect("test should be written");
-    }
-    let held = run(&dir);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    for name in [
-        "control.test.ts",
-        "control_test.ts",
-        "control.test.tsx",
-        "control_test.tsx",
-    ] {
-        let path = std::path::Path::new(".runseal").join("lib").join(name);
-        assert!(
-            held.contains(&format!(
-                "{} is a .runseal test; tested logic belongs in sealkit",
-                path.display()
-            )),
-            "{held}"
-        );
-    }
-}
-
-#[test]
 fn obsolete() {
     let dir = std::env::temp_dir().join("plumb-obsolete");
-    std::fs::create_dir_all(dir.join(".runseal/wrappers")).expect("fixture should be made");
-    for name in ["guard", "init", "land"] {
-        std::fs::write(dir.join(format!(".runseal/wrappers/{name}.ts")), "")
-            .expect("wrapper should be written");
-    }
+    std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
+    std::fs::write(dir.join("runseal.toml"), "").expect("profile should be written");
     std::fs::write(
-        dir.join(".runseal/wrappers/guard.ts"),
-        "await bin(\"plumb\").run([\"doctor\", \".\"]);\nawait bin(\"ectropy\").run([\"--strict\", \".\"]);\n",
+        dir.join(".forgejo/workflows/guard.yml"),
+        "concurrency: guard-${{ github.event.pull_request.number || github.ref }}\nrun: plumb doctor . && ectropy --strict .\n",
     )
     .expect("guard should be written");
     let held = run(&dir);

@@ -30,16 +30,6 @@ rule!(
     [ECTROPY_TAG, REPOSITORY]
 );
 rule!(
-    INIT_REQUIRES_PLUMB,
-    "structure.init-requires-plumb",
-    "Init requires plumb",
-    "The init wrapper installs or resolves plumb before using it.",
-    "The init wrapper source.",
-    Mechanized,
-    PLUMB,
-    [ADOPTION, REPOSITORY]
-);
-rule!(
     PACKAGE_UNDER_PACKAGES,
     "structure.package-under-packages",
     "Publishable packages sit under packages",
@@ -100,22 +90,12 @@ rule!(
     [REPOSITORY]
 );
 rule!(
-    OPERATOR_TEST_OWNED_BY_SEALKIT,
-    "structure.operator-test-owned-by-sealkit",
-    "Operator tests live with sealkit",
-    "Tests of .runseal behavior belong to sealkit; product repositories keep only thin wrappers.",
-    "Test files found below .runseal.",
-    Mechanized,
-    PLUMB,
-    [ADOPTION, REPOSITORY]
-);
-rule!(
-    KNOWN_WRAPPER,
-    "structure.known-wrapper",
-    "Operator wrappers have known roles",
-    "Every .runseal wrapper has a shadow in the skeleton.",
-    "Wrapper names under .runseal/wrappers.",
-    Mechanized,
+    TRANSITIONAL_WRAPPERS_OBSERVED,
+    "structure.transitional-wrappers-observed",
+    "Transitional wrappers remain visible",
+    "Repository-authored wrappers are transitional or product-specific observations, not a required generic lifecycle inventory.",
+    "Wrapper names below .runseal/wrappers in Doctor's positive shape snapshot.",
+    Observed,
     PLUMB,
     [ADOPTION, REPOSITORY]
 );
@@ -128,26 +108,6 @@ rule!(
     Mechanized,
     PLUMB,
     [REPOSITORY]
-);
-rule!(
-    INIT_PATHS_READABLE,
-    "structure.init-paths-readable",
-    "Init requirements are readable",
-    "When an init wrapper exists, plumb can read the wrapper paths it requires.",
-    "The init wrapper's required path declaration.",
-    Mechanized,
-    PLUMB,
-    [ADOPTION, REPOSITORY]
-);
-rule!(
-    INIT_REQUIRES_EXISTING_WRAPPER,
-    "structure.init-requires-existing-wrapper",
-    "Init names existing wrappers",
-    "Every wrapper required by init exists in the repository.",
-    "Init requirements compared with .runseal/wrappers.",
-    Mechanized,
-    PLUMB,
-    [ADOPTION, REPOSITORY]
 );
 rule!(
     BOUNDARY_EXISTS,
@@ -237,10 +197,9 @@ pub fn all() -> Vec<&'static Rule> {
         &ECTROPY_POLICY_PRESENT, &ECTROPY_POLICY_READABLE,
         &GUARD_CHECKS_RELEASE_PROFILE, &GUARD_CONCURRENCY,
         &GUARD_RUNS_DOCTOR, &GUARD_RUNS_ECTROPY, &GUARD_USES_CURRENT_ECTROPY_MODE,
-        &INIT_PATHS_READABLE, &INIT_REQUIRES_EXISTING_WRAPPER, &INIT_REQUIRES_PLUMB,
-        &GUARD_LANE_PRESENT, &KNOWN_DIRECTORY, &KNOWN_WORKFLOW, &KNOWN_WRAPPER,
-        &OPERATOR_TEST_OWNED_BY_SEALKIT, &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
+        &GUARD_LANE_PRESENT, &KNOWN_DIRECTORY, &KNOWN_WORKFLOW,
+        &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
         &RELEASE_LANE_PRESENT, &RELEASE_SOURCE_BOUND, &RESERVED_COMPONENTS_SEAT,
-        &SITE_DEPLOY_LANE,
+        &SITE_DEPLOY_LANE, &TRANSITIONAL_WRAPPERS_OBSERVED,
     ]
 }
