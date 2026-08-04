@@ -1,5 +1,5 @@
 # The deps dimension's first-party policy. The authorities are compiled; their
-# live stable versions are not. Retired names must migrate to their replacement.
+# live stable versions are not.
 
 blacklist = [
   "@compiled/react",
@@ -15,10 +15,6 @@ blacklist = [
   "styled-components",
   "styled-jsx",
 ]
-
-[[retired]]
-name = "@perish/harness"
-use = "@perish/sealkit"
 
 [stable.jsr]
 scope = "@perish"

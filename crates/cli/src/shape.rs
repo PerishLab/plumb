@@ -18,7 +18,6 @@ pub struct Shape {
     pub wrappers: BTreeSet<String>,
     pub dirs: BTreeSet<String>,
     pub actions: BTreeSet<String>,
-    pub tests: Vec<String>,
     pub block: Option<i64>,
     pub path: Option<i64>,
     pub grants: BTreeSet<String>,
@@ -28,12 +27,10 @@ pub struct Shape {
     pub ships: BTreeSet<String>,
     pub sites: BTreeSet<String>,
     pub ignore: String,
-    pub listed: BTreeSet<String>,
     pub bounds: Vec<String>,
     pub root: std::path::PathBuf,
     pub locks: Vec<Lock>,
     pub version: Option<String>,
-    pub inits: bool,
     pub rust: bool,
     pub runseal: bool,
     pub guards: Vec<(String, String)>,
@@ -53,7 +50,6 @@ pub struct Shape {
     pub web: Option<Found>,
     pub policy: Vec<String>,
     pub guard: String,
-    pub init: String,
 }
 
 struct Root<'a>(&'a Path);
@@ -104,25 +100,6 @@ impl Root<'_> {
                 }
                 if pack::minted(&entry.path().join("package.json")) {
                     found.insert("npm".to_string());
-                }
-            }
-        }
-        found
-    }
-
-    fn listed(&self) -> BTreeSet<String> {
-        let mut found = BTreeSet::new();
-        for seat in [".runseal/wrappers/init.ts", ".runseal/lib/init/init.ts"] {
-            let Ok(text) = std::fs::read_to_string(self.0.join(seat)) else {
-                continue;
-            };
-            for line in text.lines() {
-                let Some(at) = line.find(".runseal/wrappers/") else {
-                    continue;
-                };
-                let rest = &line[at + 18..];
-                if let Some(end) = rest.find(".ts") {
-                    found.insert(rest[..end].to_string());
                 }
             }
         }
@@ -247,7 +224,6 @@ pub fn read(root: &Path) -> Shape {
         wrappers: seat.names(".runseal/wrappers", ".ts"),
         dirs: seat.dirs(),
         actions: operator.actions(),
-        tests: operator.tests(),
         block: limit("block"),
         path: limit("path"),
         grants,
@@ -258,7 +234,7 @@ pub fn read(root: &Path) -> Shape {
         sites: pair::sites(root),
         ignore: std::fs::read_to_string(root.join(".gitignore")).unwrap_or_default(),
         rust: root.join("Cargo.toml").exists(),
-        runseal: root.join(".runseal").is_dir(),
+        runseal: root.join("runseal.toml").is_file() || root.join(".runseal").is_dir(),
         guards: guarded.lanes,
         edition: seat.edition(),
         binary: seat.binary(),
@@ -278,15 +254,11 @@ pub fn read(root: &Path) -> Shape {
         dispatch: crate::dispatch::read(root),
         web: crate::web::read(root),
         policy,
-        listed: seat.listed(),
         bounds: policy::bounds(doc.as_ref()),
         root: root.to_path_buf(),
         locks: lock::read(root),
         version: lock::held(root),
-        inits: root.join(".runseal/wrappers/init.ts").exists()
-            || root.join(".runseal/lib/init/init.ts").exists(),
         guard: guarded.source,
-        init: std::fs::read_to_string(root.join(".runseal/wrappers/init.ts")).unwrap_or_default(),
     }
 }
 pub fn reconcile(root: &Path, text: &str) -> Result<String, String> {

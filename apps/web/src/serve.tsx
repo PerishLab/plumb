@@ -34,7 +34,7 @@ const guide = `# open-web
   mechanical laws, four language adapters. install:
   curl -fsSL https://releases.ectropy.perish.uk/manage.sh | sh
 - [runseal](https://plumb.perish.uk/runseal/): operator toolbelt - explicit
-  profile, named wrappers, forge tools. install:
+  profile injection for external commands. install:
   curl -fsSL https://runseal.perish.uk/manage.sh | sh
 - [sidecar](https://plumb.perish.uk/sidecar/): local process manager -
   manifest lifecycle, stamped identity, chosen free ports. install:
@@ -99,24 +99,19 @@ source: https://git.perish.top/PerishFire/ectropy
 
 ## runseal - operator toolbelt
 
-what: run commands inside a small explicit profile - env, argv, symlinks,
-declared resources; repo-authored wrappers become verbs.
+what: run an explicit external command inside a small profile that injects
+environment, arguments, and symlinks. declared resource identities remain
+profile data rather than repository-authored commands.
 
 install (windows: manage.ps1; sha256 sums in checksums.txt):
   curl -fsSL https://runseal.perish.uk/manage.sh | sh
 
 surface:
-  runseal <cmd>     run an external command inside the profile
-  runseal :<name>   run a profile wrapper (.ts under the deno policy, or .sh)
-  runseal @profile | @resources | @resolve <uri> | @tool | @wrappers |
-  @which :<name>
-  -p, --profile <PROFILE>   explicit profile path
+  runseal [-p <PROFILE>] <cmd> [args...]   run an explicit external command
+  runseal [-p <PROFILE>] @tool            run the atomic profile tool
 
-profile (runseal.toml at the repo root; discovery walks upward, then
-~/.runseal/profiles/default.toml):
-  [resources] root
-  [[injections]] type = "env" (+ [injections.vars] NAME = "resource://path")
-  [deno] permissions = ["--allow-..."] - required for .ts wrappers
+every invocation names either the external command or atomic @tool operation;
+the profile supplies only env, argv, symlink, and resource identity data.
 source: https://git.perish.top/PerishFire/runseal
 
 ## sidecar - local process manager

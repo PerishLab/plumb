@@ -22,14 +22,12 @@ impl Operator<'_> {
             };
             lanes.push((seat.to_string(), source.replace("\r\n", "\n")));
         }
-        let mut sources = vec![
-            std::fs::read_to_string(self.0.join(".runseal/wrappers/guard.ts")).unwrap_or_default(),
-        ];
-        sources.extend(lanes.iter().map(|(_, source)| source.clone()));
-        Guard {
-            lanes,
-            source: sources.join("\n"),
-        }
+        let source = lanes
+            .iter()
+            .map(|(_, source)| source.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        Guard { lanes, source }
     }
 
     pub fn actions(&self) -> BTreeSet<String> {
@@ -45,33 +43,5 @@ impl Operator<'_> {
             })
             .map(|entry| entry.file_name().to_string_lossy().to_string())
             .collect()
-    }
-
-    pub fn tests(&self) -> Vec<String> {
-        let mut found = Vec::new();
-        collect(self.0, &self.0.join(".runseal"), &mut found);
-        found.sort();
-        found
-    }
-}
-
-fn collect(root: &Path, at: &Path, found: &mut Vec<String>) {
-    let Ok(entries) = std::fs::read_dir(at) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-            collect(root, &path, found);
-            continue;
-        }
-        let name = entry.file_name();
-        let name = name.to_string_lossy();
-        let test = [".test.ts", "_test.ts", ".test.tsx", "_test.tsx"]
-            .iter()
-            .any(|suffix| name.ends_with(suffix));
-        if test && let Ok(relative) = path.strip_prefix(root) {
-            found.push(relative.to_string_lossy().to_string());
-        }
     }
 }

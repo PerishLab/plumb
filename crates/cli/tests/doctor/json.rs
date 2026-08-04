@@ -24,8 +24,8 @@ fn clean() {
     assert_eq!(report["summary"]["out_of_true"], 0);
     assert_eq!(report["summary"]["unknown"], 0);
     assert_eq!(report["summary"]["blind"], 0);
-    assert_eq!(report["coverage"]["mechanized"], 76);
-    assert_eq!(report["coverage"]["observed"], 0);
+    assert_eq!(report["coverage"]["mechanized"], 71);
+    assert_eq!(report["coverage"]["observed"], 1);
     assert_eq!(report["coverage"]["prose_only"], 40);
     assert!(report["shape"]["wrappers"].is_array());
     assert!(report["shape"]["layout"].is_array());
@@ -44,8 +44,7 @@ fn clean() {
 #[test]
 fn failing() {
     let fixture = tempfile::tempdir().expect("fixture");
-    std::fs::create_dir_all(fixture.path().join(".runseal/wrappers"))
-        .expect("create governed fixture");
+    std::fs::write(fixture.path().join("runseal.toml"), "").expect("create governed fixture");
     let output = run(fixture.path());
     assert!(!output.status.success());
     let report: Value = serde_json::from_slice(&output.stdout).expect("doctor json");
@@ -110,10 +109,9 @@ fn blind() {
 #[test]
 fn currency() {
     let fixture = tempfile::tempdir().expect("fixture");
-    std::fs::create_dir(fixture.path().join(".runseal")).expect("runseal");
     std::fs::write(
-        fixture.path().join(".runseal/deno.json"),
-        r#"{"imports":{"@perish/sealkit":"jsr:@perish/sealkit"}}"#,
+        fixture.path().join("deno.json"),
+        r#"{"imports":{"@perish/shield":"jsr:@perish/shield"}}"#,
     )
     .expect("dependency");
     let output = run(fixture.path());

@@ -181,17 +181,17 @@ fn garbled() {
 }
 
 #[test]
-fn wrapper() {
+fn lock() {
     let domain = Domain::new();
     let seat = domain.bare("alpha");
     std::fs::create_dir_all(seat.join(".runseal")).expect("seat");
     std::fs::write(
         seat.join(".runseal/deno.lock"),
-        "{\"version\":\"5\",\"specifiers\":{\"jsr:@perish/sealkit@*\":\"0.3.4\"}}",
+        "{\"version\":\"5\",\"specifiers\":{\"jsr:@perish/shield@*\":\"0.1.0\"}}",
     )
     .expect("lock");
     let roots = vec![seat];
-    let report = check(ask(&named(&roots), "@perish/sealkit", "0.4.0")).expect("readable domain");
+    let report = check(ask(&named(&roots), "@perish/shield", "0.1.1")).expect("readable domain");
     assert_eq!(report.seats.len(), 1);
     assert_eq!(report.seats[0].lock, ".runseal/deno.lock");
     assert!(report.seats[0].behind);

@@ -50,7 +50,6 @@ fn boundary() {
 fn sites() {
     let root = std::env::temp_dir().join("plumb-siteless");
     std::fs::create_dir_all(root.join("apps/web")).expect("fixture should be made");
-    std::fs::create_dir_all(root.join(".runseal/wrappers")).expect("fixture should be made");
     let bare = doctor(&root);
     assert!(!bare.contains("declares a site"), "{bare}");
 
