@@ -226,3 +226,60 @@ fn intent() {
     assert!(manager.contains("VERSION=${PROBE_VERSION:-v1.2.0-canary.9}"));
     assert!(!out.join("canonical").exists());
 }
+
+#[test]
+fn cargo() {
+    let root = tempfile::tempdir().expect("Cargo fixture");
+    let krate = root.path().join("crates/probe");
+    std::fs::create_dir_all(krate.join("src")).expect("crate root");
+    std::fs::write(
+        root.path().join("plumb.toml"),
+        "[release.cargo]\nregistry = \"perish\"\npackages = [\"probe\"]\n",
+    )
+    .expect("release manifest");
+    std::fs::write(
+        root.path().join("Cargo.toml"),
+        "[workspace]\nmembers = [\"crates/probe\"]\nresolver = \"3\"\n\n[workspace.package]\nversion = \"0.10.2\"\nedition = \"2024\"\nlicense = \"MIT\"\nrepository = \"https://example.invalid/probe\"\n",
+    )
+    .expect("workspace manifest");
+    std::fs::write(
+        krate.join("Cargo.toml"),
+        "[package]\nname = \"probe\"\nversion.workspace = true\nedition.workspace = true\nlicense.workspace = true\nrepository.workspace = true\npublish = [\"perish\"]\n",
+    )
+    .expect("crate manifest");
+    std::fs::write(krate.join("src/lib.rs"), "pub fn probe() {}\n").expect("crate source");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["release", "registry", "rehearse"])
+        .env("PLUMB_RELEASE_ROOT", root.path())
+        .env("PLUMB_RELEASE_VERSION", "v0.10.2-beta.1")
+        .env_remove("PLUMB_RELEASE_REGISTRY_TOKEN")
+        .output()
+        .expect("plumb should run");
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(!output.status.success(), "{error}");
+    assert!(
+        error.contains("PLUMB_RELEASE_REGISTRY_TOKEN is required"),
+        "{error}"
+    );
+    assert!(!error.contains("missing field `product`"), "{error}");
+
+    std::fs::write(
+        root.path().join("plumb.toml"),
+        "[release]\nproduct = \"probe\"\n\n[release.cargo]\nregistry = \"perish\"\npackages = [\"probe\"]\n",
+    )
+    .expect("incomplete release manifest");
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["release", "registry", "rehearse"])
+        .env("PLUMB_RELEASE_ROOT", root.path())
+        .env("PLUMB_RELEASE_VERSION", "v0.10.2-beta.1")
+        .env_remove("PLUMB_RELEASE_REGISTRY_TOKEN")
+        .output()
+        .expect("plumb should run");
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(!output.status.success(), "{error}");
+    assert!(
+        error.contains("authority must be one normalized https URL"),
+        "{error}"
+    );
+}
