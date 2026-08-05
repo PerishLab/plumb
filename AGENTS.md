@@ -64,8 +64,12 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   binding, and release sequencing. Product repositories expose only
   `release-exact.yml` and `release-stable.yml` as thin callers.
 - Every permanent release resolves canonical stable Plumb once and freezes that
-  exact stable version across all jobs. The source-built Plumb genesis ceremony
-  is one-shot and leaves no alternate lane behind.
+  exact stable version across all jobs. The sole recovery exception is the
+  typed `PerishLab/plumb` v0.18.14 self-hosting contract: source-built
+  `v0.18.14` may generate only `v0.18.14-beta.1`, and that exact public beta may
+  generate only stable `v0.18.14`. The command admits no product, authority,
+  channel, version, workflow, branch, or generator selector; it records exact
+  source/public provenance and leaves no alternate lane behind.
 - Exact releases live at `v1/releases/<channel>/<exact-version>/seal.json`.
   Non-stable has no moving pointer and no activation operation. Consumers name
   both channel and exact version.

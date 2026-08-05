@@ -47,6 +47,7 @@ pub fn promotion(input: Claim<'_>) -> Result<Option<Promotion>, String> {
     if !current || !identity || release != source {
         return Err("promotion seal does not prove this stable release".into());
     }
+    super::generator::audit(&proof)?;
     Ok(Some(Promotion {
         seal: Box::new(proof),
         digest: sha(text.as_bytes()),

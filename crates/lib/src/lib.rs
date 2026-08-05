@@ -32,6 +32,13 @@ macro_rules! version {
 }
 
 #[macro_export]
+macro_rules! commit {
+    ($prefix:literal) => {
+        option_env!(concat!($prefix, "_BUILD_COMMIT"))
+    };
+}
+
+#[macro_export]
 macro_rules! channel {
     ($prefix:literal) => {
         option_env!(concat!($prefix, "_BUILD_CHANNEL")).unwrap_or("dev")

@@ -37,8 +37,16 @@ a retry publishes that capsule rather than silently recompiling it with a
 different generator.
 
 Plumb's first release of this substrate is a one-time genesis ceremony using
-the source-built binary. Genesis uses the same capsule, conditional storage,
-public verification, and separate capabilities as every subsequent release.
+the source-built binary. Its typed recovery contract is fixed to
+`PerishLab/plumb`, the canonical authority, exact beta `v0.18.14-beta.1`, stable
+`v0.18.14`, and `release/v0.18.14`. Source-built `v0.18.14` records its compiled
+commit while generating the beta; stable records the exact public beta seal URL
+and byte digest and embeds the same seal as promotion proof. The CLI accepts
+only the later receipt-derived generator, release, Actions, caller, and beta
+digest identities, never a product, authority, version, workflow, branch, or
+generator selector. Identity drift refuses. Genesis uses the same capsule,
+conditional storage, public verification, and separate capabilities as every
+subsequent release, and every active recovery surface is retired at settlement.
 No permanent bootstrap lane exists.
 
 ## Lane spine

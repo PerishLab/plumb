@@ -102,7 +102,7 @@ the shared matrix, credentials, and sequencing; product workflows are thin
 callers. Release authorities are provisioned inputs: repository creation and
 resource, domain, token, escrow, and secret synchronization remain with their
 owning control planes, never Plumb or a product wrapper. Stable activation
-remains a separate capability and operation. Exact
+remains a separate capability and operation. The sole typed recovery fixes Plumb `v0.18.14-beta.1` to stable `v0.18.14`, records receipt-derived provenance, refuses drift, and retires at settlement. Exact
 may bind any selected branch; stable binds only `release/vX.Y.Z`, and its
 commit must be packported into `main` before the next stable activation. The
 release branch remains as a permanent frozen source and audit boundary. See
@@ -267,6 +267,7 @@ plumb release activate        # move stable consensus with its separate authorit
 plumb release inspect         # verify an exact seal or stable public surface
 plumb release smoke           # exercise a generated manager on this platform
 plumb release packport        # CI proof that stable is already an ancestor of main
+plumb release recovery {arm,beta,stable} # exact one-time Plumb v0.18.14 recovery
 plumb stable prepare          # create a writable operator-only stable release line
 plumb stable pick             # append one cherry-pick -x candidate commit
 plumb stable freeze           # make the stable release line immutable
