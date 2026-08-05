@@ -4,6 +4,9 @@ use plumb::forge::{Client, Outcome, git};
 use serde_json::{Value, json};
 use std::time::{Duration, Instant};
 
+const JOBS: usize = 4;
+const LINES: usize = 12;
+
 pub fn run(options: Dispatch) -> Result<String, String> {
     let root = git::root()?;
     let remote = git::remote(&root, &options.repo)?;
@@ -84,7 +87,7 @@ fn watch(client: &Client, id: u64, url: &str) -> Result<String, String> {
         match client.outcome(id)? {
             Outcome::Success => return Ok(format!("run {id}: success")),
             Outcome::Failed { status, tasks } => {
-                return Err(report(id, url, &status, &tasks));
+                return Err(report(client, id, &brief(id, url, &status, &tasks)));
             }
             Outcome::Waiting => {}
         }
@@ -95,10 +98,53 @@ fn watch(client: &Client, id: u64, url: &str) -> Result<String, String> {
     ))
 }
 
-fn report(id: u64, url: &str, status: &str, tasks: &[String]) -> String {
+fn brief(id: u64, url: &str, status: &str, tasks: &[String]) -> String {
     let detail = tasks
         .is_empty()
         .then(String::new)
         .unwrap_or_else(|| format!("; failed tasks: {}", tasks.join(", ")));
     format!("run {id}: {status}{detail}\n{url}")
+}
+
+fn report(client: &Client, id: u64, brief: &str) -> String {
+    match client.logs(id) {
+        Ok(found) if !found.is_empty() => format!("{brief}\n{}", tails(&found)),
+        _ => brief.to_string(),
+    }
+}
+
+fn tails(found: &[(usize, String)]) -> String {
+    let refused: Vec<&(usize, String)> = found
+        .iter()
+        .filter(|(_, text)| text.contains("Job failed"))
+        .collect();
+    let chosen = if refused.is_empty() {
+        found.iter().collect()
+    } else {
+        refused
+    };
+    chosen
+        .iter()
+        .take(JOBS)
+        .map(|(job, text)| {
+            let lines: Vec<&str> = text.lines().collect();
+            let tail = lines[lines.len().saturating_sub(LINES)..]
+                .iter()
+                .map(|line| format!("  {}", stamp(line)))
+                .collect::<Vec<_>>()
+                .join("\n");
+            format!("job {job}:\n{tail}")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn stamp(line: &str) -> &str {
+    line.split_once(' ').map_or(line, |(head, rest)| {
+        if head.ends_with('Z') && head.contains('T') {
+            rest
+        } else {
+            line
+        }
+    })
 }

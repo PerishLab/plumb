@@ -4,6 +4,7 @@ use super::request::failure;
 use serde_json::{Value, json};
 
 const PAGE: usize = 50;
+const JOBS: usize = 64;
 
 impl Client {
     pub fn dispatch(
@@ -106,6 +107,34 @@ impl Client {
         }
     }
 
+    pub fn log(&self, number: u64, job: usize, attempt: u32) -> Result<String, String> {
+        let response = self.web(&route(number, job, attempt))?;
+        match response.status {
+            200 => Ok(response
+                .value
+                .as_str()
+                .map(str::to_string)
+                .unwrap_or_else(|| response.value.to_string())),
+            404 => Err(format!(
+                "forgejo: run {number} has no job {job} attempt {attempt}"
+            )),
+            status => Err(failure("fetching job log", status, &response.value)),
+        }
+    }
+
+    pub fn logs(&self, id: u64) -> Result<Vec<(usize, String)>, String> {
+        let number = number(&self.run(id)?)?;
+        let mut found = Vec::new();
+        for job in 0..JOBS {
+            match self.log(number, job, 1) {
+                Ok(text) => found.push((job, text)),
+                Err(_) if !found.is_empty() => break,
+                Err(_) => continue,
+            }
+        }
+        Ok(found)
+    }
+
     pub fn link(&self, run: &Value) -> String {
         if let Some(url) = run.get("html_url").and_then(Value::as_str)
             && !url.trim().is_empty()
@@ -122,6 +151,10 @@ impl Client {
             })
             .unwrap_or_default()
     }
+}
+
+pub fn route(number: u64, job: usize, attempt: u32) -> String {
+    format!("/actions/runs/{number}/jobs/{job}/attempt/{attempt}/logs")
 }
 
 fn number(run: &Value) -> Result<u64, String> {

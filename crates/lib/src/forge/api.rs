@@ -226,6 +226,18 @@ impl Client {
             Some(&self.token),
         )
     }
+
+    pub(super) fn web(&self, route: &str) -> Result<Response, String> {
+        send(
+            &format!(
+                "{}://{}/{}/{}{}",
+                self.remote.scheme, self.remote.host, self.remote.owner, self.remote.repo, route
+            ),
+            "GET",
+            None,
+            Some(&self.token),
+        )
+    }
 }
 
 pub fn public(url: &str) -> Result<Value, String> {

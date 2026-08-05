@@ -12,3 +12,4 @@ pub use api::{Client, public, settled};
 pub use model::{Cut, Outcome, Pull, Remote, State, Strategy};
 pub use request::{Response, failure, send};
 pub use settings::{harness, token as configured};
+pub use workflow::route;
