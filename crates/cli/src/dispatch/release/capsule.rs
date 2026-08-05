@@ -1,8 +1,9 @@
+use super::generator;
 use super::manager;
 use super::model::{Format, Spec};
 use super::proof;
 pub use super::record::{Capsule, Local, Pointer};
-use super::record::{Generator, Remote, Seal, digest, json};
+use super::record::{Remote, Seal, digest, json};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
@@ -107,10 +108,13 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
         version: input.version.into(),
         commit: input.commit.into(),
         url: url.clone(),
-        generator: Generator {
-            version: plumb::version!("PLUMB").into(),
-            template: manager::template(),
-        },
+        generator: generator::resolve(generator::Claim {
+            spec: &spec,
+            channel: input.channel,
+            version: input.version,
+            commit: input.commit,
+            promotion: input.promotion,
+        })?,
         artifacts,
         managers,
         proof: promotion,

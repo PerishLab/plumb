@@ -74,6 +74,24 @@ paths = ["docs/CHANGELOG"]
 note = "stable release identity requires one immutable version seat directly under docs/CHANGELOG"
 allow = ["fanout"]
 
+[[boundary]]
+paths = [
+  "crates/cli/src/dispatch/release",
+  "crates/cli/tests/operator",
+]
+note = "the bounded self-hosting recovery adds one production module and one integration test module to established release inventories"
+allow = ["fanout"]
+
+[[boundary]]
+paths = [
+  "crates/cli/src/dispatch/operator/recovery.rs",
+  "crates/cli/src/dispatch/release/generator.rs",
+  "crates/cli/src/dispatch/release/record.rs",
+  "crates/cli/tests/operator/recovery.rs",
+]
+note = "the fixed one-time Plumb recovery contract uses explicit provenance and identity terms plus exact refusal combinations"
+allow = ["combination", "word"]
+
 [vocabulary]
 term = [
   { name = "dictionary_digest", description = "A domain vocabulary report binds its scan to the exact bundled dictionary bytes." },

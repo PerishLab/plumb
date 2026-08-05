@@ -18,6 +18,41 @@ pub struct Remote {
 pub struct Generator {
     pub version: String,
     pub template: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub origin: Option<GeneratorOrigin>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recovery: Option<RecoveryIdentity>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct RecoveryIdentity {
+    pub repository: String,
+    pub authority: String,
+    pub beta: String,
+    pub stable: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(
+    deny_unknown_fields,
+    tag = "kind",
+    rename_all = "kebab-case",
+    rename_all_fields = "camelCase"
+)]
+pub enum GeneratorOrigin {
+    Stable {},
+    ExactRelease {
+        channel: String,
+        #[serde(rename = "releaseVersion")]
+        version: String,
+        url: String,
+        sha256: String,
+    },
+    SourceBuilt {
+        repository: String,
+        commit: String,
+    },
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

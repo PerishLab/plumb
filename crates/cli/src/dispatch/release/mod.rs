@@ -1,7 +1,8 @@
 mod capsule;
 mod engine;
+pub(super) mod generator;
 mod manager;
-mod model;
+pub(super) mod model;
 mod proof;
 mod record;
 mod smoke;
@@ -29,6 +30,10 @@ pub enum Deed {
     Packport,
     Promote,
     Publish,
+    Recovery {
+        #[command(subcommand)]
+        deed: super::operator::Recovery,
+    },
     Registry {
         #[command(subcommand)]
         deed: Registry,
@@ -112,6 +117,7 @@ fn execute(deed: Deed) -> Result<String, String> {
                 .ok_or_else(|| "PLUMB_RELEASE_PROMOTION is required".to_string())?,
         ),
         Deed::Publish => storage::publish(&capsule(release)?, &rig.publish),
+        Deed::Recovery { deed } => super::operator::recovery(deed, &spec),
         Deed::Registry { deed } => match deed {
             Registry::Publish => engine::registry::registry(&spec).publish(
                 required("PLUMB_RELEASE_VERSION", &release.version)?,
