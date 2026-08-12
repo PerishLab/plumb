@@ -2,6 +2,7 @@
 fn cargo() {
     let dir = std::env::temp_dir().join("plumb-crate-seat");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
+    crate::govern(&dir);
     let path = dir.to_str().expect("path should be utf8");
 
     std::fs::write(
@@ -66,6 +67,7 @@ fn cargo() {
 fn packages() {
     let dir = std::env::temp_dir().join("plumb-packages");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
+    crate::govern(&dir);
 
     std::fs::write(
         dir.join("deno.json"),

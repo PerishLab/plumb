@@ -11,7 +11,7 @@ fn run(root: &Path) -> Output {
 
 #[test]
 fn clean() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     let output = run(fixture.path());
     assert!(output.status.success());
     assert!(output.stderr.is_empty());
@@ -37,14 +37,14 @@ fn clean() {
             .as_str()
             .is_some_and(|digest| digest.len() == 64)
     );
-    assert_eq!(report["vocabulary"]["retired"], 0);
+    assert_eq!(report["vocabulary"]["retired"], 1);
     assert_eq!(report["vocabulary"]["coverage"]["tracked"], 0);
     assert_eq!(report["vocabulary"]["hits"], serde_json::json!([]));
 }
 
 #[test]
 fn failing() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     std::fs::write(fixture.path().join("runseal.toml"), "").expect("create governed fixture");
     let output = run(fixture.path());
     assert!(!output.status.success());
@@ -75,7 +75,7 @@ fn failing() {
 
 #[test]
 fn unknown() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     std::fs::create_dir(fixture.path().join("novel")).expect("create unknown shape");
     let output = run(fixture.path());
     assert!(output.status.success());
@@ -89,7 +89,7 @@ fn unknown() {
 
 #[test]
 fn evidence() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     let output = run(fixture.path());
     let report: Value = serde_json::from_slice(&output.stdout).expect("doctor json");
     assert_eq!(report["shape"]["dependencies"], serde_json::json!([]));
@@ -97,7 +97,7 @@ fn evidence() {
 
 #[test]
 fn blind() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     std::fs::write(fixture.path().join("ectropy.toml"), "{").expect("malformed policy");
     let output = run(fixture.path());
     assert!(!output.status.success());
@@ -109,7 +109,7 @@ fn blind() {
 
 #[test]
 fn currency() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     std::fs::write(
         fixture.path().join("deno.json"),
         r#"{"imports":{"@perish/shield":"jsr:@perish/shield"}}"#,

@@ -2,7 +2,7 @@ use std::path::Path;
 
 #[test]
 fn budget() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     let root = fixture.path();
     std::fs::create_dir_all(root.join("crates/tool/src")).expect("source seat");
     std::fs::create_dir_all(root.join("crates/tool/tests")).expect("test seat");
@@ -27,7 +27,7 @@ fn curve() {
 
 #[test]
 fn exact() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     brief(fixture.path(), "brief\n", "paths\n", "scenarios\n");
     let out = crate::run(&["doctor", fixture.path().to_str().expect("utf8 root")]);
     assert!(out.contains("true to the skeleton"), "{out}");
@@ -35,7 +35,7 @@ fn exact() {
 
 #[test]
 fn open() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     let root = fixture.path();
     strategy(root, "brief");
     std::fs::create_dir_all(root.join("skills/tool/references")).expect("reference seat");
@@ -52,7 +52,7 @@ fn open() {
 
 #[test]
 fn excess() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     brief(fixture.path(), &"line\n".repeat(121), "", "");
     let out = crate::run(&["doctor", fixture.path().to_str().expect("utf8 root")]);
     assert!(
@@ -63,7 +63,7 @@ fn excess() {
 
 #[test]
 fn unread() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     brief(fixture.path(), "brief\n", "paths\n", "scenarios\n");
     std::fs::write(fixture.path().join("skills/tool/PATHS.md"), [0xff]).expect("invalid text");
     let out = crate::run(&["doctor", fixture.path().to_str().expect("utf8 root")]);
@@ -74,7 +74,7 @@ fn unread() {
 #[cfg(unix)]
 #[test]
 fn symlink() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     brief(fixture.path(), "brief\n", "paths\n", "scenarios\n");
     let path = fixture.path().join("skills/tool/PATHS.md");
     std::fs::remove_file(&path).expect("remove path");
@@ -86,7 +86,7 @@ fn symlink() {
 #[cfg(unix)]
 #[test]
 fn source() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     let root = fixture.path();
     std::fs::create_dir_all(root.join("crates/tool/code")).expect("source seat");
     std::os::unix::fs::symlink("code", root.join("crates/tool/src")).expect("source link");
@@ -99,7 +99,7 @@ fn source() {
 
 #[test]
 fn declaration() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     let root = fixture.path();
     std::fs::create_dir_all(root.join("skills/tool")).expect("skill seat");
     std::fs::write(root.join("plumb.toml"), "").expect("manifest");
@@ -109,7 +109,7 @@ fn declaration() {
 
 #[test]
 fn closed() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     let root = fixture.path();
     brief(root, "brief\n", "paths\n", "scenarios\n");
     strategy(root, "large");
@@ -138,7 +138,7 @@ fn closed() {
 
 #[test]
 fn seat() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     strategy(fixture.path(), "brief");
     let out = crate::run(&["doctor", fixture.path().to_str().expect("utf8 root")]);
     assert!(
@@ -149,14 +149,14 @@ fn seat() {
 
 #[test]
 fn silent() {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     std::fs::create_dir_all(fixture.path().join("skills/tool")).expect("skill seat");
     let out = crate::run(&["doctor", fixture.path().to_str().expect("utf8 root")]);
     assert!(out.contains("true to the skeleton"), "{out}");
 }
 
 fn case(source: usize, budget: usize) {
-    let fixture = tempfile::tempdir().expect("fixture");
+    let fixture = crate::fixture();
     let root = fixture.path();
     std::fs::create_dir_all(root.join("crates/tool/src")).expect("source seat");
     brief(root, "brief\n", "paths\n", "scenarios\n");

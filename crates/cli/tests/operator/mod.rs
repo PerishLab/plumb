@@ -19,6 +19,19 @@ mod stable;
 #[cfg(unix)]
 mod topology;
 
+fn govern(root: &std::path::Path) {
+    let status = Command::new("git")
+        .args([
+            "-C",
+            root.to_str().expect("path should be utf8"),
+            "init",
+            "-q",
+        ])
+        .status()
+        .expect("git should run");
+    assert!(status.success(), "fixture should become a repository");
+}
+
 fn run(root: &std::path::Path) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("path should be utf8")])
@@ -31,6 +44,7 @@ fn run(root: &std::path::Path) -> String {
 fn actions() {
     let dir = std::env::temp_dir().join("plumb-actions");
     std::fs::create_dir_all(dir.join("setup-tool")).expect("fixture should be made");
+    govern(&dir);
     std::fs::write(dir.join("setup-tool/action.yml"), "name: setup\n")
         .expect("action should be written");
     let held = run(&dir);
@@ -45,6 +59,7 @@ fn actions() {
 fn adoption() {
     let dir = std::env::temp_dir().join("plumb-adoption");
     std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
+    govern(&dir);
     std::fs::write(dir.join("runseal.toml"), "").expect("profile should be written");
     let lane = dir.join(".forgejo/workflows/guard.yml");
     std::fs::write(
@@ -77,6 +92,7 @@ fn adoption() {
 fn cargo() {
     let dir = std::env::temp_dir().join("plumb-cargo-lane");
     std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
+    govern(&dir);
     std::fs::write(
         dir.join(".forgejo/workflows/release-cargo.yml"),
         "name: release-cargo\n",
@@ -93,6 +109,7 @@ fn cargo() {
 #[test]
 fn wrappers() {
     let fixture = tempfile::tempdir().expect("fixture should be made");
+    govern(fixture.path());
     std::fs::create_dir_all(fixture.path().join(".runseal/wrappers"))
         .expect("wrapper seat should be made");
     std::fs::write(fixture.path().join(".runseal/wrappers/special.ts"), "")
@@ -106,6 +123,7 @@ fn wrappers() {
 fn profile() {
     let dir = std::env::temp_dir().join("plumb-profile");
     std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
+    govern(&dir);
     std::fs::write(dir.join("runseal.toml"), "").expect("profile should be written");
     std::fs::write(dir.join("Cargo.toml"), "[workspace]\n").expect("manifest should be written");
     let lane = dir.join(".forgejo/workflows/guard.yml");
@@ -137,6 +155,7 @@ fn profile() {
 fn obsolete() {
     let dir = std::env::temp_dir().join("plumb-obsolete");
     std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
+    govern(&dir);
     std::fs::write(dir.join("runseal.toml"), "").expect("profile should be written");
     std::fs::write(
         dir.join(".forgejo/workflows/guard.yml"),

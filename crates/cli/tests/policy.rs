@@ -1,6 +1,19 @@
 use std::path::Path;
 use std::process::Command;
 
+fn govern(root: &Path) {
+    let status = Command::new("git")
+        .args([
+            "-C",
+            root.to_str().expect("path should be utf8"),
+            "init",
+            "-q",
+        ])
+        .status()
+        .expect("git should run");
+    assert!(status.success(), "fixture should become a repository");
+}
+
 fn run(root: &Path) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("path should be utf8")])
@@ -55,6 +68,7 @@ fn ban() {
 fn blind() {
     let root = std::env::temp_dir().join("plumb-blind");
     std::fs::create_dir_all(&root).expect("fixture should be made");
+    govern(&root);
     std::fs::write(root.join("runseal.toml"), "").expect("profile should be made");
     std::fs::write(root.join("ectropy.toml"), "[limit\n").expect("policy should be written");
     let out = run(&root);
@@ -67,6 +81,7 @@ fn blind() {
 fn allowance() {
     let root = std::env::temp_dir().join("plumb-allowance");
     std::fs::create_dir_all(&root).expect("fixture should be made");
+    govern(&root);
     let policy = r#"
 [scan]
 include = []
@@ -148,6 +163,7 @@ description = "fixture"
 fn malformed() {
     let root = std::env::temp_dir().join("plumb-policy-malformed");
     std::fs::create_dir_all(&root).expect("fixture should be made");
+    govern(&root);
     let path = root.join("ectropy.toml");
     std::fs::write(&path, "[limit\n").expect("policy should be written");
     let output = policy(&root, true);

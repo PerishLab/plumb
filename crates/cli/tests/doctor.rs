@@ -19,6 +19,25 @@ fn seat() -> std::path::PathBuf {
         .to_path_buf()
 }
 
+fn govern(root: &std::path::Path) {
+    let status = Command::new("git")
+        .args([
+            "-C",
+            root.to_str().expect("path should be utf8"),
+            "init",
+            "-q",
+        ])
+        .status()
+        .expect("git should run");
+    assert!(status.success(), "fixture should become a repository");
+}
+
+fn fixture() -> tempfile::TempDir {
+    let seat = tempfile::tempdir().expect("fixture");
+    govern(seat.path());
+    seat
+}
+
 fn run(args: &[&str]) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(args)
@@ -43,6 +62,7 @@ fn itself() {
 fn governs() {
     let bare = std::env::temp_dir().join("plumb-ungoverned");
     std::fs::create_dir_all(&bare).expect("fixture should be made");
+    govern(&bare);
     std::fs::write(bare.join("README.md"), "# bare\n").expect("readme should be written");
     let out = run(&["doctor", bare.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&bare).expect("fixture should be swept");
@@ -52,6 +72,7 @@ fn governs() {
 
     let seat = std::env::temp_dir().join("plumb-governed");
     std::fs::create_dir_all(seat.join(".runseal")).expect("fixture should be made");
+    govern(&seat);
     let out = run(&["doctor", seat.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&seat).expect("fixture should be swept");
     assert!(out.contains("no guard workflow"), "{out}");
@@ -62,6 +83,7 @@ fn governs() {
 fn concurrency() {
     let dir = std::env::temp_dir().join("plumb-concurrency");
     std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
+    govern(&dir);
     std::fs::write(dir.join("runseal.toml"), "").expect("profile should be written");
     std::fs::write(dir.join("ectropy.toml"), "").expect("laws should be written");
     let lane = dir.join(".forgejo/workflows/guard.yml");
@@ -89,7 +111,7 @@ fn concurrency() {
 
 #[test]
 fn authorities() {
-    let fixture = tempfile::tempdir().expect("fixture should be made");
+    let fixture = fixture();
     let root = fixture.path();
     std::fs::create_dir_all(root.join(".runseal")).expect("runseal should be made");
     std::fs::create_dir_all(root.join(".github/workflows")).expect("github should be made");
@@ -121,6 +143,7 @@ fn authorities() {
 fn edition() {
     let dir = std::env::temp_dir().join("plumb-edition");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
+    govern(&dir);
     let cargo = dir.join("Cargo.toml");
 
     std::fs::write(&cargo, "[workspace.package]\nedition = \"2021\"\n")
@@ -142,6 +165,7 @@ fn edition() {
 fn container() {
     let dir = std::env::temp_dir().join("plumb-container");
     std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
+    govern(&dir);
     let lane = dir.join(".forgejo/workflows/guard.yml");
 
     std::fs::write(&lane, "container: mirror.perish.lan/ci/deno:20260716-abc\n")
@@ -160,6 +184,7 @@ fn container() {
 fn clap() {
     let dir = std::env::temp_dir().join("plumb-clap");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
+    govern(&dir);
     std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
     let cargo = dir.join("Cargo.toml");
 
@@ -189,6 +214,7 @@ fn clap() {
 fn substrate() {
     let dir = std::env::temp_dir().join("plumb-substrate");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
+    govern(&dir);
     std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
     let cargo = dir.join("Cargo.toml");
 
@@ -215,6 +241,7 @@ fn hookless() {
     let dir = std::env::temp_dir().join("plumb-hookless");
     std::fs::create_dir_all(dir.join(".runseal")).expect("fixture should be made");
     std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
+    govern(&dir);
     std::fs::write(
         dir.join(".forgejo/workflows/guard.yml"),
         "name: guard\nconcurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true\njobs:\n  guard:\n    steps:\n      - run: plumb doctor . && ectropy .\n",
