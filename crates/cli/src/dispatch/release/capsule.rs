@@ -1,9 +1,9 @@
-use super::generator;
 use super::manager;
 use super::model::{Format, Spec};
 use super::proof;
 pub use super::record::{Capsule, Local, Pointer};
 use super::record::{Remote, Seal, digest, json};
+use super::{artifact, generator};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
@@ -48,7 +48,8 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
     }
     let seat = input.out.join("managers");
     manager::write(input.spec, input.channel, input.version, &seat)?;
-    let declared = declared(&spec);
+    let assets = artifact::list(&spec, input.version)?;
+    let declared = declared(&spec, &assets);
     complete(input.artifacts, &declared)?;
     let payload = input.out.join("payload");
     std::fs::create_dir(&payload)
@@ -70,7 +71,7 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
         artifacts.insert(target.key.clone(), local.remote.clone());
         objects.push(local);
     }
-    for asset in spec.assets() {
+    for asset in assets {
         let source = stage(input.artifacts, &payload, &asset.file)?;
         let local = draft.object(source, &asset.file, &asset.mime)?;
         artifacts.insert(asset.key.clone(), local.remote.clone());
@@ -255,11 +256,11 @@ impl Draft<'_> {
     }
 }
 
-fn declared(spec: &Spec) -> BTreeSet<String> {
+fn declared(spec: &Spec, assets: &[artifact::Asset]) -> BTreeSet<String> {
     spec.target
         .iter()
         .map(|held| held.archive.clone())
-        .chain(spec.assets().iter().map(|held| held.file.clone()))
+        .chain(assets.iter().map(|held| held.file.clone()))
         .collect()
 }
 

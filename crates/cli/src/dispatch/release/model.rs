@@ -27,13 +27,6 @@ pub struct Target {
     pub runner: String,
 }
 
-#[derive(Clone, Debug)]
-pub struct Asset {
-    pub key: String,
-    pub file: String,
-    pub mime: String,
-}
-
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct Cargo {
@@ -186,25 +179,6 @@ impl Spec {
             }
         }
         Ok(())
-    }
-
-    pub fn assets(&self) -> Vec<Asset> {
-        let mut assets = Vec::new();
-        if self.skill {
-            assets.push(Asset {
-                key: "skill".into(),
-                file: format!("{}-skill.tar.gz", self.product),
-                mime: "application/gzip".into(),
-            });
-        }
-        if self.deb.is_some() {
-            assets.push(Asset {
-                key: "linux-x64-deb".into(),
-                file: format!("{}-x86_64-unknown-linux-gnu.deb", self.product),
-                mime: "application/vnd.debian.binary-package".into(),
-            });
-        }
-        assets
     }
 
     pub fn manifest(&self) -> PathBuf {

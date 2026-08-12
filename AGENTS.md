@@ -87,6 +87,10 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   Plumb compiler before the first irreversible action.
   `plumb doctor` does not check this: a changelog is owed by a release, not by a
   working tree. See `docs/changelog.md`.
+- An optional `docs/CHANGELOG/v<base-version>/artifacts/` contributes its flat
+  regular-file set to exact prerelease and stable seals. Plumb preserves bytes
+  under filenames and owns only generic safety and collision refusal; product
+  semantics do not enter the release model.
 - Stable is `X.Y.Z`. Every non-stable release is
   `X.Y.Z-<channel>.N`. Stable promotion embeds the complete exact candidate
   seal and its digest, and requires the same product, base version, and commit.

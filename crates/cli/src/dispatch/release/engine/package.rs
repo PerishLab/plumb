@@ -1,4 +1,5 @@
 use super::super::model::{Format, Spec};
+use super::super::{artifact, artifact::Asset};
 use super::{archive, debian, skill};
 use crate::dispatch::release::engine::workspace::Workspace;
 use serde_json::json;
@@ -80,7 +81,8 @@ impl Product<'_> {
     }
 
     pub fn assemble(&self, version: &str, artifacts: &Path) -> Result<String, String> {
-        self.gather(artifacts)?;
+        let assets = artifact::list(self.spec, version)?;
+        self.gather(artifacts, &assets)?;
         if self.spec.skill {
             let path = artifacts.join(format!("{}-skill.tar.gz", self.spec.product));
             if path.exists() {
@@ -91,17 +93,34 @@ impl Product<'_> {
             }
             skill::build(self.spec, version, &path)?;
         }
-        self.verify(artifacts)?;
+        for asset in assets.iter().filter(|asset| asset.source.is_some()) {
+            let source = asset.source.as_ref().expect("source should exist");
+            let target = artifacts.join(&asset.file);
+            if target.exists() {
+                return Err(format!(
+                    "release artifact already exists: {}",
+                    target.display()
+                ));
+            }
+            std::fs::copy(source, &target).map_err(|error| {
+                format!(
+                    "cannot stage {} as {}: {error}",
+                    source.display(),
+                    target.display()
+                )
+            })?;
+        }
+        self.verify(artifacts, &assets)?;
         Ok(format!("assembled {} {}", self.spec.product, version))
     }
 
-    pub fn verify(&self, artifacts: &Path) -> Result<(), String> {
+    fn verify(&self, artifacts: &Path, assets: &[Asset]) -> Result<(), String> {
         let declared = self
             .spec
             .target
             .iter()
             .map(|target| target.archive.clone())
-            .chain(self.spec.assets().into_iter().map(|asset| asset.file))
+            .chain(assets.iter().map(|asset| asset.file.clone()))
             .collect::<BTreeSet<_>>();
         let found = std::fs::read_dir(artifacts)
             .map_err(|error| format!("cannot read {}: {error}", artifacts.display()))?
@@ -157,18 +176,17 @@ impl Product<'_> {
         Ok(())
     }
 
-    fn gather(&self, root: &Path) -> Result<(), String> {
+    fn gather(&self, root: &Path, assets: &[Asset]) -> Result<(), String> {
         let expected = self
             .spec
             .target
             .iter()
             .map(|target| target.archive.clone())
             .chain(
-                self.spec
-                    .assets()
-                    .into_iter()
-                    .filter(|asset| asset.key != "skill")
-                    .map(|asset| asset.file),
+                assets
+                    .iter()
+                    .filter(|asset| asset.key != "skill" && asset.source.is_none())
+                    .map(|asset| asset.file.clone()),
             )
             .collect::<BTreeSet<_>>();
         let mut found = BTreeMap::<String, Vec<PathBuf>>::new();

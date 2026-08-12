@@ -8,6 +8,7 @@ there is nowhere to put it.
 
 ```
 docs/CHANGELOG/v<version>/<lang>/{INDEX.md, MIGRATION.md}
+docs/CHANGELOG/v<version>/artifacts/*
 ```
 
 `en` and `zh` are the floor, not the set. A repository may carry more languages;
@@ -16,6 +17,17 @@ the membership keeps the language list out of the substrate — adding a third
 language is a repository's decision and requires no change here.
 
 INDEX.md says what changed. MIGRATION.md says what a consumer must do about it.
+
+`artifacts/` is optional. Its direct regular files join the immutable release
+artifact set under their filenames. Plumb preserves their bytes but assigns no
+meaning to their names or contents; the product owns those contracts. Links,
+directories, non-UTF-8 names, and collisions with derived release artifacts
+refuse assembly. There is no file-count limit.
+
+Prerelease identity resolves this directory through its stable base. Thus
+`v1.2.0-beta.3` and `v1.2.0` both read
+`docs/CHANGELOG/v1.2.0/artifacts/`, allowing the existing promotion proof to
+bind the same version-owned payload.
 
 ## Write the empty migration
 

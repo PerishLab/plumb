@@ -1,3 +1,4 @@
+mod artifact;
 mod capsule;
 mod engine;
 pub(super) mod generator;
