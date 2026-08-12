@@ -1,260 +1,74 @@
 ---
 name: plumb
-description: Use when building or operating a repository in this workshop — the laws it must hold, which of them a checker enforces today, and how to run plumb.
+description: Build, inspect, prove, release, and land a repository governed by a root plumb.toml.
 metadata:
-  short-description: Laws, standing, and commands for workshop repositories
+  short-description: Objects and actions for governed repositories
 ---
 
-# plumb
+# Plumb
 
-`plumb` is the substrate a managed repository builds on and the doctor that
-travels to it. This brief carries what the binary cannot enforce: the
-principles the workshop is built on, the laws that follow from them, and — for
-each law — whether a machine catches a violation or only you will.
+Plumb governs a repository carrying `plumb.toml` at its root. Outside that
+boundary this brief is silent. Read the repository's own instructions, then
+use Doctor before changing its shape.
 
-## Jurisdiction
+## Objects
 
-These laws bind only the spaces this tool manages. Its owner defines what
-managed means, states that test here, and keeps it answerable by looking
-rather than by running.
+- A **repository** is the root selected by `plumb.toml`.
+- A **shape** is the evidence Doctor can read from that repository.
+- A **rule** is one catalogued law with an owner, evidence, tags, and standing.
+- A **finding** is one rule verdict: `out of true`, `unknown shape`, or `blind`.
+- A **standing** is `mechanized`, `observed`, or `prose-only`.
+- A **boundary** proves one committed delta stays inside declared write paths.
+- A **landing** projects a clean topic branch onto its base and waits for guard.
+- A **lock** binds declared files to the version and hash of their last human
+  reading.
+- A **release** is an immutable product identity and declared artifact set.
+- A **stable line** is the explicit prepare, pick, freeze, publish, and packport
+  lifecycle for one permanent version.
+- A **site** is a declared application whose deploy, binding, and reachability
+  are independently evidenced.
+- A **skill seat** is one source brief or one ownership-proven installed brief.
 
-plumb manages a repository carrying `plumb.toml` at its root.
-
-Settle jurisdiction before you act. Inside, read these laws first and hold
-them. Outside, they are silent, and their silence is not worth remarking on.
-Only an unsettled answer asks.
-
-## Upstream
-
-Repository: https://git.perish.top/PerishLab/plumb
-
-Report defects, missing shapes, and unclear guidance there as issues. Use
-`plumb skill status` to check stable without changing an installation. When a
-newer stable release is available, run `plumb skill upgrade` and validate it.
-
-Read `Standing` before trusting any clause to be caught for you. Run
-`plumb doctor` in a repository before changing its shape.
-
-## Principles
-
-Five hold, and most specific questions fall out of them.
-
-**Mechanism at the substrate, vocabulary with the product.** plumb exports the
-derive, the doors, the template grammar, the install machinery. It exports no
-config sections, no backend names, no manifest keys. A shape frozen here is a
-closed set at the one layer that cannot open it — which backends exist and what
-a section holds are properties of the binary that owns them, expanding under
-pressure the substrate never feels.
-
-**The right to amend travels with the layer.** A law about repository shape
-lives with plumb because plumb can be amended when the shape must change. A law
-about a product's own sections lives with the product. Putting either in the
-other's house means the party who needs the change cannot make it.
-
-**Repetition is an ownership signal.** When several repositories repeat a
-Plumb-shaped mechanism nearly verbatim, surface the repeated shape to the
-caller and consider absorbing it at the substrate. Do not force an abstraction
-whose closure is still unclear; a strong signal starts an ownership decision,
-not an automatic rewrite.
-
-**Refusal over repair.** A policy half-read is a policy misread. Malformed
-config refuses to boot; an unknown template variable refuses to resolve; a state
-record with an unknown schema refuses to load; a path that is not provably ours
-refuses to be replaced. None of these guess, and none silently repair.
-
-**The wall stands until the check does.** A law is written before it is
-mechanized. A page that says so — and says it plainly — is the enforcement
-until the check lands. Claiming otherwise is worse than silence.
-
-## Laws
-
-Detail lives in the reference files; these are the clauses themselves.
-
-**Config.** Runtime policy enters through one cascade: default, file,
-environment, arguments, in that fixed order, with the default layer total. Two
-doors and no third — a parsed file and the typed environment. A direct read of
-the environment bypasses both; so does a key the cascade cannot derive. Tests
-are the granted territory. See `references/laws.md`.
-
-**Audit.** Plumb's Locus observation surface inherits one downstream-owned,
-typed environment section. Its master gate defaults muted and returns before
-Locus bootstrap, collection, generation, or reporting. The skill names the
-contract but does not choose whether, where, or what an operator observes. The
-root `locus.toml` separately declares read-side trace and span sieves and has no
-authority to enable collection. See `references/audit.md`.
-
-**Templates.** Values reach config text through one grammar: `{name}` against
-the caller's own variable table, `{{` and `}}` for the literals, and refusal for
-anything unknown, unclosed, bare, or empty. The grammar is the substrate's; the
-variables are the tool's.
-
-**Home and state.** A tool that keeps user state resolves one data home as an
-ordinary cascade field, keeps machine-written records under `state/`, versions
-their schema, and writes them whole. State is not a config surface. A record
-alone does not prove ownership: acting on a path requires the registry entry
-**and** a marker inside the path, both naming the tool.
-
-**Release lanes.** A binary product declares only its identity, binaries,
-targets, and genuine product assets in the root `plumb.toml`. Plumb owns build
-discovery, archives, attachments, managers, capsules, storage, verification,
-activation, smoke, source binding, and packport topology checks. Actions owns
-the shared matrix, credentials, and sequencing; product workflows are thin
-callers. Release authorities are provisioned inputs: repository creation and
-resource, domain, token, escrow, and secret synchronization remain with their
-owning control planes, never Plumb or a product wrapper. Stable activation
-remains a separate capability and operation. The sole typed recovery fixes Plumb `v0.18.14-beta.1` to stable `v0.18.14`, records receipt-derived provenance, refuses drift, and retires at settlement. Exact
-may bind any selected branch; stable binds only `release/vX.Y.Z`, and its
-commit must be packported into `main` before the next stable activation. The
-release branch remains as a permanent frozen source and audit boundary. See
-`references/lane.md`.
-
-**Repository protection.** Every managed repository carries the same
-byte-identical `main` and `release/**` baseline rules. Active release lines add
-only the exact PREPARING or FROZEN rule derived from their state; settled lines
-stay frozen and are never deleted. This is a prose-only operator obligation:
-`plumb doctor` does not read Forgejo. Apply and read it back with a local
-credential as specified in `references/protection.md`.
-
-**Stable consensus.** Stable from the canonical release authority alone may
-occupy default install seats and root manager entrypoints. Every other channel
-is an exact immutable validation candidate with explicit task-isolated install
-and bin paths. Stable default mutation is single-writer, ownership-proven,
-staged, atomic, and monotonic unless an exact rollback is explicit. Promotion
-embeds the exact candidate seal and requires the same source commit. See
-`references/lane.md`.
-
-**Seal evolution.** A seal reader refuses an unknown field rather than ignoring
-it, and stable promotion embeds a candidate seal and reserializes it. A new
-record therefore reaches the fleet in two releases and in that order: every
-binary that may promote first learns to read the typed optional field, and only
-afterwards does any binary begin to emit it. Reversing the order refuses a
-promotion the fleet cannot parse. The envelope `schema` stays 1 because every
-published manager script refuses anything else and those objects are immutable,
-so a new record carries its own version instead — `radius` does this with
-`plumb.radius/v1`.
-
-**Repository shape.** Generic wrappers and repository-owned Git hooks are not
-repository facts. Guard keeps one canonical workflow lane and runs Plumb plus
-Ectropy directly. Generic init and guard wrappers are removed rather than
-ported; landing is the substrate-owned `plumb land` operation. Plumb exposes no
-generic retirement command, so do not infer a successor for a removed retire
-wrapper. Transitional or product-specific wrappers remain visible in Doctor's
-shape snapshot but are not normalized against a generic lifecycle inventory;
-their absence is valid. Lanes and layout follow the skeleton the workshop
-already demonstrates rather than each repository's invention. Most of this
-clause is enforced; see below.
-
-**Dependencies.** Direct first-party dependencies across the `@perish` JSR
-scope and `perish` Cargo registry track live stable latest. Deno declarations
-carry no version requirement; Cargo retains native requirement syntax. In both
-ecosystems the exact lock resolution equals the latest non-prerelease,
-non-yanked registry version. The compiled policy names registry authorities,
-not package versions. Doctor reads registry, manifest, and lock evidence but
-mutates none of them. Unread evidence is blind and blocks; stale or pinned
-shape refuses. Same-workspace path edges remain a release-train concern rather
-than a published dependency edge.
-
-**Change boundaries.** A delivery coordinator declares repository-relative
-write prefixes and calls Plumb with an exact comparison base and member head.
-`plumb precommit` requires that head to be current, the worktree to be clean,
-the base to be its ancestor, and every changed path to lie inside the declared
-prefixes. Rename and copy count both old and new paths. Missing Git evidence,
-malformed boundaries, symbolic revisions, and non-UTF-8 paths refuse. This is
-an operation-local proof, not a Doctor rule or Git hook; Plumb validates the
-boundary but does not own claims or coordination.
-
-**Landing.** `plumb land` settles the current clean topic branch onto its
-base. It pushes the source branch unrebased, derives a base-relative one-commit
-projection at `land/<branch>`, waits for that projection's guard, fast-forwards
-the base onto it, and then syncs the separate worktree holding the base. The
-merge request pins the exact projection head and never asks Forgejo to delete a
-branch, so retention is a property of the mechanism rather than a caller
-choice. Refusals are typed, and a source or base that moves while the
-projection is guarded refuses rather than landing a stale snapshot. The library
-entry takes a repository path and reads no coordinator state, so a delivery
-coordinator may call it directly.
-
-**Release radius.** `plumb radius` answers, for one product and one candidate
-version over a supplied set of repository roots, which declared seats currently
-resolve below it. It reads each root's lock rather than its manifest, needs no
-registry and no network, and compares against the candidate the caller names
-rather than a fetched latest. The caller names each root as `[label=]path`,
-where an omitted label defaults to the final path component, and the report
-carries the label alone, so a published record leaks no filesystem layout. A
-root that cannot be read, or a resolution that is not a version, is reported
-blind and never counted as current. The evaluator takes no domain vocabulary
-and reads no private control-plane state, so a delivery coordinator supplies
-the roots and Plumb supplies the judgment. Like `precommit` this is an
-operation, not a Doctor rule, and it emits no finding.
-
-**Domain vocabulary transitions.** Plumb carries one release-locked retired
-domain dictionary encoded with canonical `p64-v1`: `~` plus unpadded Base64URL
-over a lowercase ASCII atom. Doctor scans Git-tracked path and current worktree
-bytes with ASCII case-insensitive substring matching. Symlinks contribute their
-target bytes without being followed, gitlinks only their path, and
-`docs/CHANGELOG/**` is the sole historical exemption. Hits are out of true;
-unread evidence is blind. Repositories cannot configure entries or exclusions.
-Retired is a transition rather than a permanent vocabulary state: after domain
-removal or restoration, delete the encoded entry.
-
-**Sites.** An app declaring a site ships through one dispatch-only lane calling
-`plumb site deploy`, the same CLI entry an operator runs, with a purpose-scoped
-key the lane holds and the operator does not. Plumb derives the application,
-package, assets, and worker from `apps/*/wrangler.jsonc`; repositories carry no
-ship wrapper. The build stamps its commit into the health document and
-declares its routes in the artifact — a sitemap, or the prerendered documents
-themselves; the shipper reads those and never application source. A deploy
-reports three separate states — deployed, bound, reachable — each proven on its
-own. Binding admits `unknown`, because a credential that cannot ask has not
-learned `no`, and an unprovable deploy says so rather than implying success
-(`docs/site.md`).
-
-**Changelogs.** A stable release carries
-`docs/CHANGELOG/v<version>/<lang>/{INDEX.md, MIGRATION.md}` before it goes out,
-because afterwards the release is immutable and there is nowhere to put it. `en`
-and `zh` are the floor and not the set. A release requiring nothing of anyone
-still writes MIGRATION.md saying so — that sentence is a conclusion somebody
-reached, and a file nobody wrote is not the same artifact. Prereleases are
-exempt, and the rule does not reach back past the version that introduced it
-(`docs/changelog.md`).
-
-**Locks.** A pair bound across a boundary no compiler crosses — a brief and the
-binary it describes, a chart and an environment key — is declared in
-`plumb.toml` with the version and hash of its last reading. Drift on either
-side refuses. Affirmation is a human act and never automatic
-(`references/laws.md`).
-
-## Standing
-
-The catalog compiled into the matching binary is the complete source for
-standing. Run `plumb rule list` to inspect it, or select the part relevant to
-the current work:
+## Actions
 
 ```bash
-plumb rule list --standing mechanized
-plumb rule list --standing prose-only
-plumb rule list --namespace site --tag site
-plumb rule show structure.guard-lane-present
+plumb doctor [ROOT]
+plumb rule list
+plumb rule show RULE_ID
+plumb precommit [ROOT] --base BASE --head HEAD --write PATH
+plumb land [ROOT] [--base BASE] [--dry-run]
+plumb lock [ROOT]
+plumb radius --root [LABEL=]PATH --product PRODUCT --candidate VERSION
+plumb policy [ROOT] --write
+plumb changelog [ROOT]
+plumb release --help
+plumb stable --help
+plumb site --help
+plumb skill --help
 ```
 
-`mechanized` means the doctor owns an evaluator and may emit a verdict.
-`prose-only` means the law is indexed but no finding or exit status follows
-from it. `observed` is reserved for evidence gathered without a verdict.
-`blind` is not a fourth standing: it means a mechanized evaluator ran but could
-not read enough evidence. A prose-only rule is never blind merely because no
-evaluator exists.
+The binary is the authority for flags. Use `plumb <command> --help` before an
+unfamiliar or stateful action.
 
-The catalog also names the evidence and owning layer. Namespace, tag, standing,
-and owner selectors quick-fail when their vocabulary is unknown. Do not copy a
-standing list into prose or infer completeness from a clean doctor report:
-`clean` means this repository emitted no finding, while
-`plumb doctor --json` reports whole-catalog coverage separately.
+## Operating laws
 
-The release changelog gate remains release-local rather than a doctor rule.
-`plumb release compile` enforces it for stable before capsule creation.
+- Refuse missing or unread evidence; never infer or silently repair it.
+- Run Doctor before shape changes and again after them.
+- `out of true` and `blind` make Doctor nonzero. `unknown shape` is visible but
+  does not claim a known law was violated.
+- `observed` gathers evidence without a verdict. `prose-only` remains a human
+  obligation. Never describe either as mechanized.
+- Query the catalog for the current law instead of copying a standing list.
+- Keep product declarations limited to product identity and genuine inputs;
+  Plumb owns the shared mechanism derived from them.
+- Keep generated managers, capsules, archives, and staged installs out of
+  source control.
+- Use `plumb land`; do not recreate its projection and guard protocol in a
+  repository wrapper or hook.
+- Affirm a lock only after reading both sides of the declared binding. Lock
+  output is a proposal, never an automatic rewrite.
+- Stable default skill seats accept canonical stable only. Validate every
+  other candidate in an exact, isolated stage path.
 
-## Invocation
-
-The complete command surface, its flags, and the install, stage, and upgrade
-rules live in `references/invocation.md`. The binary is the truth about its own
-flags: prefer `plumb <command> --help` over assuming.
+Use [PATHS.md](PATHS.md) for routine flows and
+[SCENARIOS.md](SCENARIOS.md) only when one of its bounded cases applies.

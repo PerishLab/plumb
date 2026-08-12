@@ -51,7 +51,7 @@ pub struct Shape {
     pub web: Option<Found>,
     pub policy: Vec<String>,
     pub guard: String,
-    pub skills: Vec<skill::Skill>,
+    pub skills: skill::Read,
 }
 
 struct Root<'a>(&'a Path);

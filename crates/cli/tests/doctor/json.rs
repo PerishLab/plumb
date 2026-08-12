@@ -24,8 +24,8 @@ fn clean() {
     assert_eq!(report["summary"]["out_of_true"], 0);
     assert_eq!(report["summary"]["unknown"], 0);
     assert_eq!(report["summary"]["blind"], 0);
-    assert_eq!(report["coverage"]["mechanized"], 71);
-    assert_eq!(report["coverage"]["observed"], 2);
+    assert_eq!(report["coverage"]["mechanized"], 73);
+    assert_eq!(report["coverage"]["observed"], 1);
     assert_eq!(report["coverage"]["prose_only"], 40);
     assert!(report["shape"]["wrappers"].is_array());
     assert!(report["shape"]["layout"].is_array());

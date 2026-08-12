@@ -48,6 +48,7 @@ struct Skill {
     text: usize,
     budget: usize,
     files: usize,
+    entries: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -188,6 +189,7 @@ impl Shape {
             },
             skills: held
                 .skills
+                .held
                 .iter()
                 .map(|skill| Skill {
                     name: skill.name.clone(),
@@ -195,6 +197,7 @@ impl Shape {
                     text: skill.text,
                     budget: skill.budget,
                     files: skill.files,
+                    entries: skill.entries.clone(),
                 })
                 .collect(),
         }
@@ -253,7 +256,7 @@ fn human(
         held.path.unwrap_or(0),
         show(&held.grants)
     );
-    for skill in &held.skills {
+    for skill in &held.skills.held {
         println!(
             "  skill     {} source={} budget={} text={} files={}",
             skill.name, skill.source, skill.budget, skill.text, skill.files
