@@ -9,6 +9,7 @@ pub(crate) mod operator;
 mod pack;
 pub mod pair;
 mod policy;
+pub mod skill;
 
 pub use crate::judge::finding::Found;
 pub use dependency::{Dependencies, Dependency};
@@ -50,6 +51,7 @@ pub struct Shape {
     pub web: Option<Found>,
     pub policy: Vec<String>,
     pub guard: String,
+    pub skills: Vec<skill::Skill>,
 }
 
 struct Root<'a>(&'a Path);
@@ -259,6 +261,7 @@ pub fn read(root: &Path) -> Shape {
         locks: lock::read(root),
         version: lock::held(root),
         guard: guarded.source,
+        skills: skill::read(root),
     }
 }
 pub fn reconcile(root: &Path, text: &str) -> Result<String, String> {

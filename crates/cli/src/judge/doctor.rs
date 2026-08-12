@@ -38,6 +38,16 @@ struct Shape {
     sites: Vec<String>,
     dependencies: Vec<Dependency>,
     law: Law,
+    skills: Vec<Skill>,
+}
+
+#[derive(Serialize)]
+struct Skill {
+    name: String,
+    source: usize,
+    text: usize,
+    budget: usize,
+    files: usize,
 }
 
 #[derive(Serialize)]
@@ -176,6 +186,17 @@ impl Shape {
                 path: held.path.unwrap_or(0),
                 grants: held.grants.iter().cloned().collect(),
             },
+            skills: held
+                .skills
+                .iter()
+                .map(|skill| Skill {
+                    name: skill.name.clone(),
+                    source: skill.source,
+                    text: skill.text,
+                    budget: skill.budget,
+                    files: skill.files,
+                })
+                .collect(),
         }
     }
 }
@@ -232,6 +253,12 @@ fn human(
         held.path.unwrap_or(0),
         show(&held.grants)
     );
+    for skill in &held.skills {
+        println!(
+            "  skill     {} source={} budget={} text={} files={}",
+            skill.name, skill.source, skill.budget, skill.text, skill.files
+        );
+    }
     match vocabulary {
         Ok(report) => println!(
             "  vocabulary {} {} retired={} scanned={}/{}",

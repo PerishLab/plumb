@@ -40,6 +40,20 @@ stay duplicated. This is the split the task brief already draws between what sti
 and what has settled: a clause the doctor now enforces has settled, and restating it invites the two
 copies to drift.
 
+## Text budget experiment
+
+Doctor observes skill size before it enforces a limit. For production source lines `S`, the first
+candidate budget is `clamp(2 × ceil(sqrt(S)), 120, 400)` total Markdown lines beneath one skill
+seat. Production source is physical lines under the conventional `src` and `lib` seats for Rust,
+TypeScript, TSX, CSS, and SCSS; tests, documentation, dependencies, generated output, and the skill
+itself do not contribute.
+
+The square root makes prose grow slower than implementation: four times the source earns only
+twice the brief, while the fixed ceiling prevents a large repository from turning its skill into a
+manual. The current rule is observed, so Doctor reports source, budget, text, and file count without
+changing its verdict. It becomes mechanized only after repositories at the floor, curve, and ceiling
+show that the measure is stable.
+
 ## Standing must be true
 
 The version invariant is not that every documented command exists — it is that **the standing a

@@ -84,6 +84,14 @@ allow = ["fanout"]
 
 [[boundary]]
 paths = [
+  "crates/cli/src/judge/catalog/rules",
+  "crates/cli/src/shape",
+]
+note = "the skill budget observation adds one rule and one repository shape probe to the established inventories"
+allow = ["fanout"]
+
+[[boundary]]
+paths = [
   "crates/cli/src/dispatch/operator/recovery.rs",
   "crates/cli/src/dispatch/release/generator.rs",
   "crates/cli/src/dispatch/release/record.rs",

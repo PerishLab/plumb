@@ -8,6 +8,8 @@ mod json;
 mod rule;
 #[path = "doctor/ships.rs"]
 mod ships;
+#[path = "doctor/skill.rs"]
+mod skill;
 
 fn seat() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

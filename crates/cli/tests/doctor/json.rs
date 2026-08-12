@@ -25,10 +25,11 @@ fn clean() {
     assert_eq!(report["summary"]["unknown"], 0);
     assert_eq!(report["summary"]["blind"], 0);
     assert_eq!(report["coverage"]["mechanized"], 71);
-    assert_eq!(report["coverage"]["observed"], 1);
+    assert_eq!(report["coverage"]["observed"], 2);
     assert_eq!(report["coverage"]["prose_only"], 40);
     assert!(report["shape"]["wrappers"].is_array());
     assert!(report["shape"]["layout"].is_array());
+    assert!(report["shape"]["skills"].is_array());
     assert_eq!(report["vocabulary"]["schema"], "plumb.vocabulary/v1");
     assert_eq!(report["vocabulary"]["codec"], "p64-v1");
     assert!(
