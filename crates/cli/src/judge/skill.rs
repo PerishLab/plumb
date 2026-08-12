@@ -6,6 +6,9 @@ pub fn check(held: &shape::Shape) -> Found {
     use shape::skill::Config;
 
     let mut found = Found::new();
+    if held.documents.config.active() {
+        return found;
+    }
     let strategy = match &held.skills.config {
         Config::Outside => return found,
         Config::Absent if !held.skills.present => return found,

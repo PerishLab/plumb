@@ -5,6 +5,7 @@ use serde_json::Value as Json;
 use std::path::{Path, PathBuf};
 
 pub(crate) mod audit;
+pub mod command;
 pub mod land;
 pub mod operator;
 mod production;

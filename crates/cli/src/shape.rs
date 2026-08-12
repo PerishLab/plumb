@@ -3,6 +3,7 @@ use std::path::Path;
 
 pub mod changelog;
 mod dependency;
+pub mod document;
 mod lock;
 mod node;
 pub(crate) mod operator;
@@ -52,6 +53,7 @@ pub struct Shape {
     pub policy: Vec<String>,
     pub guard: String,
     pub skills: skill::Read,
+    pub documents: document::Read,
 }
 
 struct Root<'a>(&'a Path);
@@ -189,6 +191,14 @@ impl Root<'_> {
 }
 
 pub fn read(root: &Path) -> Shape {
+    let snapshot = plumb::snapshot::Snapshot::read(root);
+    capture(root, &snapshot)
+}
+
+pub fn capture(
+    root: &Path,
+    snapshot: &Result<plumb::snapshot::Snapshot, plumb::snapshot::Refusal>,
+) -> Shape {
     let seat = Root(root);
     let operator = operator::Operator(root);
     let guarded = operator.guard();
@@ -222,6 +232,12 @@ pub fn read(root: &Path) -> Shape {
             }
         }
     }
+    let documents = document::read(root, snapshot.as_ref());
+    let skills = if documents.config.active() {
+        skill::Read::empty(root)
+    } else {
+        skill::read(root)
+    };
     Shape {
         wrappers: seat.names(".runseal/wrappers", ".ts"),
         dirs: seat.dirs(),
@@ -261,7 +277,8 @@ pub fn read(root: &Path) -> Shape {
         locks: lock::read(root),
         version: lock::held(root),
         guard: guarded.source,
-        skills: skill::read(root),
+        skills,
+        documents,
     }
 }
 pub fn reconcile(root: &Path, text: &str) -> Result<String, String> {

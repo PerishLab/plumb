@@ -1,8 +1,6 @@
-use super::fixture::SPEC;
+use super::fixture::{CURL, SPEC};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-
-const COMMIT: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 struct Fixture {
     root: tempfile::TempDir,
@@ -13,18 +11,52 @@ struct Cut<'a> {
     version: &'a str,
     label: &'a str,
     proof: Option<&'a Path>,
+    commit: &'a str,
 }
 
 impl Fixture {
     fn new() -> Self {
         let root = tempfile::tempdir().expect("fixture root");
         std::fs::write(root.path().join("plumb.toml"), SPEC).expect("release manifest");
+        let tools = root.path().join("tools");
+        std::fs::create_dir(&tools).expect("tools");
+        let curl = tools.join("curl");
+        std::fs::write(&curl, CURL).expect("fake curl");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&curl, std::fs::Permissions::from_mode(0o755))
+                .expect("curl mode");
+        }
+        pass(
+            Command::new("git")
+                .arg("-C")
+                .arg(root.path())
+                .args(["init", "-q"]),
+        );
+        pass(Command::new("git").arg("-C").arg(root.path()).args([
+            "config",
+            "user.name",
+            "Fixture",
+        ]));
+        pass(Command::new("git").arg("-C").arg(root.path()).args([
+            "config",
+            "user.email",
+            "fixture@example.test",
+        ]));
         Self { root }
     }
 
     fn command(&self) -> Command {
         let mut held = Command::new(env!("CARGO_BIN_EXE_plumb"));
-        held.env("PLUMB_RELEASE_ROOT", self.root.path());
+        let path = format!(
+            "{}:{}",
+            self.root.path().join("tools").display(),
+            std::env::var("PATH").unwrap_or_default()
+        );
+        held.env("PLUMB_RELEASE_ROOT", self.root.path())
+            .env("FAKE_S3_ROOT", self.root.path())
+            .env("PATH", path);
         held
     }
 
@@ -78,7 +110,7 @@ impl Fixture {
             .args(["release", "compile"])
             .env("PLUMB_RELEASE_CHANNEL", input.channel)
             .env("PLUMB_RELEASE_VERSION", input.version)
-            .env("PLUMB_RELEASE_COMMIT", COMMIT)
+            .env("PLUMB_RELEASE_COMMIT", input.commit)
             .env("PLUMB_RELEASE_ARTIFACTS", &artifacts)
             .env("PLUMB_RELEASE_OUTPUT", &out);
         if let Some(path) = input.proof {
@@ -86,6 +118,30 @@ impl Fixture {
         }
         pass(&mut command);
         out
+    }
+
+    fn candidate(&self) -> String {
+        pass(Command::new("git").arg("-C").arg(self.root.path()).args([
+            "add",
+            "plumb.toml",
+            "docs",
+        ]));
+        pass(Command::new("git").arg("-C").arg(self.root.path()).args([
+            "commit",
+            "-qm",
+            "candidate",
+        ]));
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(self.root.path())
+            .args(["rev-parse", "HEAD"])
+            .output()
+            .expect("candidate");
+        assert!(output.status.success());
+        String::from_utf8(output.stdout)
+            .expect("candidate utf8")
+            .trim()
+            .to_string()
     }
 }
 
@@ -107,17 +163,20 @@ fn seal(path: &Path) -> serde_json::Value {
 fn sealed() {
     let fixture = Fixture::new();
     let source = fixture.docs();
+    let commit = fixture.candidate();
     let beta = fixture.cut(Cut {
         channel: "beta",
         version: "v1.2.0-beta.7",
         label: "beta",
         proof: None,
+        commit: &commit,
     });
     let stable = fixture.cut(Cut {
         channel: "stable",
         version: "v1.2.0",
         label: "stable",
         proof: Some(&beta.join("seal.json")),
+        commit: &commit,
     });
     let candidate = seal(&beta.join("seal.json"));
     let permanent = seal(&stable.join("seal.json"));

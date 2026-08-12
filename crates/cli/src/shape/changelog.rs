@@ -1,8 +1,20 @@
 use semver::Version;
+use serde::Deserialize;
 use std::path::{Path, PathBuf};
+use std::process::Command;
+
+pub use plumb::changelog::Proof;
 
 const TONGUES: [&str; 2] = ["en", "zh"];
 const LEAVES: [&str; 2] = ["INDEX.md", "MIGRATION.md"];
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Pointer {
+    schema: u32,
+    channel: String,
+    commit: String,
+}
 
 pub fn stamped(version: &str) -> String {
     match version.strip_prefix('v') {
@@ -11,16 +23,18 @@ pub fn stamped(version: &str) -> String {
     }
 }
 
-pub fn seat(root: &Path, version: &str) -> PathBuf {
-    root.join("docs/CHANGELOG").join(stamped(version))
+pub fn seat(workspace: &Path, version: &str) -> PathBuf {
+    workspace
+        .join("docs/CHANGELOG")
+        .join(stamped(&base(version)))
 }
 
-pub fn artifacts(root: &Path, version: &str) -> Result<Vec<PathBuf>, String> {
+pub fn artifacts(repository: &Path, version: &str) -> Result<Vec<PathBuf>, String> {
     let version = version.strip_prefix('v').unwrap_or(version);
     let parsed =
         Version::parse(version).map_err(|error| format!("invalid version {version}: {error}"))?;
     let home = seat(
-        root,
+        repository,
         &format!("{}.{}.{}", parsed.major, parsed.minor, parsed.patch),
     )
     .join("artifacts");
@@ -65,8 +79,8 @@ pub fn artifacts(root: &Path, version: &str) -> Result<Vec<PathBuf>, String> {
     Ok(found)
 }
 
-pub fn read(root: &Path, version: &str) -> Vec<String> {
-    let home = seat(root, version);
+pub fn read(source: &Path, version: &str) -> Vec<String> {
+    let home = seat(source, version);
     let mut found = Vec::new();
     for tongue in TONGUES {
         for leaf in LEAVES {
@@ -78,6 +92,66 @@ pub fn read(root: &Path, version: &str) -> Vec<String> {
     found
 }
 
+pub fn previous(authority: &str) -> Result<Option<String>, String> {
+    let url = format!(
+        "{}/v1/channels/stable.json",
+        authority.trim_end_matches('/')
+    );
+    let output = tempfile::NamedTempFile::new()
+        .map_err(|error| format!("cannot stage previous stable pointer: {error}"))?;
+    let response = Command::new("curl")
+        .args(["--silent", "--show-error", "--location", "--output"])
+        .arg(output.path())
+        .args(["--write-out", "%{http_code}", &url])
+        .output()
+        .map_err(|error| format!("cannot execute curl: {error}"))?;
+    if !response.status.success() {
+        let error = String::from_utf8_lossy(&response.stderr).trim().to_string();
+        return Err(format!(
+            "cannot read previous stable pointer {url}: {}",
+            if error.is_empty() {
+                "curl failed"
+            } else {
+                &error
+            }
+        ));
+    }
+    let status = String::from_utf8_lossy(&response.stdout).trim().to_string();
+    if status == "404" {
+        return Ok(None);
+    }
+    if status != "200" {
+        return Err(format!(
+            "cannot read previous stable pointer {url}: HTTP {status}"
+        ));
+    }
+    let bytes = std::fs::read(output.path())
+        .map_err(|error| format!("cannot read previous stable pointer {url}: {error}"))?;
+    let pointer: Pointer = serde_json::from_slice(&bytes)
+        .map_err(|error| format!("cannot parse previous stable pointer {url}: {error}"))?;
+    if pointer.schema != 1 || pointer.channel != "stable" || !commit(&pointer.commit) {
+        return Err(format!(
+            "previous stable pointer {url} has invalid identity"
+        ));
+    }
+    Ok(Some(pointer.commit))
+}
+
+pub fn prove(
+    root: &Path,
+    version: &str,
+    previous: Option<&str>,
+    candidate: &str,
+) -> Result<Proof, String> {
+    let version = identity(version)?;
+    plumb::changelog::prove(plumb::changelog::Claim {
+        root,
+        version: &version,
+        previous,
+        candidate,
+    })
+}
+
 fn judged(home: &Path, tongue: &str, leaf: &str) -> Option<String> {
     let shown = format!("{tongue}/{leaf}");
     match std::fs::read_to_string(home.join(tongue).join(leaf)) {
@@ -85,4 +159,24 @@ fn judged(home: &Path, tongue: &str, leaf: &str) -> Option<String> {
         Ok(_) => Some(format!("{shown} is empty")),
         Err(_) => Some(format!("{shown} is missing")),
     }
+}
+
+fn base(version: &str) -> String {
+    identity(version).unwrap_or_else(|_| version.trim_start_matches('v').to_string())
+}
+
+fn identity(version: &str) -> Result<String, String> {
+    let parsed = Version::parse(version.trim_start_matches('v'))
+        .map_err(|error| format!("invalid version {version}: {error}"))?;
+    Ok(format!(
+        "{}.{}.{}",
+        parsed.major, parsed.minor, parsed.patch
+    ))
+}
+
+fn commit(value: &str) -> bool {
+    (40..=64).contains(&value.len())
+        && value
+            .chars()
+            .all(|held| held.is_ascii_digit() || ('a'..='f').contains(&held))
 }

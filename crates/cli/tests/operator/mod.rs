@@ -11,6 +11,8 @@ mod precommit;
 #[cfg(unix)]
 mod recovery;
 #[cfg(unix)]
+mod registry;
+#[cfg(unix)]
 mod release;
 #[cfg(unix)]
 mod settlement;

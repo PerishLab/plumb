@@ -2,8 +2,12 @@ use std::process::Command;
 
 #[path = "doctor/dependency.rs"]
 mod dependency;
+#[path = "doctor/document.rs"]
+mod document;
 #[path = "doctor/json.rs"]
 mod json;
+#[path = "doctor/migration.rs"]
+mod migration;
 #[path = "doctor/rule.rs"]
 mod rule;
 #[path = "doctor/ships.rs"]

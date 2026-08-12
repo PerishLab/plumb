@@ -19,7 +19,7 @@ pub use vendor::forgejo::land;
 #[cfg(feature = "radius")]
 pub use proof::radius;
 
-pub use proof::{boundary, trace, vocabulary};
+pub use proof::{boundary, changelog, snapshot, trace, vocabulary};
 
 pub use serde;
 

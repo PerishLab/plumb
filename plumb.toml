@@ -1,11 +1,17 @@
-[[lock]]
-name = "skill"
-paths = ["skills/plumb"]
-version = "0.18.18"
-hash = "1ae18806f952d41f17a8bc0db5e8809030c866e0cb2466ed1ba595684ebe773a"
+[[document]]
+strategy = "agent"
+source = [{ path = ".", seal = "2a93784754cafe64fbb01f37d568cf6fce710e9c5fa8c29cad429f9cca1fa58b" }]
+target-seal = "f1f3d6df27a7c584df88fc09e9561efae46dfd24e24102805a1728ea0d90c7c3"
 
-[skill]
+[[document]]
 strategy = "brief"
+name = "plumb"
+source = [
+  { path = "crates/cli/src", seal = "82bf53d51048adefb263b5c4f710f25a85138a8a73e88ef8ef246847e797fb24" },
+  { path = "crates/lib/src", seal = "5235d703237a7eb322268143a77125f74de66ca1ac44b9200f0fc8a3f527003c" },
+  { path = "crates/macro/src", seal = "c8ae2bfd1091d77db6e6f010560bbf961644c87557ac3005e0bcb85723dd8f19" },
+]
+target-seal = "76adabe51e556bc0eb287cea94d8cc2ae9439648804cd34b39d623bf7837608d"
 
 [release]
 product = "plumb"

@@ -1,8 +1,10 @@
 use super::catalog::model::Coverage;
-use super::{catalog, finding, judge, show};
+use super::{catalog, finding, judge};
 use crate::shape;
 use serde::Serialize;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+
+mod human;
 
 #[derive(Serialize)]
 struct Report {
@@ -40,6 +42,7 @@ struct Shape {
     law: Law,
     strategy: Option<&'static str>,
     skills: Vec<Skill>,
+    documents: Vec<Document>,
 }
 
 #[derive(Serialize)]
@@ -49,6 +52,16 @@ struct Skill {
     text: usize,
     budget: Option<usize>,
     files: usize,
+}
+
+#[derive(Serialize)]
+struct Document {
+    strategy: &'static str,
+    target: String,
+    source: usize,
+    text: Option<usize>,
+    budget: Option<usize>,
+    leaves: Option<usize>,
 }
 
 #[derive(Serialize)]
@@ -78,9 +91,13 @@ struct Summary {
 }
 
 pub fn run(root: PathBuf, json: bool) -> i32 {
-    let mut held = shape::read(&root);
+    let snapshot = plumb::snapshot::Snapshot::read(&root);
+    let mut held = shape::capture(&root, &snapshot);
     held.dependencies.current();
-    let vocabulary = plumb::vocabulary::inspect(&root);
+    let vocabulary = match &snapshot {
+        Ok(snapshot) => plumb::vocabulary::observe(snapshot),
+        Err(error) => Err(error.clone()),
+    };
     let mut findings = judge(&held);
     findings.extend(retired(&vocabulary));
     let summary = Summary::new(&findings);
@@ -102,7 +119,7 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
             serde_json::to_string_pretty(&report).expect("doctor report should encode")
         );
     } else {
-        human(&root, &held, &vocabulary, &findings);
+        human::render(&root, &held, &vocabulary, &findings);
     }
     i32::from(!ok)
 }
@@ -200,6 +217,19 @@ impl Shape {
                     files: skill.files,
                 })
                 .collect(),
+            documents: held
+                .documents
+                .held
+                .iter()
+                .map(|document| Document {
+                    strategy: document.strategy.id(),
+                    target: document.target.clone(),
+                    source: document.sources.len(),
+                    text: document.lines,
+                    budget: document.budget,
+                    leaves: document.leaves,
+                })
+                .collect(),
         }
     }
 }
@@ -221,79 +251,4 @@ impl Summary {
                 .count(),
         }
     }
-}
-
-fn human(
-    root: &Path,
-    held: &shape::Shape,
-    vocabulary: &Result<plumb::vocabulary::Report, plumb::vocabulary::Refusal>,
-    findings: &[finding::Finding],
-) {
-    let summary = Summary::new(findings);
-    println!("plumb doctor {}", root.display());
-    println!();
-    println!("  wrappers  {}", show(&held.wrappers));
-    println!("  layout    {}", show(&held.dirs));
-    println!("  lanes     {}", show(&held.lanes));
-    println!("  publishes {}", show(&held.ships));
-    if !held.sites.is_empty() {
-        println!("  sites     {}", show(&held.sites));
-    }
-    for dependency in &held.dependencies.held {
-        println!(
-            "  deps      {} {} {} -> {} (latest {}) [{}]",
-            dependency.ecosystem.name(),
-            dependency.name,
-            dependency.requirement,
-            dependency.resolution,
-            dependency.latest.as_deref().unwrap_or("?"),
-            dependency.seat,
-        );
-    }
-    println!(
-        "  law       block={} path={} grants={}",
-        held.block.unwrap_or(0),
-        held.path.unwrap_or(0),
-        show(&held.grants)
-    );
-    for skill in &held.skills.held {
-        println!(
-            "  skill     {} strategy={} source={} budget={} text={} files={}",
-            skill.name,
-            held.skills.config.strategy().map_or("?", |held| held.id()),
-            skill.source,
-            skill
-                .budget
-                .map_or_else(|| "?".into(), |held| held.to_string()),
-            skill.text,
-            skill.files
-        );
-    }
-    match vocabulary {
-        Ok(report) => println!(
-            "  vocabulary {} {} retired={} scanned={}/{}",
-            report.codec,
-            &report.dictionary_digest[..12],
-            report.retired,
-            report.coverage.scanned,
-            report.coverage.tracked
-        ),
-        Err(error) => println!("  vocabulary blind: {error}"),
-    }
-    println!();
-    if findings.is_empty() {
-        println!("  true to the skeleton");
-        return;
-    }
-    for finding in findings {
-        println!(
-            "  {}: {} [{}]",
-            finding.grade, finding.evidence, finding.scope
-        );
-    }
-    println!();
-    println!(
-        "  {} out of true, {} unknown to the skeleton, {} blind",
-        summary.wrong, summary.unknown, summary.blind
-    );
 }

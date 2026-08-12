@@ -72,14 +72,24 @@ pub const CURL: &str = r#"#!/bin/sh
 set -eu
 output=
 url=
+status=false
 while [ $# -gt 0 ]; do
   case "$1" in
     --output|-o) output=$2; shift 2 ;;
     --retry|--retry-delay) shift 2 ;;
+    --write-out) status=true; shift 2 ;;
     --fail|--silent|--show-error|--location|--retry-all-errors) shift ;;
     *) url=$1; shift ;;
   esac
 done
 key=${url#https://releases.test/}
-cp "$FAKE_S3_ROOT/releases/$key" "$output"
+path="$FAKE_S3_ROOT/releases/$key"
+if [ -f "$path" ]; then
+  cp "$path" "$output"
+  [ "$status" = false ] || printf '200'
+elif [ "$status" = true ]; then
+  printf '404'
+else
+  exit 1
+fi
 "#;

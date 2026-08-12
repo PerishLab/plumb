@@ -33,6 +33,17 @@ pub struct Read {
     pub present: bool,
 }
 
+impl Read {
+    pub fn empty(root: &Path) -> Self {
+        Self {
+            config: config::read(root),
+            held: Vec::new(),
+            unread: None,
+            present: root.join("skills").is_dir(),
+        }
+    }
+}
+
 pub fn read(root: &Path) -> Read {
     let config = config::read(root);
     let mut found = Read {

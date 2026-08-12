@@ -20,8 +20,8 @@ use Doctor before changing its shape.
 - A **standing** is `mechanized`, `observed`, or `prose-only`.
 - A **boundary** proves one committed delta stays inside declared write paths.
 - A **landing** projects a clean topic branch onto its base and waits for guard.
-- A **lock** binds declared files to the version and hash of their last human
-  reading.
+- A **document** is one closed target strategy, its exact source bindings, and
+  the seals recorded at the last human reading.
 - A **release** is an immutable product identity and declared artifact set.
 - A **stable line** is the explicit prepare, pick, freeze, publish, and packport
   lifecycle for one permanent version.
@@ -31,8 +31,8 @@ use Doctor before changing its shape.
   refused unless the product declares `[release.retire]` and every confirmation
   equals its target verbatim.
 - A **skill seat** is one source brief or one ownership-proven installed brief.
-- A **limit strategy** is one Plumb-owned file enumeration and text magnitude
-  selected by a repository; its files and numeric limit are not parameters.
+- A **document strategy** owns its target files, evidence mass, invalidation
+  lifecycle, and text magnitude; none of those are downstream parameters.
 
 ## Actions
 
@@ -42,7 +42,7 @@ plumb rule list
 plumb rule show RULE_ID
 plumb precommit [ROOT] --base BASE --head HEAD --write PATH
 plumb land [ROOT] [--base BASE] [--dry-run]
-plumb lock [ROOT]
+plumb document [ROOT]
 plumb radius --root [LABEL=]PATH --product PRODUCT --candidate VERSION
 plumb policy [ROOT] --write
 plumb changelog [ROOT]
@@ -71,12 +71,13 @@ unfamiliar or stateful action.
   source control.
 - Use `plumb land`; do not recreate its projection and guard protocol in a
   repository wrapper or hook.
-- Affirm a lock only after reading both sides of the declared binding. Lock
-  output is a proposal, never an automatic rewrite.
+- Record document seals only after reading every named source and target.
+  `plumb document` prints proposals and never rewrites `plumb.toml`.
 - Stable default skill seats accept canonical stable only. Validate every
   other candidate in an exact, isolated stage path.
-- A governed repository with source skill seats declares one `[skill]`
-  `strategy`; unknown strategies and direct `files` or `limit` fields refuse.
+- A governed repository declares `[[document]]` strategies. Unknown
+  strategies, legacy `[skill]` or `[[lock]]` coexistence, arbitrary targets,
+  and numeric limits refuse.
 
 Use [PATHS.md](PATHS.md) for routine flows and
 [SCENARIOS.md](SCENARIOS.md) only when one of its bounded cases applies.

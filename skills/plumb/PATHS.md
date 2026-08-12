@@ -57,17 +57,17 @@ Keep the source branch. Plumb creates the one-commit projection, waits for its
 guard, advances the base only if the observed revisions still match, and syncs
 the separate base worktree.
 
-## Inspect and affirm a lock
+## Inspect and affirm a document
 
-When Doctor reports drift, read every path named by the lock and compare the
-brief with the behavior it describes. If the binding is still true, print the
-fresh values and deliberately apply them to `plumb.toml`:
+When Doctor reports drift, read every named source and its target. If the
+projection remains true, print fresh source and target seals and deliberately
+record them in `plumb.toml`:
 
 ```bash
-plumb lock .
+plumb document .
 ```
 
-Run Doctor after the edit. Never script affirmation into guard.
+Run Doctor after the edit. Never script affirmation into guard or migration.
 
 ## Measure release radius
 
@@ -94,15 +94,19 @@ reads binding, and proves the public fingerprint.
 
 ## Operate a skill seat
 
-A repository shipping source skills selects a closed limit strategy:
+A repository shipping a source skill declares one closed document binding:
 
 ```toml
-[skill]
+[[document]]
 strategy = "brief"
+name = "product"
+source = [{ path = "src", seal = "<human affirmation>" }]
+target-seal = "<human affirmation>"
 ```
 
-The strategy owns the admitted root files and aggregate text budget. Do not
-declare either separately.
+The strategy derives `skills/product/{SKILL.md,PATHS.md,SCENARIOS.md}` and its
+aggregate text budget. Do not declare either separately. Use the matching
+release CHANGELOG migration scripts when moving from `[skill]` and `[[lock]]`.
 
 ```bash
 plumb skill status

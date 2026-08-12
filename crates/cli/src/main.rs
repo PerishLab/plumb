@@ -87,6 +87,10 @@ enum Command {
         #[arg(long)]
         version: Option<String>,
     },
+    Document {
+        #[command(flatten)]
+        target: Root,
+    },
     Release {
         #[command(subcommand)]
         deed: dispatch::release::Deed,
@@ -117,97 +121,13 @@ impl Command {
             Self::Rule { .. } => "rule",
             Self::Lock { .. } => "lock",
             Self::Changelog { .. } => "changelog",
+            Self::Document { .. } => "document",
             Self::Release { .. } => "release",
             Self::Stable { .. } => "stable",
             Self::Site { .. } => "site",
             Self::Retire { .. } => "retire",
         }
     }
-}
-
-fn locks(root: PathBuf) -> i32 {
-    let held = shape::read(&root);
-    println!("plumb lock {}", root.display());
-    println!();
-    if held.locks.is_empty() {
-        println!("  no lock is declared");
-        return 0;
-    }
-    let seen = held.version.unwrap_or_default();
-    for lock in &held.locks {
-        match shape::seal(&root, lock) {
-            Ok(hash) => println!(
-                "  {} version = \"{seen}\"\n  {} hash = \"{hash}\"",
-                lock.name, lock.name
-            ),
-            Err(why) => println!("  {} {why}", lock.name),
-        }
-    }
-    println!();
-    println!("  record these in plumb.toml only after reading what they cover");
-    0
-}
-
-fn changelog(root: PathBuf, version: Option<String>) -> i32 {
-    let held = version
-        .filter(|held| !held.trim().is_empty())
-        .or_else(|| shape::read(&root).version)
-        .unwrap_or_default();
-    println!("plumb changelog {}", root.display());
-    println!();
-    if held.is_empty() {
-        println!("  no version to read: the repository declares none, so pass --version");
-        return 1;
-    }
-    let seat = shape::changelog::seat(&root, &held);
-    let found = shape::changelog::read(&root, &held);
-    if found.is_empty() {
-        println!(
-            "  {} is documented in en and zh",
-            shape::changelog::stamped(&held)
-        );
-        return 0;
-    }
-    println!("  {}", seat.display());
-    for line in &found {
-        println!("    {line}");
-    }
-    println!();
-    println!("  a stable release is immutable; what it changed cannot be written afterwards");
-    1
-}
-
-fn policy(root: PathBuf, write: bool) -> i32 {
-    let path = root.join("ectropy.toml");
-    let text = match std::fs::read_to_string(&path) {
-        Ok(text) => text,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
-        Err(error) => {
-            eprintln!("plumb policy {}: {error}", root.display());
-            return 1;
-        }
-    };
-    let rendered = match shape::reconcile(&root, &text) {
-        Ok(rendered) => rendered,
-        Err(error) => {
-            eprintln!("plumb policy {}: {error}", root.display());
-            return 1;
-        }
-    };
-    if !write {
-        print!("{rendered}");
-        return 0;
-    }
-    let draft = path.with_extension(format!("toml.tmp-{}", std::process::id()));
-    if let Err(error) =
-        std::fs::write(&draft, rendered).and_then(|()| std::fs::rename(&draft, &path))
-    {
-        let _ = std::fs::remove_file(&draft);
-        eprintln!("plumb policy {}: {error}", root.display());
-        return 1;
-    }
-    println!("plumb policy {}: wrote {}", root.display(), path.display());
-    0
 }
 
 fn execute(command: Command) -> i32 {
@@ -254,11 +174,18 @@ fn execute(command: Command) -> i32 {
             candidate,
             json,
         }),
-        Command::Policy { target, write } => policy(PathBuf::from(target.root), write),
+        Command::Policy { target, write } => {
+            dispatch::command::Seat::new(PathBuf::from(target.root)).policy(write)
+        }
         Command::Skill { deed } => skill::run(deed),
         Command::Rule { deed } => judge::catalog::query::run(deed),
-        Command::Lock { target } => locks(PathBuf::from(target.root)),
-        Command::Changelog { target, version } => changelog(PathBuf::from(target.root), version),
+        Command::Lock { target } => dispatch::command::Seat::new(PathBuf::from(target.root)).lock(),
+        Command::Changelog { target, version } => {
+            dispatch::command::Seat::new(PathBuf::from(target.root)).changelog(version)
+        }
+        Command::Document { target } => {
+            dispatch::command::Seat::new(PathBuf::from(target.root)).document()
+        }
         Command::Release { deed } => dispatch::release::run(deed),
         Command::Stable { deed } => dispatch::operator::run(deed),
         Command::Site { deed } => dispatch::site::run(deed),

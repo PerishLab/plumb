@@ -148,24 +148,19 @@ fn execute(deed: Deed) -> Result<String, String> {
 fn compile(spec: &model::Spec, release: &plumb::rig::Release) -> Result<String, String> {
     let channel = required("PLUMB_RELEASE_CHANNEL", &release.channel)?;
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
-    if channel == "stable" {
-        let missing = crate::shape::changelog::read(&spec.root, version);
-        if !missing.is_empty() {
-            return Err(format!(
-                "stable changelog is incomplete at {}: {}",
-                crate::shape::changelog::seat(&spec.root, version).display(),
-                missing.join("; ")
-            ));
-        }
-    }
+    let commit = required("PLUMB_RELEASE_COMMIT", &release.commit)?;
+    let previous = crate::shape::changelog::previous(&spec.authority)?;
+    let changelog =
+        crate::shape::changelog::prove(&spec.root, version, previous.as_deref(), commit)?;
     capsule::compile(capsule::Compile {
         spec: &spec.manifest(),
         channel,
         version,
-        commit: required("PLUMB_RELEASE_COMMIT", &release.commit)?,
+        commit,
         artifacts: &artifacts(release)?,
         out: &output(release)?,
         promotion: release.promotion.as_deref(),
+        changelog,
     })
 }
 

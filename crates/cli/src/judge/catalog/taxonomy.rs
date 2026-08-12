@@ -73,6 +73,7 @@ item!(
     "dependency naming and policy"
 );
 item!(DISPATCH, Tag, "dispatch", "process dispatch and readiness");
+item!(DOCUMENT_TAG, Tag, "document", "governed repository prose");
 item!(ECTROPY_TAG, Tag, "ectropy", "ectropy policy and execution");
 item!(OWNERSHIP, Tag, "ownership", "resource ownership boundaries");
 item!(RELEASE_TAG, Tag, "release", "release and deployment lanes");
@@ -94,6 +95,7 @@ pub static TAGS: &[&Tag] = &[
     &CONFIGURATION,
     &DEPENDENCY,
     &DISPATCH,
+    &DOCUMENT_TAG,
     &ECTROPY_TAG,
     &OWNERSHIP,
     &RELEASE_TAG,
@@ -117,6 +119,7 @@ macro_rules! namespace {
 
 namespace!(CONFIG, "config", "runtime policy vocabulary", PRODUCT);
 namespace!(DEPS, "deps", "dependency posture", PLUMB);
+namespace!(DOCUMENT, "document", "governed repository prose", PLUMB);
 namespace!(DISPATCH_NS, "dispatch", "process dispatch shape", SIDECAR);
 namespace!(ENV, "env", "repository execution environment", PLUMB);
 namespace!(LOCK, "lock", "cross-boundary affirmations", PLUMB);
@@ -137,6 +140,7 @@ namespace!(WEB_NS, "web", "web application shape", WEB);
 pub static NAMESPACES: &[&Namespace] = &[
     &CONFIG,
     &DEPS,
+    &DOCUMENT,
     &DISPATCH_NS,
     &ENV,
     &LOCK,

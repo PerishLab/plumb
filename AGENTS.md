@@ -21,15 +21,14 @@ link, and it is the only one.
 - `crates/cli` — the CLI, published as a binary through the release lanes.
 - `crates/lib` and `crates/macro` — the substrate and derive consumed by the
   ecosystem.
-- `docs/audit.md` — the opt-in Locus audit surface and its observation boundary.
 - `apps/web` — the site at plumb.perish.uk, shipped by the deploy lane on
-  dispatch through `plumb site deploy` and verified by readback
-  (`docs/site.md`).
+  dispatch through `plumb site deploy` and verified by readback.
 - `packages/*` — publishable specimens, when they earn their place.
 
 The layout is not invented; it is the union already demonstrated by codehull and
 ensign: `crates` for rust members, `apps` for deployable applications,
-`packages` for publishable node packages, `docs` for prose.
+`packages` for publishable node packages, `skills` for operating briefs, and
+`docs/CHANGELOG` for immutable release history.
 
 ## Boundaries
 
@@ -44,6 +43,27 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   become unremovable, or its justification decays from finding to story.
 - plumb MUST PASS ITSELF. Running the CLI here has to come back clean, or the
   relation above does not hold for the one repo that declares it.
+
+## Documents
+
+- A Plumb release owns one closed document strategy set. Repositories select a
+  strategy and exact source seats; they do not configure target paths, file
+  lists, exclusions, or numeric limits.
+- `agent` owns root `AGENTS.md`, `architecture` owns optional root
+  `ARCHITECTURE.md`, `design` owns optional root `DESIGN.md`, and `brief` owns
+  exactly `SKILL.md`, `PATHS.md`, and `SCENARIOS.md` under one named skill seat.
+- Tracked Markdown outside those declared targets and `docs/CHANGELOG/**` is
+  out of true. Product payloads that happen to be Markdown do not acquire a
+  repository-document exception.
+- Current projections bind canonical source seals and one target/topology seal
+  in `plumb.toml`. Source, target, or topology drift is out of true until a
+  human reads both sides and records the proposal from `plumb document`.
+- Document evidence values are excluded from the semantic `plumb.toml` source
+  projection. No other source bytes, target bytes, or binding fields are
+  excluded.
+- Source code admits no comments or documentation comments. Unclear behavior
+  is repaired through names, types, boundaries, and tests rather than prose in
+  source.
 
 ## Release
 
@@ -84,9 +104,14 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   destructive path, and refuses an implicit rollback.
 - A stable capsule refuses to compile without
   `docs/CHANGELOG/v<version>/{en,zh}/{INDEX.md,MIGRATION.md}`, enforced by the
-  Plumb compiler before the first irreversible action.
-  `plumb doctor` does not check this: a changelog is owed by a release, not by a
-  working tree. See `docs/changelog.md`.
+  Plumb compiler before the first irreversible action. Exact release compile
+  binds the previous public stable commit to the frozen candidate, measures
+  textual churn plus changed paths, checks each language pair against its
+  diff-derived budget, and retains the proof in the release seal.
+- Existing changelog versions are frozen history. The current release may add
+  its own language leaves and artifacts but cannot mutate an earlier version
+  directory. Candidate language leaves do not scale their own budget; opaque
+  artifacts and migration scripts remain in the measured diff.
 - An optional `docs/CHANGELOG/v<base-version>/artifacts/` contributes its flat
   regular-file set to exact prerelease and stable seals. Plumb preserves bytes
   under filenames and owns only generic safety and collision refusal; product
