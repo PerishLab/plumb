@@ -49,6 +49,8 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - A Plumb release owns one closed document strategy set. Repositories select a
   strategy and exact source seats; they do not configure target paths, file
   lists, exclusions, or numeric limits.
+- Every repository carrying `plumb.toml` declares `[[document]]`; the former
+  standalone skill and generic affirmation schemas have no compatibility path.
 - `agent` owns root `AGENTS.md`, `architecture` owns optional root
   `ARCHITECTURE.md`, `design` owns optional root `DESIGN.md`, and `brief` owns
   exactly `SKILL.md`, `PATHS.md`, and `SCENARIOS.md` under one named skill seat.

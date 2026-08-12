@@ -4,17 +4,14 @@ use std::path::Path;
 pub mod changelog;
 mod dependency;
 pub mod document;
-mod lock;
 mod node;
 pub(crate) mod operator;
 mod pack;
 pub mod pair;
 mod policy;
-pub mod skill;
 
 pub use crate::judge::finding::Found;
 pub use dependency::{Dependencies, Dependency};
-pub use lock::{Lock, locked, seal};
 
 pub struct Shape {
     pub wrappers: BTreeSet<String>,
@@ -31,8 +28,6 @@ pub struct Shape {
     pub ignore: String,
     pub bounds: Vec<String>,
     pub root: std::path::PathBuf,
-    pub locks: Vec<Lock>,
-    pub version: Option<String>,
     pub rust: bool,
     pub runseal: bool,
     pub guards: Vec<(String, String)>,
@@ -52,7 +47,6 @@ pub struct Shape {
     pub web: Option<Found>,
     pub policy: Vec<String>,
     pub guard: String,
-    pub skills: skill::Read,
     pub documents: document::Read,
 }
 
@@ -73,16 +67,20 @@ impl Root<'_> {
         found
     }
 
-    fn dirs(&self) -> BTreeSet<String> {
+    fn dirs(snapshot: &plumb::snapshot::Snapshot) -> BTreeSet<String> {
         let mut found = BTreeSet::new();
-        let Ok(entries) = std::fs::read_dir(self.0) else {
-            return found;
-        };
-        for entry in entries.flatten() {
-            let name = entry.file_name().to_string_lossy().to_string();
+        for entry in snapshot.entries() {
+            let name = entry
+                .path()
+                .split_once('/')
+                .map(|(head, _)| head)
+                .or_else(|| (entry.mode() == "160000").then_some(entry.path()));
+            let Some(name) = name else {
+                continue;
+            };
             let skip = name.starts_with('.') || name == "target" || name == "node_modules";
-            if entry.path().is_dir() && !skip {
-                found.insert(name);
+            if !skip {
+                found.insert(name.to_string());
             }
         }
         found
@@ -190,11 +188,6 @@ impl Root<'_> {
     }
 }
 
-pub fn read(root: &Path) -> Shape {
-    let snapshot = plumb::snapshot::Snapshot::read(root);
-    capture(root, &snapshot)
-}
-
 pub fn capture(
     root: &Path,
     snapshot: &Result<plumb::snapshot::Snapshot, plumb::snapshot::Refusal>,
@@ -233,14 +226,9 @@ pub fn capture(
         }
     }
     let documents = document::read(root, snapshot.as_ref());
-    let skills = if documents.config.active() {
-        skill::Read::empty(root)
-    } else {
-        skill::read(root)
-    };
     Shape {
         wrappers: seat.names(".runseal/wrappers", ".ts"),
-        dirs: seat.dirs(),
+        dirs: snapshot.as_ref().map(Root::dirs).unwrap_or_default(),
         actions: operator.actions(),
         block: limit("block"),
         path: limit("path"),
@@ -274,12 +262,35 @@ pub fn capture(
         policy,
         bounds: policy::bounds(doc.as_ref()),
         root: root.to_path_buf(),
-        locks: lock::read(root),
-        version: lock::held(root),
         guard: guarded.source,
-        skills,
         documents,
     }
+}
+
+pub fn version(root: &Path) -> Option<String> {
+    let cargo = std::fs::read_to_string(root.join("Cargo.toml")).unwrap_or_default();
+    if let Some(found) = mark(&cargo) {
+        return Some(found);
+    }
+    for name in ["deno.json", "package.json"] {
+        let text = std::fs::read_to_string(root.join(name)).unwrap_or_default();
+        if let Some(found) = quoted(&text) {
+            return Some(found);
+        }
+    }
+    None
+}
+
+fn mark(text: &str) -> Option<String> {
+    text.lines()
+        .find(|line| line.trim_start().starts_with("version = \""))
+        .and_then(|line| line.split('"').nth(1))
+        .map(str::to_string)
+}
+
+fn quoted(text: &str) -> Option<String> {
+    let seat = text.find("\"version\"")?;
+    text[seat..].split('"').nth(3).map(str::to_string)
 }
 pub fn reconcile(root: &Path, text: &str) -> Result<String, String> {
     policy::render(root, text)

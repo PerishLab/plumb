@@ -38,6 +38,12 @@ impl<'a> Closure<'a> {
             else {
                 return Err(format!("target {path} is not a tracked leaf"));
             };
+            if !entry.mode().starts_with("100") {
+                return Err(format!("target {path} is not a regular file"));
+            }
+            if std::str::from_utf8(entry.bytes()).is_err() {
+                return Err(format!("target {path} is not UTF-8"));
+            }
             entries.push(entry);
         }
         let mut bytes = Vec::new();

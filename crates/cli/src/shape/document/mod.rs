@@ -38,12 +38,6 @@ pub struct Source {
     pub error: Option<String>,
 }
 
-impl Config {
-    pub fn active(&self) -> bool {
-        matches!(self, Self::Held(_))
-    }
-}
-
 pub fn read(root: &Path, snapshot: Result<&Snapshot, &Refusal>) -> Read {
     let config = config::read(root);
     let mut found = Read {

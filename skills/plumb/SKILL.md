@@ -76,8 +76,8 @@ unfamiliar or stateful action.
 - Stable default skill seats accept canonical stable only. Validate every
   other candidate in an exact, isolated stage path.
 - A governed repository declares `[[document]]` strategies. Unknown
-  strategies, legacy `[skill]` or `[[lock]]` coexistence, arbitrary targets,
-  and numeric limits refuse.
+  strategies, retired document declarations, arbitrary targets, and numeric
+  limits refuse.
 
 Use [PATHS.md](PATHS.md) for routine flows and
 [SCENARIOS.md](SCENARIOS.md) only when one of its bounded cases applies.

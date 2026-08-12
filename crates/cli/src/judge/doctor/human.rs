@@ -36,19 +36,6 @@ pub fn render(
         held.path.unwrap_or(0),
         show(&held.grants)
     );
-    for skill in &held.skills.held {
-        println!(
-            "  skill     {} strategy={} source={} budget={} text={} files={}",
-            skill.name,
-            held.skills.config.strategy().map_or("?", |held| held.id()),
-            skill.source,
-            skill
-                .budget
-                .map_or_else(|| "?".into(), |held| held.to_string()),
-            skill.text,
-            skill.files
-        );
-    }
     for document in &held.documents.held {
         println!(
             "  document  {} target={} source={} budget={} text={} leaves={}",

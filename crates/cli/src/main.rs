@@ -77,10 +77,6 @@ enum Command {
         #[command(subcommand)]
         deed: judge::catalog::query::Deed,
     },
-    Lock {
-        #[command(flatten)]
-        target: Root,
-    },
     Changelog {
         #[command(flatten)]
         target: Root,
@@ -119,7 +115,6 @@ impl Command {
             Self::Policy { .. } => "policy",
             Self::Skill { .. } => "skill",
             Self::Rule { .. } => "rule",
-            Self::Lock { .. } => "lock",
             Self::Changelog { .. } => "changelog",
             Self::Document { .. } => "document",
             Self::Release { .. } => "release",
@@ -179,7 +174,6 @@ fn execute(command: Command) -> i32 {
         }
         Command::Skill { deed } => skill::run(deed),
         Command::Rule { deed } => judge::catalog::query::run(deed),
-        Command::Lock { target } => dispatch::command::Seat::new(PathBuf::from(target.root)).lock(),
         Command::Changelog { target, version } => {
             dispatch::command::Seat::new(PathBuf::from(target.root)).changelog(version)
         }

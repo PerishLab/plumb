@@ -69,7 +69,16 @@ fn closed() {
     )
     .expect("manifest");
     let out = super::run(&["doctor", root.to_str().expect("utf8 root")]);
-    assert!(out.contains("cannot coexist with [skill]"), "{out}");
+    assert!(out.contains("retired document declarations"), "{out}");
+}
+
+#[test]
+fn required() {
+    let fixture = super::fixture();
+    let root = fixture.path();
+    std::fs::write(root.join("plumb.toml"), "").expect("manifest");
+    let out = super::run(&["doctor", root.to_str().expect("utf8 root")]);
+    assert!(out.contains("misses document declarations"), "{out}");
 }
 
 #[test]
@@ -111,6 +120,83 @@ fn inline() {
     .expect("affirm manifest");
     let out = super::run(&["doctor", root.to_str().expect("utf8 root")]);
     assert!(out.contains("true to the skeleton"), "{out}");
+}
+
+#[test]
+fn brief() {
+    let fixture = super::fixture();
+    let root = fixture.path();
+    std::fs::create_dir_all(root.join("crates/tool/src")).expect("source seat");
+    std::fs::create_dir_all(root.join("skills/tool/references")).expect("extra seat");
+    std::fs::write(root.join("crates/tool/src/main.rs"), "fn main() {}\n").expect("source");
+    std::fs::write(root.join("AGENTS.md"), "# Agents\n").expect("agent");
+    for leaf in ["SKILL.md", "PATHS.md", "SCENARIOS.md"] {
+        std::fs::write(root.join("skills/tool").join(leaf), "brief\n").expect("brief");
+    }
+    std::fs::write(root.join("skills/tool/references/extra.md"), "extra\n").expect("extra");
+    std::fs::write(
+        root.join("plumb.toml"),
+        "[[document]]\nstrategy = \"agent\"\nsource = [{ path = \"crates/tool/src\", seal = \"\" }]\ntarget-seal = \"\"\n\n[[document]]\nstrategy = \"brief\"\nname = \"tool\"\nsource = [{ path = \"crates/tool/src\", seal = \"\" }]\ntarget-seal = \"\"\n",
+    )
+    .expect("manifest");
+    track(root);
+    let out = super::run(&["doctor", root.to_str().expect("utf8 root")]);
+    assert!(out.contains("skills/tool/references/extra.md"), "{out}");
+}
+
+#[test]
+fn mass() {
+    let fixture = super::fixture();
+    let root = fixture.path();
+    std::fs::create_dir_all(root.join("crates/tool/src")).expect("source seat");
+    std::fs::create_dir_all(root.join("skills/tool")).expect("brief seat");
+    std::fs::write(root.join("crates/tool/src/main.rs"), "fn main() {}\n").expect("source");
+    std::fs::write(root.join("AGENTS.md"), "# Agents\n").expect("agent");
+    std::fs::write(root.join("skills/tool/SKILL.md"), "line\n".repeat(239)).expect("brief");
+    std::fs::write(root.join("skills/tool/PATHS.md"), "path\n").expect("paths");
+    std::fs::write(root.join("skills/tool/SCENARIOS.md"), "scenario\n").expect("scenarios");
+    std::fs::write(
+        root.join("plumb.toml"),
+        "[[document]]\nstrategy = \"agent\"\nsource = [{ path = \"crates/tool/src\", seal = \"\" }]\ntarget-seal = \"\"\n\n[[document]]\nstrategy = \"brief\"\nname = \"tool\"\nsource = [{ path = \"crates/tool/src\", seal = \"\" }]\ntarget-seal = \"\"\n",
+    )
+    .expect("manifest");
+    track(root);
+    let out = super::run(&["doctor", root.to_str().expect("utf8 root")]);
+    assert!(
+        out.contains("skills/tool has 241 Markdown lines, above brief budget 240"),
+        "{out}"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn regular() {
+    let fixture = super::fixture();
+    let root = fixture.path();
+    std::fs::create_dir_all(root.join("crates/tool/src")).expect("source seat");
+    std::fs::create_dir_all(root.join("skills/tool")).expect("brief seat");
+    std::fs::write(root.join("crates/tool/src/main.rs"), "fn main() {}\n").expect("source");
+    std::fs::write(root.join("AGENTS.md"), "# Agents\n").expect("agent");
+    std::fs::write(root.join("skills/tool/SKILL.md"), "brief\n").expect("brief");
+    std::fs::write(root.join("skills/tool/SCENARIOS.md"), "scenario\n").expect("scenarios");
+    std::os::unix::fs::symlink("SKILL.md", root.join("skills/tool/PATHS.md")).expect("symlink");
+    std::fs::write(
+        root.join("plumb.toml"),
+        "[[document]]\nstrategy = \"agent\"\nsource = [{ path = \"crates/tool/src\", seal = \"\" }]\ntarget-seal = \"\"\n\n[[document]]\nstrategy = \"brief\"\nname = \"tool\"\nsource = [{ path = \"crates/tool/src\", seal = \"\" }]\ntarget-seal = \"\"\n",
+    )
+    .expect("manifest");
+    track(root);
+    let out = super::run(&["doctor", root.to_str().expect("utf8 root")]);
+    assert!(out.contains("PATHS.md is not a regular file"), "{out}");
+}
+
+#[test]
+fn command() {
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .arg("lock")
+        .output()
+        .expect("plumb");
+    assert!(!output.status.success());
 }
 
 fn declare(root: &Path, source: &str, target: &str) {

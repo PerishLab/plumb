@@ -11,7 +11,6 @@ pub(crate) mod doctor;
 pub(crate) mod finding;
 pub(crate) mod precommit;
 pub mod radius;
-mod skill;
 mod text;
 
 pub use text::show;
@@ -21,12 +20,10 @@ pub fn judge(held: &shape::Shape) -> Vec<Finding> {
     for found in [
         held.env(),
         shape::document::check(held),
-        skill::check(held),
         held.structure(),
         deps::check(held),
         held.web.clone().unwrap_or_default(),
         held.dispatch.clone().unwrap_or_default(),
-        shape::locked(held),
     ] {
         for seed in found {
             notes.push(Finding::new(seed));

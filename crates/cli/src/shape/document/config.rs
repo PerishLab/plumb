@@ -6,8 +6,6 @@ use super::grammar::{atom, overlaps, seat};
 #[derive(Clone)]
 pub enum Config {
     Outside,
-    Legacy,
-    Absent,
     Held(Vec<Binding>),
     Wrong(String),
     Blind(String),
@@ -78,19 +76,12 @@ pub fn read(root: &Path) -> Config {
         Ok(doc) => doc,
         Err(error) => return Config::Wrong(format!("cannot parse plumb.toml: {error}")),
     };
-    let legacy = doc.contains_key("skill") || doc.contains_key("lock");
-    let Some(value) = doc.get("document") else {
-        return if legacy {
-            Config::Legacy
-        } else {
-            Config::Absent
-        };
-    };
-    if legacy {
-        return Config::Wrong(
-            "document declarations cannot coexist with [skill] or [[lock]]".into(),
-        );
+    if doc.contains_key("skill") || doc.contains_key("lock") {
+        return Config::Wrong("plumb.toml contains retired document declarations".into());
     }
+    let Some(value) = doc.get("document") else {
+        return Config::Wrong("plumb.toml misses document declarations".into());
+    };
     let Some(list) = value.as_array() else {
         return Config::Wrong("document must be an array of tables".into());
     };

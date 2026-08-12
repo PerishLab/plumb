@@ -105,8 +105,9 @@ target-seal = "<human affirmation>"
 ```
 
 The strategy derives `skills/product/{SKILL.md,PATHS.md,SCENARIOS.md}` and its
-aggregate text budget. Do not declare either separately. Use the matching
-release CHANGELOG migration scripts when moving from `[skill]` and `[[lock]]`.
+aggregate text budget. Do not declare either separately. A repository that
+predates document bindings follows the versioned release CHANGELOG before
+running the current binary.
 
 ```bash
 plumb skill status

@@ -8,33 +8,10 @@ impl Seat {
         Self(root)
     }
 
-    pub fn lock(&self) -> i32 {
-        let held = shape::read(&self.0);
-        println!("plumb lock {}", self.0.display());
-        println!();
-        if held.locks.is_empty() {
-            println!("  no lock is declared");
-            return 0;
-        }
-        let seen = held.version.unwrap_or_default();
-        for lock in &held.locks {
-            match shape::seal(&self.0, lock) {
-                Ok(hash) => println!(
-                    "  {} version = \"{seen}\"\n  {} hash = \"{hash}\"",
-                    lock.name, lock.name
-                ),
-                Err(why) => println!("  {} {why}", lock.name),
-            }
-        }
-        println!();
-        println!("  record these in plumb.toml only after reading what they cover");
-        0
-    }
-
     pub fn changelog(&self, version: Option<String>) -> i32 {
         let held = version
             .filter(|held| !held.trim().is_empty())
-            .or_else(|| shape::read(&self.0).version)
+            .or_else(|| shape::version(&self.0))
             .unwrap_or_default();
         println!("plumb changelog {}", self.0.display());
         println!();

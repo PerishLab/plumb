@@ -122,7 +122,6 @@ namespace!(DEPS, "deps", "dependency posture", PLUMB);
 namespace!(DOCUMENT, "document", "governed repository prose", PLUMB);
 namespace!(DISPATCH_NS, "dispatch", "process dispatch shape", SIDECAR);
 namespace!(ENV, "env", "repository execution environment", PLUMB);
-namespace!(LOCK, "lock", "cross-boundary affirmations", PLUMB);
 namespace!(RELEASE_NS, "release", "release lane anatomy", RELEASE);
 namespace!(SKILL_NS, "skill", "released agent brief", SKILL);
 namespace!(STATE_NS, "state", "machine-owned state", PRODUCT);
@@ -143,7 +142,6 @@ pub static NAMESPACES: &[&Namespace] = &[
     &DOCUMENT,
     &DISPATCH_NS,
     &ENV,
-    &LOCK,
     &RELEASE_NS,
     &SITE,
     &SKILL_NS,

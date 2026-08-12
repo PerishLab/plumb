@@ -7,7 +7,7 @@ pub fn check(held: &shape::Shape) -> Found {
 
     let mut found = Found::new();
     match &held.documents.config {
-        Config::Outside | Config::Legacy | Config::Absent => return found,
+        Config::Outside => return found,
         Config::Wrong(error) => {
             found.push(wrong(&rule::SCHEMA, error));
             return found;

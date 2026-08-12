@@ -5,9 +5,7 @@ pub mod dispatch;
 pub mod document;
 mod domain;
 pub mod env;
-pub mod lock;
 pub mod prose;
-pub mod skill;
 pub mod structure;
 pub mod web;
 
@@ -59,9 +57,7 @@ pub fn all() -> Vec<&'static Rule> {
         deps::all(),
         web::all(),
         dispatch::all(),
-        lock::all(),
         prose::all(),
-        skill::all(),
         vocabulary::all(),
     ]
     .into_iter()
