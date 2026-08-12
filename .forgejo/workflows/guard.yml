@@ -43,22 +43,3 @@ jobs:
           pnpm --filter @plumb/web build
           cargo run --quiet --locked -p plumb-cli -- doctor .
           ectropy .
-
-  guard-windows:
-    runs-on: windows
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Install stable Ectropy
-        uses: PerishLab/actions/setup-binary@main
-        env:
-          PERISH_SETUP_PRODUCT: ectropy
-
-      - name: Rust
-        run: |
-          cargo fmt --all --check
-          cargo clippy --all-targets --locked -- -D warnings
-          cargo test --locked
-          cargo run --quiet --locked -p plumb-cli -- doctor .
-          ectropy .

@@ -7,7 +7,7 @@ fn lane() -> serde_json::Value {
         "sha": "055018b61e106296436f36fe77f9826701656936",
         "statuses": [
             {"context": "guard / guard (pull_request)", "status": "success"},
-            {"context": "guard / guard-windows (pull_request)", "status": "success"}
+            {"context": "guard / proof (pull_request)", "status": "success"}
         ]
     })
 }
