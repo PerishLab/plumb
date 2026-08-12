@@ -8,6 +8,8 @@ boundary through one typed `PLUMB_LOCUS_*` config section:
 - `PLUMB_LOCUS_REPORT_FILE` selects Locus's built-in file reporter.
 - `PLUMB_LOCUS_TRACE_FILE` selects the shared-file trace generator.
 - `PLUMB_LOCUS_TRACE_ID` supplies a literal trace key.
+- exact `CODEX_THREAD_ID` collection is bound to `locus.trace` as
+  `codex.thread` when observation is enabled.
 - `PLUMB_LOCUS_TARGET_COLLECTORS` supplies the explicit ordered collector chain
   bound to `plumb.target`.
 
@@ -20,6 +22,13 @@ without creating an ambient observation path.
 When the gate is true, `PLUMB_LOCUS_REPORT_FILE` is required. Missing or invalid
 enabled configuration refuses the audit record without replacing the CLI
 command's own result.
+
+Trace precedence is explicit `PLUMB_LOCUS_TRACE_ID`, exact `codex.thread`
+collection, inherited Context, and configured shared or default random
+generation. Collection reads only `CODEX_THREAD_ID`, limits it to 512 bytes,
+and freezes provenance into the start Atom. Absence falls through; invalid
+present input refuses the audit record. Plumb attaches no executor, activity,
+lifecycle, or authority meaning to the opaque trace key.
 
 `PLUMB_LOCUS_TARGET_COLLECTORS` is a comma-separated chain. Each entry selects
 one exact bounded fact:

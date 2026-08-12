@@ -7,7 +7,7 @@ fn atoms() {
     let home = tempfile::tempdir().expect("temp");
     let trace = home.path().join("trace.json");
     let report = home.path().join("audit.jsonl");
-    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+    let output = plumb()
         .args(["doctor", home.path().to_str().expect("path")])
         .env("PLUMB_LOCUS_ENABLED", "true")
         .env("PLUMB_LOCUS_TRACE_FILE", &trace)
@@ -16,11 +16,7 @@ fn atoms() {
         .expect("plumb");
 
     assert!(output.status.success());
-    let text = fs::read_to_string(report).expect("report");
-    let atoms: Vec<Atom> = text
-        .lines()
-        .map(|line| serde_json::from_str(line).expect("atom"))
-        .collect();
+    let atoms = read(&report);
     assert_eq!(atoms.len(), 2);
     assert_eq!(atoms[0].payload().expect("payload")["event"], "cli.start");
     assert_eq!(atoms[1].payload().expect("payload")["event"], "cli.finish");
@@ -58,11 +54,12 @@ fn atoms() {
 fn explicit() {
     let home = tempfile::tempdir().expect("temp");
     let report = home.path().join("audit.jsonl");
-    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+    let output = plumb()
         .arg("--version")
         .env("PLUMB_LOCUS_ENABLED", "true")
         .env("PLUMB_LOCUS_TRACE_ID", "manual-trace")
         .env("PLUMB_LOCUS_REPORT_FILE", &report)
+        .env("CODEX_THREAD_ID", "ignored-thread")
         .output()
         .expect("plumb");
 
@@ -76,6 +73,38 @@ fn explicit() {
         .expect("trace");
     assert_eq!(trace.key(), "manual-trace");
     assert_eq!(trace.origin(), &Origin::Explicit);
+    assert!(atom.collections().is_empty());
+}
+
+#[test]
+fn identity() {
+    let home = tempfile::tempdir().expect("temp");
+    let trace = home.path().join("trace.json");
+    let report = home.path().join("audit.jsonl");
+    let output = plumb()
+        .args(["doctor", home.path().to_str().expect("path")])
+        .env("PLUMB_LOCUS_ENABLED", "true")
+        .env("PLUMB_LOCUS_TRACE_FILE", &trace)
+        .env("PLUMB_LOCUS_REPORT_FILE", &report)
+        .env("CODEX_THREAD_ID", "codex-thread")
+        .output()
+        .expect("plumb");
+
+    assert!(output.status.success());
+    let atoms = read(&report);
+    assert_eq!(atoms.len(), 2);
+    assert!(
+        atoms
+            .iter()
+            .all(|atom| atom.context()["locus.trace"] == "codex-thread")
+    );
+    let collected = &atoms[0].collections()[0];
+    assert_eq!(collected.role(), "locus.trace");
+    assert_eq!(collected.binding(), "codex.thread");
+    assert_eq!(collected.collector(), "environment");
+    assert_eq!(collected.selector(), "CODEX_THREAD_ID");
+    assert!(atoms[1].collections().is_empty());
+    assert!(!trace.exists());
 }
 
 #[test]
@@ -84,7 +113,7 @@ fn muted() {
         let home = tempfile::tempdir().expect("temp");
         let trace = home.path().join("trace.json");
         let report = home.path().join("audit.jsonl");
-        let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
+        let mut command = plumb();
         command
             .args(["doctor", home.path().to_str().expect("path")])
             .env_remove("PLUMB_LOCUS_ENABLED")
@@ -106,7 +135,7 @@ fn muted() {
 fn malformed() {
     let home = tempfile::tempdir().expect("temp");
     let report = home.path().join("audit.jsonl");
-    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+    let output = plumb()
         .args(["doctor", home.path().to_str().expect("path")])
         .env("PLUMB_LOCUS_ENABLED", "yes")
         .env("PLUMB_LOCUS_REPORT_FILE", &report)
@@ -161,7 +190,7 @@ fn collectors() {
 fn invalid() {
     let home = tempfile::tempdir().expect("temp");
     let report = home.path().join("audit.jsonl");
-    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+    let output = plumb()
         .args(["doctor", home.path().to_str().expect("path")])
         .env("PLUMB_LOCUS_ENABLED", "true")
         .env("PLUMB_LOCUS_TARGET_COLLECTORS", "process:parent")
@@ -179,7 +208,7 @@ fn invalid() {
 
 fn invoke(root: &std::path::Path, collectors: &str, value: Option<(&str, &str)>) -> Vec<Atom> {
     let report = root.join("audit.jsonl");
-    let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
+    let mut command = plumb();
     command
         .args(["doctor", root.to_str().expect("path")])
         .env("PLUMB_LOCUS_ENABLED", "true")
@@ -192,8 +221,19 @@ fn invoke(root: &std::path::Path, collectors: &str, value: Option<(&str, &str)>)
     }
     let output = command.output().expect("plumb");
     assert!(output.status.success());
-    let text = fs::read_to_string(report).expect("report");
-    text.lines()
+    read(&report)
+}
+
+fn plumb() -> Command {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
+    command.env_remove("CODEX_THREAD_ID");
+    command
+}
+
+fn read(path: &std::path::Path) -> Vec<Atom> {
+    fs::read_to_string(path)
+        .expect("report")
+        .lines()
         .map(|line| serde_json::from_str(line).expect("atom"))
         .collect()
 }

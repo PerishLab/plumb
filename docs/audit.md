@@ -10,8 +10,21 @@ judge its result, or infer a repository identity.
 The settings below are Plumb's named Locus bootstrap control surface.
 `PLUMB_LOCUS_REPORT_FILE` selects the built-in JSONL reporter.
 `PLUMB_LOCUS_TRACE_FILE` selects the shared-file trace-key generator, and
-`PLUMB_LOCUS_TRACE_ID` supplies a literal trace key that wins over inheritance
-and generation.
+`PLUMB_LOCUS_TRACE_ID` supplies a literal trace key that wins over exact
+collection, inheritance, and generation.
+
+## Trace identity
+
+When observation is enabled, Plumb asks Locus's named `codex.thread` collector
+for exactly `CODEX_THREAD_ID` and binds a present value to `locus.trace`. It
+does not scan the environment. The value is bounded at 512 bytes, and the
+start Atom freezes collector provenance without duplicating the value.
+
+An explicit `PLUMB_LOCUS_TRACE_ID` wins without running the collector. When
+the environment fact is absent, identity falls through to the configured
+shared-file generator or the default random generator. This keeps one Codex
+thread continuous across independently observed products without teaching
+Plumb executor, activity, lifecycle, or authority semantics.
 
 ## Target
 

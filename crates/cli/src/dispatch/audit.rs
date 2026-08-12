@@ -7,6 +7,7 @@ use plumb::rig::Locus;
 use serde_json::json;
 
 const TARGET: &str = "target";
+const THREAD: &str = "codex.thread";
 const LIMIT: usize = 512;
 
 fn inherit() -> Result<Locus, plumb::config::Error> {
@@ -33,17 +34,19 @@ impl Run {
             return None;
         }
         let (engine, explicit, target) = bootstrap(settings)?;
+        let trace = Role::trace();
         let mut candidate = Candidate::event(json!({
             "event": "cli.start",
             "command": command,
         }))
-        .ensure(Role::trace())
+        .collect(trace.clone(), THREAD)
+        .ensure(trace.clone())
         .ensure(Role::span());
         if let Some(role) = target {
             candidate = candidate.collect(role, TARGET);
         }
         if let Some(key) = explicit {
-            candidate = candidate.explicit(Role::trace(), key);
+            candidate = candidate.explicit(trace, key);
         }
         let accepted = locus::record!(&engine, &Context::empty(), candidate).ok()?;
         Some(Self {
@@ -66,7 +69,12 @@ impl Run {
 }
 
 fn bootstrap(settings: Locus) -> Option<(Engine, Option<Key>, Option<Role>)> {
-    let mut policy = Policy::default().reporter(reporter::Spec::file(settings.report.file));
+    let mut policy = Policy::default()
+        .collector(
+            THREAD,
+            collector::Spec::environment("CODEX_THREAD_ID", LIMIT),
+        )
+        .reporter(reporter::Spec::file(settings.report.file));
     if !settings.trace.file.as_os_str().is_empty() {
         policy = policy.generator(Role::trace(), generator::Spec::shared(settings.trace.file));
     }
