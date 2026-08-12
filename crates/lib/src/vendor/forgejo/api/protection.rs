@@ -1,4 +1,35 @@
+use super::{Client, failure, segment};
 use serde_json::{Value, json};
+
+impl Client {
+    pub fn protect(&self, name: &str, mode: &str) -> Result<(), String> {
+        let username = self.user()?;
+        let route = format!("/branch_protections/{}", segment(name));
+        let existing = self.request("GET", &route, None)?;
+        if ![200, 404].contains(&existing.status) {
+            return Err(failure(
+                "fetching branch protection",
+                existing.status,
+                &existing.value,
+            ));
+        }
+        let policy = policy(name, mode, &username);
+        let response = if existing.status == 404 {
+            self.request("POST", "/branch_protections", Some(policy.clone()))?
+        } else {
+            self.request("PATCH", &route, Some(policy.clone()))?
+        };
+        let wanted = if existing.status == 404 { 201 } else { 200 };
+        if response.status != wanted {
+            return Err(failure(
+                "setting branch protection",
+                response.status,
+                &response.value,
+            ));
+        }
+        verify(name, &policy, &response.value)
+    }
+}
 
 pub fn policy(name: &str, mode: &str, username: &str) -> Value {
     let preparing = mode == "preparing";

@@ -77,9 +77,7 @@ dictionary entries or exclusions. A hit is out of true and unread closure
 evidence is blind.
 
 Retirement is deliberately temporary. After the domain either removes a term
-or restores it to live use, its encoded dictionary entry is deleted. The first
-release of this mechanism carries an empty retired set, so it adds the proof
-surface without beginning a vocabulary transition.
+or restores it to live use, its encoded dictionary entry is deleted.
 
 ## Install the CLI
 
@@ -155,6 +153,22 @@ Plumb derives the one `apps/*/wrangler.jsonc` application and keeps upload,
 Cloudflare binding, and public fingerprint readback as three separate results.
 Product repositories carry only the dispatch lane and declaration, not a ship
 wrapper.
+
+Retiring a delivery chain is the mirror of releasing one, and it is CLI-owned
+too:
+
+```sh
+plumb retire
+plumb retire --execute \
+  --confirm-repo <owner/name> \
+  --confirm-bucket <bucket> \
+  --confirm-domain <host>
+```
+
+Only a product declaring `[release.retire]` can be retired. The first form is
+a dry run that reads no credentials; the second destroys the repository, its
+release bucket, its custom domain, and its publication credentials, in that
+fixed order, and refuses unless every confirmation equals its target verbatim.
 
 ## Paired Web/API dispatch
 

@@ -11,7 +11,7 @@ radius = [
   "dep:semver",
   "dep:serde_json",
 ]
-forge = [
+vendor = [
   "dep:semver",
   "dep:serde_json",
 ]
@@ -33,7 +33,7 @@ sha2 = "0.10"
 tar = { version = "0.4", optional = true }
 ureq = { version = "3", optional = true }
 pin-project-lite = "0.2"
-plumb-macro = { path = "../macro", version = "=0.18.17", registry = "perish" }
+plumb-macro = { path = "../macro", version = "=0.18.18", registry = "perish" }
 serde = { version = "1", features = ["derive"] }
 toml = "0.9"
 
@@ -51,9 +51,9 @@ name = "skill"
 required-features = ["skill"]
 
 [[test]]
-name = "forge"
-path = "tests/forge/mod.rs"
-required-features = ["forge"]
+name = "vendor"
+path = "tests/vendor/mod.rs"
+required-features = ["vendor"]
 
 [[test]]
 name = "runtime"

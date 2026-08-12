@@ -12,10 +12,9 @@ pub fn public(url: &str) -> Result<Value, String> {
     if response.status == 200 {
         Ok(response.value)
     } else {
-        Err(failure(
-            "fetching stable pointer",
-            response.status,
-            &response.value,
+        Err(format!(
+            "fetching stable pointer failed ({}): {}",
+            response.status, response.value
         ))
     }
 }
@@ -24,7 +23,7 @@ pub fn send(
     url: &str,
     method: &str,
     body: Option<Value>,
-    token: Option<&str>,
+    auth: Option<&str>,
 ) -> Result<Response, String> {
     let mut command = Command::new("curl");
     command.args([
@@ -52,18 +51,18 @@ pub fn send(
         .stdout(Stdio::piped())
         .spawn()
         .map_err(|error| format!("cannot run curl: {error}"))?;
-    if let Some(token) = token {
-        let safe = token.replace('\\', "\\\\").replace('"', "\\\"");
-        let config = format!(
-            "header = \"Authorization: token {safe}\"\nheader = \"Accept: application/json\"\n"
-        );
-        child
-            .stdin
-            .take()
-            .ok_or_else(|| "cannot open curl input".to_string())?
-            .write_all(config.as_bytes())
-            .map_err(|error| format!("cannot write curl input: {error}"))?;
+    let mut config =
+        "header = \"Accept: application/json\"\nheader = \"Cache-Control: no-cache\"\n".to_string();
+    if let Some(auth) = auth {
+        let safe = auth.replace('\\', "\\\\").replace('"', "\\\"");
+        config.push_str(&format!("header = \"Authorization: {safe}\"\n"));
     }
+    child
+        .stdin
+        .take()
+        .ok_or_else(|| "cannot open curl input".to_string())?
+        .write_all(config.as_bytes())
+        .map_err(|error| format!("cannot write curl input: {error}"))?;
     let output = child
         .wait_with_output()
         .map_err(|error| format!("cannot wait for curl: {error}"))?;
@@ -87,13 +86,4 @@ pub fn send(
         serde_json::from_str(body).unwrap_or_else(|_| Value::String(body.to_string()))
     };
     Ok(Response { status, value })
-}
-
-pub fn failure(action: &str, status: u16, value: &Value) -> String {
-    let detail = value
-        .get("message")
-        .and_then(Value::as_str)
-        .map(str::to_string)
-        .unwrap_or_else(|| value.to_string());
-    format!("forgejo: {action} failed ({status}): {detail}")
 }

@@ -1,3 +1,7 @@
+mod retire;
+
+pub use retire::Retire;
+
 use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -50,6 +54,7 @@ pub struct Spec {
     pub skill: bool,
     pub cargo: Option<Cargo>,
     pub deb: Option<Deb>,
+    pub retire: Option<Retire>,
 }
 
 #[derive(Deserialize)]
@@ -67,6 +72,7 @@ struct Raw {
     skill: bool,
     cargo: Option<Cargo>,
     deb: Option<Deb>,
+    retire: Option<Retire>,
 }
 impl Spec {
     pub fn read(path: &Path) -> Result<Self, String> {
@@ -85,6 +91,7 @@ impl Spec {
             skill,
             cargo,
             deb,
+            retire,
         } = held.release;
         let mut spec = Self {
             root: root.to_path_buf(),
@@ -98,6 +105,7 @@ impl Spec {
             skill,
             cargo,
             deb,
+            retire,
         };
         if let Some(deb) = &mut spec.deb {
             deb.root = rebase(root, &deb.root);
@@ -149,6 +157,9 @@ impl Spec {
                 "declared skill root is absent: {}",
                 self.root.join("skills").join(&self.product).display()
             ));
+        }
+        if let Some(retire) = &self.retire {
+            retire.validate()?;
         }
         if let Some(cargo) = &self.cargo {
             token("Cargo registry", &cargo.registry, false)?;

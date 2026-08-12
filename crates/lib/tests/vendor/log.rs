@@ -1,4 +1,4 @@
-use plumb::forge::route;
+use plumb::vendor::forgejo::route;
 
 #[test]
 fn attempt() {

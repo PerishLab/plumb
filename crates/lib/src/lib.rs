@@ -5,16 +5,16 @@ pub mod cli;
 pub mod config;
 pub mod context;
 pub mod fill;
-#[cfg(feature = "forge")]
-pub mod forge;
 mod proof;
-#[cfg(any(feature = "forge", feature = "skill"))]
+#[cfg(any(feature = "vendor", feature = "skill"))]
 pub mod rig;
 #[cfg(feature = "skill")]
 pub mod skill;
+#[cfg(feature = "vendor")]
+pub mod vendor;
 
-#[cfg(feature = "forge")]
-pub use forge::land;
+#[cfg(feature = "vendor")]
+pub use vendor::forgejo::land;
 
 #[cfg(feature = "radius")]
 pub use proof::radius;

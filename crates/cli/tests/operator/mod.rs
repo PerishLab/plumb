@@ -6,7 +6,7 @@ mod audit;
 #[cfg(unix)]
 mod fixture;
 #[cfg(unix)]
-mod forge;
+mod forgejo;
 mod precommit;
 #[cfg(unix)]
 mod recovery;

@@ -1,4 +1,4 @@
-use plumb::forge::git::fetch;
+use plumb::vendor::forgejo::git::fetch;
 use std::path::Path;
 use std::process::{Command, Output};
 

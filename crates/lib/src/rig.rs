@@ -66,6 +66,24 @@ pub struct Harness {
 
 #[derive(Debug, PartialEq, Cascade)]
 #[cascade(section)]
+pub struct Mint {
+    pub account: String,
+    pub api: String,
+    pub token: String,
+}
+
+impl Default for Mint {
+    fn default() -> Self {
+        Self {
+            account: String::new(),
+            api: "https://api.cloudflare.com/client/v4".to_string(),
+            token: String::new(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Cascade)]
+#[cascade(section)]
 pub struct Site {
     pub account: String,
     pub api: String,

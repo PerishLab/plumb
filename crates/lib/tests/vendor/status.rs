@@ -1,4 +1,4 @@
-use plumb::forge::State;
+use plumb::vendor::forgejo::State;
 use serde_json::json;
 
 fn lane() -> serde_json::Value {
@@ -43,7 +43,7 @@ fn malformed() {
 
 #[test]
 fn cut() {
-    use plumb::forge::{Cut, settled};
+    use plumb::vendor::forgejo::{Cut, settled};
     assert_eq!(
         settled("release/v1.0.0", "main", "abc", "abc"),
         Ok(Cut::Held)

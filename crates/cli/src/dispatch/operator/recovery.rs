@@ -1,7 +1,7 @@
 use super::super::release::generator;
 use super::super::release::model::Spec;
 use super::{Arm, Promotion, Recovery};
-use plumb::forge::{Client, git};
+use plumb::vendor::forgejo::{Client, git};
 use serde_json::{Value, json};
 use std::path::Path;
 
@@ -56,7 +56,11 @@ fn arm(root: &Path, input: Arm) -> Result<String, String> {
     ))
 }
 
-fn beta(remote: plumb::forge::Remote, caller: String, dry: bool) -> Result<String, String> {
+fn beta(
+    remote: plumb::vendor::forgejo::Remote,
+    caller: String,
+    dry: bool,
+) -> Result<String, String> {
     commit("--caller", &caller)?;
     dispatch(DispatchInput {
         remote,
@@ -67,7 +71,7 @@ fn beta(remote: plumb::forge::Remote, caller: String, dry: bool) -> Result<Strin
     })
 }
 
-fn stable(remote: plumb::forge::Remote, input: Promotion) -> Result<String, String> {
+fn stable(remote: plumb::vendor::forgejo::Remote, input: Promotion) -> Result<String, String> {
     commit("--caller", &input.caller)?;
     digest(&input.digest)?;
     dispatch(DispatchInput {
@@ -80,7 +84,7 @@ fn stable(remote: plumb::forge::Remote, input: Promotion) -> Result<String, Stri
 }
 
 struct DispatchInput {
-    remote: plumb::forge::Remote,
+    remote: plumb::vendor::forgejo::Remote,
     caller: String,
     inputs: Value,
     version: &'static str,

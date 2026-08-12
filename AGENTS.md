@@ -145,26 +145,39 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   `yes|no|unknown`; `PLUMB_SITE_BLIND=true` can excuse failed reachability only
   when binding is positively known.
 
-## Control-plane cold-start
+## Cold-start
 
-Repository creation belongs to the Forgejo control plane. Bucket, domain,
-token, and credential lifecycle belongs to the declared infrastructure
-resource owner. Plumb neither creates those resources nor writes their
-credentials into Forgejo; it consumes the already provisioned
-`RELEASE_PUBLISH_S3_*` and `RELEASE_ACTIVATE_S3_*` authority at publication
-time.
+Plumb owns the complete life of a governed product's release surface: land,
+guard, release, publish, stable, site, and retire. Retirement is the mirror of
+release, not a foreign errand, and it lives here because everything it destroys
+is something Plumb declared, published, or protected.
 
-No cold-start wrapper or token factory belongs in this repository. A missing
-authority blocks release setup at its owning control plane rather than
-inviting Plumb to infer or repair external state.
+Plumb does not cold-start. It creates no repository, no bucket, and no domain
+that does not already exist, and it never infers or repairs missing external
+state. A missing authority blocks at its owning control plane. This is an
+implementation constraint, not a permission one: no provisioning call exists in
+this codebase, and adding one is the change that must be refused, because the
+authority Plumb already holds is sufficient to provision if such a call were
+ever written.
+
+Plumb may derive ephemeral authority to act on what it governs. `plumb retire`
+cuts short-lived scoped tokens from the declared factory in `PLUMB_RETIRE_*`,
+bounds them with an expiry, and revokes them in an arm that runs whether the
+sweep succeeded or failed. A derived token never enters command arguments or
+logs, and no derived token outlives the command that cut it. The factory
+credential itself is provisioned elsewhere; Plumb consumes it and never mints
+one.
 
 Plumb itself needs one explicit genesis ceremony to publish and activate the
 first release that contains this substrate. The ceremony runs the source-built
 binary once with the same capsule protocol and separate credentials. No
 bootstrap branch or alternate permanent workflow survives genesis.
 
-Repository retirement remains a destructive control-plane responsibility.
-Plumb exposes no generic retirement command, and this repository carries no
-retirement wrapper or implementation. An operator must use the explicit
-authority and procedure of the owning control plane rather than infer a
-successor command.
+Retirement destroys and cannot be undone, so it is bounded by declaration
+rather than by argument. A product that can be retired names its bucket and
+zone under `[release.retire]`; one that declares nothing cannot be retired at
+all. The dry run is the default and reads no credentials. `--execute` acts only
+when `--confirm-repo`, `--confirm-bucket`, and `--confirm-domain` each equal
+their target verbatim, and the destructive order is fixed: inventory, archive
+and purge credentials, revoke the writer, detach the domain, empty and delete
+the bucket, delete the repository, remove the local escrow.

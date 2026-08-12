@@ -5,14 +5,15 @@ pub fn run(root: &Path) -> Result<String, String> {
     let app = App::read(root)?;
     let site = super::settings::read()?;
     super::settings::require(&site)?;
-    let token = super::cloud::verify(&site)?;
+    let vantage = super::cloud::Vantage::new(&site);
+    let token = vantage.verify()?;
     println!("token: {token}");
-    let worker = super::cloud::worker(&site, &app.worker)?;
+    let worker = vantage.worker(&app.worker)?;
     println!(
         "worker: {} {}",
         app.worker,
         if worker { "present" } else { "absent" }
     );
-    println!("bound: {}", super::cloud::binding(&site));
+    println!("bound: {}", vantage.binding());
     Ok("site inspect: ok".into())
 }

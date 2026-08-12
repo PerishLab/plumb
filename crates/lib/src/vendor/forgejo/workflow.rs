@@ -1,6 +1,6 @@
 use super::api::Client;
+use super::api::failure;
 use super::model::Outcome;
-use super::request::failure;
 use serde_json::{Value, json};
 
 const PAGE: usize = 50;

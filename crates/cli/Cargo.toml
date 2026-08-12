@@ -15,11 +15,15 @@ name = "plumb"
 path = "src/main.rs"
 
 [[test]]
+name = "dispatch"
+path = "tests/dispatch/mod.rs"
+
+[[test]]
 name = "operator"
 path = "tests/operator/mod.rs"
 
 [dependencies]
-plumb = { path = "../lib", features = ["forge", "radius", "skill"] }
+plumb = { path = "../lib", features = ["radius", "skill", "vendor"] }
 locus = { version = "0", registry = "perish" }
 clap = { version = "4", features = ["derive", "env"] }
 flate2 = "1"

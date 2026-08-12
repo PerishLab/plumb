@@ -27,6 +27,9 @@ use Doctor before changing its shape.
   lifecycle for one permanent version.
 - A **site** is a declared application whose deploy, binding, and reachability
   are independently evidenced.
+- A **retirement** destroys one declared delivery chain in a fixed order; it is
+  refused unless the product declares `[release.retire]` and every confirmation
+  equals its target verbatim.
 - A **skill seat** is one source brief or one ownership-proven installed brief.
 - A **limit strategy** is one Plumb-owned file enumeration and text magnitude
   selected by a repository; its files and numeric limit are not parameters.
@@ -46,6 +49,7 @@ plumb changelog [ROOT]
 plumb release --help
 plumb stable --help
 plumb site --help
+plumb retire [--root ROOT] [--execute --confirm-repo R --confirm-bucket B --confirm-domain D]
 plumb skill --help
 ```
 

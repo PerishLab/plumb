@@ -9,6 +9,7 @@ pub mod land;
 pub mod operator;
 mod production;
 pub mod release;
+pub mod retire;
 pub mod site;
 
 pub fn read(root: &Path) -> Option<Found> {

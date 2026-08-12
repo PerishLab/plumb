@@ -33,7 +33,7 @@ pub fn run(root: &Path) -> Result<String, String> {
     })?;
     println!("verify");
     println!("  deployed  yes");
-    let bond = super::cloud::binding(&site);
+    let bond = super::cloud::Vantage::new(&site).binding();
     println!("  bound     {bond}");
     match bond {
         Bond::No => return Err(format!("{} is not attached to the worker", site.domain)),
