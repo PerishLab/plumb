@@ -12,7 +12,7 @@ fn budget() {
 
     let out = crate::run(&["doctor", root.to_str().expect("utf8 root")]);
     assert!(
-        out.contains("skill     tool source=3 budget=120 text=4 files=3"),
+        out.contains("skill     tool strategy=brief source=3 budget=120 text=4 files=3"),
         "{out}"
     );
     assert!(out.contains("true to the skeleton"), "{out}");
@@ -37,6 +37,7 @@ fn exact() {
 fn open() {
     let fixture = tempfile::tempdir().expect("fixture");
     let root = fixture.path();
+    strategy(root, "brief");
     std::fs::create_dir_all(root.join("skills/tool/references")).expect("reference seat");
     std::fs::write(root.join("skills/tool/SKILL.md"), "brief\n").expect("brief");
     std::fs::write(root.join("skills/tool/references/path.md"), "path\n").expect("path");
@@ -96,6 +97,64 @@ fn source() {
     assert!(out.contains("1 blind"), "{out}");
 }
 
+#[test]
+fn declaration() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let root = fixture.path();
+    std::fs::create_dir_all(root.join("skills/tool")).expect("skill seat");
+    std::fs::write(root.join("plumb.toml"), "").expect("manifest");
+    let out = crate::run(&["doctor", root.to_str().expect("utf8 root")]);
+    assert!(out.contains("declares no skill strategy"), "{out}");
+}
+
+#[test]
+fn closed() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let root = fixture.path();
+    brief(root, "brief\n", "paths\n", "scenarios\n");
+    strategy(root, "large");
+    let unknown = crate::run(&["doctor", root.to_str().expect("utf8 root")]);
+    assert!(
+        unknown.contains("unknown skill strategy large"),
+        "{unknown}"
+    );
+
+    std::fs::write(
+        root.join("plumb.toml"),
+        "[skill]\nstrategy = \"brief\"\nlimit = 500\n",
+    )
+    .expect("manifest");
+    let limit = crate::run(&["doctor", root.to_str().expect("utf8 root")]);
+    assert!(limit.contains("skill has unknown fields: limit"), "{limit}");
+
+    std::fs::write(
+        root.join("plumb.toml"),
+        "[skill]\nstrategy = \"brief\"\nfiles = [\"SKILL.md\"]\n",
+    )
+    .expect("manifest");
+    let files = crate::run(&["doctor", root.to_str().expect("utf8 root")]);
+    assert!(files.contains("skill has unknown fields: files"), "{files}");
+}
+
+#[test]
+fn seat() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    strategy(fixture.path(), "brief");
+    let out = crate::run(&["doctor", fixture.path().to_str().expect("utf8 root")]);
+    assert!(
+        out.contains("skill strategy brief has no skill seat"),
+        "{out}"
+    );
+}
+
+#[test]
+fn silent() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    std::fs::create_dir_all(fixture.path().join("skills/tool")).expect("skill seat");
+    let out = crate::run(&["doctor", fixture.path().to_str().expect("utf8 root")]);
+    assert!(out.contains("true to the skeleton"), "{out}");
+}
+
 fn case(source: usize, budget: usize) {
     let fixture = tempfile::tempdir().expect("fixture");
     let root = fixture.path();
@@ -108,13 +167,23 @@ fn case(source: usize, budget: usize) {
     .expect("source");
 
     let out = crate::run(&["doctor", root.to_str().expect("utf8 root")]);
-    let want = format!("skill     tool source={source} budget={budget} text=3 files=3");
+    let want =
+        format!("skill     tool strategy=brief source={source} budget={budget} text=3 files=3");
     assert!(out.contains(&want), "{out}");
 }
 
 fn brief(root: &Path, skill: &str, paths: &str, scenarios: &str) {
+    strategy(root, "brief");
     std::fs::create_dir_all(root.join("skills/tool")).expect("skill seat");
     std::fs::write(root.join("skills/tool/SKILL.md"), skill).expect("skill");
     std::fs::write(root.join("skills/tool/PATHS.md"), paths).expect("paths");
     std::fs::write(root.join("skills/tool/SCENARIOS.md"), scenarios).expect("scenarios");
+}
+
+fn strategy(root: &Path, value: &str) {
+    std::fs::write(
+        root.join("plumb.toml"),
+        format!("[skill]\nstrategy = \"{value}\"\n"),
+    )
+    .expect("manifest");
 }

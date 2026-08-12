@@ -94,6 +94,16 @@ reads binding, and proves the public fingerprint.
 
 ## Operate a skill seat
 
+A repository shipping source skills selects a closed limit strategy:
+
+```toml
+[skill]
+strategy = "brief"
+```
+
+The strategy owns the admitted root files and aggregate text budget. Do not
+declare either separately.
+
 ```bash
 plumb skill status
 plumb skill upgrade --dry-run

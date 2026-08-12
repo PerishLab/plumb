@@ -38,6 +38,7 @@ struct Shape {
     sites: Vec<String>,
     dependencies: Vec<Dependency>,
     law: Law,
+    strategy: Option<&'static str>,
     skills: Vec<Skill>,
 }
 
@@ -46,9 +47,8 @@ struct Skill {
     name: String,
     source: usize,
     text: usize,
-    budget: usize,
+    budget: Option<usize>,
     files: usize,
-    entries: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -187,6 +187,7 @@ impl Shape {
                 path: held.path.unwrap_or(0),
                 grants: held.grants.iter().cloned().collect(),
             },
+            strategy: held.skills.config.strategy().map(|held| held.id()),
             skills: held
                 .skills
                 .held
@@ -197,7 +198,6 @@ impl Shape {
                     text: skill.text,
                     budget: skill.budget,
                     files: skill.files,
-                    entries: skill.entries.clone(),
                 })
                 .collect(),
         }
@@ -258,8 +258,15 @@ fn human(
     );
     for skill in &held.skills.held {
         println!(
-            "  skill     {} source={} budget={} text={} files={}",
-            skill.name, skill.source, skill.budget, skill.text, skill.files
+            "  skill     {} strategy={} source={} budget={} text={} files={}",
+            skill.name,
+            held.skills.config.strategy().map_or("?", |held| held.id()),
+            skill.source,
+            skill
+                .budget
+                .map_or_else(|| "?".into(), |held| held.to_string()),
+            skill.text,
+            skill.files
         );
     }
     match vocabulary {

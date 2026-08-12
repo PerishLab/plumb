@@ -28,6 +28,8 @@ use Doctor before changing its shape.
 - A **site** is a declared application whose deploy, binding, and reachability
   are independently evidenced.
 - A **skill seat** is one source brief or one ownership-proven installed brief.
+- A **limit strategy** is one Plumb-owned file enumeration and text magnitude
+  selected by a repository; its files and numeric limit are not parameters.
 
 ## Actions
 
@@ -69,6 +71,8 @@ unfamiliar or stateful action.
   output is a proposal, never an automatic rewrite.
 - Stable default skill seats accept canonical stable only. Validate every
   other candidate in an exact, isolated stage path.
+- A governed repository with source skill seats declares one `[skill]`
+  `strategy`; unknown strategies and direct `files` or `limit` fields refuse.
 
 Use [PATHS.md](PATHS.md) for routine flows and
 [SCENARIOS.md](SCENARIOS.md) only when one of its bounded cases applies.
