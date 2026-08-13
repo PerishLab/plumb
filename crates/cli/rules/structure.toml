@@ -16,7 +16,8 @@ dirs = [
   "lib",
   "packages",
   "repos",
+  "runner-control",
   "skills",
   "tests",
 ]
-lanes = ["deploy", "guard", "release-binary", "release-cargo", "release-exact", "release-stable", "probe"]
+lanes = ["deploy", "guard", "release-binary", "release-cargo", "release-exact", "release-runner", "release-stable", "probe"]
