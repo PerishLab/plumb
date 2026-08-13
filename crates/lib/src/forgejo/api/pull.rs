@@ -1,6 +1,6 @@
-use super::{Client, failure};
-use crate::vendor::forgejo::model::{Pull, Strategy};
-use serde_json::{Value, json};
+use super::Client;
+use crate::forgejo::model::{Pull, Strategy};
+use serde_json::Value;
 
 impl Client {
     pub fn find(&self, head: &str) -> Result<Option<Pull>, String> {
@@ -8,12 +8,8 @@ impl Client {
     }
 
     pub fn opened(&self, base: &str, head: &str) -> Result<Option<Pull>, String> {
-        let response = self.request("GET", "/pulls?state=open&limit=50", None)?;
-        if response.status != 200 {
-            return Err(failure("listing pulls", response.status, &response.value));
-        }
-        Ok(response
-            .value
+        let value = self.call(&["pull", "list"])?;
+        Ok(value
             .as_array()
             .into_iter()
             .flatten()
@@ -29,21 +25,10 @@ impl Client {
     }
 
     pub fn raise(&self, base: &str, head: &str, title: &str, body: &str) -> Result<Pull, String> {
-        let response = self.request(
-            "POST",
-            "/pulls",
-            Some(json!({
-                "base": base,
-                "head": head,
-                "title": title,
-                "body": body
-            })),
-        )?;
-        if response.status == 201 {
-            number(&response.value).ok_or_else(|| "created pull has no number".to_string())
-        } else {
-            Err(failure("creating pull", response.status, &response.value))
-        }
+        let value = self.call(&[
+            "pull", "create", "--base", base, "--head", head, "--title", title, "--body", body,
+        ])?;
+        number(&value).ok_or_else(|| "created pull has no number".to_string())
     }
 
     pub fn merge(&self, pull: u64, head: &str) -> Result<(), String> {
@@ -51,26 +36,32 @@ impl Client {
     }
 
     pub fn settle(&self, pull: u64, head: &str, strategy: Strategy) -> Result<(), String> {
-        let body = json!({
-            "Do": strategy.wire(),
-            "delete_branch_after_merge": false,
-            "head_commit_id": head
-        });
         let mut last = String::new();
         for turn in 1..=6 {
-            let response =
-                self.request("POST", &format!("/pulls/{pull}/merge"), Some(body.clone()))?;
-            if [200, 204].contains(&response.status) {
+            let result = self.call(&[
+                "pull",
+                "merge",
+                &pull.to_string(),
+                "--head",
+                head,
+                "--do",
+                strategy.wire(),
+            ]);
+            if result.is_ok() {
                 return Ok(());
             }
-            last = failure("merging pull", response.status, &response.value);
-            if ![405, 409].contains(&response.status) {
+            last = result.expect_err("failed merge has an error");
+            if !retryable(&last) {
                 break;
             }
             std::thread::sleep(std::time::Duration::from_secs(turn));
         }
         Err(last)
     }
+}
+
+fn retryable(error: &str) -> bool {
+    error.contains("405") || error.contains("409")
 }
 
 fn number(value: &Value) -> Option<Pull> {

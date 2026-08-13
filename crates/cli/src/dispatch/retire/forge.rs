@@ -1,4 +1,4 @@
-use plumb::vendor::forgejo::Client;
+use plumb::forgejo::Client;
 
 pub const SECRETS: [&str; 9] = [
     "RELEASE_ACTIVATE_S3_ACCESS_KEY",

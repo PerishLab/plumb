@@ -52,6 +52,7 @@ paths = [
   "apps/*/tests/**/*.test.ts",
   "apps/*/tests/**/*.test.tsx",
   "crates/lib/src/config.rs",
+  "crates/lib/src/forgejo/settings.rs",
   "crates/macro/src/parse.rs",
   "apps/web/vite.config.ts",
   "crates/*/tests/**/*.rs",
@@ -60,6 +61,11 @@ paths = [
 [[ban]]
 syntax = "style"
 paths = ["apps/web/src/lib/components/**"]
+
+[[boundary]]
+paths = ["crates/lib/src"]
+note = "the Runseal-backed Forgejo adaptor is a peer of the existing removable substrate modules"
+allow = ["fanout"]
 
 [[boundary]]
 paths = [

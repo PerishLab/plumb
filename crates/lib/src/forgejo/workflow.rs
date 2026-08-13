@@ -1,9 +1,7 @@
 use super::api::Client;
-use super::api::failure;
 use super::model::Outcome;
-use serde_json::{Value, json};
+use serde_json::Value;
 
-const PAGE: usize = 50;
 const JOBS: usize = 64;
 
 impl Client {
@@ -13,37 +11,23 @@ impl Client {
         reference: &str,
         inputs: Value,
     ) -> Result<Value, String> {
-        let route = format!("/actions/workflows/{workflow}/dispatches");
-        let response = self.request(
-            "POST",
-            &route,
-            Some(json!({
-                "ref": reference,
-                "inputs": inputs,
-                "return_run_info": true
-            })),
-        )?;
-        if [200, 201, 204].contains(&response.status) {
-            Ok(response.value)
-        } else {
-            Err(failure(
-                "dispatching release workflow",
-                response.status,
-                &response.value,
-            ))
-        }
+        self.call(&[
+            "workflow",
+            "dispatch",
+            workflow,
+            "--ref",
+            reference,
+            "--inputs",
+            &inputs.to_string(),
+        ])
     }
 
     pub fn run(&self, id: u64) -> Result<Value, String> {
-        let response = self.request("GET", &format!("/actions/runs/{id}"), None)?;
-        if response.status == 200 && response.value.is_object() {
-            Ok(response.value)
+        let value = self.call(&["run", "show", &id.to_string()])?;
+        if value.is_object() {
+            Ok(value)
         } else {
-            Err(failure(
-                "fetching workflow run",
-                response.status,
-                &response.value,
-            ))
+            Err("forgejo: workflow run response is not an object".into())
         }
     }
 
@@ -73,53 +57,27 @@ impl Client {
     }
 
     fn tasks(&self, number: u64) -> Result<Option<Vec<Value>>, String> {
-        let mut page = 1;
-        let mut seen = 0;
-        let mut found = Vec::new();
-        loop {
-            let route = format!("/actions/tasks?page={page}&limit={PAGE}");
-            let response = self.request("GET", &route, None)?;
-            if response.status != 200 {
-                return Ok(None);
-            }
-            let entries = response
-                .value
-                .get("workflow_runs")
-                .and_then(Value::as_array)
-                .ok_or_else(|| "Forgejo action task list has no workflow_runs".to_string())?;
-            let total = response
-                .value
-                .get("total_count")
-                .and_then(Value::as_u64)
-                .ok_or_else(|| "Forgejo action task list has no total_count".to_string())?
-                as usize;
-            seen += entries.len();
-            found.extend(
-                entries
-                    .iter()
-                    .filter(|task| task.get("run_number").and_then(Value::as_u64) == Some(number))
-                    .cloned(),
-            );
-            if seen >= total || entries.len() < PAGE {
-                return Ok(Some(found));
-            }
-            page += 1;
-        }
+        let value = self.call(&["task", "list", &number.to_string()])?;
+        value
+            .as_array()
+            .cloned()
+            .map(Some)
+            .ok_or_else(|| "Forgejo action task list is not an array".to_string())
     }
 
     pub fn log(&self, number: u64, job: usize, attempt: u32) -> Result<String, String> {
-        let response = self.web(&route(number, job, attempt))?;
-        match response.status {
-            200 => Ok(response
-                .value
-                .as_str()
-                .map(str::to_string)
-                .unwrap_or_else(|| response.value.to_string())),
-            404 => Err(format!(
-                "forgejo: run {number} has no job {job} attempt {attempt}"
-            )),
-            status => Err(failure("fetching job log", status, &response.value)),
-        }
+        let value = self.call(&[
+            "job",
+            "log",
+            &number.to_string(),
+            &job.to_string(),
+            "--attempt",
+            &attempt.to_string(),
+        ])?;
+        Ok(value
+            .as_str()
+            .map(str::to_string)
+            .unwrap_or_else(|| value.to_string()))
     }
 
     pub fn logs(&self, id: u64) -> Result<Vec<(usize, String)>, String> {

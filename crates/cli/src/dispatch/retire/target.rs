@@ -1,5 +1,5 @@
 use super::super::release::model::Spec;
-use plumb::vendor::forgejo::{Remote, git};
+use plumb::forgejo::{Remote, git};
 use std::path::{Path, PathBuf};
 
 pub struct Target {

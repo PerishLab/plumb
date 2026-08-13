@@ -5,6 +5,8 @@ pub mod cli;
 pub mod config;
 pub mod context;
 pub mod fill;
+#[cfg(feature = "vendor")]
+pub mod forgejo;
 mod proof;
 #[cfg(any(feature = "vendor", feature = "skill"))]
 pub mod rig;
@@ -14,7 +16,7 @@ pub mod skill;
 pub mod vendor;
 
 #[cfg(feature = "vendor")]
-pub use vendor::forgejo::land;
+pub use forgejo::land;
 
 #[cfg(feature = "radius")]
 pub use proof::radius;

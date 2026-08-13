@@ -21,6 +21,10 @@ link, and it is the only one.
 - `crates/cli` — the CLI, published as a binary through the release lanes.
 - `crates/lib` and `crates/macro` — the substrate and derive consumed by the
   ecosystem.
+- `crates/lib/src/forgejo` — Plumb orchestration and Git adaptors over
+  Runseal's structured Forgejo operations. It owns no HTTP sender and reads no
+  `tea.yml`; authority enters through `FORGEJO_URL` with
+  `FORGEJO_TOKEN_FILE` or `FORGEJO_TOKEN`.
 - `apps/web` — the site at plumb.perish.uk, shipped by the deploy lane on
   dispatch through `plumb site deploy` and verified by readback.
 - `packages/*` — publishable specimens, when they earn their place.

@@ -1,3 +1,4 @@
+use super::forgejo::{Court, serve};
 use sha2::{Digest, Sha256};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
@@ -105,9 +106,10 @@ esac
 #[test]
 fn retains() {
     let fixture = tempfile::tempdir().expect("fixture");
+    let settled = fixture.path().join("settled");
+    let (forge, forge_calls) = serve(Court::Packport(settled.clone()), 8);
     seed(fixture.path());
     let calls = fixture.path().join("calls");
-    let settled = fixture.path().join("settled");
     let path = format!(
         "{}:{}",
         fixture.path().join("bin").display(),
@@ -118,6 +120,7 @@ fn retains() {
         .current_dir(fixture.path())
         .env("PATH", path)
         .env("FORGEJO_TOKEN", "test-token")
+        .env("FORGEJO_URL", forge)
         .env("COURT_ROOT", fixture.path())
         .env("COURT_CALLS", &calls)
         .env("COURT_SETTLED", &settled)
@@ -125,15 +128,17 @@ fn retains() {
         .expect("plumb");
     assert!(
         output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
+        "{} {:?}",
+        String::from_utf8_lossy(&output.stderr),
+        forge_calls.lock().expect("forge calls")
     );
     let text = String::from_utf8_lossy(&output.stdout);
     assert!(text.contains("retained frozen release/v1.2.0"), "{text}");
     let calls = std::fs::read_to_string(calls).expect("calls");
     assert!(!calls.contains("DELETE"), "{calls}");
-    let merge = calls
-        .lines()
+    let held = forge_calls.lock().expect("forge calls");
+    let merge = held
+        .iter()
         .find(|line| line.contains("/pulls/12/merge"))
         .expect("merge");
     assert!(merge.contains(r#""delete_branch_after_merge":false"#));

@@ -1,14 +1,14 @@
-use super::{Client, failure, segment};
-use crate::vendor::forgejo::model::Cut;
-use serde_json::{Value, json};
+use super::Client;
+use crate::forgejo::model::Cut;
+use serde_json::Value;
 
 impl Client {
     pub fn branch(&self, name: &str) -> Result<Option<Value>, String> {
-        let response = self.request("GET", &format!("/branches/{}", segment(name)), None)?;
-        match response.status {
-            200 if response.value.is_object() => Ok(Some(response.value)),
-            404 => Ok(None),
-            status => Err(failure("fetching branch", status, &response.value)),
+        match self.call(&["branch", "show", name]) {
+            Ok(value) if value.is_object() => Ok(Some(value)),
+            Err(error) if absent(&error) => Ok(None),
+            Ok(_) => Err("forgejo: branch response is not an object".into()),
+            Err(error) => Err(error),
         }
     }
 
@@ -17,21 +17,13 @@ impl Client {
             let wanted = self.branch(from)?.as_ref().map(commit).unwrap_or_default();
             return settled(name, from, &commit(&held), &wanted);
         }
-        let response = self.request(
-            "POST",
-            "/branches",
-            Some(json!({"new_branch_name": name, "old_branch_name": from})),
-        )?;
-        if response.status == 201 {
-            Ok(Cut::Made)
-        } else {
-            Err(failure(
-                "creating release branch",
-                response.status,
-                &response.value,
-            ))
-        }
+        self.call(&["branch", "create", name, "--from", from])?;
+        Ok(Cut::Made)
     }
+}
+
+fn absent(error: &str) -> bool {
+    error.contains("404") || error.contains("missing") || error.contains("not found")
 }
 
 pub fn settled(name: &str, from: &str, seen: &str, wanted: &str) -> Result<Cut, String> {

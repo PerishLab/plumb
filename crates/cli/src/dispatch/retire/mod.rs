@@ -5,9 +5,9 @@ mod target;
 
 use clap::Args;
 use plumb::config::Cascade as _;
+use plumb::forgejo::Client;
 use plumb::rig::Mint;
 use plumb::vendor::cloudflare::{Account, Bucket, Factory, Grant, Minted};
-use plumb::vendor::forgejo::Client;
 use std::path::PathBuf;
 use store::{Seat, Store};
 use target::Target;

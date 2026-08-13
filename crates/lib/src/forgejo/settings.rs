@@ -1,12 +1,23 @@
 use crate::config::Cascade as _;
-use crate::rig::{Forgejo, Harness};
+use crate::rig::Harness;
+use std::collections::BTreeMap;
 
-pub fn token() -> Result<String, String> {
-    Ok(Forgejo::default()
-        .merge(Forgejo::env("FORGEJO").map_err(|error| error.to_string())?)
-        .token
-        .trim()
-        .to_string())
+pub fn vars(url: String) -> Result<BTreeMap<String, String>, String> {
+    let mut vars = BTreeMap::from([(
+        "FORGEJO_URL".to_string(),
+        std::env::var("FORGEJO_URL").unwrap_or(url),
+    )]);
+    for key in ["FORGEJO_TOKEN", "FORGEJO_TOKEN_FILE"] {
+        if let Ok(value) = std::env::var(key)
+            && !value.trim().is_empty()
+        {
+            vars.insert(key.to_string(), value);
+        }
+    }
+    if !vars.contains_key("FORGEJO_TOKEN") && !vars.contains_key("FORGEJO_TOKEN_FILE") {
+        return Err("FORGEJO_TOKEN or FORGEJO_TOKEN_FILE is required".into());
+    }
+    Ok(vars)
 }
 
 pub fn harness() -> Result<Harness, String> {

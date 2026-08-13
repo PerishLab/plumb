@@ -50,11 +50,6 @@ pub struct Target {
     pub collectors: String,
 }
 
-#[derive(Debug, Default, PartialEq, Cascade)]
-pub struct Forgejo {
-    pub token: String,
-}
-
 #[derive(Debug, PartialEq, Cascade)]
 pub struct Harness {
     pub run_poll_ms: u64,

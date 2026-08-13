@@ -53,6 +53,10 @@ plumb land . --base main --dry-run
 plumb land . --base main --title "TITLE" --body "BODY"
 ```
 
+Forgejo operations use the published Runseal library dialect in-process.
+Provide `FORGEJO_URL` and either `FORGEJO_TOKEN_FILE` or `FORGEJO_TOKEN`.
+Plumb does not discover or parse `tea.yml`.
+
 Keep the source branch. Plumb creates the one-commit projection, waits for its
 guard, advances the base only if the observed revisions still match, and syncs
 the separate base worktree.

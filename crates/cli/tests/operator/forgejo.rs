@@ -1,6 +1,7 @@
 use serde_json::{Value, json};
 use std::io::{Read, Write};
 use std::net::TcpListener;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 pub enum Court {
@@ -9,6 +10,7 @@ pub enum Court {
     Nested(bool),
     Paged,
     Prepare(bool),
+    Packport(PathBuf),
 }
 
 pub fn serve(court: Court, count: usize) -> (String, Arc<Mutex<Vec<String>>>) {
@@ -19,7 +21,9 @@ pub fn serve(court: Court, count: usize) -> (String, Arc<Mutex<Vec<String>>>) {
     std::thread::spawn(move || {
         for mut stream in listener.incoming().take(count).flatten() {
             let (request, body) = request(&mut stream);
-            seen.lock().expect("calls").push(request.clone());
+            seen.lock()
+                .expect("calls")
+                .push(format!("{request} {body}"));
             let (status, value) = answer(&court, &request, body);
             let text = value.to_string();
             write!(
@@ -105,10 +109,12 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
                 ]
             }),
         ),
-        Court::Prepare(_) if request.contains("GET /api/v1/user ") => {
+        Court::Prepare(_) | Court::Packport(_) if request.contains("GET /api/v1/user ") => {
             ("200 OK", json!({"login": "operator"}))
         }
-        Court::Prepare(_) if request.contains("GET ") && request.contains("branch_protections") => {
+        Court::Prepare(_) | Court::Packport(_)
+            if request.contains("GET ") && request.contains("branch_protections") =>
+        {
             ("404 Not Found", json!({"message": "missing"}))
         }
         Court::Prepare(exact)
@@ -121,6 +127,37 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
             }
             ("201 Created", value)
         }
+        Court::Packport(_)
+            if request.contains("POST ") && request.contains("branch_protections") =>
+        {
+            let mut value = body;
+            value["branch_name"] = json!("release/v1.2.0");
+            ("201 Created", value)
+        }
+        Court::Packport(_) if request.contains("GET ") && request.contains("/branches/") => (
+            "200 OK",
+            json!({"commit":{"id":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}),
+        ),
+        Court::Packport(_) if request.contains("GET ") && request.contains("/pulls?") => {
+            ("200 OK", json!([]))
+        }
+        Court::Packport(_) if request.contains("POST ") && request.ends_with("/pulls HTTP/1.1") => {
+            ("201 Created", json!({"number": 12}))
+        }
+        Court::Packport(settled)
+            if request.contains("POST ") && request.contains("/pulls/12/merge ") =>
+        {
+            std::fs::write(settled, "settled").expect("settled marker");
+            ("204 No Content", Value::Null)
+        }
+        Court::Packport(_) if request.contains("GET ") && request.contains("/commits/") => (
+            "200 OK",
+            json!({"state":"success","statuses":[{
+                "context":"guard / guard (pull_request)",
+                "status":"success",
+                "updated_at":"2026-01-01T00:00:00Z"
+            }]}),
+        ),
         Court::Prepare(_) if request.contains("GET ") && request.contains("/branches/") => {
             ("404 Not Found", json!({"message": "missing"}))
         }

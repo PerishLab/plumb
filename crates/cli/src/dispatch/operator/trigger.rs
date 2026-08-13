@@ -1,6 +1,6 @@
 use super::Dispatch;
 use super::{line, value};
-use plumb::vendor::forgejo::{Client, Outcome, git};
+use plumb::forgejo::{Client, Outcome, git};
 use serde_json::{Value, json};
 use std::time::{Duration, Instant};
 
@@ -81,7 +81,7 @@ pub fn run(options: Dispatch) -> Result<String, String> {
 }
 
 fn watch(client: &Client, id: u64, url: &str) -> Result<String, String> {
-    let harness = plumb::vendor::forgejo::harness()?;
+    let harness = plumb::forgejo::harness()?;
     let deadline = Instant::now() + Duration::from_millis(harness.run_timeout_ms);
     while Instant::now() < deadline {
         match client.outcome(id)? {
