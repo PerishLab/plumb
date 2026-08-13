@@ -165,6 +165,19 @@ fn deploy() {
 }
 
 #[test]
+fn node() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    seed(fixture.path());
+    std::fs::remove_file(fixture.path().join("Cargo.toml")).expect("remove manifest");
+    let output = run(fixture.path(), &["site", "deploy"], "live", false);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
 fn unproven() {
     let fixture = tempfile::tempdir().expect("fixture");
     seed(fixture.path());

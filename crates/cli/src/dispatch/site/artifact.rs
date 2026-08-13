@@ -1,4 +1,5 @@
 use super::model::App;
+use std::path::Path;
 
 pub struct Marks {
     pub commit: String,
@@ -7,7 +8,15 @@ pub struct Marks {
 
 pub fn marks(app: &App) -> Result<Marks, String> {
     let commit = super::process::text("git", &["rev-parse", "--short", "HEAD"], &app.root)?;
-    let path = app.root.join("Cargo.toml");
+    let version = version(&app.root)?;
+    Ok(Marks { commit, version })
+}
+
+fn version(root: &Path) -> Result<String, String> {
+    let path = root.join("Cargo.toml");
+    if !path.exists() {
+        return Ok(String::new());
+    }
     let text = std::fs::read_to_string(&path)
         .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
     let doc = text
@@ -25,7 +34,7 @@ pub fn marks(app: &App) -> Result<Marks, String> {
         })
         .unwrap_or("")
         .to_string();
-    Ok(Marks { commit, version })
+    Ok(version)
 }
 
 pub fn stamp(app: &App) -> Result<String, String> {
