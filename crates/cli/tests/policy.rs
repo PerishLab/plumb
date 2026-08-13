@@ -160,6 +160,27 @@ description = "fixture"
 }
 
 #[test]
+fn svelte() {
+    let root = std::env::temp_dir().join("plumb-policy-svelte");
+    std::fs::create_dir_all(root.join("apps/docs/src")).expect("fixture should be made");
+    std::fs::create_dir_all(root.join("packages/design/src")).expect("fixture should be made");
+    std::fs::write(root.join("apps/docs/src/App.svelte"), "").expect("fixture should be made");
+    std::fs::write(root.join("packages/design/src/Button.svelte"), "")
+        .expect("fixture should be made");
+    std::fs::write(root.join("ectropy.toml"), "").expect("policy should be written");
+    let output = policy(&root, true);
+    assert!(output.status.success(), "{output:?}");
+    let text = std::fs::read_to_string(root.join("ectropy.toml"))
+        .expect("reconciled policy should be readable");
+    std::fs::remove_dir_all(&root).expect("fixture should be swept");
+    assert!(text.contains("apps/**/*.svelte"), "{text}");
+    assert!(text.contains("packages/**/*.svelte"), "{text}");
+    assert!(text.contains("**/.svelte-kit/**"), "{text}");
+    assert!(!text.contains("apps/**/*.tsx"), "{text}");
+    assert!(!text.contains("packages/**/*.tsx"), "{text}");
+}
+
+#[test]
 fn malformed() {
     let root = std::env::temp_dir().join("plumb-policy-malformed");
     std::fs::create_dir_all(&root).expect("fixture should be made");

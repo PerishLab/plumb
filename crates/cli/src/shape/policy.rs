@@ -103,10 +103,10 @@ impl Expected {
             }
         }
         if root.join("apps").is_dir() {
-            held.web("apps");
+            held.web(root, "apps");
         }
         if root.join("packages").is_dir() {
-            held.web("packages");
+            held.web(root, "packages");
         }
         if root.join("lib").is_dir() {
             held.include.insert("lib/**/*.ts".to_string());
@@ -157,9 +157,18 @@ impl Expected {
         self.tests.insert(format!("{root}/tests/**/*.rs"));
     }
 
-    fn web(&mut self, seat: &str) {
-        for suffix in ["ts", "tsx", "css", "scss"] {
+    fn web(&mut self, root: &Path, seat: &str) {
+        let svelte = extension(&root.join(seat), "svelte");
+        let tsx = !svelte || extension(&root.join(seat), "tsx");
+        for suffix in ["ts", "css", "scss"] {
             self.include.insert(format!("{seat}/**/*.{suffix}"));
+        }
+        if svelte {
+            self.include.insert(format!("{seat}/**/*.svelte"));
+            self.exclude.insert("**/.svelte-kit/**".to_string());
+        }
+        if tsx {
+            self.include.insert(format!("{seat}/**/*.tsx"));
         }
         self.roots.insert(format!("{seat}/*/src"));
         if seat == "packages" {
@@ -167,8 +176,24 @@ impl Expected {
         }
         self.roots.insert(format!("{seat}/*/tests"));
         self.tests.insert(format!("{seat}/*/tests/**/*.test.ts"));
-        self.tests.insert(format!("{seat}/*/tests/**/*.test.tsx"));
+        if tsx {
+            self.tests.insert(format!("{seat}/*/tests/**/*.test.tsx"));
+        }
     }
+}
+
+fn extension(root: &Path, suffix: &str) -> bool {
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return false;
+    };
+    entries.flatten().any(|entry| {
+        let path = entry.path();
+        if path.is_dir() {
+            extension(&path, suffix)
+        } else {
+            path.extension().and_then(|value| value.to_str()) == Some(suffix)
+        }
+    })
 }
 
 struct Policy<'a>(&'a toml::Value);
