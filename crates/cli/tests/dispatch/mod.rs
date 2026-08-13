@@ -1,3 +1,4 @@
+mod cloud;
 mod retire;
 
 use std::path::{Path, PathBuf};

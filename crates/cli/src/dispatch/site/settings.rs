@@ -8,10 +8,16 @@ pub fn read() -> Result<Site, String> {
         held.turns = Site::default().turns;
     }
     held.api = held.api.trim_end_matches('/').to_string();
-    if !held.api.starts_with("https://") {
+    if !held.api.starts_with("https://") && !loopback(&held.api) {
         return Err("PLUMB_SITE_API must use https".into());
     }
     Ok(held)
+}
+
+fn loopback(api: &str) -> bool {
+    ["http://127.0.0.1:", "http://localhost:", "http://[::1]:"]
+        .iter()
+        .any(|prefix| api.starts_with(prefix))
 }
 
 pub fn require(held: &Site) -> Result<(), String> {

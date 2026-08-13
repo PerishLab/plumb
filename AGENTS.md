@@ -25,6 +25,9 @@ link, and it is the only one.
   Runseal's structured Forgejo operations. It owns no HTTP sender and reads no
   `tea.yml`; authority enters through `FORGEJO_URL` with
   `FORGEJO_TOKEN_FILE` or `FORGEJO_TOKEN`.
+- `crates/cli/src/dispatch/site` and `retire` — Cloudflare interpretation and
+  orchestration over Runseal's structured Cloudflare operations. Plumb owns no
+  authenticated Cloudflare HTTP sender or raw route dialect.
 - `apps/web` — the site at plumb.perish.uk, shipped by the deploy lane on
   dispatch through `plumb site deploy` and verified by readback.
 - `packages/*` — publishable specimens, when they earn their place.
@@ -187,7 +190,8 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   public edge serves the built fingerprint.
 - Site authority enters only through `PLUMB_SITE_TOKEN`,
   `PLUMB_SITE_ACCOUNT`, and `PLUMB_SITE_DOMAIN`. The token never enters command
-  arguments or logs.
+  arguments or logs; it reaches Cloudflare through Runseal's in-process
+  dialect.
 - Deploy, bound, and reachable are separate outcomes. Binding is
   `yes|no|unknown`; `PLUMB_SITE_BLIND=true` can excuse failed reachability only
   when binding is positively known.

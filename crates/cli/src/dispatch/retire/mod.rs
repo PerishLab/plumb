@@ -1,13 +1,14 @@
 mod clock;
+mod cloud;
 mod forge;
 mod store;
 mod target;
 
 use clap::Args;
+use cloud::{Bucket, Factory, Grant, Minted};
 use plumb::config::Cascade as _;
 use plumb::forgejo::Client;
 use plumb::rig::Mint;
-use plumb::vendor::cloudflare::{Account, Bucket, Factory, Grant, Minted};
 use std::path::PathBuf;
 use store::{Seat, Store};
 use target::Target;
@@ -61,10 +62,10 @@ fn act(deed: Deed) -> Result<String, String> {
     }
     target.confirm(&deed)?;
     let factory = open()?;
-    factory.verify().map_err(String::from)?;
+    factory.verify()?;
     let seen = factory.held()?;
     for stale in seen.iter().filter(|held| names.temporary(&held.name)) {
-        factory.revoke(&stale.id).map_err(String::from)?;
+        factory.revoke(&stale.id)?;
         println!("temporary token: cleared stale {}", stale.name);
     }
     let writers = seen
@@ -119,12 +120,11 @@ struct Seats<'a> {
 }
 
 fn sweep(factory: &Factory, target: &Target, seats: Seats<'_>) -> Result<String, String> {
-    let account = factory.bearing(&seats.admin.value);
-    let bucket = Bucket::new(&account, &target.bucket);
+    let bucket = Bucket::new(factory, seats.admin, &target.bucket);
     let live = bucket.live()?;
     let store = Store::new(
         &seats.item.id,
-        &store::digest(&seats.item.value),
+        &store::digest(seats.item.value()),
         &Seat {
             bucket: target.bucket.clone(),
             endpoint: format!("https://{}.r2.cloudflarestorage.com", factory.id()),
@@ -149,7 +149,7 @@ fn sweep(factory: &Factory, target: &Target, seats: Seats<'_>) -> Result<String,
     forge::purge(&client)?;
     match seats.writer {
         Some(id) => {
-            factory.revoke(&id).map_err(String::from)?;
+            factory.revoke(&id)?;
             println!("persistent token: revoked");
         }
         None => println!("persistent token: absent"),
@@ -157,7 +157,7 @@ fn sweep(factory: &Factory, target: &Target, seats: Seats<'_>) -> Result<String,
     if live {
         detach(&bucket, target)?;
         store.empty(&held.keys)?;
-        bucket.erase().map_err(String::from)?;
+        bucket.erase()?;
         println!("bucket: deleted ({})", target.bucket);
     }
     if existed {
@@ -180,7 +180,7 @@ fn detach(bucket: &Bucket<'_>, target: &Target) -> Result<(), String> {
     if found.zone != target.zone {
         return Err(format!("custom domain belongs to zone {}", found.zone));
     }
-    bucket.detach(&target.domain).map_err(String::from)?;
+    bucket.detach(&target.domain)?;
     println!("domain: detached ({})", target.domain);
     Ok(())
 }
@@ -211,11 +211,11 @@ fn open() -> Result<Factory, String> {
     if held.token.contains(['\r', '\n']) {
         return Err("PLUMB_RETIRE_TOKEN contains a line break".into());
     }
-    Ok(Factory::new(Account::new(
+    Ok(Factory::new(
         held.account,
         held.api.trim_end_matches('/').to_string(),
         held.token,
-    )))
+    ))
 }
 
 fn plan(target: &Target, names: &Names) {

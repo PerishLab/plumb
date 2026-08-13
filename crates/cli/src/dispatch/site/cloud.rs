@@ -1,7 +1,7 @@
 use plumb::rig::Site;
-use plumb::vendor::cloudflare::Account;
+use runseal::tool::cloudflare::{api::Fault, invoke};
 use serde_json::Value;
-use std::fmt;
+use std::{collections::BTreeMap, fmt};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Bond {
@@ -21,21 +21,24 @@ impl fmt::Display for Bond {
 }
 
 pub struct Vantage {
-    account: Account,
+    vars: BTreeMap<String, String>,
     domain: String,
 }
 
 impl Vantage {
     pub fn new(site: &Site) -> Self {
         Self {
-            account: Account::new(site.account.clone(), site.api.clone(), site.token.clone()),
+            vars: BTreeMap::from([
+                ("CLOUDFLARE_ACCOUNT_ID".into(), site.account.clone()),
+                ("CLOUDFLARE_API_TOKEN".into(), site.token.clone()),
+                ("CLOUDFLARE_API_URL".into(), site.api.clone()),
+            ]),
             domain: site.domain.clone(),
         }
     }
 
     pub fn binding(&self) -> Bond {
-        let route = format!("{}/workers/domains", self.account.scope());
-        let Ok(listed) = self.account.read(&route) else {
+        let Ok(listed) = self.call(&["worker", "domain", "list"]) else {
             return Bond::Unknown;
         };
         let attached = listed
@@ -47,10 +50,11 @@ impl Vantage {
     }
 
     pub fn verify(&self) -> Result<String, String> {
-        let scoped = format!("{}/tokens/verify", self.account.scope());
-        let seen = match self.account.read("/user/tokens/verify") {
+        let seen = match self.call(&["token", "user", "verify"]) {
             Ok(seen) => seen,
-            Err(_) => self.account.read(&scoped)?,
+            Err(_) => self
+                .call(&["token", "account", "verify"])
+                .map_err(|(_, detail)| detail)?,
         };
         let status = seen
             .get("status")
@@ -64,28 +68,25 @@ impl Vantage {
     }
 
     pub fn worker(&self, name: &str) -> Result<bool, String> {
-        let route = format!(
-            "{}/workers/services/{}",
-            self.account.scope(),
-            segment(name)
-        );
-        match self.account.read(&route) {
+        match self.call(&["worker", "service", "show", name]) {
             Ok(_) => Ok(true),
-            Err(fault) if fault.status == 404 => Ok(false),
-            Err(fault) => Err(fault.into()),
+            Err((Some(404), _)) => Ok(false),
+            Err((_, detail)) => Err(detail),
         }
     }
-}
 
-fn segment(value: &str) -> String {
-    value
-        .bytes()
-        .map(|byte| {
-            if byte.is_ascii_alphanumeric() || b"-._~".contains(&byte) {
-                (byte as char).to_string()
-            } else {
-                format!("%{byte:02X}")
-            }
-        })
-        .collect()
+    fn call(&self, args: &[&str]) -> Result<Value, (Option<u16>, String)> {
+        let args = args
+            .iter()
+            .map(|value| value.to_string())
+            .collect::<Vec<_>>();
+        invoke(&args, &self.vars, None)
+            .map(|reply| reply.value)
+            .map_err(|error| {
+                (
+                    error.downcast_ref::<Fault>().map(Fault::status),
+                    error.to_string(),
+                )
+            })
+    }
 }

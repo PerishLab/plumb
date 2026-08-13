@@ -503,6 +503,7 @@ dependencies = [
  "flate2",
  "locus",
  "plumb",
+ "runseal",
  "semver",
  "serde",
  "serde_json",
@@ -569,17 +570,19 @@ dependencies = [
 
 [[package]]
 name = "runseal"
-version = "0.16.6"
+version = "0.17.0"
 source = "sparse+https://git.perish.top/api/packages/PerishLab/cargo/"
-checksum = "ccbde23b609cb0a1b63e8e7ed6bb59ec36d110ddcb9c0a81af288ba59f22f9ea"
+checksum = "5462e4b3f218139543250d31742736cb52ee42da7434e9e4d94f39e26dfba10b"
 dependencies = [
  "anyhow",
  "clap",
  "path-absolutize",
  "serde",
  "serde_json",
+ "sha2",
  "toml",
  "ureq",
+ "zeroize",
 ]
 
 [[package]]

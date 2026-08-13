@@ -24,6 +24,7 @@ path = "tests/operator/mod.rs"
 
 [dependencies]
 plumb = { path = "../lib", features = ["radius", "skill", "vendor"] }
+runseal = { version = "=0.17.0", registry = "perish", default-features = false }
 locus = { version = "0", registry = "perish" }
 clap = { version = "4", features = ["derive", "env"] }
 flate2 = "1"

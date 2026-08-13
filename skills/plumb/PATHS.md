@@ -94,7 +94,9 @@ plumb site deploy .
 ```
 
 Plan is credential-free. Inspect reads current state. Deploy builds, uploads,
-reads binding, and proves the public fingerprint.
+reads binding, and proves the public fingerprint. Cloudflare reads use
+Runseal's structured in-process dialect; Plumb retains deployment and outcome
+interpretation.
 
 ## Operate a skill seat
 

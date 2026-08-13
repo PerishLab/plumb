@@ -1,3 +1,5 @@
+mod server;
+
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::{Command, Output};
@@ -87,6 +89,15 @@ esac
 
 fn run(root: &Path, args: &[&str], case: &str, blind: bool) -> Output {
     let calls = root.join("calls");
+    let cloud = if args.contains(&"deploy") || args.contains(&"inspect") {
+        Some(server::serve(
+            case,
+            &calls,
+            if args.contains(&"inspect") { 3 } else { 1 },
+        ))
+    } else {
+        None
+    };
     let path = format!(
         "{}:{}",
         root.join("bin").display(),
@@ -100,7 +111,13 @@ fn run(root: &Path, args: &[&str], case: &str, blind: bool) -> Output {
         .env("SITE_CALLS", calls)
         .env("SITE_CASE", case)
         .env("PLUMB_SITE_ACCOUNT", "account")
-        .env("PLUMB_SITE_API", "https://cloud.test")
+        .env(
+            "PLUMB_SITE_API",
+            cloud
+                .as_ref()
+                .map(|(url, _)| url.as_str())
+                .unwrap_or("https://cloud.test"),
+        )
         .env("PLUMB_SITE_DOMAIN", "site.test")
         .env("PLUMB_SITE_TOKEN", "held-secret")
         .env("PLUMB_SITE_TURNS", "1")
@@ -108,7 +125,11 @@ fn run(root: &Path, args: &[&str], case: &str, blind: bool) -> Output {
     if blind {
         command.env("PLUMB_SITE_BLIND", "true");
     }
-    command.output().expect("plumb")
+    let output = command.output().expect("plumb");
+    if let Some((_, handle)) = cloud {
+        handle.join().expect("cloud server");
+    }
+    output
 }
 
 #[test]
