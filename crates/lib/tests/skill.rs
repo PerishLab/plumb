@@ -151,6 +151,18 @@ fn lands() {
 }
 
 #[test]
+fn discovers() {
+    let dir = root("discovers");
+    fs::create_dir_all(dir.join("home/.grok/skills")).expect("grok");
+    let archive = pack();
+    let kit = rig(&dir, &serve(archive.clone(), plumb::skill::stamp(&archive)));
+    fs::remove_dir_all(dir.join("home/.claude")).expect("drop claude");
+    let done = kit.install(&ask()).expect("install");
+    assert_eq!(done.kept[0].agent, "grok");
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn guards() {
     let seat = root("guards");
     let kit = online(&seat);

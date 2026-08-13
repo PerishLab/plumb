@@ -37,6 +37,7 @@ pub fn named(path: &Path, name: &str) -> bool {
 fn spots(home: &Path) -> Vec<Spot> {
     let claude = home.join(".claude");
     let codex = home.join(".codex");
+    let grok = home.join(".grok");
     let shared = home.join(".agents").join("skills");
     let opencode = home.join(".config").join("opencode");
     vec![
@@ -49,6 +50,11 @@ fn spots(home: &Path) -> Vec<Spot> {
             agent: "codex",
             skills: codex.join("skills"),
             presence: codex,
+        },
+        Spot {
+            agent: "grok",
+            skills: grok.join("skills"),
+            presence: grok,
         },
         Spot {
             agent: "shared",
