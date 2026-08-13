@@ -100,7 +100,7 @@ impl Fixture {
         );
         pass(
             self.command()
-                .args(["release", "assemble"])
+                .args(["ship", "binary", "assemble"])
                 .env("PLUMB_RELEASE_VERSION", input.version)
                 .env("PLUMB_RELEASE_ARTIFACTS", &artifacts),
         );
@@ -202,7 +202,7 @@ fn refuses() {
     std::fs::create_dir(&artifacts).expect("artifact root");
     let output = fixture
         .command()
-        .args(["release", "assemble"])
+        .args(["ship", "binary", "assemble"])
         .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1")
         .env("PLUMB_RELEASE_ARTIFACTS", &artifacts)
         .output()
@@ -224,7 +224,7 @@ fn collides() {
     std::fs::create_dir(&artifacts).expect("artifact root");
     let output = fixture
         .command()
-        .args(["release", "assemble"])
+        .args(["ship", "binary", "assemble"])
         .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1")
         .env("PLUMB_RELEASE_ARTIFACTS", &artifacts)
         .output()

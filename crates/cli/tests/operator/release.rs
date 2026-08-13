@@ -175,7 +175,7 @@ fn cycle() {
     let manifest = beta.join("capsule.json");
     for _ in 0..2 {
         let mut held = fixture.command();
-        held.args(["release", "publish"]);
+        held.args(["ship", "binary", "publish"]);
         authority(&mut held, &manifest, "PUBLISH");
         run(&mut held);
     }
@@ -195,7 +195,7 @@ fn cycle() {
         .expect("manager url");
     run(fixture
         .command()
-        .args(["release", "smoke"])
+        .args(["ship", "binary", "smoke"])
         .env("PLUMB_RELEASE_URL", manager)
         .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.7"));
 
@@ -212,7 +212,7 @@ fn cycle() {
     });
     let record = stable.join("capsule.json");
     let mut publish = fixture.command();
-    publish.args(["release", "publish"]);
+    publish.args(["ship", "binary", "publish"]);
     authority(&mut publish, &record, "PUBLISH");
     run(&mut publish);
     for _ in 0..2 {
@@ -224,7 +224,7 @@ fn cycle() {
 
     let mut verify = fixture.command();
     verify
-        .args(["release", "verify"])
+        .args(["ship", "binary", "verify"])
         .env("PLUMB_RELEASE_CAPSULE", &record)
         .env("PLUMB_RELEASE_ACTIVATED", "true");
     run(&mut verify);
@@ -253,7 +253,7 @@ fn intent() {
     let fixture = Fixture { root, tools: root };
     run(fixture
         .command()
-        .args(["release", "managers"])
+        .args(["ship", "binary", "managers"])
         .env("PLUMB_RELEASE_CHANNEL", "canary")
         .env("PLUMB_RELEASE_VERSION", "v1.2.0-canary.9")
         .env("PLUMB_RELEASE_OUTPUT", &out));

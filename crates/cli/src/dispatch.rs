@@ -11,6 +11,7 @@ pub mod operator;
 mod production;
 pub mod release;
 pub mod retire;
+pub mod ship;
 pub mod site;
 
 pub fn read(root: &Path) -> Option<Found> {

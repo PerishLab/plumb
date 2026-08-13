@@ -89,6 +89,11 @@ note = "the bounded self-hosting recovery adds one production module and one int
 allow = ["fanout"]
 
 [[boundary]]
+paths = ["crates/cli/src/dispatch"]
+note = "ship adds one top level command module while site and registry still stand apart; the inventory drops back under the limit once both fold into ship as adaptors"
+allow = ["fanout"]
+
+[[boundary]]
 paths = [
   "crates/cli/src/judge/catalog/rules",
   "crates/cli/src/shape",

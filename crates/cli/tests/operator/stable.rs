@@ -47,7 +47,8 @@ fn dispatch() {
     let output = command(
         fixture.path(),
         &[
-            "release",
+            "ship",
+            "binary",
             "dispatch",
             "--channel",
             "nightly",
@@ -80,7 +81,8 @@ fn nested() {
     let output = command(
         fixture.path(),
         &[
-            "release",
+            "ship",
+            "binary",
             "dispatch",
             "--channel",
             "nightly",
@@ -112,7 +114,8 @@ fn failure() {
     let output = command(
         fixture.path(),
         &[
-            "release",
+            "ship",
+            "binary",
             "dispatch",
             "--channel",
             "nightly",
@@ -133,7 +136,8 @@ fn blocked() {
     let output = command(
         fixture.path(),
         &[
-            "release",
+            "ship",
+            "binary",
             "dispatch",
             "--channel",
             "nightly",
@@ -154,7 +158,8 @@ fn pagination() {
     let output = command(
         fixture.path(),
         &[
-            "release",
+            "ship",
+            "binary",
             "dispatch",
             "--channel",
             "nightly",
@@ -214,7 +219,8 @@ fn freedom() {
     let output = command(
         fixture.path(),
         &[
-            "release",
+            "ship",
+            "binary",
             "dispatch",
             "--channel",
             "nightly",
@@ -241,7 +247,8 @@ fn strict() {
     let output = command(
         fixture.path(),
         &[
-            "release",
+            "ship",
+            "binary",
             "dispatch",
             "--channel",
             "stable",

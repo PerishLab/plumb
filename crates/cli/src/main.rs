@@ -91,6 +91,10 @@ enum Command {
         #[command(subcommand)]
         deed: dispatch::release::Deed,
     },
+    Ship {
+        #[command(subcommand)]
+        deed: dispatch::ship::Deed,
+    },
     Stable {
         #[command(subcommand)]
         deed: dispatch::operator::Stable,
@@ -118,6 +122,7 @@ impl Command {
             Self::Changelog { .. } => "changelog",
             Self::Document { .. } => "document",
             Self::Release { .. } => "release",
+            Self::Ship { .. } => "ship",
             Self::Stable { .. } => "stable",
             Self::Site { .. } => "site",
             Self::Retire { .. } => "retire",
@@ -181,6 +186,7 @@ fn execute(command: Command) -> i32 {
             dispatch::command::Seat::new(PathBuf::from(target.root)).document()
         }
         Command::Release { deed } => dispatch::release::run(deed),
+        Command::Ship { deed } => dispatch::ship::run(deed),
         Command::Stable { deed } => dispatch::operator::run(deed),
         Command::Site { deed } => dispatch::site::run(deed),
         Command::Retire { deed } => dispatch::retire::run(deed),

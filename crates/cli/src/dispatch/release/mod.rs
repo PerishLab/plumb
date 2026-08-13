@@ -1,14 +1,14 @@
 mod artifact;
 mod capsule;
-mod engine;
+pub(super) mod engine;
 pub(super) mod generator;
-mod manager;
+pub(super) mod manager;
 pub(super) mod model;
 mod proof;
 mod record;
-mod smoke;
-mod storage;
-mod verify;
+pub(super) mod smoke;
+pub(super) mod storage;
+pub(super) mod verify;
 
 use clap::Subcommand;
 use plumb::rig::{Authority, Rig};
@@ -17,31 +17,16 @@ use std::path::{Path, PathBuf};
 #[derive(Subcommand)]
 pub enum Deed {
     Activate,
-    Assemble,
     Authority,
-    Build,
     Compile,
-    Dispatch {
-        #[command(flatten)]
-        options: super::operator::Dispatch,
-    },
     Inspect,
-    Managers,
-    Matrix,
     Packport,
     Promote,
-    Publish,
-    Recovery {
-        #[command(subcommand)]
-        deed: super::operator::Recovery,
-    },
     Registry {
         #[command(subcommand)]
         deed: Registry,
     },
-    Smoke,
     Source,
-    Verify,
 }
 
 #[derive(Subcommand)]
@@ -71,31 +56,12 @@ fn execute(deed: Deed) -> Result<String, String> {
     let release = &rig.release;
     match deed {
         Deed::Activate => storage::activate(&capsule(release)?, &rig.activate),
-        Deed::Assemble => engine::package::product(&spec).assemble(
-            required("PLUMB_RELEASE_VERSION", &release.version)?,
-            &artifacts(release)?,
-        ),
         Deed::Authority => Ok(spec.authority.clone()),
-        Deed::Build => engine::package::product(&spec).build(engine::package::Build {
-            target: required("PLUMB_RELEASE_TARGET", &release.target)?,
-            version: required("PLUMB_RELEASE_VERSION", &release.version)?,
-            channel: required("PLUMB_RELEASE_CHANNEL", &release.channel)?,
-            commit: required("PLUMB_RELEASE_COMMIT", &release.commit)?,
-            artifacts: &artifacts(release)?,
-        }),
         Deed::Compile => compile(&spec, release),
-        Deed::Dispatch { options } => super::operator::dispatch(options),
         Deed::Inspect => verify::inspect(
             required("PLUMB_RELEASE_URL", &release.url)?,
             release.activated,
         ),
-        Deed::Managers => manager::write(
-            &manifest,
-            required("PLUMB_RELEASE_CHANNEL", &release.channel)?,
-            required("PLUMB_RELEASE_VERSION", &release.version)?,
-            &output(release)?,
-        ),
-        Deed::Matrix => engine::package::product(&spec).matrix(),
         Deed::Packport => engine::topology::packport(
             &spec.root,
             required("PLUMB_RELEASE_VERSION", &release.version)?,
@@ -117,8 +83,6 @@ fn execute(deed: Deed) -> Result<String, String> {
                 .as_deref()
                 .ok_or_else(|| "PLUMB_RELEASE_PROMOTION is required".to_string())?,
         ),
-        Deed::Publish => storage::publish(&capsule(release)?, &rig.publish),
-        Deed::Recovery { deed } => super::operator::recovery(deed, &spec),
         Deed::Registry { deed } => match deed {
             Registry::Publish => engine::registry::registry(&spec).publish(
                 required("PLUMB_RELEASE_VERSION", &release.version)?,
@@ -129,11 +93,6 @@ fn execute(deed: Deed) -> Result<String, String> {
                 &release.registry_token,
             ),
         },
-        Deed::Smoke => smoke::run(
-            &manifest,
-            required("PLUMB_RELEASE_URL", &release.url)?,
-            required("PLUMB_RELEASE_VERSION", &release.version)?,
-        ),
         Deed::Source => engine::topology::source(engine::topology::Source {
             root: &spec.root,
             channel: required("PLUMB_RELEASE_CHANNEL", &release.channel)?,
@@ -141,7 +100,6 @@ fn execute(deed: Deed) -> Result<String, String> {
             commit: required("PLUMB_RELEASE_COMMIT", &release.commit)?,
             reference: required("PLUMB_RELEASE_SOURCE", &release.source)?,
         }),
-        Deed::Verify => verify::run(&capsule(release)?, release.activated),
     }
 }
 
@@ -164,7 +122,7 @@ fn compile(spec: &model::Spec, release: &plumb::rig::Release) -> Result<String, 
     })
 }
 
-fn artifacts(release: &plumb::rig::Release) -> Result<PathBuf, String> {
+pub(super) fn artifacts(release: &plumb::rig::Release) -> Result<PathBuf, String> {
     if !release.artifacts.as_os_str().is_empty() {
         return Ok(rebase(&release.root, &release.artifacts));
     }
@@ -172,21 +130,21 @@ fn artifacts(release: &plumb::rig::Release) -> Result<PathBuf, String> {
     Ok(release.root.join("dist").join(version))
 }
 
-fn output(release: &plumb::rig::Release) -> Result<PathBuf, String> {
+pub(super) fn output(release: &plumb::rig::Release) -> Result<PathBuf, String> {
     if release.output.as_os_str().is_empty() {
         return Err("PLUMB_RELEASE_OUTPUT is required".into());
     }
     Ok(rebase(&release.root, &release.output))
 }
 
-fn capsule(release: &plumb::rig::Release) -> Result<PathBuf, String> {
+pub(super) fn capsule(release: &plumb::rig::Release) -> Result<PathBuf, String> {
     if !release.capsule.as_os_str().is_empty() {
         return Ok(rebase(&release.root, &release.capsule));
     }
     Ok(output(release)?.join("capsule.json"))
 }
 
-fn required<'a>(name: &str, value: &'a str) -> Result<&'a str, String> {
+pub(super) fn required<'a>(name: &str, value: &'a str) -> Result<&'a str, String> {
     if value.trim().is_empty() {
         Err(format!("{name} is required"))
     } else {

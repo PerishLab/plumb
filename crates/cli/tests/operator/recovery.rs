@@ -214,6 +214,18 @@ fn repository(root: &Path, origin: &str) {
     }
 }
 
+fn argv(caller: &str) -> [&str; 7] {
+    [
+        "ship",
+        "binary",
+        "recovery",
+        "beta",
+        "--caller",
+        caller,
+        "--dry-run",
+    ]
+}
+
 fn recovery(root: &Path, authority: &str) {
     repository(root, "ssh://git@git.perish.top/PerishLab/plumb.git");
     std::fs::write(root.join("plumb.toml"), format!("[release]\nproduct = \"plumb\"\nauthority = \"{authority}\"\nbinaries = [\"plumb\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n")).expect("manifest");
@@ -224,17 +236,7 @@ fn recovery_cli_is_exact_and_typed() {
     let fixture = tempfile::tempdir().expect("fixture");
     recovery(fixture.path(), "https://releases.plumb.perish.uk");
     let caller = "cccccccccccccccccccccccccccccccccccccccc";
-    let output = cli(
-        fixture.path(),
-        &[
-            "release",
-            "recovery",
-            "beta",
-            "--caller",
-            caller,
-            "--dry-run",
-        ],
-    );
+    let output = cli(fixture.path(), &argv(caller));
     assert!(
         output.status.success(),
         "{}",
@@ -247,7 +249,8 @@ fn recovery_cli_is_exact_and_typed() {
     let output = cli(
         fixture.path(),
         &[
-            "release",
+            "ship",
+            "binary",
             "recovery",
             "beta",
             "--caller",
@@ -266,17 +269,7 @@ fn recovery_cli_refuses_identity_and_digest_drift() {
     let caller = "cccccccccccccccccccccccccccccccccccccccc";
     let fixture = tempfile::tempdir().expect("fixture");
     recovery(fixture.path(), "https://other.invalid");
-    let output = cli(
-        fixture.path(),
-        &[
-            "release",
-            "recovery",
-            "beta",
-            "--caller",
-            caller,
-            "--dry-run",
-        ],
-    );
+    let output = cli(fixture.path(), &argv(caller));
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("belongs only to PerishLab/plumb"));
     let exact = tempfile::tempdir().expect("fixture");
@@ -284,7 +277,8 @@ fn recovery_cli_refuses_identity_and_digest_drift() {
     let output = cli(
         exact.path(),
         &[
-            "release",
+            "ship",
+            "binary",
             "recovery",
             "stable",
             "--caller",

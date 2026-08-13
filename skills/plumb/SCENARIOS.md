@@ -20,7 +20,7 @@ Stable starts from an explicit release line:
 plumb stable prepare
 plumb stable pick
 plumb stable freeze
-plumb release dispatch
+plumb ship binary dispatch
 plumb stable packport
 ```
 

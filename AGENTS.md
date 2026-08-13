@@ -82,6 +82,14 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   Debian assembly, manager generation, capsules, storage, verification,
   activation, smoke, source binding, and packport topology checks. Those
   mechanisms do not live in product scripts.
+- `release` holds the truth cycle and `ship` holds every projection of it. A
+  verb belongs to whichever object it acts on: `release` keeps `source`,
+  `compile`, `packport`, and `authority`, while `ship binary` takes `build`,
+  `assemble`, `matrix`, `managers`, `publish`, `smoke`, `verify`, `dispatch`,
+  and `recovery`. `activate` and `inspect` still span both sides, and
+  `registry` still stands apart until a Cargo adaptor claims it; both are
+  transitional, not settled. A projection never keeps a compatibility alias for
+  a verb that moved.
 - Every Plumb-owned artifact is byte-reproducible from the declared payload.
   Archive members are ordered and carry canonical timestamps, owners, and
   modes; MSVC binaries use the reproducible linker mode. Rebuilding one exact
@@ -129,7 +137,7 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - Exact publication may bind any operator-selected branch ref; the called
   shared workflow freezes its direct event ref and commit once and every job
   checks out that commit. Product callers expose and forward no second source.
-  `plumb release dispatch` is the generic Forgejo entrypoint and preserves
+  `plumb ship binary dispatch` is the generic Forgejo entrypoint and preserves
   arbitrary exact channel and branch selection.
   Stable alone must originate from `refs/heads/release/vX.Y.Z`. A stable
   release line is managed by `plumb stable prepare|pick|freeze|packport`,
@@ -139,7 +147,7 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   stable activation use separate credentials and separate Plumb commands.
 - `plumb release inspect` takes its exact or stable public URL from the release
   environment and verifies the whole public surface.
-- `plumb release smoke` performs the shared cross-platform generated-manager
+- `plumb ship binary smoke` performs the shared cross-platform generated-manager
   install, exact `--version` probe, update, and uninstall cycle from the product
   declaration.
 - Cargo rehearses the head of each ordered attachment before publication, then
