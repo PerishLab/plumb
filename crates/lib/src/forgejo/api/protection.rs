@@ -4,18 +4,12 @@ use serde_json::{Value, json};
 impl Client {
     pub fn protect(&self, name: &str, mode: &str) -> Result<(), String> {
         let username = self.user()?;
-        let existing = self.call(&["protection", "show", name]);
-        let create = matches!(&existing, Err(error) if error.contains("404") || error.contains("missing") || error.contains("not found"));
-        if let Err(error) = &existing
-            && !create
-        {
-            return Err(error.clone());
-        }
+        let held = self.call(&["protection", "show", name]).is_ok();
         let policy = policy(name, mode, &username);
-        let actual = if create {
-            self.call(&["protection", "create", "--body", &policy.to_string()])?
-        } else {
+        let actual = if held {
             self.call(&["protection", "edit", name, "--body", &policy.to_string()])?
+        } else {
+            self.call(&["protection", "create", "--body", &policy.to_string()])?
         };
         verify(name, &policy, &actual)
     }

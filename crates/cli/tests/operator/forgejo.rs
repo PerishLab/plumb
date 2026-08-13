@@ -115,7 +115,10 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
         Court::Prepare(_) | Court::Packport(_)
             if request.contains("GET ") && request.contains("branch_protections") =>
         {
-            ("404 Not Found", json!({"message": "missing"}))
+            (
+                "404 Not Found",
+                json!({"message": "The target couldn't be found."}),
+            )
         }
         Court::Prepare(exact)
             if request.contains("POST ") && request.contains("branch_protections") =>
