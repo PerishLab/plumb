@@ -39,9 +39,6 @@ const guide = `# open-web
 - [sidecar](https://plumb.perish.uk/sidecar/): local process manager -
   manifest lifecycle, stamped identity, chosen free ports. install:
   curl -fsSL https://sidecar.perish.uk/manage.sh | sh
-- [shield](https://plumb.perish.uk/shield/): fault substrate for typescript -
-  native throw, family-scoped kinds, no Result monad, zero deps. import:
-  import { family } from "jsr:@perish/shield";
 
 ## law
 
@@ -55,7 +52,6 @@ const guide = `# open-web
 - https://git.perish.top/PerishFire/ectropy
 - https://git.perish.top/PerishFire/runseal
 - https://git.perish.top/PerishFire/sidecar
-- https://git.perish.top/PerishFire/shield
 `;
 
 const manual = `# open-web - full reference for agents
@@ -136,28 +132,6 @@ manifest (sidecar.toml at the repo root):
 the packed --sidecar-stamp arg is the only identity contract; state lives in
 targets.json and logs under the data home.
 source: https://git.perish.top/PerishFire/sidecar
-
-## shield - fault substrate
-
-what: a typescript fault substrate below harness; native throw, no Result
-monad, zero runtime deps; a domain declares its failure vocabulary once and
-that declaration types both the throw site and every handler.
-
-import (jsr, runtime-pure):
-  import { assert, family, kind, run } from "jsr:@perish/shield";
-
-surface:
-  family(name, spec) - declare a domain's fault kinds; the spec is the single
-    source of truth for the factories and every handler's meta type
-  assert(expr, mint) - throw a minted fault when a check fails
-  run(fn) - the boundary; absorbs every non-fault into a foreign kind
-  first(...tries) - sequential fallback; total failure throws exhausted
-  <family>.consume(table) - exhaustive terminal disposition; every kind handled
-  <family>.attempt(fn, table) - local recovery over named kinds
-a business brings its own schema (zod, or the zero-dep kind phantom); shield
-consumes the inferred shape and never validates. adapters at the harness seam
-mint faults from native errors.
-source: https://git.perish.top/PerishFire/shield
 
 ## law
 
