@@ -18,6 +18,7 @@ use std::path::{Path, PathBuf};
 pub enum Deed {
     Activate,
     Authority,
+    Channel,
     Compile,
     Inspect,
     Packport,
@@ -57,6 +58,7 @@ fn execute(deed: Deed) -> Result<String, String> {
     match deed {
         Deed::Activate => storage::activate(&capsule(release)?, &rig.activate),
         Deed::Authority => Ok(spec.authority.clone()),
+        Deed::Channel => manager::channel(required("PLUMB_RELEASE_VERSION", &release.version)?),
         Deed::Compile => compile(&spec, release),
         Deed::Inspect => verify::inspect(
             required("PLUMB_RELEASE_URL", &release.url)?,

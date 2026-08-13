@@ -64,12 +64,32 @@ fn topology() {
     git(root, &["commit", "-m", "main"]);
     let main = git(root, &["rev-parse", "HEAD"]);
 
+    git(root, &["tag", "v1.2.0-beta.1"]);
     run(plumb(root)
         .args(["release", "source"])
         .env("PLUMB_RELEASE_CHANNEL", "beta")
         .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1")
         .env("PLUMB_RELEASE_COMMIT", &main)
-        .env("PLUMB_RELEASE_SOURCE", "refs/heads/main"));
+        .env("PLUMB_RELEASE_SOURCE", "refs/tags/v1.2.0-beta.1"));
+
+    let branched = plumb(root)
+        .args(["release", "source"])
+        .env("PLUMB_RELEASE_CHANNEL", "beta")
+        .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1")
+        .env("PLUMB_RELEASE_COMMIT", &main)
+        .env("PLUMB_RELEASE_SOURCE", "refs/heads/main")
+        .output()
+        .expect("plumb should run");
+    assert!(!branched.status.success());
+    assert!(
+        String::from_utf8_lossy(&branched.stderr).contains("refs/tags/v1.2.0-beta.1"),
+        "{}",
+        String::from_utf8_lossy(&branched.stderr)
+    );
+
+    run(plumb(root)
+        .args(["release", "channel"])
+        .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1"));
 
     let wrong = plumb(root)
         .args(["release", "source"])

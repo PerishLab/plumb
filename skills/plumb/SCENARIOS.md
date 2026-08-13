@@ -13,6 +13,8 @@ Use `plumb release <command> --help` for the exact command contract. One run
 binds its source revision and release identity, builds only declared artifacts,
 publishes immutable objects and an exact seal, then reads the public bytes back.
 Non-stable releases remain exact and have no moving pointer or activation.
+An exact release binds `refs/tags/<exact-version>`, so push that tag before
+dispatching one; its channel is read from the version, never named beside it.
 
 Stable starts from an explicit release line:
 

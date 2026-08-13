@@ -14,23 +14,20 @@ pub fn source(input: Source<'_>) -> Result<String, String> {
     manager::intent(input.channel, input.version)?;
     proof::commit(input.commit)?;
     let reference = input.reference;
-    if !reference.starts_with("refs/heads/") {
-        return Err(format!(
-            "release source must be a branch ref, got {reference}"
-        ));
-    }
     success(
         "validate release source ref",
         git(input.root, ["check-ref-format", reference])?,
     )?;
-    if input.channel == "stable" {
-        let expected = format!("refs/heads/release/{}", input.version);
-        if reference != expected {
-            return Err(format!(
-                "stable {} must originate from {expected}, got {reference}",
-                input.version
-            ));
-        }
+    let expected = if input.channel == "stable" {
+        format!("refs/heads/release/{}", input.version)
+    } else {
+        format!("refs/tags/{}", input.version)
+    };
+    if reference != expected {
+        return Err(format!(
+            "{} {} must originate from {expected}, got {reference}",
+            input.channel, input.version
+        ));
     }
     let actual = text(
         "resolve checked-out release commit",

@@ -95,6 +95,28 @@ fn unix(spec: &Spec) -> String {
     lines.join("\n")
 }
 
+pub(super) fn channel(value: &str) -> Result<String, String> {
+    let raw = value
+        .strip_prefix('v')
+        .ok_or_else(|| format!("release version must begin with v: {value}"))?;
+    let version =
+        Version::parse(raw).map_err(|error| format!("invalid release version: {error}"))?;
+    if version.pre.is_empty() {
+        return Ok("stable".into());
+    }
+    let parts = version.pre.as_str().split('.').collect::<Vec<_>>();
+    let named = parts.first().copied().unwrap_or_default();
+    let number = parts
+        .get(1)
+        .and_then(|held| held.parse::<u64>().ok())
+        .unwrap_or_default();
+    if parts.len() != 2 || named.is_empty() || number == 0 {
+        return Err(format!("version {value} names no channel"));
+    }
+    intent(named, value)?;
+    Ok(named.into())
+}
+
 pub(super) fn intent(channel: &str, value: &str) -> Result<(), String> {
     if channel.is_empty()
         || !channel

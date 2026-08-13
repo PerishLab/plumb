@@ -134,15 +134,23 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   `X.Y.Z-<channel>.N`. Stable promotion embeds the complete exact candidate
   seal and its digest, and requires the same product, base version, and commit.
   Stable binaries are rebuilt with stable identity from that commit.
-- Exact publication may bind any operator-selected branch ref; the called
+- Exact publication binds exactly `refs/tags/<exact-version>`; the called
   shared workflow freezes its direct event ref and commit once and every job
   checks out that commit. Product callers expose and forward no second source.
-  `plumb ship binary dispatch` is the generic Forgejo entrypoint and preserves
-  arbitrary exact channel and branch selection.
+  `plumb ship binary dispatch` is the generic Forgejo entrypoint.
   Stable alone must originate from `refs/heads/release/vX.Y.Z`. A stable
   release line is managed by `plumb stable prepare|pick|freeze|packport`,
   prepared by linear `cherry-pick -x`, frozen before publication, and remains
   independent from an unblocked `main`.
+- The channel is read from the version, never named beside it. `plumb release
+  channel` derives it and is the only place that rule lives: `X.Y.Z` is stable
+  and `X.Y.Z-<channel>.N` names its own channel. An exact version therefore
+  carries its channel into every job that resolves it.
+- A branch is a line and a tag is a point. `release/vX.Y.Z` accumulates the
+  picked commits and remains the permanent audit boundary; the tag records
+  which commit was published. An exact tag is a declaration and a convenience,
+  not evidence: it may move, while the published seal cannot, and the seal
+  wins wherever the two disagree.
 - Exact seal creation is create-only and idempotent by content. Publish and
   stable activation use separate credentials and separate Plumb commands.
 - `plumb release inspect` takes its exact or stable public URL from the release
