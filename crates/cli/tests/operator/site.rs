@@ -136,7 +136,7 @@ fn run(root: &Path, args: &[&str], case: &str, blind: bool) -> Output {
 fn plan() {
     let fixture = tempfile::tempdir().expect("fixture");
     seed(fixture.path());
-    let output = run(fixture.path(), &["site", "plan"], "live", false);
+    let output = run(fixture.path(), &["ship", "site", "plan"], "live", false);
     assert!(output.status.success());
     let text = String::from_utf8_lossy(&output.stdout);
     assert!(text.contains("pnpm --filter @probe/web build"), "{text}");
@@ -155,7 +155,7 @@ fn bare() {
         std::env::var("PATH").unwrap_or_default()
     );
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["site", "plan"])
+        .args(["ship", "site", "plan"])
         .current_dir(fixture.path())
         .env("PATH", path)
         .env("SITE_CALLS", fixture.path().join("calls"))
@@ -171,7 +171,7 @@ fn bare() {
 fn deploy() {
     let fixture = tempfile::tempdir().expect("fixture");
     seed(fixture.path());
-    let output = run(fixture.path(), &["site", "deploy"], "live", false);
+    let output = run(fixture.path(), &["ship", "site", "deploy"], "live", false);
     assert!(
         output.status.success(),
         "{}",
@@ -190,7 +190,7 @@ fn node() {
     let fixture = tempfile::tempdir().expect("fixture");
     seed(fixture.path());
     std::fs::remove_file(fixture.path().join("Cargo.toml")).expect("remove manifest");
-    let output = run(fixture.path(), &["site", "deploy"], "live", false);
+    let output = run(fixture.path(), &["ship", "site", "deploy"], "live", false);
     assert!(
         output.status.success(),
         "{}",
@@ -202,7 +202,7 @@ fn node() {
 fn unproven() {
     let fixture = tempfile::tempdir().expect("fixture");
     seed(fixture.path());
-    let output = run(fixture.path(), &["site", "deploy"], "unknown", true);
+    let output = run(fixture.path(), &["ship", "site", "deploy"], "unknown", true);
     assert!(!output.status.success());
     let error = String::from_utf8_lossy(&output.stderr);
     assert!(
@@ -215,7 +215,7 @@ fn unproven() {
 fn blind() {
     let fixture = tempfile::tempdir().expect("fixture");
     seed(fixture.path());
-    let output = run(fixture.path(), &["site", "deploy"], "stale", true);
+    let output = run(fixture.path(), &["ship", "site", "deploy"], "stale", true);
     assert!(output.status.success());
     let text = String::from_utf8_lossy(&output.stdout);
     assert!(text.contains("bound     yes"), "{text}");
@@ -226,7 +226,12 @@ fn blind() {
 fn unbound() {
     let fixture = tempfile::tempdir().expect("fixture");
     seed(fixture.path());
-    let output = run(fixture.path(), &["site", "deploy"], "unbound", false);
+    let output = run(
+        fixture.path(),
+        &["ship", "site", "deploy"],
+        "unbound",
+        false,
+    );
     assert!(!output.status.success());
     let error = String::from_utf8_lossy(&output.stderr);
     assert!(error.contains("is not attached to the worker"), "{error}");
@@ -236,7 +241,7 @@ fn unbound() {
 fn inspect() {
     let fixture = tempfile::tempdir().expect("fixture");
     seed(fixture.path());
-    let output = run(fixture.path(), &["site", "inspect"], "live", false);
+    let output = run(fixture.path(), &["ship", "site", "inspect"], "live", false);
     assert!(output.status.success());
     let text = String::from_utf8_lossy(&output.stdout);
     assert!(text.contains("token: active"), "{text}");
@@ -254,7 +259,7 @@ fn insecure() {
         std::env::var("PATH").unwrap_or_default()
     );
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["site", "inspect"])
+        .args(["ship", "site", "inspect"])
         .current_dir(fixture.path())
         .env("PATH", path)
         .env("PLUMB_SITE_API", "http://cloud.test")

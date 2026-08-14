@@ -29,7 +29,7 @@ link, and it is the only one.
   orchestration over Runseal's structured Cloudflare operations. Plumb owns no
   authenticated Cloudflare HTTP sender or raw route dialect.
 - `apps/web` — the site at plumb.perish.uk, shipped by the deploy lane on
-  dispatch through `plumb site deploy` and verified by readback. It is the
+  dispatch through `plumb ship site deploy` and verified by readback. It is the
   Svelte specimen the web shape checks, and the shape moved with it: a web app
   carries `@perish/design`, and views and components are `.svelte` files.
 - `packages/*` — publishable specimens, when they earn their place.
@@ -97,7 +97,7 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   a verb that moved.
 - The adaptor set is a closed enumeration in Plumb, one entry per medium the
   ecosystem publishes to: `binary`, `site`, `cargo`, `npm`, `oci`, and `chart`.
-  Only `binary` is absorbed. The rest are declared and refuse, naming the verb
+  `binary` and `site` are absorbed. The rest are declared and refuse, naming the verb
   that still projects outside the ship contract where one exists, because a
   medium with no name here is a medium every repository invents for itself. A
   declared entry says so rather than pretending, and filling one in is an
@@ -204,9 +204,10 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - A repository declares one site with `apps/*/wrangler.jsonc`; Plumb derives
   its package, assets, worker, routes, and fingerprint without a repository
   ship wrapper.
-- `plumb site plan` is credential-free, `plumb site inspect` reads Cloudflare
-  state, and `plumb site deploy` builds, uploads, reads binding, and proves the
-  public edge serves the built fingerprint.
+- `plumb ship site plan` is credential-free, `plumb ship site inspect` reads
+  Cloudflare state, and `plumb ship site deploy` builds, uploads, reads binding,
+  and proves the public edge serves the built fingerprint. The site is an
+  adaptor rather than a command of its own, so nothing projects outside `ship`.
 - Site authority enters only through `PLUMB_SITE_TOKEN`,
   `PLUMB_SITE_ACCOUNT`, and `PLUMB_SITE_DOMAIN`. The token never enters command
   arguments or logs; it reaches Cloudflare through Runseal's in-process

@@ -8,39 +8,16 @@ mod reach;
 mod settings;
 mod ship;
 
-use clap::Subcommand;
-use std::path::PathBuf;
+use std::path::Path;
 
-#[derive(Subcommand)]
-pub enum Deed {
-    Plan {
-        #[arg(long, default_value = ".")]
-        root: PathBuf,
-    },
-    Deploy {
-        #[arg(long, default_value = ".")]
-        root: PathBuf,
-    },
-    Inspect {
-        #[arg(long, default_value = ".")]
-        root: PathBuf,
-    },
+pub(super) fn deploy(root: &Path) -> Result<String, String> {
+    ship::run(root)
 }
 
-pub fn run(deed: Deed) -> i32 {
-    let result = match deed {
-        Deed::Plan { root } => plan::run(&root),
-        Deed::Deploy { root } => ship::run(&root),
-        Deed::Inspect { root } => inspect::run(&root),
-    };
-    match result {
-        Ok(message) => {
-            println!("{message}");
-            0
-        }
-        Err(error) => {
-            eprintln!("plumb site: {error}");
-            1
-        }
-    }
+pub(super) fn inspect(root: &Path) -> Result<String, String> {
+    inspect::run(root)
+}
+
+pub(super) fn plan(root: &Path) -> Result<String, String> {
+    plan::run(root)
 }

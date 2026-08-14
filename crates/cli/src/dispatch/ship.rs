@@ -14,7 +14,26 @@ pub enum Deed {
     Chart,
     Npm,
     Oci,
-    Site,
+    Site {
+        #[command(subcommand)]
+        deed: Site,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum Site {
+    Deploy {
+        #[arg(long, default_value = ".")]
+        root: std::path::PathBuf,
+    },
+    Inspect {
+        #[arg(long, default_value = ".")]
+        root: std::path::PathBuf,
+    },
+    Plan {
+        #[arg(long, default_value = ".")]
+        root: std::path::PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -43,7 +62,7 @@ pub fn run(deed: Deed) -> i32 {
         Deed::Chart => absent("chart", ""),
         Deed::Npm => absent("npm", ""),
         Deed::Oci => absent("oci", ""),
-        Deed::Site => absent("site", "plumb site deploy"),
+        Deed::Site { deed } => site(deed),
     };
     match result {
         Ok(message) => {
@@ -66,6 +85,14 @@ fn absent(adaptor: &str, held: &str) -> Result<String, String> {
     Err(format!(
         "the {adaptor} adaptor is declared and not absorbed; {held} still projects outside the ship contract"
     ))
+}
+
+fn site(deed: Site) -> Result<String, String> {
+    match deed {
+        Site::Deploy { root } => super::site::deploy(&root),
+        Site::Inspect { root } => super::site::inspect(&root),
+        Site::Plan { root } => super::site::plan(&root),
+    }
 }
 
 fn binary(deed: Binary) -> Result<String, String> {

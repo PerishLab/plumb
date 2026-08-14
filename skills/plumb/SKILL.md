@@ -24,7 +24,8 @@ use Doctor before changing its shape.
   the seals recorded at the last human reading.
 - A **release** is an immutable product identity and declared artifact set.
 - A **projection** renders one release onto one medium. The adaptors are a
-  closed set; only `binary` is absorbed and the rest refuse until they are.
+  closed set; `binary` and `site` are absorbed and the rest refuse until they
+  are.
   `release` keeps the truth cycle and never projects.
 - A **stable line** is the explicit prepare, pick, freeze, publish, and packport
   lifecycle for one permanent version.
@@ -52,7 +53,6 @@ plumb changelog [ROOT]
 plumb release --help
 plumb ship --help
 plumb stable --help
-plumb site --help
 plumb retire [--root ROOT] [--execute --confirm-repo R --confirm-bucket B --confirm-domain D]
 plumb skill --help
 ```

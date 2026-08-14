@@ -88,9 +88,9 @@ is never counted as current.
 ## Operate a site
 
 ```bash
-plumb site plan .
-plumb site inspect .
-plumb site deploy .
+plumb ship site plan .
+plumb ship site inspect .
+plumb ship site deploy .
 ```
 
 Plan is credential-free. Inspect reads current state. Deploy builds, uploads,

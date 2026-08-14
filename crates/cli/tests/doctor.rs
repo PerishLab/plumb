@@ -59,7 +59,7 @@ fn adaptors() {
     for adaptor in ["binary", "cargo", "chart", "npm", "oci", "site"] {
         assert!(listed.contains(adaptor), "{listed}");
     }
-    for adaptor in ["cargo", "chart", "npm", "oci", "site"] {
+    for adaptor in ["cargo", "chart", "npm", "oci"] {
         let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
             .args(["ship", adaptor])
             .output()
