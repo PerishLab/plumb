@@ -40,9 +40,33 @@ fn run(command: &mut Command) {
 }
 
 #[test]
+fn flight() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let (url, _calls) = serve(Court::Flight, 400);
+    repo(fixture.path(), &format!("{url}/test/probe.git"));
+    let output = command(
+        fixture.path(),
+        &[
+            "ship",
+            "binary",
+            "dispatch",
+            "--version",
+            "v1.2.0-nightly.1",
+            "--watch",
+        ],
+    );
+    assert!(!output.status.success());
+    let text = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        text.contains("still running past the watch timeout"),
+        "{text}"
+    );
+}
+
+#[test]
 fn dispatch() {
     let fixture = tempfile::tempdir().expect("fixture");
-    let (url, calls) = serve(Court::Dispatch, 2);
+    let (url, calls) = serve(Court::Dispatch, 3);
     repo(fixture.path(), &format!("{url}/test/probe.git"));
     let output = command(
         fixture.path(),
