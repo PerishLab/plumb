@@ -29,17 +29,6 @@ impl Domain {
         seat
     }
 
-    fn deno(&self, name: &str, product: &str, version: &str) -> PathBuf {
-        let seat = self.root().join(name);
-        std::fs::create_dir_all(&seat).expect("seat");
-        std::fs::write(
-            seat.join("deno.lock"),
-            format!("{{\"version\":\"5\",\"specifiers\":{{\"jsr:{product}@^{version}\":\"{version}\"}}}}"),
-        )
-        .expect("lock");
-        seat
-    }
-
     fn bare(&self, name: &str) -> PathBuf {
         let seat = self.root().join(name);
         std::fs::create_dir_all(&seat).expect("seat");
@@ -122,16 +111,6 @@ fn bare() {
 }
 
 #[test]
-fn jsr() {
-    let domain = Domain::new();
-    let roots = vec![domain.deno("alpha", "@perish/shield", "0.1.0")];
-    let report = check(ask(&named(&roots), "@perish/shield", "0.1.1")).expect("readable domain");
-    assert_eq!(report.seats.len(), 1);
-    assert_eq!(report.seats[0].ecosystem, "jsr");
-    assert!(report.seats[0].behind);
-}
-
-#[test]
 fn unreadable() {
     let domain = Domain::new();
     let roots = vec![
@@ -178,23 +157,6 @@ fn garbled() {
     assert!(report.seats.is_empty());
     assert_eq!(report.blind.len(), 1);
     assert!(report.blind[0].reason.contains("not a version"));
-}
-
-#[test]
-fn lock() {
-    let domain = Domain::new();
-    let seat = domain.bare("alpha");
-    std::fs::create_dir_all(seat.join(".runseal")).expect("seat");
-    std::fs::write(
-        seat.join(".runseal/deno.lock"),
-        "{\"version\":\"5\",\"specifiers\":{\"jsr:@perish/shield@*\":\"0.1.0\"}}",
-    )
-    .expect("lock");
-    let roots = vec![seat];
-    let report = check(ask(&named(&roots), "@perish/shield", "0.1.1")).expect("readable domain");
-    assert_eq!(report.seats.len(), 1);
-    assert_eq!(report.seats[0].lock, ".runseal/deno.lock");
-    assert!(report.seats[0].behind);
 }
 
 #[test]

@@ -115,20 +115,13 @@ fn survey(root: &Root<'_>, product: &str, candidate: &Version) -> Result<Vec<Sea
         return Err("root is not a directory".to_string());
     }
     let mut found = Vec::new();
-    for (name, ecosystem) in [
-        ("Cargo.lock", "cargo"),
-        ("deno.lock", "jsr"),
-        (".runseal/deno.lock", "jsr"),
-    ] {
+    for (name, ecosystem) in [("Cargo.lock", "cargo")] {
         let path = seen.join(name);
         if !path.exists() {
             continue;
         }
         let bytes = std::fs::read(&path).map_err(|error| format!("cannot read {name}: {error}"))?;
-        let resolved = match ecosystem {
-            "cargo" => cargo(&bytes, product)?,
-            _ => jsr(&bytes, product)?,
-        };
+        let resolved = cargo(&bytes, product)?;
         for resolution in resolved {
             let held = Version::parse(&resolution).map_err(|error| {
                 format!(
@@ -168,38 +161,5 @@ pub fn cargo(bytes: &[u8], product: &str) -> Result<Vec<String>, String> {
             .ok_or_else(|| format!("Cargo.lock: package {product} has no version"))?;
         found.push(held.to_string());
     }
-    Ok(found)
-}
-
-pub fn jsr(bytes: &[u8], product: &str) -> Result<Vec<String>, String> {
-    let text = std::str::from_utf8(bytes).map_err(|error| format!("deno.lock: {error}"))?;
-    let document: serde_json::Value =
-        serde_json::from_str(text).map_err(|error| format!("deno.lock: {error}"))?;
-    let mut found = Vec::new();
-    let sealed = format!("{product}@");
-    if let Some(table) = document.get("jsr").and_then(serde_json::Value::as_object) {
-        for key in table.keys() {
-            if let Some(rest) = key.strip_prefix(&sealed) {
-                found.push(rest.to_string());
-            }
-        }
-    }
-    let wanted = format!("jsr:{product}@");
-    for (key, value) in document
-        .get("specifiers")
-        .and_then(serde_json::Value::as_object)
-        .into_iter()
-        .flatten()
-    {
-        if !key.starts_with(&wanted) {
-            continue;
-        }
-        let held = value
-            .as_str()
-            .ok_or_else(|| format!("deno.lock: {key} has no resolved version"))?;
-        found.push(held.to_string());
-    }
-    found.sort();
-    found.dedup();
     Ok(found)
 }
