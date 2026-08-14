@@ -161,9 +161,10 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
                 "updated_at":"2026-01-01T00:00:00Z"
             }]}),
         ),
-        Court::Prepare(_) if request.contains("GET ") && request.contains("/branches/") => {
-            ("404 Not Found", json!({"message": "missing"}))
-        }
+        Court::Prepare(_) if request.contains("GET ") && request.contains("/branches/") => (
+            "404 Not Found",
+            json!({"message": "The target couldn't be found."}),
+        ),
         Court::Prepare(_)
             if request.contains("POST ") && request.ends_with("/branches HTTP/1.1") =>
         {

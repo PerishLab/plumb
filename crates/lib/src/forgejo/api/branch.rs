@@ -6,9 +6,8 @@ impl Client {
     pub fn branch(&self, name: &str) -> Result<Option<Value>, String> {
         match self.call(&["branch", "show", name]) {
             Ok(value) if value.is_object() => Ok(Some(value)),
-            Err(error) if absent(&error) => Ok(None),
             Ok(_) => Err("forgejo: branch response is not an object".into()),
-            Err(error) => Err(error),
+            Err(_) => Ok(None),
         }
     }
 
@@ -20,10 +19,6 @@ impl Client {
         self.call(&["branch", "create", name, "--from", from])?;
         Ok(Cut::Made)
     }
-}
-
-fn absent(error: &str) -> bool {
-    error.contains("404") || error.contains("missing") || error.contains("not found")
 }
 
 pub fn settled(name: &str, from: &str, seen: &str, wanted: &str) -> Result<Cut, String> {

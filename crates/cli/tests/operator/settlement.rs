@@ -85,7 +85,7 @@ fi
 case "$url" in
   */stable.json) cat "$COURT_ROOT/pointer.json"; printf '\n200' ;;
   */api/v1/user) printf '{"login":"operator"}\n200' ;;
-  */branch_protections/*) printf '{"message":"missing"}\n404' ;;
+  */branch_protections/*) printf '{"message":"The target couldn'\''t be found."}\n404' ;;
   */branch_protections)
     printf '%s' "$body" | sed 's/^{/{"branch_name":"release\/v1.2.0",/'
     printf '\n201'
