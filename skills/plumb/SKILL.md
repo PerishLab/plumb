@@ -23,8 +23,9 @@ use Doctor before changing its shape.
 - A **document** is one closed target strategy, its exact source bindings, and
   the seals recorded at the last human reading.
 - A **release** is an immutable product identity and declared artifact set.
-- A **projection** renders one release onto one medium. `ship binary` is the
-  first; `release` keeps the truth cycle and never projects.
+- A **projection** renders one release onto one medium. The adaptors are a
+  closed set; only `binary` is absorbed and the rest refuse until they are.
+  `release` keeps the truth cycle and never projects.
 - A **stable line** is the explicit prepare, pick, freeze, publish, and packport
   lifecycle for one permanent version.
 - A **site** is a declared application whose deploy, binding, and reachability

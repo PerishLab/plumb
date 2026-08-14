@@ -10,6 +10,11 @@ pub enum Deed {
         #[command(subcommand)]
         deed: Binary,
     },
+    Cargo,
+    Chart,
+    Npm,
+    Oci,
+    Site,
 }
 
 #[derive(Subcommand)]
@@ -32,8 +37,15 @@ pub enum Binary {
 }
 
 pub fn run(deed: Deed) -> i32 {
-    let Deed::Binary { deed } = deed;
-    match binary(deed) {
+    let result = match deed {
+        Deed::Binary { deed } => binary(deed),
+        Deed::Cargo => absent("cargo", "plumb release registry"),
+        Deed::Chart => absent("chart", ""),
+        Deed::Npm => absent("npm", ""),
+        Deed::Oci => absent("oci", ""),
+        Deed::Site => absent("site", "plumb site deploy"),
+    };
+    match result {
         Ok(message) => {
             println!("{message}");
             0
@@ -43,6 +55,17 @@ pub fn run(deed: Deed) -> i32 {
             1
         }
     }
+}
+
+fn absent(adaptor: &str, held: &str) -> Result<String, String> {
+    if held.is_empty() {
+        return Err(format!(
+            "the {adaptor} adaptor is declared and not absorbed; it projects nothing yet"
+        ));
+    }
+    Err(format!(
+        "the {adaptor} adaptor is declared and not absorbed; {held} still projects outside the ship contract"
+    ))
 }
 
 fn binary(deed: Binary) -> Result<String, String> {

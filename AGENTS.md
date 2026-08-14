@@ -95,6 +95,15 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   `registry` still stands apart until a Cargo adaptor claims it; both are
   transitional, not settled. A projection never keeps a compatibility alias for
   a verb that moved.
+- The adaptor set is a closed enumeration in Plumb, one entry per medium the
+  ecosystem publishes to: `binary`, `site`, `cargo`, `npm`, `oci`, and `chart`.
+  Only `binary` is absorbed. The rest are declared and refuse, naming the verb
+  that still projects outside the ship contract where one exists, because a
+  medium with no name here is a medium every repository invents for itself. A
+  declared entry says so rather than pretending, and filling one in is an
+  addition, so the enumeration lands before the projections do. Nothing enters
+  it on speculation: an entry earns its place from a medium already published
+  to, never from one that might be.
 - Every Plumb-owned artifact is byte-reproducible from the declared payload.
   Archive members are ordered and carry canonical timestamps, owners, and
   modes; MSVC binaries use the reproducible linker mode. Rebuilding one exact

@@ -54,6 +54,28 @@ fn version() {
 }
 
 #[test]
+fn adaptors() {
+    let listed = run(&["ship", "--help"]);
+    for adaptor in ["binary", "cargo", "chart", "npm", "oci", "site"] {
+        assert!(listed.contains(adaptor), "{listed}");
+    }
+    for adaptor in ["cargo", "chart", "npm", "oci", "site"] {
+        let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["ship", adaptor])
+            .output()
+            .expect("plumb should run");
+        assert!(!output.status.success());
+        let text = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            text.contains(&format!(
+                "the {adaptor} adaptor is declared and not absorbed"
+            )),
+            "{text}"
+        );
+    }
+}
+
+#[test]
 #[ignore = "exercises live first-party registries in the repository guard"]
 fn itself() {
     let out = run(&["doctor", seat().to_str().expect("path should be utf8")]);
