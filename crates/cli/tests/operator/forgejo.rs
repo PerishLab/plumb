@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 
 pub enum Court {
     Dispatch,
+    Flight,
     Failed,
     Nested(bool),
     Paged,
@@ -68,14 +69,17 @@ fn request(stream: &mut impl Read) -> (String, Value) {
 
 fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
     match court {
-        Court::Dispatch | Court::Failed | Court::Nested(_) | Court::Paged
+        Court::Dispatch | Court::Failed | Court::Flight | Court::Nested(_) | Court::Paged
             if request.contains("/dispatches ") =>
         {
             ("201 Created", json!({"id": 88, "run_number": 7}))
         }
-        Court::Dispatch if request.contains("/actions/runs/88 ") => {
-            ("200 OK", json!({"id": 88, "status": "success"}))
-        }
+        Court::Dispatch | Court::Flight if request.contains("/actions/runs/88 ") => (
+            "200 OK",
+            json!({"id": 88, "index_in_repo": 7, "status": "success"}),
+        ),
+        Court::Dispatch if request.contains("/actions/tasks?") => ("200 OK", tasks("success")),
+        Court::Flight if request.contains("/actions/tasks?") => ("200 OK", tasks("running")),
         Court::Failed if request.contains("/actions/runs/88 ") => (
             "200 OK",
             json!({"id": 88, "index_in_repo": 7, "status": "failure"}),

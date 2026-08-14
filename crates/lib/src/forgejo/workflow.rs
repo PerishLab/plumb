@@ -39,7 +39,15 @@ impl Client {
             .ok_or_else(|| "Forgejo workflow run has no status".to_string())?;
         match status {
             "unknown" | "waiting" | "running" => Ok(Outcome::Waiting),
-            "success" => Ok(Outcome::Success),
+            "success" => {
+                let number = number(&run)?;
+                let tasks = self.tasks(number)?.unwrap_or_default();
+                if flight(&tasks) {
+                    Ok(Outcome::Waiting)
+                } else {
+                    Ok(Outcome::Success)
+                }
+            }
             "failure" | "cancelled" | "skipped" => {
                 let number = number(&run)?;
                 let tasks = self.tasks(number)?.unwrap_or_default();
@@ -137,6 +145,15 @@ fn failed(tasks: &[Value]) -> Vec<String> {
     names.sort();
     names.dedup();
     names
+}
+
+fn flight(tasks: &[Value]) -> bool {
+    tasks.iter().any(|task| {
+        matches!(
+            task.get("status").and_then(Value::as_str),
+            Some("unknown" | "waiting" | "running")
+        )
+    })
 }
 
 fn blocked(tasks: Option<Vec<Value>>) -> Result<Outcome, String> {
