@@ -10,41 +10,30 @@ const LINES: usize = 12;
 pub fn run(options: Dispatch) -> Result<String, String> {
     let root = git::root()?;
     let remote = git::remote(&root, &options.repo)?;
-    let version = value::version(&options.version, &options.channel)?;
-    let (workflow, reference, inputs) = if options.channel == "stable" {
+    let channel = super::super::release::channel(&options.version)?;
+    let version = value::version(&options.version, &channel)?;
+    let (workflow, reference, inputs) = if channel == "stable" {
         if options.promotion_channel == "stable" {
             return Err("stable promotion requires an exact non-stable channel".into());
-        }
-        if !options.r#ref.is_empty() {
-            return Err(format!(
-                "stable ref is derived as {}; remove --ref",
-                value::branch(&version)
-            ));
         }
         let promotion = value::version(&options.promotion_version, &options.promotion_channel)?;
         (
             "release-stable.yml",
             value::branch(&version),
             json!({
-                "version": version,
                 "promotion_channel": options.promotion_channel,
                 "promotion_version": promotion
             }),
         )
     } else {
-        value::exact(&options.channel)?;
         (
             "release-exact.yml",
-            if options.r#ref.is_empty() {
-                "main".to_string()
-            } else {
-                options.r#ref.clone()
-            },
-            json!({"channel": options.channel, "version": version}),
+            format!("refs/tags/{version}"),
+            json!({}),
         )
     };
     if options.dry {
-        let wall = (options.channel == "stable").then(|| {
+        let wall = (channel == "stable").then(|| {
             format!(
                 "PUT /repos/{}/{}/branch_protections/{} (frozen)\n",
                 remote.owner, remote.repo, reference
@@ -58,7 +47,7 @@ pub fn run(options: Dispatch) -> Result<String, String> {
         ));
     }
     let client = Client::new(remote)?;
-    if options.channel == "stable" {
+    if channel == "stable" {
         line::freeze(&client, &root, &reference)?;
     }
     let run = client.dispatch(workflow, &reference, inputs)?;

@@ -162,6 +162,10 @@ fn rebase(root: &Path, path: &Path) -> PathBuf {
     }
 }
 
+pub(super) fn channel(version: &str) -> Result<String, String> {
+    manager::channel(version)
+}
+
 pub(super) fn authority(root: &Path) -> Result<String, String> {
     model::Spec::read(&root.join("plumb.toml")).map(|spec| spec.authority)
 }

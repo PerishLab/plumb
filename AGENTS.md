@@ -140,7 +140,9 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - Exact publication binds exactly `refs/tags/<exact-version>`; the called
   shared workflow freezes its direct event ref and commit once and every job
   checks out that commit. Product callers expose and forward no second source.
-  `plumb ship binary dispatch` is the generic Forgejo entrypoint.
+  `plumb ship binary dispatch` is the generic Forgejo entrypoint and takes only
+  `--version`: it derives the channel, derives the ref that carries it, and
+  sends no identity input at all.
   Stable alone must originate from `refs/heads/release/vX.Y.Z`. A stable
   release line is managed by `plumb stable prepare|pick|freeze|packport`,
   prepared by linear `cherry-pick -x`, frozen before publication, and remains

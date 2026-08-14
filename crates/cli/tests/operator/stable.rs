@@ -50,8 +50,6 @@ fn dispatch() {
             "ship",
             "binary",
             "dispatch",
-            "--channel",
-            "nightly",
             "--version",
             "v1.2.0-nightly.1",
             "--watch",
@@ -84,8 +82,6 @@ fn nested() {
             "ship",
             "binary",
             "dispatch",
-            "--channel",
-            "nightly",
             "--version",
             "v1.2.0-nightly.2",
             "--watch",
@@ -117,8 +113,6 @@ fn failure() {
             "ship",
             "binary",
             "dispatch",
-            "--channel",
-            "nightly",
             "--version",
             "v1.2.0-nightly.3",
             "--watch",
@@ -139,8 +133,6 @@ fn blocked() {
             "ship",
             "binary",
             "dispatch",
-            "--channel",
-            "nightly",
             "--version",
             "v1.2.0-nightly.5",
             "--watch",
@@ -161,8 +153,6 @@ fn pagination() {
             "ship",
             "binary",
             "dispatch",
-            "--channel",
-            "nightly",
             "--version",
             "v1.2.0-nightly.4",
             "--watch",
@@ -222,19 +212,15 @@ fn freedom() {
             "ship",
             "binary",
             "dispatch",
-            "--channel",
-            "nightly",
             "--version",
             "v1.2.0-nightly.9",
-            "--ref",
-            "topic/candidate",
             "--dry-run",
         ],
     );
     assert!(output.status.success());
     let text = String::from_utf8_lossy(&output.stdout);
-    assert!(text.contains("ref=topic/candidate"), "{text}");
-    assert!(text.contains(r#""channel":"nightly""#), "{text}");
+    assert!(text.contains("ref=refs/tags/v1.2.0-nightly.9"), "{text}");
+    assert!(text.contains("inputs={}"), "{text}");
 }
 
 #[test]
@@ -250,18 +236,15 @@ fn strict() {
             "ship",
             "binary",
             "dispatch",
-            "--channel",
-            "stable",
             "--version",
             "v1.2.0",
             "--promotion-version",
             "v1.2.0-beta.4",
-            "--ref",
-            "main",
             "--dry-run",
         ],
     );
-    assert!(!output.status.success());
-    let text = String::from_utf8_lossy(&output.stderr);
-    assert!(text.contains("stable ref is derived"), "{text}");
+    assert!(output.status.success());
+    let text = String::from_utf8_lossy(&output.stdout);
+    assert!(text.contains("ref=release/v1.2.0"), "{text}");
+    assert!(!text.contains(r#""version""#), "{text}");
 }
