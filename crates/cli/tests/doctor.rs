@@ -59,19 +59,16 @@ fn adaptors() {
     for adaptor in ["binary", "cargo", "chart", "npm", "oci", "site"] {
         assert!(listed.contains(adaptor), "{listed}");
     }
-    for adaptor in ["cargo", "chart", "npm", "oci"] {
-        let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-            .args(["ship", adaptor])
-            .output()
-            .expect("plumb should run");
-        assert!(!output.status.success());
-        let text = String::from_utf8_lossy(&output.stderr);
-        assert!(
-            text.contains(&format!(
-                "the {adaptor} adaptor is declared and not absorbed"
-            )),
-            "{text}"
-        );
+    for (adaptor, deed) in [
+        ("binary", "publish"),
+        ("cargo", "publish"),
+        ("chart", "publish"),
+        ("npm", "publish"),
+        ("oci", "publish"),
+        ("site", "deploy"),
+    ] {
+        let deeds = run(&["ship", adaptor, "--help"]);
+        assert!(deeds.contains(deed), "{deeds}");
     }
 }
 

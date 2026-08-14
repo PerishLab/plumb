@@ -35,7 +35,13 @@ jobs:
         run: |
           set -eu
           exec > >(tee -a "$RUNNER_TEMP/lane.log") 2>&1
-          plumb site deploy
+          # The lane runs canonical stable Plumb, so it asks the binary which
+          # spelling it holds rather than assuming one.
+          if plumb ship site deploy --help >/dev/null 2>&1; then
+            plumb ship site deploy
+          else
+            plumb site deploy
+          fi
 
       - name: Report failure
         if: failure()

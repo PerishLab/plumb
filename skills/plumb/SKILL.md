@@ -24,11 +24,13 @@ use Doctor before changing its shape.
   the seals recorded at the last human reading.
 - A **release** is an immutable product identity and declared artifact set.
 - A **projection** renders one release onto one medium. The adaptors are a
-  closed set; `binary` and `site` are absorbed and the rest refuse until they
-  are.
+  closed set, and all six are absorbed: `binary`, `site`, `cargo`, `oci`,
+  `chart`, and `npm`. Publishing one carries the compiled capsule, so a version
+  with no published seal has projected nothing.
   `release` keeps the truth cycle and never projects.
 - A **stable line** is the explicit prepare, pick, freeze, publish, and packport
-  lifecycle for one permanent version.
+  lifecycle for one permanent version. Freeze stamps its point and `retract`
+  removes that point while nothing is published; a served seal refuses it.
 - A **site** is a declared application whose deploy, binding, and reachability
   are independently evidenced.
 - A **retirement** destroys one declared delivery chain in a fixed order; it is
@@ -52,7 +54,7 @@ plumb policy [ROOT] --write
 plumb changelog [ROOT]
 plumb release --help
 plumb ship --help
-plumb stable --help
+plumb stable prepare|pick|freeze|packport|retract --help
 plumb retire [--root ROOT] [--execute --confirm-repo R --confirm-bucket B --confirm-domain D]
 plumb skill --help
 ```

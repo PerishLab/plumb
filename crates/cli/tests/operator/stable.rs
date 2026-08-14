@@ -2,7 +2,7 @@ use super::forgejo::{Court, serve};
 use std::path::Path;
 use std::process::{Command, Output};
 
-fn repo(root: &Path, origin: &str) {
+pub fn repo(root: &Path, origin: &str) {
     std::fs::write(
         root.join("plumb.toml"),
         r#"[release]
@@ -19,7 +19,7 @@ targets = ["x86_64-unknown-linux-gnu"]
         .current_dir(root));
 }
 
-fn command(root: &Path, args: &[&str]) -> Output {
+pub fn command(root: &Path, args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(args)
         .current_dir(root)

@@ -1,6 +1,8 @@
+use sha2::{Digest, Sha256};
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 
+const SEALED: [&str; 4] = ["cargo", "chart", "npm", "oci"];
 const ATTACHMENT: &str =
     "[release.cargo]\nregistry = \"perish\"\npackages = [\"family-macro\", \"family-core\"]\n";
 const WORKSPACE: &str = "[workspace]\nmembers = [\"crates/core\", \"crates/macro\", \"crates/helper\"]\nresolver = \"3\"\n\n[workspace.package]\nversion = \"0.10.2\"\nedition = \"2024\"\nlicense = \"MIT\"\nrepository = \"https://example.invalid/family\"\n\n[workspace.dependencies]\ncore-alias = { package = \"family-core\", path = \"crates/core\", version = \"=0.10.2\" }\nhelper = { path = \"crates/helper\", version = \"=9.9.9\" }\nregistry-core = { package = \"family-core\", version = \"=0.10.2\", registry = \"perish\" }\n\n[workspace.dependencies.family-macro]\npath = \"crates/macro\"\nversion = \"=0.10.2\"\n";
@@ -49,7 +51,7 @@ fn cargo() {
         command
     };
     let output = command()
-        .args(["release", "registry", "rehearse"])
+        .args(["ship", "cargo", "rehearse"])
         .env("PLUMB_RELEASE_VERSION", "v0.10.2-beta.1")
         .env_remove("PLUMB_RELEASE_REGISTRY_TOKEN")
         .output()
@@ -57,7 +59,7 @@ fn cargo() {
     let error = String::from_utf8_lossy(&output.stderr);
     assert!(!output.status.success() && error.contains("PLUMB_RELEASE_REGISTRY_TOKEN is required"));
     let output = command()
-        .args(["release", "registry", "rehearse"])
+        .args(["ship", "cargo", "rehearse"])
         .env("PLUMB_RELEASE_VERSION", "v0.10.2-beta.1")
         .env("PLUMB_RELEASE_REGISTRY_TOKEN", "secret")
         .output()
@@ -71,4 +73,60 @@ fn cargo() {
         std::fs::read_to_string(path.join("cargo-observed")).expect("observation"),
         "0.10.2-beta.1\n"
     );
+}
+
+#[test]
+fn sealed() {
+    let root = tempfile::tempdir().expect("capsule fixture");
+    let path = root.path();
+    std::fs::write(path.join("plumb.toml"), ATTACHMENT).expect("attachment");
+    let ship = |adaptor: &str, version: &str| {
+        Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["ship", adaptor, "publish"])
+            .env("PLUMB_RELEASE_ROOT", path)
+            .env("PLUMB_RELEASE_OUTPUT", ".plumb-release")
+            .env("PLUMB_RELEASE_VERSION", version)
+            .env("PLUMB_RELEASE_REGISTRY_TOKEN", "secret")
+            .output()
+            .expect("plumb should run")
+    };
+    for adaptor in SEALED {
+        let bare = ship(adaptor, "v0.10.2-beta.1");
+        let missing = String::from_utf8_lossy(&bare.stderr).to_string();
+        assert!(
+            !bare.status.success() && missing.contains("capsule.json"),
+            "{adaptor}: {missing}"
+        );
+    }
+
+    let out = path.join(".plumb-release");
+    std::fs::create_dir_all(&out).expect("release output");
+    let body = b"{}";
+    std::fs::write(out.join("seal.json"), body).expect("seal");
+    let digest = format!("{:x}", Sha256::digest(body));
+    let capsule = format!(
+        concat!(
+            r#"{{"schema":1,"product":"family","channel":"beta","#,
+            r#""releaseVersion":"v0.10.2-beta.1","authority":"https://example.invalid","#,
+            r#""objects":[],"seal":{{"source":"seal.json","key":"v1/seal.json","#,
+            r#""remote":{{"name":"seal.json","mime":"application/json","sha256":"{}","#,
+            r#""size":{},"url":"https://example.invalid/seal.json"}}}},"#,
+            r#""roots":[],"pointer":null}}"#
+        ),
+        digest,
+        body.len()
+    );
+    std::fs::write(out.join("capsule.json"), capsule).expect("capsule");
+
+    for adaptor in SEALED {
+        let drift = ship(adaptor, "v0.10.2-beta.2");
+        let refused = String::from_utf8_lossy(&drift.stderr).to_string();
+        assert!(
+            !drift.status.success()
+                && refused.contains(
+                    "capsule seals v0.10.2-beta.1 while the projection carries v0.10.2-beta.2"
+                ),
+            "{adaptor}: {refused}"
+        );
+    }
 }

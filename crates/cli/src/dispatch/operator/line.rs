@@ -26,6 +26,7 @@ pub fn run(deed: Stable) -> Result<String, String> {
         } => pick(&version, &commit, dry),
         Stable::Freeze { version, repo, dry } => wall(&version, &repo, dry),
         Stable::Packport { version, repo, dry } => packport(&version, &repo, dry),
+        Stable::Retract { version, dry } => retract(&version, dry),
     }
 }
 
@@ -69,7 +70,16 @@ fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
         return Ok(plan(&remote, &name, "frozen"));
     }
     freeze(&Client::new(remote)?, &root, &name)?;
-    Ok(format!("froze {name}"))
+    let spec = super::super::release::model::Spec::read(&root.join("plumb.toml"))?;
+    let stamped = super::mark::point(&root).stamp(&spec.product, &version, &name)?;
+    Ok(format!("froze {name}; {stamped}"))
+}
+
+fn retract(raw: &str, dry: bool) -> Result<String, String> {
+    let version = value::version(raw, "stable")?;
+    let root = git::root()?;
+    let spec = super::super::release::model::Spec::read(&root.join("plumb.toml"))?;
+    super::mark::point(&root).retract(&spec.authority, &version, dry)
 }
 
 pub fn freeze(client: &Client, root: &Path, name: &str) -> Result<(), String> {

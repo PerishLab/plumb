@@ -29,10 +29,14 @@ link, and it is the only one.
   orchestration over Runseal's structured Cloudflare operations. Plumb owns no
   authenticated Cloudflare HTTP sender or raw route dialect.
 - `apps/web` — the site at plumb.perish.uk, shipped by the deploy lane on
-  dispatch through `plumb ship site deploy` and verified by readback. It is the
+  dispatch through `plumb ship site deploy` and verified by readback. That lane
+  runs canonical stable Plumb, so it probes the deed and falls back to the
+  spelling the installed version holds until stable carries this release. It is the
   Svelte specimen the web shape checks, and the shape moved with it: a web app
   carries `@perish/design`, and views and components are `.svelte` files.
 - `packages/*` — publishable specimens, when they earn their place.
+- `Containerfile` and `charts/*` — the image and chart carriers the ship
+  adaptors project onto.
 
 The layout is not invented; it is the union already demonstrated by codehull and
 ensign: `crates` for rust members, `apps` for deployable applications,
@@ -91,19 +95,30 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   verb belongs to whichever object it acts on: `release` keeps `source`,
   `compile`, `packport`, and `authority`, while `ship binary` takes `build`,
   `assemble`, `matrix`, `managers`, `publish`, `smoke`, `verify`, `dispatch`,
-  and `recovery`. `activate` and `inspect` still span both sides, and
-  `registry` still stands apart until a Cargo adaptor claims it; both are
-  transitional, not settled. A projection never keeps a compatibility alias for
-  a verb that moved.
+  and `recovery`, `ship cargo` takes `publish` and `rehearse`, `ship oci` takes
+  `build` and `publish`, `ship chart` takes `package` and `publish`, and
+  `ship npm` takes `pack` and `publish`. `activate` and `inspect` still span
+  both sides and are transitional, not settled. A projection never keeps a
+  compatibility alias for a verb that moved.
 - The adaptor set is a closed enumeration in Plumb, one entry per medium the
   ecosystem publishes to: `binary`, `site`, `cargo`, `npm`, `oci`, and `chart`.
-  `binary` and `site` are absorbed. The rest are declared and refuse, naming the verb
-  that still projects outside the ship contract where one exists, because a
-  medium with no name here is a medium every repository invents for itself. A
-  declared entry says so rather than pretending, and filling one in is an
-  addition, so the enumeration lands before the projections do. Nothing enters
-  it on speculation: an entry earns its place from a medium already published
-  to, never from one that might be.
+  All six are absorbed, because a medium with no name here is a medium every
+  repository invents for itself. The enumeration landed before the projections
+  did, which is why filling each one in was an addition rather than a break.
+  Nothing enters it on speculation: an entry earns its place from a medium
+  already published to, never from one that might be.
+- A projection carries a compiled capsule, so no medium receives anything the
+  seal does not already cover. Every publishing deed refuses a capsule that
+  seals another version, exactly as `ship binary publish` takes the capsule as
+  its payload. The deeds that only prepare -- `cargo rehearse`, `oci build`,
+  `chart package`, `npm pack` -- stay outside that rule because they mutate
+  nothing beyond the working tree. One release therefore has one irreversible
+  point, and it is publication; a version with no published seal has projected
+  nothing anywhere.
+- `Containerfile`, `charts/plumb`, and `packages/plumb` are carriers, not
+  workloads. They exist so the image, chart, and module adaptors project a real
+  medium rather than a described one, they hold no responsibility yet, and no
+  lane consumes them. Each takes content when content earns its place.
 - Every Plumb-owned artifact is byte-reproducible from the declared payload.
   Archive members are ordered and carry canonical timestamps, owners, and
   modes; MSVC binaries use the reproducible linker mode. Rebuilding one exact
@@ -170,9 +185,17 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   carries its channel into every job that resolves it.
 - A branch is a line and a tag is a point. `release/vX.Y.Z` accumulates the
   picked commits and remains the permanent audit boundary; the tag records
-  which commit was published. An exact tag is a declaration and a convenience,
-  not evidence: it may move, while the published seal cannot, and the seal
-  wins wherever the two disagree.
+  which commit was published. A tag is a declaration and a convenience, not
+  evidence: it may move, while the published seal cannot, and the seal wins
+  wherever the two disagree. Stable carries both a line and a point, and the
+  line stays the audit boundary; the point exists so a declared release has one
+  removable handle.
+- `plumb stable freeze` stamps that point, and `plumb stable retract` removes
+  it. Retraction reads the release authority first and continues only on a
+  plain absence: a served seal refuses because the version projected something,
+  and any other answer refuses because a destructive act never runs on a
+  reading it cannot trust. It acts on the declaration alone and leaves the line
+  standing, so what it removes is a name, never evidence.
 - Exact seal creation is create-only and idempotent by content. Publish and
   stable activation use separate credentials and separate Plumb commands.
 - `plumb release inspect` takes its exact or stable public URL from the release

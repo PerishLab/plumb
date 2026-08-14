@@ -10,14 +10,50 @@ pub enum Deed {
         #[command(subcommand)]
         deed: Binary,
     },
-    Cargo,
-    Chart,
-    Npm,
-    Oci,
+    Cargo {
+        #[command(subcommand)]
+        deed: Cargo,
+    },
+    Chart {
+        #[command(subcommand)]
+        deed: Chart,
+    },
+    Npm {
+        #[command(subcommand)]
+        deed: Npm,
+    },
+    Oci {
+        #[command(subcommand)]
+        deed: Oci,
+    },
     Site {
         #[command(subcommand)]
         deed: Site,
     },
+}
+
+#[derive(Subcommand)]
+pub enum Cargo {
+    Publish,
+    Rehearse,
+}
+
+#[derive(Subcommand)]
+pub enum Oci {
+    Build,
+    Publish,
+}
+
+#[derive(Subcommand)]
+pub enum Chart {
+    Package,
+    Publish,
+}
+
+#[derive(Subcommand)]
+pub enum Npm {
+    Pack,
+    Publish,
 }
 
 #[derive(Subcommand)]
@@ -58,10 +94,10 @@ pub enum Binary {
 pub fn run(deed: Deed) -> i32 {
     let result = match deed {
         Deed::Binary { deed } => binary(deed),
-        Deed::Cargo => absent("cargo", "plumb release registry"),
-        Deed::Chart => absent("chart", ""),
-        Deed::Npm => absent("npm", ""),
-        Deed::Oci => absent("oci", ""),
+        Deed::Cargo { deed } => cargo(deed),
+        Deed::Chart { deed } => chart(deed),
+        Deed::Npm { deed } => npm(deed),
+        Deed::Oci { deed } => oci(deed),
         Deed::Site { deed } => site(deed),
     };
     match result {
@@ -76,15 +112,75 @@ pub fn run(deed: Deed) -> i32 {
     }
 }
 
-fn absent(adaptor: &str, held: &str) -> Result<String, String> {
-    if held.is_empty() {
+fn cargo(deed: Cargo) -> Result<String, String> {
+    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
+    let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
+    let release = &rig.release;
+    let attachment = engine::adaptor::registry::registry(&spec);
+    let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
+    match deed {
+        Cargo::Publish => {
+            sealed(&capsule(release)?, version)?;
+            attachment.publish(version, &release.registry_token)
+        }
+        Cargo::Rehearse => attachment.rehearse(version, &release.registry_token),
+    }
+}
+
+fn oci(deed: Oci) -> Result<String, String> {
+    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
+    let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
+    let release = &rig.release;
+    let carrier = engine::adaptor::image::image(&spec);
+    let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
+    match deed {
+        Oci::Build => carrier.build(version),
+        Oci::Publish => {
+            sealed(&capsule(release)?, version)?;
+            carrier.publish(version, &release.registry_token)
+        }
+    }
+}
+
+fn chart(deed: Chart) -> Result<String, String> {
+    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
+    let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
+    let release = &rig.release;
+    let carrier = engine::adaptor::chart::chart(&spec);
+    let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
+    match deed {
+        Chart::Package => carrier.package(version),
+        Chart::Publish => {
+            sealed(&capsule(release)?, version)?;
+            carrier.publish(version, &release.registry_token)
+        }
+    }
+}
+
+fn npm(deed: Npm) -> Result<String, String> {
+    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
+    let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
+    let release = &rig.release;
+    let carrier = engine::adaptor::module::module(&spec);
+    let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
+    match deed {
+        Npm::Pack => carrier.pack(version),
+        Npm::Publish => {
+            sealed(&capsule(release)?, version)?;
+            carrier.publish(version, &release.registry_token)
+        }
+    }
+}
+
+fn sealed(path: &std::path::Path, version: &str) -> Result<(), String> {
+    let (compiled, _) = super::release::record::Capsule::read(path)?;
+    if compiled.version != version {
         return Err(format!(
-            "the {adaptor} adaptor is declared and not absorbed; it projects nothing yet"
+            "capsule seals {} while the projection carries {version}",
+            compiled.version
         ));
     }
-    Err(format!(
-        "the {adaptor} adaptor is declared and not absorbed; {held} still projects outside the ship contract"
-    ))
+    Ok(())
 }
 
 fn site(deed: Site) -> Result<String, String> {

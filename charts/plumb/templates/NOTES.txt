@@ -1,0 +1,2 @@
+This chart carries no workload. It exists so the chart adaptor projects a real
+medium, and it takes a workload only when one earns its place.

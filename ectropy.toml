@@ -1,126 +1,169 @@
-[scan]
-include = [
-  "crates/**/*.rs",
-  "apps/**/*.ts",
-  "apps/**/*.svelte",
-  "apps/**/*.css",
-  "apps/**/*.scss",
-  "docs/**/*.md",
-  "skills/**/*.md",
-]
-exclude = [
-  "**/target/**",
-  "**/node_modules/**",
-  "**/dist/**",
-  "**/.svelte-kit/**",
+[[ban]]
+paths = ["apps/web/src/lib/components/**"]
+syntax = "style"
+
+[[boundary]]
+allow = ["fanout"]
+note = "the Runseal-backed Forgejo adaptor is a peer of the existing removable substrate modules"
+paths = ["crates/lib/src"]
+
+[[boundary]]
+allow = ["path"]
+note = "vite and vitest require root-level config files; path law anchors to src and tests"
+paths = [
+    "apps/web/vite.config.ts",
+    "apps/web/vitest.config.ts",
 ]
 
-[module]
-roots = [
-  "apps/*/src",
-  "apps/*/tests",
-  "crates/*/src",
-  "crates/*/tests",
-  "docs",
-  "skills/*",
+[[boundary]]
+allow = ["fanout"]
+note = "stable release identity requires one immutable version seat directly under docs/CHANGELOG"
+paths = ["docs/CHANGELOG"]
+
+[[boundary]]
+allow = ["fanout"]
+note = "the bounded self-hosting recovery adds one production module and one integration test module to established release inventories"
+paths = [
+    "crates/cli/src/dispatch/release",
+    "crates/cli/tests/operator",
 ]
 
-[limit]
-block = 4
-path = 4
-param = 4
-markup = 8
-file = 300
-fanout = 10
+[[boundary]]
+allow = ["fanout"]
+note = "ship adds one top level command module while site and registry still stand apart; the inventory drops back under the limit once both fold into ship as adaptors"
+paths = ["crates/cli/src/dispatch"]
+
+[[boundary]]
+allow = ["fanout"]
+note = "the skill budget observation adds one rule and one repository shape probe to the established inventories"
+paths = [
+    "crates/cli/src/judge/catalog/rules",
+    "crates/cli/src/shape",
+]
+
+[[boundary]]
+allow = [
+    "combination",
+    "word",
+]
+note = "the fixed one-time Plumb recovery contract uses explicit provenance and identity terms plus exact refusal combinations"
+paths = [
+    "crates/cli/src/dispatch/operator/recovery.rs",
+    "crates/cli/src/dispatch/release/generator.rs",
+    "crates/cli/src/dispatch/release/record.rs",
+    "crates/cli/tests/operator/recovery.rs",
+]
 
 [comment]
 allow = false
 
+[[grant]]
+paths = [
+    "apps/*/tests/**/*.test.ts",
+    "crates/*/tests/**/*.rs",
+    "packages/*/tests/**/*.test.ts",
+    "packages/*/tests/**/*.test.tsx",
+]
+syntax = "test"
+
+[[grant]]
+paths = [
+    "apps/*/tests/**/*.test.ts",
+    "apps/web/vite.config.ts",
+    "crates/*/tests/**/*.rs",
+    "crates/lib/src/config.rs",
+    "crates/lib/src/forgejo/settings.rs",
+    "crates/macro/src/parse.rs",
+    "packages/*/tests/**/*.test.ts",
+    "packages/*/tests/**/*.test.tsx",
+]
+syntax = "environment"
+
+[limit]
+block = 4
+fanout = 10
+file = 300
+markup = 8
+param = 4
+path = 4
+
+[module]
+roots = [
+    "apps/*/src",
+    "apps/*/tests",
+    "crates/*/src",
+    "crates/*/tests",
+    "docs",
+    "packages/*/lib",
+    "packages/*/src",
+    "packages/*/tests",
+    "skills/*",
+]
+
+[scan]
+exclude = [
+    "**/.svelte-kit/**",
+    "**/dist/**",
+    "**/node_modules/**",
+    "**/target/**",
+]
+include = [
+    "apps/**/*.css",
+    "apps/**/*.scss",
+    "apps/**/*.svelte",
+    "apps/**/*.ts",
+    "crates/**/*.rs",
+    "docs/**/*.md",
+    "packages/**/*.css",
+    "packages/**/*.scss",
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "skills/**/*.md",
+]
+
+[[vocabulary.term]]
+description = "A domain vocabulary report binds its scan to the exact bundled dictionary bytes."
+name = "dictionary_digest"
+
+[[vocabulary.term]]
+description = "Cargo metadata names a package manifest path as one schema field."
+name = "manifest_path"
+
+[[vocabulary.term]]
+description = "The operator harness names its pending guard poll interval in milliseconds."
+name = "guard_pending_ms"
+
+[[vocabulary.term]]
+description = "The operator harness names its absent guard registration poll interval in milliseconds."
+name = "guard_register_ms"
+
+[[vocabulary.term]]
+description = "The operator harness names its guard deadline in milliseconds."
+name = "guard_timeout_ms"
+
+[[vocabulary.term]]
+description = "An exact promotion channel is one release proof field."
+name = "promotion_channel"
+
+[[vocabulary.term]]
+description = "An exact promotion version is one release proof field."
+name = "promotion_version"
+
+[[vocabulary.term]]
+description = "The Cargo registry token is one release authority field."
+name = "registry_token"
+
+[[vocabulary.term]]
+description = "The operator harness names its workflow poll interval in milliseconds."
+name = "run_poll_ms"
+
+[[vocabulary.term]]
+description = "The operator harness names its workflow deadline in milliseconds."
+name = "run_timeout_ms"
+
+[[vocabulary.term]]
+description = "Cargo metadata names its build target directory as one schema field."
+name = "target_directory"
+
 [word]
 single = true
-
-[[grant]]
-syntax = "test"
-paths = [
-  "apps/*/tests/**/*.test.ts",
-  "crates/*/tests/**/*.rs",
-]
-
-[[grant]]
-syntax = "environment"
-paths = [
-  "apps/*/tests/**/*.test.ts",
-  "crates/lib/src/config.rs",
-  "crates/lib/src/forgejo/settings.rs",
-  "crates/macro/src/parse.rs",
-  "apps/web/vite.config.ts",
-  "crates/*/tests/**/*.rs",
-]
-
-[[ban]]
-syntax = "style"
-paths = ["apps/web/src/lib/components/**"]
-
-[[boundary]]
-paths = ["crates/lib/src"]
-note = "the Runseal-backed Forgejo adaptor is a peer of the existing removable substrate modules"
-allow = ["fanout"]
-
-[[boundary]]
-paths = [
-  "apps/web/vite.config.ts",
-  "apps/web/vitest.config.ts",
-]
-note = "vite and vitest require root-level config files; path law anchors to src and tests"
-allow = ["path"]
-
-[[boundary]]
-paths = ["docs/CHANGELOG"]
-note = "stable release identity requires one immutable version seat directly under docs/CHANGELOG"
-allow = ["fanout"]
-
-[[boundary]]
-paths = [
-  "crates/cli/src/dispatch/release",
-  "crates/cli/tests/operator",
-]
-note = "the bounded self-hosting recovery adds one production module and one integration test module to established release inventories"
-allow = ["fanout"]
-
-[[boundary]]
-paths = ["crates/cli/src/dispatch"]
-note = "ship adds one top level command module while site and registry still stand apart; the inventory drops back under the limit once both fold into ship as adaptors"
-allow = ["fanout"]
-
-[[boundary]]
-paths = [
-  "crates/cli/src/judge/catalog/rules",
-  "crates/cli/src/shape",
-]
-note = "the skill budget observation adds one rule and one repository shape probe to the established inventories"
-allow = ["fanout"]
-
-[[boundary]]
-paths = [
-  "crates/cli/src/dispatch/operator/recovery.rs",
-  "crates/cli/src/dispatch/release/generator.rs",
-  "crates/cli/src/dispatch/release/record.rs",
-  "crates/cli/tests/operator/recovery.rs",
-]
-note = "the fixed one-time Plumb recovery contract uses explicit provenance and identity terms plus exact refusal combinations"
-allow = ["combination", "word"]
-
-[vocabulary]
-term = [
-  { name = "dictionary_digest", description = "A domain vocabulary report binds its scan to the exact bundled dictionary bytes." },
-  { name = "manifest_path", description = "Cargo metadata names a package manifest path as one schema field." },
-  { name = "guard_pending_ms", description = "The operator harness names its pending guard poll interval in milliseconds." },
-  { name = "guard_register_ms", description = "The operator harness names its absent guard registration poll interval in milliseconds." },
-  { name = "guard_timeout_ms", description = "The operator harness names its guard deadline in milliseconds." },
-  { name = "promotion_channel", description = "An exact promotion channel is one release proof field." },
-  { name = "promotion_version", description = "An exact promotion version is one release proof field." },
-  { name = "registry_token", description = "The Cargo registry token is one release authority field." },
-  { name = "run_poll_ms", description = "The operator harness names its workflow poll interval in milliseconds." },
-  { name = "run_timeout_ms", description = "The operator harness names its workflow deadline in milliseconds." },
-  { name = "target_directory", description = "Cargo metadata names its build target directory as one schema field." },
-]

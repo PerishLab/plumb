@@ -1,6 +1,6 @@
-use super::super::model::{Cargo, Spec};
-use super::ledger;
-use super::workspace::{Workspace, release};
+use super::super::super::model::{Cargo, Spec};
+use super::super::ledger;
+use super::super::workspace::{Workspace, release};
 use flate2::read::GzDecoder;
 use semver::Version;
 use std::io::Read;
@@ -69,7 +69,7 @@ impl Registry<'_> {
             )?;
             let archive = self.archive(package, &identity);
             inspect(&archive, package, &identity)?;
-            let checksum = super::super::record::digest(&archive)?.0;
+            let checksum = super::super::super::record::digest(&archive)?.0;
             let held = ledger::entries(self.spec, cargo, package, token)?;
             if ledger::verified(package, &identity, &checksum, &held)? {
                 continue;
@@ -86,7 +86,7 @@ impl Registry<'_> {
                 ],
                 token,
             )?;
-            if super::super::record::digest(&archive)?.0 != checksum {
+            if super::super::super::record::digest(&archive)?.0 != checksum {
                 return Err(format!(
                     "Cargo package {package} changed during publisher dry run"
                 ));

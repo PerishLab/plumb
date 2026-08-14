@@ -1,4 +1,5 @@
 mod line;
+mod mark;
 mod pick;
 mod recovery;
 mod trigger;
@@ -92,6 +93,12 @@ pub enum Stable {
         version: String,
         #[arg(long, default_value = "")]
         repo: String,
+        #[arg(long = "dry-run")]
+        dry: bool,
+    },
+    Retract {
+        #[arg(long)]
+        version: String,
         #[arg(long = "dry-run")]
         dry: bool,
     },

@@ -79,6 +79,12 @@ importers:
         specifier: 'catalog:'
         version: 4.110.0
 
+  packages/plumb:
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
 packages:
 
   '@biomejs/biome@2.5.3':

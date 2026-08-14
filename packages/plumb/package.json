@@ -1,0 +1,14 @@
+{
+	"description": "plumb carrier \u2014 the npm adaptor holds no export yet",
+	"files": [
+		"index.js"
+	],
+	"license": "MIT",
+	"main": "index.js",
+	"name": "@perish/plumb",
+	"type": "module",
+	"version": "0.0.0",
+	"devDependencies": {
+		"typescript": "catalog:"
+	}
+}

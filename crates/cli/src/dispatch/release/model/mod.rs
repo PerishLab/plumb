@@ -1,5 +1,7 @@
+mod attachment;
 mod retire;
 
+pub use attachment::{Cargo, Chart, Npm, Oci};
 pub use retire::Retire;
 
 use serde::Deserialize;
@@ -31,13 +33,6 @@ pub struct Target {
     pub runner: String,
 }
 
-#[derive(Clone, Debug, Default, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "kebab-case")]
-pub struct Cargo {
-    pub registry: String,
-    pub packages: Vec<String>,
-}
-
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct Deb {
@@ -53,6 +48,9 @@ pub struct Spec {
     pub target: Vec<Target>,
     pub skill: bool,
     pub cargo: Option<Cargo>,
+    pub oci: Option<Oci>,
+    pub chart: Option<Chart>,
+    pub npm: Option<Npm>,
     pub deb: Option<Deb>,
     pub retire: Option<Retire>,
 }
@@ -71,6 +69,9 @@ struct Raw {
     targets: Vec<String>,
     skill: bool,
     cargo: Option<Cargo>,
+    oci: Option<Oci>,
+    chart: Option<Chart>,
+    npm: Option<Npm>,
     deb: Option<Deb>,
     retire: Option<Retire>,
 }
@@ -90,6 +91,9 @@ impl Spec {
             targets,
             skill,
             cargo,
+            oci,
+            chart,
+            npm,
             deb,
             retire,
         } = held.release;
@@ -104,6 +108,9 @@ impl Spec {
             binaries,
             skill,
             cargo,
+            oci,
+            chart,
+            npm,
             deb,
             retire,
         };
@@ -112,6 +119,19 @@ impl Spec {
         }
         spec.validate()?;
         Ok(spec)
+    }
+
+    fn attachments(&self) -> [Result<(), String>; 4] {
+        [
+            self.cargo.as_ref().map_or(Ok(()), Cargo::validate),
+            self.oci.as_ref().map_or(Ok(()), Oci::validate),
+            self.chart
+                .as_ref()
+                .map_or(Ok(()), |held| held.validate(&self.root)),
+            self.npm
+                .as_ref()
+                .map_or(Ok(()), |held| held.validate(&self.root)),
+        ]
     }
 
     fn validate(&self) -> Result<(), String> {
@@ -161,18 +181,8 @@ impl Spec {
         if let Some(retire) = &self.retire {
             retire.validate()?;
         }
-        if let Some(cargo) = &self.cargo {
-            token("Cargo registry", &cargo.registry, false)?;
-            if cargo.packages.is_empty() {
-                return Err("Cargo attachment must declare ordered packages".into());
-            }
-            let mut packages = BTreeSet::new();
-            for package in &cargo.packages {
-                token("Cargo package", package, false)?;
-                if !packages.insert(package) {
-                    return Err(format!("duplicate Cargo package {package}"));
-                }
-            }
+        for held in self.attachments() {
+            held?;
         }
         if let Some(deb) = &self.deb {
             if !self
@@ -252,7 +262,7 @@ fn target(product: &str, triple: &str) -> Result<Target, String> {
     })
 }
 
-fn token(subject: &str, value: &str, upper: bool) -> Result<(), String> {
+pub(super) fn token(subject: &str, value: &str, upper: bool) -> Result<(), String> {
     let mut chars = value.chars();
     let Some(first) = chars.next() else {
         return Err(format!("{subject} cannot be empty"));

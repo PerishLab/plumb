@@ -1,10 +1,10 @@
+pub mod adaptor;
 pub mod package;
 pub mod promotion;
-pub mod registry;
 pub mod topology;
 
 mod archive;
 mod debian;
-mod ledger;
+pub(super) mod ledger;
 mod skill;
-mod workspace;
+pub(super) mod workspace;
