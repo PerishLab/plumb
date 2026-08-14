@@ -21,8 +21,8 @@ cp "$FAKE_S3_ROOT/releases/$key" "$output"
 const COMMIT: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 const SOURCE: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const AUTHORITY: &str = "https://releases.plumb.perish.uk";
-const BETA: &str = "v0.18.14-beta.1";
-const STABLE: &str = "v0.18.14";
+const BETA: &str = "v0.20.0-beta.1";
+const STABLE: &str = "v0.20.0";
 struct Inspect<'a> {
     root: &'a Path,
     tools: &'a Path,
@@ -160,7 +160,7 @@ fn unknown_and_drifted_provenance_refuse() {
             "version" => seal["generator"]["version"] = json!("v0.18.13"),
             "url" => seal["url"] = json!(format!("{AUTHORITY}/v1/releases/beta/drift.json")),
             "repository" => seal["generator"]["origin"]["repository"] = json!("Other/plumb"),
-            _ => seal["generator"]["recovery"]["beta"] = json!("v0.18.14-beta.2"),
+            _ => seal["generator"]["recovery"]["beta"] = json!("v0.20.0-beta.2"),
         }
         assert!(!inspect(&held, &seal).status.success(), "{drift}");
     }
@@ -243,7 +243,7 @@ fn recovery_cli_is_exact_and_typed() {
         String::from_utf8_lossy(&output.stderr)
     );
     let text = String::from_utf8_lossy(&output.stdout);
-    for expected in ["release-recovery.yml", "v0.18.14-beta.1", caller] {
+    for expected in ["release-recovery.yml", "v0.20.0-beta.1", caller] {
         assert!(text.contains(expected), "{text}");
     }
     let output = cli(

@@ -128,9 +128,10 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   `release-exact.yml` and `release-stable.yml` as thin callers.
 - Every permanent release resolves canonical stable Plumb once and freezes that
   exact stable version across all jobs. The sole recovery exception is the
-  typed `PerishLab/plumb` v0.18.14 self-hosting contract: source-built
-  `v0.18.14` may generate only `v0.18.14-beta.1`, and that exact public beta may
-  generate only stable `v0.18.14`. The command admits no product, authority,
+  typed `PerishLab/plumb` v0.20.0 self-hosting contract: source-built
+  `v0.20.0` may generate only `v0.20.0-beta.1`, and that exact public beta may
+  generate only stable `v0.20.0`. It exists because v0.20.0 declares release
+  attachments no earlier Plumb can parse, so no published Plumb can build it. The command admits no product, authority,
   channel, version, workflow, branch, or generator selector; it records exact
   source/public provenance and leaves no alternate lane behind.
 - Exact releases live at `v1/releases/<channel>/<exact-version>/seal.json`.

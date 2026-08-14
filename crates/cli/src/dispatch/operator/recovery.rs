@@ -5,9 +5,9 @@ use plumb::forgejo::{Client, git};
 use serde_json::{Value, json};
 use std::path::Path;
 
-const BASE: &str = "b7707e226aa3b6bea2c318e25ba658a2f5db1570";
-const FIX: &str = "5fdf12fad8dd11480266237ee4711db47542776b";
-const MAIN: &str = "f2a09eb2af09a2a82b4fc612ffe595c1c08e92ed";
+const BASE: &str = "993698cbfbf826c791f26ef5da9cb194f712e3f8";
+const FIX: &str = "4781b396694ac631b5c1bd7ac5833ceaa8244448";
+const MAIN: &str = "5a3b56b46ed0e66aa0e0b74dfda16077011a0854";
 
 pub fn run(deed: Recovery, spec: &Spec) -> Result<String, String> {
     generator::contract(spec)?;
