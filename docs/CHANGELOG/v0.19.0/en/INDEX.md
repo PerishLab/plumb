@@ -28,3 +28,15 @@ prose of the retired vendored client, and Runseal carries none of those words.
 Branch and protection now both choose on the read outcome: readable is edited,
 unreadable is created, and a genuine failure surfaces from the operation that
 needs it. No text crosses the product boundary.
+
+## What `ship` does not settle yet
+
+`ship` carries `binary` and nothing else here. The adaptor set is not
+enumerated in this version, and `site` still answers as a command of its own;
+both arrive after it. Read the nine moved verbs as the whole of the change and
+not as the shape of a finished object.
+
+`release` still keeps `activate`, `inspect` and `registry`. They span both
+objects or stand apart, they are transitional rather than settled, and each
+moves when the adaptor that claims it is absorbed. Migrate what this release
+moved and wire nothing around what it did not.

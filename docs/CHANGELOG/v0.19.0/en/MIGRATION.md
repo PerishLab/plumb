@@ -44,8 +44,8 @@ plumb release recovery  -> plumb ship binary recovery
 
 There is no alias. An old call fails at argument parsing, before any network
 write, so a stale caller refuses instead of publishing wrongly. `release` keeps
-`source`, `compile`, `packport`, `authority`, `activate`, `inspect`, `promote`
-and `registry`.
+`source`, `compile`, `packport`, `authority`, `promote`, and the unsettled
+`activate`, `inspect` and `registry`.
 
 An exact release may no longer bind an arbitrary branch. It binds the tag that
 names its version, and a stable release binds its release line.

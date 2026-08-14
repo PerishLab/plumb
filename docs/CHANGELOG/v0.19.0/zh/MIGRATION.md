@@ -42,7 +42,7 @@ plumb release recovery  -> plumb ship binary recovery
 
 没有别名。旧调用在参数解析阶段失败，发生在任何网络写入之前，因此过期的调用方
 只会拒绝，不会错误发布。`release` 保留 `source`、`compile`、`packport`、
-`authority`、`activate`、`inspect`、`promote` 与 `registry`。
+`authority`、`promote`，以及尚未定下的 `activate`、`inspect` 与 `registry`。
 
 exact 发布不再能绑定任意分支：它绑定命名其版本的那个 tag，
 而 stable 发布绑定它的发布线。
