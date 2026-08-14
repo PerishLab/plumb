@@ -16,7 +16,7 @@ fn boundary() {
     write(
         &root,
         "apps/web/package.json",
-        r#"{"dependencies":{"react":"19","vite":"7"}}"#,
+        r#"{"dependencies":{"svelte":"5","vite":"7"}}"#,
     );
     write(
         &root,

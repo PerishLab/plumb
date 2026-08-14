@@ -117,25 +117,3 @@ fn blind() {
     assert_eq!(report["summary"]["out_of_true"], 0);
     assert_eq!(report["summary"]["blind"], 1);
 }
-
-#[test]
-fn currency() {
-    let fixture = crate::fixture();
-    std::fs::write(
-        fixture.path().join("deno.json"),
-        r#"{"imports":{"@perish/shield":"jsr:@perish/shield"}}"#,
-    )
-    .expect("dependency");
-    let output = run(fixture.path());
-    assert!(!output.status.success());
-    let report: Value = serde_json::from_slice(&output.stdout).expect("doctor json");
-    assert_eq!(report["ok"], false);
-    assert_eq!(report["summary"]["blind"], 1);
-    assert!(
-        report["findings"]
-            .as_array()
-            .expect("findings")
-            .iter()
-            .any(|finding| finding["code"] == "deps.first-party-stable-latest")
-    );
-}

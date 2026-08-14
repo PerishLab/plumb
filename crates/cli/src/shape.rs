@@ -89,17 +89,11 @@ impl Root<'_> {
     fn ships(&self) -> BTreeSet<String> {
         let mut found = BTreeSet::new();
         found.extend(pair::ships(self.0));
-        if self.0.join("deno.json").exists() {
-            found.insert("jsr".to_string());
-        }
         for seat in ["packages"] {
             let Ok(entries) = std::fs::read_dir(self.0.join(seat)) else {
                 continue;
             };
             for entry in entries.flatten() {
-                if entry.path().join("deno.json").exists() {
-                    found.insert("jsr".to_string());
-                }
                 if pack::minted(&entry.path().join("package.json")) {
                     found.insert("npm".to_string());
                 }

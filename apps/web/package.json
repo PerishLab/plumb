@@ -4,21 +4,17 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
-		"build": "vite build && vite build --ssr src/serve.tsx --outDir .local/server && node .local/server/serve.js",
+		"build": "vite build && vite build --ssr src/serve.ts --outDir .local/server && node .local/server/serve.js",
 		"preview": "vite preview",
 		"test": "vitest run"
 	},
 	"dependencies": {
-		"@perish/react-components": "0.1.1",
-		"react": "catalog:",
-		"react-dom": "catalog:"
+		"@perish/design": "0.2.1",
+		"svelte": "catalog:"
 	},
 	"devDependencies": {
-		"@jsr/perish__vite-plugin-design": "0.1.1",
+		"@sveltejs/vite-plugin-svelte": "catalog:",
 		"@types/node": "catalog:",
-		"@types/react": "catalog:",
-		"@types/react-dom": "catalog:",
-		"@vitejs/plugin-react": "catalog:",
 		"sass": "catalog:",
 		"typescript": "catalog:",
 		"vite": "catalog:",

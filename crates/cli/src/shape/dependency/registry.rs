@@ -28,10 +28,6 @@ pub fn read(dependencies: &mut Dependencies) {
 
 fn fetch(ecosystem: Ecosystem, name: &str) -> Result<String, String> {
     let url = match ecosystem {
-        Ecosystem::Jsr => format!(
-            "{}/{name}/meta.json",
-            RULES.stable.jsr.authority.trim_end_matches('/')
-        ),
         Ecosystem::Cargo => format!(
             "{}/{}",
             RULES
@@ -66,9 +62,6 @@ fn fetch(ecosystem: Ecosystem, name: &str) -> Result<String, String> {
             String::from_utf8_lossy(&output.stderr).trim()
         ));
     }
-    match ecosystem {
-        Ecosystem::Jsr => plumb_cli::jsr(&output.stdout),
-        Ecosystem::Cargo => plumb_cli::cargo(&output.stdout),
-    }
-    .map_err(|error| format!("cannot read {} stable {name}: {error}", ecosystem.name()))
+    plumb_cli::cargo(&output.stdout)
+        .map_err(|error| format!("cannot read {} stable {name}: {error}", ecosystem.name()))
 }

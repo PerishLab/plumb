@@ -1,7 +1,7 @@
-import { design } from "@jsr/perish__vite-plugin-design";
-import react from "@vitejs/plugin-react";
+import { design } from "@perish/design/vite";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-	plugins: [design({ login: false, serve: false }), react()],
+	plugins: [design({ login: false, serve: false }), svelte()],
 });

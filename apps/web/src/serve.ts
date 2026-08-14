@@ -1,10 +1,10 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { renderToString } from "react-dom/server";
+import { render } from "svelte/server";
 import { type Page, pages } from "./lib/meta";
-import Home from "./views/index";
+import Home from "./views/index.svelte";
 
-function render(path: string): string {
-	return path === "/" ? renderToString(<Home />) : "";
+function body(path: string): string {
+	return path === "/" ? render(Home).body : "";
 }
 
 function head(page: Page): string {
@@ -147,7 +147,7 @@ for (const page of pages) {
 		.replace("<title>open-web</title>", head(page))
 		.replace(
 			'<div id="root"></div>',
-			`<div id="root">${render(page.path)}</div>`,
+			`<div id="root">${body(page.path)}</div>`,
 		);
 	const dir = page.path === "/" ? "dist" : `dist${page.path}`;
 	mkdirSync(dir, { recursive: true });

@@ -29,7 +29,9 @@ link, and it is the only one.
   orchestration over Runseal's structured Cloudflare operations. Plumb owns no
   authenticated Cloudflare HTTP sender or raw route dialect.
 - `apps/web` — the site at plumb.perish.uk, shipped by the deploy lane on
-  dispatch through `plumb site deploy` and verified by readback.
+  dispatch through `plumb site deploy` and verified by readback. It is the
+  Svelte specimen the web shape checks, and the shape moved with it: a web app
+  carries `@perish/design`, and views and components are `.svelte` files.
 - `packages/*` — publishable specimens, when they earn their place.
 
 The layout is not invented; it is the union already demonstrated by codehull and

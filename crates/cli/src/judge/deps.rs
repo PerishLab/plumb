@@ -49,13 +49,6 @@ fn currency(dependency: &Dependency, found: &mut Found) {
     }
     for verdict in plumb_cli::judge(dependency) {
         match verdict {
-            Verdict::Pinned => found.push(wrong(
-                &rule::SELF_BUILT_DEPENDENCY_UNPINNED,
-                format!(
-                    "self-built {} is version-pinned at {} in {}",
-                    dependency.name, dependency.requirement, dependency.seat
-                ),
-            )),
             Verdict::Stale { resolution, latest } => found.push(wrong(
                 &rule::FIRST_PARTY_STABLE_LATEST,
                 format!(

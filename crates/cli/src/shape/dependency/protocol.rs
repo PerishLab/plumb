@@ -5,14 +5,12 @@ use std::collections::BTreeSet;
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Ecosystem {
     Cargo,
-    Jsr,
 }
 
 impl Ecosystem {
     pub fn name(self) -> &'static str {
         match self {
             Self::Cargo => "cargo",
-            Self::Jsr => "jsr",
         }
     }
 }
@@ -30,14 +28,8 @@ pub struct Dependency {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Verdict {
-    Pinned,
     Stale { resolution: String, latest: String },
     Unread(String),
-}
-
-#[derive(Deserialize)]
-struct Jsr {
-    latest: String,
 }
 
 #[derive(Deserialize)]
@@ -49,9 +41,6 @@ struct Cargo {
 
 pub fn judge(dependency: &Dependency) -> Vec<Verdict> {
     let mut found = Vec::new();
-    if dependency.ecosystem == Ecosystem::Jsr && dependency.pinned {
-        found.push(Verdict::Pinned);
-    }
     let Some(latest) = &dependency.latest else {
         return found;
     };
@@ -81,43 +70,6 @@ pub fn judge(dependency: &Dependency) -> Vec<Verdict> {
         });
     }
     found
-}
-
-pub fn specifier(value: &str, scope: &str) -> Option<(String, String, bool)> {
-    let prefix = format!("jsr:{scope}/");
-    let tail = value.strip_prefix(&prefix)?;
-    let package: String = tail
-        .chars()
-        .take_while(|held| held.is_ascii_alphanumeric() || *held == '-' || *held == '_')
-        .collect();
-    if package.is_empty() {
-        return None;
-    }
-    let name = format!("{scope}/{package}");
-    let tail = &tail[package.len()..];
-    if tail.is_empty() || tail.starts_with('/') {
-        return Some((name, "*".into(), false));
-    }
-    let requirement = tail
-        .strip_prefix('@')?
-        .split('/')
-        .next()
-        .unwrap_or_default();
-    if requirement.is_empty() {
-        return None;
-    }
-    Some((name, requirement.to_string(), true))
-}
-
-pub fn jsr(bytes: &[u8]) -> Result<String, String> {
-    let document: Jsr =
-        serde_json::from_slice(bytes).map_err(|error| format!("invalid metadata: {error}"))?;
-    let version = Version::parse(&document.latest)
-        .map_err(|error| format!("invalid latest version {}: {error}", document.latest))?;
-    if !version.pre.is_empty() {
-        return Err(format!("latest version {version} is a prerelease"));
-    }
-    Ok(version.to_string())
 }
 
 pub fn cargo(bytes: &[u8]) -> Result<String, String> {

@@ -16,10 +16,6 @@ blacklist = [
   "styled-jsx",
 ]
 
-[stable.jsr]
-scope = "@perish"
-authority = "https://jsr.io"
-
 [stable.cargo]
 registry = "perish"
 index = "sparse+https://git.perish.top/api/packages/PerishLab/cargo/"

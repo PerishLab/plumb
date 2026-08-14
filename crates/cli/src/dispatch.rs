@@ -17,7 +17,7 @@ pub mod site;
 pub fn read(root: &Path) -> Option<Found> {
     let workspace = Workspace(root);
     let web = workspace.package()?;
-    if !contains(&web, "react") || !contains(&web, "vite") || !workspace.executable() {
+    if !contains(&web, "svelte") || !contains(&web, "vite") || !workspace.executable() {
         return None;
     }
 

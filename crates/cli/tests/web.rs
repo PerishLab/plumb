@@ -23,26 +23,26 @@ fn fixture(name: &str) -> std::path::PathBuf {
     }
     std::fs::write(
         root.join("apps/web/package.json"),
-        r#"{"name":"@specimen/web","scripts":{"build":"vite build"},"dependencies":{"@perish/react-components":"0.1.1","react":"19","vite":"8"},"devDependencies":{"@jsr/perish__vite-plugin-design":"0.1.1"}}"#,
+        r#"{"name":"@specimen/web","scripts":{"build":"vite build"},"dependencies":{"@perish/design":"0.2.1","svelte":"5","vite":"8"},"devDependencies":{}}"#,
     )
     .expect("manifest should be written");
     std::fs::write(
         root.join("apps/web/vite.config.ts"),
-        "import { design } from '@jsr/perish__vite-plugin-design'; design();",
+        "import { design } from '@perish/design/vite'; design();",
     )
     .expect("vite config should be written");
     std::fs::write(
         root.join("apps/web/tsconfig.json"),
-        r#"{"compilerOptions":{"types":["@perish/react-components/client"]}}"#,
+        r#"{"compilerOptions":{"types":["vite/client"]}}"#,
     )
     .expect("compiler config should be written");
     std::fs::write(
-        root.join("apps/web/src/main.tsx"),
-        "import source from 'virtual:perish/views'; import { Views } from '@perish/react-components'; <Views source={source} />;",
+        root.join("apps/web/src/main.ts"),
+        "declare module \"virtual:perish/views\";\nimport source from 'virtual:perish/views'; import { Views } from '@perish/design'; mount(Views, { props: { source } });",
     )
     .expect("entry should be written");
     std::fs::write(
-        root.join("apps/web/src/views/index.tsx"),
+        root.join("apps/web/src/views/index.svelte"),
         "export default function Home() { return null; }",
     )
     .expect("view should be written");
@@ -81,7 +81,7 @@ fn roles() {
     let root = fixture("plumb-web-roles");
     std::fs::write(root.join("apps/web/src/views/helper.ts"), "")
         .expect("helper should be written");
-    std::fs::write(root.join("apps/web/src/lib/Panel.tsx"), "")
+    std::fs::write(root.join("apps/web/src/lib/Panel.svelte"), "")
         .expect("component should be written");
     std::fs::write(root.join("apps/web/src/lib/hooks/Hush.ts"), "")
         .expect("hook should be written");
@@ -94,11 +94,11 @@ fn roles() {
     let out = run(&root);
     std::fs::remove_dir_all(&root).expect("fixture should be swept");
     for line in [
-        "web views only hold route tsx files",
-        "web lib tsx must live under lib/components",
+        "web views only hold route svelte files",
+        "web lib svelte must live under lib/components",
         "web convention paths must be lowercase",
         "web hooks must be lowercase .ts files",
-        "web components only hold lowercase tsx files",
+        "web components only hold lowercase svelte files",
     ] {
         assert!(out.contains(&format!("{line} [web]")), "{out}");
     }

@@ -37,11 +37,10 @@ fn fixture(name: &str) -> PathBuf {
     "build": "vite build"
   },
   "dependencies": {
-    "@perish/react-components": "0.1.0",
-    "react": "19"
+    "@perish/design": "0.2.1",
+    "svelte": "5"
   },
   "devDependencies": {
-    "@perish/vite-plugin-design": "0.1.0",
     "vite": "7"
   }
 }"#,
@@ -254,7 +253,7 @@ export default { server: { port, proxy: { "/api": api } } };
         "vite manually consumes sidecar dispatch environment",
         "web does not load the virtual views manifest",
         "web does not render the views manifest",
-        "web compiler does not include @perish/react-components/client",
+        "web does not declare the virtual views module type",
         "guard does not build the web app",
     ] {
         assert!(out.contains(&format!("{line} [web]")), "{out}");

@@ -10,13 +10,7 @@ pub struct Rules {
 }
 
 pub struct Stable {
-    pub jsr: Jsr,
     pub cargo: Cargo,
-}
-
-pub struct Jsr {
-    pub scope: String,
-    pub authority: String,
 }
 
 pub struct Cargo {
@@ -58,9 +52,6 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
     let stable = deps
         .get("stable")
         .unwrap_or_else(|| panic!("rules/deps.toml must name stable authorities"));
-    let jsr = stable
-        .get("jsr")
-        .unwrap_or_else(|| panic!("rules/deps.toml must name stable.jsr"));
     let cargo = stable
         .get("cargo")
         .unwrap_or_else(|| panic!("rules/deps.toml must name stable.cargo"));
@@ -80,10 +71,6 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
         retired,
         blacklist,
         stable: Stable {
-            jsr: Jsr {
-                scope: required(jsr, "scope"),
-                authority: required(jsr, "authority"),
-            },
             cargo: Cargo {
                 registry: required(cargo, "registry"),
                 index: required(cargo, "index"),

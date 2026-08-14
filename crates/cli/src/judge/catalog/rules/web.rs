@@ -1,10 +1,10 @@
 use super::{Rule, rule};
 
 rule!(
-    REACT_COMPONENTS_DEPENDENCY,
-    "web.react-components-dependency",
+    DESIGN_DEPENDENCY,
+    "web.design-dependency",
     "Web uses the design system",
-    "A React/Vite app depends on the workshop React component package.",
+    "A Svelte/Vite app depends on the workshop design package.",
     "The web package dependency maps.",
     Mechanized,
     WEB,
@@ -14,7 +14,7 @@ rule!(
     DESIGN_PLUGIN_DEPENDENCY,
     "web.design-plugin-dependency",
     "Web carries the design plugin",
-    "A React/Vite app depends on the workshop Vite design plugin.",
+    "A Svelte/Vite app carries the design plugin through the design package.",
     "The web package dependency maps.",
     Mechanized,
     WEB,
@@ -61,11 +61,11 @@ rule!(
     [WEB_TAG]
 );
 rule!(
-    CLIENT_TYPES_PRESENT,
-    "web.client-types-present",
-    "Web includes design client types",
-    "The web compiler includes the design system client type surface.",
-    "apps/web/tsconfig.json.",
+    VIEWS_TYPES_DECLARED,
+    "web.views-types-declared",
+    "Web declares the views module type",
+    "The web sources declare the virtual views module so its catalog type is checked.",
+    "Ambient declarations under apps/web/src.",
     Mechanized,
     WEB,
     [CONFIGURATION, WEB_TAG]
@@ -104,15 +104,15 @@ rule!(
     VIEW_FILE_KIND,
     "web.view-file-kind",
     "Views contain route TSX files",
-    "The views tree contains only route .tsx files.",
+    "The views tree contains only route .svelte files.",
     "Files below apps/web/src/views.",
     Mechanized,
     WEB,
     [WEB_TAG]
 );
 rule!(
-    TSX_UNDER_COMPONENTS,
-    "web.tsx-under-components",
+    SVELTE_UNDER_COMPONENTS,
+    "web.svelte-under-components",
     "Library TSX lives under components",
     "Reusable web library TSX lives below lib/components.",
     "Direct files below apps/web/src/lib.",
@@ -134,7 +134,7 @@ rule!(
     COMPONENT_FILE_KIND,
     "web.component-file-kind",
     "Components are TSX files",
-    "The web component tree contains only lowercase directories and .tsx files.",
+    "The web component tree contains only lowercase directories and .svelte files.",
     "Files below apps/web/src/lib/components.",
     Mechanized,
     WEB,
@@ -154,15 +154,15 @@ rule!(
 pub fn all() -> Vec<&'static Rule> {
     vec![
         &BUILD_SCRIPT_PRESENT,
-        &CLIENT_TYPES_PRESENT,
+        &VIEWS_TYPES_DECLARED,
         &COMPONENT_FILE_KIND,
         &CONVENTION_PATH_LOWERCASE,
         &DESIGN_PLUGIN_ACTIVE,
         &DESIGN_PLUGIN_DEPENDENCY,
         &GUARD_BUILDS_WEB,
         &HOOK_FILE_KIND,
-        &REACT_COMPONENTS_DEPENDENCY,
-        &TSX_UNDER_COMPONENTS,
+        &DESIGN_DEPENDENCY,
+        &SVELTE_UNDER_COMPONENTS,
         &VIEW_FILE_KIND,
         &VIEW_PATH_SEGMENT,
         &VIEWS_MANIFEST_LOADED,

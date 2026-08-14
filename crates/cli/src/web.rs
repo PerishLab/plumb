@@ -13,7 +13,7 @@ struct Web<'a>(&'a Path);
 impl Web<'_> {
     fn read(&self) -> Option<Found> {
         let package = self.package()?;
-        if !has(&package, "react") || !has(&package, "vite") {
+        if !has(&package, "svelte") || !has(&package, "vite") {
             return None;
         }
         let mut found = Found::new();
@@ -28,24 +28,11 @@ impl Web<'_> {
     }
 
     fn plane(&self, package: &Json, found: &mut Found) {
-        if !has(package, "@perish/react-components") {
+        if !has(package, "@perish/design") {
             wrong(
                 found,
-                &rule::REACT_COMPONENTS_DEPENDENCY,
-                "web does not depend on @perish/react-components",
-            );
-        }
-        if ![
-            "@perish/vite-plugin-design",
-            "@jsr/perish__vite-plugin-design",
-        ]
-        .iter()
-        .any(|name| has(package, name))
-        {
-            wrong(
-                found,
-                &rule::DESIGN_PLUGIN_DEPENDENCY,
-                "web does not depend on @perish/vite-plugin-design",
+                &rule::DESIGN_DEPENDENCY,
+                "web does not depend on @perish/design",
             );
         }
         let config = [
@@ -79,7 +66,7 @@ impl Web<'_> {
                 "web does not load the virtual views manifest",
             );
         }
-        if !source.contains("Views") || !source.contains("@perish/react-components") {
+        if !source.contains("Views") || !source.contains("@perish/design") {
             wrong(
                 found,
                 &rule::VIEWS_MANIFEST_RENDERED,
@@ -87,13 +74,11 @@ impl Web<'_> {
             );
         }
 
-        let compiler =
-            std::fs::read_to_string(self.0.join("apps/web/tsconfig.json")).unwrap_or_default();
-        if !compiler.contains("@perish/react-components/client") {
+        if !source.contains("declare module \"virtual:perish/views\"") {
             wrong(
                 found,
-                &rule::CLIENT_TYPES_PRESENT,
-                "web compiler does not include @perish/react-components/client",
+                &rule::VIEWS_TYPES_DECLARED,
+                "web does not declare the virtual views module type",
             );
         }
         if package
@@ -145,11 +130,11 @@ impl Web<'_> {
                 self.views(&path, found);
                 continue;
             }
-            if path.extension().and_then(|value| value.to_str()) != Some("tsx") {
+            if path.extension().and_then(|value| value.to_str()) != Some("svelte") {
                 wrong(
                     found,
                     &rule::VIEW_FILE_KIND,
-                    "web views only hold route tsx files",
+                    "web views only hold route svelte files",
                 );
                 continue;
             }
@@ -171,14 +156,13 @@ impl Web<'_> {
         let Ok(entries) = std::fs::read_dir(root) else {
             return;
         };
-        if entries
-            .flatten()
-            .any(|entry| entry.path().extension().and_then(|value| value.to_str()) == Some("tsx"))
-        {
+        if entries.flatten().any(|entry| {
+            entry.path().extension().and_then(|value| value.to_str()) == Some("svelte")
+        }) {
             wrong(
                 found,
-                &rule::TSX_UNDER_COMPONENTS,
-                "web lib tsx must live under lib/components",
+                &rule::SVELTE_UNDER_COMPONENTS,
+                "web lib svelte must live under lib/components",
             );
         }
     }
@@ -199,11 +183,11 @@ impl Web<'_> {
             }
             if path.is_dir() {
                 self.components(&path, found);
-            } else if path.extension().and_then(|value| value.to_str()) != Some("tsx") {
+            } else if path.extension().and_then(|value| value.to_str()) != Some("svelte") {
                 wrong(
                     found,
                     &rule::COMPONENT_FILE_KIND,
-                    "web components only hold lowercase tsx files",
+                    "web components only hold lowercase svelte files",
                 );
             }
         }
