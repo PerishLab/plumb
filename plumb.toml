@@ -1,7 +1,7 @@
 [[document]]
 strategy = "agent"
-source = [{ path = ".", seal = "4ccd89fbfa3a4d62c5f687ee573d4290b151b453c8dd0936f0b051fdec226de4" }]
-target-seal = "43c4e01e90a50b72dcf32ce4f1ab46a736dc760b6def09c010ba9d2e8b020eb9"
+source = [{ path = ".", seal = "03317de84ee19100a4577c765b5f48bbaddd061dcd1feca289107e3ad5341bfe" }]
+target-seal = "54baa81cef12982c0fe27a69aee0a475085c29a95814a5fa08ad5d87fd18ab96"
 
 [[document]]
 strategy = "brief"

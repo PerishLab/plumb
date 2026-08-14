@@ -145,6 +145,12 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   release line is managed by `plumb stable prepare|pick|freeze|packport`,
   prepared by linear `cherry-pick -x`, frozen before publication, and remains
   independent from an unblocked `main`.
+- The ref carries the release, so neither caller takes a version. Both stay
+  dispatched by an operator, who selects the ref instead of typing an identity:
+  `release-exact.yml` on the exact tag, `release-stable.yml` on the frozen
+  release line. Both forward only promotion selection and guard evidence. A
+  release never follows from a push, so the anchor is chosen from refs that
+  already exist and no lane starts by accident.
 - The channel is read from the version, never named beside it. `plumb release
   channel` derives it and is the only place that rule lives: `X.Y.Z` is stable
   and `X.Y.Z-<channel>.N` names its own channel. An exact version therefore
