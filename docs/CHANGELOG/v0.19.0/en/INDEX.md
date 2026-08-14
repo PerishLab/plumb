@@ -29,6 +29,15 @@ Branch and protection now both choose on the read outcome: readable is edited,
 unreadable is created, and a genuine failure surfaces from the operation that
 needs it. No text crosses the product boundary.
 
+## A watched run waits for every task
+
+`plumb ship binary dispatch --watch` called a run successful while it was still
+executing, on a release that went on to fail. Forgejo computes a run status
+from the tasks that have concluded, so a run whose early tasks had finished
+read as successful mid-flight. The blocked arm already walked the task list;
+the success arm short-circuited without looking. It walks the same list now: a
+run is successful when its status says so and no task remains in flight.
+
 ## What `ship` does not settle yet
 
 `ship` carries `binary` and nothing else here. The adaptor set is not

@@ -25,6 +25,14 @@ resolve 输出。
 的措辞不含其中任何一个。分支与保护规则现在都按读取结果选择：读得到就编辑，
 读不到就创建，真正的失败由需要它的那个操作自己上抛。没有文本跨越产品边界。
 
+## 被 watch 的 run 要等每个 task 落定
+
+`plumb ship binary dispatch --watch` 曾在 run 仍在执行时就称它成功，而那次发布
+随后失败了。Forgejo 用已经结束的 task 聚合出 run 状态，因此早先的 task 跑完、
+后面的还没开始时，这个 run 在半途读起来就是成功。blocked 分支本来就会走一遍
+task 列表，success 分支却不看就短路。现在它走同一份列表：run 的状态说成功，
+且没有任何 task 还在飞行中，才算成功。
+
 ## 这一版尚未定下的 `ship`
 
 `ship` 在这里只带 `binary` 一个 adaptor。adaptor 集合在本版中尚未枚举，
