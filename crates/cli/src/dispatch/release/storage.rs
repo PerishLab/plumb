@@ -34,12 +34,23 @@ pub fn activate(path: &Path, authority: &impl Authority) -> Result<String, Strin
         .as_ref()
         .ok_or_else(|| "stable capsule has no pointer".to_string())?;
     let remote = Remote::new(authority)?;
+    remote.activate(pointer, &root)?;
+    super::verify::consensus(&capsule)?;
+    Ok(format!("activated stable {}", capsule.version))
+}
+
+pub fn shift(path: &Path, authority: &impl Authority) -> Result<String, String> {
+    let (capsule, root) = Capsule::read(path)?;
+    if capsule.channel != "stable" {
+        return Err("only stable may activate managers".into());
+    }
+    super::verify::published(&capsule)?;
+    let remote = Remote::new(authority)?;
     for manager in &capsule.roots {
         remote.shift(manager, &root)?;
     }
-    remote.activate(pointer, &root)?;
-    super::verify::activation(&capsule)?;
-    Ok(format!("activated stable {}", capsule.version))
+    super::verify::projection(&capsule)?;
+    Ok(format!("activated stable binary {}", capsule.version))
 }
 
 struct Remote<'a> {

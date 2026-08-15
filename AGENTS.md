@@ -93,13 +93,16 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   mechanisms do not live in product scripts.
 - `release` holds the truth cycle and `ship` holds every projection of it. A
   verb belongs to whichever object it acts on: `release` keeps `source`,
-  `compile`, `packport`, and `authority`, while `ship binary` takes `build`,
-  `assemble`, `matrix`, `managers`, `publish`, `smoke`, `verify`, `dispatch`,
-  and `recovery`, `ship cargo` takes `publish` and `rehearse`, `ship oci` takes
-  `build` and `publish`, `ship chart` takes `package` and `publish`, and
-  `ship npm` takes `pack` and `publish`. `activate` and `inspect` still span
-  both sides and are transitional, not settled. A projection never keeps a
-  compatibility alias for a verb that moved.
+  `compile`, `packport`, `authority`, `activate`, and `inspect`, while
+  `ship binary` takes `activate`, `assemble`, `build`, `dispatch`, `inspect`,
+  `managers`, `matrix`, `publish`, `recovery`, `smoke`, and `verify`, `ship
+  cargo` takes `publish` and `rehearse`, `ship oci` takes `build` and `publish`,
+  `ship chart` takes `package` and `publish`, and `ship npm` takes `pack` and
+  `publish`. Release activation advances only the consensus pointer and release
+  inspection proves only pointer and seal identity. Binary activation shifts
+  generated managers and binary inspection proves the projected artifacts and
+  managers. A projection never keeps a compatibility alias for a verb that
+  moved.
 - The adaptor set is a closed enumeration in Plumb, one entry per medium the
   ecosystem publishes to: `binary`, `site`, `cargo`, `npm`, `oci`, and `chart`.
   All six are absorbed, because a medium with no name here is a medium every
@@ -200,7 +203,8 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - Exact seal creation is create-only and idempotent by content. Publish and
   stable activation use separate credentials and separate Plumb commands.
 - `plumb release inspect` takes its exact or stable public URL from the release
-  environment and verifies the whole public surface.
+  environment and proves release identity. `plumb ship binary inspect` reads
+  the same surface and proves the binary projection.
 - `plumb ship binary smoke` performs the shared cross-platform generated-manager
   install, exact `--version` probe, update, and uninstall cycle from the product
   declaration.

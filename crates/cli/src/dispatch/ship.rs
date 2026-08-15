@@ -74,12 +74,14 @@ pub enum Site {
 
 #[derive(Subcommand)]
 pub enum Binary {
+    Activate,
     Assemble,
     Build,
     Dispatch {
         #[command(flatten)]
         options: super::operator::Dispatch,
     },
+    Inspect,
     Managers,
     Matrix,
     Publish,
@@ -209,6 +211,7 @@ fn binary(deed: Binary) -> Result<String, String> {
     let spec = super::release::model::Spec::read(&manifest)?;
     let release = &rig.release;
     match deed {
+        Binary::Activate => storage::shift(&capsule(release)?, &rig.activate),
         Binary::Assemble => engine::package::product(&spec).assemble(
             required("PLUMB_RELEASE_VERSION", &release.version)?,
             &artifacts(release)?,
@@ -221,6 +224,10 @@ fn binary(deed: Binary) -> Result<String, String> {
             artifacts: &artifacts(release)?,
         }),
         Binary::Dispatch { options } => super::operator::dispatch(options),
+        Binary::Inspect => verify::binary(
+            required("PLUMB_RELEASE_URL", &release.url)?,
+            release.activated,
+        ),
         Binary::Managers => manager::write(
             &manifest,
             required("PLUMB_RELEASE_CHANNEL", &release.channel)?,

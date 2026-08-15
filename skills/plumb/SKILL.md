@@ -27,6 +27,9 @@ use Doctor before changing its shape.
   closed set, and all six are absorbed: `binary`, `site`, `cargo`, `oci`,
   `chart`, and `npm`. Publishing one carries the compiled capsule, so a version
   with no published seal has projected nothing.
+- Release activation advances the stable consensus pointer, while binary
+  activation shifts generated managers. Their inspect deeds likewise prove
+  release identity and the binary projection separately.
   `release` keeps the truth cycle and never projects.
 - A **stable line** is the explicit prepare, pick, freeze, publish, and packport
   lifecycle for one permanent version. Freeze stamps its point and `retract`
