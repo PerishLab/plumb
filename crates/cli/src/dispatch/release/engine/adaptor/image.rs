@@ -1,4 +1,6 @@
 use super::super::super::model::Spec;
+
+const LINUX: &str = "x86_64-unknown-linux-gnu";
 use std::io::Write;
 use std::process::{Command, Stdio};
 
@@ -11,7 +13,7 @@ pub fn image(spec: &Spec) -> Image<'_> {
 }
 
 impl Image<'_> {
-    pub fn build(&self, version: &str) -> Result<String, String> {
+    pub fn build(&self, version: &str, artifacts: &std::path::Path) -> Result<String, String> {
         let Some(oci) = &self.spec.oci else {
             return Ok(format!("{} has no image attachment", self.spec.product));
         };
@@ -19,6 +21,7 @@ impl Image<'_> {
         if !file.is_file() {
             return Err(format!("declared image has no {}", file.display()));
         }
+        let seat = self.payload(artifacts)?;
         let reference = reference(oci, version);
         self.command([
             "build",
@@ -28,9 +31,35 @@ impl Image<'_> {
             &reference,
             "--file",
             &file.to_string_lossy(),
-            ".",
+            &seat.to_string_lossy(),
         ])?;
         Ok(format!("built {reference}"))
+    }
+
+    fn payload(&self, artifacts: &std::path::Path) -> Result<std::path::PathBuf, String> {
+        let target = self
+            .spec
+            .target
+            .iter()
+            .find(|held| held.triple == LINUX)
+            .ok_or_else(|| format!("an image attachment requires the {LINUX} target"))?;
+        let source = artifacts.join(&target.archive);
+        let file = std::fs::File::open(&source)
+            .map_err(|error| format!("cannot read {}: {error}", source.display()))?;
+        let seat = self.spec.root.join("target/image");
+        let _ = std::fs::remove_dir_all(&seat);
+        std::fs::create_dir_all(&seat)
+            .map_err(|error| format!("cannot open {}: {error}", seat.display()))?;
+        tar::Archive::new(flate2::read::GzDecoder::new(file))
+            .unpack(&seat)
+            .map_err(|error| format!("cannot open {}: {error}", source.display()))?;
+        for binary in &self.spec.binaries {
+            let held = seat.join(binary);
+            if !held.is_file() {
+                return Err(format!("{} carries no {binary}", source.display()));
+            }
+        }
+        Ok(seat)
     }
 
     pub fn publish(&self, version: &str, token: &str) -> Result<String, String> {
