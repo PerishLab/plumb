@@ -169,7 +169,7 @@ fn npm(deed: Npm) -> Result<String, String> {
         Npm::Pack => carrier.pack(version),
         Npm::Publish => {
             sealed(&capsule(release)?, version)?;
-            carrier.publish(version, &release.registry_token)
+            carrier.publish(version, registry_token(&release.registry_token)?)
         }
     }
 }
@@ -177,8 +177,17 @@ fn npm(deed: Npm) -> Result<String, String> {
 fn registry(release: &plumb::rig::Release) -> Result<Identity<'_>, String> {
     Ok(Identity {
         user: required("PLUMB_RELEASE_REGISTRY_ACCOUNT", &release.registry_account)?,
-        token: required("PLUMB_RELEASE_REGISTRY_TOKEN", &release.registry_token)?,
+        token: registry_token(&release.registry_token)?,
     })
+}
+
+fn registry_token(credential: &str) -> Result<&str, String> {
+    let credential = required("PLUMB_RELEASE_REGISTRY_TOKEN", credential)?;
+    credential
+        .strip_prefix("Bearer ")
+        .filter(|token| !token.chars().any(char::is_whitespace))
+        .filter(|token| !token.is_empty())
+        .ok_or_else(|| "PLUMB_RELEASE_REGISTRY_TOKEN must be a Cargo Bearer credential".into())
 }
 
 pub struct Identity<'a> {

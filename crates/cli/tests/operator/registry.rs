@@ -61,7 +61,7 @@ fn cargo() {
     let output = command()
         .args(["ship", "cargo", "rehearse"])
         .env("PLUMB_RELEASE_VERSION", "v0.10.2-beta.1")
-        .env("PLUMB_RELEASE_REGISTRY_TOKEN", "secret")
+        .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
         .output()
         .expect("plumb should run");
     assert!(
@@ -85,6 +85,7 @@ fn sealed() {
             .args(["ship", adaptor, "publish"])
             .env("PLUMB_RELEASE_ROOT", path)
             .env("PLUMB_RELEASE_OUTPUT", ".plumb-release")
+            .env("PLUMB_RELEASE_REGISTRY_ACCOUNT", "Example")
             .env("PLUMB_RELEASE_VERSION", version)
             .env("PLUMB_RELEASE_REGISTRY_TOKEN", "secret")
             .output()
@@ -126,6 +127,15 @@ fn sealed() {
                 && refused.contains(
                     "capsule seals v0.10.2-beta.1 while the projection carries v0.10.2-beta.2"
                 ),
+            "{adaptor}: {refused}"
+        );
+    }
+
+    for adaptor in ["chart", "npm", "oci"] {
+        let raw = ship(adaptor, "v0.10.2-beta.1");
+        let refused = String::from_utf8_lossy(&raw.stderr).to_string();
+        assert!(
+            !raw.status.success() && refused.contains("must be a Cargo Bearer credential"),
             "{adaptor}: {refused}"
         );
     }
