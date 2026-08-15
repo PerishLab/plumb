@@ -216,6 +216,10 @@ fn cycle() {
     authority(&mut publish, &record, "PUBLISH");
     run(&mut publish);
     for _ in 0..2 {
+        let mut project = fixture.command();
+        project.args(["ship", "binary", "activate"]);
+        authority(&mut project, &record, "ACTIVATE");
+        run(&mut project);
         let mut activate = fixture.command();
         activate.args(["release", "activate"]);
         authority(&mut activate, &record, "ACTIVATE");
@@ -232,9 +236,21 @@ fn cycle() {
         "PLUMB_RELEASE_URL",
         "https://releases.test/v1/releases/beta/v1.2.0-beta.7/seal.json",
     ));
+    run(fixture.command().args(["ship", "binary", "inspect"]).env(
+        "PLUMB_RELEASE_URL",
+        "https://releases.test/v1/releases/beta/v1.2.0-beta.7/seal.json",
+    ));
     run(fixture
         .command()
         .args(["release", "inspect"])
+        .env(
+            "PLUMB_RELEASE_URL",
+            "https://releases.test/v1/channels/stable.json",
+        )
+        .env("PLUMB_RELEASE_ACTIVATED", "true"));
+    run(fixture
+        .command()
+        .args(["ship", "binary", "inspect"])
         .env(
             "PLUMB_RELEASE_URL",
             "https://releases.test/v1/channels/stable.json",
