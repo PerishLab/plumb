@@ -137,7 +137,7 @@ fn oci(deed: Oci) -> Result<String, String> {
         Oci::Build => carrier.build(version, &artifacts(release)?),
         Oci::Publish => {
             sealed(&capsule(release)?, version)?;
-            carrier.publish(version, &release.registry_token)
+            carrier.publish(version, &registry(release)?)
         }
     }
 }
@@ -152,7 +152,7 @@ fn chart(deed: Chart) -> Result<String, String> {
         Chart::Package => carrier.package(version),
         Chart::Publish => {
             sealed(&capsule(release)?, version)?;
-            carrier.publish(version, &release.registry_token)
+            carrier.publish(version, &registry(release)?)
         }
     }
 }
@@ -170,6 +170,18 @@ fn npm(deed: Npm) -> Result<String, String> {
             carrier.publish(version, &release.registry_token)
         }
     }
+}
+
+fn registry(release: &plumb::rig::Release) -> Result<Identity<'_>, String> {
+    Ok(Identity {
+        user: required("PLUMB_RELEASE_REGISTRY_ACCOUNT", &release.registry_account)?,
+        token: required("PLUMB_RELEASE_REGISTRY_TOKEN", &release.registry_token)?,
+    })
+}
+
+pub struct Identity<'a> {
+    pub user: &'a str,
+    pub token: &'a str,
 }
 
 fn sealed(path: &std::path::Path, version: &str) -> Result<(), String> {

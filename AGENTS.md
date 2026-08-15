@@ -218,6 +218,13 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   work remain unblocked. The settled release branch remains permanently frozen
   as the stable version's source and audit boundary; the merge request never
   asks Forgejo to delete it.
+- A registry projection takes its identity from the environment, never from the
+  declaration: `PLUMB_RELEASE_REGISTRY_ACCOUNT` names the account and
+  `PLUMB_RELEASE_REGISTRY_TOKEN` carries its secret. An owner segment in an
+  image or chart path names an organisation, which is not an account, so no
+  login is derived from it. A module published under a prerelease version
+  carries its channel as the distribution tag, because a registry that defaults
+  a prerelease to latest would hand consumers an unreleased build.
 - Every product repository uses the same Forgejo secret names:
   `RELEASE_PUBLISH_S3_*`, `RELEASE_ACTIVATE_S3_*`, and optional
   `RELEASE_REGISTRY_TOKEN`. Authority comes from `plumb.toml`, not a repository
