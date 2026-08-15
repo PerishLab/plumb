@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   release:
-    uses: PerishLab/actions/.forgejo/workflows/release-recovery-binary.yml@03b5876d1d45462c4cbc1cc27e49fcaf31e23123
+    uses: PerishLab/actions/.forgejo/workflows/release-recovery-binary.yml@99e9201380d14cfb1f3c1e63e4511a404bffa454
     with:
       phase: ${{ inputs.phase }}
       beta_sha256: ${{ inputs.beta_sha256 }}
