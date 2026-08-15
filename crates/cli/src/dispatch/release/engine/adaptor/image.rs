@@ -62,15 +62,16 @@ impl Image<'_> {
         Ok(seat)
     }
 
-    pub fn publish(&self, version: &str, token: &str) -> Result<String, String> {
+    pub fn publish(
+        &self,
+        version: &str,
+        identity: &crate::dispatch::ship::Identity<'_>,
+    ) -> Result<String, String> {
         let Some(oci) = &self.spec.oci else {
             return Ok(format!("{} has no image attachment", self.spec.product));
         };
-        if token.trim().is_empty() {
-            return Err("PLUMB_RELEASE_REGISTRY_TOKEN is required".into());
-        }
         let reference = reference(oci, version);
-        self.login(oci, token)?;
+        self.login(&oci.registry, identity)?;
         self.command(["push", &reference])?;
         let digest = self.digest(&reference)?;
         let published = format!("{}/{}@{digest}", oci.registry, oci.image);
@@ -78,19 +79,17 @@ impl Image<'_> {
         Ok(format!("published {reference} as {digest}"))
     }
 
-    fn login(&self, oci: &super::super::super::model::Oci, token: &str) -> Result<(), String> {
-        let owner = oci
-            .image
-            .split('/')
-            .next()
-            .filter(|held| !held.is_empty())
-            .ok_or_else(|| "image attachment must name an owner".to_string())?;
+    fn login(
+        &self,
+        registry: &str,
+        identity: &crate::dispatch::ship::Identity<'_>,
+    ) -> Result<(), String> {
         let mut child = Command::new("docker")
             .args([
                 "login",
-                &oci.registry,
+                registry,
                 "--username",
-                owner,
+                identity.user,
                 "--password-stdin",
             ])
             .current_dir(&self.spec.root)
@@ -101,7 +100,7 @@ impl Image<'_> {
             .stdin
             .take()
             .ok_or_else(|| "docker login refused its stdin".to_string())?
-            .write_all(token.as_bytes())
+            .write_all(identity.token.as_bytes())
             .map_err(|error| format!("cannot send registry token: {error}"))?;
         let status = child
             .wait()

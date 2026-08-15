@@ -154,6 +154,10 @@ description = "The Cargo registry token is one release authority field."
 name = "registry_token"
 
 [[vocabulary.term]]
+description = "The registry account is the login the token belongs to, and a path owner is not one."
+name = "registry_account"
+
+[[vocabulary.term]]
 description = "The operator harness names its workflow poll interval in milliseconds."
 name = "run_poll_ms"
 

@@ -43,7 +43,12 @@ impl Module<'_> {
         }
         self.pack(version)?;
         let identity = release(version)?;
-        self.authenticated(&["publish", "--registry", &npm.registry], npm, token)?;
+        let mut publish = vec!["publish", "--registry", npm.registry.as_str()];
+        let channel = channel(&identity);
+        if let Some(channel) = &channel {
+            publish.extend(["--tag", channel]);
+        }
+        self.authenticated(&publish, npm, token)?;
         self.authenticated(
             &[
                 "view",
@@ -121,6 +126,15 @@ impl Module<'_> {
             .join("target/module")
             .join(format!("{held}-{version}.tgz"))
     }
+}
+
+fn channel(version: &Version) -> Option<String> {
+    version
+        .pre
+        .split('.')
+        .next()
+        .filter(|held| !held.is_empty())
+        .map(str::to_string)
 }
 
 fn bare(package: &str) -> &str {

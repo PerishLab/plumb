@@ -35,21 +35,22 @@ impl Chart<'_> {
         Ok(format!("packaged chart attachment for {version}"))
     }
 
-    pub fn publish(&self, version: &str, token: &str) -> Result<String, String> {
+    pub fn publish(
+        &self,
+        version: &str,
+        identity: &crate::dispatch::ship::Identity<'_>,
+    ) -> Result<String, String> {
         let Some(chart) = &self.spec.chart else {
             return Ok(format!("{} has no chart attachment", self.spec.product));
         };
-        if token.trim().is_empty() {
-            return Err("PLUMB_RELEASE_REGISTRY_TOKEN is required".into());
-        }
         self.package(version)?;
-        let identity = release(version)?;
+        let semver = release(version)?;
         let held = name(chart)?;
         let owner = owner(chart)?;
-        self.login(&chart.registry, &owner, token)?;
+        self.login(&chart.registry, identity)?;
         self.helm([
             "push",
-            &self.archive(&held, &identity).to_string_lossy(),
+            &self.archive(&held, &semver).to_string_lossy(),
             &format!("oci://{}/{owner}", chart.registry),
         ])?;
         self.helm([
@@ -57,7 +58,7 @@ impl Chart<'_> {
             "chart",
             &format!("oci://{}/{owner}/{held}", chart.registry),
             "--version",
-            &identity.to_string(),
+            &semver.to_string(),
         ])?;
         Ok(format!("published chart attachment for {version}"))
     }
@@ -83,14 +84,18 @@ impl Chart<'_> {
             .map_err(|error| format!("cannot write {}: {error}", path.display()))
     }
 
-    fn login(&self, registry: &str, owner: &str, token: &str) -> Result<(), String> {
+    fn login(
+        &self,
+        registry: &str,
+        identity: &crate::dispatch::ship::Identity<'_>,
+    ) -> Result<(), String> {
         let mut child = Command::new("helm")
             .args([
                 "registry",
                 "login",
                 registry,
                 "--username",
-                owner,
+                identity.user,
                 "--password-stdin",
             ])
             .current_dir(&self.spec.root)
@@ -101,7 +106,7 @@ impl Chart<'_> {
             .stdin
             .take()
             .ok_or_else(|| "helm login refused its stdin".to_string())?
-            .write_all(token.as_bytes())
+            .write_all(identity.token.as_bytes())
             .map_err(|error| format!("cannot send registry token: {error}"))?;
         let status = child
             .wait()
