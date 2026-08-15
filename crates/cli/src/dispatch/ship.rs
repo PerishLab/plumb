@@ -134,7 +134,7 @@ fn oci(deed: Oci) -> Result<String, String> {
     let carrier = engine::adaptor::image::image(&spec);
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
     match deed {
-        Oci::Build => carrier.build(version),
+        Oci::Build => carrier.build(version, &artifacts(release)?),
         Oci::Publish => {
             sealed(&capsule(release)?, version)?;
             carrier.publish(version, &release.registry_token)
