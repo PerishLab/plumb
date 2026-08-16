@@ -145,9 +145,15 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
             "200 OK",
             json!({"commit":{"id":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}),
         ),
-        Court::Packport(_) if request.contains("GET ") && request.contains("/pulls?") => {
-            ("200 OK", json!([]))
-        }
+        Court::Packport(_) if request.contains("GET ") && request.contains("/pulls?") => (
+            "200 OK",
+            json!([{
+                "number": 9,
+                "state": "closed",
+                "head": {"ref": "release/v1.2.0"},
+                "base": {"ref": "main"}
+            }]),
+        ),
         Court::Packport(_) if request.contains("POST ") && request.ends_with("/pulls HTTP/1.1") => {
             ("201 Created", json!({"number": 12}))
         }

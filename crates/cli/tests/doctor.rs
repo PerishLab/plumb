@@ -8,6 +8,8 @@ mod document;
 mod json;
 #[path = "doctor/migration.rs"]
 mod migration;
+#[path = "doctor/release.rs"]
+mod release;
 #[path = "doctor/rule.rs"]
 mod rule;
 #[path = "doctor/ships.rs"]

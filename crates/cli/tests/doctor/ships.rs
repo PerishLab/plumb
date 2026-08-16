@@ -7,7 +7,7 @@ fn cargo() {
 
     std::fs::write(
         dir.join("plumb.toml"),
-        "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\n",
+        "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
     )
     .expect("manifest should be written");
     let binary = crate::run(&["doctor", path]);

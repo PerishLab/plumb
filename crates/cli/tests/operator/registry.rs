@@ -3,6 +3,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 
 const SEALED: [&str; 4] = ["cargo", "chart", "npm", "oci"];
+const PRODUCT: &str = "[release]\nproduct = \"family\"\nauthority = \"https://example.invalid\"\nbinaries = [\"family\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n\n[release.cargo]\nregistry = \"perish\"\npackages = [\"family-macro\", \"family-core\"]\n";
 const ATTACHMENT: &str =
     "[release.cargo]\nregistry = \"perish\"\npackages = [\"family-macro\", \"family-core\"]\n";
 const WORKSPACE: &str = "[workspace]\nmembers = [\"crates/core\", \"crates/macro\", \"crates/helper\"]\nresolver = \"3\"\n\n[workspace.package]\nversion = \"0.10.2\"\nedition = \"2024\"\nlicense = \"MIT\"\nrepository = \"https://example.invalid/family\"\n\n[workspace.dependencies]\ncore-alias = { package = \"family-core\", path = \"crates/core\", version = \"=0.10.2\" }\nhelper = { path = \"crates/helper\", version = \"=9.9.9\" }\nregistry-core = { package = \"family-core\", version = \"=0.10.2\", registry = \"perish\" }\n\n[workspace.dependencies.family-macro]\npath = \"crates/macro\"\nversion = \"=0.10.2\"\n";
@@ -79,13 +80,12 @@ fn cargo() {
 fn sealed() {
     let root = tempfile::tempdir().expect("capsule fixture");
     let path = root.path();
-    std::fs::write(path.join("plumb.toml"), ATTACHMENT).expect("attachment");
+    std::fs::write(path.join("plumb.toml"), PRODUCT).expect("attachment");
     let ship = |adaptor: &str, version: &str| {
         Command::new(env!("CARGO_BIN_EXE_plumb"))
             .args(["ship", adaptor, "publish"])
             .env("PLUMB_RELEASE_ROOT", path)
             .env("PLUMB_RELEASE_OUTPUT", ".plumb-release")
-            .env("PLUMB_RELEASE_REGISTRY_ACCOUNT", "Example")
             .env("PLUMB_RELEASE_VERSION", version)
             .env("PLUMB_RELEASE_REGISTRY_TOKEN", "secret")
             .output()
@@ -131,12 +131,47 @@ fn sealed() {
         );
     }
 
-    for adaptor in ["chart", "npm", "oci"] {
-        let raw = ship(adaptor, "v0.10.2-beta.1");
-        let refused = String::from_utf8_lossy(&raw.stderr).to_string();
+    for (adaptor, medium) in [("chart", "chart"), ("npm", "module"), ("oci", "image")] {
+        let absent = ship(adaptor, "v0.10.2-beta.1");
+        let said = String::from_utf8_lossy(&absent.stdout).to_string();
         assert!(
-            !raw.status.success() && refused.contains("must be a Cargo Bearer credential"),
-            "{adaptor}: {refused}"
+            absent.status.success() && said.contains(&format!("has no {medium} attachment")),
+            "{adaptor}: {said}"
         );
     }
+
+    std::fs::create_dir_all(path.join("packages/family")).expect("module seat");
+    std::fs::write(
+        path.join("plumb.toml"),
+        format!(
+            "{PRODUCT}\n[release.npm]\nregistry = \"https://example.invalid/npm/\"\npackage = \"@family/family\"\n"
+        ),
+    )
+    .expect("attachment");
+    let malformed = ship("npm", "v0.10.2-beta.1");
+    let refused = String::from_utf8_lossy(&malformed.stderr).to_string();
+    assert!(
+        !malformed.status.success() && refused.contains("must be a Cargo Bearer credential"),
+        "{refused}"
+    );
+}
+
+#[test]
+fn unsealed() {
+    let root = tempfile::tempdir().expect("attachment fixture");
+    let path = root.path();
+    std::fs::write(path.join("plumb.toml"), ATTACHMENT).expect("attachment");
+    let out = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["ship", "cargo", "publish"])
+        .env("PLUMB_RELEASE_ROOT", path)
+        .env_remove("PLUMB_RELEASE_OUTPUT")
+        .env_remove("PLUMB_RELEASE_CAPSULE")
+        .env("PLUMB_RELEASE_VERSION", "v0.10.2-beta.1")
+        .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
+        .output()
+        .expect("plumb should run");
+    let reached = String::from_utf8_lossy(&out.stderr).to_string();
+    assert!(!reached.contains("PLUMB_RELEASE_OUTPUT"), "{reached}");
+    assert!(!reached.contains("capsule"), "{reached}");
+    assert!(reached.contains("cargo metadata failed"), "{reached}");
 }

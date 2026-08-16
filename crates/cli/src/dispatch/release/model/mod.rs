@@ -134,9 +134,12 @@ impl Spec {
         ]
     }
 
+    pub fn binary(&self) -> bool {
+        self.product.len() + self.authority.len() + self.binaries.len() + self.target.len() > 0
+    }
+
     fn validate(&self) -> Result<(), String> {
-        let fields = self.product.len() + self.authority.len();
-        let binary = fields + self.binaries.len() + self.target.len() > 0;
+        let binary = self.binary();
         let invalid = self.skill || self.deb.is_some() || self.cargo.is_none();
         if !binary && invalid {
             return Err("Cargo-only release must declare only a Cargo attachment".into());

@@ -91,16 +91,6 @@ rule!(
     [OWNERSHIP, STATE]
 );
 rule!(
-    RELEASE_SPEC_DECLARED,
-    "release.spec-declared",
-    "Products declare release inputs once",
-    "One strict product spec owns authority, version probe, binaries, platform archives, and extra assets.",
-    "The release spec compared with product archives and generated records.",
-    Prose,
-    RELEASE,
-    [OWNERSHIP, RELEASE_TAG]
-);
-rule!(
     GUARD_FRESH,
     "release.guard-fresh",
     "Release guard runs fresh",
@@ -286,7 +276,7 @@ pub fn all() -> Vec<&'static Rule> {
         &CAPSULE_SEALED, &CONFIG_VOCABULARY, &COORDINATOR_SINGLE, &DRY_RUN_ASSERTED,
         &EXACT_CREATE_ONLY, &GENERATED_EPHEMERAL, &GENERATOR_STABLE, &GUARD_FRESH,
         &HOME_CASCADE, &MANIFEST_STAMPED, &OWNERSHIP_TWO_SIDED, &PUBLIC_READBACK,
-        &RECORDS_NOT_CONFIG, &RELEASE_SPEC_DECLARED,
+        &RECORDS_NOT_CONFIG,
         &RECORDS_SCHEMA_VERSIONED, &RECORDS_UNDER_STATE, &RECORDS_WRITTEN_WHOLE,
         &SITE_ARTIFACT_IDENTITY, &SITE_BINDING_THREE_VALUED, &SITE_DISPATCH_ONLY,
         &SITE_PURPOSE_KEY, &SITE_READBACK, &SITE_ROUTES_ARTIFACT,

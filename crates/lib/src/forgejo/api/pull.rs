@@ -14,7 +14,8 @@ impl Client {
             .into_iter()
             .flatten()
             .find(|held| {
-                held.pointer("/head/ref").and_then(Value::as_str) == Some(head)
+                held.get("state").and_then(Value::as_str) == Some("open")
+                    && held.pointer("/head/ref").and_then(Value::as_str) == Some(head)
                     && held.pointer("/base/ref").and_then(Value::as_str) == Some(base)
             })
             .and_then(number))

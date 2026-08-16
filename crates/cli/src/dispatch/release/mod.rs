@@ -3,7 +3,7 @@ mod capsule;
 pub(super) mod engine;
 pub(super) mod generator;
 pub(super) mod manager;
-pub(super) mod model;
+pub(crate) mod model;
 mod proof;
 pub(super) mod record;
 pub(super) mod smoke;

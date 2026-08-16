@@ -35,31 +35,36 @@ impl Chart<'_> {
         Ok(format!("packaged chart attachment for {version}"))
     }
 
-    pub fn publish(
-        &self,
-        version: &str,
-        identity: &crate::dispatch::ship::Identity<'_>,
-    ) -> Result<String, String> {
+    pub fn publish(&self, version: &str, credential: &str) -> Result<String, String> {
         let Some(chart) = &self.spec.chart else {
             return Ok(format!("{} has no chart attachment", self.spec.product));
+        };
+        let identity = crate::dispatch::ship::Identity {
+            user: &chart.account,
+            token: crate::dispatch::ship::registry_token(credential)?,
         };
         self.package(version)?;
         let semver = release(version)?;
         let held = name(chart)?;
         let owner = owner(chart)?;
-        self.login(&chart.registry, identity)?;
+        self.login(&chart.registry, &identity)?;
+        let archive = self.archive(&held, &semver);
+        let seat = format!("oci://{}/{owner}/{held}", chart.registry);
+        if let Some(carried) = self.carried(&seat, &semver)? {
+            let held = super::super::super::record::digest(&archive)?.0;
+            if carried != held {
+                return Err(format!(
+                    "published chart drift: {seat} holds {carried} while this projection carries {held}"
+                ));
+            }
+            return Ok(format!("{seat} already carries {version}"));
+        }
         self.helm([
             "push",
-            &self.archive(&held, &semver).to_string_lossy(),
+            &archive.to_string_lossy(),
             &format!("oci://{}/{owner}", chart.registry),
         ])?;
-        self.helm([
-            "show",
-            "chart",
-            &format!("oci://{}/{owner}/{held}", chart.registry),
-            "--version",
-            &semver.to_string(),
-        ])?;
+        self.helm(["show", "chart", &seat, "--version", &semver.to_string()])?;
         Ok(format!("published chart attachment for {version}"))
     }
 
@@ -82,6 +87,37 @@ impl Chart<'_> {
         lines.push(String::new());
         std::fs::write(&path, lines.join("\n"))
             .map_err(|error| format!("cannot write {}: {error}", path.display()))
+    }
+
+    fn carried(&self, seat: &str, version: &Version) -> Result<Option<String>, String> {
+        let out = tempfile::tempdir()
+            .map_err(|error| format!("cannot open a chart readback seat: {error}"))?;
+        let pulled = Command::new("helm")
+            .args([
+                "pull",
+                seat,
+                "--version",
+                &version.to_string(),
+                "--destination",
+                &out.path().to_string_lossy(),
+            ])
+            .current_dir(&self.spec.root)
+            .output()
+            .map_err(|error| format!("cannot run helm: {error}"))?;
+        if !pulled.status.success() {
+            return Ok(None);
+        }
+        let mut held = None;
+        for entry in std::fs::read_dir(out.path())
+            .map_err(|error| format!("cannot read the chart readback seat: {error}"))?
+            .flatten()
+        {
+            if entry.path().extension().is_some_and(|held| held == "tgz") {
+                held = Some(entry.path());
+            }
+        }
+        let path = held.ok_or_else(|| format!("{seat} answered with no chart archive"))?;
+        Ok(Some(super::super::super::record::digest(&path)?.0))
     }
 
     fn login(

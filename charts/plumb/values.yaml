@@ -1,0 +1,14 @@
+# The carrier's workload is deliberately small and deliberately real. It exists
+# so the chart adaptor packages, publishes and reads back something a cluster
+# would actually admit, and it takes a workload of its own when one earns the
+# seat.
+replicaCount: 1
+
+image:
+  repository: nginx
+  tag: "1.29-alpine"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80

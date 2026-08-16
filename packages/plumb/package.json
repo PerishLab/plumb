@@ -1,14 +1,25 @@
 {
-	"description": "plumb carrier \u2014 the npm adaptor holds no export yet",
-	"files": [
-		"index.js"
-	],
-	"license": "MIT",
-	"main": "index.js",
 	"name": "@perish/plumb",
-	"type": "module",
+	"description": "plumb carrier — the npm adaptor holds no export yet",
 	"version": "0.0.0",
+	"type": "module",
+	"license": "MIT",
+	"main": "dist/index.js",
+	"exports": {
+		".": "./dist/index.js"
+	},
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "vite build",
+		"test": "vitest run",
+		"typecheck": "tsc --noEmit",
+		"prepack": "pnpm build"
+	},
 	"devDependencies": {
-		"typescript": "catalog:"
+		"typescript": "catalog:",
+		"vite": "catalog:",
+		"vitest": "catalog:"
 	}
 }

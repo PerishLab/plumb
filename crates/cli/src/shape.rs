@@ -23,6 +23,7 @@ pub struct Shape {
     pub laws: bool,
     pub unread: Option<String>,
     pub lanes: BTreeSet<String>,
+    pub release: pair::Release,
     pub ships: BTreeSet<String>,
     pub sites: BTreeSet<String>,
     pub ignore: String,
@@ -81,22 +82,6 @@ impl Root<'_> {
             let skip = name.starts_with('.') || name == "target" || name == "node_modules";
             if !skip {
                 found.insert(name.to_string());
-            }
-        }
-        found
-    }
-
-    fn ships(&self) -> BTreeSet<String> {
-        let mut found = BTreeSet::new();
-        found.extend(pair::ships(self.0));
-        for seat in ["packages"] {
-            let Ok(entries) = std::fs::read_dir(self.0.join(seat)) else {
-                continue;
-            };
-            for entry in entries.flatten() {
-                if pack::minted(&entry.path().join("package.json")) {
-                    found.insert("npm".to_string());
-                }
             }
         }
         found
@@ -220,6 +205,8 @@ pub fn capture(
         }
     }
     let documents = document::read(root, snapshot.as_ref());
+    let release = pair::release(root);
+    let ships = release.attachments.clone();
     Shape {
         wrappers: seat.names(".runseal/wrappers", ".ts"),
         dirs: snapshot.as_ref().map(Root::dirs).unwrap_or_default(),
@@ -230,7 +217,8 @@ pub fn capture(
         laws: laws.exists(),
         unread,
         lanes: seat.names(".forgejo/workflows", ".yml"),
-        ships: seat.ships(),
+        release,
+        ships,
         sites: pair::sites(root),
         ignore: std::fs::read_to_string(root.join(".gitignore")).unwrap_or_default(),
         rust: root.join("Cargo.toml").exists(),

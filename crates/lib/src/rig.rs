@@ -134,7 +134,6 @@ pub struct Release {
     pub url: String,
     pub activated: bool,
     pub registry_token: String,
-    pub registry_account: String,
 }
 
 #[derive(Debug, Default, PartialEq, Cascade)]

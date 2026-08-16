@@ -25,8 +25,10 @@ use Doctor before changing its shape.
 - A **release** is an immutable product identity and declared artifact set.
 - A **projection** renders one release onto one medium. The adaptors are a
   closed set, and all six are absorbed: `binary`, `site`, `cargo`, `oci`,
-  `chart`, and `npm`. Publishing one carries the compiled capsule, so a version
-  with no published seal has projected nothing.
+  `chart`, and `npm`. Publishing one carries the compiled capsule wherever the
+  release carries a seal, so a sealed version with no published seal has
+  projected nothing. A release declaring only attachments compiles no capsule
+  and is bound instead by the registries that receive it.
 - Release activation advances the stable consensus pointer, while binary
   activation shifts generated managers. Their inspect deeds likewise prove
   release identity and the binary projection separately.

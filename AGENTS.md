@@ -118,10 +118,21 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   nothing beyond the working tree. One release therefore has one irreversible
   point, and it is publication; a version with no published seal has projected
   nothing anywhere.
-- `Containerfile`, `charts/plumb`, and `packages/plumb` are carriers, not
-  workloads. They exist so the image, chart, and module adaptors project a real
-  medium rather than a described one, they hold no responsibility yet, and no
-  lane consumes them. Each takes content when content earns its place.
+- That rule binds a release that carries a seal, and whether one does is a
+  declaration rather than an environment. A release naming a product and an
+  authority compiles a capsule and publishes it; a release declaring only
+  attachments compiles none, because nothing produces one and no authority
+  holds one, so its projections answer to the registries that receive them.
+  Reading the gate from a release output path instead refused a shape Plumb
+  itself defines, for a reason that had nothing to do with the deed asked for.
+- `Containerfile`, `charts/plumb`, and `packages/plumb` are carriers. They exist
+  so the image, chart, and module adaptors project a real medium rather than a
+  described one, and each now fixes the shape a published artifact of its kind
+  takes here: the module carries `build`, `test`, `typecheck` and `prepack` with
+  every tool pinned through the workspace catalog, and the chart carries a
+  minimal workload a cluster would admit. The content is deliberately small and
+  deliberately real; each takes a responsibility of its own when one earns the
+  seat.
 - Every Plumb-owned artifact is byte-reproducible from the declared payload.
   Archive members are ordered and carry canonical timestamps, owners, and
   modes; MSVC binaries use the reproducible linker mode. Rebuilding one exact
@@ -222,9 +233,12 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   work remain unblocked. The settled release branch remains permanently frozen
   as the stable version's source and audit boundary; the merge request never
   asks Forgejo to delete it.
-- A registry projection takes its identity from the environment, never from the
-  declaration: `PLUMB_RELEASE_REGISTRY_ACCOUNT` names the account and
-  `PLUMB_RELEASE_REGISTRY_TOKEN` carries its secret. An owner segment in an
+- A registry projection takes its identity from the declaration and its secret
+  from the environment: `account` on the image and chart attachments names the
+  forge identity, and `PLUMB_RELEASE_REGISTRY_TOKEN` carries the credential. An
+  account is a public name, so a lane that supplied it would hold a decision the
+  product owns; a credential is not, so it never enters the manifest. An owner
+  segment in an
   image or chart path names an organisation, which is not an account, so no
   login is derived from it. A module published under a prerelease version
   carries its channel as the distribution tag, because a registry that defaults

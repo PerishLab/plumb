@@ -1,6 +1,7 @@
 use super::super::super::model::Spec;
 
 const LINUX: &str = "x86_64-unknown-linux-gnu";
+const PAYLOAD: &str = "uk.perish.plumb.payload";
 use std::io::Write;
 use std::process::{Command, Stdio};
 
@@ -21,22 +22,24 @@ impl Image<'_> {
         if !file.is_file() {
             return Err(format!("declared image has no {}", file.display()));
         }
-        let seat = self.payload(artifacts)?;
+        let (seat, payload) = self.payload(artifacts)?;
         let reference = reference(oci, version);
         self.command([
             "build",
             "--network",
             "host",
+            "--label",
+            &format!("{PAYLOAD}={payload}"),
             "--tag",
             &reference,
             "--file",
             &file.to_string_lossy(),
             &seat.to_string_lossy(),
         ])?;
-        Ok(format!("built {reference}"))
+        Ok(format!("built {reference} carrying {payload}"))
     }
 
-    fn payload(&self, artifacts: &std::path::Path) -> Result<std::path::PathBuf, String> {
+    fn payload(&self, artifacts: &std::path::Path) -> Result<(std::path::PathBuf, String), String> {
         let target = self
             .spec
             .target
@@ -59,19 +62,30 @@ impl Image<'_> {
                 return Err(format!("{} carries no {binary}", source.display()));
             }
         }
-        Ok(seat)
+        let payload = super::super::super::record::digest(&source)?.0;
+        Ok((seat, payload))
     }
 
-    pub fn publish(
-        &self,
-        version: &str,
-        identity: &crate::dispatch::ship::Identity<'_>,
-    ) -> Result<String, String> {
+    pub fn publish(&self, version: &str, credential: &str) -> Result<String, String> {
         let Some(oci) = &self.spec.oci else {
             return Ok(format!("{} has no image attachment", self.spec.product));
         };
+        let identity = crate::dispatch::ship::Identity {
+            user: &oci.account,
+            token: crate::dispatch::ship::registry_token(credential)?,
+        };
         let reference = reference(oci, version);
-        self.login(&oci.registry, identity)?;
+        self.login(&oci.registry, &identity)?;
+        let built = self.carried(&reference)?;
+        if self.fetched(&reference)? {
+            let held = self.carried(&reference)?;
+            if held != built {
+                return Err(format!(
+                    "published image drift: {reference} carries {held} while this projection carries {built}"
+                ));
+            }
+            return Ok(format!("{reference} already carries {held}"));
+        }
         self.command(["push", &reference])?;
         let digest = self.digest(&reference)?;
         let published = format!("{}/{}@{digest}", oci.registry, oci.image);
@@ -110,6 +124,37 @@ impl Image<'_> {
         } else {
             Err("image attachment login failed".into())
         }
+    }
+
+    fn fetched(&self, reference: &str) -> Result<bool, String> {
+        let output = Command::new("docker")
+            .args(["pull", reference])
+            .current_dir(&self.spec.root)
+            .output()
+            .map_err(|error| format!("cannot run docker: {error}"))?;
+        Ok(output.status.success())
+    }
+
+    fn carried(&self, reference: &str) -> Result<String, String> {
+        let output = Command::new("docker")
+            .args([
+                "image",
+                "inspect",
+                "--format",
+                &format!("{{{{index .Config.Labels \"{PAYLOAD}\"}}}}"),
+                reference,
+            ])
+            .current_dir(&self.spec.root)
+            .output()
+            .map_err(|error| format!("cannot run docker: {error}"))?;
+        if !output.status.success() {
+            return Err(format!("no {reference} to read a payload from"));
+        }
+        let held = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if held.is_empty() || held == "<no value>" {
+            return Err(format!("{reference} declares no {PAYLOAD}"));
+        }
+        Ok(held)
     }
 
     fn digest(&self, reference: &str) -> Result<String, String> {

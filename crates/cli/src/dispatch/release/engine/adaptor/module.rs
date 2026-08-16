@@ -23,7 +23,7 @@ impl Module<'_> {
             .map_err(|error| format!("cannot open {}: {error}", out.display()))?;
         let seat = std::fs::canonicalize(&out)
             .map_err(|error| format!("cannot resolve {}: {error}", out.display()))?;
-        self.npm(
+        self.pnpm(
             &["pack", "--pack-destination", &seat.to_string_lossy()],
             npm,
         )?;
@@ -34,21 +34,36 @@ impl Module<'_> {
         Ok(format!("packed module attachment for {version}"))
     }
 
-    pub fn publish(&self, version: &str, token: &str) -> Result<String, String> {
+    pub fn publish(&self, version: &str, credential: &str) -> Result<String, String> {
         let Some(npm) = &self.spec.npm else {
             return Ok(format!("{} has no module attachment", self.spec.product));
         };
-        if token.trim().is_empty() {
-            return Err("PLUMB_RELEASE_REGISTRY_TOKEN is required".into());
-        }
+        let token = crate::dispatch::ship::registry_token(credential)?;
         self.pack(version)?;
         let identity = release(version)?;
-        let mut publish = vec!["publish", "--registry", npm.registry.as_str()];
-        let channel = channel(&identity);
-        if let Some(channel) = &channel {
-            publish.extend(["--tag", channel]);
+        let archive = self.archive(npm, &identity);
+        let name = archive
+            .file_name()
+            .ok_or_else(|| format!("packed module has no name: {}", archive.display()))?
+            .to_string_lossy()
+            .to_string();
+        let seat = tempfile::tempdir()
+            .map_err(|error| format!("cannot open a module projection seat: {error}"))?;
+        std::fs::copy(&archive, seat.path().join(&name))
+            .map_err(|error| format!("cannot stage {}: {error}", archive.display()))?;
+        if !self.carried(npm, &identity, token, seat.path())? {
+            let mut publish = vec![
+                "publish",
+                name.as_str(),
+                "--registry",
+                npm.registry.as_str(),
+            ];
+            let channel = channel(&identity);
+            if let Some(channel) = &channel {
+                publish.extend(["--tag", channel]);
+            }
+            self.authenticated(&publish, npm, token, seat.path())?;
         }
-        self.authenticated(&publish, npm, token)?;
         self.authenticated(
             &[
                 "view",
@@ -59,6 +74,7 @@ impl Module<'_> {
             ],
             npm,
             token,
+            seat.path(),
         )?;
         Ok(format!("published module attachment for {version}"))
     }
@@ -81,8 +97,36 @@ impl Module<'_> {
             .map_err(|error| format!("cannot write {}: {error}", path.display()))
     }
 
-    fn npm(&self, args: &[&str], npm: &super::super::super::model::Npm) -> Result<(), String> {
-        self.run(Command::new("npm").args(args).current_dir(self.seat(npm)))
+    fn pnpm(&self, args: &[&str], npm: &super::super::super::model::Npm) -> Result<(), String> {
+        self.run(Command::new("pnpm").args(args).current_dir(self.seat(npm)))
+    }
+
+    fn carried(
+        &self,
+        npm: &super::super::super::model::Npm,
+        identity: &Version,
+        token: &str,
+        cwd: &std::path::Path,
+    ) -> Result<bool, String> {
+        let seat = npm
+            .registry
+            .split_once("://")
+            .map(|(_, rest)| rest)
+            .unwrap_or(&npm.registry);
+        let output = Command::new("pnpm")
+            .args([
+                "view",
+                &format!("{}@{identity}", npm.package),
+                "version",
+                "--registry",
+                &npm.registry,
+            ])
+            .current_dir(cwd)
+            .env(format!("npm_config_//{seat}:_authToken"), token)
+            .output()
+            .map_err(|error| format!("cannot run pnpm: {error}"))?;
+        Ok(output.status.success()
+            && String::from_utf8_lossy(&output.stdout).trim() == identity.to_string())
     }
 
     fn authenticated(
@@ -90,16 +134,17 @@ impl Module<'_> {
         args: &[&str],
         npm: &super::super::super::model::Npm,
         token: &str,
+        cwd: &std::path::Path,
     ) -> Result<(), String> {
         let seat = npm
             .registry
             .split_once("://")
             .map(|(_, rest)| rest)
             .unwrap_or(&npm.registry);
-        let mut command = Command::new("npm");
+        let mut command = Command::new("pnpm");
         command
             .args(args)
-            .current_dir(self.seat(npm))
+            .current_dir(cwd)
             .env(format!("npm_config_//{seat}:_authToken"), token);
         self.run(&mut command)
     }
@@ -107,7 +152,7 @@ impl Module<'_> {
     fn run(&self, command: &mut Command) -> Result<(), String> {
         let status = command
             .status()
-            .map_err(|error| format!("cannot run npm: {error}"))?;
+            .map_err(|error| format!("cannot run pnpm: {error}"))?;
         if status.success() {
             Ok(())
         } else {

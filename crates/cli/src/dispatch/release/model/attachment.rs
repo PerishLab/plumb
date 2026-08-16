@@ -14,6 +14,7 @@ pub struct Cargo {
 pub struct Oci {
     pub registry: String,
     pub image: String,
+    pub account: String,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -21,6 +22,7 @@ pub struct Oci {
 pub struct Chart {
     pub registry: String,
     pub chart: String,
+    pub account: String,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -50,6 +52,7 @@ impl Cargo {
 impl Oci {
     pub(super) fn validate(&self) -> Result<(), String> {
         host("image registry", &self.registry)?;
+        account("image account", &self.account)?;
         pair(
             &self.image,
             "image attachment must name one owner and one image",
@@ -61,6 +64,7 @@ impl Oci {
 impl Chart {
     pub(super) fn validate(&self, root: &Path) -> Result<(), String> {
         host("chart registry", &self.registry)?;
+        account("chart account", &self.account)?;
         let name = pair(
             &self.chart,
             "chart attachment must name one owner and one chart",
@@ -103,4 +107,17 @@ fn host(subject: &str, value: &str) -> Result<(), String> {
         return Err(format!("{subject} must be one bare host"));
     }
     Ok(())
+}
+
+const MARKS: [char; 3] = ['-', '_', '.'];
+
+fn account(subject: &str, value: &str) -> Result<(), String> {
+    let shaped = value
+        .chars()
+        .all(|held| held.is_ascii_alphanumeric() || MARKS.contains(&held));
+    if shaped && !value.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("{subject} must be one forge account name: {value}"))
+    }
 }

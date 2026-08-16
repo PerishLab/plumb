@@ -122,7 +122,7 @@ fn cargo(deed: Cargo) -> Result<String, String> {
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
     match deed {
         Cargo::Publish => {
-            sealed(&capsule(release)?, version)?;
+            sealed(&spec, release, version)?;
             attachment.publish(version, &release.registry_token)
         }
         Cargo::Rehearse => attachment.rehearse(version, &release.registry_token),
@@ -138,8 +138,8 @@ fn oci(deed: Oci) -> Result<String, String> {
     match deed {
         Oci::Build => carrier.build(version, &artifacts(release)?),
         Oci::Publish => {
-            sealed(&capsule(release)?, version)?;
-            carrier.publish(version, &registry(release)?)
+            sealed(&spec, release, version)?;
+            carrier.publish(version, &release.registry_token)
         }
     }
 }
@@ -153,8 +153,8 @@ fn chart(deed: Chart) -> Result<String, String> {
     match deed {
         Chart::Package => carrier.package(version),
         Chart::Publish => {
-            sealed(&capsule(release)?, version)?;
-            carrier.publish(version, &registry(release)?)
+            sealed(&spec, release, version)?;
+            carrier.publish(version, &release.registry_token)
         }
     }
 }
@@ -168,20 +168,13 @@ fn npm(deed: Npm) -> Result<String, String> {
     match deed {
         Npm::Pack => carrier.pack(version),
         Npm::Publish => {
-            sealed(&capsule(release)?, version)?;
-            carrier.publish(version, registry_token(&release.registry_token)?)
+            sealed(&spec, release, version)?;
+            carrier.publish(version, &release.registry_token)
         }
     }
 }
 
-fn registry(release: &plumb::rig::Release) -> Result<Identity<'_>, String> {
-    Ok(Identity {
-        user: required("PLUMB_RELEASE_REGISTRY_ACCOUNT", &release.registry_account)?,
-        token: registry_token(&release.registry_token)?,
-    })
-}
-
-fn registry_token(credential: &str) -> Result<&str, String> {
+pub(super) fn registry_token(credential: &str) -> Result<&str, String> {
     let credential = required("PLUMB_RELEASE_REGISTRY_TOKEN", credential)?;
     credential
         .strip_prefix("Bearer ")
@@ -195,8 +188,16 @@ pub struct Identity<'a> {
     pub token: &'a str,
 }
 
-fn sealed(path: &std::path::Path, version: &str) -> Result<(), String> {
-    let (compiled, _) = super::release::record::Capsule::read(path)?;
+fn sealed(
+    spec: &super::release::model::Spec,
+    release: &plumb::rig::Release,
+    version: &str,
+) -> Result<(), String> {
+    if !spec.binary() {
+        return Ok(());
+    }
+    let path = capsule(release)?;
+    let (compiled, _) = super::release::record::Capsule::read(&path)?;
     if compiled.version != version {
         return Err(format!(
             "capsule seals {} while the projection carries {version}",

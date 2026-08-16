@@ -1,2 +1,5 @@
-This chart carries no workload. It exists so the chart adaptor projects a real
-medium, and it takes a workload only when one earns its place.
+This chart carries a minimal nginx workload. It exists so the chart adaptor
+projects onto a real medium rather than a described one, and it takes a workload
+of its own when one earns the seat.
+
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }} 8080:{{ .Values.service.port }}
