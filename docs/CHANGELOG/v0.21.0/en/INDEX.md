@@ -61,6 +61,6 @@ because pushing rewrites an image config, so no digest survives the round trip.
 binary lane now prepares them before the seal and publishes them behind it.
 
 `packages/plumb` fixes the shape a published module takes here, and
-`charts/plumb` carries a minimal workload. Neither image nor chart is declared
-yet: the `account` field lands in this release and a manifest declaring it can
-only be read from the next one.
+`charts/plumb` carries a minimal workload. None of the three is declared yet: a
+lane runs canonical stable Plumb, so a projection this release repairs is first
+deliverable from the next one.

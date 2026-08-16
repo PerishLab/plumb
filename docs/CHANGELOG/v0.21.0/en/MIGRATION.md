@@ -14,7 +14,8 @@ account = "PerishFire"
 ```
 
 Declare it only once the Plumb building that repository is at least this
-version. Plumb's own manifest declares neither attachment here, for that reason.
+version. Plumb declares no image, chart or module attachment here: a lane runs
+canonical stable Plumb, which still hands npm its credential unstripped.
 
 ## `PLUMB_RELEASE_REGISTRY_ACCOUNT` is removed
 

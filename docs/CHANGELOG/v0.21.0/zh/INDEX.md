@@ -52,5 +52,5 @@ payload，module 比 registry 只收一次的那个 identity。image 比 payload
 准备它们、在封印后投影它们。
 
 `packages/plumb` 定下本域一个已发布模块的形状，`charts/plumb` 承接一个最小工作
-负载。image 与 chart 这一版都还没有被声明：`account` 字段随本版落地，
-而一份声明它的 manifest 只能被下一版读取。
+负载。三者这一版都还没有被声明：lane 跑的是 canonical stable，
+因此本版修好的投影要到下一版才交付得动。
