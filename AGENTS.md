@@ -110,14 +110,17 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   did, which is why filling each one in was an addition rather than a break.
   Nothing enters it on speculation: an entry earns its place from a medium
   already published to, never from one that might be.
-- A projection carries a compiled capsule, so no medium receives anything the
-  seal does not already cover. Every publishing deed refuses a capsule that
-  seals another version, exactly as `ship binary publish` takes the capsule as
-  its payload. The deeds that only prepare -- `cargo rehearse`, `oci build`,
-  `chart package`, `npm pack` -- stay outside that rule because they mutate
-  nothing beyond the working tree. One release therefore has one irreversible
-  point, and it is publication; a version with no published seal has projected
-  nothing anywhere.
+- A capsule covers what a capsule can cover, and the gate is keyed to the
+  declaration rather than to the medium. A release that declares a binary shape
+  compiles a capsule, so every publishing deed refuses one that seals another
+  version, exactly as `ship binary publish` takes the capsule as its payload. A
+  release that declares no binary shape compiles no capsule and holds no
+  authority to keep one in, so demanding one would refuse a shape Plumb itself
+  defines; those deeds answer to the declared projection surface instead. The
+  deeds that only prepare -- `cargo rehearse`, `oci build`, `chart package`,
+  `npm pack` -- stay outside the rule either way, because they mutate nothing
+  beyond the working tree. Publication remains the one irreversible point of a
+  release.
 - That rule binds a release that carries a seal, and whether one does is a
   declaration rather than an environment. A release naming a product and an
   authority compiles a capsule and publishes it; a release declaring only

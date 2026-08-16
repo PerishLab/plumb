@@ -1,7 +1,7 @@
 [[document]]
 strategy = "agent"
-source = [{ path = ".", seal = "22abe6aecabbb57a2334003cfaa03fe21e8faaf7891a632fe703cde7ce907633" }]
-target-seal = "e2181b21f85699cf214cde92d8f3f06e0bd3cdfcca94a41ef4b5bb62fcee48f5"
+source = [{ path = ".", seal = "f6386dc35f3c6b7d44d1231e3538e27c39f4c10b56400155dd2da70aa4830b79" }]
+target-seal = "d289e07b9a899fbc1be93307cfd43be4bec4b6982087caf6e08541b7d6d89733"
 
 [[document]]
 strategy = "brief"
@@ -24,6 +24,20 @@ targets = [
   "x86_64-pc-windows-msvc",
 ]
 skill = true
+
+[release.oci]
+registry = "git.perish.top"
+image = "perishlab/plumb"
+account = "PerishFire"
+
+[release.chart]
+registry = "git.perish.top"
+chart = "perishlab/plumb"
+account = "PerishFire"
+
+[release.npm]
+registry = "https://git.perish.top/api/packages/PerishLab/npm/"
+package = "@perish/plumb"
 
 [release.cargo]
 registry = "perish"
