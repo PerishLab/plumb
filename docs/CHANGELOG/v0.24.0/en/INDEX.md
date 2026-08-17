@@ -66,3 +66,10 @@ field that is present and malformed refuses.
 The regression was invisible until now because a release always runs on the Plumb
 already published, never on the one being released, so a fault in the release
 engine surfaces one release late.
+
+## A relative release root still names the same tree
+
+The lane hands Plumb a release root of `.`, and Cargo answers with absolute
+manifest paths. Stripping one from the other silently left the seat absolute, so
+every Cargo object covered no tracked leaf and compile refused. A root is now
+resolved before it is stripped, so the two halves speak the same shape.

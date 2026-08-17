@@ -34,11 +34,12 @@ pub struct Build<'a> {
 
 impl Workspace {
     pub fn seats(&self, root: &Path) -> BTreeMap<String, PathBuf> {
+        let base = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
         self.packages
             .iter()
             .filter_map(|package| {
                 let seat = package.manifest_path.parent()?;
-                let held = seat.strip_prefix(root).unwrap_or(seat);
+                let held = seat.strip_prefix(&base).unwrap_or(seat);
                 Some((package.name.clone(), held.to_path_buf()))
             })
             .collect()
