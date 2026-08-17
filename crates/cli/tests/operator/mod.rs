@@ -8,6 +8,8 @@ mod fixture;
 #[cfg(unix)]
 mod forgejo;
 #[cfg(unix)]
+mod image;
+#[cfg(unix)]
 mod lane;
 #[cfg(unix)]
 mod pin;

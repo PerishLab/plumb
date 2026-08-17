@@ -29,7 +29,7 @@ impl Image<'_> {
             return Err(format!("declared image has no {}", file.display()));
         }
         let (seat, payload) = if self.spec.binary() {
-            self.payload(artifacts)?
+            self.payload(artifacts, version)?
         } else if commit.is_empty() {
             return Err("PLUMB_RELEASE_COMMIT binds an image that carries no archive".into());
         } else {
@@ -51,6 +51,50 @@ impl Image<'_> {
         Ok(format!("built {reference} carrying {payload}"))
     }
 
+    fn published(&self, archive: &str, version: &str) -> Result<std::path::PathBuf, String> {
+        if self.spec.authority.is_empty() {
+            return Err(format!(
+                "{archive} is absent and this release names no authority"
+            ));
+        }
+        let channel = crate::dispatch::release::channel(version)?;
+        let url = format!(
+            "{}/v1/releases/{channel}/{version}/seal.json",
+            self.spec.authority.trim_end_matches('/')
+        );
+        let seal = super::super::super::verify::optional(&url)?
+            .ok_or_else(|| format!("the authority serves no seal at {url}"))?;
+        let remote = seal
+            .get("artifacts")
+            .and_then(serde_json::Value::as_object)
+            .into_iter()
+            .flatten()
+            .map(|(_, held)| held)
+            .find(|held| held.get("name").and_then(serde_json::Value::as_str) == Some(archive))
+            .ok_or_else(|| format!("the published seal carries no {archive}"))?;
+        let held = |key: &str| {
+            remote
+                .get(key)
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_string()
+        };
+        let seat = self.spec.root.join("target/payload");
+        std::fs::create_dir_all(&seat)
+            .map_err(|error| format!("cannot open {}: {error}", seat.display()))?;
+        let path = seat.join(archive);
+        fetch(&held("url"), &path)?;
+        let digest = super::super::super::record::digest(&path)?.0;
+        if digest != held("sha256") {
+            return Err(format!(
+                "published payload drift: {} serves {digest} while the seal records {}",
+                held("url"),
+                held("sha256")
+            ));
+        }
+        Ok(path)
+    }
+
     fn mark(&self) -> &'static str {
         if self.spec.binary() {
             PAYLOAD
@@ -59,14 +103,24 @@ impl Image<'_> {
         }
     }
 
-    fn payload(&self, artifacts: &std::path::Path) -> Result<(std::path::PathBuf, String), String> {
+    fn payload(
+        &self,
+        artifacts: &std::path::Path,
+        version: &str,
+    ) -> Result<(std::path::PathBuf, String), String> {
         let target = self
             .spec
             .target
             .iter()
             .find(|held| held.triple == LINUX)
             .ok_or_else(|| format!("an image attachment requires the {LINUX} target"))?;
-        let source = artifacts.join(&target.archive);
+        let archive = target.archive.clone();
+        let source = artifacts.join(&archive);
+        let source = if source.is_file() {
+            source
+        } else {
+            self.published(&archive, version)?
+        };
         let file = std::fs::File::open(&source)
             .map_err(|error| format!("cannot read {}: {error}", source.display()))?;
         let seat = self.spec.root.join("target/image");
@@ -214,4 +268,24 @@ impl Image<'_> {
 
 fn reference(oci: &super::super::super::model::Oci, version: &str) -> String {
     format!("{}/{}:{version}", oci.registry, oci.image)
+}
+
+fn fetch(url: &str, path: &std::path::Path) -> Result<(), String> {
+    let status = Command::new("curl")
+        .args([
+            "--fail",
+            "--silent",
+            "--show-error",
+            "--location",
+            "--output",
+        ])
+        .arg(path)
+        .arg(url)
+        .status()
+        .map_err(|error| format!("cannot run curl: {error}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("cannot read the published payload {url}"))
+    }
 }
