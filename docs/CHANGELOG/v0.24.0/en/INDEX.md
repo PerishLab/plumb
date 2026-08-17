@@ -39,3 +39,14 @@ every other unrendered lane still only draws a note.
 The module attachment returns with ordered packages and the worker joins it, so
 the site is a declared medium rather than a lane of its own. Ship forwards the
 credential a worker needs beside the registry token.
+
+## The plan names the deed that prepares each medium
+
+The projection step ran `plumb ship <medium> rehearse` for every medium, and only
+Cargo and a worker hold that deed: an image builds, a chart packages, a module
+packs. Three of five projections would have failed on an unrecognised subcommand.
+
+Which word prepares a medium is a fact Plumb holds, so it belongs in the plan
+rather than in the lane. The projected matrix now carries it beside the medium,
+the lane spends it, and a test asks this binary whether every deed the plan names
+exists at all.

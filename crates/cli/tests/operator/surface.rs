@@ -27,7 +27,7 @@ fn declared() {
     .expect("manifest");
     assert_eq!(
         surface(&root),
-        r#"{"include":[{"medium":"cargo"}],"project":{"include":[{"medium":"cargo"}]},"seal":{"include":[]}}"#
+        r#"{"include":[{"medium":"cargo"}],"project":{"include":[{"medium":"cargo","prepare":"rehearse"}]},"seal":{"include":[]}}"#
     );
 
     std::fs::write(
@@ -37,7 +37,7 @@ fn declared() {
     .expect("manifest");
     assert_eq!(
         surface(&root),
-        r#"{"include":[{"medium":"binary"},{"medium":"oci"}],"project":{"include":[{"medium":"oci"}]},"seal":{"include":[{"held":"seal"}]}}"#
+        r#"{"include":[{"medium":"binary"},{"medium":"oci"}],"project":{"include":[{"medium":"oci","prepare":"build"}]},"seal":{"include":[{"held":"seal"}]}}"#
     );
 
     std::fs::remove_dir_all(&root).expect("fixture should be swept");
@@ -67,7 +67,7 @@ fn worker() {
     .expect("manifest");
     assert_eq!(
         surface(&root),
-        r#"{"include":[{"medium":"cfworker"}],"project":{"include":[{"medium":"cfworker"}]},"seal":{"include":[]}}"#
+        r#"{"include":[{"medium":"cfworker"}],"project":{"include":[{"medium":"cfworker","prepare":"rehearse"}]},"seal":{"include":[]}}"#
     );
 
     std::fs::write(
@@ -121,5 +121,47 @@ fn depends() {
         "the surface reads before objects resolve"
     );
 
+    std::fs::remove_dir_all(&root).expect("fixture should be swept");
+}
+
+#[test]
+fn prepared() {
+    let root = std::env::temp_dir().join("plumb-release-prepared");
+    let _ = std::fs::remove_dir_all(&root);
+    for seat in ["apps/web", "charts/probe", "packages/probe"] {
+        std::fs::create_dir_all(root.join(seat)).expect("fixture");
+    }
+    std::fs::write(
+        root.join("plumb.toml"),
+        concat!(
+            "[release.cargo]\nregistry = \"perish\"\npackages = [\"probe\"]\n",
+            "[release.chart]\nregistry = \"example.invalid\"\nchart = \"owner/probe\"\naccount = \"Example\"\n",
+            "[release.npm]\nregistry = \"https://example.invalid\"\npackages = [\"probe\"]\n",
+            "[release.cfworker]\naccount = \"held\"\ndomain = \"probe.example.uk\"\n",
+            "[release.oci]\nregistry = \"example.invalid\"\nimage = \"owner/probe\"\naccount = \"Example\"\n",
+        ),
+    )
+    .expect("manifest");
+    let plan: serde_json::Value =
+        serde_json::from_str(&surface(&root)).expect("the surface is one plan");
+    let rows = plan["project"]["include"]
+        .as_array()
+        .expect("a plan names the projected media");
+    assert_eq!(rows.len(), 5, "{rows:?}");
+    for row in rows {
+        let medium = row["medium"].as_str().expect("a row names its medium");
+        let prepare = row["prepare"]
+            .as_str()
+            .expect("a row names its prepare deed");
+        let held = Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["ship", medium, prepare, "--help"])
+            .output()
+            .expect("plumb should run");
+        assert!(
+            held.status.success(),
+            "the plan names {medium} {prepare}, which this binary does not hold: {}",
+            String::from_utf8_lossy(&held.stderr)
+        );
+    }
     std::fs::remove_dir_all(&root).expect("fixture should be swept");
 }

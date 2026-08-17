@@ -96,6 +96,16 @@ fn execute(deed: Deed) -> Result<String, String> {
     }
 }
 
+fn prepared(medium: &str) -> Result<&'static str, String> {
+    match medium {
+        "cargo" | "cfworker" => Ok("rehearse"),
+        "chart" => Ok("package"),
+        "npm" => Ok("pack"),
+        "oci" => Ok("build"),
+        _ => Err(format!("{medium} names no deed that prepares it")),
+    }
+}
+
 fn surface(spec: &model::Spec) -> Result<String, String> {
     let media = spec.surface();
     let row = |medium: &&str| serde_json::json!({ "medium": medium });
@@ -103,8 +113,11 @@ fn surface(spec: &model::Spec) -> Result<String, String> {
     let project = media
         .iter()
         .filter(|medium| **medium != "binary")
-        .map(row)
-        .collect::<Vec<_>>();
+        .map(|medium| {
+            prepared(medium)
+                .map(|prepare| serde_json::json!({ "medium": medium, "prepare": prepare }))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     let seal = media
         .iter()
         .filter(|medium| **medium == "binary")

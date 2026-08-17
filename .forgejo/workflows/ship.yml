@@ -226,6 +226,6 @@ jobs:
       - name: Project one declared medium
         run: |
           set -eu
-          plumb ship ${{ matrix.medium }} rehearse
+          plumb ship ${{ matrix.medium }} ${{ matrix.prepare }}
           plumb ship ${{ matrix.medium }} publish
 

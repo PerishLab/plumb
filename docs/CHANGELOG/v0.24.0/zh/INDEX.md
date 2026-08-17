@@ -29,3 +29,13 @@ ship lane 在 `workflow_call` 下声明 secrets，而这个 forge 在那里只�
 
 模块附件带着有序 packages 回来了，worker 与它一同加入，于是站点是一个被声明的介质，
 而不再是一条自己的 lane。ship 在 registry token 之外，也转发 worker 需要的凭据。
+
+## 计划里现在写明每个介质由哪个动词准备
+
+投影步骤对每个介质都跑 `plumb ship <medium> rehearse`，而只有 cargo 与 worker 有这个
+动词：镜像是 build、chart 是 package、模块是 pack。五个投影里有三个会挂在「无法识别的
+子命令」上。
+
+哪个词准备哪个介质，是 plumb 自己掌握的事实，因此它属于计划而不属于 lane。投影矩阵
+现在把它写在介质旁边，lane 只负责花掉它，并且有一个测试直接问这个二进制：计划点名的
+每个动词，你到底有没有。
