@@ -72,7 +72,16 @@ fn pinned() {
     std::fs::create_dir_all(published.join("channels")).expect("published root");
     std::fs::write(
         published.join("channels/stable.json"),
-        r#"{"seal":{"url":"https://releases.test/v1/seal.json"}}"#,
+        format!(
+            concat!(
+                r#"{{"schema":1,"product":"probe","channel":"stable","releaseVersion":"v1.1.0","#,
+                r#""commit":"{}","managers":{{}},"seal":{{"name":"seal.json","#,
+                r#""mime":"application/json","sha256":"{}","size":3,"#,
+                r#""url":"https://releases.test/v1/seal.json"}}}}"#
+            ),
+            candidate,
+            "0".repeat(64)
+        ),
     )
     .expect("stable pointer");
     std::fs::copy(out.join("seal.json"), published.join("seal.json")).expect("published seal");
@@ -98,5 +107,18 @@ fn pinned() {
     assert!(
         said.contains("rehearsed Cargo attachment for v1.2.0-beta.8"),
         "{said}"
+    );
+
+    super::fixture::run(
+        fixture
+            .command()
+            .current_dir(root)
+            .args(["release", "compile"])
+            .env("PLUMB_RELEASE_ROOT", ".")
+            .env("PLUMB_RELEASE_CHANNEL", "beta")
+            .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.9")
+            .env("PLUMB_RELEASE_COMMIT", &candidate)
+            .env("PLUMB_RELEASE_ARTIFACTS", &artifacts)
+            .env("PLUMB_RELEASE_OUTPUT", root.join("relative")),
     );
 }
