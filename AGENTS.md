@@ -152,9 +152,9 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   Archive members are ordered and carry canonical timestamps, owners, and
   modes; MSVC binaries use the reproducible linker mode. Rebuilding one exact
   version from one commit must produce the same seal.
-- Actions owns the reusable target matrix, artifact transport, credential
-  binding, and release sequencing. Product repositories expose only
-  `release-exact.yml` and `release-stable.yml` as thin callers.
+- This repository renders and carries its own release lanes and reaches no
+  shared workflow. Actions still owns the reusable matrix, artifact transport,
+  credential binding, and sequencing for repositories not yet rendered.
 - Every permanent release resolves canonical stable Plumb once and freezes that
   exact stable version across all jobs. The sole recovery exception is the
   typed `PerishLab/plumb` v0.20.0 self-hosting contract: source-built
