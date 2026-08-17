@@ -21,6 +21,7 @@ jobs:
   release:
     uses: PerishLab/actions/.forgejo/workflows/release-binary.yml@main
     with:
+      bootstrap: v0.24.0
       promotion_channel: ${{ inputs.promotion_channel }}
       promotion_version: ${{ inputs.promotion_version }}
       guard_contexts: '["guard / guard (push)"]'
