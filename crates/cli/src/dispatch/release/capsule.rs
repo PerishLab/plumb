@@ -18,6 +18,7 @@ pub struct Compile<'a> {
     pub out: &'a Path,
     pub promotion: Option<&'a Path>,
     pub changelog: crate::shape::changelog::Proof,
+    pub toolchain: &'a str,
 }
 
 struct Draft<'a> {
@@ -131,6 +132,7 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
         changelog: Some(input.changelog),
         proof: promotion,
         radius: None,
+        inputs: super::object::Seat(&spec).inputs(input.toolchain, input.version)?,
     };
     let path = input.out.join("seal.json");
     json(&path, &seal)?;

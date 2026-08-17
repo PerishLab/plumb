@@ -41,16 +41,8 @@ fn seated(manifest: &Path) -> bool {
 }
 
 fn attachments(spec: &Spec) -> BTreeSet<String> {
-    let mut found = BTreeSet::new();
-    for (present, name) in [
-        (!spec.binaries.is_empty(), "binary"),
-        (spec.skill, "skill"),
-        (spec.deb.is_some(), "deb"),
-        (spec.cargo.is_some(), "cargo"),
-        (spec.oci.is_some(), "oci"),
-        (spec.chart.is_some(), "chart"),
-        (spec.npm.is_some(), "npm"),
-    ] {
+    let mut found: BTreeSet<String> = spec.surface().into_iter().map(str::to_string).collect();
+    for (present, name) in [(spec.skill, "skill"), (spec.deb.is_some(), "deb")] {
         if present {
             found.insert(name.to_string());
         }
@@ -60,8 +52,8 @@ fn attachments(spec: &Spec) -> BTreeSet<String> {
 
 fn carriers(attachment: &str) -> &'static [&'static str] {
     match attachment {
-        "binary" | "skill" | "deb" | "npm" | "oci" | "chart" => &["release-binary"],
-        "cargo" => &["release-binary", "release-cargo"],
+        "binary" | "skill" | "deb" | "npm" | "oci" | "chart" => &["release-binary", "ship"],
+        "cargo" => &["release-binary", "release-cargo", "ship"],
         _ => &[],
     }
 }

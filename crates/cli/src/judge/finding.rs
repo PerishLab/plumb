@@ -39,6 +39,14 @@ impl Seed {
         }
     }
 
+    pub fn noted(rule: &'static Mechanism, evidence: impl Into<String>) -> Self {
+        Self {
+            rule: &rule.0,
+            grade: "noted",
+            evidence: evidence.into(),
+        }
+    }
+
     pub fn unknown(rule: &'static Mechanism, evidence: impl Into<String>) -> Self {
         Self {
             rule: &rule.0,

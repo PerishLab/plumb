@@ -37,3 +37,28 @@ fn refused() {
     assert_eq!(fill("port}", &table()), Err(Error::Bare));
     assert_eq!(fill("{}", &table()), Err(Error::Empty));
 }
+
+#[test]
+fn expressions() {
+    let vars = BTreeMap::from([("product", "plumb".to_string())]);
+    let text = "image: forge\nrun: ${{ matrix.medium }} {@product}\njq: '{context: $held}'\n";
+    assert_eq!(
+        plumb::fill::actions(text, &vars).expect("render"),
+        "image: forge\nrun: ${{ matrix.medium }} plumb\njq: '{context: $held}'\n"
+    );
+}
+
+#[test]
+fn unknown() {
+    let vars = BTreeMap::from([("product", "plumb".to_string())]);
+    assert_eq!(
+        plumb::fill::actions("{@absent}", &vars),
+        Err(plumb::fill::Error::Unknown {
+            name: "absent".to_string()
+        })
+    );
+    assert_eq!(
+        plumb::fill::actions("{@open", &vars),
+        Err(plumb::fill::Error::Unclosed)
+    );
+}

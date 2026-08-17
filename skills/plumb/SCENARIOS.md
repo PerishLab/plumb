@@ -27,7 +27,10 @@ plumb stable packport
 ```
 
 Inspect each subcommand before use. Stable publication requires the frozen
-line and release-local changelog. Packport settles ancestry after publication;
+line and release-local changelog. `freeze` also derives the promotion source
+and refuses unless exactly one published exact seal stands at the frozen
+commit, so recover a failed exact release by rerunning it rather than by
+tagging the next candidate. Packport settles ancestry after publication;
 it does not rewrite a successful release result. Never delete the frozen line.
 
 ## A skill candidate needs validation

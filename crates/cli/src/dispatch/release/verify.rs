@@ -49,6 +49,40 @@ pub fn inspect(url: &str, stable: bool) -> Result<String, String> {
     Surface(url).release(stable)
 }
 
+pub fn optional(url: &str) -> Result<Option<serde_json::Value>, String> {
+    let path = temporary("probe");
+    let output = Command::new("curl")
+        .args([
+            "--silent",
+            "--show-error",
+            "--location",
+            "--retry",
+            "3",
+            "--write-out",
+            "%{http_code}",
+            "--output",
+        ])
+        .arg(&path)
+        .arg(url)
+        .output()
+        .map_err(|error| format!("cannot run curl: {error}"))?;
+    if !output.status.success() {
+        let _ = std::fs::remove_file(&path);
+        return Err(format!(
+            "cannot probe {url}: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    let status = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let held = match status.as_str() {
+        "200" => parse(&path).map(Some),
+        "404" => Ok(None),
+        code => Err(format!("cannot probe {url}: HTTP {code}")),
+    };
+    let _ = std::fs::remove_file(path);
+    held
+}
+
 pub fn binary(url: &str, stable: bool) -> Result<String, String> {
     Surface(url).binary(stable)
 }

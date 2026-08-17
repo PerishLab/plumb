@@ -69,10 +69,27 @@ fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
     if dry {
         return Ok(plan(&remote, &name, "frozen"));
     }
-    freeze(&Client::new(remote)?, &root, &name)?;
+    let client = Client::new(remote)?;
+    freeze(&client, &root, &name)?;
     let spec = super::super::release::model::Spec::read(&root.join("plumb.toml"))?;
+    let commit = head(&client, &name)?;
+    let exact = super::super::release::promotion(&spec, &commit, &version)?;
     let stamped = super::mark::point(&root).stamp(&spec.product, &version, &name)?;
-    Ok(format!("froze {name}; {stamped}"))
+    Ok(format!(
+        "froze {name} at {commit}; promoting {}; {stamped}",
+        exact.version
+    ))
+}
+
+fn head(client: &Client, name: &str) -> Result<String, String> {
+    let branch = client.branch(name)?;
+    let commit = branch
+        .as_ref()
+        .and_then(|held| held.pointer("/commit/id"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("{name} exposes no head commit"))?;
+    value::commit(commit)?;
+    Ok(commit.to_string())
 }
 
 fn retract(raw: &str, dry: bool) -> Result<String, String> {

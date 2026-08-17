@@ -87,6 +87,12 @@ enum Command {
         #[command(flatten)]
         target: Root,
     },
+    Lane {
+        #[command(flatten)]
+        target: Root,
+        #[arg(long)]
+        write: bool,
+    },
     Release {
         #[command(subcommand)]
         deed: dispatch::release::Deed,
@@ -117,6 +123,7 @@ impl Command {
             Self::Rule { .. } => "rule",
             Self::Changelog { .. } => "changelog",
             Self::Document { .. } => "document",
+            Self::Lane { .. } => "lane",
             Self::Release { .. } => "release",
             Self::Ship { .. } => "ship",
             Self::Stable { .. } => "stable",
@@ -179,6 +186,9 @@ fn execute(command: Command) -> i32 {
         }
         Command::Document { target } => {
             dispatch::command::Seat::new(PathBuf::from(target.root)).document()
+        }
+        Command::Lane { target, write } => {
+            dispatch::command::Seat::new(PathBuf::from(target.root)).lane(write)
         }
         Command::Release { deed } => dispatch::release::run(deed),
         Command::Ship { deed } => dispatch::ship::run(deed),

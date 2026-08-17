@@ -12,10 +12,6 @@ use clap::{Args, Subcommand};
 pub struct Dispatch {
     #[arg(long)]
     version: String,
-    #[arg(long, default_value = "beta")]
-    promotion_channel: String,
-    #[arg(long, default_value = "")]
-    promotion_version: String,
     #[arg(long, default_value = "")]
     repo: String,
     #[arg(long)]

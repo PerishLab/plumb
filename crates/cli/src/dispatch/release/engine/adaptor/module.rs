@@ -1,35 +1,53 @@
 use super::super::super::model::Spec;
+use super::super::super::object::{self, Held};
 use semver::Version;
 use std::path::PathBuf;
 use std::process::Command;
 
 pub struct Module<'a> {
     spec: &'a Spec,
+    held: &'a Held,
 }
 
-pub fn module(spec: &Spec) -> Module<'_> {
-    Module { spec }
+pub fn module<'a>(spec: &'a Spec, held: &'a Held) -> Module<'a> {
+    Module { spec, held }
 }
 
 impl Module<'_> {
+    fn settled(&self, package: &str) -> bool {
+        let bare = package.rsplit('/').next().unwrap_or_default();
+        match self.held.since(&object::npm(bare)) {
+            Some(since) => {
+                println!("  {bare} unchanged since {since}; not projected");
+                true
+            }
+            None => false,
+        }
+    }
+
     pub fn pack(&self, version: &str) -> Result<String, String> {
         let Some(npm) = &self.spec.npm else {
             return Ok(format!("{} has no module attachment", self.spec.product));
         };
         let identity = release(version)?;
-        self.stamp(npm, &identity)?;
         let out = self.spec.root.join("target/module");
         std::fs::create_dir_all(&out)
             .map_err(|error| format!("cannot open {}: {error}", out.display()))?;
         let seat = std::fs::canonicalize(&out)
             .map_err(|error| format!("cannot resolve {}: {error}", out.display()))?;
-        self.pnpm(
-            &["pack", "--pack-destination", &seat.to_string_lossy()],
-            npm,
-        )?;
-        let archive = self.archive(npm, &identity);
-        if !archive.is_file() {
-            return Err(format!("module attachment left no {}", archive.display()));
+        for package in &npm.packages {
+            if self.settled(package) {
+                continue;
+            }
+            self.stamp(package, &identity)?;
+            self.pnpm(
+                &["pack", "--pack-destination", &seat.to_string_lossy()],
+                package,
+            )?;
+            let archive = self.archive(package, &identity);
+            if !archive.is_file() {
+                return Err(format!("module attachment left no {}", archive.display()));
+            }
         }
         Ok(format!("packed module attachment for {version}"))
     }
@@ -41,50 +59,46 @@ impl Module<'_> {
         let token = crate::dispatch::ship::registry_token(credential)?;
         self.pack(version)?;
         let identity = release(version)?;
-        let archive = self.archive(npm, &identity);
-        let name = archive
-            .file_name()
-            .ok_or_else(|| format!("packed module has no name: {}", archive.display()))?
-            .to_string_lossy()
-            .to_string();
-        let seat = tempfile::tempdir()
-            .map_err(|error| format!("cannot open a module projection seat: {error}"))?;
-        std::fs::copy(&archive, seat.path().join(&name))
-            .map_err(|error| format!("cannot stage {}: {error}", archive.display()))?;
-        if !self.carried(npm, &identity, token, seat.path())? {
-            let mut publish = vec![
-                "publish",
-                name.as_str(),
-                "--registry",
-                npm.registry.as_str(),
-            ];
-            let channel = channel(&identity);
-            if let Some(channel) = &channel {
-                publish.extend(["--tag", channel]);
+        for package in &npm.packages {
+            if self.settled(package) {
+                continue;
             }
-            self.authenticated(&publish, npm, token, seat.path())?;
+            let archive = self.archive(package, &identity);
+            let name = archive
+                .file_name()
+                .ok_or_else(|| format!("packed module has no name: {}", archive.display()))?
+                .to_string_lossy()
+                .to_string();
+            let seat = tempfile::tempdir()
+                .map_err(|error| format!("cannot open a module projection seat: {error}"))?;
+            std::fs::copy(&archive, seat.path().join(&name))
+                .map_err(|error| format!("cannot stage {}: {error}", archive.display()))?;
+            let spec = format!("{package}@{identity}");
+            if self.carried(npm, &spec, token, seat.path())? != Some(identity.to_string()) {
+                let mut publish = vec![
+                    "publish",
+                    name.as_str(),
+                    "--registry",
+                    npm.registry.as_str(),
+                ];
+                let channel = channel(&identity);
+                if let Some(channel) = &channel {
+                    publish.extend(["--tag", channel]);
+                }
+                self.authenticated(&publish, npm, token, seat.path())?;
+            }
+            self.authenticated(
+                &["view", &spec, "dist.shasum", "--registry", &npm.registry],
+                npm,
+                token,
+                seat.path(),
+            )?;
         }
-        self.authenticated(
-            &[
-                "view",
-                &format!("{}@{identity}", npm.package),
-                "dist.shasum",
-                "--registry",
-                &npm.registry,
-            ],
-            npm,
-            token,
-            seat.path(),
-        )?;
         Ok(format!("published module attachment for {version}"))
     }
 
-    fn stamp(
-        &self,
-        npm: &super::super::super::model::Npm,
-        version: &Version,
-    ) -> Result<(), String> {
-        let path = self.seat(npm).join("package.json");
+    fn stamp(&self, package: &str, version: &Version) -> Result<(), String> {
+        let path = self.seat(package).join("package.json");
         let text = std::fs::read_to_string(&path)
             .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
         let mut held: serde_json::Value = serde_json::from_str(&text)
@@ -97,36 +111,38 @@ impl Module<'_> {
             .map_err(|error| format!("cannot write {}: {error}", path.display()))
     }
 
-    fn pnpm(&self, args: &[&str], npm: &super::super::super::model::Npm) -> Result<(), String> {
-        self.run(Command::new("pnpm").args(args).current_dir(self.seat(npm)))
+    fn pnpm(&self, args: &[&str], package: &str) -> Result<(), String> {
+        self.run(
+            Command::new("pnpm")
+                .args(args)
+                .current_dir(self.seat(package)),
+        )
     }
 
     fn carried(
         &self,
         npm: &super::super::super::model::Npm,
-        identity: &Version,
+        spec: &str,
         token: &str,
         cwd: &std::path::Path,
-    ) -> Result<bool, String> {
+    ) -> Result<Option<String>, String> {
         let seat = npm
             .registry
             .split_once("://")
             .map(|(_, rest)| rest)
             .unwrap_or(&npm.registry);
         let output = Command::new("pnpm")
-            .args([
-                "view",
-                &format!("{}@{identity}", npm.package),
-                "version",
-                "--registry",
-                &npm.registry,
-            ])
+            .args(["view", spec, "version", "--registry", &npm.registry])
             .current_dir(cwd)
             .env(format!("npm_config_//{seat}:_authToken"), token)
             .output()
             .map_err(|error| format!("cannot run pnpm: {error}"))?;
-        Ok(output.status.success()
-            && String::from_utf8_lossy(&output.stdout).trim() == identity.to_string())
+        if !output.status.success() {
+            return Ok(None);
+        }
+        Ok(Some(
+            String::from_utf8_lossy(&output.stdout).trim().to_string(),
+        ))
     }
 
     fn authenticated(
@@ -160,12 +176,12 @@ impl Module<'_> {
         }
     }
 
-    fn seat(&self, npm: &super::super::super::model::Npm) -> PathBuf {
-        self.spec.root.join("packages").join(bare(&npm.package))
+    fn seat(&self, package: &str) -> PathBuf {
+        self.spec.root.join("packages").join(bare(package))
     }
 
-    fn archive(&self, npm: &super::super::super::model::Npm, version: &Version) -> PathBuf {
-        let held = npm.package.replace('@', "").replace('/', "-");
+    fn archive(&self, package: &str, version: &Version) -> PathBuf {
+        let held = package.replace('@', "").replace('/', "-");
         self.spec
             .root
             .join("target/module")

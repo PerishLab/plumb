@@ -77,7 +77,7 @@ pub fn render(
     }
     println!();
     println!(
-        "  {} out of true, {} unknown to the skeleton, {} blind",
-        summary.wrong, summary.unknown, summary.blind
+        "  {} out of true, {} unknown to the skeleton, {} blind, {} noted",
+        summary.wrong, summary.unknown, summary.blind, summary.noted
     );
 }

@@ -1,0 +1,34 @@
+
+  project:
+    needs: [resolve{@after}]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve.outputs.project) }}
+    runs-on: docker
+    container:
+      image: {@forge}
+    env:
+      DOCKER_HOST: tcp://172.17.0.1:2375
+      PLUMB_RELEASE_ROOT: .
+      PLUMB_RELEASE_CHANNEL: ${{ needs.resolve.outputs.channel }}
+      PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
+      PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
+      PLUMB_RELEASE_REGISTRY_TOKEN: ${{ secrets.registry_token }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ needs.resolve.outputs.commit }}
+
+      - name: Install stable Plumb
+        run: curl -fsSL {@plumb}/manage.sh | sh
+
+      - name: Seat the package store outside the source
+        run: echo "PNPM_CONFIG_STORE_DIR=$RUNNER_TEMP/pnpm-store" >> "$GITHUB_ENV"
+
+      - name: Project one declared medium
+        run: |
+          set -eu
+          plumb ship ${{ matrix.medium }} rehearse
+          plumb ship ${{ matrix.medium }} publish

@@ -34,6 +34,32 @@ pub fn fill(text: &str, vars: &BTreeMap<&str, String>) -> Result<String, Error> 
     Ok(out)
 }
 
+pub fn actions(text: &str, vars: &BTreeMap<&str, String>) -> Result<String, Error> {
+    let mut out = String::new();
+    let mut rest = text.chars().peekable();
+    while let Some(mark) = rest.next() {
+        if mark != '{' || rest.peek() != Some(&'@') {
+            out.push(mark);
+            continue;
+        }
+        rest.next();
+        let mut name = String::new();
+        let mut closed = false;
+        for held in rest.by_ref() {
+            if held == '}' {
+                closed = true;
+                break;
+            }
+            name.push(held);
+        }
+        if !closed {
+            return Err(Error::Unclosed);
+        }
+        resolve(&mut out, &name, vars)?;
+    }
+    Ok(out)
+}
+
 fn open(
     out: &mut String,
     rest: &mut std::iter::Peekable<std::str::Chars<'_>>,

@@ -9,22 +9,12 @@ const LINES: usize = 12;
 
 pub fn run(options: Dispatch) -> Result<String, String> {
     let root = git::root()?;
+    current(&root)?;
     let remote = git::remote(&root, &options.repo)?;
     let channel = super::super::release::channel(&options.version)?;
     let version = value::version(&options.version, &channel)?;
     let (workflow, reference, inputs) = if channel == "stable" {
-        if options.promotion_channel == "stable" {
-            return Err("stable promotion requires an exact non-stable channel".into());
-        }
-        let promotion = value::version(&options.promotion_version, &options.promotion_channel)?;
-        (
-            "release-stable.yml",
-            value::branch(&version),
-            json!({
-                "promotion_channel": options.promotion_channel,
-                "promotion_version": promotion
-            }),
-        )
+        ("release-stable.yml", value::branch(&version), json!({}))
     } else {
         (
             "release-exact.yml",
@@ -67,6 +57,17 @@ pub fn run(options: Dispatch) -> Result<String, String> {
         message.push_str(&watch(&client, id, &url)?);
     }
     Ok(message)
+}
+
+fn current(root: &std::path::Path) -> Result<(), String> {
+    let stale = crate::shape::lane::Seat(root).stale();
+    if stale.is_empty() {
+        return Ok(());
+    }
+    Err(format!(
+        "a release cannot start on a lane this Plumb did not render: {}; run plumb lane --write",
+        stale.join(", ")
+    ))
 }
 
 fn watch(client: &Client, id: u64, url: &str) -> Result<String, String> {

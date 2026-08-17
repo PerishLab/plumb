@@ -22,6 +22,17 @@ rule!(
     [RELEASE_TAG, REPOSITORY]
 );
 
+rule!(
+    LANE_RENDERED,
+    "release.lane-rendered",
+    "Release lanes stand as this Plumb renders them",
+    "Every governed lane in a repository is the exact text the current Plumb renders from that repository's declaration, so no lane is hand-written or left behind by an older Plumb.",
+    "The lane templates carried by the running Plumb, the release table in plumb.toml, and the tracked workflow bytes.",
+    Mechanized,
+    RELEASE,
+    [RELEASE_TAG, REPOSITORY]
+);
+
 pub fn all() -> Vec<&'static Rule> {
-    vec![&ATTACHMENT_DELIVERABLE, &SPEC_DECLARED]
+    vec![&ATTACHMENT_DELIVERABLE, &LANE_RENDERED, &SPEC_DECLARED]
 }

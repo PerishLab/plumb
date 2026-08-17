@@ -1,0 +1,5 @@
+      - name: Guard
+        run: |
+          set -eu
+          export PATH="$HOME/.local/bin:$PATH"
+{@proofs}

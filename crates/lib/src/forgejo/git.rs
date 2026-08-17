@@ -62,6 +62,16 @@ fn parse(raw: &str) -> Result<Remote, String> {
     })
 }
 
+pub fn tags(root: &Path, commit: &str) -> Result<Vec<String>, String> {
+    let listed = text("list tags", command(root, ["tag", "--points-at", commit])?)?;
+    Ok(listed
+        .lines()
+        .map(str::trim)
+        .filter(|held| !held.is_empty())
+        .map(str::to_string)
+        .collect())
+}
+
 pub fn fetch(root: &Path) -> Result<(), String> {
     success(
         "fetch origin",

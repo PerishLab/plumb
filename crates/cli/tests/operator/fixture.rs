@@ -1,3 +1,136 @@
+use std::path::Path;
+use std::process::{Command, Output};
+
+pub struct Fixture<'a> {
+    pub root: &'a Path,
+    pub tools: &'a Path,
+}
+
+pub fn run(command: &mut Command) -> Output {
+    let output = command.output().expect("plumb should run");
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    output
+}
+
+impl Fixture<'_> {
+    pub fn command(&self) -> Command {
+        let mut held = Command::new(env!("CARGO_BIN_EXE_plumb"));
+        let path = format!(
+            "{}:{}",
+            self.tools.display(),
+            std::env::var("PATH").unwrap_or_default()
+        );
+        held.env("PATH", path)
+            .env("FAKE_S3_ROOT", self.root)
+            .env("PLUMB_RELEASE_ROOT", self.root);
+        held
+    }
+
+    pub fn archive(&self, artifacts: &Path, version: &str) {
+        use std::os::unix::fs::PermissionsExt;
+
+        let seat = self.root.join("binary");
+        std::fs::create_dir_all(&seat).expect("binary root");
+        let binary = seat.join("probe");
+        std::fs::write(&binary, format!("#!/bin/sh\nprintf 'probe {version}\\n'\n"))
+            .expect("probe binary");
+        std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755))
+            .expect("binary mode");
+        run(Command::new("tar").args([
+            "-C",
+            seat.to_str().expect("binary root path"),
+            "-czf",
+            artifacts
+                .join("probe-x86_64-unknown-linux-gnu.tar.gz")
+                .to_str()
+                .expect("artifact path"),
+            "probe",
+        ]));
+    }
+
+    pub fn seed(&self) {
+        use std::os::unix::fs::PermissionsExt;
+
+        std::fs::write(self.root.join("plumb.toml"), SPEC).expect("release manifest");
+        run(Command::new("git")
+            .arg("-C")
+            .arg(self.root)
+            .args(["init", "-q"]));
+        run(Command::new("git")
+            .arg("-C")
+            .arg(self.root)
+            .args(["config", "user.name", "Fixture"]));
+        run(Command::new("git").arg("-C").arg(self.root).args([
+            "config",
+            "user.email",
+            "fixture@example.test",
+        ]));
+        for (name, text) in [("aws", AWS), ("curl", CURL)] {
+            let path = self.tools.join(name);
+            std::fs::write(&path, text).expect("fake tool");
+            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755))
+                .expect("tool mode");
+        }
+    }
+
+    pub fn changelog(&self, version: &str) {
+        let seat = self.root.join("docs/CHANGELOG").join(version);
+        for language in ["en", "zh"] {
+            std::fs::create_dir_all(seat.join(language)).expect("changelog language root");
+            for leaf in ["INDEX.md", "MIGRATION.md"] {
+                std::fs::write(seat.join(language).join(leaf), "complete\n")
+                    .expect("changelog leaf");
+            }
+        }
+    }
+
+    pub fn candidate(&self) -> String {
+        run(Command::new("git")
+            .arg("-C")
+            .arg(self.root)
+            .args(["add", "plumb.toml", "docs"]));
+        run(Command::new("git")
+            .arg("-C")
+            .arg(self.root)
+            .args(["commit", "-qm", "candidate"]));
+        String::from_utf8(
+            run(Command::new("git")
+                .arg("-C")
+                .arg(self.root)
+                .args(["rev-parse", "HEAD"]))
+            .stdout,
+        )
+        .expect("candidate utf8")
+        .trim()
+        .to_string()
+    }
+
+    pub fn track(&self, path: &str) {
+        run(Command::new("git")
+            .arg("-C")
+            .arg(self.root)
+            .args(["add", path]));
+    }
+
+    pub fn tag(&self, version: &str) {
+        run(Command::new("git")
+            .arg("-C")
+            .arg(self.root)
+            .args(["tag", version]));
+    }
+
+    pub fn seal(&self, version: &str) {
+        let seat = self.root.join("releases/v1/releases/beta").join(version);
+        std::fs::create_dir_all(&seat).expect("published seal root");
+        std::fs::write(seat.join("seal.json"), "{}\n").expect("published seal");
+    }
+}
+
 pub const SPEC: &str = r#"
 [release]
 product = "probe"
@@ -78,7 +211,7 @@ while [ $# -gt 0 ]; do
     --output|-o) output=$2; shift 2 ;;
     --retry|--retry-delay) shift 2 ;;
     --write-out) status=true; shift 2 ;;
-    --fail|--silent|--show-error|--location|--retry-all-errors) shift ;;
+    --fail|--silent|--show-error|--location|--retry-all-errors|--head) shift ;;
     *) url=$1; shift ;;
   esac
 done

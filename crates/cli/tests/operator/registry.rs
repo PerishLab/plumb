@@ -144,7 +144,7 @@ fn sealed() {
     std::fs::write(
         path.join("plumb.toml"),
         format!(
-            "{PRODUCT}\n[release.npm]\nregistry = \"https://example.invalid/npm/\"\npackage = \"@family/family\"\n"
+            "{PRODUCT}\n[release.npm]\nregistry = \"https://example.invalid/npm/\"\npackages = [\"@family/family\"]\n"
         ),
     )
     .expect("attachment");
@@ -174,4 +174,47 @@ fn unsealed() {
     assert!(!reached.contains("PLUMB_RELEASE_OUTPUT"), "{reached}");
     assert!(!reached.contains("capsule"), "{reached}");
     assert!(reached.contains("cargo metadata failed"), "{reached}");
+}
+
+#[test]
+fn settled() {
+    let temp = tempfile::tempdir().expect("temp root");
+    let root = temp.path();
+    std::fs::create_dir_all(root.join("packages/held")).expect("package root");
+    std::fs::write(
+        root.join("plumb.toml"),
+        "[release.npm]\nregistry = \"https://registry.invalid\"\npackages = [\"held\"]\n",
+    )
+    .expect("manifest");
+    std::fs::write(
+        root.join("packages/held/package.json"),
+        "{\"name\":\"held\"}\n",
+    )
+    .expect("package");
+    for args in [
+        vec!["init", "-q"],
+        vec!["config", "user.name", "Fixture"],
+        vec!["config", "user.email", "fixture@example.test"],
+        vec!["add", "-A"],
+        vec!["commit", "-qm", "seed"],
+    ] {
+        let status = std::process::Command::new("git")
+            .arg("-C")
+            .arg(root)
+            .args(args)
+            .status()
+            .expect("git");
+        assert!(status.success());
+    }
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["ship", "npm", "pack"])
+        .env("PLUMB_RELEASE_ROOT", root)
+        .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1")
+        .output()
+        .expect("plumb should run");
+    let text = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !text.contains("unchanged since"),
+        "a product with no authority holds no baseline, so nothing is settled: {text}"
+    );
 }

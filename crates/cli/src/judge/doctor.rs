@@ -77,6 +77,7 @@ struct Summary {
     wrong: usize,
     unknown: usize,
     blind: usize,
+    noted: usize,
 }
 
 pub fn run(root: PathBuf, json: bool) -> i32 {
@@ -150,7 +151,7 @@ fn retired(
             .hits
             .iter()
             .map(|hit| {
-                finding::Finding::new(finding::wrong(
+                finding::Finding::new(finding::Seed::wrong(
                     &RETIRED_TERM_ABSENT,
                     format!(
                         "{} contains retired domain term {} in {}",
@@ -159,7 +160,7 @@ fn retired(
                 ))
             })
             .collect(),
-        Err(error) => vec![finding::Finding::new(finding::blind(
+        Err(error) => vec![finding::Finding::new(finding::Seed::blind(
             &RETIRED_TERM_ABSENT,
             error.to_string(),
         ))],
@@ -224,6 +225,10 @@ impl Summary {
             blind: findings
                 .iter()
                 .filter(|finding| finding.grade == "blind")
+                .count(),
+            noted: findings
+                .iter()
+                .filter(|finding| finding.grade == "noted")
                 .count(),
         }
     }

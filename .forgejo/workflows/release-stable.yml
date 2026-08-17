@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       promotion_channel:
-        description: Exact source channel
-        required: true
-        default: beta
+        description: Ignored; the source is derived from the frozen commit. Stop passing it.
+        required: false
+        default: ""
         type: string
       promotion_version:
-        description: Exact source version
-        required: true
+        description: Ignored; the source is derived from the frozen commit. Stop passing it.
+        required: false
+        default: ""
         type: string
 
 permissions:

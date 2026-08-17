@@ -24,7 +24,25 @@ pub fn run(spec: &Path, url: &str, version: &str) -> Result<String, String> {
     Ok(format!("smoked {} {}", spec.product, version))
 }
 
+fn held(url: &str) -> Result<String, String> {
+    if !url.ends_with("/seal.json") && !url.ends_with("/stable.json") {
+        return Ok(url.to_string());
+    }
+    let seat = if cfg!(windows) {
+        "/managers/windows/url"
+    } else {
+        "/managers/unix/url"
+    };
+    let record = plumb::forgejo::public(url)?;
+    record
+        .pointer(seat)
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_string)
+        .ok_or_else(|| format!("{url} names no manager for this platform"))
+}
+
 fn cycle(spec: &Spec, url: &str, version: &str, root: &Path) -> Result<(), String> {
+    let url = &held(url)?;
     let manager = root.join(if cfg!(windows) {
         "manage.ps1"
     } else {

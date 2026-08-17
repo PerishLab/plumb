@@ -100,6 +100,57 @@ impl Seat {
         0
     }
 
+    pub fn lane(&self, write: bool) -> i32 {
+        let seat = shape::lane::Seat(&self.0);
+        let lanes = match seat.render() {
+            Ok(lanes) => lanes,
+            Err(error) => {
+                eprintln!("plumb lane {}: {error}", self.0.display());
+                return 1;
+            }
+        };
+        println!("plumb lane {}", self.0.display());
+        println!();
+        if !write {
+            return Self::proposed(&lanes);
+        }
+        match seat.write(&lanes) {
+            Ok(written) if written.is_empty() => {
+                println!("  every rendered lane already stands as written");
+                0
+            }
+            Ok(written) => {
+                for path in written {
+                    println!("  wrote {path}");
+                }
+                0
+            }
+            Err(error) => {
+                eprintln!("plumb lane {}: {error}", self.0.display());
+                1
+            }
+        }
+    }
+
+    fn proposed(lanes: &[shape::lane::Lane]) -> i32 {
+        let mut drifted = 0;
+        for lane in lanes {
+            if !lane.drifted() {
+                println!("  true {}", lane.path);
+                continue;
+            }
+            drifted += 1;
+            let state = if lane.absent() { "absent" } else { "drifted" };
+            println!("  {state} {}", lane.path);
+        }
+        if drifted == 0 {
+            return 0;
+        }
+        println!();
+        println!("  run plumb lane --write to render what this repository declares");
+        1
+    }
+
     fn proposal(document: &shape::document::Document) -> bool {
         println!("  {} {}", document.strategy.id(), document.target);
         let mut ok = document.sources.iter().all(Self::source);

@@ -262,13 +262,12 @@ fn strict() {
             "dispatch",
             "--version",
             "v1.2.0",
-            "--promotion-version",
-            "v1.2.0-beta.4",
             "--dry-run",
         ],
     );
     assert!(output.status.success());
     let text = String::from_utf8_lossy(&output.stdout);
     assert!(text.contains("ref=release/v1.2.0"), "{text}");
+    assert!(text.contains("inputs={}"), "{text}");
     assert!(!text.contains(r#""version""#), "{text}");
 }

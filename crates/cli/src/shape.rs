@@ -4,6 +4,7 @@ use std::path::Path;
 pub mod changelog;
 mod dependency;
 pub mod document;
+pub mod lane;
 mod node;
 pub(crate) mod operator;
 mod pack;

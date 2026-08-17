@@ -1,19 +1,22 @@
 use super::super::super::model::{Cargo, Spec};
+use super::super::super::object::{self, Held};
 use super::super::ledger;
 use super::super::workspace::{Workspace, release};
+use super::manifest;
 use flate2::read::GzDecoder;
 use semver::Version;
+use std::collections::BTreeMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use toml_edit::{DocumentMut, Item, Value};
 
 pub struct Registry<'a> {
     spec: &'a Spec,
+    held: &'a Held,
 }
 
-pub fn registry(spec: &Spec) -> Registry<'_> {
-    Registry { spec }
+pub fn registry<'a>(spec: &'a Spec, held: &'a Held) -> Registry<'a> {
+    Registry { spec, held }
 }
 
 impl Registry<'_> {
@@ -26,10 +29,9 @@ impl Registry<'_> {
         }
         self.stamp(cargo, version)?;
         let identity = release(version)?;
-        let package = cargo
-            .packages
-            .first()
-            .ok_or_else(|| "Cargo attachment must declare ordered packages".to_string())?;
+        let Some(package) = self.projected(cargo)? else {
+            return Ok(format!("Cargo attachment holds nothing new for {version}"));
+        };
         self.command(
             [
                 "package",
@@ -55,6 +57,9 @@ impl Registry<'_> {
         self.stamp(cargo, version)?;
         let identity = release(version)?;
         for package in &cargo.packages {
+            if self.passed(package) {
+                continue;
+            }
             self.command(
                 [
                     "package",
@@ -114,11 +119,52 @@ impl Registry<'_> {
         Ok(format!("published Cargo attachment for {version}"))
     }
 
+    fn settled(&self, package: &str) -> Option<(&str, Version)> {
+        let since = self.held.since(&object::cargo(package))?;
+        Some((since, release(since).ok()?))
+    }
+
+    fn passed(&self, package: &str) -> bool {
+        match self.settled(package) {
+            Some((since, _)) => {
+                println!("  {package} unchanged since {since}; not projected");
+                true
+            }
+            None => false,
+        }
+    }
+
+    fn projected<'a>(&self, cargo: &'a Cargo) -> Result<Option<&'a String>, String> {
+        if cargo.packages.is_empty() {
+            return Err("Cargo attachment must declare ordered packages".into());
+        }
+        for package in &cargo.packages {
+            if !self.passed(package) {
+                return Ok(Some(package));
+            }
+        }
+        Ok(None)
+    }
+
+    fn pins(&self, cargo: &Cargo, identity: &Version) -> BTreeMap<String, String> {
+        cargo
+            .packages
+            .iter()
+            .map(|package| {
+                let pin = self
+                    .settled(package)
+                    .map_or_else(|| identity.clone(), |(_, held)| held);
+                (package.clone(), pin.to_string())
+            })
+            .collect()
+    }
+
     fn stamp(&self, cargo: &Cargo, version: &str) -> Result<(), String> {
         let identity = release(version)?;
+        let pins = self.pins(cargo, &identity);
         let workspace = Workspace::read(&self.spec.root)?;
         let root = self.spec.root.join("Cargo.toml");
-        let mut document = read(&root)?;
+        let mut document = manifest::read(&root)?;
         let base = document["workspace"]["package"]["version"]
             .as_str()
             .or_else(|| document["package"]["version"].as_str())
@@ -139,19 +185,23 @@ impl Registry<'_> {
         } else {
             document["package"]["version"] = toml_edit::value(identity.to_string());
         }
-        write(&root, &document)?;
+        manifest::write(&root, &document)?;
         for package in &cargo.packages {
-            let (manifest, _) = workspace.package(package)?;
-            let mut document = read(manifest)?;
-            if document["package"]["version"].as_str().is_some() {
-                document["package"]["version"] = toml_edit::value(identity.to_string());
+            let (seat, _) = workspace.package(package)?;
+            let mut document = manifest::read(seat)?;
+            let pin = pins
+                .get(package)
+                .ok_or_else(|| format!("cargo package {package} holds no release version"))?;
+            if self.settled(package).is_some() || document["package"]["version"].as_str().is_some()
+            {
+                document["package"]["version"] = toml_edit::value(pin.clone());
             }
-            dependencies(&mut document, &cargo.packages, &identity.to_string())?;
-            write(manifest, &document)?;
+            manifest::dependencies(&mut document, &pins)?;
+            manifest::write(seat, &document)?;
         }
-        let mut document = read(&root)?;
-        dependencies(&mut document, &cargo.packages, &identity.to_string())?;
-        write(&root, &document)
+        let mut document = manifest::read(&root)?;
+        manifest::dependencies(&mut document, &pins)?;
+        manifest::write(&root, &document)
     }
 
     fn command<const N: usize>(&self, args: [&str; N], token: &str) -> Result<(), String> {
@@ -186,51 +236,6 @@ impl Registry<'_> {
     }
 }
 
-fn dependencies(
-    document: &mut DocumentMut,
-    packages: &[String],
-    version: &str,
-) -> Result<(), String> {
-    if let Some(table) = document
-        .get_mut("workspace")
-        .and_then(Item::as_table_mut)
-        .and_then(|workspace| workspace.get_mut("dependencies"))
-        .and_then(Item::as_table_mut)
-    {
-        requirements(table, packages, version);
-    }
-    for section in ["dependencies", "build-dependencies", "dev-dependencies"] {
-        let Some(table) = document.get_mut(section).and_then(Item::as_table_mut) else {
-            continue;
-        };
-        requirements(table, packages, version);
-    }
-    Ok(())
-}
-
-fn requirements(table: &mut toml_edit::Table, packages: &[String], version: &str) {
-    for (name, item) in table.iter_mut() {
-        dependency(&name, item, packages, version);
-    }
-}
-
-fn dependency(name: &str, item: &mut Item, packages: &[String], version: &str) {
-    if let Some(detail) = item.as_inline_table_mut() {
-        let identity = detail
-            .get("package")
-            .and_then(Value::as_str)
-            .unwrap_or(name);
-        if detail.contains_key("path") && packages.iter().any(|package| package == identity) {
-            detail.insert("version", Value::from(format!("={version}")));
-        }
-    } else if let Some(detail) = item.as_table_mut() {
-        let identity = detail.get("package").and_then(Item::as_str).unwrap_or(name);
-        if detail.contains_key("path") && packages.iter().any(|package| package == identity) {
-            detail["version"] = toml_edit::value(format!("={version}"));
-        }
-    }
-}
-
 fn inspect(path: &Path, package: &str, version: &Version) -> Result<(), String> {
     let file = std::fs::File::open(path)
         .map_err(|error| format!("cannot open {}: {error}", path.display()))?;
@@ -250,16 +255,4 @@ fn inspect(path: &Path, package: &str, version: &Version) -> Result<(), String> 
         }
     }
     Err(format!("Cargo archive misses {wanted}"))
-}
-
-fn read(path: &Path) -> Result<DocumentMut, String> {
-    std::fs::read_to_string(path)
-        .map_err(|error| format!("cannot read {}: {error}", path.display()))?
-        .parse()
-        .map_err(|error| format!("cannot parse {}: {error}", path.display()))
-}
-
-fn write(path: &Path, document: &DocumentMut) -> Result<(), String> {
-    std::fs::write(path, document.to_string())
-        .map_err(|error| format!("cannot stamp {}: {error}", path.display()))
 }

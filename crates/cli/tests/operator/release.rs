@@ -1,22 +1,6 @@
-use super::fixture::{AWS, CURL, SPEC};
+use super::fixture::{Fixture, SPEC, run};
 use std::path::Path;
-use std::process::{Command, Output};
-
-struct Fixture<'a> {
-    root: &'a Path,
-    tools: &'a Path,
-}
-
-fn run(command: &mut Command) -> Output {
-    let output = command.output().expect("plumb should run");
-    assert!(
-        output.status.success(),
-        "stdout:\n{}\nstderr:\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    output
-}
+use std::process::Command;
 
 struct Compile<'a> {
     fixture: &'a Fixture<'a>,
@@ -51,100 +35,6 @@ fn authority(command: &mut Command, capsule: &Path, operation: &str) {
         .env("PLUMB_RELEASE_CAPSULE", capsule);
 }
 
-impl Fixture<'_> {
-    fn command(&self) -> Command {
-        let mut held = Command::new(env!("CARGO_BIN_EXE_plumb"));
-        let path = format!(
-            "{}:{}",
-            self.tools.display(),
-            std::env::var("PATH").unwrap_or_default()
-        );
-        held.env("PATH", path)
-            .env("FAKE_S3_ROOT", self.root)
-            .env("PLUMB_RELEASE_ROOT", self.root);
-        held
-    }
-
-    fn archive(&self, artifacts: &Path, version: &str) {
-        use std::os::unix::fs::PermissionsExt;
-
-        let seat = self.root.join("binary");
-        std::fs::create_dir_all(&seat).expect("binary root");
-        let binary = seat.join("probe");
-        std::fs::write(&binary, format!("#!/bin/sh\nprintf 'probe {version}\\n'\n"))
-            .expect("probe binary");
-        std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755))
-            .expect("binary mode");
-        run(Command::new("tar").args([
-            "-C",
-            seat.to_str().expect("binary root path"),
-            "-czf",
-            artifacts
-                .join("probe-x86_64-unknown-linux-gnu.tar.gz")
-                .to_str()
-                .expect("artifact path"),
-            "probe",
-        ]));
-    }
-
-    fn seed(&self) {
-        use std::os::unix::fs::PermissionsExt;
-
-        std::fs::write(self.root.join("plumb.toml"), SPEC).expect("release manifest");
-        run(Command::new("git")
-            .arg("-C")
-            .arg(self.root)
-            .args(["init", "-q"]));
-        run(Command::new("git")
-            .arg("-C")
-            .arg(self.root)
-            .args(["config", "user.name", "Fixture"]));
-        run(Command::new("git").arg("-C").arg(self.root).args([
-            "config",
-            "user.email",
-            "fixture@example.test",
-        ]));
-        for (name, text) in [("aws", AWS), ("curl", CURL)] {
-            let path = self.tools.join(name);
-            std::fs::write(&path, text).expect("fake tool");
-            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755))
-                .expect("tool mode");
-        }
-    }
-
-    fn changelog(&self, version: &str) {
-        let seat = self.root.join("docs/CHANGELOG").join(version);
-        for language in ["en", "zh"] {
-            std::fs::create_dir_all(seat.join(language)).expect("changelog language root");
-            for leaf in ["INDEX.md", "MIGRATION.md"] {
-                std::fs::write(seat.join(language).join(leaf), "complete\n")
-                    .expect("changelog leaf");
-            }
-        }
-    }
-
-    fn candidate(&self) -> String {
-        run(Command::new("git")
-            .arg("-C")
-            .arg(self.root)
-            .args(["add", "plumb.toml", "docs"]));
-        run(Command::new("git")
-            .arg("-C")
-            .arg(self.root)
-            .args(["commit", "-qm", "candidate"]));
-        String::from_utf8(
-            run(Command::new("git")
-                .arg("-C")
-                .arg(self.root)
-                .args(["rev-parse", "HEAD"]))
-            .stdout,
-        )
-        .expect("candidate utf8")
-        .trim()
-        .to_string()
-    }
-}
-
 #[test]
 fn cycle() {
     let temp = tempfile::tempdir().expect("temp root");
@@ -160,6 +50,7 @@ fn cycle() {
     fixture.seed();
     fixture.changelog("v1.2.0");
     let candidate = fixture.candidate();
+    fixture.tag("v1.2.0-beta.7");
     fixture.archive(&artifacts, "v1.2.0-beta.7");
 
     let beta = root.join("beta");
@@ -183,8 +74,8 @@ fn cycle() {
     run(fixture
         .command()
         .args(["release", "promote"])
-        .env("PLUMB_RELEASE_PROMOTION_CHANNEL", "beta")
-        .env("PLUMB_RELEASE_PROMOTION_VERSION", "v1.2.0-beta.7")
+        .env("PLUMB_RELEASE_COMMIT", &candidate)
+        .env("PLUMB_RELEASE_VERSION", "v1.2.0")
         .env("PLUMB_RELEASE_PROMOTION", &proof));
     assert!(proof.is_file());
     let seal: serde_json::Value =
@@ -277,4 +168,69 @@ fn intent() {
     assert!(manager.contains("CHANNEL=${PROBE_CHANNEL:-canary}"));
     assert!(manager.contains("VERSION=${PROBE_VERSION:-v1.2.0-canary.9}"));
     assert!(!out.join("canonical").exists());
+}
+
+#[test]
+fn inputs() {
+    let temp = tempfile::tempdir().expect("temp root");
+    let root = temp.path();
+    let tools = root.join("tools");
+    let artifacts = root.join("artifacts");
+    std::fs::create_dir_all(&tools).expect("tool root");
+    std::fs::create_dir_all(&artifacts).expect("artifact root");
+    std::fs::create_dir_all(root.join("charts/probe")).expect("chart root");
+    let fixture = Fixture {
+        root,
+        tools: &tools,
+    };
+    fixture.seed();
+    std::fs::write(
+        root.join("plumb.toml"),
+        format!("{SPEC}[release.chart]\nregistry = \"example.invalid\"\nchart = \"owner/probe\"\naccount = \"Example\"\n"),
+    )
+    .expect("manifest");
+    std::fs::write(root.join("charts/probe/Chart.yaml"), "name: probe\n").expect("chart");
+    fixture.changelog("v1.2.0");
+    fixture.track("charts");
+    let candidate = fixture.candidate();
+    fixture.tag("v1.2.0-beta.7");
+    fixture.archive(&artifacts, "v1.2.0-beta.7");
+
+    let out = root.join("beta");
+    compile(Compile {
+        fixture: &fixture,
+        artifacts: &artifacts,
+        channel: "beta",
+        version: "v1.2.0-beta.7",
+        out: &out,
+        promotion: None,
+        commit: &candidate,
+    });
+    let seal: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(out.join("seal.json")).expect("seal"))
+            .expect("seal json");
+    let held = &seal["inputs"]["chart"];
+    assert!(held["hash"].as_str().is_some_and(|hash| hash.len() == 64));
+    assert_eq!(held["since"], "v1.2.0-beta.7");
+
+    let published = root.join("releases/v1");
+    std::fs::create_dir_all(published.join("channels")).expect("published root");
+    std::fs::write(
+        published.join("channels/stable.json"),
+        r#"{"seal":{"url":"https://releases.test/v1/seal.json"}}"#,
+    )
+    .expect("stable pointer");
+    std::fs::copy(out.join("seal.json"), published.join("seal.json")).expect("published seal");
+    let said = String::from_utf8_lossy(
+        &run(fixture
+            .command()
+            .args(["ship", "chart", "package"])
+            .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.8"))
+        .stdout,
+    )
+    .to_string();
+    assert!(
+        said.contains("chart unchanged since v1.2.0-beta.7"),
+        "a published baseline that still matches holds the object settled: {said}"
+    );
 }

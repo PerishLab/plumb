@@ -7,7 +7,13 @@ mod audit;
 mod fixture;
 #[cfg(unix)]
 mod forgejo;
+#[cfg(unix)]
+mod lane;
+#[cfg(unix)]
+mod pin;
 mod precommit;
+#[cfg(unix)]
+mod promotion;
 #[cfg(unix)]
 mod recovery;
 #[cfg(unix)]
@@ -22,6 +28,7 @@ mod settlement;
 mod site;
 #[cfg(unix)]
 mod stable;
+mod surface;
 #[cfg(unix)]
 mod topology;
 

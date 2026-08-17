@@ -109,6 +109,15 @@ pub struct Seal {
     pub proof: Option<Promotion>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub radius: Option<Radius>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub inputs: BTreeMap<String, Input>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct Input {
+    pub hash: String,
+    pub since: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

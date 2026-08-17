@@ -1,0 +1,78 @@
+name: ship
+
+on:
+  workflow_call:
+    inputs:
+      guard_contexts:
+        description: JSON commit-status contexts proving the canonical source guard
+        required: false
+        default: ""
+        type: string
+    secrets:
+      publish_access:
+        required: false
+      publish_secret:
+        required: false
+      publish_bucket:
+        required: false
+      publish_endpoint:
+        required: false
+      activate_access:
+        required: false
+      activate_secret:
+        required: false
+      activate_bucket:
+        required: false
+      activate_endpoint:
+        required: false
+      registry_token:
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.repository }}-ship-${{ startsWith(github.ref, 'refs/heads/release/') && 'consensus' || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    runs-on: docker
+    container:
+      image: {@forge}
+    outputs:
+      channel: ${{ steps.plan.outputs.channel }}
+      commit: ${{ steps.plan.outputs.commit }}
+      version: ${{ steps.plan.outputs.version }}
+      targets: ${{ steps.plan.outputs.targets }}
+      project: ${{ steps.plan.outputs.project }}
+    env:
+      PLUMB_RELEASE_ROOT: .
+      PLUMB_RELEASE_COMMIT: ${{ github.sha }}
+      PLUMB_RELEASE_SOURCE: ${{ github.ref }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Install stable Plumb
+        run: curl -fsSL {@plumb}/manage.sh | sh
+
+      - name: Plan this release
+        id: plan
+        run: |
+          set -eu
+          PLUMB_RELEASE_VERSION=$(plumb release reference)
+          PLUMB_RELEASE_CHANNEL=$(plumb release channel)
+          export PLUMB_RELEASE_VERSION PLUMB_RELEASE_CHANNEL
+          plumb release source
+          {
+            echo "channel=$PLUMB_RELEASE_CHANNEL"
+            echo "commit=$PLUMB_RELEASE_COMMIT"
+            echo "version=$PLUMB_RELEASE_VERSION"
+            echo "targets=$(plumb ship binary matrix)"
+            echo "project=$(plumb release surface | jq -c '.project')"
+          } >> "$GITHUB_OUTPUT"
+{@binary}{@project}

@@ -2,6 +2,7 @@ use super::super::super::model::Spec;
 
 const LINUX: &str = "x86_64-unknown-linux-gnu";
 const PAYLOAD: &str = "uk.perish.plumb.payload";
+const REVISION: &str = "org.opencontainers.image.revision";
 use std::io::Write;
 use std::process::{Command, Stdio};
 
@@ -14,7 +15,12 @@ pub fn image(spec: &Spec) -> Image<'_> {
 }
 
 impl Image<'_> {
-    pub fn build(&self, version: &str, artifacts: &std::path::Path) -> Result<String, String> {
+    pub fn build(
+        &self,
+        version: &str,
+        commit: &str,
+        artifacts: &std::path::Path,
+    ) -> Result<String, String> {
         let Some(oci) = &self.spec.oci else {
             return Ok(format!("{} has no image attachment", self.spec.product));
         };
@@ -22,14 +28,20 @@ impl Image<'_> {
         if !file.is_file() {
             return Err(format!("declared image has no {}", file.display()));
         }
-        let (seat, payload) = self.payload(artifacts)?;
+        let (seat, payload) = if self.spec.binary() {
+            self.payload(artifacts)?
+        } else if commit.is_empty() {
+            return Err("PLUMB_RELEASE_COMMIT binds an image that carries no archive".into());
+        } else {
+            (self.spec.root.clone(), commit.to_string())
+        };
         let reference = reference(oci, version);
         self.command([
             "build",
             "--network",
             "host",
             "--label",
-            &format!("{PAYLOAD}={payload}"),
+            &format!("{}={payload}", self.mark()),
             "--tag",
             &reference,
             "--file",
@@ -37,6 +49,14 @@ impl Image<'_> {
             &seat.to_string_lossy(),
         ])?;
         Ok(format!("built {reference} carrying {payload}"))
+    }
+
+    fn mark(&self) -> &'static str {
+        if self.spec.binary() {
+            PAYLOAD
+        } else {
+            REVISION
+        }
     }
 
     fn payload(&self, artifacts: &std::path::Path) -> Result<(std::path::PathBuf, String), String> {
@@ -141,7 +161,7 @@ impl Image<'_> {
                 "image",
                 "inspect",
                 "--format",
-                &format!("{{{{index .Config.Labels \"{PAYLOAD}\"}}}}"),
+                &format!("{{{{index .Config.Labels \"{}\"}}}}", self.mark()),
                 reference,
             ])
             .current_dir(&self.spec.root)
@@ -152,7 +172,7 @@ impl Image<'_> {
         }
         let held = String::from_utf8_lossy(&output.stdout).trim().to_string();
         if held.is_empty() || held == "<no value>" {
-            return Err(format!("{reference} declares no {PAYLOAD}"));
+            return Err(format!("{reference} declares no {}", self.mark()));
         }
         Ok(held)
     }

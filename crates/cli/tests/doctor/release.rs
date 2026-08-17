@@ -102,3 +102,35 @@ fn carried() {
 
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
+
+#[test]
+fn attached() {
+    let dir = seat("plumb-release-attachment-only");
+    let path = dir.to_str().expect("path should be utf8");
+
+    std::fs::write(
+        dir.join("plumb.toml"),
+        "[release.oci]\nregistry = \"git.perish.top\"\nimage = \"owner/name\"\naccount = \"PerishFire\"\n",
+    )
+    .expect("manifest should be written");
+    caller(&dir, "release-exact", "release-binary");
+    let image = crate::run(&["doctor", path]);
+    assert!(image.contains("publishes oci"), "{image}");
+    assert!(!image.contains("the current Plumb refuses"), "{image}");
+
+    std::fs::write(dir.join("plumb.toml"), "[release]\nskill = false\n")
+        .expect("manifest should be written");
+    let empty = crate::run(&["doctor", path]);
+    assert!(empty.contains("the current Plumb refuses"), "{empty}");
+    assert!(empty.contains("at least one attachment"), "{empty}");
+
+    std::fs::write(
+        dir.join("plumb.toml"),
+        "[release]\nskill = true\n[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n",
+    )
+    .expect("manifest should be written");
+    let skill = crate::run(&["doctor", path]);
+    assert!(skill.contains("requires a binary release"), "{skill}");
+
+    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
+}

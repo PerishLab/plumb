@@ -1,0 +1,122 @@
+
+  build:
+    needs: resolve
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve.outputs.targets) }}
+    runs-on: ${{ matrix.runner }}
+    env:
+      PLUMB_RELEASE_ROOT: .
+      PLUMB_RELEASE_CHANNEL: ${{ needs.resolve.outputs.channel }}
+      PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
+      PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
+      PLUMB_RELEASE_TARGET: ${{ matrix.target }}
+      PLUMB_RELEASE_ARTIFACTS: dist/${{ needs.resolve.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          ref: ${{ needs.resolve.outputs.commit }}
+
+      - name: Install stable Plumb
+        run: curl -fsSL {@plumb}/manage.sh | sh
+
+      - name: Build one declared target
+        run: plumb ship binary build
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/${{ needs.resolve.outputs.version }}/*
+
+  seal:
+    needs: [resolve, build]
+    runs-on: docker
+    container:
+      image: {@forge}
+    outputs:
+      manager: ${{ steps.surface.outputs.manager }}
+    env:
+      DOCKER_HOST: tcp://172.17.0.1:2375
+      PLUMB_RELEASE_ROOT: .
+      PLUMB_RELEASE_CHANNEL: ${{ needs.resolve.outputs.channel }}
+      PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
+      PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
+      PLUMB_RELEASE_ARTIFACTS: dist/${{ needs.resolve.outputs.version }}
+      PLUMB_RELEASE_TOOLCHAIN: {@forge}
+      PLUMB_RELEASE_OUTPUT: .plumb-release/capsule
+      PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
+      PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
+      PLUMB_PUBLISH_ACCESS: ${{ secrets.publish_access }}
+      PLUMB_PUBLISH_SECRET: ${{ secrets.publish_secret }}
+      PLUMB_PUBLISH_BUCKET: ${{ secrets.publish_bucket }}
+      PLUMB_PUBLISH_ENDPOINT: ${{ secrets.publish_endpoint }}
+      PLUMB_ACTIVATE_ACCESS: ${{ secrets.activate_access }}
+      PLUMB_ACTIVATE_SECRET: ${{ secrets.activate_secret }}
+      PLUMB_ACTIVATE_BUCKET: ${{ secrets.activate_bucket }}
+      PLUMB_ACTIVATE_ENDPOINT: ${{ secrets.activate_endpoint }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ needs.resolve.outputs.commit }}
+
+      - name: Install stable Plumb
+        run: curl -fsSL {@plumb}/manage.sh | sh
+
+      - name: Require canonical guard evidence
+        env:
+          PLUMB_GUARD_API: ${{ github.api_url }}
+          PLUMB_GUARD_REPOSITORY: ${{ github.repository }}
+          PLUMB_GUARD_TOKEN: ${{ github.token }}
+          PLUMB_GUARD_CONTEXTS: ${{ inputs.guard_contexts }}
+        run: plumb release evidence
+
+      - uses: actions/download-artifact@v3
+        with:
+          path: dist/${{ needs.resolve.outputs.version }}
+
+      - name: Assemble the declared binary shape
+        run: plumb ship binary assemble
+
+      - name: Fetch the derived promotion proof
+        run: plumb release promote
+
+      - name: Compile the immutable capsule
+        run: plumb release compile
+
+      - name: Publish and read back the exact release
+        run: |
+          set -eu
+          plumb ship binary publish
+          plumb ship binary verify
+
+      - name: Activate the stable consensus
+        id: surface
+        run: |
+          set -eu
+          plumb ship binary activate
+          echo "manager=$(plumb ship binary manager)" >> "$GITHUB_OUTPUT"
+
+  smoke:
+    needs: [resolve, seal]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve.outputs.targets) }}
+    runs-on: ${{ matrix.runner }}
+    env:
+      PLUMB_RELEASE_ROOT: .
+      PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
+      PLUMB_RELEASE_URL: ${{ needs.seal.outputs.manager }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          ref: ${{ needs.resolve.outputs.commit }}
+
+      - name: Install stable Plumb
+        run: curl -fsSL {@plumb}/manage.sh | sh
+
+      - name: Smoke the generated manager
+        run: plumb ship binary smoke

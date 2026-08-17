@@ -26,10 +26,20 @@ pub enum Deed {
         #[command(subcommand)]
         deed: Oci,
     },
+    Cfworker {
+        #[command(subcommand)]
+        deed: Cfworker,
+    },
     Site {
         #[command(subcommand)]
         deed: Site,
     },
+}
+
+#[derive(Subcommand)]
+pub enum Cfworker {
+    Publish,
+    Rehearse,
 }
 
 #[derive(Subcommand)]
@@ -100,6 +110,7 @@ pub fn run(deed: Deed) -> i32 {
         Deed::Chart { deed } => chart(deed),
         Deed::Npm { deed } => npm(deed),
         Deed::Oci { deed } => oci(deed),
+        Deed::Cfworker { deed } => cfworker(deed),
         Deed::Site { deed } => site(deed),
     };
     match result {
@@ -118,8 +129,9 @@ fn cargo(deed: Cargo) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
     let release = &rig.release;
-    let attachment = engine::adaptor::registry::registry(&spec);
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
+    let held = super::release::object::Seat(&spec).held(&release.toolchain, version);
+    let attachment = engine::adaptor::registry::registry(&spec, &held);
     match deed {
         Cargo::Publish => {
             sealed(&spec, release, version)?;
@@ -136,7 +148,7 @@ fn oci(deed: Oci) -> Result<String, String> {
     let carrier = engine::adaptor::image::image(&spec);
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
     match deed {
-        Oci::Build => carrier.build(version, &artifacts(release)?),
+        Oci::Build => carrier.build(version, &release.commit, &artifacts(release)?),
         Oci::Publish => {
             sealed(&spec, release, version)?;
             carrier.publish(version, &release.registry_token)
@@ -148,8 +160,9 @@ fn chart(deed: Chart) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
     let release = &rig.release;
-    let carrier = engine::adaptor::chart::chart(&spec);
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
+    let held = super::release::object::Seat(&spec).held(&release.toolchain, version);
+    let carrier = engine::adaptor::chart::chart(&spec, &held);
     match deed {
         Chart::Package => carrier.package(version),
         Chart::Publish => {
@@ -163,8 +176,9 @@ fn npm(deed: Npm) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
     let release = &rig.release;
-    let carrier = engine::adaptor::module::module(&spec);
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
+    let held = super::release::object::Seat(&spec).held(&release.toolchain, version);
+    let carrier = engine::adaptor::module::module(&spec, &held);
     match deed {
         Npm::Pack => carrier.pack(version),
         Npm::Publish => {
@@ -205,6 +219,17 @@ fn sealed(
         ));
     }
     Ok(())
+}
+
+fn cfworker(deed: Cfworker) -> Result<String, String> {
+    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
+    let seat = super::site::Worker {
+        root: &rig.release.root,
+        channel: required("PLUMB_RELEASE_CHANNEL", &rig.release.channel)?,
+        version: required("PLUMB_RELEASE_VERSION", &rig.release.version)?,
+        toolchain: &rig.release.toolchain,
+    };
+    super::site::worker(seat, matches!(deed, Cfworker::Publish))
 }
 
 fn site(deed: Site) -> Result<String, String> {

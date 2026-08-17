@@ -1,7 +1,8 @@
 mod attachment;
 mod retire;
+mod shape;
 
-pub use attachment::{Cargo, Chart, Npm, Oci};
+pub use attachment::{Cargo, Cfworker, Chart, Deb, Npm, Oci};
 pub use retire::Retire;
 
 use serde::Deserialize;
@@ -33,12 +34,6 @@ pub struct Target {
     pub runner: String,
 }
 
-#[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "kebab-case")]
-pub struct Deb {
-    pub root: PathBuf,
-}
-
 #[derive(Clone, Debug)]
 pub struct Spec {
     pub root: PathBuf,
@@ -51,6 +46,8 @@ pub struct Spec {
     pub oci: Option<Oci>,
     pub chart: Option<Chart>,
     pub npm: Option<Npm>,
+    pub cfworker: Option<Cfworker>,
+    pub depends: std::collections::BTreeMap<String, Vec<PathBuf>>,
     pub deb: Option<Deb>,
     pub retire: Option<Retire>,
 }
@@ -72,6 +69,8 @@ struct Raw {
     oci: Option<Oci>,
     chart: Option<Chart>,
     npm: Option<Npm>,
+    cfworker: Option<Cfworker>,
+    depends: std::collections::BTreeMap<String, Vec<PathBuf>>,
     deb: Option<Deb>,
     retire: Option<Retire>,
 }
@@ -94,6 +93,8 @@ impl Spec {
             oci,
             chart,
             npm,
+            cfworker,
+            depends,
             deb,
             retire,
         } = held.release;
@@ -111,6 +112,8 @@ impl Spec {
             oci,
             chart,
             npm,
+            cfworker,
+            depends,
             deb,
             retire,
         };
@@ -121,7 +124,7 @@ impl Spec {
         Ok(spec)
     }
 
-    fn attachments(&self) -> [Result<(), String>; 4] {
+    fn attachments(&self) -> [Result<(), String>; 5] {
         [
             self.cargo.as_ref().map_or(Ok(()), Cargo::validate),
             self.oci.as_ref().map_or(Ok(()), Oci::validate),
@@ -131,18 +134,16 @@ impl Spec {
             self.npm
                 .as_ref()
                 .map_or(Ok(()), |held| held.validate(&self.root)),
+            self.cfworker
+                .as_ref()
+                .map_or(Ok(()), |held| held.validate(&self.root)),
         ]
-    }
-
-    pub fn binary(&self) -> bool {
-        self.product.len() + self.authority.len() + self.binaries.len() + self.target.len() > 0
     }
 
     fn validate(&self) -> Result<(), String> {
         let binary = self.binary();
-        let invalid = self.skill || self.deb.is_some() || self.cargo.is_none();
-        if !binary && invalid {
-            return Err("Cargo-only release must declare only a Cargo attachment".into());
+        if !binary {
+            self.standalone()?;
         }
         if binary {
             token("product", &self.product, false)?;

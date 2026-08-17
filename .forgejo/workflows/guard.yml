@@ -8,6 +8,9 @@ on:
       - release/**
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: guard-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -15,17 +18,16 @@ concurrency:
 jobs:
   guard:
     runs-on: docker
-    container: mirror.perish.lan/ci/deno
+    container:
+      image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
       - name: Install stable Ectropy
-        uses: PerishLab/actions/setup-binary@main
-        env:
-          PERISH_SETUP_PRODUCT: ectropy
+        run: curl -fsSL https://releases.ectropy.perish.uk/manage.sh | sh
 
-      - name: Install JS dependencies
+      - name: Install declared packages
         run: |
           set -eu
           corepack enable
@@ -34,6 +36,7 @@ jobs:
       - name: Guard
         run: |
           set -eu
+          export PATH="$HOME/.local/bin:$PATH"
           cargo fmt --all --check
           cargo clippy --all-targets -- -D warnings
           cargo test --locked
@@ -42,5 +45,6 @@ jobs:
           pnpm -r exec tsc --noEmit
           pnpm -r test
           pnpm --filter @plumb/web build
-          cargo run --quiet --locked -p plumb-cli -- doctor .
+          cargo run --quiet --locked --bin plumb -- doctor .
           ectropy .
+

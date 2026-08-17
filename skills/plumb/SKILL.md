@@ -56,6 +56,7 @@ plumb land [ROOT] [--base BASE] [--dry-run]
 plumb document [ROOT]
 plumb radius --root [LABEL=]PATH --product PRODUCT --candidate VERSION
 plumb policy [ROOT] --write
+plumb lane [ROOT] [--write]
 plumb changelog [ROOT]
 plumb release --help
 plumb ship --help
@@ -84,6 +85,21 @@ unfamiliar or stateful action.
   repository wrapper or hook.
 - Record document seals only after reading every named source and target.
   `plumb document` prints proposals and never rewrites `plumb.toml`.
+- A skip is an optimisation, never a gate. An unreadable baseline projects
+  everything and says so; it does not refuse the release. A settled crate keeps
+  the release it last changed in, and every requirement on it names that one.
+- A ship object carries the name of its medium, plus `/<package>` where one
+  medium holds many: `cargo/<crate>`, `npm/<package>`, `chart`, `cfworker`.
+  `[release.depends]` keys and a seal's recorded inputs use those names.
+- A worker is a release medium, not a side channel. `[release.cfworker]` names
+  the account and the stable domain; exact channels stage a version behind its
+  own preview URL and only stable reaches the declared domain.
+- Never hand-edit a governed workflow. `plumb lane --write` renders it from the
+  declaration; doctor notes drift instead of refusing it, so a stale lane stays
+  visible without reddening the repository. A rendered lane carries no condition:
+  the job set follows the declared surface, and matrices only size a job kind.
+  Dispatch refuses a lane this Plumb rendered and someone then edited; a lane
+  never rendered at all only draws the note, so adoption stays incremental.
 - Stable default skill seats accept canonical stable only. Validate every
   other candidate in an exact, isolated stage path.
 - A governed repository declares `[[document]]` strategies. Unknown

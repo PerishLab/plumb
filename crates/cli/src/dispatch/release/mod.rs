@@ -4,6 +4,7 @@ pub(super) mod engine;
 pub(super) mod generator;
 pub(super) mod manager;
 pub(crate) mod model;
+pub(super) mod object;
 mod proof;
 pub(super) mod record;
 pub(super) mod smoke;
@@ -20,10 +21,13 @@ pub enum Deed {
     Authority,
     Channel,
     Compile,
+    Evidence,
     Inspect,
     Packport,
     Promote,
+    Reference,
     Source,
+    Surface,
 }
 
 pub fn run(deed: Deed) -> i32 {
@@ -54,6 +58,7 @@ fn execute(deed: Deed) -> Result<String, String> {
             required("PLUMB_RELEASE_URL", &release.url)?,
             release.activated,
         ),
+        Deed::Surface => surface(&spec),
         Deed::Packport => engine::topology::packport(
             &spec.root,
             required("PLUMB_RELEASE_VERSION", &release.version)?,
@@ -62,19 +67,25 @@ fn execute(deed: Deed) -> Result<String, String> {
         ),
         Deed::Promote => engine::promotion::fetch(
             &spec,
-            required(
-                "PLUMB_RELEASE_PROMOTION_CHANNEL",
-                &release.promotion_channel,
-            )?,
-            required(
-                "PLUMB_RELEASE_PROMOTION_VERSION",
-                &release.promotion_version,
-            )?,
+            required("PLUMB_RELEASE_COMMIT", &release.commit)?,
+            required("PLUMB_RELEASE_VERSION", &release.version)?,
             release
                 .promotion
                 .as_deref()
                 .ok_or_else(|| "PLUMB_RELEASE_PROMOTION is required".to_string())?,
         ),
+        Deed::Evidence => engine::topology::evidence(
+            engine::topology::Guard {
+                api: required("PLUMB_GUARD_API", &rig.guard.api)?,
+                repository: required("PLUMB_GUARD_REPOSITORY", &rig.guard.repository)?,
+                token: required("PLUMB_GUARD_TOKEN", &rig.guard.token)?,
+                commit: required("PLUMB_RELEASE_COMMIT", &release.commit)?,
+            },
+            &rig.guard.contexts,
+        ),
+        Deed::Reference => {
+            engine::topology::reference(required("PLUMB_RELEASE_SOURCE", &release.source)?)
+        }
         Deed::Source => engine::topology::source(engine::topology::Source {
             root: &spec.root,
             channel: required("PLUMB_RELEASE_CHANNEL", &release.channel)?,
@@ -83,6 +94,28 @@ fn execute(deed: Deed) -> Result<String, String> {
             reference: required("PLUMB_RELEASE_SOURCE", &release.source)?,
         }),
     }
+}
+
+fn surface(spec: &model::Spec) -> Result<String, String> {
+    let media = spec.surface();
+    let row = |medium: &&str| serde_json::json!({ "medium": medium });
+    let include = media.iter().map(row).collect::<Vec<_>>();
+    let project = media
+        .iter()
+        .filter(|medium| **medium != "binary")
+        .map(row)
+        .collect::<Vec<_>>();
+    let seal = media
+        .iter()
+        .filter(|medium| **medium == "binary")
+        .map(|_| serde_json::json!({ "held": "seal" }))
+        .collect::<Vec<_>>();
+    serde_json::to_string(&serde_json::json!({
+        "include": include,
+        "project": { "include": project },
+        "seal": { "include": seal },
+    }))
+    .map_err(|error| error.to_string())
 }
 
 fn compile(spec: &model::Spec, release: &plumb::rig::Release) -> Result<String, String> {
@@ -101,6 +134,7 @@ fn compile(spec: &model::Spec, release: &plumb::rig::Release) -> Result<String, 
         out: &output(release)?,
         promotion: release.promotion.as_deref(),
         changelog,
+        toolchain: &release.toolchain,
     })
 }
 
@@ -152,6 +186,14 @@ pub(super) fn authority(root: &Path) -> Result<String, String> {
 
 pub(super) fn inspect(url: &str) -> Result<String, String> {
     verify::inspect(url, true)
+}
+
+pub(super) fn promotion(
+    spec: &model::Spec,
+    commit: &str,
+    version: &str,
+) -> Result<engine::promotion::Exact, String> {
+    engine::promotion::derive(spec, commit, version)
 }
 
 pub(super) fn settled(root: &Path, version: &str, commit: &str) -> Result<String, String> {

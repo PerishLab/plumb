@@ -22,6 +22,23 @@ pub fn run(call: Call<'_>) -> Result<(), String> {
     }
 }
 
+pub fn held(call: Call<'_>) -> Result<String, String> {
+    let output = Command::new(call.bin)
+        .args(call.args)
+        .current_dir(call.cwd)
+        .envs(call.env.iter().copied())
+        .output()
+        .map_err(|error| format!("cannot run {}: {error}", call.bin))?;
+    if !output.status.success() {
+        return Err(format!(
+            "{} failed: {}",
+            call.bin,
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
 pub fn text(bin: &str, args: &[&str], cwd: &Path) -> Result<String, String> {
     let output = Command::new(bin)
         .args(args)

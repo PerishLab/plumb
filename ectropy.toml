@@ -142,14 +142,6 @@ description = "The operator harness names its guard deadline in milliseconds."
 name = "guard_timeout_ms"
 
 [[vocabulary.term]]
-description = "An exact promotion channel is one release proof field."
-name = "promotion_channel"
-
-[[vocabulary.term]]
-description = "An exact promotion version is one release proof field."
-name = "promotion_version"
-
-[[vocabulary.term]]
 description = "The Cargo registry token is one release authority field."
 name = "registry_token"
 

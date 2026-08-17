@@ -33,6 +33,17 @@ pub struct Build<'a> {
 }
 
 impl Workspace {
+    pub fn seats(&self, root: &Path) -> BTreeMap<String, PathBuf> {
+        self.packages
+            .iter()
+            .filter_map(|package| {
+                let seat = package.manifest_path.parent()?;
+                let held = seat.strip_prefix(root).unwrap_or(seat);
+                Some((package.name.clone(), held.to_path_buf()))
+            })
+            .collect()
+    }
+
     pub fn read(root: &Path) -> Result<Self, String> {
         let output = Command::new("cargo")
             .args(["metadata", "--no-deps", "--format-version", "1"])

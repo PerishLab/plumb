@@ -3,8 +3,8 @@ use semver::Version;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-const UNIX: &str = include_str!("../../../assets/manage.sh.in");
-const WINDOWS: &str = include_str!("../../../assets/manage.ps1.in");
+const UNIX: &str = include_str!("../../../assets/manager/unix.sh.in");
+const WINDOWS: &str = include_str!("../../../assets/manager/windows.ps1.in");
 
 pub fn template() -> String {
     let mut bytes = Vec::new();

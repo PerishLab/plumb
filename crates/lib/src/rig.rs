@@ -17,6 +17,8 @@ pub struct Rig {
     pub activate: Authority,
     #[cascade(section)]
     pub site: Site,
+    #[cascade(section)]
+    pub guard: Guard,
 }
 
 #[derive(Debug, Default, PartialEq, Cascade)]
@@ -128,12 +130,20 @@ pub struct Release {
     pub artifacts: PathBuf,
     pub output: PathBuf,
     pub promotion: Option<PathBuf>,
-    pub promotion_channel: String,
-    pub promotion_version: String,
     pub capsule: PathBuf,
     pub url: String,
     pub activated: bool,
     pub registry_token: String,
+    pub toolchain: String,
+}
+
+#[derive(Debug, Default, PartialEq, Cascade)]
+#[cascade(section)]
+pub struct Guard {
+    pub api: String,
+    pub repository: String,
+    pub token: String,
+    pub contexts: String,
 }
 
 #[derive(Debug, Default, PartialEq, Cascade)]
@@ -161,6 +171,7 @@ impl Default for Rig {
             publish: Authority::default(),
             activate: Authority::default(),
             site: Site::default(),
+            guard: Guard::default(),
         }
     }
 }

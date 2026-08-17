@@ -73,6 +73,14 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - Current projections bind canonical source seals and one target/topology seal
   in `plumb.toml`. Source, target, or topology drift is out of true until a
   human reads both sides and records the proposal from `plumb document`.
+- Governed lanes are rendered, never written. `plumb lane` derives each one from the release
+  declaration and the repository shape, and drift is byte comparison against a fresh render, not a
+  recorded seal: a generated target needs no evidence it cannot already derive. Rendering decides
+  which jobs exist, so a product declaring no binary gets a lane without build, seal, and smoke
+  rather than an empty matrix, which Forgejo never creates and whose dependents block forever. Drift is
+  noted, never out of true: a release refuses on a rendered lane that drifted, while one never rendered only draws the note.
+- A seal records one input hash per ship object: tracked leaves under derived roots plus the pinned
+  toolchain, stamped with the version those inputs first appeared in, and `[release.depends]` adds only the edges no convention derives.
 - Document evidence values are excluded from the semantic `plumb.toml` source
   projection. No other source bytes, target bytes, or binding fields are
   excluded.
@@ -82,11 +90,15 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 
 ## Release
 
-- The root `plumb.toml` `[release]` table is the complete product-owned binary
-  release declaration: product, authority, binaries, Rust targets, and typed
-  product inputs such as a skill, Cargo attachment, or Debian payload.
-  Platform keys, archive names, environment prefixes, and artifact metadata
-  are derived.
+- The root `plumb.toml` `[release]` table is the complete product-owned release
+  declaration: product, authority, binaries, Rust targets, and typed product
+  inputs such as a skill, Cargo attachment, or Debian payload. Platform keys,
+  archive names, environment prefixes, and artifact metadata are derived.
+- A release declares a binary shape, or one attachment, or both. A skill and a
+  Debian payload ride the binary authority and cannot stand without it, while
+  every other attachment names a registry that holds its own ledger, so a
+  release may declare one and nothing else. The shape a product declares is the
+  shape Plumb answers to; refusing one it defines refuses its own product.
 - Plumb owns Cargo discovery and stamping, target builds, archives, skill and
   Debian assembly, manager generation, capsules, storage, verification,
   activation, smoke, source binding, and packport topology checks. Those
@@ -180,6 +192,8 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - Stable is `X.Y.Z`. Every non-stable release is
   `X.Y.Z-<channel>.N`. Stable promotion embeds the complete exact candidate
   seal and its digest, and requires the same product, base version, and commit.
+  The candidate is derived, never named: exactly one published exact seal must
+  stand at the frozen commit, and `plumb stable freeze` refuses zero or many.
   Stable binaries are rebuilt with stable identity from that commit.
 - Exact publication binds exactly `refs/tags/<exact-version>`; the called
   shared workflow freezes its direct event ref and commit once and every job
@@ -194,7 +208,7 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - The ref carries the release, so neither caller takes a version. Both stay
   dispatched by an operator, who selects the ref instead of typing an identity:
   `release-exact.yml` on the exact tag, `release-stable.yml` on the frozen
-  release line. Both forward only promotion selection and guard evidence. A
+  release line. Both forward only guard evidence, never an identity. A
   release never follows from a push, so the anchor is chosen from refs that
   already exist and no lane starts by accident.
 - The channel is read from the version, never named beside it. `plumb release
@@ -222,11 +236,11 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - `plumb ship binary smoke` performs the shared cross-platform generated-manager
   install, exact `--version` probe, update, and uninstall cycle from the product
   declaration.
-- Cargo rehearses the head of each ordered attachment before publication, then
-  publishes and reads back every package before preparing its dependent.
-  Plumb therefore publishes `plumb-macro` before `plumb` and locks their
-  coupled versions exactly without requiring an unpublished dependency to
-  exist during rehearsal.
+- Cargo rehearses the first package it will project, then publishes and reads
+  back every package before preparing its dependent. A package that did not
+  move keeps the release it last changed in, and every requirement on it names
+  that one, so `plumb` and `plumb-macro` stay coupled exactly without
+  republishing what stood still or demanding an unpublished dependency exist.
 - Release identity lives in exact seals and the stable pointer; new releases do
   not create Git tags. Historical tags are retained as history, not consensus.
 - After stable succeeds, a local operator packports the release line into

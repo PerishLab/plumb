@@ -25,11 +25,24 @@ pub struct Chart {
     pub account: String,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "kebab-case")]
+pub struct Deb {
+    pub root: std::path::PathBuf,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "kebab-case")]
+pub struct Cfworker {
+    pub account: String,
+    pub domain: String,
+}
+
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct Npm {
     pub registry: String,
-    pub package: String,
+    pub packages: Vec<String>,
 }
 
 impl Cargo {
@@ -81,25 +94,67 @@ impl Npm {
         if !self.registry.starts_with("https://") {
             return Err("module registry must be one https URL".into());
         }
-        let bare = self.package.rsplit('/').next().unwrap_or_default();
-        if bare.is_empty() {
-            return Err("module attachment must name one package".into());
+        if self.packages.is_empty() {
+            return Err("module attachment must declare ordered packages".into());
         }
-        if !root.join("packages").join(bare).is_dir() {
-            return Err(format!("declared module root is absent: packages/{bare}"));
+        let mut packages = BTreeSet::new();
+        for package in &self.packages {
+            let bare = package.rsplit('/').next().unwrap_or_default();
+            if bare.is_empty() {
+                return Err("module attachment must name one package".into());
+            }
+            if !packages.insert(package) {
+                return Err(format!("duplicate module package {package}"));
+            }
+            if !root.join("packages").join(bare).is_dir() {
+                return Err(format!("declared module root is absent: packages/{bare}"));
+            }
         }
         Ok(())
     }
 }
 
+impl Cfworker {
+    pub(super) fn validate(&self, root: &Path) -> Result<(), String> {
+        account("worker account", &self.account)?;
+        hostname("worker domain", &self.domain)?;
+        if !root.join("apps").is_dir() {
+            return Err("declared worker root is absent: apps".into());
+        }
+        Ok(())
+    }
+}
+
+fn hostname(subject: &str, value: &str) -> Result<(), String> {
+    let labels: Vec<&str> = value.split('.').collect();
+    if labels.len() < 2 {
+        return Err(format!("{subject} must be one fully qualified hostname"));
+    }
+    for held in labels {
+        if !label(held) {
+            return Err(format!(
+                "{subject} label {held} is not a valid RFC 1123 label"
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn label(value: &str) -> bool {
+    let sized = (1..=63).contains(&value.len());
+    let shaped = value
+        .chars()
+        .all(|held| held.is_ascii_lowercase() || held.is_ascii_digit() || held == '-');
+    let edged = value.starts_with('-') || value.ends_with('-');
+    sized && shaped && !edged
+}
+
 fn pair(value: &str, wrong: &str) -> Result<String, String> {
-    let mut seats = value.split('/');
-    let owner = seats.next().unwrap_or_default();
-    let name = seats.next().unwrap_or_default();
-    if seats.next().is_some() || owner.is_empty() || name.is_empty() {
+    let seats: Vec<&str> = value.split('/').collect();
+    if seats.len() < 2 || seats.iter().any(|held| held.is_empty()) {
         return Err(wrong.into());
     }
-    Ok(name.to_string())
+    Ok(seats[seats.len() - 1].to_string())
 }
 
 fn host(subject: &str, value: &str) -> Result<(), String> {
