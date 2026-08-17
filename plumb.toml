@@ -1,17 +1,17 @@
 [[document]]
 strategy = "agent"
-source = [{ path = ".", seal = "6aff75d41a62751a7efc1687531cb218a247377a622cdf053ecc3b23e530d98a" }]
-target-seal = "30c421e38a35e42d7e79f1bb3d74c4bb6a066f30ebd65710b5e5437223dc0790"
+source = [{ path = ".", seal = "b96d14cfcac43e6efd8aba92af8685863108622404dd5a61ec00566fc2d51411" }]
+target-seal = "9ae22bb551b047224272dbe9ae36ca06464bcf4076ad01948128d24d3f57a098"
 
 [[document]]
 strategy = "brief"
 name = "plumb"
 source = [
-  { path = "crates/cli/src", seal = "ff113afcbd66ee016c01dba38656bb2ecfadd9c9740027ff19ab1e6f480364a9" },
+  { path = "crates/cli/src", seal = "9e63318f3b89246839ed7d62bd05cafcb115949cf0ec0b29c0119358e155dc1d" },
   { path = "crates/lib/src", seal = "46478a53d663079408c8b390b108d5a1687a0d6212e2b7b719a7f60c9edc10bf" },
   { path = "crates/macro/src", seal = "c8ae2bfd1091d77db6e6f010560bbf961644c87557ac3005e0bcb85723dd8f19" },
 ]
-target-seal = "dbd94119f881a3cb9e2e06a4c3da65aa114e286b9316d3479b07fe8b0cbb72e9"
+target-seal = "504a2b6e1f1a359ff6af21a2db98e5af15a95d32c357db6af20d83d3f6b60b4a"
 
 [release]
 product = "plumb"
@@ -38,3 +38,11 @@ account = "PerishFire"
 [release.cargo]
 registry = "perish"
 packages = ["plumb-macro", "plumb"]
+
+[release.npm]
+registry = "https://git.perish.top/api/packages/PerishLab/npm/"
+packages = ["@perish/plumb"]
+
+[release.cfworker]
+account = "a6776d8a453d1b84d01576245a9c4f8d"
+domain = "plumb.perish.uk"

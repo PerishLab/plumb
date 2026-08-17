@@ -21,3 +21,4 @@ jobs:
       activate_bucket: ${{ secrets.RELEASE_ACTIVATE_S3_BUCKET }}
       activate_endpoint: ${{ secrets.RELEASE_ACTIVATE_S3_ENDPOINT }}
       registry_token: ${{ secrets.RELEASE_REGISTRY_TOKEN }}
+      site_token: ${{ secrets.PLUMB_SITE_TOKEN }}

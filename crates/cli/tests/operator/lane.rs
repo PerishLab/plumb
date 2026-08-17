@@ -122,6 +122,14 @@ fn carried() {
     rendered(&fixture);
     let held = ship(temp.path());
 
+    assert!(
+        !held.contains("\n    secrets:\n"),
+        "this forge parses workflow_call inputs and outputs only, so a callee declares no secrets: {held}"
+    );
+    assert!(
+        held.contains("${{ secrets.publish_access }}"),
+        "a callee still reads what its caller passes: {held}"
+    );
     assert!(held.contains("\n  build:\n"), "{held}");
     assert!(held.contains("\n  seal:\n"), "{held}");
     assert!(held.contains("\n  smoke:\n"), "{held}");
@@ -148,6 +156,10 @@ fn attached() {
     assert!(held.contains("\n  project:\n"), "{held}");
     assert!(held.contains("needs: [resolve]"), "{held}");
     assert!(
+        held.contains("PLUMB_SITE_TOKEN: ${{ secrets.site_token }}"),
+        "a projected medium may be a worker: {held}"
+    );
+    assert!(
         !held.contains("include\":[]"),
         "no empty matrix is rendered"
     );
@@ -167,9 +179,11 @@ fn refused() {
     ]));
 
     let bare = dispatch(&fixture);
+    let absent = String::from_utf8_lossy(&bare.stderr);
+    assert!(!bare.status.success());
     assert!(
-        !String::from_utf8_lossy(&bare.stderr).contains("did not render"),
-        "an unrendered lane must not refuse a release"
+        absent.contains("has not rendered") && absent.contains("exact.release.yml"),
+        "the lane a dispatch must reach cannot be missing: {absent}"
     );
 
     rendered(&fixture);
@@ -197,4 +211,33 @@ fn dispatch(fixture: &Fixture<'_>) -> std::process::Output {
         ])
         .output()
         .expect("plumb should run")
+}
+
+#[test]
+fn anchored() {
+    let temp = tempfile::tempdir().expect("temp root");
+    let tools = temp.path().join("tools");
+    let fixture = seat(temp.path(), &tools);
+    rendered(&fixture);
+
+    for name in ["exact.release.yml", "stable.release.yml"] {
+        let held = fs::read_to_string(temp.path().join(".forgejo/workflows").join(name))
+            .expect("release lane");
+        assert!(
+            held.contains("on:\n  workflow_dispatch:\n"),
+            "{name} must wait for an operator: {held}"
+        );
+        assert!(
+            !held.contains("\n  push:\n"),
+            "a release never follows from a push: {name}: {held}"
+        );
+        assert!(
+            held.contains("guard_contexts: '[\"guard / guard (push)\"]'"),
+            "{name} must forward the canonical guard evidence: {held}"
+        );
+        assert!(
+            held.contains("site_token: ${{ secrets.PLUMB_SITE_TOKEN }}"),
+            "{name} must forward the credential a worker medium needs: {held}"
+        );
+    }
 }

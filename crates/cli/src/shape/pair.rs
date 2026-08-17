@@ -98,23 +98,42 @@ pub fn sites(root: &Path) -> BTreeSet<String> {
 }
 
 pub fn judge(held: &Shape) -> Found {
-    let mut found = Found::new();
-    if held.rust && !held.ignore.lines().any(|line| line.trim() == "target/") {
-        found.push(Seed::wrong(
-            &rule::CARGO_TARGET_IGNORED,
-            "Cargo.toml without target/ in .gitignore".to_string(),
-        ));
+    Judge(held).run()
+}
+
+struct Judge<'a>(&'a Shape);
+
+impl Judge<'_> {
+    fn run(&self) -> Found {
+        let held = self.0;
+        let mut found = Found::new();
+        if held.rust && !held.ignore.lines().any(|line| line.trim() == "target/") {
+            found.push(Seed::wrong(
+                &rule::CARGO_TARGET_IGNORED,
+                "Cargo.toml without target/ in .gitignore".to_string(),
+            ));
+        }
+        spec(held.release.refusal.as_deref(), &mut found);
+        deliverable(&held.release, &held.root, &mut found);
+        if held.ships.contains("binary") {
+            self.anchors(&mut found);
+        }
+        self.site(&mut found);
+        found
     }
-    spec(held.release.refusal.as_deref(), &mut found);
-    deliverable(&held.release, &held.root, &mut found);
-    if held.ships.contains("binary") {
+
+    fn anchors(&self, found: &mut Found) {
+        let held = self.0;
+        if held.lanes.contains("exact.release") && held.lanes.contains("stable.release") {
+            return;
+        }
         for lane in ["release-exact", "release-stable"] {
             if !held.lanes.contains(lane) {
                 found.push(Seed::wrong(
                     &rule::RELEASE_LANE_PRESENT,
                     format!("binary release without a {lane} lane"),
                 ));
-            } else if !bound(held, lane) {
+            } else if !self.bound(lane) {
                 found.push(Seed::wrong(
                     &rule::RELEASE_SOURCE_BOUND,
                     format!("{lane} exposes or forwards a second source binding"),
@@ -122,8 +141,42 @@ pub fn judge(held: &Shape) -> Found {
             }
         }
     }
-    site(held, &mut found);
-    found
+
+    fn bound(&self, lane: &str) -> bool {
+        std::fs::read_to_string(
+            self.0
+                .root
+                .join(".forgejo/workflows")
+                .join(format!("{lane}.yml")),
+        )
+        .map(|text| {
+            let loose = [
+                "source_ref:",
+                "source_commit:",
+                "${{ inputs.ref }}",
+                "\n      ref:\n",
+            ];
+            !loose.iter().any(|value| text.contains(value))
+        })
+        .unwrap_or(false)
+    }
+
+    fn site(&self, found: &mut Found) {
+        let held = self.0;
+        if held.sites.is_empty() || held.lanes.contains("deploy") {
+            return;
+        }
+        if held.ships.contains("cfworker") && held.lanes.contains("ship") {
+            return;
+        }
+        found.push(Seed::wrong(
+            &rule::SITE_DEPLOY_LANE,
+            format!(
+                "{} declares a site that no lane delivers",
+                show(&held.sites)
+            ),
+        ));
+    }
 }
 
 fn spec(refusal: Option<&str>, found: &mut Found) {
@@ -140,6 +193,9 @@ fn deliverable(release: &Release, root: &Path, found: &mut Found) {
         return;
     }
     let called = callers(root);
+    if called.contains("ship") {
+        return;
+    }
     for attachment in &release.attachments {
         let carriers = carriers(attachment);
         if carriers.is_empty() {
@@ -158,38 +214,5 @@ fn deliverable(release: &Release, root: &Path, found: &mut Found) {
                 ),
             ));
         }
-    }
-}
-
-fn bound(held: &Shape, lane: &str) -> bool {
-    std::fs::read_to_string(
-        held.root
-            .join(".forgejo/workflows")
-            .join(format!("{lane}.yml")),
-    )
-    .map(|text| {
-        let loose = [
-            "source_ref:",
-            "source_commit:",
-            "${{ inputs.ref }}",
-            "\n      ref:\n",
-        ];
-        !loose.iter().any(|value| text.contains(value))
-    })
-    .unwrap_or(false)
-}
-
-fn site(held: &Shape, found: &mut Found) {
-    if held.sites.is_empty() {
-        return;
-    }
-    if !held.lanes.contains("deploy") {
-        found.push(Seed::wrong(
-            &rule::SITE_DEPLOY_LANE,
-            format!(
-                "{} declares a site without a deploy lane",
-                show(&held.sites)
-            ),
-        ));
     }
 }

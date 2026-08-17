@@ -20,4 +20,4 @@ dirs = [
   "skills",
   "tests",
 ]
-lanes = ["deploy", "guard", "release-binary", "release-cargo", "release-exact", "release-runner", "release-stable", "probe"]
+lanes = ["deploy", "exact.release", "guard", "probe", "release-binary", "release-cargo", "release-exact", "release-runner", "release-stable", "ship", "stable.release"]

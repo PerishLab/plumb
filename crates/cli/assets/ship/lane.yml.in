@@ -8,25 +8,6 @@ on:
         required: false
         default: ""
         type: string
-    secrets:
-      publish_access:
-        required: false
-      publish_secret:
-        required: false
-      publish_bucket:
-        required: false
-      publish_endpoint:
-        required: false
-      activate_access:
-        required: false
-      activate_secret:
-        required: false
-      activate_bucket:
-        required: false
-      activate_endpoint:
-        required: false
-      registry_token:
-        required: false
 
 permissions:
   contents: read

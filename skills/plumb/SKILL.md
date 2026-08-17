@@ -98,8 +98,9 @@ unfamiliar or stateful action.
   declaration; doctor notes drift instead of refusing it, so a stale lane stays
   visible without reddening the repository. A rendered lane carries no condition:
   the job set follows the declared surface, and matrices only size a job kind.
-  Dispatch refuses a lane this Plumb rendered and someone then edited; a lane
-  never rendered at all only draws the note, so adoption stays incremental.
+  Dispatch refuses a lane this Plumb rendered and someone then edited, and the
+  absence of the one lane it must dispatch; every other unrendered lane only
+  draws the note, so adoption stays incremental.
 - Stable default skill seats accept canonical stable only. Validate every
   other candidate in an exact, isolated stage path.
 - A governed repository declares `[[document]]` strategies. Unknown

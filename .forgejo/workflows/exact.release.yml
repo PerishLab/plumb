@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   release:
-    uses: PerishLab/actions/.forgejo/workflows/release-binary.yml@main
+    uses: ./.forgejo/workflows/ship.yml
     with:
       guard_contexts: '["guard / guard (push)"]'
     secrets:
@@ -17,3 +17,4 @@ jobs:
       publish_bucket: ${{ secrets.RELEASE_PUBLISH_S3_BUCKET }}
       publish_endpoint: ${{ secrets.RELEASE_PUBLISH_S3_ENDPOINT }}
       registry_token: ${{ secrets.RELEASE_REGISTRY_TOKEN }}
+      site_token: ${{ secrets.PLUMB_SITE_TOKEN }}

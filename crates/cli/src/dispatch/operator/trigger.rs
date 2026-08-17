@@ -14,14 +14,15 @@ pub fn run(options: Dispatch) -> Result<String, String> {
     let channel = super::super::release::channel(&options.version)?;
     let version = value::version(&options.version, &channel)?;
     let (workflow, reference, inputs) = if channel == "stable" {
-        ("release-stable.yml", value::branch(&version), json!({}))
+        ("stable.release.yml", value::branch(&version), json!({}))
     } else {
         (
-            "release-exact.yml",
+            "exact.release.yml",
             format!("refs/tags/{version}"),
             json!({}),
         )
     };
+    present(&root, workflow)?;
     if options.dry {
         let wall = (channel == "stable").then(|| {
             format!(
@@ -68,6 +69,19 @@ fn current(root: &std::path::Path) -> Result<(), String> {
         "a release cannot start on a lane this Plumb did not render: {}; run plumb lane --write",
         stale.join(", ")
     ))
+}
+
+fn present(root: &std::path::Path, workflow: &str) -> Result<(), String> {
+    let Ok(lanes) = crate::shape::lane::Seat(root).render() else {
+        return Ok(());
+    };
+    let path = format!(".forgejo/workflows/{workflow}");
+    if lanes.iter().any(|lane| lane.path == path && lane.absent()) {
+        return Err(format!(
+            "a release cannot start on a lane this repository has not rendered: {path}; run plumb lane --write"
+        ));
+    }
+    Ok(())
 }
 
 fn watch(client: &Client, id: u64, url: &str) -> Result<String, String> {

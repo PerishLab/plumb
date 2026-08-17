@@ -56,7 +56,7 @@ fn sites() {
     std::fs::write(root.join("apps/web/wrangler.jsonc"), "{}").expect("config should be written");
     let held = doctor(&root);
     assert!(
-        held.contains("web declares a site without a deploy lane"),
+        held.contains("web declares a site that no lane delivers"),
         "{held}"
     );
 

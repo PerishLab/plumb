@@ -17,6 +17,9 @@ targets = ["x86_64-unknown-linux-gnu"]
     run(Command::new("git")
         .args(["remote", "add", "origin", origin])
         .current_dir(root));
+    run(Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["lane", "--write"])
+        .current_dir(root));
 }
 
 pub fn command(root: &Path, args: &[&str]) -> Output {
@@ -86,7 +89,7 @@ fn dispatch() {
     );
     let text = String::from_utf8_lossy(&output.stdout);
     assert!(
-        text.contains("triggered release-exact.yml run 88"),
+        text.contains("triggered exact.release.yml run 88"),
         "{text}"
     );
     assert!(text.contains("run 88: success"), "{text}");

@@ -14,6 +14,7 @@
       PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
       PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
       PLUMB_RELEASE_REGISTRY_TOKEN: ${{ secrets.registry_token }}
+      PLUMB_SITE_TOKEN: ${{ secrets.site_token }}
     steps:
       - uses: actions/checkout@v6
         with:
