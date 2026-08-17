@@ -50,3 +50,19 @@ Which word prepares a medium is a fact Plumb holds, so it belongs in the plan
 rather than in the lane. The projected matrix now carries it beside the medium,
 the lane spends it, and a test asks this binary whether every deed the plan names
 exists at all.
+
+## A published seal without input hashes is a baseline, not a refusal
+
+Every stable seal published before v0.23.0 carries no input hashes, because
+nothing recorded them yet. Reading one was treated as a malformed answer rather
+than as an empty baseline, so `release compile` refused — and since every product
+in this domain has exactly such a seal standing as its current stable, v0.23.0
+could compile no release at all, including its own successor.
+
+An absent field now reads as what it is: nothing is known about what moved, so
+everything is projected and every object is stamped with this release. Only a
+field that is present and malformed refuses.
+
+The regression was invisible until now because a release always runs on the Plumb
+already published, never on the one being released, so a fault in the release
+engine surfaces one release late.

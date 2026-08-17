@@ -112,7 +112,10 @@ impl Seat<'_> {
         let Some(seal) = super::verify::optional(seat)? else {
             return Ok(BTreeMap::new());
         };
-        serde_json::from_value(seal.get("inputs").cloned().unwrap_or_default())
+        let Some(held) = seal.get("inputs").filter(|held| !held.is_null()) else {
+            return Ok(BTreeMap::new());
+        };
+        serde_json::from_value(held.clone())
             .map_err(|error| format!("cannot read published inputs from {seat}: {error}"))
     }
 

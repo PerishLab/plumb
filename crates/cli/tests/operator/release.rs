@@ -213,6 +213,33 @@ fn inputs() {
     assert!(held["hash"].as_str().is_some_and(|hash| hash.len() == 64));
     assert_eq!(held["since"], "v1.2.0-beta.7");
 
+    let bare = root.join("releases/v1");
+    std::fs::create_dir_all(bare.join("channels")).expect("published root");
+    std::fs::write(bare.join("bare.json"), "{}\n").expect("published seal");
+    std::fs::write(
+        bare.join("channels/stable.json"),
+        format!(
+            concat!(
+                r#"{{"schema":1,"product":"probe","channel":"stable","releaseVersion":"v1.1.0","#,
+                r#""commit":"{}","managers":{{}},"seal":{{"name":"seal.json","#,
+                r#""mime":"application/json","sha256":"{}","size":3,"#,
+                r#""url":"https://releases.test/v1/bare.json"}}}}"#
+            ),
+            candidate,
+            "0".repeat(64)
+        ),
+    )
+    .expect("stable pointer");
+    compile(Compile {
+        fixture: &fixture,
+        artifacts: &artifacts,
+        channel: "beta",
+        version: "v1.2.0-beta.7",
+        out: &root.join("bare"),
+        promotion: None,
+        commit: &candidate,
+    });
+
     let published = root.join("releases/v1");
     std::fs::create_dir_all(published.join("channels")).expect("published root");
     std::fs::write(
