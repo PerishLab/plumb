@@ -28,3 +28,16 @@ and a release refuses on a lane an older Plumb rendered.
 `[release.cfworker]` projects through the ship lane, which now takes a site token
 beside the registry token. Provision `PLUMB_SITE_TOKEN` as a repository secret;
 the rendered release lanes forward it.
+
+## A rendered lane serves what canonical stable holds
+
+A rendered lane installs canonical stable Plumb, so every deed it spends must
+exist in the release that is already published. The projected matrix carries the
+prepare deed from this release onward; a repository rendering these lanes
+releases through the Plumb that reads them, which is this one or later.
+
+Two consequences to know before you render. A binary-backed image cannot project
+through the ship lane yet: the projection job holds no archives, and an image that
+wraps one takes its payload from them. And this product releases v0.24.0 through
+the shared workflows one last time, because the lane it now carries asks for a
+plan only this release produces.
