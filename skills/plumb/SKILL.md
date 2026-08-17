@@ -101,6 +101,10 @@ unfamiliar or stateful action.
   Dispatch refuses a lane this Plumb rendered and someone then edited, and the
   absence of the one lane it must dispatch; every other unrendered lane only
   draws the note, so adoption stays incremental.
+- A rendered lane is refused at render when it carries a shape the forge cannot
+  run: secrets under `workflow_call`, an empty matrix, an installed tool absent
+  from the job path, or a release lane that follows a push. Only the forge parses
+  a lane body, so a local check must stand where the text is written.
 - Stable default skill seats accept canonical stable only. Validate every
   other candidate in an exact, isolated stage path.
 - A governed repository declares `[[document]]` strategies. Unknown

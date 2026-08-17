@@ -39,7 +39,10 @@ jobs:
           ref: ${{ github.sha }}
 
       - name: Install stable Plumb
-        run: curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+        run: |
+          set -eu
+          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Plan this release
         id: plan
@@ -77,7 +80,10 @@ jobs:
           ref: ${{ needs.resolve.outputs.commit }}
 
       - name: Install stable Plumb
-        run: curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+        run: |
+          set -eu
+          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Build one declared target
         run: plumb ship binary build
@@ -121,7 +127,10 @@ jobs:
           ref: ${{ needs.resolve.outputs.commit }}
 
       - name: Install stable Plumb
-        run: curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+        run: |
+          set -eu
+          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Require canonical guard evidence
         env:
@@ -174,7 +183,10 @@ jobs:
           ref: ${{ needs.resolve.outputs.commit }}
 
       - name: Install stable Plumb
-        run: curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+        run: |
+          set -eu
+          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Smoke the generated manager
         run: plumb ship binary smoke
@@ -203,7 +215,10 @@ jobs:
           ref: ${{ needs.resolve.outputs.commit }}
 
       - name: Install stable Plumb
-        run: curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+        run: |
+          set -eu
+          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Seat the package store outside the source
         run: echo "PNPM_CONFIG_STORE_DIR=$RUNNER_TEMP/pnpm-store" >> "$GITHUB_ENV"

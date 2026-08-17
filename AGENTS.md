@@ -28,12 +28,11 @@ link, and it is the only one.
 - `crates/cli/src/dispatch/site` and `retire` — Cloudflare interpretation and
   orchestration over Runseal's structured Cloudflare operations. Plumb owns no
   authenticated Cloudflare HTTP sender or raw route dialect.
-- `apps/web` — the site at plumb.perish.uk, declared as `[release.cfworker]` and
-  projected by the rendered ship lane like any other medium: an exact channel
-  stages a version behind its own preview URL and only stable reaches the
-  domain. The deploy lane that dispatched `plumb ship site deploy` is gone. It is
-  the Svelte specimen the web shape checks, and the shape moved with it: a web
-  app carries `@perish/design`, and views and components are `.svelte` files.
+- `apps/web` — the site at plumb.perish.uk, declared as `[release.cfworker]` and projected by the rendered
+  ship lane like any other medium: an exact channel stages a version behind its own preview URL and only
+  stable reaches the domain, and the deploy lane that dispatched `plumb ship site deploy` is gone. It is the
+  Svelte specimen the web shape checks, and the shape moved with it: a web app carries `@perish/design`,
+  and views and components are `.svelte` files.
 - `packages/*` — publishable specimens, when they earn their place.
 - `Containerfile` and `charts/*` — the image and chart carriers the ship
   adaptors project onto.
@@ -79,6 +78,7 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   which jobs exist, so a product declaring no binary gets a lane without build, seal, and smoke
   rather than an empty matrix, which Forgejo never creates and whose dependents block forever. Drift is noted, never out of
   true: a release refuses on a rendered lane that drifted and on the absence of the lane it must dispatch, while every other unrendered lane only draws the note, so adoption stays incremental.
+  Rendering itself refuses a shape the forge cannot run — secrets under `workflow_call`, an empty matrix, an installed tool absent from the job path, a release following a push — because only the forge parses a lane body, so the check stands where the text is written.
 - A seal records one input hash per ship object: tracked leaves under derived roots plus the pinned
   toolchain, stamped with the version those inputs first appeared in, and `[release.depends]` adds only the edges no convention derives.
 - Document evidence values are excluded from the semantic `plumb.toml` source

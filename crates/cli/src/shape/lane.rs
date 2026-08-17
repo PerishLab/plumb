@@ -46,7 +46,15 @@ impl Seat<'_> {
             lanes.push(self.thin("exact.release.yml", EXACT)?);
             lanes.push(self.thin("stable.release.yml", STABLE)?);
         }
-        Ok(lanes)
+        let refused = lanes
+            .iter()
+            .flat_map(|lane| super::forge::refusals(&lane.path, &lane.rendered))
+            .collect::<Vec<_>>();
+        if refused.is_empty() {
+            Ok(lanes)
+        } else {
+            Err(refused.join("; "))
+        }
     }
 
     fn ship(&self, spec: &Spec) -> Result<Lane, String> {

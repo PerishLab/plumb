@@ -39,7 +39,10 @@ jobs:
           ref: ${{ github.sha }}
 
       - name: Install stable Plumb
-        run: curl -fsSL {@plumb}/manage.sh | sh
+        run: |
+          set -eu
+          curl -fsSL {@plumb}/manage.sh | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Plan this release
         id: plan

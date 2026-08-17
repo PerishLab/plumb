@@ -48,8 +48,8 @@ fn derived() {
         "{guard}"
     );
     assert!(
-        guard.contains("export PATH=\"$HOME/.local/bin:$PATH\""),
-        "a stable tool installs under the home seat, so the proofs must reach it: {guard}"
+        guard.contains("printf '%s\\n' \"$HOME/.local/bin\" >> \"$GITHUB_PATH\""),
+        "a stable tool installs under the home seat, so the job path must carry it: {guard}"
     );
     assert!(guard.contains("cargo fmt --all --check"), "{guard}");
     assert!(guard.contains("plumb doctor ."), "{guard}");
@@ -129,6 +129,10 @@ fn carried() {
     assert!(
         held.contains("${{ secrets.publish_access }}"),
         "a callee still reads what its caller passes: {held}"
+    );
+    assert!(
+        held.matches("/manage.sh | sh").count() == held.matches(">> \"$GITHUB_PATH\"").count(),
+        "every install seats the home bin on the job path: {held}"
     );
     assert!(held.contains("\n  build:\n"), "{held}");
     assert!(held.contains("\n  seal:\n"), "{held}");

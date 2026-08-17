@@ -25,7 +25,10 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install stable Ectropy
-        run: curl -fsSL https://releases.ectropy.perish.uk/manage.sh | sh
+        run: |
+          set -eu
+          curl -fsSL https://releases.ectropy.perish.uk/manage.sh | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Install declared packages
         run: |
@@ -36,7 +39,6 @@ jobs:
       - name: Guard
         run: |
           set -eu
-          export PATH="$HOME/.local/bin:$PATH"
           cargo fmt --all --check
           cargo clippy --all-targets -- -D warnings
           cargo test --locked
