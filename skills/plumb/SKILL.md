@@ -88,6 +88,8 @@ unfamiliar or stateful action.
   source control.
 - Use `plumb land`; do not recreate its projection and guard protocol in a
   repository wrapper or hook.
+- Judge a release by its run graph, never by the dispatch that started it. A
+  watch holds until every job is terminal and refuses an empty or failed graph.
 - Record document seals only after reading every named source and target.
   `plumb document` prints proposals and never rewrites `plumb.toml`.
 - A projection never skips. Input hashes are evidence of what moved, not a gate

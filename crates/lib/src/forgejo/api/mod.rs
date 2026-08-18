@@ -30,7 +30,14 @@ impl Client {
         argv.extend(args.iter().map(|arg| arg.to_string()));
         runseal::tool::call("forgejo", &argv, &self.vars)
             .map(|reply| reply.value)
-            .map_err(|error| error.to_string())
+            .map_err(|error| {
+                format!(
+                    "forgejo refused {} on {}/{}: {error}",
+                    attempted(args),
+                    self.remote.owner,
+                    self.remote.repo
+                )
+            })
     }
 
     fn user(&self) -> Result<String, String> {
@@ -41,6 +48,19 @@ impl Client {
         } else {
             Err("forgejo: current user response has no login".into())
         }
+    }
+}
+
+fn attempted(args: &[&str]) -> String {
+    let named = args
+        .iter()
+        .take_while(|arg| !arg.starts_with("--"))
+        .copied()
+        .collect::<Vec<_>>();
+    if named.is_empty() {
+        "an operation".to_string()
+    } else {
+        named.join(" ")
     }
 }
 

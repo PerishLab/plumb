@@ -57,7 +57,28 @@ impl Client {
             }
             std::thread::sleep(std::time::Duration::from_secs(turn));
         }
-        Err(last)
+        Err(self.stale(pull, head, &last))
+    }
+}
+
+impl Client {
+    fn stale(&self, pull: u64, head: &str, error: &str) -> String {
+        if !error.contains("head out of date") {
+            return error.to_string();
+        }
+        let standing = self
+            .call(&["pull", "show", &pull.to_string()])
+            .ok()
+            .as_ref()
+            .and_then(|value| value.pointer("/head/sha").and_then(Value::as_str))
+            .map(str::to_string);
+        match standing {
+            Some(standing) if standing == head => format!(
+                "{error}; pull {pull} does stand at {head}, so Forgejo refused the merge for another reason"
+            ),
+            Some(standing) => format!("{error}; pull {pull} stands at {standing}, not {head}"),
+            None => format!("{error}; pull {pull} did not expose the head it stands at"),
+        }
     }
 }
 

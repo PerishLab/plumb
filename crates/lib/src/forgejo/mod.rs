@@ -8,4 +8,4 @@ mod workflow;
 pub use api::{Client, failure, public, settled};
 pub use model::{Cut, Outcome, Pull, Remote, State, Strategy};
 pub use settings::harness;
-pub use workflow::route;
+pub use workflow::{graph, route};

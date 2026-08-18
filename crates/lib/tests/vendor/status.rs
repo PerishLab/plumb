@@ -54,3 +54,28 @@ fn cut() {
     let unread = settled("release/v1.0.0", "main", "", "def").expect_err("unread commit");
     assert!(unread.contains("could not be compared"));
 }
+
+#[test]
+fn graph() {
+    use plumb::forgejo::{Outcome, graph};
+    use serde_json::json;
+
+    let task = |status: &str| json!({ "name": status, "status": status });
+    assert_eq!(
+        graph(&[]).expect("empty graph"),
+        Outcome::Waiting,
+        "a run that has laid out no job has not finished"
+    );
+    assert_eq!(
+        graph(&[task("success"), task("running")]).expect("partial graph"),
+        Outcome::Waiting
+    );
+    assert_eq!(
+        graph(&[task("success"), task("skipped")]).expect("settled graph"),
+        Outcome::Success
+    );
+    assert!(matches!(
+        graph(&[task("success"), task("failure")]).expect("failed graph"),
+        Outcome::Failed { status, tasks } if status == "success" && tasks == ["failure"]
+    ));
+}

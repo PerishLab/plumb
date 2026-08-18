@@ -41,12 +41,7 @@ impl Client {
             "unknown" | "waiting" | "running" => Ok(Outcome::Waiting),
             "success" => {
                 let number = number(&run)?;
-                let tasks = self.tasks(number)?.unwrap_or_default();
-                if flight(&tasks) {
-                    Ok(Outcome::Waiting)
-                } else {
-                    Ok(Outcome::Success)
-                }
+                graph(&self.tasks(number)?.unwrap_or_default())
             }
             "failure" | "cancelled" | "skipped" => {
                 let number = number(&run)?;
@@ -145,6 +140,23 @@ fn failed(tasks: &[Value]) -> Vec<String> {
     names.sort();
     names.dedup();
     names
+}
+
+pub fn graph(tasks: &[Value]) -> Result<Outcome, String> {
+    if tasks.is_empty() {
+        return Ok(Outcome::Waiting);
+    }
+    let failures = failed(tasks);
+    if !failures.is_empty() {
+        return Ok(Outcome::Failed {
+            status: "success".into(),
+            tasks: failures,
+        });
+    }
+    if flight(tasks) {
+        return Ok(Outcome::Waiting);
+    }
+    Ok(Outcome::Success)
 }
 
 fn flight(tasks: &[Value]) -> bool {
