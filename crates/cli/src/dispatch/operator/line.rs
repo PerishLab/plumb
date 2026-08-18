@@ -37,13 +37,15 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     let remote = git::remote(&root, repo)?;
     if dry {
         return Ok(format!(
-            "{}\nPOST /repos/{}/{}/branches ({name} from {from})\n{}",
+            "{}\n{}\nPOST /repos/{}/{}/branches ({name} from {from})\n{}",
+            super::ported::plan(),
             plan(&remote, &name, "preparing"),
             remote.owner,
             remote.repo,
             super::datum::plan(&version)
         ));
     }
+    super::ported::Seat(&root).ported(&version)?;
     let client = Client::new(remote)?;
     client.protect(&name, "preparing")?;
     let cut = client.create(&name, from)?;
@@ -77,8 +79,13 @@ fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
     let root = git::root()?;
     let remote = git::remote(&root, repo)?;
     if dry {
-        return Ok(plan(&remote, &name, "frozen"));
+        return Ok(format!(
+            "{}\n{}",
+            super::ported::plan(),
+            plan(&remote, &name, "frozen")
+        ));
     }
+    super::ported::Seat(&root).ported(&version)?;
     let client = Client::new(remote)?;
     freeze(&client, &root, &name)?;
     let spec = super::super::release::model::Spec::read(&root.join("plumb.toml"))?;

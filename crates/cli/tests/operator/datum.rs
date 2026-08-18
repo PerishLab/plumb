@@ -28,7 +28,11 @@ pub fn lined(root: &Path, origin: &str, bare: &Path, line: &str) -> String {
         .current_dir(root)
         .output()
         .expect("git");
-    String::from_utf8_lossy(&head.stdout).trim().to_string()
+    let head = String::from_utf8_lossy(&head.stdout).trim().to_string();
+    run(Command::new("git")
+        .args(["update-ref", "refs/remotes/origin/main", &head])
+        .current_dir(root));
+    head
 }
 
 #[test]

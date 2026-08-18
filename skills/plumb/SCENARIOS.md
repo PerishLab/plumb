@@ -33,7 +33,9 @@ requires the frozen line and release-local changelog. `freeze` also derives the 
 and refuses unless exactly one published exact seal stands at the frozen
 commit, so recover a failed exact release by rerunning it rather than by
 tagging the next candidate. Packport settles ancestry after publication;
-it does not rewrite a successful release result. Never delete the frozen line.
+it does not rewrite a successful release result, and `prepare` and `freeze`
+refuse while the last stable point still sits outside `origin/main`, so a late
+packport is caught before the next line exists. Never delete the frozen line.
 
 ## A skill candidate needs validation
 

@@ -202,8 +202,12 @@ fn pagination() {
 #[test]
 fn drift() {
     let fixture = tempfile::tempdir().expect("fixture");
-    let (url, _) = serve(Court::Prepare(false, fixture.path().join("cut")), 3);
-    repo(fixture.path(), &format!("{url}/test/probe.git"));
+    let bare = tempfile::tempdir().expect("bare");
+    let cut = fixture.path().join("cut");
+    let (url, _) = serve(Court::Prepare(false, cut.clone()), 3);
+    let origin = format!("{url}/test/probe.git");
+    let head = super::datum::lined(fixture.path(), &origin, bare.path(), "release/v1.2.0");
+    std::fs::write(&cut, &head).expect("cut");
     let output = command(fixture.path(), &["stable", "prepare", "--version", "1.2.0"]);
     assert!(!output.status.success());
     assert!(
