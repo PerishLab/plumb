@@ -1,5 +1,20 @@
 # Migrating to Plumb v0.27.0
 
+## Render the lanes again, before the next stable release
+
+A lane rendered by v0.26.0 shifts the managers and never advances the consensus
+pointer, so a stable release through it publishes everything, reports
+activation, and leaves the channel naming the release before it. The smokes fail
+because they install what is still canonical, and the release cannot be
+completed from an operator seat — the deed needs credentials that exist only
+inside a lane (issue #346).
+
+Run `plumb lane --write` with this version and land the result before the next
+stable release. An exact release is unaffected. A release already split this way
+is repaired by rendering again and dispatching the same stable version: publish
+is create-only and self-verifying, so re-running advances the pointer and
+nothing else.
+
 ## `plumb stable packport` is now `plumb stable rejoin`
 
 The command surface changed. `packport` is in the retired dictionary, so any
