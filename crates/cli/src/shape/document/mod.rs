@@ -140,8 +140,7 @@ fn label(binding: &config::Binding, paths: &[String]) -> String {
 
 fn budget(document: &Document) -> Option<usize> {
     match document.strategy {
-        Strategy::Agent | Strategy::Design => Some(320),
-        Strategy::Architecture => {
+        Strategy::Agent | Strategy::Design | Strategy::Architecture => {
             let leaves = document
                 .sources
                 .iter()

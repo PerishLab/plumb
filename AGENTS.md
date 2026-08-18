@@ -225,7 +225,9 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - Exact seal creation is create-only and idempotent by content, and every
   attachment projects on the same terms: finding its object already published
   compares that digest against the bytes just built and refuses on drift rather
-  than treat a name as evidence. A product carrying a binary projects a declared
+  than treat a name as evidence, and where a registry answers with an identity
+  and not a digest that is the weak case, which the adaptor says rather than let
+  a caller assume the strong one. A product carrying a binary projects a declared
   medium only once that release's seal reads back from the authority at the
   digest the capsule assembled — a capsule is an upload plan, proving what was
   built, not what stands. Publish and stable activation use separate credentials

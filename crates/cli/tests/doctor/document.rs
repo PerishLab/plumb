@@ -92,8 +92,22 @@ fn magnitude() {
     track(root);
     let out = super::run(&["doctor", root.to_str().expect("utf8 root")]);
     assert!(
-        out.contains("AGENTS.md has 321 Markdown lines, above agent budget 320"),
+        out.contains("AGENTS.md has 321 Markdown lines, above agent budget 240"),
         "{out}"
+    );
+
+    for leaf in 0..120 {
+        std::fs::write(
+            root.join(format!("crates/tool/src/leaf{leaf}.rs")),
+            "fn held() {}\n",
+        )
+        .expect("source");
+    }
+    track(root);
+    let wider = super::run(&["doctor", root.to_str().expect("utf8 root")]);
+    assert!(
+        !wider.contains("above agent budget"),
+        "a source that grew must carry a budget that grew: {wider}"
     );
 }
 
