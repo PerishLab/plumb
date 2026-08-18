@@ -4,18 +4,19 @@ use std::path::{Path, PathBuf};
 pub const SCHEMA: u32 = 1;
 pub const HOME: &str = ".plumb";
 pub const SEAT: &str = ".plumb/releases";
-pub const LEAF: &str = "datum.json";
+pub const LEAF: &str = "datum.toml";
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields, rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct Datum {
     pub schema: u32,
     pub version: String,
+    #[serde(default, rename = "answer")]
     pub answers: Vec<Answer>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-#[serde(deny_unknown_fields, rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct Answer {
     pub ecosystem: String,
     pub name: String,
@@ -42,9 +43,7 @@ impl Datum {
     }
 
     pub fn encode(&self) -> Result<String, String> {
-        serde_json::to_string_pretty(self)
-            .map(|text| format!("{text}\n"))
-            .map_err(|error| format!("cannot encode datum: {error}"))
+        toml::to_string(self).map_err(|error| format!("cannot encode datum: {error}"))
     }
 }
 
@@ -95,8 +94,10 @@ impl Tree<'_> {
 }
 
 pub fn decode(version: &str, bytes: &[u8]) -> Result<Datum, String> {
-    let datum: Datum = serde_json::from_slice(bytes)
-        .map_err(|error| format!("cannot parse {}: {error}", leaf(version)))?;
+    let text = std::str::from_utf8(bytes)
+        .map_err(|error| format!("cannot read {}: {error}", leaf(version)))?;
+    let datum: Datum =
+        toml::from_str(text).map_err(|error| format!("cannot parse {}: {error}", leaf(version)))?;
     if datum.schema != SCHEMA {
         return Err(format!(
             "{} carries schema {}, this Plumb reads {SCHEMA}",

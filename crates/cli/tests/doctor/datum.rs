@@ -13,7 +13,7 @@ fn line(root: &Path, name: &str) {
 fn record(root: &Path, version: &str, text: &str) {
     let seat = root.join(".plumb/releases").join(version);
     std::fs::create_dir_all(&seat).expect("seat should be made");
-    std::fs::write(seat.join("datum.json"), text).expect("datum should be written");
+    std::fs::write(seat.join("datum.toml"), text).expect("datum should be written");
 }
 
 #[test]
@@ -33,11 +33,7 @@ fn recorded() {
     let fixture = super::fixture();
     let root = fixture.path();
     line(root, "release/v1.2.0");
-    record(
-        root,
-        "v1.2.0",
-        r#"{"schema":1,"version":"v1.2.0","answers":[]}"#,
-    );
+    record(root, "v1.2.0", "schema = 1\nversion = \"v1.2.0\"\n");
     let out = super::run(&["doctor", root.to_str().expect("path should be utf8")]);
     assert!(!out.contains("records no datum"), "{out}");
     assert!(out.contains("true to the skeleton"), "{out}");
@@ -48,11 +44,7 @@ fn disagrees() {
     let fixture = super::fixture();
     let root = fixture.path();
     line(root, "release/v1.2.0");
-    record(
-        root,
-        "v1.2.0",
-        r#"{"schema":1,"version":"v1.3.0","answers":[]}"#,
-    );
+    record(root, "v1.2.0", "schema = 1\nversion = \"v1.3.0\"\n");
     let out = super::run(&["doctor", root.to_str().expect("path should be utf8")]);
     assert!(out.contains("names release v1.3.0, not v1.2.0"), "{out}");
 }

@@ -9,7 +9,7 @@
 一发版，所有依赖它的线当场变红 —— 产品一个字节都没动。
 
 `plumb stable prepare` 现在把这条线将要据以判决的答案记下来 —— 依赖法会咨询的每一条
-一等公民各一条 —— 作为**该线的第一个 commit**，落在 `.plumb/releases/<version>/datum.json`。
+一等公民各一条 —— 作为**该线的第一个 commit**，落在 `.plumb/releases/<version>/datum.toml`。
 在这条线上 `doctor` 读记录；不在这条线上，`main` 继续追活 latest，因为漂移检测仍是它的
 职责，而可复现是这条线的职责。发布线上没有基准面即 out of true。
 
