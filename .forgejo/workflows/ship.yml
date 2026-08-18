@@ -162,7 +162,6 @@ jobs:
 
       - name: Install the Plumb this release is bound to
         shell: bash
-        if: runner.os != 'Windows'
         run: |
           set -eu
           if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
@@ -175,16 +174,6 @@ jobs:
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
           fi
-
-      - name: Install stable Plumb on Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $manager = Join-Path $env:RUNNER_TEMP 'manage-plumb.ps1'
-          Invoke-WebRequest -UseBasicParsing -Uri 'https://releases.plumb.perish.uk/manage.ps1' -OutFile $manager
-          & $manager install
-          (Join-Path $HOME '.local/bin') | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Require canonical guard evidence
         env:
@@ -202,6 +191,7 @@ jobs:
         run: plumb ship binary assemble
 
       - name: Fetch the derived promotion proof
+        if: needs.resolve.outputs.channel == 'stable'
         run: plumb release promote
 
       - name: Compile the immutable capsule
@@ -215,11 +205,17 @@ jobs:
           plumb ship binary verify
 
       - name: Activate the stable consensus
-        id: surface
+        if: needs.resolve.outputs.channel == 'stable'
         shell: bash
         run: |
           set -eu
           plumb ship binary activate
+
+      - name: Name the generated manager
+        id: surface
+        shell: bash
+        run: |
+          set -eu
           echo "manager=$(plumb ship binary manager)" >> "$GITHUB_OUTPUT"
 
   smoke:
