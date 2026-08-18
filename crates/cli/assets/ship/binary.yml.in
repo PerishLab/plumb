@@ -108,6 +108,8 @@
         run: |
           set -eu
           plumb ship binary activate
+          plumb release activate
+          PLUMB_RELEASE_ACTIVATED=true plumb ship binary verify
 
       - name: Name the generated managers
         id: surface

@@ -27,7 +27,20 @@ impl Registry<'_> {
         }
         self.stamp(cargo, version)?;
         let identity = release(version)?;
+        let workspace = Workspace::read(&self.spec.root)?;
         for package in self.ordered(cargo)? {
+            let (seat, _) = workspace.package(package)?;
+            let held = manifest::read(seat)?;
+            let siblings = cargo
+                .packages
+                .iter()
+                .filter(|held| *held != package)
+                .cloned()
+                .collect::<Vec<_>>();
+            if manifest::coupled(&held, &siblings) {
+                println!("  {package} requires a sibling this release has not published yet");
+                continue;
+            }
             self.command(
                 [
                     "package",

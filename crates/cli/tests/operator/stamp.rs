@@ -118,8 +118,12 @@ fn stamped() {
     );
     assert_eq!(
         std::fs::read_to_string(root.join("projected")).expect("projection"),
-        "family-macro\nfamily-core\n",
-        "every declared package projects, in declared order"
+        "family-macro\n",
+        "a package requiring a sibling cannot be verified before that sibling is published"
+    );
+    assert!(
+        said.contains("family-core requires a sibling this release has not published yet"),
+        "{said}"
     );
     assert!(!said.contains("not projected"), "{said}");
 

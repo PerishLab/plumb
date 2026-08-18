@@ -57,3 +57,35 @@ pub fn write(path: &Path, document: &DocumentMut) -> Result<(), String> {
     std::fs::write(path, document.to_string())
         .map_err(|error| format!("cannot stamp {}: {error}", path.display()))
 }
+
+pub fn coupled(document: &DocumentMut, siblings: &[String]) -> bool {
+    let mut named = Vec::new();
+    if let Some(table) = document
+        .get("workspace")
+        .and_then(Item::as_table)
+        .and_then(|workspace| workspace.get("dependencies"))
+        .and_then(Item::as_table)
+    {
+        collect(table, &mut named);
+    }
+    for section in ["dependencies", "build-dependencies"] {
+        if let Some(table) = document.get(section).and_then(Item::as_table) {
+            collect(table, &mut named);
+        }
+    }
+    named.iter().any(|held| siblings.contains(held))
+}
+
+fn collect(table: &toml_edit::Table, named: &mut Vec<String>) {
+    for (name, item) in table.iter() {
+        let identity = item
+            .as_inline_table()
+            .and_then(|detail| detail.get("package").and_then(Value::as_str))
+            .or_else(|| {
+                item.as_table()
+                    .and_then(|detail| detail.get("package").and_then(Item::as_str))
+            })
+            .unwrap_or(name);
+        named.push(identity.to_string());
+    }
+}
