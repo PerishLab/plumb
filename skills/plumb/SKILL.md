@@ -46,7 +46,9 @@ use Doctor before changing its shape.
   equals its target verbatim.
 - A **skill seat** is one source brief or one ownership-proven installed brief.
 - A **document strategy** owns its target files, evidence mass, invalidation
-  lifecycle, and text magnitude; none of those are downstream parameters.
+  lifecycle, and text magnitude; none of those are downstream parameters. Its
+  seal projects the Git index, so an untracked leaf under a declared source
+  seat is out of true and proposes nothing.
 
 ## Actions
 

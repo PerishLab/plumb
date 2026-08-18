@@ -199,6 +199,53 @@ fn command() {
     assert!(!output.status.success());
 }
 
+#[test]
+fn untracked() {
+    let fixture = super::fixture();
+    let root = fixture.path();
+    let seat = root.to_str().expect("utf8 root");
+    std::fs::create_dir_all(root.join("crates/tool/src")).expect("source seat");
+    std::fs::write(root.join("crates/tool/src/main.rs"), "fn main() {}\n").expect("source");
+    std::fs::write(root.join("AGENTS.md"), "# Agents\n").expect("target");
+    declare(root, "", "");
+    track(root);
+    let proposal = super::run(&["document", seat]);
+    let source = value(&proposal, "source crates/tool/src seal");
+    let target = value(&proposal, "target-seal");
+    declare(root, source, target);
+    track(root);
+    assert!(
+        super::run(&["doctor", seat]).contains("true to the skeleton"),
+        "fixture should stand true before the loose leaf"
+    );
+
+    std::fs::write(root.join("outside.rs"), "fn stray() {}\n").expect("stray");
+    let outside = super::run(&["doctor", seat]);
+    assert!(!outside.contains("untracked leaves"), "{outside}");
+
+    std::fs::write(root.join("crates/tool/src/loose.rs"), "fn loose() {}\n").expect("loose");
+    let held = super::run(&["doctor", seat]);
+    assert!(
+        held.contains("source crates/tool/src holds untracked leaves"),
+        "{held}"
+    );
+    assert!(held.contains("crates/tool/src/loose.rs"), "{held}");
+
+    let refused = super::run(&["document", seat]);
+    assert!(
+        !refused.contains("source crates/tool/src seal ="),
+        "{refused}"
+    );
+    assert!(
+        refused.contains("git add or ignore them first"),
+        "{refused}"
+    );
+
+    track(root);
+    let sealed = super::run(&["doctor", seat]);
+    assert!(!sealed.contains("untracked leaves"), "{sealed}");
+}
+
 fn declare(root: &Path, source: &str, target: &str) {
     std::fs::write(
         root.join("plumb.toml"),

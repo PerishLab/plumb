@@ -14,6 +14,7 @@ pub struct Entry {
 pub struct Snapshot {
     root: PathBuf,
     entries: Vec<Entry>,
+    untracked: Vec<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Serialize)]
@@ -32,13 +33,11 @@ impl std::error::Error for Refusal {}
 
 impl Snapshot {
     pub fn read(root: &Path) -> Result<Self, Refusal> {
-        let output = Command::new("git")
-            .arg("-C")
-            .arg(root)
-            .args(["ls-files", "--stage", "-z"])
-            .output()
-            .map_err(|error| refuse("git", format!("cannot execute git: {error}")))?;
-        let listed = success(output, "cannot list tracked paths")?;
+        let listed = listing(
+            root,
+            &["ls-files", "--stage", "-z"],
+            "cannot list tracked paths",
+        )?;
         let mut entries = listed
             .split(|byte| *byte == 0)
             .filter(|record| !record.is_empty())
@@ -50,6 +49,7 @@ impl Snapshot {
         Ok(Self {
             root: root.to_path_buf(),
             entries,
+            untracked: paths(root)?,
         })
     }
 
@@ -59,6 +59,10 @@ impl Snapshot {
 
     pub fn entries(&self) -> &[Entry] {
         &self.entries
+    }
+
+    pub fn untracked(&self) -> &[String] {
+        &self.untracked
     }
 
     pub fn seat(&self, path: &str) -> Vec<&Entry> {
@@ -118,6 +122,33 @@ impl Entry {
     pub fn bytes(&self) -> &[u8] {
         &self.bytes
     }
+}
+
+fn listing(root: &Path, args: &[&str], fallback: &str) -> Result<Vec<u8>, Refusal> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(args)
+        .output()
+        .map_err(|error| refuse("git", format!("cannot execute git: {error}")))?;
+    success(output, fallback)
+}
+
+fn paths(root: &Path) -> Result<Vec<String>, Refusal> {
+    let listed = listing(
+        root,
+        &["ls-files", "--others", "--exclude-standard", "-z"],
+        "cannot list untracked paths",
+    )?;
+    listed
+        .split(|byte| *byte == 0)
+        .filter(|record| !record.is_empty())
+        .map(|record| {
+            std::str::from_utf8(record)
+                .map(str::to_owned)
+                .map_err(|_| refuse("git-path", "untracked path is not UTF-8"))
+        })
+        .collect()
 }
 
 fn bytes(root: &Path, entry: &Entry) -> Result<Vec<u8>, Refusal> {

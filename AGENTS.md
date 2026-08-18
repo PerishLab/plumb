@@ -72,6 +72,10 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - Current projections bind canonical source seals and one target/topology seal
   in `plumb.toml`. Source, target, or topology drift is out of true until a
   human reads both sides and records the proposal from `plumb document`.
+- A seal projects the Git index, so a declared source seat holding an untracked
+  leaf is out of true and `plumb document` proposes nothing for it: the seal
+  would otherwise stand for a tree the seat no longer is, and the drift the
+  next reader sees would be someone else's. Track the leaf or ignore it.
 - Governed lanes are rendered, never written. `plumb lane` derives each one from the release
   declaration and the repository shape, and drift is byte comparison against a fresh render, not a
   recorded seal: a generated target needs no evidence it cannot already derive. Rendering decides

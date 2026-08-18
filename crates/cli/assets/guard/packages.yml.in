@@ -1,3 +1,5 @@
+      - name: Seat the package store outside the source
+        run: echo "PNPM_CONFIG_STORE_DIR=$RUNNER_TEMP/pnpm-store" >> "$GITHUB_ENV"
       - name: Install declared packages
         run: |
           set -eu

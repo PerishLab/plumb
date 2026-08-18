@@ -84,6 +84,17 @@ impl<'a> Closure<'a> {
             .collect()
     }
 
+    pub fn loose(&self, path: &str, documents: &BTreeSet<String>) -> Vec<String> {
+        let prefix = format!("{}/", path.trim_end_matches('/'));
+        self.snapshot
+            .untracked()
+            .iter()
+            .filter(|held| path == "." || **held == prefix || held.starts_with(&prefix))
+            .filter(|held| !document(held, documents))
+            .cloned()
+            .collect()
+    }
+
     fn seat(&self, path: &str) -> Vec<&'a Entry> {
         if path == "." {
             self.snapshot.entries().iter().collect()

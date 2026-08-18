@@ -167,6 +167,14 @@ impl Seat {
     }
 
     fn source(source: &shape::document::Source) -> bool {
+        if !source.loose.is_empty() {
+            println!(
+                "    source {} holds untracked leaves; git add or ignore them first: {}",
+                source.path,
+                shape::document::named(&source.loose)
+            );
+            return false;
+        }
         match (&source.actual, &source.error) {
             (Some(seal), _) => {
                 println!("    source {} seal = \"{seal}\"", source.path);

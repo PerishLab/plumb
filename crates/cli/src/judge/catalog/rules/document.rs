@@ -44,6 +44,17 @@ rule!(
     [DOCUMENT_TAG, REPOSITORY]
 );
 
+rule!(
+    CLOSURE,
+    "document.source-tracked",
+    "Source seats hold nothing Git does not track",
+    "A declared source seat carries no untracked leaf, because a seal projected from the index would otherwise stand for a tree the working seat no longer is.",
+    "The declared source seats, the exact Git index, and the untracked leaves Git reports beneath them.",
+    Mechanized,
+    PLUMB,
+    [DOCUMENT_TAG, OWNERSHIP]
+);
+
 pub fn all() -> Vec<&'static Rule> {
-    vec![&ADMISSION, &EVIDENCE, &MAGNITUDE, &SCHEMA]
+    vec![&ADMISSION, &CLOSURE, &EVIDENCE, &MAGNITUDE, &SCHEMA]
 }

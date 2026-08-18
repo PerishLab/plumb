@@ -41,6 +41,17 @@ pub fn check(held: &shape::Shape) -> Found {
             ));
         }
         for source in &document.sources {
+            if !source.loose.is_empty() {
+                found.push(wrong(
+                    &rule::CLOSURE,
+                    format!(
+                        "document {} source {} holds untracked leaves; git add or ignore them before sealing: {}",
+                        document.target,
+                        source.path,
+                        shape::document::named(&source.loose)
+                    ),
+                ));
+            }
             if let Some(error) = &source.error {
                 found.push(blind(&rule::EVIDENCE, error));
                 continue;

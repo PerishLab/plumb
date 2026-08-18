@@ -36,6 +36,7 @@ pub struct Source {
     pub lines: Option<usize>,
     pub leaves: Option<usize>,
     pub error: Option<String>,
+    pub loose: Vec<String>,
 }
 
 pub fn read(root: &Path, snapshot: Result<&Snapshot, &Refusal>) -> Read {
@@ -81,6 +82,7 @@ pub fn read(root: &Path, snapshot: Result<&Snapshot, &Refusal>) -> Read {
             errors: closure.form(binding),
         };
         for source in &binding.sources {
+            let loose = closure.loose(&source.path, &documents);
             match closure.source(&source.path, &documents) {
                 Ok(metric) => document.sources.push(Source {
                     path: source.path.clone(),
@@ -89,6 +91,7 @@ pub fn read(root: &Path, snapshot: Result<&Snapshot, &Refusal>) -> Read {
                     lines: Some(metric.lines),
                     leaves: Some(metric.leaves),
                     error: None,
+                    loose,
                 }),
                 Err(error) => document.sources.push(Source {
                     path: source.path.clone(),
@@ -97,6 +100,7 @@ pub fn read(root: &Path, snapshot: Result<&Snapshot, &Refusal>) -> Read {
                     lines: None,
                     leaves: None,
                     error: Some(error),
+                    loose,
                 }),
             }
         }
@@ -113,6 +117,18 @@ pub fn read(root: &Path, snapshot: Result<&Snapshot, &Refusal>) -> Read {
         found.held.push(document);
     }
     found
+}
+
+pub fn named(loose: &[String]) -> String {
+    const SHOWN: usize = 5;
+
+    let head = loose.iter().take(SHOWN).cloned().collect::<Vec<_>>();
+    let rest = loose.len().saturating_sub(head.len());
+    if rest == 0 {
+        head.join(", ")
+    } else {
+        format!("{} and {rest} more", head.join(", "))
+    }
 }
 
 fn label(binding: &config::Binding, paths: &[String]) -> String {
