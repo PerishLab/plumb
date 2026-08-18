@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "version": "v0.26.0",
+  "answers": [
+    {
+      "ecosystem": "cargo",
+      "name": "locus",
+      "latest": "0.2.2"
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "runseal",
+      "latest": "0.17.0"
+    }
+  ]
+}
