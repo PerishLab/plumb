@@ -20,8 +20,6 @@ jobs:
     runs-on: docker
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
-    env:
-      PLUMB_RELEASE_VERSION: ${{ startsWith(github.ref, 'refs/heads/release/') && github.ref_name || '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
