@@ -97,6 +97,10 @@ fn sweeps() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("recorded"),
+        "a seat holding a stray leaf is not already recorded"
+    );
     let listed = Command::new("git")
         .args([
             "ls-tree",
