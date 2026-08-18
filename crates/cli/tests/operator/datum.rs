@@ -73,3 +73,46 @@ fn protection() {
     assert!(datum.contains("schema = 1"), "{datum}");
     assert!(datum.contains("version = \"v1.2.0\""), "{datum}");
 }
+
+#[test]
+fn sweeps() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let bare = tempfile::tempdir().expect("bare");
+    let root = fixture.path();
+    let cut = root.join("cut");
+    let (url, _) = serve(Court::Prepare(true, cut.clone()), 9);
+    let origin = format!("{url}/test/probe.git");
+    std::fs::create_dir_all(root.join(".plumb/releases/v1.2.0")).expect("seat");
+    std::fs::write(
+        root.join(".plumb/releases/v1.2.0/datum.json"),
+        "{\"schema\":1}\n",
+    )
+    .expect("stale datum");
+    let head = lined(root, &origin, bare.path(), "release/v1.2.0");
+    std::fs::write(&cut, &head).expect("cut");
+
+    let output = command(root, &["stable", "prepare", "--version", "1.2.0"]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let listed = Command::new("git")
+        .args([
+            "ls-tree",
+            "-r",
+            "--name-only",
+            "release/v1.2.0",
+            "--",
+            ".plumb/releases/v1.2.0",
+        ])
+        .current_dir(bare.path())
+        .output()
+        .expect("git");
+    let listed = String::from_utf8_lossy(&listed.stdout).to_string();
+    assert!(listed.contains("datum.toml"), "{listed}");
+    assert!(
+        !listed.contains("datum.json"),
+        "the datum commit owns its seat: {listed}"
+    );
+}

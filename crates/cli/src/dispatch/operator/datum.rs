@@ -41,15 +41,19 @@ pub fn record(cut: Cut<'_>) -> Result<String, String> {
 
 impl Seat<'_> {
     pub fn carried(&self, commit: &str, version: &str) -> bool {
-        let leaf = datum::leaf(version);
-        let touched = read(
+        let seat = format!("{}/{version}/", datum::SEAT);
+        let Ok(touched) = read(
             "inspect datum commit",
             self.command(["show", "--name-only", "--format=", commit]),
-        );
-        if touched.as_deref() != Ok(leaf.as_str()) {
+        ) else {
             return false;
-        }
-        self.decodes(&format!("{commit}:{leaf}"), version)
+        };
+        let owned = touched
+            .lines()
+            .map(str::trim)
+            .filter(|path| !path.is_empty())
+            .all(|path| path.starts_with(&seat));
+        owned && self.decodes(&format!("{commit}:{}", datum::leaf(version)), version)
     }
 
     fn reachable(&self, head: &str) -> Result<(), String> {
@@ -110,6 +114,12 @@ impl Seat<'_> {
                 .map_err(|error| format!("cannot run git: {error}"))
         };
         success("read the release tree", stage(owned(["read-tree", head])))?;
+        for stale in self.stale(head, version)? {
+            success(
+                "drop a stale datum",
+                stage(owned(["update-index", "--force-remove", &stale])),
+            )?;
+        }
         success(
             "stage the datum",
             stage(owned([
@@ -122,6 +132,21 @@ impl Seat<'_> {
         let tree = read("write the datum tree", stage(owned(["write-tree"])));
         let _ = std::fs::remove_file(&index);
         tree
+    }
+
+    fn stale(&self, head: &str, version: &str) -> Result<Vec<String>, String> {
+        let seat = format!("{}/{version}", datum::SEAT);
+        let leaf = datum::leaf(version);
+        let listed = read(
+            "list the datum seat",
+            self.command(["ls-tree", "-r", "--name-only", head, "--", &seat]),
+        )?;
+        Ok(listed
+            .lines()
+            .map(str::trim)
+            .filter(|path| !path.is_empty() && *path != leaf)
+            .map(str::to_string)
+            .collect())
     }
 
     fn sealed(&self, tree: &str, head: &str, version: &str) -> Result<String, String> {
