@@ -154,3 +154,73 @@ fn inputs() {
         "a recorded edit moves the object"
     );
 }
+
+#[test]
+fn carried() {
+    let temp = tempfile::tempdir().expect("temp root");
+    let root = temp.path();
+    let tools = root.join("tools");
+    let artifacts = root.join("artifacts");
+    std::fs::create_dir_all(&tools).expect("tool root");
+    std::fs::create_dir_all(&artifacts).expect("artifact root");
+    let fixture = Fixture {
+        root,
+        tools: &tools,
+    };
+    fixture.seed();
+    std::fs::write(
+        root.join("plumb.toml"),
+        format!(
+            "{SPEC}[release.oci]\nregistry = \"example.invalid\"\nimage = \"owner/probe\"\naccount = \"Example\"\n\n[release.chart]\nregistry = \"example.invalid\"\nchart = \"owner/probe\"\naccount = \"Example\"\n"
+        ),
+    )
+    .expect("manifest");
+    std::fs::write(root.join("Containerfile"), "FROM scratch\n").expect("containerfile");
+    std::fs::create_dir_all(root.join("charts/probe")).expect("chart root");
+    std::fs::write(root.join("charts/probe/Chart.yaml"), "name: probe\n").expect("chart");
+    fixture.changelog("v1.2.0");
+    fixture.track("Containerfile");
+    fixture.track("charts");
+    let candidate = fixture.candidate();
+    fixture.tag("v1.2.0-beta.7");
+    fixture.archive(&artifacts, "v1.2.0-beta.7");
+
+    let out = root.join("beta");
+    compile(Compile {
+        fixture: &fixture,
+        artifacts: &artifacts,
+        channel: "beta",
+        version: "v1.2.0-beta.7",
+        out: &out,
+        promotion: None,
+        commit: &candidate,
+    });
+    let held = measured(&out);
+    assert!(
+        held["oci"]["hash"].as_str().is_some_and(|h| h.len() == 64),
+        "a declared image is an object the seal can speak about: {held}"
+    );
+    assert_eq!(held["oci"]["since"], "v1.2.0-beta.7");
+
+    fixture.tag("v1.2.0-beta.8");
+    fixture.archive(&artifacts, "v1.2.0-beta.8");
+    let next = root.join("later");
+    compile(Compile {
+        fixture: &fixture,
+        artifacts: &artifacts,
+        channel: "beta",
+        version: "v1.2.0-beta.8",
+        out: &next,
+        promotion: None,
+        commit: &candidate,
+    });
+    let moved = measured(&next);
+    assert_ne!(
+        moved["oci"]["hash"], held["oci"]["hash"],
+        "an image wrapping this release's archive moves with the release, whatever the Containerfile did"
+    );
+    assert_eq!(
+        moved["chart"]["hash"], held["chart"]["hash"],
+        "an object whose source did not move keeps its hash"
+    );
+}

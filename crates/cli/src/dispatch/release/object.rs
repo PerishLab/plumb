@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 pub const CARGO: &str = "cargo";
+pub const OCI: &str = "oci";
 pub const CHART: &str = "chart";
 pub const CFWORKER: &str = "cfworker";
 pub const NPM: &str = "npm";
@@ -37,6 +38,9 @@ impl Seat<'_> {
         }
         if spec.cfworker.is_some() {
             held.insert(CFWORKER.to_string(), vec![PathBuf::from("apps")]);
+        }
+        if spec.oci.is_some() {
+            held.insert(OCI.to_string(), vec![PathBuf::from("Containerfile")]);
         }
         self.crates(&mut held)?;
         for (name, extra) in &spec.depends {
@@ -108,6 +112,10 @@ impl Seat<'_> {
             let mut digest = Sha256::new();
             digest.update(toolchain.as_bytes());
             digest.update([0]);
+            if object.name == OCI && self.0.binary() {
+                digest.update(version.as_bytes());
+                digest.update([0]);
+            }
             let mut seen = 0usize;
             for entry in snapshot.entries() {
                 if !object.roots.iter().any(|root| under(entry.path(), root)) {
