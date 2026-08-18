@@ -244,20 +244,35 @@ fn inputs() {
     std::fs::create_dir_all(published.join("channels")).expect("published root");
     std::fs::write(
         published.join("channels/stable.json"),
-        r#"{"seal":{"url":"https://releases.test/v1/seal.json"}}"#,
+        format!(
+            concat!(
+                r#"{{"schema":1,"product":"probe","channel":"stable","releaseVersion":"v1.1.0","#,
+                r#""commit":"{}","managers":{{}},"seal":{{"name":"seal.json","#,
+                r#""mime":"application/json","sha256":"{}","size":3,"#,
+                r#""url":"https://releases.test/v1/seal.json"}}}}"#
+            ),
+            candidate,
+            "0".repeat(64)
+        ),
     )
     .expect("stable pointer");
     std::fs::copy(out.join("seal.json"), published.join("seal.json")).expect("published seal");
-    let said = String::from_utf8_lossy(
-        &run(fixture
-            .command()
-            .args(["ship", "chart", "package"])
-            .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.8"))
-        .stdout,
-    )
-    .to_string();
-    assert!(
-        said.contains("chart unchanged since v1.2.0-beta.7"),
-        "a published baseline that still matches holds the object settled: {said}"
+    let next = root.join("held");
+    compile(Compile {
+        fixture: &fixture,
+        artifacts: &artifacts,
+        channel: "beta",
+        version: "v1.2.0-beta.8",
+        out: &next,
+        promotion: None,
+        commit: &candidate,
+    });
+    let seal: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(next.join("seal.json")).expect("seal"))
+            .expect("seal json");
+    assert_eq!(
+        seal["inputs"]["chart"]["since"], "v1.2.0-beta.7",
+        "an unchanged object still reports where it last changed"
     );
+    assert_eq!(seal["releaseVersion"], "v1.2.0-beta.8");
 }

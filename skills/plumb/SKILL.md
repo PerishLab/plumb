@@ -90,12 +90,12 @@ unfamiliar or stateful action.
   repository wrapper or hook.
 - Record document seals only after reading every named source and target.
   `plumb document` prints proposals and never rewrites `plumb.toml`.
-- A skip is an optimisation, never a gate. An unreadable baseline projects
-  everything and says so; it does not refuse the release. A settled crate keeps
-  the release it last changed in, and every requirement on it names that one.
-- A ship object carries the name of its medium, plus `/<package>` where one
-  medium holds many: `cargo/<crate>`, `npm/<package>`, `chart`, `cfworker`.
-  `[release.depends]` keys and a seal's recorded inputs use those names.
+- A projection never skips. Input hashes are evidence of what moved, not a gate
+  on what ships, so a release projects every declared object at its own version
+  and an unreadable baseline changes nothing but the evidence.
+- A ship object is one attachment: `cargo`, `npm`, `chart`, `cfworker`. Every
+  package an attachment declares carries one digest, one version, and ships
+  together. `[release.depends]` keys and a seal's inputs use those names.
 - A worker is a release medium, not a side channel. `[release.cfworker]` names
   the account and the stable domain; exact channels stage a version behind its
   own preview URL and only stable reaches the declared domain.

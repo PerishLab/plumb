@@ -17,9 +17,15 @@ if [ "$1" = metadata ]; then printf '%s\n' "{\"packages\":[{\"name\":\"family-co
 grep -F 'version = "0.10.2-beta.1"' Cargo.toml >/dev/null && grep -F 'version = "0.10.2-beta.1"' crates/macro/Cargo.toml >/dev/null
 grep -F 'helper = { path = "crates/helper", version = "=9.9.9" }' Cargo.toml >/dev/null && grep -F 'registry-core = { package = "family-core", version = "=0.10.2", registry = "perish" }' Cargo.toml >/dev/null && grep -F 'helper = { path = "../helper", version = "=9.9.9" }' crates/core/Cargo.toml >/dev/null && grep -F 'version = "9.9.9"' crates/helper/Cargo.toml >/dev/null
 printf '0.10.2-beta.1\n' > cargo-observed
-mkdir -p target/package/family-macro-0.10.2-beta.1
-printf 'version = "0.10.2-beta.1"\n' > target/package/family-macro-0.10.2-beta.1/Cargo.toml
-tar -czf target/package/family-macro-0.10.2-beta.1.crate -C target/package family-macro-0.10.2-beta.1
+name=""
+prev=""
+for arg in "$@"; do
+  if [ "$prev" = --package ]; then name="$arg"; fi
+  prev="$arg"
+done
+mkdir -p "target/package/$name-0.10.2-beta.1"
+printf 'version = "0.10.2-beta.1"\n' > "target/package/$name-0.10.2-beta.1/Cargo.toml"
+tar -czf "target/package/$name-0.10.2-beta.1.crate" -C target/package "$name-0.10.2-beta.1"
 "#;
 
 #[test]

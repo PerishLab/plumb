@@ -1,30 +1,17 @@
 use super::super::super::model::Spec;
-use super::super::super::object::{self, Held};
 use semver::Version;
 use std::path::PathBuf;
 use std::process::Command;
 
 pub struct Module<'a> {
     spec: &'a Spec,
-    held: &'a Held,
 }
 
-pub fn module<'a>(spec: &'a Spec, held: &'a Held) -> Module<'a> {
-    Module { spec, held }
+pub fn module(spec: &Spec) -> Module<'_> {
+    Module { spec }
 }
 
 impl Module<'_> {
-    fn settled(&self, package: &str) -> bool {
-        let bare = package.rsplit('/').next().unwrap_or_default();
-        match self.held.since(&object::npm(bare)) {
-            Some(since) => {
-                println!("  {bare} unchanged since {since}; not projected");
-                true
-            }
-            None => false,
-        }
-    }
-
     pub fn pack(&self, version: &str) -> Result<String, String> {
         let Some(npm) = &self.spec.npm else {
             return Ok(format!("{} has no module attachment", self.spec.product));
@@ -36,9 +23,6 @@ impl Module<'_> {
         let seat = std::fs::canonicalize(&out)
             .map_err(|error| format!("cannot resolve {}: {error}", out.display()))?;
         for package in &npm.packages {
-            if self.settled(package) {
-                continue;
-            }
             self.stamp(package, &identity)?;
             self.pnpm(
                 &["pack", "--pack-destination", &seat.to_string_lossy()],
@@ -60,9 +44,6 @@ impl Module<'_> {
         self.pack(version)?;
         let identity = release(version)?;
         for package in &npm.packages {
-            if self.settled(package) {
-                continue;
-            }
             let archive = self.archive(package, &identity);
             let name = archive
                 .file_name()

@@ -83,8 +83,8 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   rather than an empty matrix, which Forgejo never creates and whose dependents block forever. Drift is noted, never out of
   true: a release refuses on a rendered lane that drifted and on the absence of the lane it must dispatch, while every other unrendered lane only draws the note, so adoption stays incremental.
   Rendering itself refuses a shape the forge cannot run — secrets under `workflow_call`, an empty matrix, an installed tool absent from the job path, a release following a push — because only the forge parses a lane body, so the check stands where the text is written.
-- A seal records one input hash per ship object: tracked leaves under derived roots plus the pinned
-  toolchain, stamped with the version those inputs first appeared in, and `[release.depends]` adds only the edges no convention derives.
+- A ship object is one attachment, not one package: every package an attachment declares carries one input hash, one version, and ships together, because a unit the language forced into several boxes is still one unit. A seal records that hash per object — tracked leaves under derived roots plus the pinned toolchain, stamped with the version those inputs first appeared in — and `[release.depends]` adds only the edges no convention derives.
+- A projection never skips. The input hash says what moved since the last stable; it does not decide what ships. Every declared object projects at the release version, because a published identity carries that version and not shipping one punches a hole in the sequence that no later release can fill.
 - Document evidence values are excluded from the semantic `plumb.toml` source
   projection. No other source bytes, target bytes, or binding fields are
   excluded.

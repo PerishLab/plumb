@@ -130,8 +130,7 @@ fn cargo(deed: Cargo) -> Result<String, String> {
     let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
     let release = &rig.release;
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
-    let held = super::release::object::Seat(&spec).held(&release.toolchain, version);
-    let attachment = engine::adaptor::registry::registry(&spec, &held);
+    let attachment = engine::adaptor::registry::registry(&spec);
     match deed {
         Cargo::Publish => {
             sealed(&spec, release, version)?;
@@ -161,8 +160,7 @@ fn chart(deed: Chart) -> Result<String, String> {
     let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
     let release = &rig.release;
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
-    let held = super::release::object::Seat(&spec).held(&release.toolchain, version);
-    let carrier = engine::adaptor::chart::chart(&spec, &held);
+    let carrier = engine::adaptor::chart::chart(&spec);
     match deed {
         Chart::Package => carrier.package(version),
         Chart::Publish => {
@@ -177,8 +175,7 @@ fn npm(deed: Npm) -> Result<String, String> {
     let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
     let release = &rig.release;
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
-    let held = super::release::object::Seat(&spec).held(&release.toolchain, version);
-    let carrier = engine::adaptor::module::module(&spec, &held);
+    let carrier = engine::adaptor::module::module(&spec);
     match deed {
         Npm::Pack => carrier.pack(version),
         Npm::Publish => {
@@ -227,7 +224,6 @@ fn cfworker(deed: Cfworker) -> Result<String, String> {
         root: &rig.release.root,
         channel: required("PLUMB_RELEASE_CHANNEL", &rig.release.channel)?,
         version: required("PLUMB_RELEASE_VERSION", &rig.release.version)?,
-        toolchain: &rig.release.toolchain,
     };
     super::site::worker(seat, matches!(deed, Cfworker::Publish))
 }

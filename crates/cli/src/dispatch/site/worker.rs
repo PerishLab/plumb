@@ -1,7 +1,6 @@
 use super::model::App;
 use super::process::Call;
 use crate::dispatch::release::model::{Cfworker, Spec};
-use crate::dispatch::release::object;
 use plumb::rig::Site;
 use serde_json::{Value, json};
 use std::path::Path;
@@ -10,7 +9,6 @@ pub struct Seat<'a> {
     pub root: &'a Path,
     pub channel: &'a str,
     pub version: &'a str,
-    pub toolchain: &'a str,
 }
 
 impl Seat<'_> {
@@ -28,10 +26,6 @@ impl Seat<'_> {
 
     pub fn publish(&self) -> Result<String, String> {
         let (spec, held) = self.declared()?;
-        let settled = object::Seat(&spec).held(self.toolchain, self.version);
-        if let Some(since) = settled.since(object::CFWORKER) {
-            return Ok(format!("cfworker unchanged since {since}; not projected"));
-        }
         let app = App::read(self.root)?;
         let site = self.vantage(&spec, &held)?;
         previews(&site, &app.worker)?;

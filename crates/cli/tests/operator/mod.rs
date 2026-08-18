@@ -13,8 +13,6 @@ mod forgejo;
 mod image;
 #[cfg(unix)]
 mod lane;
-#[cfg(unix)]
-mod pin;
 mod precommit;
 #[cfg(unix)]
 mod promotion;
@@ -32,6 +30,8 @@ mod settlement;
 mod site;
 #[cfg(unix)]
 mod stable;
+#[cfg(unix)]
+mod stamp;
 mod surface;
 #[cfg(unix)]
 mod topology;

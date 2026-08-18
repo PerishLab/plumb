@@ -1,17 +1,25 @@
 use std::os::unix::fs::PermissionsExt;
 
-const PINNED: &str = r#"#!/bin/sh
+const STAMPED: &str = r#"#!/bin/sh
 set -eu
 if [ "$1" = metadata ]; then printf '%s\n' "{\"packages\":[{\"name\":\"family-core\",\"version\":\"1.2.0\",\"manifest_path\":\"$PWD/crates/core/Cargo.toml\",\"targets\":[]},{\"name\":\"family-macro\",\"version\":\"1.2.0\",\"manifest_path\":\"$PWD/crates/macro/Cargo.toml\",\"targets\":[]}],\"target_directory\":\"$PWD/target\"}"; exit 0; fi
-grep -F 'version = "1.2.0-beta.7"' crates/macro/Cargo.toml >/dev/null
-grep -F 'version = "=1.2.0-beta.7"' crates/core/Cargo.toml >/dev/null
-mkdir -p target/package/family-core-1.2.0-beta.8
-printf 'version = "1.2.0-beta.8"\n' > target/package/family-core-1.2.0-beta.8/Cargo.toml
-tar -czf target/package/family-core-1.2.0-beta.8.crate -C target/package family-core-1.2.0-beta.8
+grep -F 'version = "1.2.0-beta.8"' Cargo.toml >/dev/null
+grep -F 'version = "=1.2.0-beta.8"' crates/core/Cargo.toml >/dev/null
+grep -F 'version.workspace = true' crates/macro/Cargo.toml >/dev/null
+name=""
+prev=""
+for arg in "$@"; do
+  if [ "$prev" = --package ]; then name="$arg"; fi
+  prev="$arg"
+done
+mkdir -p "target/package/$name-1.2.0-beta.8"
+printf 'version = "1.2.0-beta.8"\n' > "target/package/$name-1.2.0-beta.8/Cargo.toml"
+tar -czf "target/package/$name-1.2.0-beta.8.crate" -C target/package "$name-1.2.0-beta.8"
+printf '%s\n' "$name" >> projected
 "#;
 
 #[test]
-fn pinned() {
+fn stamped() {
     let temp = tempfile::tempdir().expect("temp root");
     let root = temp.path();
     let tools = root.join("tools");
@@ -26,7 +34,7 @@ fn pinned() {
     };
     fixture.seed();
     let cargo = tools.join("cargo");
-    std::fs::write(&cargo, PINNED).expect("fake cargo");
+    std::fs::write(&cargo, STAMPED).expect("fake cargo");
     std::fs::set_permissions(&cargo, std::fs::Permissions::from_mode(0o755)).expect("cargo mode");
     for (seat, text) in [
         (
@@ -108,6 +116,12 @@ fn pinned() {
         said.contains("rehearsed Cargo attachment for v1.2.0-beta.8"),
         "{said}"
     );
+    assert_eq!(
+        std::fs::read_to_string(root.join("projected")).expect("projection"),
+        "family-macro\nfamily-core\n",
+        "every declared package projects, in declared order"
+    );
+    assert!(!said.contains("not projected"), "{said}");
 
     super::fixture::run(
         fixture

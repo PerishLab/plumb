@@ -1,5 +1,4 @@
 use super::super::super::model::{Cargo, Spec};
-use super::super::super::object::{self, Held};
 use super::super::ledger;
 use super::super::workspace::{Workspace, release};
 use super::manifest;
@@ -12,11 +11,10 @@ use std::process::Command;
 
 pub struct Registry<'a> {
     spec: &'a Spec,
-    held: &'a Held,
 }
 
-pub fn registry<'a>(spec: &'a Spec, held: &'a Held) -> Registry<'a> {
-    Registry { spec, held }
+pub fn registry(spec: &Spec) -> Registry<'_> {
+    Registry { spec }
 }
 
 impl Registry<'_> {
@@ -29,21 +27,20 @@ impl Registry<'_> {
         }
         self.stamp(cargo, version)?;
         let identity = release(version)?;
-        let Some(package) = self.projected(cargo)? else {
-            return Ok(format!("Cargo attachment holds nothing new for {version}"));
-        };
-        self.command(
-            [
-                "package",
-                "--registry",
-                &cargo.registry,
-                "--package",
-                package,
-                "--allow-dirty",
-            ],
-            token,
-        )?;
-        inspect(&self.archive(package, &identity), package, &identity)?;
+        for package in self.ordered(cargo)? {
+            self.command(
+                [
+                    "package",
+                    "--registry",
+                    &cargo.registry,
+                    "--package",
+                    package,
+                    "--allow-dirty",
+                ],
+                token,
+            )?;
+            inspect(&self.archive(package, &identity), package, &identity)?;
+        }
         Ok(format!("rehearsed Cargo attachment for {version}"))
     }
 
@@ -56,10 +53,7 @@ impl Registry<'_> {
         }
         self.stamp(cargo, version)?;
         let identity = release(version)?;
-        for package in &cargo.packages {
-            if self.passed(package) {
-                continue;
-            }
+        for package in self.ordered(cargo)? {
             self.command(
                 [
                     "package",
@@ -119,49 +113,24 @@ impl Registry<'_> {
         Ok(format!("published Cargo attachment for {version}"))
     }
 
-    fn settled(&self, package: &str) -> Option<(&str, Version)> {
-        let since = self.held.since(&object::cargo(package))?;
-        Some((since, release(since).ok()?))
-    }
-
-    fn passed(&self, package: &str) -> bool {
-        match self.settled(package) {
-            Some((since, _)) => {
-                println!("  {package} unchanged since {since}; not projected");
-                true
-            }
-            None => false,
-        }
-    }
-
-    fn projected<'a>(&self, cargo: &'a Cargo) -> Result<Option<&'a String>, String> {
+    fn ordered<'a>(&self, cargo: &'a Cargo) -> Result<&'a [String], String> {
         if cargo.packages.is_empty() {
             return Err("Cargo attachment must declare ordered packages".into());
         }
-        for package in &cargo.packages {
-            if !self.passed(package) {
-                return Ok(Some(package));
-            }
-        }
-        Ok(None)
+        Ok(&cargo.packages)
     }
 
-    fn pins(&self, cargo: &Cargo, identity: &Version) -> BTreeMap<String, String> {
+    fn pins(cargo: &Cargo, identity: &Version) -> BTreeMap<String, String> {
         cargo
             .packages
             .iter()
-            .map(|package| {
-                let pin = self
-                    .settled(package)
-                    .map_or_else(|| identity.clone(), |(_, held)| held);
-                (package.clone(), pin.to_string())
-            })
+            .map(|package| (package.clone(), identity.to_string()))
             .collect()
     }
 
     fn stamp(&self, cargo: &Cargo, version: &str) -> Result<(), String> {
         let identity = release(version)?;
-        let pins = self.pins(cargo, &identity);
+        let pins = Self::pins(cargo, &identity);
         let workspace = Workspace::read(&self.spec.root)?;
         let root = self.spec.root.join("Cargo.toml");
         let mut document = manifest::read(&root)?;
@@ -189,12 +158,8 @@ impl Registry<'_> {
         for package in &cargo.packages {
             let (seat, _) = workspace.package(package)?;
             let mut document = manifest::read(seat)?;
-            let pin = pins
-                .get(package)
-                .ok_or_else(|| format!("cargo package {package} holds no release version"))?;
-            if self.settled(package).is_some() || document["package"]["version"].as_str().is_some()
-            {
-                document["package"]["version"] = toml_edit::value(pin.clone());
+            if document["package"]["version"].as_str().is_some() {
+                document["package"]["version"] = toml_edit::value(identity.to_string());
             }
             manifest::dependencies(&mut document, &pins)?;
             manifest::write(seat, &document)?;

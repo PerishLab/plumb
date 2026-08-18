@@ -1,5 +1,4 @@
 use super::super::super::model::Spec;
-use super::super::super::object::{self, Held};
 use semver::Version;
 use std::io::Write;
 use std::path::PathBuf;
@@ -7,25 +6,17 @@ use std::process::{Command, Stdio};
 
 pub struct Chart<'a> {
     spec: &'a Spec,
-    held: &'a Held,
 }
 
-pub fn chart<'a>(spec: &'a Spec, held: &'a Held) -> Chart<'a> {
-    Chart { spec, held }
+pub fn chart(spec: &Spec) -> Chart<'_> {
+    Chart { spec }
 }
 
 impl Chart<'_> {
-    fn settled(&self) -> Option<&str> {
-        self.held.since(object::CHART)
-    }
-
     pub fn package(&self, version: &str) -> Result<String, String> {
         let Some(chart) = &self.spec.chart else {
             return Ok(format!("{} has no chart attachment", self.spec.product));
         };
-        if let Some(since) = self.settled() {
-            return Ok(format!("chart unchanged since {since}; not projected"));
-        }
         let identity = release(version)?;
         self.stamp(&name(chart)?, &identity)?;
         let out = self.out();
@@ -48,9 +39,6 @@ impl Chart<'_> {
         let Some(chart) = &self.spec.chart else {
             return Ok(format!("{} has no chart attachment", self.spec.product));
         };
-        if let Some(since) = self.settled() {
-            return Ok(format!("chart unchanged since {since}; not projected"));
-        }
         let identity = crate::dispatch::ship::Identity {
             user: &chart.account,
             token: crate::dispatch::ship::registry_token(credential)?,

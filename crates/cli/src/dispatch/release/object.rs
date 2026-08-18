@@ -4,16 +4,10 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+pub const CARGO: &str = "cargo";
 pub const CHART: &str = "chart";
 pub const CFWORKER: &str = "cfworker";
-
-pub fn cargo(package: &str) -> String {
-    format!("cargo/{package}")
-}
-
-pub fn npm(package: &str) -> String {
-    format!("npm/{package}")
-}
+pub const NPM: &str = "npm";
 
 pub struct Seat<'a>(pub &'a Spec);
 
@@ -22,23 +16,20 @@ pub struct Object {
     pub roots: Vec<PathBuf>,
 }
 
-pub struct Held(BTreeMap<String, String>);
-
-impl Held {
-    pub fn since(&self, name: &str) -> Option<&str> {
-        self.0.get(name).map(String::as_str)
-    }
-}
-
 impl Seat<'_> {
     pub fn declared(&self) -> Result<Vec<Object>, String> {
         let spec = self.0;
         let mut held: BTreeMap<String, Vec<PathBuf>> = BTreeMap::new();
         if let Some(modules) = &spec.npm {
-            for package in &modules.packages {
-                let bare = package.rsplit('/').next().unwrap_or_default();
-                held.insert(npm(bare), vec![PathBuf::from("packages").join(bare)]);
-            }
+            let seats = modules
+                .packages
+                .iter()
+                .map(|package| {
+                    let bare = package.rsplit('/').next().unwrap_or_default();
+                    PathBuf::from("packages").join(bare)
+                })
+                .collect();
+            held.insert(NPM.to_string(), seats);
         }
         if let Some(chart) = &spec.chart {
             let name = chart.chart.rsplit('/').next().unwrap_or_default();
@@ -76,21 +67,6 @@ impl Seat<'_> {
     ) -> Result<BTreeMap<String, Input>, String> {
         let prior = self.baseline()?;
         self.measure(toolchain, version, &prior)
-    }
-
-    pub fn held(&self, toolchain: &str, version: &str) -> Held {
-        let prior = self.baseline().unwrap_or_else(|error| {
-            println!("  cannot read the published baseline, projecting everything: {error}");
-            BTreeMap::new()
-        });
-        let measured = self.measure(toolchain, version, &prior).unwrap_or_default();
-        Held(
-            measured
-                .into_iter()
-                .filter(|(_, input)| input.since != version)
-                .map(|(name, input)| (name, input.since))
-                .collect(),
-        )
     }
 
     fn baseline(&self) -> Result<BTreeMap<String, Input>, String> {
@@ -162,12 +138,14 @@ impl Seat<'_> {
             return Ok(());
         };
         let seats = super::engine::workspace::Workspace::read(&self.0.root)?.seats(&self.0.root);
+        let mut roots = Vec::new();
         for package in &attachment.packages {
             let seat = seats
                 .get(package)
                 .ok_or_else(|| format!("cargo package {package} is not one workspace member"))?;
-            held.insert(cargo(package), vec![seat.clone()]);
+            roots.push(seat.clone());
         }
+        held.insert(CARGO.to_string(), roots);
         Ok(())
     }
 }
