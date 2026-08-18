@@ -23,7 +23,7 @@ pub fn record(cut: Cut<'_>) -> Result<String, String> {
     let datum = Datum::new(cut.version, dependency::answers(cut.root)?);
     let count = datum.answers.len();
     seat.reachable(cut.head)?;
-    if seat.standing(cut.head, cut.version) {
+    if seat.settled(cut.head, cut.version) {
         return Ok(format!(
             "{} already stands on the release line",
             datum::leaf(cut.version)
@@ -69,8 +69,9 @@ impl Seat<'_> {
         }
     }
 
-    fn standing(&self, head: &str, version: &str) -> bool {
-        self.decodes(&format!("{head}:{}", datum::leaf(version)), version)
+    fn settled(&self, head: &str, version: &str) -> bool {
+        let swept = self.stale(head, version).is_ok_and(|held| held.is_empty());
+        swept && self.decodes(&format!("{head}:{}", datum::leaf(version)), version)
     }
 
     fn decodes(&self, object: &str, version: &str) -> bool {
