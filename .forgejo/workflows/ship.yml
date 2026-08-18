@@ -57,8 +57,9 @@ jobs:
         run: |
           set -eu
           PLUMB_RELEASE_VERSION=$(plumb release reference)
+          export PLUMB_RELEASE_VERSION
           PLUMB_RELEASE_CHANNEL=$(plumb release channel)
-          export PLUMB_RELEASE_VERSION PLUMB_RELEASE_CHANNEL
+          export PLUMB_RELEASE_CHANNEL
           plumb release source
           {
             echo "channel=$PLUMB_RELEASE_CHANNEL"
