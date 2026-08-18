@@ -37,6 +37,16 @@ it does not rewrite a successful release result, and `prepare` and `freeze`
 refuse while the last stable point still sits outside `origin/main`, so a late
 packport is caught before the next line exists. Never delete the frozen line.
 
+Packport merges, and a merge can conflict: a line that absorbed fixes while
+`main` absorbed the same fixes carries them under different commits, and Git
+reads both sides as having changed the same lines. Settle it by hand, and settle
+it one way only — take `main`'s tree entire and record the line as a second
+parent, which is `git merge -s ours` from `main`. Do not resolve the conflicts
+file by file. Nothing on the line is missing from `main`: every commit there was
+picked from `main`, and the datum is the line's own state. The merge carries no
+content, only reachability, so its diff against `main` must be empty and the
+stable commit must be reachable from the result. Verify both before pushing.
+
 ## A skill candidate needs validation
 
 Do not replace a managed stable seat. Stage the exact candidate under a new

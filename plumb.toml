@@ -11,7 +11,7 @@ source = [
   { path = "crates/lib/src", seal = "2abb6bb36edd41426e67b2292d388a784d430f59e367f181f71609640bfffd91" },
   { path = "crates/macro/src", seal = "c8ae2bfd1091d77db6e6f010560bbf961644c87557ac3005e0bcb85723dd8f19" },
 ]
-target-seal = "ba2971b700bd2a4f24077fb784e5d15038cf8f1cb419b226e25423c283074c48"
+target-seal = "8b53868f286ad22f5ab9cd4ff94ac061c4bbcc7d182fe7728ec56d80dacba9dc"
 
 [release]
 product = "plumb"
