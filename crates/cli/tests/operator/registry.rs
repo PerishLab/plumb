@@ -109,7 +109,9 @@ fn sealed() {
     let out = path.join(".plumb-release");
     std::fs::create_dir_all(&out).expect("release output");
     let body = b"{}";
-    std::fs::write(out.join("seal.json"), body).expect("seal");
+    let record = out.join("seal.json");
+    std::fs::write(&record, body).expect("seal");
+    let served = format!("file://{}", record.display());
     let digest = format!("{:x}", Sha256::digest(body));
     let capsule = format!(
         concat!(
@@ -117,13 +119,14 @@ fn sealed() {
             r#""releaseVersion":"v0.10.2-beta.1","authority":"https://example.invalid","#,
             r#""objects":[],"seal":{{"source":"seal.json","key":"v1/seal.json","#,
             r#""remote":{{"name":"seal.json","mime":"application/json","sha256":"{}","#,
-            r#""size":{},"url":"https://example.invalid/seal.json"}}}},"#,
+            r#""size":{},"url":"{}"}}}},"#,
             r#""roots":[],"pointer":null}}"#
         ),
         digest,
-        body.len()
+        body.len(),
+        served
     );
-    std::fs::write(out.join("capsule.json"), capsule).expect("capsule");
+    std::fs::write(out.join("capsule.json"), &capsule).expect("capsule");
 
     for adaptor in SEALED {
         let drift = ship(adaptor, "v0.10.2-beta.2");
@@ -159,6 +162,20 @@ fn sealed() {
     assert!(
         !malformed.status.success() && refused.contains("must be a Cargo Bearer credential"),
         "{refused}"
+    );
+
+    let elsewhere = out.join("elsewhere.json");
+    std::fs::write(&elsewhere, b"{\"other\":true}").expect("served");
+    std::fs::write(
+        out.join("capsule.json"),
+        capsule.replace(&served, &format!("file://{}", elsewhere.display())),
+    )
+    .expect("capsule");
+    let drifted = ship("npm", "v0.10.2-beta.1");
+    let said = String::from_utf8_lossy(&drifted.stderr).to_string();
+    assert!(
+        !drifted.status.success() && said.contains("public object drift"),
+        "{said}"
     );
 }
 

@@ -129,7 +129,7 @@ fn cargo(deed: Cargo) -> Result<String, String> {
     let attachment = engine::adaptor::registry::registry(&spec);
     match deed {
         Cargo::Publish => {
-            sealed(&spec, release, version)?;
+            sealed(&spec, release, version, spec.cargo.is_some())?;
             attachment.publish(version, &release.registry_token)
         }
         Cargo::Rehearse => attachment.rehearse(version, &release.registry_token),
@@ -145,7 +145,7 @@ fn oci(deed: Oci) -> Result<String, String> {
     match deed {
         Oci::Build => carrier.build(version, &release.commit, &artifacts(release)?),
         Oci::Publish => {
-            sealed(&spec, release, version)?;
+            sealed(&spec, release, version, spec.oci.is_some())?;
             carrier.publish(version, &release.registry_token)
         }
     }
@@ -160,7 +160,7 @@ fn chart(deed: Chart) -> Result<String, String> {
     match deed {
         Chart::Package => carrier.package(version),
         Chart::Publish => {
-            sealed(&spec, release, version)?;
+            sealed(&spec, release, version, spec.chart.is_some())?;
             carrier.publish(version, &release.registry_token)
         }
     }
@@ -175,7 +175,7 @@ fn npm(deed: Npm) -> Result<String, String> {
     match deed {
         Npm::Pack => carrier.pack(version),
         Npm::Publish => {
-            sealed(&spec, release, version)?;
+            sealed(&spec, release, version, spec.npm.is_some())?;
             carrier.publish(version, &release.registry_token)
         }
     }
@@ -199,6 +199,7 @@ fn sealed(
     spec: &super::release::model::Spec,
     release: &plumb::rig::Release,
     version: &str,
+    declared: bool,
 ) -> Result<(), String> {
     if !spec.binary() {
         return Ok(());
@@ -211,7 +212,10 @@ fn sealed(
             compiled.version
         ));
     }
-    Ok(())
+    if !declared {
+        return Ok(());
+    }
+    verify::object(&compiled.seal)
 }
 
 fn cfworker(deed: Cfworker) -> Result<String, String> {

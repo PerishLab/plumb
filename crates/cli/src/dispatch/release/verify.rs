@@ -209,6 +209,10 @@ fn parse<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
     serde_json::from_str(&text).map_err(|error| format!("cannot parse {}: {error}", path.display()))
 }
 
+pub fn object(held: &Local) -> Result<(), String> {
+    local(held)
+}
+
 fn local(object: &Local) -> Result<(), String> {
     let path = fetch(&object.remote)?;
     let _ = std::fs::remove_file(path);
