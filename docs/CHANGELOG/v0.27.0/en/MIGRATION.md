@@ -1,0 +1,61 @@
+# Migrating to Plumb v0.27.0
+
+## `plumb stable packport` is now `plumb stable rejoin`
+
+The command surface changed. `packport` is in the retired dictionary, so any
+tracked byte still carrying the word is out of true once this Plumb is
+installed — in this repository and in every repository the release reaches.
+Rename the call, and the prose around it.
+
+The shared release lane probes for both spellings, so a repository that has not
+migrated still runs. That probe comes out once the estate has.
+
+## A dry run needs the network and credentials
+
+`--dry-run` on the operator verbs — `stable prepare|pick|freeze|rejoin|retract`
+and `ship binary dispatch` — now performs every read and skips only the writes.
+It resolves the same conditions the real run resolves, so what it prints is what
+would happen against the remote as it stands, rather than a guess written beside
+the code.
+
+The consequence is that it needs the same credentials as the real run, and that
+it refuses instead of printing a plan it could not verify. A preview against a
+line that does not exist now says so; it used to print a plan to freeze it.
+
+`plumb retire --dry-run` is unchanged and still reads no credentials.
+
+## The agent and design document budgets now scale
+
+They were a flat 320 Markdown lines. They now measure the source they document,
+inside a corridor of 240 to 800. A large repository gains room; a small one
+drops to 240 and may be out of true on an `AGENTS.md` that passed before. The
+report names the budget it applied, so the number is not a guess.
+
+## An npm republish compares the tarball
+
+Publishing a version that already stands used to be skipped on the strength of
+the name. It now compares `dist.integrity` against the archive just built and
+refuses with `published module drift` when they disagree. A re-run of an
+unchanged release passes as before; a re-run whose inputs moved refuses instead
+of reporting a success it did not verify.
+
+If a lane republishes deliberately with different content under one version,
+that lane was already wrong and is now told so.
+
+## A medium publishes only after its release seal reads back
+
+`plumb ship cargo|npm|oci|chart publish` for a product that carries a binary now
+reads the release seal from the public authority before projecting. Inside the
+lane nothing changes, because the projecting jobs already run after the sealing
+job. Running one by hand before the binary release is published now refuses,
+where it used to proceed on the strength of a local capsule file.
+
+## Seal inputs gained the `oci` object
+
+Baselines recorded by an earlier Plumb do not carry it, so the first release
+after this one re-times every object once. Nothing else follows from it.
+
+## Attachment widths
+
+The per-attachment table is replaced by one `ceiling` of ten, with the table
+carrying only departures. Nothing that was permitted becomes refused.
