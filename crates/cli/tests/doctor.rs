@@ -47,6 +47,7 @@ fn fixture() -> tempfile::TempDir {
 fn run(args: &[&str]) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(args)
+        .env_remove("PLUMB_RELEASE_VERSION")
         .output()
         .expect("plumb should run");
     String::from_utf8_lossy(&output.stdout).to_string()

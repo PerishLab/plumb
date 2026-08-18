@@ -58,6 +58,23 @@ fn disagrees() {
 }
 
 #[test]
+fn ambient() {
+    let fixture = super::fixture();
+    let root = fixture.path();
+    line(root, "release/v1.2.0");
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["doctor", root.to_str().expect("path should be utf8")])
+        .env("PLUMB_RELEASE_VERSION", "release/v9.9.9")
+        .output()
+        .expect("plumb should run");
+    let said = String::from_utf8_lossy(&output.stdout).to_string();
+    assert!(
+        said.contains("release line v9.9.9 records no datum"),
+        "a declared release version outranks the branch it runs on: {said}"
+    );
+}
+
+#[test]
 fn ordinary() {
     let fixture = super::fixture();
     let root = fixture.path();
