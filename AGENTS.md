@@ -222,6 +222,14 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   and any other answer refuses because a destructive act never runs on a
   reading it cannot trust. It acts on the declaration alone and leaves the line
   standing, so what it removes is a name, never evidence.
+- A dry run performs every read and no write. It resolves the same conditions
+  the real run resolves — whether the line already stands, which commit it
+  points at — so what it prints is what would happen from the state the remote
+  is actually in, rather than a guess written beside the code. It therefore
+  needs the network and the same credentials, and refuses rather than print a
+  plan it could not verify. Every mutation a verb performs is declared as one
+  step and the printed course is that declaration, so an action reaching the
+  remote without a line describing it is not expressible.
 - Exact seal creation is create-only and idempotent by content, and every
   attachment projects on the same terms: finding its object already published
   compares that digest against the bytes just built and refuses on drift rather

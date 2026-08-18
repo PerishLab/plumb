@@ -238,15 +238,13 @@ fn freedom() {
     let text = String::from_utf8_lossy(&output.stdout);
     assert!(text.contains("ref=refs/tags/v1.2.0-nightly.9"), "{text}");
     assert!(text.contains("inputs={}"), "{text}");
+    assert!(!text.contains(r#""version""#), "{text}");
 }
 
 #[test]
 fn strict() {
     let fixture = tempfile::tempdir().expect("fixture");
-    repo(
-        fixture.path(),
-        "ssh://git@git.perish.top/PerishLab/probe.git",
-    );
+    repo(fixture.path(), "ssh://git@127.0.0.1:9/PerishLab/probe.git");
     let output = command(
         fixture.path(),
         &[
@@ -258,9 +256,15 @@ fn strict() {
             "--dry-run",
         ],
     );
-    assert!(output.status.success());
     let text = String::from_utf8_lossy(&output.stdout);
-    assert!(text.contains("ref=release/v1.2.0"), "{text}");
-    assert!(text.contains("inputs={}"), "{text}");
-    assert!(!text.contains(r#""version""#), "{text}");
+    let said = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        !output.status.success(),
+        "a preview that cannot read the line must refuse: {text}"
+    );
+    assert!(
+        !text.contains("branch_protections"),
+        "a refused preview must not have printed a plan: {text}"
+    );
+    assert!(!said.is_empty(), "a refusal must say why");
 }

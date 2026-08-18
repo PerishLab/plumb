@@ -17,11 +17,17 @@ fn retraction() {
         &["stable", "retract", "--version", "0.10.2", "--dry-run"],
     );
     let printed = String::from_utf8_lossy(&plan.stdout).to_string();
-    for held in [
-        "https://releases.test/v1/releases/stable/v0.10.2/seal.json",
-        "expect 404",
-        "--delete refs/tags/v0.10.2",
-    ] {
-        assert!(plan.status.success() && printed.contains(held), "{printed}");
-    }
+    let refusal = String::from_utf8_lossy(&plan.stderr).to_string();
+    assert!(
+        !plan.status.success(),
+        "a preview that cannot read the authority must refuse: {printed}"
+    );
+    assert!(
+        refusal.contains("https://releases.test/v1/releases/stable/v0.10.2/seal.json"),
+        "a refusal must name what it could not read: {refusal}"
+    );
+    assert!(
+        !printed.contains("--delete"),
+        "a refused preview must not have printed a plan: {printed}"
+    );
 }

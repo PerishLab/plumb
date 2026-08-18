@@ -4,10 +4,6 @@ use std::process::{Command, Output};
 
 pub struct Seat<'a>(pub &'a Path);
 
-pub fn plan() -> String {
-    "prove the last stable point is an ancestor of origin/main".to_string()
-}
-
 impl Seat<'_> {
     pub fn rejoined(&self, version: &str) -> Result<(), String> {
         let base = self.reference("origin/main")?;

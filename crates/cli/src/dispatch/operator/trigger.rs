@@ -1,4 +1,5 @@
 use super::Dispatch;
+use super::course::Course;
 use super::{line, value};
 use plumb::forgejo::{Client, Outcome, git};
 use serde_json::{Value, json};
@@ -23,25 +24,21 @@ pub fn run(options: Dispatch) -> Result<String, String> {
         )
     };
     present(&root, workflow)?;
-    if options.dry {
-        let wall = (channel == "stable").then(|| {
-            format!(
-                "PUT /repos/{}/{}/branch_protections/{} (frozen)\n",
-                remote.owner, remote.repo, reference
-            )
-        });
-        return Ok(format!(
-            "{}POST /repos/{}/{}/actions/workflows/{workflow}/dispatches (ref={reference}, inputs={inputs})",
-            wall.unwrap_or_default(),
-            remote.owner,
-            remote.repo
-        ));
-    }
+    let mut course = Course::new(options.dry);
     let client = Client::new(remote)?;
     if channel == "stable" {
-        line::freeze(&client, &root, &reference)?;
+        line::freeze(&mut course, &client, &root, &reference)?;
     }
-    let run = client.dispatch(workflow, &reference, inputs)?;
+    let said = format!(
+        "POST /repos/{}/{}/actions/workflows/{workflow}/dispatches (ref={reference}, inputs={inputs})",
+        client.remote().owner,
+        client.remote().repo
+    );
+    let run = course.step(said, || client.dispatch(workflow, &reference, inputs))?;
+    if course.dry() {
+        return Ok(course.plan());
+    }
+    let run = run.ok_or_else(|| "the dispatch left no run".to_string())?;
     let id = run
         .get("id")
         .and_then(Value::as_u64)

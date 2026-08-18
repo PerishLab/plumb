@@ -1,3 +1,4 @@
+use super::course::Course;
 use plumb::forgejo::git::fetch;
 use std::path::Path;
 use std::process::{Command, Output};
@@ -46,27 +47,30 @@ impl Point<'_> {
 
     pub fn retract(&self, authority: &str, version: &str, dry: bool) -> Result<String, String> {
         let url = format!("{authority}/v1/releases/stable/{version}/seal.json");
-        if dry {
-            return Ok(format!(
-                "GET {url} (expect 404)\ngit push origin --delete {}\ngit tag --delete {version}",
-                reference(version)
-            ));
-        }
+        let mut course = Course::new(dry);
         if published(&url)? {
             return Err(format!(
                 "{version} is published at {url}; retraction acts only on a declaration"
             ));
         }
         fetch(self.root)?;
-        text(
-            "withdraw the release point",
-            self.git(["push", "origin", "--delete", &reference(version)])?,
-        )?;
-        if self.seen(version)?.is_some() {
+        let point = reference(version);
+        course.step(format!("git push origin --delete {point}"), || {
             text(
-                "forget the release point",
-                self.git(["tag", "--delete", version])?,
-            )?;
+                "withdraw the release point",
+                self.git(["push", "origin", "--delete", &point])?,
+            )
+        })?;
+        if self.seen(version)?.is_some() {
+            course.step(format!("git tag --delete {version}"), || {
+                text(
+                    "forget the release point",
+                    self.git(["tag", "--delete", version])?,
+                )
+            })?;
+        }
+        if course.dry() {
+            return Ok(course.plan());
         }
         Ok(format!("retracted {version}; it projected nothing"))
     }
@@ -92,7 +96,8 @@ impl Point<'_> {
 }
 
 fn published(url: &str) -> Result<bool, String> {
-    let response = plumb::vendor::send(url, "GET", None, None)?;
+    let response = plumb::vendor::send(url, "GET", None, None)
+        .map_err(|error| format!("cannot read {url}: {error}"))?;
     match response.status {
         200 => Ok(true),
         404 => Ok(false),

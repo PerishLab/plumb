@@ -108,6 +108,9 @@ unfamiliar or stateful action.
 - A worker is a release medium, not a side channel. `[release.cfworker]` names
   the account and the stable domain; exact channels stage a version behind its
   own preview URL and only stable reaches the declared domain.
+- `--dry-run` does every read and no write, so it needs credentials and the
+  network. It prints the steps that would run against the remote as it stands
+  now, and refuses instead of printing a plan it could not verify.
 - Never hand-edit a governed workflow. `plumb lane --write` renders it from the
   declaration; doctor notes drift instead of refusing it, so a stale lane stays
   visible without reddening the repository. A rendered lane carries no condition:

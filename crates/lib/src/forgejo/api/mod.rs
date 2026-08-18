@@ -16,6 +16,10 @@ pub struct Client {
 }
 
 impl Client {
+    pub fn remote(&self) -> &Remote {
+        &self.remote
+    }
+
     pub fn new(remote: Remote) -> Result<Self, String> {
         let url = format!("{}://{}", remote.scheme, remote.host);
         let vars = super::settings::vars(url)?;
