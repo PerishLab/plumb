@@ -195,16 +195,8 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   The candidate is derived, never named: exactly one published exact seal must
   stand at the frozen commit, and `plumb stable freeze` refuses zero or many.
   Stable binaries are rebuilt with stable identity from that commit.
-- Exact publication binds exactly `refs/tags/<exact-version>`; the called
-  shared workflow freezes its direct event ref and commit once and every job
-  checks out that commit. Product callers expose and forward no second source.
-  `plumb ship binary dispatch` is the generic Forgejo entrypoint and takes only
-  `--version`: it derives the channel, derives the ref that carries it, and
-  sends no identity input at all.
-  Stable alone must originate from `refs/heads/release/vX.Y.Z`. A stable
-  release line is managed by `plumb stable prepare|pick|freeze|packport`,
-  prepared by linear `cherry-pick -x`, frozen before publication, and remains
-  independent from an unblocked `main`.
+- Exact publication binds exactly `refs/tags/<exact-version>`; the called shared workflow freezes its direct event ref and commit once and every job checks out that commit. Product callers expose and forward no second source. `plumb ship binary dispatch` is the generic Forgejo entrypoint and takes only `--version`: it derives the channel, derives the ref that carries it, and sends no identity input at all. Stable alone must originate from `refs/heads/release/vX.Y.Z`. A stable release line is managed by `plumb stable prepare|pick|freeze|packport`, prepared by linear `cherry-pick -x`, frozen before publication, and remains independent from an unblocked `main`.
+- A release run pins its verdict as it pins its generator: `plumb stable prepare` records the datum the line judges against under `.plumb`, the mechanism's own seat that source projection excludes as it excludes `docs/CHANGELOG`, and on that line `plumb doctor` reads the recorded stable answers instead of asking a live registry. A line carrying no datum is out of true. `main` still tracks live latest, because drift detection is its job and reproducibility is the line's.
 - The ref carries the release, so neither caller takes a version. Both stay
   dispatched by an operator, who selects the ref instead of typing an identity:
   `release-exact.yml` on the exact tag, `release-stable.yml` on the frozen

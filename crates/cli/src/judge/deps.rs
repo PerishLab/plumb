@@ -1,4 +1,5 @@
 use super::catalog::rules::deps as rule;
+use super::catalog::rules::release::DATUM_RECORDED;
 use super::finding::{blind, wrong};
 use crate::rules::RULES;
 use crate::shape::{self, Dependency, Found};
@@ -16,6 +17,12 @@ pub fn check(held: &shape::Shape) -> Found {
         found.push(wrong(
             &rule::RUST_BINARY_USES_PLUMB,
             "ships a rust binary without plumb",
+        ));
+    }
+    if let Some(version) = &held.dependencies.missing {
+        found.push(wrong(
+            &DATUM_RECORDED,
+            format!("release line {version} records no datum to judge against"),
         ));
     }
     for error in &held.dependencies.blind {

@@ -1,4 +1,4 @@
-use super::{Dependencies, Ecosystem};
+use super::{Dependencies, Ecosystem, retired};
 use crate::rules::RULES;
 use std::collections::BTreeMap;
 use std::process::Command;
@@ -7,11 +7,7 @@ pub fn read(dependencies: &mut Dependencies) {
     let mut cache = BTreeMap::new();
     let mut blind = Vec::new();
     for dependency in &mut dependencies.held {
-        if RULES
-            .retired
-            .iter()
-            .any(|(name, _)| name == &dependency.name)
-        {
+        if retired(&dependency.name) {
             continue;
         }
         let key = (dependency.ecosystem, dependency.name.clone());

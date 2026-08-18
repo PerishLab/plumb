@@ -33,6 +33,22 @@ rule!(
     [RELEASE_TAG, REPOSITORY]
 );
 
+rule!(
+    DATUM_RECORDED,
+    "release.datum-recorded",
+    "Release lines judge against a recorded datum",
+    "A release line carries the stable answers its judgement rests on, recorded once when the line is cut, so every later judgement measures the frozen candidate against that datum instead of a registry that moves under it.",
+    "The datum leaf under the mechanism seat in the release line's own tree.",
+    Mechanized,
+    RELEASE,
+    [DEPENDENCY, RELEASE_TAG]
+);
+
 pub fn all() -> Vec<&'static Rule> {
-    vec![&ATTACHMENT_DELIVERABLE, &LANE_RENDERED, &SPEC_DECLARED]
+    vec![
+        &ATTACHMENT_DELIVERABLE,
+        &DATUM_RECORDED,
+        &LANE_RENDERED,
+        &SPEC_DECLARED,
+    ]
 }

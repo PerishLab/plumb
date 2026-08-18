@@ -37,17 +37,27 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     let remote = git::remote(&root, repo)?;
     if dry {
         return Ok(format!(
-            "{}\nPOST /repos/{}/{}/branches ({name} from {from})",
+            "{}\nPOST /repos/{}/{}/branches ({name} from {from})\n{}",
             plan(&remote, &name, "preparing"),
             remote.owner,
-            remote.repo
+            remote.repo,
+            super::datum::plan(&version)
         ));
     }
     let client = Client::new(remote)?;
     client.protect(&name, "preparing")?;
-    match client.create(&name, from)? {
-        Cut::Made => Ok(format!("prepared {name} from {from}")),
-        Cut::Held => Ok(format!("{name} already stands at {from}; nothing moved")),
+    let cut = client.create(&name, from)?;
+    let recorded = super::datum::record(super::datum::Cut {
+        root: &root,
+        name: &name,
+        version: &version,
+        head: cut.commit(),
+    })?;
+    match cut {
+        Cut::Made(_) => Ok(format!("prepared {name} from {from}; {recorded}")),
+        Cut::Held(_) => Ok(format!(
+            "{name} already stands at {from}; nothing moved; {recorded}"
+        )),
     }
 }
 

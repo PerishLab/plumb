@@ -2,7 +2,7 @@ use super::catalog::model::Coverage;
 use super::{catalog, finding, judge};
 use crate::shape;
 use serde::Serialize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 mod human;
 
@@ -83,7 +83,7 @@ struct Summary {
 pub fn run(root: PathBuf, json: bool) -> i32 {
     let snapshot = plumb::snapshot::Snapshot::read(&root);
     let mut held = shape::capture(&root, &snapshot);
-    held.dependencies.current();
+    held.dependencies.judge(&root, line(&root).as_deref());
     let vocabulary = match &snapshot {
         Ok(snapshot) => plumb::vocabulary::observe(snapshot),
         Err(error) => Err(error.clone()),
@@ -112,6 +112,13 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
         human::render(&root, &held, &vocabulary, &findings);
     }
     i32::from(!ok)
+}
+
+fn line(root: &Path) -> Option<String> {
+    let declared = plumb::rig::Rig::resolve(None)
+        .map(|rig| rig.release.version)
+        .unwrap_or_default();
+    plumb::datum::Tree(root).line(&declared)
 }
 
 impl Vocabulary {

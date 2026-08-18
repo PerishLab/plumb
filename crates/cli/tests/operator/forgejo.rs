@@ -10,7 +10,7 @@ pub enum Court {
     Failed,
     Nested(bool),
     Paged,
-    Prepare(bool),
+    Prepare(bool, PathBuf),
     Packport(PathBuf),
 }
 
@@ -113,10 +113,10 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
                 ]
             }),
         ),
-        Court::Prepare(_) | Court::Packport(_) if request.contains("GET /api/v1/user ") => {
+        Court::Prepare(..) | Court::Packport(_) if request.contains("GET /api/v1/user ") => {
             ("200 OK", json!({"login": "operator"}))
         }
-        Court::Prepare(_) | Court::Packport(_)
+        Court::Prepare(..) | Court::Packport(_)
             if request.contains("GET ") && request.contains("branch_protections") =>
         {
             (
@@ -124,7 +124,7 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
                 json!({"message": "The target couldn't be found."}),
             )
         }
-        Court::Prepare(exact)
+        Court::Prepare(exact, _)
             if request.contains("POST ") && request.contains("branch_protections") =>
         {
             let mut value = body;
@@ -171,17 +171,22 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
                 "updated_at":"2026-01-01T00:00:00Z"
             }]}),
         ),
-        Court::Prepare(_) if request.contains("GET ") && request.contains("/branches/") => (
+        Court::Prepare(..) if request.contains("GET ") && request.contains("/branches/") => (
             "404 Not Found",
             json!({"message": "The target couldn't be found."}),
         ),
-        Court::Prepare(_)
+        Court::Prepare(_, head)
             if request.contains("POST ") && request.ends_with("/branches HTTP/1.1") =>
         {
-            ("201 Created", json!({"name": "release/v1.2.0"}))
+            ("201 Created", cut(head))
         }
         _ => ("500 Internal Server Error", json!({"message": request})),
     }
+}
+
+fn cut(head: &PathBuf) -> Value {
+    let commit = std::fs::read_to_string(head).unwrap_or_default();
+    json!({"name": "release/v1.2.0", "commit": {"id": commit.trim()}})
 }
 
 fn tasks(status: &str) -> Value {

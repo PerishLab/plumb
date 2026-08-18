@@ -16,8 +16,12 @@ impl Client {
             let wanted = self.branch(from)?.as_ref().map(commit).unwrap_or_default();
             return settled(name, from, &commit(&held), &wanted);
         }
-        self.call(&["branch", "create", name, "--from", from])?;
-        Ok(Cut::Made)
+        let made = self.call(&["branch", "create", name, "--from", from])?;
+        let cut = commit(&made);
+        if cut.is_empty() {
+            return Err(format!("{name} was cut but exposes no head commit"));
+        }
+        Ok(Cut::Made(cut))
     }
 }
 
@@ -32,7 +36,7 @@ pub fn settled(name: &str, from: &str, seen: &str, wanted: &str) -> Result<Cut, 
             "{name} already exists at {seen} and {from} is {wanted}; a release line is frozen and prepare does not move it"
         ));
     }
-    Ok(Cut::Held)
+    Ok(Cut::Held(seen.to_string()))
 }
 
 fn commit(value: &Value) -> String {

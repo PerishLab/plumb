@@ -1,0 +1,66 @@
+use std::path::Path;
+use std::process::Command;
+
+fn line(root: &Path, name: &str) {
+    let status = Command::new("git")
+        .args(["symbolic-ref", "HEAD", &format!("refs/heads/{name}")])
+        .current_dir(root)
+        .status()
+        .expect("git should run");
+    assert!(status.success(), "fixture should stand on {name}");
+}
+
+fn record(root: &Path, version: &str, text: &str) {
+    let seat = root.join(".plumb/releases").join(version);
+    std::fs::create_dir_all(&seat).expect("seat should be made");
+    std::fs::write(seat.join("datum.json"), text).expect("datum should be written");
+}
+
+#[test]
+fn absent() {
+    let fixture = super::fixture();
+    let root = fixture.path();
+    line(root, "release/v1.2.0");
+    let out = super::run(&["doctor", root.to_str().expect("path should be utf8")]);
+    assert!(
+        out.contains("release line v1.2.0 records no datum to judge against"),
+        "{out}"
+    );
+}
+
+#[test]
+fn recorded() {
+    let fixture = super::fixture();
+    let root = fixture.path();
+    line(root, "release/v1.2.0");
+    record(
+        root,
+        "v1.2.0",
+        r#"{"schema":1,"version":"v1.2.0","answers":[]}"#,
+    );
+    let out = super::run(&["doctor", root.to_str().expect("path should be utf8")]);
+    assert!(!out.contains("records no datum"), "{out}");
+    assert!(out.contains("true to the skeleton"), "{out}");
+}
+
+#[test]
+fn disagrees() {
+    let fixture = super::fixture();
+    let root = fixture.path();
+    line(root, "release/v1.2.0");
+    record(
+        root,
+        "v1.2.0",
+        r#"{"schema":1,"version":"v1.3.0","answers":[]}"#,
+    );
+    let out = super::run(&["doctor", root.to_str().expect("path should be utf8")]);
+    assert!(out.contains("names release v1.3.0, not v1.2.0"), "{out}");
+}
+
+#[test]
+fn ordinary() {
+    let fixture = super::fixture();
+    let root = fixture.path();
+    let out = super::run(&["doctor", root.to_str().expect("path should be utf8")]);
+    assert!(!out.contains("records no datum"), "{out}");
+}

@@ -35,10 +35,18 @@ impl Strategy {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Cut {
-    Made,
-    Held,
+    Made(String),
+    Held(String),
+}
+
+impl Cut {
+    pub fn commit(&self) -> &str {
+        match self {
+            Self::Made(commit) | Self::Held(commit) => commit,
+        }
+    }
 }
 
 pub struct State {

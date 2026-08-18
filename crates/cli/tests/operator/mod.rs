@@ -4,6 +4,8 @@ use std::process::Command;
 mod artifact;
 mod audit;
 #[cfg(unix)]
+mod datum;
+#[cfg(unix)]
 mod fixture;
 #[cfg(unix)]
 mod forgejo;

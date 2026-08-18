@@ -17,20 +17,29 @@ pub fn validate(root: &Path, name: &str) -> Result<(), String> {
     if !merges.is_empty() {
         return Err(format!("{name} must remain linear"));
     }
-    let bodies = text(
+    let listed = text(
         "inspect release provenance",
-        command(root, ["log", "--format=%B%x00", &range])?,
+        command(root, ["log", "--format=%H%x1f%B%x00", &range])?,
     )?;
-    let invalid = bodies
+    let version = name.strip_prefix("release/").unwrap_or(name);
+    let invalid = listed
         .split('\0')
-        .map(str::trim)
-        .find(|body| !body.is_empty() && !provenance(body));
+        .filter_map(|record| record.trim_start().split_once('\u{1f}'))
+        .find(|(commit, body)| !sourced(root, commit, body, version));
     if invalid.is_some() {
         return Err(format!(
             "{name} contains a commit without cherry-pick -x provenance"
         ));
     }
     Ok(())
+}
+
+fn sourced(root: &Path, commit: &str, body: &str, version: &str) -> bool {
+    let body = body.trim();
+    if body.is_empty() {
+        return true;
+    }
+    provenance(body) || super::datum::Seat(root).carried(commit, version)
 }
 
 fn provenance(body: &str) -> bool {

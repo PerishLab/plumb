@@ -177,7 +177,7 @@ fn erase(table: &mut toml::Table, key: &str) {
 }
 
 fn document(path: &str, documents: &BTreeSet<String>) -> bool {
-    documents.contains(path) || path == "docs/CHANGELOG" || path.starts_with("docs/CHANGELOG/")
+    documents.contains(path) || super::mechanism(path)
 }
 
 fn flat(body: &[u8]) -> Vec<u8> {

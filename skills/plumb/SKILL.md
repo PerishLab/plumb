@@ -36,6 +36,9 @@ use Doctor before changing its shape.
 - A **stable line** is the explicit prepare, pick, freeze, publish, and packport
   lifecycle for one permanent version. Freeze stamps its point and `retract`
   removes that point while nothing is published; a served seal refuses it.
+- A **datum** is the stable answers a release line judges against, recorded by
+  `prepare` under `.plumb` and read there by `doctor` in place of a live
+  registry, so the frozen candidate keeps the verdict it was proved with.
 - A **site** is a declared application whose deploy, binding, and reachability
   are independently evidenced.
 - A **retirement** destroys one declared delivery chain in a fixed order; it is

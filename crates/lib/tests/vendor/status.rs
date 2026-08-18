@@ -46,7 +46,7 @@ fn cut() {
     use plumb::forgejo::{Cut, settled};
     assert_eq!(
         settled("release/v1.0.0", "main", "abc", "abc"),
-        Ok(Cut::Held)
+        Ok(Cut::Held("abc".into()))
     );
     let moved = settled("release/v1.0.0", "main", "abc", "def").expect_err("a frozen line");
     assert!(moved.contains("frozen"));

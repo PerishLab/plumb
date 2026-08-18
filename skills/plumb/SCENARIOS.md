@@ -26,8 +26,10 @@ plumb ship binary dispatch
 plumb stable packport
 ```
 
-Inspect each subcommand before use. Stable publication requires the frozen
-line and release-local changelog. `freeze` also derives the promotion source
+Inspect each subcommand before use. `prepare` also records the line's datum,
+so the frozen candidate is judged against the registry answers that stood when
+the line was cut; a line carrying no datum is out of true. Stable publication
+requires the frozen line and release-local changelog. `freeze` also derives the promotion source
 and refuses unless exactly one published exact seal stands at the frozen
 commit, so recover a failed exact release by rerunning it rather than by
 tagging the next candidate. Packport settles ancestry after publication;

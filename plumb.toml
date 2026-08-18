@@ -1,17 +1,17 @@
 [[document]]
 strategy = "agent"
-source = [{ path = ".", seal = "c5711977573add3ed508c2d4158c5bf2d69e9abe3e0009cd8f84c17ed006f480" }]
-target-seal = "bfc46746bace2f6ec1baa5ed58220a7d8d6527d6e7f0e05f8c626493dd22c2a5"
+source = [{ path = ".", seal = "b2f1a713966b33cc5c527f3132b7396018d2ddfcd1fed815274892b70270184e" }]
+target-seal = "9d9cb2b6dafeb35c4c58a0f2f42a630d80c7e811da4b0970f3e9139c390387d9"
 
 [[document]]
 strategy = "brief"
 name = "plumb"
 source = [
-  { path = "crates/cli/src", seal = "e4d2b84e0e7417fe36e20818d985d38d9c81468a12f6b617ea3ad27a7d767c3c" },
-  { path = "crates/lib/src", seal = "46478a53d663079408c8b390b108d5a1687a0d6212e2b7b719a7f60c9edc10bf" },
+  { path = "crates/cli/src", seal = "fea675fdc5340e68143c2ceb7d2e1a6b4e04a1faa1890e0db1e2494df3613a38" },
+  { path = "crates/lib/src", seal = "fa71e423f89fff2e0620c26c0ea5b0848bb67cb3bf67eab031d9b31f892ccaa1" },
   { path = "crates/macro/src", seal = "c8ae2bfd1091d77db6e6f010560bbf961644c87557ac3005e0bcb85723dd8f19" },
 ]
-target-seal = "0bf3ec6ed8d20e19b6e4bd77fcefca89932b32d084c8a7a8ceb518ff3d32cc0c"
+target-seal = "83da559ba3665ccfb47e2238b3b2f9c530aa777ac7a0bb0f947ddfe5cd1622f4"
 
 [release]
 product = "plumb"

@@ -33,7 +33,7 @@ pub fn command(root: &Path, args: &[&str]) -> Output {
         .expect("plumb")
 }
 
-fn run(command: &mut Command) {
+pub fn run(command: &mut Command) {
     let output = command.output().expect("command");
     assert!(
         output.status.success(),
@@ -200,23 +200,9 @@ fn pagination() {
 }
 
 #[test]
-fn protection() {
-    let fixture = tempfile::tempdir().expect("fixture");
-    let (url, _) = serve(Court::Prepare(true), 5);
-    repo(fixture.path(), &format!("{url}/test/probe.git"));
-    let output = command(fixture.path(), &["stable", "prepare", "--version", "1.2.0"]);
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(String::from_utf8_lossy(&output.stdout).contains("prepared release/v1.2.0 from main"));
-}
-
-#[test]
 fn drift() {
     let fixture = tempfile::tempdir().expect("fixture");
-    let (url, _) = serve(Court::Prepare(false), 3);
+    let (url, _) = serve(Court::Prepare(false, fixture.path().join("cut")), 3);
     repo(fixture.path(), &format!("{url}/test/probe.git"));
     let output = command(fixture.path(), &["stable", "prepare", "--version", "1.2.0"]);
     assert!(!output.status.success());

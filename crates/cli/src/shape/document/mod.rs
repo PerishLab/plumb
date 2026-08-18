@@ -157,5 +157,11 @@ fn markdown(path: &str) -> bool {
 }
 
 fn admitted(path: &str, documents: &BTreeSet<String>) -> bool {
-    documents.contains(path) || path == "docs/CHANGELOG" || path.starts_with("docs/CHANGELOG/")
+    documents.contains(path) || mechanism(path)
+}
+
+pub(super) fn mechanism(path: &str) -> bool {
+    ["docs/CHANGELOG", plumb::datum::HOME]
+        .iter()
+        .any(|seat| path == *seat || path.starts_with(&format!("{seat}/")))
 }

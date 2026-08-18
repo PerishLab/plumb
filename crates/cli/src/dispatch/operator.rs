@@ -1,3 +1,4 @@
+mod datum;
 mod line;
 mod mark;
 mod pick;
