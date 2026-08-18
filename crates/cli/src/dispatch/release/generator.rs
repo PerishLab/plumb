@@ -6,7 +6,7 @@ pub const PRODUCT: &str = "plumb";
 pub const AUTHORITY: &str = "https://releases.plumb.perish.uk";
 pub const REPOSITORY: &str = "PerishLab/plumb";
 pub const BETA_CHANNEL: &str = "beta";
-pub const BETA_VERSION: &str = "v0.26.0-beta.3";
+pub const BETA_VERSION: &str = "v0.26.0-beta.4";
 pub const STABLE_VERSION: &str = "v0.26.0";
 
 pub struct Claim<'a> {
