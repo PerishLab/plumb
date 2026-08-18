@@ -1,6 +1,6 @@
 use super::Stable;
 use super::value;
-use plumb::forgejo::{Client, Cut, Remote, git};
+use plumb::forgejo::{Client, Remote, git};
 use serde_json::Value;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -47,19 +47,25 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     }
     super::ported::Seat(&root).ported(&version)?;
     let client = Client::new(remote)?;
-    client.protect(&name, "preparing")?;
-    let cut = client.create(&name, from)?;
+    let standing = client.branch(&name)?.is_some();
+    let head = if standing {
+        head(&client, &name)?
+    } else {
+        client.protect(&name, "preparing")?;
+        client.create(&name, from)?.commit().to_string()
+    };
     let recorded = super::datum::record(super::datum::Cut {
         root: &root,
         name: &name,
         version: &version,
-        head: cut.commit(),
+        head: &head,
     })?;
-    match cut {
-        Cut::Made(_) => Ok(format!("prepared {name} from {from}; {recorded}")),
-        Cut::Held(_) => Ok(format!(
-            "{name} already stands at {from}; nothing moved; {recorded}"
-        )),
+    if standing {
+        Ok(format!(
+            "{name} already stands at {head}; nothing moved; {recorded}"
+        ))
+    } else {
+        Ok(format!("prepared {name} from {from} at {head}; {recorded}"))
     }
 }
 

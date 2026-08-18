@@ -9,7 +9,7 @@ fn late() {
     let bare = tempfile::tempdir().expect("bare");
     let root = fixture.path();
     let cut = root.join("cut");
-    let (url, _) = serve(Court::Prepare(true, cut.clone()), 5);
+    let (url, _) = serve(Court::Prepare(true, cut.clone()), 7);
     let origin = format!("{url}/test/probe.git");
     let head = lined(root, &origin, bare.path(), "release/v1.3.0");
     std::fs::write(&cut, &head).expect("cut");
