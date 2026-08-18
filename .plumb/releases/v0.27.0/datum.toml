@@ -1,0 +1,12 @@
+schema = 1
+version = "v0.27.0"
+
+[[answer]]
+ecosystem = "cargo"
+name = "locus"
+latest = "0.2.2"
+
+[[answer]]
+ecosystem = "cargo"
+name = "runseal"
+latest = "0.17.0"
