@@ -40,7 +40,7 @@ fn protection() {
     let fixture = tempfile::tempdir().expect("fixture");
     let bare = tempfile::tempdir().expect("bare");
     let cut = fixture.path().join("cut");
-    let (url, _) = serve(Court::Prepare(true, cut.clone()), 5);
+    let (url, _) = serve(Court::Prepare(true, cut.clone()), 7);
     let origin = format!("{url}/test/probe.git");
     let head = lined(fixture.path(), &origin, bare.path(), "release/v1.2.0");
     std::fs::write(&cut, &head).expect("cut");

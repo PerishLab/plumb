@@ -204,7 +204,7 @@ fn drift() {
     let fixture = tempfile::tempdir().expect("fixture");
     let bare = tempfile::tempdir().expect("bare");
     let cut = fixture.path().join("cut");
-    let (url, _) = serve(Court::Prepare(false, cut.clone()), 3);
+    let (url, _) = serve(Court::Prepare(false, cut.clone()), 5);
     let origin = format!("{url}/test/probe.git");
     let head = super::datum::lined(fixture.path(), &origin, bare.path(), "release/v1.2.0");
     std::fs::write(&cut, &head).expect("cut");
