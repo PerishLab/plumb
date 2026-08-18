@@ -338,8 +338,14 @@ jobs:
           name: release-capsule
           path: .plumb-release/capsule
 
-      - name: Seat the package store outside the source
-        run: echo "PNPM_CONFIG_STORE_DIR=$RUNNER_TEMP/pnpm-store" >> "$GITHUB_ENV"
+      - name: Install declared packages
+        shell: bash
+        run: |
+          set -eu
+          if test -f pnpm-lock.yaml; then
+            corepack enable
+            pnpm install --frozen-lockfile --store-dir "$RUNNER_TEMP/pnpm-store"
+          fi
 
       - name: Project one declared medium
         shell: bash

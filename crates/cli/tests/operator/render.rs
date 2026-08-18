@@ -141,4 +141,8 @@ fn carried() {
         "a smoke runs against the manager its own platform was given: {ship}"
     );
     assert!(!ship.contains("binary manager\n"), "{ship}");
+    assert!(
+        project.contains("corepack enable"),
+        "a projection that spends pnpm must first have one: {project}"
+    );
 }
