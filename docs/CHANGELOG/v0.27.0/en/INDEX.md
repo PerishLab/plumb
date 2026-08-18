@@ -137,6 +137,26 @@ before it runs, in a step that says so. The bare `git tag` leaves the procedure,
 and `retract` stops being stable-only — an exact point can be removed by the
 verb that made it, reading its own channel from the authority.
 
+## A rendered stable lane advances the pointer
+
+Shifting the managers and advancing the consensus pointer are two operations,
+and the rendered lane ran only the first. A stable release therefore published
+every object, rewrote the managers, reported activation, and left
+`v1/channels/stable.json` naming the release before it. The smokes then
+installed what was still canonical and reported the mismatch they exist to
+catch — which is the lane telling the truth about a lane that had not.
+
+`v0.26.0` shipped with this in its renderer. Its own release met it and was
+finished by hand; `sidecar v0.8.0` met it as the first stable release rendered
+by that version and could not complete, because the deed that writes the pointer
+needs credentials that exist only inside a lane (issue #346). The rendered lane
+now runs both deeds and reads the activated surface back, as the shared workflow
+always did.
+
+Any repository whose lanes were rendered by v0.26.0 carries this. Rendering
+again with this version is what removes it, and until then a stable release
+cannot reach consensus.
+
 ## Smaller truths
 
 The Debian package wrote the semver string into the dpkg `Version` field
@@ -156,6 +176,8 @@ wherever it runs. It is an observation and not a finding: the operator's seats
 are not the repository's business, and a repository that is true stays true
 beside a stale brief.
 
-The stable pointer advances before the rehearsal that cannot run until it has,
-and the bootstrap that generated v0.26.0 is retired now that the release it
-bootstrapped stands on its own.
+A Cargo rehearsal now says which packages it cannot rehearse and why, because
+an attachment holds one unit whose packages pin each other exactly and the
+second cannot be built from its packaged form until the first is published. The
+ordered publish is what proves them. The bootstrap that generated v0.26.0 is
+retired now that the release it bootstrapped stands on its own.

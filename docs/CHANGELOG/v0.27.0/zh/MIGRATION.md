@@ -1,5 +1,16 @@
 # 迁移到 Plumb v0.27.0
 
+## 在下一次 stable 发布之前，重新渲染 lane
+
+**由 v0.26.0 渲染出来的 lane 只移动 manager，从不推进共识指针。** 于是走它发一次 stable，
+会把所有对象都发出去、报告"已激活"，而通道仍然指着上一个版本。smoke 因为装到的是仍然
+canonical 的那一版而失败，**而这次发布没法从操作者座位上收尾** —— 写指针那个动作需要的凭据
+只存在于 lane 内部(issue #346)。
+
+**用这一版跑 `plumb lane --write` 并落地，然后再发下一次 stable。** exact 发布不受影响。
+已经被劈成两半的发布，靠重新渲染并对同一个 stable 版本再派发一次即可修复:publish 是
+create-only 且自校验的，所以重跑只会补上指针，别的什么都不动。
+
 ## `plumb stable packport` 现在是 `plumb stable rejoin`
 
 **命令表面发生了破坏性变更。** `packport` 已进退休词典，所以任何仍带着这个词的**被跟踪字节**，
