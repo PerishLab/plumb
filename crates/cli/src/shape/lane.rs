@@ -12,7 +12,6 @@ const CARRIED: &str = include_str!("../../assets/ship/binary.yml.in");
 const PROJECTED: &str = include_str!("../../assets/ship/project.yml.in");
 const EXACT: &str = include_str!("../../assets/release/exact.yml.in");
 const STABLE: &str = include_str!("../../assets/release/stable.yml.in");
-const FORGE: &str = "git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0";
 const TOOLS: [&str; 2] = ["ectropy", "plumb"];
 
 pub struct Seat<'a>(pub &'a Path);
@@ -62,7 +61,7 @@ impl Seat<'_> {
         let carried = media.contains(&"binary");
         let projected = media.iter().any(|medium| *medium != "binary");
         let mut vars = BTreeMap::from([
-            ("forge", FORGE.to_string()),
+            ("forge", crate::rules::RULES.release.forge.clone()),
             ("plumb", manager("plumb")),
             ("after", if carried { ", seal" } else { "" }.to_string()),
         ]);
@@ -142,7 +141,10 @@ impl Seat<'_> {
 
     fn guard(&self, spec: &Spec) -> Result<Lane, String> {
         let path = ".forgejo/workflows/guard.yml";
-        let vars = BTreeMap::from([("forge", FORGE.to_string()), ("steps", self.steps(spec)?)]);
+        let vars = BTreeMap::from([
+            ("forge", crate::rules::RULES.release.forge.clone()),
+            ("steps", self.steps(spec)?),
+        ]);
         let rendered = fill(GUARD, &vars)?;
         Ok(Lane {
             path: path.to_string(),

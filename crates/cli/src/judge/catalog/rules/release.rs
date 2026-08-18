@@ -44,9 +44,33 @@ rule!(
     [DEPENDENCY, RELEASE_TAG]
 );
 
+rule!(
+    ATTACHMENT_PERMITTED,
+    "release.attachment-permitted",
+    "Attachments declare no more than Plumb permits",
+    "An attachment declares at most the number of packages Plumb permits it, because every package past the first adds ordering, cross-pinning, and partial failure to the mechanism, and a product cannot grant itself a wider shape by declaring one.",
+    "The attachment tables in plumb.toml against the permitted widths in Plumb's release rules.",
+    Mechanized,
+    RELEASE,
+    [OWNERSHIP, RELEASE_TAG]
+);
+
+rule!(
+    ATTACHMENT_EXERCISED,
+    "release.attachment-exercised",
+    "Unexercised width stays visible",
+    "The width a product declares is reported against the width this skeleton has actually released, so a path no release has ever run says so instead of passing as proven.",
+    "The attachment tables in plumb.toml against the exercised widths in Plumb's release rules.",
+    Mechanized,
+    RELEASE,
+    [RELEASE_TAG, REPOSITORY]
+);
+
 pub fn all() -> Vec<&'static Rule> {
     vec![
         &ATTACHMENT_DELIVERABLE,
+        &ATTACHMENT_EXERCISED,
+        &ATTACHMENT_PERMITTED,
         &DATUM_RECORDED,
         &LANE_RENDERED,
         &SPEC_DECLARED,

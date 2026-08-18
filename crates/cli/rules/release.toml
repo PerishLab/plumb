@@ -1,0 +1,16 @@
+# The release dimension's managed numbers. A cap here is Plumb's law: widening
+# one is a change to Plumb, never a declaration a product can make for itself.
+# `permitted` is what an attachment may declare, `exercised` is the width this
+# skeleton has actually released. The gap between them is the evidence that a
+# path has never been run.
+
+[permitted]
+cargo = 2
+npm = 1
+
+[exercised]
+cargo = 2
+npm = 1
+
+[forge]
+image = "git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0"

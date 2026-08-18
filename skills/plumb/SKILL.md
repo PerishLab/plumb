@@ -98,6 +98,9 @@ unfamiliar or stateful action.
 - A ship object is one attachment: `cargo`, `npm`, `chart`, `cfworker`. Every
   package an attachment declares carries one digest, one version, and ships
   together. `[release.depends]` keys and a seal's inputs use those names.
+- How wide an attachment may be is Plumb's law, held in its rules directory
+  beside the forge image. Declaring above the width Plumb has released is
+  noted, never refused; declaring above the width Plumb permits is refused.
 - A worker is a release medium, not a side channel. `[release.cfworker]` names
   the account and the stable domain; exact channels stage a version behind its
   own preview URL and only stable reaches the declared domain.

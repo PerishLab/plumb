@@ -10,6 +10,7 @@ use std::path::Path;
 #[derive(Default)]
 pub struct Release {
     pub attachments: BTreeSet<String>,
+    pub widths: std::collections::BTreeMap<String, usize>,
     pub refusal: Option<String>,
 }
 
@@ -21,10 +22,12 @@ pub fn release(root: &Path) -> Release {
     match Spec::read(&manifest) {
         Ok(spec) => Release {
             attachments: attachments(&spec),
+            widths: widths(&spec),
             refusal: None,
         },
         Err(refusal) => Release {
             attachments: BTreeSet::new(),
+            widths: std::collections::BTreeMap::new(),
             refusal: Some(refusal),
         },
     }
@@ -48,6 +51,42 @@ fn attachments(spec: &Spec) -> BTreeSet<String> {
         }
     }
     found
+}
+
+fn widths(spec: &Spec) -> std::collections::BTreeMap<String, usize> {
+    let mut found = std::collections::BTreeMap::new();
+    if let Some(cargo) = &spec.cargo {
+        found.insert("cargo".to_string(), cargo.packages.len());
+    }
+    if let Some(npm) = &spec.npm {
+        found.insert("npm".to_string(), npm.packages.len());
+    }
+    found
+}
+
+fn measured(release: &Release, found: &mut Found) {
+    let rules = &crate::rules::RULES.release;
+    for (attachment, held) in &release.widths {
+        let permitted = rules.permitted.get(attachment).copied().unwrap_or(1);
+        if *held > permitted {
+            found.push(Seed::wrong(
+                &release_rule::ATTACHMENT_PERMITTED,
+                format!(
+                    "the {attachment} attachment declares {held} packages and Plumb permits {permitted}; widening it is a change to Plumb"
+                ),
+            ));
+            continue;
+        }
+        let exercised = rules.exercised.get(attachment).copied().unwrap_or(0);
+        if *held > exercised {
+            found.push(Seed::noted(
+                &release_rule::ATTACHMENT_EXERCISED,
+                format!(
+                    "the {attachment} attachment declares {held} packages and the skeleton has released {exercised}; this width has never run"
+                ),
+            ));
+        }
+    }
 }
 
 fn carriers(attachment: &str) -> &'static [&'static str] {
@@ -114,6 +153,7 @@ impl Judge<'_> {
             ));
         }
         spec(held.release.refusal.as_deref(), &mut found);
+        measured(&held.release, &mut found);
         deliverable(&held.release, &held.root, &mut found);
         if held.ships.contains("binary") {
             self.anchors(&mut found);

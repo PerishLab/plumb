@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::LazyLock;
 
 pub struct Rules {
@@ -7,6 +7,13 @@ pub struct Rules {
     pub retired: Vec<(String, String)>,
     pub blacklist: BTreeSet<String>,
     pub stable: Stable,
+    pub release: Release,
+}
+
+pub struct Release {
+    pub permitted: BTreeMap<String, usize>,
+    pub exercised: BTreeMap<String, usize>,
+    pub forge: String,
 }
 
 pub struct Stable {
@@ -65,6 +72,15 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
                 .collect()
         })
         .unwrap_or_default();
+    let release: toml::Table = include_str!("../rules/release.toml")
+        .parse()
+        .expect("rules/release.toml must parse");
+    let forge = release
+        .get("forge")
+        .and_then(|table| table.get("image"))
+        .and_then(toml::Value::as_str)
+        .unwrap_or_else(|| panic!("rules/release.toml must name forge.image"))
+        .to_string();
     Rules {
         dirs: set("dirs"),
         lanes: set("lanes"),
@@ -76,8 +92,28 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
                 index: required(cargo, "index"),
             },
         },
+        release: Release {
+            permitted: counted(&release, "permitted"),
+            exercised: counted(&release, "exercised"),
+            forge,
+        },
     }
 });
+
+fn counted(doc: &toml::Table, key: &str) -> BTreeMap<String, usize> {
+    doc.get(key)
+        .and_then(toml::Value::as_table)
+        .map(|table| {
+            table
+                .iter()
+                .filter_map(|(name, value)| {
+                    let held = value.as_integer()?;
+                    usize::try_from(held).ok().map(|held| (name.clone(), held))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
 
 fn required(value: &toml::Value, key: &str) -> String {
     value

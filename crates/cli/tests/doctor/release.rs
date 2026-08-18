@@ -134,3 +134,32 @@ fn attached() {
 
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
+
+#[test]
+fn width() {
+    let dir = seat("plumb-release-width");
+    let path = dir.to_str().expect("path should be utf8");
+    for package in ["one", "two"] {
+        std::fs::create_dir_all(dir.join("packages").join(package)).expect("module seat");
+    }
+    let declare = |packages: &str| {
+        std::fs::write(
+            dir.join("plumb.toml"),
+            format!(
+                "{BINARY}\n[release.npm]\nregistry = \"https://example.invalid/npm/\"\npackages = {packages}\n"
+            ),
+        )
+        .expect("manifest should be written");
+    };
+
+    declare("[\"@probe/one\"]");
+    let held = crate::run(&["doctor", path]);
+    assert!(!held.contains("attachment declares"), "{held}");
+
+    declare("[\"@probe/one\", \"@probe/two\"]");
+    let wide = crate::run(&["doctor", path]);
+    assert!(
+        wide.contains("the npm attachment declares 2 packages and Plumb permits 1"),
+        "{wide}"
+    );
+}
