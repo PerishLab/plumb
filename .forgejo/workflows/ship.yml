@@ -144,7 +144,6 @@ jobs:
       PLUMB_RELEASE_TOOLCHAIN: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
       PLUMB_RELEASE_OUTPUT: .plumb-release/capsule
       PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
-      PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
       PLUMB_PUBLISH_ACCESS: ${{ secrets.publish_access }}
       PLUMB_PUBLISH_SECRET: ${{ secrets.publish_secret }}
       PLUMB_PUBLISH_BUCKET: ${{ secrets.publish_bucket }}
@@ -192,9 +191,18 @@ jobs:
 
       - name: Fetch the derived promotion proof
         if: needs.resolve.outputs.channel == 'stable'
+        env:
+          PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
         run: plumb release promote
 
-      - name: Compile the immutable capsule
+      - name: Compile the exact capsule
+        if: needs.resolve.outputs.channel != 'stable'
+        run: plumb release compile
+
+      - name: Compile the stable capsule
+        if: needs.resolve.outputs.channel == 'stable'
+        env:
+          PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
         run: plumb release compile
 
       - name: Publish and read back the exact release

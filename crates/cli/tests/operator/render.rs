@@ -92,3 +92,27 @@ fn portable() {
         "a Windows runner has no bash, so its install is written in its own shell: {ship}"
     );
 }
+
+#[test]
+fn scoped() {
+    let temp = tempfile::tempdir().expect("temp root");
+    let tools = temp.path().join("tools");
+    let fixture = seat(temp.path(), &tools);
+    fs::write(temp.path().join("Cargo.toml"), CARGO).expect("cargo manifest");
+    rendered(&fixture);
+    let ship = fs::read_to_string(temp.path().join(".forgejo/workflows/ship.yml")).expect("ship");
+    let seal = ship.split("\n  seal:\n").nth(1).expect("seal job");
+    let job = seal.split("    steps:").next().expect("job header");
+    assert!(
+        !job.contains("PLUMB_RELEASE_PROMOTION"),
+        "a proof only stable holds cannot sit in the env every step reads: {job}"
+    );
+    for step in seal.split("      - name: ").skip(1) {
+        if step.contains("PLUMB_RELEASE_PROMOTION") {
+            assert!(
+                step.contains("if: needs.resolve.outputs.channel == 'stable'"),
+                "the proof travels only with the steps that may hold it: {step}"
+            );
+        }
+    }
+}
