@@ -112,6 +112,19 @@ image is now an object: its `Containerfile`, plus whatever `[release.depends]`
 adds, and where the image wraps this release's archive the version folds in too,
 because such an image moves with the release however still its source has been.
 
+## An exact release starts from a point a mechanism made
+
+Plumb stamped the stable point and left the exact one to a hand: the documented
+way to begin a beta was `git tag` followed by `git push`. The machinery for
+doing it properly already existed — annotated, idempotent, refusing to move a
+point that already stands — and was reachable only through `freeze`, which is
+the stable path.
+
+`plumb stable stamp --version <exact>` reaches it. It derives the line the
+version belongs to, reads that line's head, and stamps there. It refuses a
+stable version, which belongs to `freeze`, and `freeze` refuses an exact one.
+The bare `git tag` leaves the release procedure.
+
 ## Smaller truths
 
 The Debian package wrote the semver string into the dpkg `Version` field
