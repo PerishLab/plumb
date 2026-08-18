@@ -2,17 +2,17 @@ use super::fixture::{Fixture, SPEC, run};
 use std::path::Path;
 use std::process::Command;
 
-struct Compile<'a> {
-    fixture: &'a Fixture<'a>,
-    artifacts: &'a Path,
-    channel: &'a str,
-    version: &'a str,
-    out: &'a Path,
-    promotion: Option<&'a Path>,
-    commit: &'a str,
+pub struct Compile<'a> {
+    pub fixture: &'a Fixture<'a>,
+    pub artifacts: &'a Path,
+    pub channel: &'a str,
+    pub version: &'a str,
+    pub out: &'a Path,
+    pub promotion: Option<&'a Path>,
+    pub commit: &'a str,
 }
 
-fn compile(input: Compile<'_>) {
+pub fn compile(input: Compile<'_>) {
     let mut held = input.fixture.command();
     held.args(["release", "compile"])
         .env("PLUMB_RELEASE_CHANNEL", input.channel)
@@ -168,111 +168,4 @@ fn intent() {
     assert!(manager.contains("CHANNEL=${PROBE_CHANNEL:-canary}"));
     assert!(manager.contains("VERSION=${PROBE_VERSION:-v1.2.0-canary.9}"));
     assert!(!out.join("canonical").exists());
-}
-
-#[test]
-fn inputs() {
-    let temp = tempfile::tempdir().expect("temp root");
-    let root = temp.path();
-    let tools = root.join("tools");
-    let artifacts = root.join("artifacts");
-    std::fs::create_dir_all(&tools).expect("tool root");
-    std::fs::create_dir_all(&artifacts).expect("artifact root");
-    std::fs::create_dir_all(root.join("charts/probe")).expect("chart root");
-    let fixture = Fixture {
-        root,
-        tools: &tools,
-    };
-    fixture.seed();
-    std::fs::write(
-        root.join("plumb.toml"),
-        format!("{SPEC}[release.chart]\nregistry = \"example.invalid\"\nchart = \"owner/probe\"\naccount = \"Example\"\n"),
-    )
-    .expect("manifest");
-    std::fs::write(root.join("charts/probe/Chart.yaml"), "name: probe\n").expect("chart");
-    fixture.changelog("v1.2.0");
-    fixture.track("charts");
-    let candidate = fixture.candidate();
-    fixture.tag("v1.2.0-beta.7");
-    fixture.archive(&artifacts, "v1.2.0-beta.7");
-
-    let out = root.join("beta");
-    compile(Compile {
-        fixture: &fixture,
-        artifacts: &artifacts,
-        channel: "beta",
-        version: "v1.2.0-beta.7",
-        out: &out,
-        promotion: None,
-        commit: &candidate,
-    });
-    let seal: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(out.join("seal.json")).expect("seal"))
-            .expect("seal json");
-    let held = &seal["inputs"]["chart"];
-    assert!(held["hash"].as_str().is_some_and(|hash| hash.len() == 64));
-    assert_eq!(held["since"], "v1.2.0-beta.7");
-
-    let bare = root.join("releases/v1");
-    std::fs::create_dir_all(bare.join("channels")).expect("published root");
-    std::fs::write(bare.join("bare.json"), "{}\n").expect("published seal");
-    std::fs::write(
-        bare.join("channels/stable.json"),
-        format!(
-            concat!(
-                r#"{{"schema":1,"product":"probe","channel":"stable","releaseVersion":"v1.1.0","#,
-                r#""commit":"{}","managers":{{}},"seal":{{"name":"seal.json","#,
-                r#""mime":"application/json","sha256":"{}","size":3,"#,
-                r#""url":"https://releases.test/v1/bare.json"}}}}"#
-            ),
-            candidate,
-            "0".repeat(64)
-        ),
-    )
-    .expect("stable pointer");
-    compile(Compile {
-        fixture: &fixture,
-        artifacts: &artifacts,
-        channel: "beta",
-        version: "v1.2.0-beta.7",
-        out: &root.join("bare"),
-        promotion: None,
-        commit: &candidate,
-    });
-
-    let published = root.join("releases/v1");
-    std::fs::create_dir_all(published.join("channels")).expect("published root");
-    std::fs::write(
-        published.join("channels/stable.json"),
-        format!(
-            concat!(
-                r#"{{"schema":1,"product":"probe","channel":"stable","releaseVersion":"v1.1.0","#,
-                r#""commit":"{}","managers":{{}},"seal":{{"name":"seal.json","#,
-                r#""mime":"application/json","sha256":"{}","size":3,"#,
-                r#""url":"https://releases.test/v1/seal.json"}}}}"#
-            ),
-            candidate,
-            "0".repeat(64)
-        ),
-    )
-    .expect("stable pointer");
-    std::fs::copy(out.join("seal.json"), published.join("seal.json")).expect("published seal");
-    let next = root.join("held");
-    compile(Compile {
-        fixture: &fixture,
-        artifacts: &artifacts,
-        channel: "beta",
-        version: "v1.2.0-beta.8",
-        out: &next,
-        promotion: None,
-        commit: &candidate,
-    });
-    let seal: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(next.join("seal.json")).expect("seal"))
-            .expect("seal json");
-    assert_eq!(
-        seal["inputs"]["chart"]["since"], "v1.2.0-beta.7",
-        "an unchanged object still reports where it last changed"
-    );
-    assert_eq!(seal["releaseVersion"], "v1.2.0-beta.8");
 }

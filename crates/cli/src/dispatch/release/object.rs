@@ -116,7 +116,9 @@ impl Seat<'_> {
                 seen += 1;
                 digest.update(entry.path().as_bytes());
                 digest.update([0]);
-                digest.update(entry.bytes());
+                digest.update(entry.mode().as_bytes());
+                digest.update([0]);
+                digest.update(entry.oid().as_bytes());
                 digest.update([0]);
             }
             if seen == 0 {

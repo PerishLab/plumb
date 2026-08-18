@@ -6,6 +6,8 @@ mod audit;
 #[cfg(unix)]
 mod datum;
 #[cfg(unix)]
+mod digest;
+#[cfg(unix)]
 mod fixture;
 #[cfg(unix)]
 mod forgejo;
