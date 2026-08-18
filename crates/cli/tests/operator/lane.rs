@@ -139,8 +139,10 @@ fn carried() {
     assert!(held.contains("\n  smoke:\n"), "{held}");
     assert!(held.contains("needs: [resolve, seal]"), "{held}");
     assert!(
-        held.match_indices("if:")
-            .all(|(at, _)| held[at..].starts_with("if: runner.os")),
+        held.match_indices("if:").all(|(at, _)| {
+            held[at..].starts_with("if: runner.os")
+                || held[at..].starts_with("if: needs.resolve.outputs.channel")
+        }),
         "a rendered lane carries no condition render time could have decided: {held}"
     );
     assert!(!held.contains("{@"), "{held}");

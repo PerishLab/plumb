@@ -63,7 +63,7 @@
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-{@carry}
+{@install}
       - name: Require canonical guard evidence
         env:
           PLUMB_GUARD_API: ${{ github.api_url }}
@@ -80,6 +80,7 @@
         run: plumb ship binary assemble
 
       - name: Fetch the derived promotion proof
+        if: needs.resolve.outputs.channel == 'stable'
         run: plumb release promote
 
       - name: Compile the immutable capsule
@@ -93,11 +94,17 @@
           plumb ship binary verify
 
       - name: Activate the stable consensus
-        id: surface
+        if: needs.resolve.outputs.channel == 'stable'
         shell: bash
         run: |
           set -eu
           plumb ship binary activate
+
+      - name: Name the generated manager
+        id: surface
+        shell: bash
+        run: |
+          set -eu
           echo "manager=$(plumb ship binary manager)" >> "$GITHUB_OUTPUT"
 
   smoke:
