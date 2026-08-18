@@ -25,7 +25,7 @@ fn clean() {
     assert_eq!(report["summary"]["unknown"], 0);
     assert_eq!(report["summary"]["blind"], 0);
     assert_eq!(report["coverage"]["mechanized"], 79);
-    assert_eq!(report["coverage"]["observed"], 1);
+    assert_eq!(report["coverage"]["observed"], 2);
     assert_eq!(report["coverage"]["prose_only"], 39);
     assert!(report["shape"]["wrappers"].is_array());
     assert!(report["shape"]["layout"].is_array());
@@ -116,4 +116,19 @@ fn blind() {
     assert_eq!(report["ok"], false);
     assert_eq!(report["summary"]["out_of_true"], 0);
     assert_eq!(report["summary"]["blind"], 1);
+}
+
+#[test]
+fn briefs() {
+    let fixture = crate::fixture();
+    let output = run(fixture.path());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("doctor json");
+    assert!(
+        report["briefs"].is_array(),
+        "a report names the briefs standing beside the binary it ran"
+    );
+    assert_eq!(
+        report["summary"]["noted"], 0,
+        "a brief beside the binary is the operator's business, not the repository's"
+    );
 }

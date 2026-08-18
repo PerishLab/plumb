@@ -3,12 +3,22 @@ use super::Summary;
 use crate::shape;
 use std::path::Path;
 
-pub fn render(
-    root: &Path,
-    held: &shape::Shape,
-    vocabulary: &Result<plumb::vocabulary::Report, plumb::vocabulary::Refusal>,
-    findings: &[finding::Finding],
-) {
+pub struct Held<'a> {
+    pub root: &'a Path,
+    pub shape: &'a shape::Shape,
+    pub vocabulary: &'a Result<plumb::vocabulary::Report, plumb::vocabulary::Refusal>,
+    pub findings: &'a [finding::Finding],
+    pub briefs: &'a [String],
+}
+
+pub fn render(seen: Held<'_>) {
+    let Held {
+        root,
+        shape: held,
+        vocabulary,
+        findings,
+        briefs,
+    } = seen;
     let summary = Summary::new(findings);
     println!("plumb doctor {}", root.display());
     println!();
@@ -63,6 +73,9 @@ pub fn render(
             report.coverage.tracked
         ),
         Err(error) => println!("  vocabulary blind: {error}"),
+    }
+    for brief in briefs {
+        println!("  brief     {brief}");
     }
     println!();
     if findings.is_empty() {

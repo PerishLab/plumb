@@ -15,6 +15,7 @@ struct Report {
     shape: Shape,
     vocabulary: Vocabulary,
     findings: Vec<finding::Finding>,
+    briefs: Vec<String>,
     summary: Summary,
     coverage: Coverage,
 }
@@ -101,6 +102,7 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
             shape: Shape::new(&held),
             vocabulary: Vocabulary::new(vocabulary),
             findings,
+            briefs: briefs(),
             summary,
             coverage: catalog::coverage(),
         };
@@ -109,9 +111,45 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
             serde_json::to_string_pretty(&report).expect("doctor report should encode")
         );
     } else {
-        human::render(&root, &held, &vocabulary, &findings);
+        human::render(human::Held {
+            root: &root,
+            shape: &held,
+            vocabulary: &vocabulary,
+            findings: &findings,
+            briefs: &briefs(),
+        });
     }
     i32::from(!ok)
+}
+
+fn briefs() -> Vec<String> {
+    let running = plumb::version!("PLUMB");
+    let Ok(rig) = plumb::rig::Rig::resolve(None) else {
+        return Vec::new();
+    };
+    let kit = plumb::skill::Kit {
+        name: "plumb".to_string(),
+        home: plumb::config::home().unwrap_or_default(),
+        state: std::path::PathBuf::from(&rig.home)
+            .join("state")
+            .join("skills.json"),
+        url: rig.releases.clone(),
+    };
+    let Ok(records) = kit.list() else {
+        return Vec::new();
+    };
+    records
+        .iter()
+        .filter(|record| record.version != running)
+        .map(|record| {
+            format!(
+                "{} {} is {}, beside a running plumb {running}; run plumb skill upgrade",
+                record.agent,
+                record.path.display(),
+                record.version
+            )
+        })
+        .collect()
 }
 
 fn line(root: &Path) -> Option<String> {

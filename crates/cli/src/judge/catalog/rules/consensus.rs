@@ -122,11 +122,31 @@ rule!(
 );
 
 #[rustfmt::skip]
+rule!(
+    SKILL_SEAT_CURRENT,
+    "skill.seat-matches-binary",
+    "An installed brief describes the binary beside it",
+    "Every installed agent brief names the Plumb release that is actually running, because a brief is what a reader trusts first and a stale one documents verbs the binary does not have.",
+    "The skill ledger's recorded version for each installed seat against the running binary's own version.",
+    Observed,
+    SKILL,
+    [SKILL_TAG, ADOPTION]
+);
+
 pub fn all() -> Vec<&'static Rule> {
     vec![
-        &CANONICAL_AUTHORITY, &CANONICAL_BRANCH_PROTECTION, &CANONICAL_MANAGER_STABLE,
-        &DEFAULT_SEAT_STABLE, &NONSTABLE_EXACT, &NONSTABLE_ISOLATED,
-        &PROMOTION_PROOF_EXACT, &SKILL_CANDIDATE_STAGE, &SKILL_MANAGED_STABLE,
-        &STABLE_REJOIN, &STABLE_SINGLE_WRITER, &STABLE_SOURCE_LINE,
+        &CANONICAL_AUTHORITY,
+        &CANONICAL_BRANCH_PROTECTION,
+        &CANONICAL_MANAGER_STABLE,
+        &DEFAULT_SEAT_STABLE,
+        &NONSTABLE_EXACT,
+        &NONSTABLE_ISOLATED,
+        &PROMOTION_PROOF_EXACT,
+        &SKILL_CANDIDATE_STAGE,
+        &SKILL_MANAGED_STABLE,
+        &SKILL_SEAT_CURRENT,
+        &STABLE_REJOIN,
+        &STABLE_SINGLE_WRITER,
+        &STABLE_SOURCE_LINE,
     ]
 }
