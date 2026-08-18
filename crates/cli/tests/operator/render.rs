@@ -73,13 +73,22 @@ fn portable() {
         let head = step.lines().next().unwrap_or_default().to_string();
         if step.contains("run: |") {
             assert!(
-                step.contains("shell: bash"),
-                "a step whose body is a shell script must name the shell it is written in: {head}"
+                step.contains("shell: bash") || step.contains("shell: pwsh"),
+                "a step whose body is a script must name the shell it is written in: {head}"
             );
         }
     }
     assert!(
         ship.contains("rustup target add ${{ matrix.target }}"),
         "a matrix runner holds only its own target until one is added: {ship}"
+    );
+    assert_eq!(
+        ship.matches("if: runner.os != 'Windows'").count(),
+        ship.matches("if: runner.os == 'Windows'").count(),
+        "every job a Windows runner reaches carries both halves of its install"
+    );
+    assert!(
+        ship.contains("shell: pwsh") && ship.contains("manage.ps1"),
+        "a Windows runner has no bash, so its install is written in its own shell: {ship}"
     );
 }

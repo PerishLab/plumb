@@ -18,7 +18,7 @@
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-{@install}
+{@carry}
       - name: Add the declared Rust target
         run: rustup target add ${{ matrix.target }}
 
@@ -63,7 +63,7 @@
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-{@install}
+{@carry}
       - name: Require canonical guard evidence
         env:
           PLUMB_GUARD_API: ${{ github.api_url }}
@@ -116,6 +116,6 @@
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-{@install}
+{@carry}
       - name: Smoke the generated manager
         run: plumb ship binary smoke
