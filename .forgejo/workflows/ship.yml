@@ -39,6 +39,7 @@ jobs:
           ref: ${{ github.sha }}
 
       - name: Install the Plumb this release is bound to
+        shell: bash
         run: |
           set -eu
           if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
@@ -54,6 +55,7 @@ jobs:
 
       - name: Plan this release
         id: plan
+        shell: bash
         run: |
           set -eu
           PLUMB_RELEASE_VERSION=$(plumb release reference)
@@ -89,6 +91,7 @@ jobs:
           ref: ${{ needs.resolve.outputs.commit }}
 
       - name: Install the Plumb this release is bound to
+        shell: bash
         run: |
           set -eu
           if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
@@ -101,6 +104,9 @@ jobs:
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
           fi
+
+      - name: Add the declared Rust target
+        run: rustup target add ${{ matrix.target }}
 
       - name: Build one declared target
         run: plumb ship binary build
@@ -144,6 +150,7 @@ jobs:
           ref: ${{ needs.resolve.outputs.commit }}
 
       - name: Install the Plumb this release is bound to
+        shell: bash
         run: |
           set -eu
           if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
@@ -179,6 +186,7 @@ jobs:
         run: plumb release compile
 
       - name: Publish and read back the exact release
+        shell: bash
         run: |
           set -eu
           plumb ship binary publish
@@ -186,6 +194,7 @@ jobs:
 
       - name: Activate the stable consensus
         id: surface
+        shell: bash
         run: |
           set -eu
           plumb ship binary activate
@@ -208,6 +217,7 @@ jobs:
           ref: ${{ needs.resolve.outputs.commit }}
 
       - name: Install the Plumb this release is bound to
+        shell: bash
         run: |
           set -eu
           if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
@@ -248,6 +258,7 @@ jobs:
           ref: ${{ needs.resolve.outputs.commit }}
 
       - name: Install the Plumb this release is bound to
+        shell: bash
         run: |
           set -eu
           if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
@@ -265,6 +276,7 @@ jobs:
         run: echo "PNPM_CONFIG_STORE_DIR=$RUNNER_TEMP/pnpm-store" >> "$GITHUB_ENV"
 
       - name: Project one declared medium
+        shell: bash
         run: |
           set -eu
           plumb ship ${{ matrix.medium }} ${{ matrix.prepare }}

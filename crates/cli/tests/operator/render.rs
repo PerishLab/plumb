@@ -60,3 +60,26 @@ fn planned() {
         "a derivation reading the version must run after the export that carries it: {plan}"
     );
 }
+
+#[test]
+fn portable() {
+    let temp = tempfile::tempdir().expect("temp root");
+    let tools = temp.path().join("tools");
+    let fixture = seat(temp.path(), &tools);
+    fs::write(temp.path().join("Cargo.toml"), CARGO).expect("cargo manifest");
+    rendered(&fixture);
+    let ship = fs::read_to_string(temp.path().join(".forgejo/workflows/ship.yml")).expect("ship");
+    for step in ship.split("      - name: ").skip(1) {
+        let head = step.lines().next().unwrap_or_default().to_string();
+        if step.contains("run: |") {
+            assert!(
+                step.contains("shell: bash"),
+                "a step whose body is a shell script must name the shell it is written in: {head}"
+            );
+        }
+    }
+    assert!(
+        ship.contains("rustup target add ${{ matrix.target }}"),
+        "a matrix runner holds only its own target until one is added: {ship}"
+    );
+}

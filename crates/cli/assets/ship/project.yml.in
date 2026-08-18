@@ -27,6 +27,7 @@
         run: echo "PNPM_CONFIG_STORE_DIR=$RUNNER_TEMP/pnpm-store" >> "$GITHUB_ENV"
 
       - name: Project one declared medium
+        shell: bash
         run: |
           set -eu
           plumb ship ${{ matrix.medium }} ${{ matrix.prepare }}
