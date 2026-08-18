@@ -56,11 +56,11 @@ fn protection() {
         "{stood}"
     );
     assert!(
-        stood.contains(".plumb/releases/v1.2.0/datum.json"),
+        stood.contains(".plumb/releases/v1.2.0/datum.toml"),
         "{stood}"
     );
     let shown = Command::new("git")
-        .args(["show", "release/v1.2.0:.plumb/releases/v1.2.0/datum.json"])
+        .args(["show", "release/v1.2.0:.plumb/releases/v1.2.0/datum.toml"])
         .current_dir(bare.path())
         .output()
         .expect("git");
@@ -69,8 +69,7 @@ fn protection() {
         "{}",
         String::from_utf8_lossy(&shown.stderr)
     );
-    let datum: serde_json::Value =
-        serde_json::from_slice(&shown.stdout).expect("datum should decode");
-    assert_eq!(datum["schema"], 1);
-    assert_eq!(datum["version"], "v1.2.0");
+    let datum = String::from_utf8_lossy(&shown.stdout).to_string();
+    assert!(datum.contains("schema = 1"), "{datum}");
+    assert!(datum.contains("version = \"v1.2.0\""), "{datum}");
 }

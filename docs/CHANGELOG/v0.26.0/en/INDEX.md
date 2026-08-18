@@ -13,7 +13,7 @@ the product changing.
 
 `plumb stable prepare` now records the answers the line will judge against — one
 per first-party line the rule consults — as the line's first commit, under
-`.plumb/releases/<version>/datum.json`. On that line `doctor` reads the record;
+`.plumb/releases/<version>/datum.toml`. On that line `doctor` reads the record;
 off it, `main` keeps tracking live latest, because drift detection is still its
 job and reproducibility is the line's. A release line carrying no datum is out
 of true.
