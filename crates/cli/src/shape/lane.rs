@@ -12,6 +12,7 @@ const CARRIED: &str = include_str!("../../assets/ship/binary.yml.in");
 const PROJECTED: &str = include_str!("../../assets/ship/project.yml.in");
 const INSTALL: &str = include_str!("../../assets/ship/install.yml.in");
 const BOOTSTRAP: &str = include_str!("../../assets/ship/bootstrap.yml.in");
+const WINDOWS: &str = include_str!("../../assets/ship/windows.yml.in");
 const EXACT: &str = include_str!("../../assets/release/exact.yml.in");
 const STABLE: &str = include_str!("../../assets/release/stable.yml.in");
 const TOOLS: [&str; 2] = ["ectropy", "plumb"];
@@ -67,7 +68,9 @@ impl Seat<'_> {
             ("plumb", manager("plumb")),
             ("after", if carried { ", seal" } else { "" }.to_string()),
         ]);
-        vars.insert("install", install(spec, &vars)?);
+        let held = install(spec, &vars)?;
+        vars.insert("carry", matrixed(&held, &vars)?);
+        vars.insert("install", held);
         let binary = if carried {
             fill(CARRIED, &vars)?
         } else {
@@ -251,6 +254,15 @@ fn install(spec: &Spec, vars: &BTreeMap<&str, String>) -> Result<String, String>
     held.insert("beta", generator::BETA_VERSION.to_string());
     held.insert("stable", generator::STABLE_VERSION.to_string());
     fill(BOOTSTRAP, &held)
+}
+
+fn matrixed(install: &str, vars: &BTreeMap<&str, String>) -> Result<String, String> {
+    let guarded = install.replacen(
+        "        run: |",
+        "        if: runner.os != 'Windows'\n        run: |",
+        1,
+    );
+    Ok(format!("{guarded}\n{}", fill(WINDOWS, vars)?))
 }
 
 fn manager(tool: &str) -> String {
