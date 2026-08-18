@@ -13,6 +13,8 @@
       PLUMB_RELEASE_CHANNEL: ${{ needs.resolve.outputs.channel }}
       PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
       PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
+      PLUMB_RELEASE_OUTPUT: .plumb-release/capsule
+      PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
       PLUMB_RELEASE_REGISTRY_TOKEN: ${{ secrets.registry_token }}
       PLUMB_SITE_TOKEN: ${{ secrets.site_token }}
     steps:
@@ -23,7 +25,7 @@
           ref: ${{ needs.resolve.outputs.commit }}
 
 {@install}
-      - name: Seat the package store outside the source
+{@capsule}      - name: Seat the package store outside the source
         run: echo "PNPM_CONFIG_STORE_DIR=$RUNNER_TEMP/pnpm-store" >> "$GITHUB_ENV"
 
       - name: Project one declared medium

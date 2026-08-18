@@ -133,7 +133,8 @@ jobs:
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
     outputs:
-      manager: ${{ steps.surface.outputs.manager }}
+      manager_unix: ${{ steps.surface.outputs.manager_unix }}
+      manager_windows: ${{ steps.surface.outputs.manager_windows }}
     env:
       DOCKER_HOST: tcp://172.17.0.1:2375
       PLUMB_RELEASE_ROOT: .
@@ -219,12 +220,25 @@ jobs:
           set -eu
           plumb ship binary activate
 
-      - name: Name the generated manager
+      - name: Name the generated managers
         id: surface
         shell: bash
         run: |
           set -eu
-          echo "manager=$(plumb ship binary manager)" >> "$GITHUB_OUTPUT"
+          if [ "$PLUMB_RELEASE_CHANNEL" = stable ]; then
+            seat="$PLUMB_RELEASE_OUTPUT/stable.json"
+          else
+            seat="$PLUMB_RELEASE_OUTPUT/seal.json"
+          fi
+          {
+            echo "manager_unix=$(jq -r '.managers.unix.url' "$seat")"
+            echo "manager_windows=$(jq -r '.managers.windows.url // ""' "$seat")"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: release-capsule
+          path: .plumb-release/capsule
 
   smoke:
     needs: [resolve, seal]
@@ -235,7 +249,6 @@ jobs:
     env:
       PLUMB_RELEASE_ROOT: .
       PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
-      PLUMB_RELEASE_URL: ${{ needs.seal.outputs.manager }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -269,6 +282,15 @@ jobs:
           (Join-Path $HOME '.local/bin') | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Smoke the generated manager
+        if: runner.os != 'Windows'
+        env:
+          PLUMB_RELEASE_URL: ${{ needs.seal.outputs.manager_unix }}
+        run: plumb ship binary smoke
+
+      - name: Smoke the generated manager on Windows
+        if: runner.os == 'Windows'
+        env:
+          PLUMB_RELEASE_URL: ${{ needs.seal.outputs.manager_windows }}
         run: plumb ship binary smoke
 
   project:
@@ -285,6 +307,8 @@ jobs:
       PLUMB_RELEASE_CHANNEL: ${{ needs.resolve.outputs.channel }}
       PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
       PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
+      PLUMB_RELEASE_OUTPUT: .plumb-release/capsule
+      PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
       PLUMB_RELEASE_REGISTRY_TOKEN: ${{ secrets.registry_token }}
       PLUMB_SITE_TOKEN: ${{ secrets.site_token }}
     steps:
@@ -308,6 +332,11 @@ jobs:
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
           fi
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: release-capsule
+          path: .plumb-release/capsule
 
       - name: Seat the package store outside the source
         run: echo "PNPM_CONFIG_STORE_DIR=$RUNNER_TEMP/pnpm-store" >> "$GITHUB_ENV"

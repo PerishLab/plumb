@@ -116,3 +116,29 @@ fn scoped() {
         }
     }
 }
+
+#[test]
+fn carried() {
+    let temp = tempfile::tempdir().expect("temp root");
+    let tools = temp.path().join("tools");
+    let fixture = seat(temp.path(), &tools);
+    fs::write(temp.path().join("Cargo.toml"), CARGO).expect("cargo manifest");
+    fs::write(
+        temp.path().join("plumb.toml"),
+        "[release]\nproduct = \"probe\"\nauthority = \"https://releases.test\"\nbinaries = [\"probe\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n\n[release.chart]\nregistry = \"example.invalid\"\nchart = \"owner/probe\"\naccount = \"Example\"\n",
+    )
+    .expect("release manifest");
+    fs::create_dir_all(temp.path().join("charts/probe")).expect("chart seat");
+    rendered(&fixture);
+    let ship = fs::read_to_string(temp.path().join(".forgejo/workflows/ship.yml")).expect("ship");
+    let project = ship.split("\n  project:\n").nth(1).expect("project job");
+    assert!(
+        project.contains("name: release-capsule"),
+        "a projection that gates on the capsule must be handed one: {project}"
+    );
+    assert!(
+        ship.contains("manager_unix") && ship.contains("manager_windows"),
+        "a smoke runs against the manager its own platform was given: {ship}"
+    );
+    assert!(!ship.contains("binary manager\n"), "{ship}");
+}

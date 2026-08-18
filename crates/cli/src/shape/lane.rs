@@ -13,6 +13,7 @@ const PROJECTED: &str = include_str!("../../assets/ship/project.yml.in");
 const INSTALL: &str = include_str!("../../assets/ship/install.yml.in");
 const BOOTSTRAP: &str = include_str!("../../assets/ship/bootstrap.yml.in");
 const WINDOWS: &str = include_str!("../../assets/ship/windows.yml.in");
+const CAPSULE: &str = include_str!("../../assets/ship/capsule.yml.in");
 const EXACT: &str = include_str!("../../assets/release/exact.yml.in");
 const STABLE: &str = include_str!("../../assets/release/stable.yml.in");
 const TOOLS: [&str; 2] = ["ectropy", "plumb"];
@@ -76,6 +77,14 @@ impl Seat<'_> {
         } else {
             String::new()
         };
+        vars.insert(
+            "capsule",
+            if carried {
+                CAPSULE.to_string()
+            } else {
+                String::new()
+            },
+        );
         let project = if projected {
             fill(PROJECTED, &vars)?
         } else {
