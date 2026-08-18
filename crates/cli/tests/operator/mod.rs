@@ -25,6 +25,8 @@ mod registry;
 #[cfg(unix)]
 mod release;
 #[cfg(unix)]
+mod render;
+#[cfg(unix)]
 mod retract;
 #[cfg(unix)]
 mod settlement;

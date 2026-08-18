@@ -3,16 +3,16 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-const CARGO: &str = "[workspace]\nmembers = []\n";
+pub const CARGO: &str = "[workspace]\nmembers = []\n";
 
-fn seat<'a>(root: &'a Path, tools: &'a Path) -> Fixture<'a> {
+pub fn seat<'a>(root: &'a Path, tools: &'a Path) -> Fixture<'a> {
     fs::create_dir_all(tools).expect("tool root");
     let held = Fixture { root, tools };
     held.seed();
     held
 }
 
-fn rendered(fixture: &Fixture<'_>) -> String {
+pub fn rendered(fixture: &Fixture<'_>) -> String {
     let output = fixture
         .command()
         .args(["lane", "--write"])
@@ -244,39 +244,4 @@ fn anchored() {
             "{name} must forward the credential a worker medium needs: {held}"
         );
     }
-}
-
-#[test]
-fn bootstrapped() {
-    let temp = tempfile::tempdir().expect("temp root");
-    let tools = temp.path().join("tools");
-    let fixture = seat(temp.path(), &tools);
-    fs::write(temp.path().join("Cargo.toml"), CARGO).expect("cargo manifest");
-    rendered(&fixture);
-    let ship = |root: &Path| {
-        fs::read_to_string(root.join(".forgejo/workflows/ship.yml")).expect("ship lane")
-    };
-    let ordinary = ship(temp.path());
-    assert!(
-        !ordinary.contains("the Plumb this release is bound to"),
-        "an ordinary product carries no bootstrap: {ordinary}"
-    );
-
-    fs::write(
-        temp.path().join("plumb.toml"),
-        "[release]\nproduct = \"plumb\"\nauthority = \"https://releases.plumb.perish.uk\"\nbinaries = [\"plumb\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
-    )
-    .expect("release manifest");
-    rendered(&fixture);
-    let held = ship(temp.path());
-    assert!(
-        held.contains("the Plumb this release is bound to"),
-        "{held}"
-    );
-    assert!(
-        held.contains("refs/heads/release/v0.26.0")
-            && held.contains("--channel beta --version v0.26.0-beta.1"),
-        "the bootstrap binds one line to one published beta: {held}"
-    );
-    assert!(!held.contains("{@"), "{held}");
 }
