@@ -48,12 +48,12 @@ impl Seat<'_> {
         ) else {
             return false;
         };
-        let owned = touched
+        let mut held = touched
             .lines()
             .map(str::trim)
             .filter(|path| !path.is_empty())
-            .all(|path| path.starts_with(&seat));
-        owned && self.decodes(&format!("{commit}:{}", datum::leaf(version)), version)
+            .peekable();
+        held.peek().is_some() && held.all(|path| path.starts_with(&seat))
     }
 
     fn reachable(&self, head: &str) -> Result<(), String> {

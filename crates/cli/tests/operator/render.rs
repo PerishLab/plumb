@@ -31,7 +31,7 @@ fn bootstrapped() {
     );
     assert!(
         held.contains("refs/heads/release/v0.26.0")
-            && held.contains("--channel beta --version v0.26.0-beta.3"),
+            && held.contains("--channel beta --version v0.26.0-beta.4"),
         "the bootstrap binds one line to one published beta: {held}"
     );
     assert!(!held.contains("{@"), "{held}");

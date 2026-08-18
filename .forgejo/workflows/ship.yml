@@ -43,9 +43,9 @@ jobs:
         run: |
           set -eu
           if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
-            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.3"
+            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.4"
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
-              --channel beta --version v0.26.0-beta.3 \
+              --channel beta --version v0.26.0-beta.4 \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
           else
@@ -96,9 +96,9 @@ jobs:
         run: |
           set -eu
           if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
-            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.3"
+            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.4"
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
-              --channel beta --version v0.26.0-beta.3 \
+              --channel beta --version v0.26.0-beta.4 \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
           else
@@ -165,9 +165,9 @@ jobs:
         run: |
           set -eu
           if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
-            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.3"
+            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.4"
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
-              --channel beta --version v0.26.0-beta.3 \
+              --channel beta --version v0.26.0-beta.4 \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
           else
@@ -261,9 +261,9 @@ jobs:
         run: |
           set -eu
           if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
-            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.3"
+            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.4"
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
-              --channel beta --version v0.26.0-beta.3 \
+              --channel beta --version v0.26.0-beta.4 \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
           else
@@ -323,9 +323,9 @@ jobs:
         run: |
           set -eu
           if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
-            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.3"
+            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.4"
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
-              --channel beta --version v0.26.0-beta.3 \
+              --channel beta --version v0.26.0-beta.4 \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
           else
