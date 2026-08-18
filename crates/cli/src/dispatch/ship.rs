@@ -95,10 +95,6 @@ pub enum Binary {
     Managers,
     Matrix,
     Publish,
-    Recovery {
-        #[command(subcommand)]
-        deed: super::operator::Recovery,
-    },
     Smoke,
     Verify,
 }
@@ -267,7 +263,6 @@ fn binary(deed: Binary) -> Result<String, String> {
         ),
         Binary::Matrix => engine::package::product(&spec).matrix(),
         Binary::Publish => storage::publish(&capsule(release)?, &rig.publish),
-        Binary::Recovery { deed } => super::operator::recovery(deed, &spec),
         Binary::Smoke => smoke::run(
             &manifest,
             required("PLUMB_RELEASE_URL", &release.url)?,

@@ -69,3 +69,14 @@ run 报 success 而 job 列表为空，读起来是完成了；run 报 success �
 packport 读起来像收尾，于是被留到以后；而以后，下一条线就切在了 `main` 从未见过的提交
 上面。`prepare` 与 `freeze` 现在在「最后一个 stable 点不是 `origin/main` 持有的提交」时
 直接拒绝，并点名那次能了结它的 packport。证据是一个 tag 加一次 `merge-base`，不碰任何网络。
+
+## 这一版由它自己的 beta 生成
+
+一次发布由 canonical stable 的 Plumb 生成，而 canonical stable 正是**还带着 skip 的那一版**。
+不管它的话，v0.26.0 会被它自己要删的那个缺陷发出去：`crates/macro`、`packages/`、`charts/`、
+`apps/` 这一轮一个字节都没动，于是 macro crate、模块、chart、镜像都会被判为未变，在这个版本
+上一个都不发。
+
+所以 stable v0.26.0 由**已发布的精确 beta `v0.26.0-beta.1`**（站在同一个 commit 上）生成 ——
+一份有界的契约：它只点名一条分支和一个 beta，把这份出处记进封印，并在下一次发布里撤除。
+它取代的 v0.20.0 自举恢复、以及那套点名着本仓库早已不再渲染的 workflow 的派发命令，一并删除。

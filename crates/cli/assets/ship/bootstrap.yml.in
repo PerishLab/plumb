@@ -1,0 +1,13 @@
+      - name: Install the Plumb this release is bound to
+        run: |
+          set -eu
+          if [ "${{ github.ref }}" = "refs/heads/release/{@stable}" ]; then
+            seat="$RUNNER_TEMP/plumb-{@beta}"
+            curl -fsSL {@plumb}/manage.sh | sh -s -- install \
+              --channel beta --version {@beta} \
+              --install-root "$seat/versions" --bin-dir "$seat/bin"
+            printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
+          else
+            curl -fsSL {@plumb}/manage.sh | sh
+            printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+          fi

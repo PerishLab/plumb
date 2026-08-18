@@ -1,7 +1,7 @@
 mod artifact;
 mod capsule;
 pub(super) mod engine;
-pub(super) mod generator;
+pub(crate) mod generator;
 pub(super) mod manager;
 pub(crate) mod model;
 pub(super) mod object;

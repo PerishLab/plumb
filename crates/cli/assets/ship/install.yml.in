@@ -1,0 +1,5 @@
+      - name: Install stable Plumb
+        run: |
+          set -eu
+          curl -fsSL {@plumb}/manage.sh | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"

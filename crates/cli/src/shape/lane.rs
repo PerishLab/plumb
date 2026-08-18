@@ -10,6 +10,8 @@ const PROOFS: &str = include_str!("../../assets/guard/proofs.yml.in");
 const SHIP: &str = include_str!("../../assets/ship/lane.yml.in");
 const CARRIED: &str = include_str!("../../assets/ship/binary.yml.in");
 const PROJECTED: &str = include_str!("../../assets/ship/project.yml.in");
+const INSTALL: &str = include_str!("../../assets/ship/install.yml.in");
+const BOOTSTRAP: &str = include_str!("../../assets/ship/bootstrap.yml.in");
 const EXACT: &str = include_str!("../../assets/release/exact.yml.in");
 const STABLE: &str = include_str!("../../assets/release/stable.yml.in");
 const TOOLS: [&str; 2] = ["ectropy", "plumb"];
@@ -65,6 +67,7 @@ impl Seat<'_> {
             ("plumb", manager("plumb")),
             ("after", if carried { ", seal" } else { "" }.to_string()),
         ]);
+        vars.insert("install", install(spec, &vars)?);
         let binary = if carried {
             fill(CARRIED, &vars)?
         } else {
@@ -236,6 +239,18 @@ fn invocation(spec: &Spec, tool: &str) -> String {
     let binary = spec.binaries.first().map_or(tool, String::as_str);
     let deed = if tool == "plumb" { " doctor" } else { "" };
     format!("cargo run --quiet --locked --bin {binary} --{deed}")
+}
+
+fn install(spec: &Spec, vars: &BTreeMap<&str, String>) -> Result<String, String> {
+    use super::super::dispatch::release::generator;
+
+    if generator::contract(spec).is_err() {
+        return fill(INSTALL, vars);
+    }
+    let mut held = vars.clone();
+    held.insert("beta", generator::BETA_VERSION.to_string());
+    held.insert("stable", generator::STABLE_VERSION.to_string());
+    fill(BOOTSTRAP, &held)
 }
 
 fn manager(tool: &str) -> String {

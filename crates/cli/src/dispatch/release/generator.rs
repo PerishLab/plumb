@@ -6,10 +6,8 @@ pub const PRODUCT: &str = "plumb";
 pub const AUTHORITY: &str = "https://releases.plumb.perish.uk";
 pub const REPOSITORY: &str = "PerishLab/plumb";
 pub const BETA_CHANNEL: &str = "beta";
-pub const BETA_VERSION: &str = "v0.20.0-beta.1";
-pub const STABLE_VERSION: &str = "v0.20.0";
-pub const RELEASE_BRANCH: &str = "release/v0.20.0";
-pub const WORKFLOW: &str = "release-recovery.yml";
+pub const BETA_VERSION: &str = "v0.26.0-beta.1";
+pub const STABLE_VERSION: &str = "v0.26.0";
 
 pub struct Claim<'a> {
     pub spec: &'a Spec,
@@ -22,13 +20,12 @@ pub struct Claim<'a> {
 #[derive(Clone, Copy)]
 struct Running<'a> {
     version: &'a str,
-    commit: Option<&'a str>,
 }
 
 pub fn contract(spec: &Spec) -> Result<(), String> {
     if spec.product != PRODUCT || spec.authority != AUTHORITY {
         return Err(format!(
-            "self-hosting recovery belongs only to {REPOSITORY} at {AUTHORITY}"
+            "the one-time bootstrap belongs only to {REPOSITORY} at {AUTHORITY}"
         ));
     }
     Ok(())
@@ -39,19 +36,14 @@ pub fn resolve(input: Claim<'_>) -> Result<Generator, String> {
         input,
         Running {
             version: plumb::version!("PLUMB"),
-            commit: plumb::commit!("PLUMB"),
         },
     )
 }
 
 fn resolve_with(input: Claim<'_>, running: Running<'_>) -> Result<Generator, String> {
-    let origin = if recovery(&input) {
+    let origin = if bootstrap(&input, running) {
         contract(input.spec)?;
-        if input.channel == BETA_CHANNEL {
-            source(&input, running)?
-        } else {
-            exact(&input, running)?
-        }
+        exact(&input, running)?
     } else {
         GeneratorOrigin::Stable {}
     };
@@ -59,19 +51,15 @@ fn resolve_with(input: Claim<'_>, running: Running<'_>) -> Result<Generator, Str
         version: running.version.into(),
         template: super::manager::template(),
         origin: Some(origin),
-        recovery: recovery(&input).then(identity),
+        recovery: bootstrap(&input, running).then(identity),
     })
 }
 
-fn recovery(input: &Claim<'_>) -> bool {
-    let running = plumb::version!("PLUMB");
+fn bootstrap(input: &Claim<'_>, running: Running<'_>) -> bool {
     input.spec.product == PRODUCT
-        && ((input.channel == BETA_CHANNEL
-            && input.version == BETA_VERSION
-            && running == STABLE_VERSION)
-            || (input.channel == "stable"
-                && input.version == STABLE_VERSION
-                && running == BETA_VERSION))
+        && input.channel == "stable"
+        && input.version == STABLE_VERSION
+        && running.version == BETA_VERSION
 }
 
 fn identity() -> RecoveryIdentity {
@@ -87,27 +75,6 @@ fn exact_identity(generator: &Generator) -> bool {
     generator.recovery.as_ref() == Some(&identity())
 }
 
-fn source(input: &Claim<'_>, running: Running<'_>) -> Result<GeneratorOrigin, String> {
-    if input.promotion.is_some() {
-        return Err("the recovery beta cannot carry a promotion proof".into());
-    }
-    if running.version != STABLE_VERSION {
-        return Err(format!(
-            "the recovery beta requires source Plumb {STABLE_VERSION}, got {}",
-            running.version
-        ));
-    }
-    let commit = running
-        .commit
-        .ok_or_else(|| "the recovery beta generator has no compiled source commit".to_string())?;
-    super::proof::commit(commit)
-        .map_err(|_| "the recovery beta generator source commit is invalid".to_string())?;
-    Ok(GeneratorOrigin::SourceBuilt {
-        repository: REPOSITORY.into(),
-        commit: commit.into(),
-    })
-}
-
 fn exact(input: &Claim<'_>, running: Running<'_>) -> Result<GeneratorOrigin, String> {
     if running.version != BETA_VERSION {
         return Err(format!(
@@ -118,11 +85,15 @@ fn exact(input: &Claim<'_>, running: Running<'_>) -> Result<GeneratorOrigin, Str
     let path = input
         .promotion
         .ok_or_else(|| format!("stable {STABLE_VERSION} requires the exact public beta seal"))?;
-    let bytes = std::fs::read(path)
-        .map_err(|error| format!("cannot read recovery beta seal {}: {error}", path.display()))?;
+    let bytes = std::fs::read(path).map_err(|error| {
+        format!(
+            "cannot read bootstrap beta seal {}: {error}",
+            path.display()
+        )
+    })?;
     let seal: Seal = serde_json::from_slice(&bytes).map_err(|error| {
         format!(
-            "cannot parse recovery beta seal {}: {error}",
+            "cannot parse bootstrap beta seal {}: {error}",
             path.display()
         )
     })?;
@@ -142,16 +113,8 @@ fn beta(seal: &Seal, commit: &str) -> Result<(), String> {
         && seal.version == BETA_VERSION
         && seal.commit == commit
         && seal.url == format!("{AUTHORITY}/v1/releases/{BETA_CHANNEL}/{BETA_VERSION}/seal.json");
-    let source = exact_identity(&seal.generator)
-        && matches!(
-            &seal.generator.origin,
-            Some(GeneratorOrigin::SourceBuilt { repository, commit })
-                if repository == REPOSITORY
-                    && seal.generator.version == STABLE_VERSION
-                    && super::proof::commit(commit).is_ok()
-        );
-    if !identity || !source {
-        return Err("exact recovery beta seal identity or source provenance disagrees".into());
+    if !identity {
+        return Err("bootstrap beta seal identity disagrees".into());
     }
     Ok(())
 }
@@ -161,14 +124,13 @@ pub fn audit(seal: &Seal) -> Result<(), String> {
         return Ok(());
     }
     match (seal.channel.as_str(), seal.version.as_str()) {
-        (BETA_CHANNEL, BETA_VERSION) => beta(seal, &seal.commit),
         ("stable", STABLE_VERSION) => stable(seal),
         _ => {
             if matches!(
                 seal.generator.origin,
                 Some(GeneratorOrigin::SourceBuilt { .. } | GeneratorOrigin::ExactRelease { .. })
             ) {
-                Err("self-hosting generator provenance appears outside its exact recovery".into())
+                Err("bootstrap generator provenance appears outside its one release".into())
             } else {
                 Ok(())
             }
@@ -178,10 +140,10 @@ pub fn audit(seal: &Seal) -> Result<(), String> {
 
 fn stable(seal: &Seal) -> Result<(), String> {
     if !exact_identity(&seal.generator) {
-        return Err("stable recovery generator identity disagrees".into());
+        return Err("bootstrap generator identity disagrees".into());
     }
     let Some(proof) = &seal.proof else {
-        return Err("stable recovery seal has no beta proof".into());
+        return Err("bootstrap stable seal has no beta proof".into());
     };
     beta(&proof.seal, &seal.commit)?;
     match &seal.generator.origin {
@@ -198,6 +160,6 @@ fn stable(seal: &Seal) -> Result<(), String> {
         {
             Ok(())
         }
-        _ => Err("stable recovery generator and beta promotion proof disagree".into()),
+        _ => Err("bootstrap generator and beta promotion proof disagree".into()),
     }
 }

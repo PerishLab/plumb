@@ -18,12 +18,7 @@
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-      - name: Install stable Plumb
-        run: |
-          set -eu
-          curl -fsSL {@plumb}/manage.sh | sh
-          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
-
+{@install}
       - name: Build one declared target
         run: plumb ship binary build
 
@@ -65,12 +60,7 @@
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-      - name: Install stable Plumb
-        run: |
-          set -eu
-          curl -fsSL {@plumb}/manage.sh | sh
-          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
-
+{@install}
       - name: Require canonical guard evidence
         env:
           PLUMB_GUARD_API: ${{ github.api_url }}
@@ -121,11 +111,6 @@
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-      - name: Install stable Plumb
-        run: |
-          set -eu
-          curl -fsSL {@plumb}/manage.sh | sh
-          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
-
+{@install}
       - name: Smoke the generated manager
         run: plumb ship binary smoke

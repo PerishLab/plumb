@@ -38,11 +38,19 @@ jobs:
           persist-credentials: false
           ref: ${{ github.sha }}
 
-      - name: Install stable Plumb
+      - name: Install the Plumb this release is bound to
         run: |
           set -eu
-          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
-          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+          if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
+            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.1"
+            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
+              --channel beta --version v0.26.0-beta.1 \
+              --install-root "$seat/versions" --bin-dir "$seat/bin"
+            printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
+          else
+            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+            printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+          fi
 
       - name: Plan this release
         id: plan
@@ -79,11 +87,19 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-      - name: Install stable Plumb
+      - name: Install the Plumb this release is bound to
         run: |
           set -eu
-          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
-          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+          if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
+            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.1"
+            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
+              --channel beta --version v0.26.0-beta.1 \
+              --install-root "$seat/versions" --bin-dir "$seat/bin"
+            printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
+          else
+            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+            printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+          fi
 
       - name: Build one declared target
         run: plumb ship binary build
@@ -126,11 +142,19 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-      - name: Install stable Plumb
+      - name: Install the Plumb this release is bound to
         run: |
           set -eu
-          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
-          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+          if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
+            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.1"
+            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
+              --channel beta --version v0.26.0-beta.1 \
+              --install-root "$seat/versions" --bin-dir "$seat/bin"
+            printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
+          else
+            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+            printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+          fi
 
       - name: Require canonical guard evidence
         env:
@@ -182,11 +206,19 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-      - name: Install stable Plumb
+      - name: Install the Plumb this release is bound to
         run: |
           set -eu
-          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
-          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+          if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
+            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.1"
+            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
+              --channel beta --version v0.26.0-beta.1 \
+              --install-root "$seat/versions" --bin-dir "$seat/bin"
+            printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
+          else
+            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+            printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+          fi
 
       - name: Smoke the generated manager
         run: plumb ship binary smoke
@@ -214,11 +246,19 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-      - name: Install stable Plumb
+      - name: Install the Plumb this release is bound to
         run: |
           set -eu
-          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
-          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+          if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
+            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.1"
+            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
+              --channel beta --version v0.26.0-beta.1 \
+              --install-root "$seat/versions" --bin-dir "$seat/bin"
+            printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
+          else
+            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+            printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+          fi
 
       - name: Seat the package store outside the source
         run: echo "PNPM_CONFIG_STORE_DIR=$RUNNER_TEMP/pnpm-store" >> "$GITHUB_ENV"

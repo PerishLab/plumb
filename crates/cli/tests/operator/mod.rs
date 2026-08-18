@@ -21,8 +21,6 @@ mod precommit;
 #[cfg(unix)]
 mod promotion;
 #[cfg(unix)]
-mod recovery;
-#[cfg(unix)]
 mod registry;
 #[cfg(unix)]
 mod release;

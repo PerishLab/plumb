@@ -38,12 +38,7 @@ jobs:
           persist-credentials: false
           ref: ${{ github.sha }}
 
-      - name: Install stable Plumb
-        run: |
-          set -eu
-          curl -fsSL {@plumb}/manage.sh | sh
-          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
-
+{@install}
       - name: Plan this release
         id: plan
         run: |

@@ -22,7 +22,7 @@ paths = ["docs/CHANGELOG"]
 
 [[boundary]]
 allow = ["fanout"]
-note = "the bounded self-hosting recovery adds one production module and one integration test module to established release inventories"
+note = "the bounded self-hosting bootstrap adds one production module to the established release inventory"
 paths = [
     "crates/cli/src/dispatch/release",
     "crates/cli/tests/operator",
@@ -46,12 +46,10 @@ allow = [
     "combination",
     "word",
 ]
-note = "the fixed one-time Plumb recovery contract uses explicit provenance and identity terms plus exact refusal combinations"
+note = "the one-time Plumb bootstrap contract uses explicit provenance and identity terms plus exact refusal combinations"
 paths = [
-    "crates/cli/src/dispatch/operator/recovery.rs",
     "crates/cli/src/dispatch/release/generator.rs",
     "crates/cli/src/dispatch/release/record.rs",
-    "crates/cli/tests/operator/recovery.rs",
 ]
 
 [comment]
