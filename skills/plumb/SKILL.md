@@ -33,7 +33,7 @@ use Doctor before changing its shape.
   activation shifts generated managers. Their inspect deeds likewise prove
   release identity and the binary projection separately.
   `release` keeps the truth cycle and never projects.
-- A **stable line** is the explicit prepare, pick, freeze, publish, and packport
+- A **stable line** is the explicit prepare, pick, freeze, publish, and rejoin
   lifecycle for one permanent version. Freeze stamps its point and `retract`
   removes that point while nothing is published; a served seal refuses it.
 - A **datum** is the stable answers a release line judges against, recorded by
@@ -65,7 +65,7 @@ plumb lane [ROOT] [--write]
 plumb changelog [ROOT]
 plumb release --help
 plumb ship --help
-plumb stable prepare|pick|freeze|packport|retract --help
+plumb stable prepare|pick|freeze|rejoin|retract --help
 plumb retire [--root ROOT] [--execute --confirm-repo R --confirm-bucket B --confirm-domain D]
 plumb skill --help
 ```

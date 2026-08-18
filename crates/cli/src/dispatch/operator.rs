@@ -2,7 +2,7 @@ mod datum;
 mod line;
 mod mark;
 mod pick;
-mod ported;
+mod rejoined;
 mod trigger;
 mod value;
 
@@ -49,7 +49,7 @@ pub enum Stable {
         #[arg(long = "dry-run")]
         dry: bool,
     },
-    Packport {
+    Rejoin {
         #[arg(long)]
         version: String,
         #[arg(long, default_value = "")]

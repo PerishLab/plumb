@@ -25,7 +25,7 @@ pub fn run(deed: Stable) -> Result<String, String> {
             dry,
         } => pick(&version, &commit, dry),
         Stable::Freeze { version, repo, dry } => wall(&version, &repo, dry),
-        Stable::Packport { version, repo, dry } => packport(&version, &repo, dry),
+        Stable::Rejoin { version, repo, dry } => rejoin(&version, &repo, dry),
         Stable::Retract { version, dry } => retract(&version, dry),
     }
 }
@@ -38,14 +38,14 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     if dry {
         return Ok(format!(
             "{}\n{}\nPOST /repos/{}/{}/branches ({name} from {from})\n{}",
-            super::ported::plan(),
+            super::rejoined::plan(),
             plan(&remote, &name, "preparing"),
             remote.owner,
             remote.repo,
             super::datum::plan(&version)
         ));
     }
-    super::ported::Seat(&root).ported(&version)?;
+    super::rejoined::Seat(&root).rejoined(&version)?;
     let client = Client::new(remote)?;
     let standing = client.branch(&name)?.is_some();
     let head = if standing {
@@ -87,11 +87,11 @@ fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
     if dry {
         return Ok(format!(
             "{}\n{}",
-            super::ported::plan(),
+            super::rejoined::plan(),
             plan(&remote, &name, "frozen")
         ));
     }
-    super::ported::Seat(&root).ported(&version)?;
+    super::rejoined::Seat(&root).rejoined(&version)?;
     let client = Client::new(remote)?;
     freeze(&client, &root, &name)?;
     let spec = super::super::release::model::Spec::read(&root.join("plumb.toml"))?;
@@ -130,7 +130,7 @@ pub fn freeze(client: &Client, root: &Path, name: &str) -> Result<(), String> {
     client.protect(name, "frozen")
 }
 
-fn packport(version: &str, repo: &str, dry: bool) -> Result<String, String> {
+fn rejoin(version: &str, repo: &str, dry: bool) -> Result<String, String> {
     let version = value::version(version, "stable")?;
     let name = value::branch(&version);
     let root = git::root()?;
@@ -187,12 +187,12 @@ fn settle(root: &Path, remote: Remote, version: &str, name: &str) -> Result<Stri
         git::fetch(root)?;
         if !settled(root, &published)? {
             return Err(format!(
-                "packport merge did not settle {version} into origin/main"
+                "rejoin merge did not settle {version} into origin/main"
             ));
         }
     }
     Ok(format!(
-        "packported {version} at {} into main; retained frozen {name}",
+        "rejoined {version} at {} into main; retained frozen {name}",
         published.commit
     ))
 }
@@ -242,13 +242,13 @@ fn guard(client: &Client, pull: u64, commit: &str) -> Result<(), String> {
             std::thread::sleep(Duration::from_millis(harness.guard_pending_ms));
         } else {
             return Err(format!(
-                "packport guard {} on {commit}; PR #{pull} left open",
+                "rejoin guard {} on {commit}; PR #{pull} left open",
                 state.state
             ));
         }
     }
     Err(format!(
-        "packport guard still pending on {commit} after {}s; PR #{pull} left open",
+        "rejoin guard still pending on {commit} after {}s; PR #{pull} left open",
         harness.guard_timeout_ms / 1000
     ))
 }

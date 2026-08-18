@@ -23,7 +23,7 @@ plumb stable prepare
 plumb stable pick
 plumb stable freeze
 plumb ship binary dispatch
-plumb stable packport
+plumb stable rejoin
 ```
 
 Inspect each subcommand before use. `prepare` also records the line's datum,
@@ -32,12 +32,12 @@ the line was cut; a line carrying no datum is out of true. Stable publication
 requires the frozen line and release-local changelog. `freeze` also derives the promotion source
 and refuses unless exactly one published exact seal stands at the frozen
 commit, so recover a failed exact release by rerunning it rather than by
-tagging the next candidate. Packport settles ancestry after publication;
+tagging the next candidate. Rejoin settles ancestry after publication;
 it does not rewrite a successful release result, and `prepare` and `freeze`
 refuse while the last stable point still sits outside `origin/main`, so a late
-packport is caught before the next line exists. Never delete the frozen line.
+rejoin is caught before the next line exists. Never delete the frozen line.
 
-Packport merges, and a merge can conflict: a line that absorbed fixes while
+Rejoin merges, and a merge can conflict: a line that absorbed fixes while
 `main` absorbed the same fixes carries them under different commits, and Git
 reads both sides as having changed the same lines. Settle it by hand, and settle
 it one way only — take `main`'s tree entire and record the line as a second

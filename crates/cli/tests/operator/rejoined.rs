@@ -14,7 +14,7 @@ fn late() {
     let head = lined(root, &origin, bare.path(), "release/v1.3.0");
     std::fs::write(&cut, &head).expect("cut");
 
-    std::fs::write(root.join("stray"), "released, never ported\n").expect("stray");
+    std::fs::write(root.join("stray"), "released, never rejoined\n").expect("stray");
     run(Command::new("git").args(["add", "-A"]).current_dir(root));
     run(Command::new("git")
         .args([
@@ -36,7 +36,7 @@ fn late() {
     let said = String::from_utf8_lossy(&output.stderr).to_string();
     assert!(said.contains("stable v1.2.0 stands at"), "{said}");
     assert!(
-        said.contains("plumb stable packport --version v1.2.0"),
+        said.contains("plumb stable rejoin --version v1.2.0"),
         "{said}"
     );
 }

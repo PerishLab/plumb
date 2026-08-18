@@ -91,8 +91,8 @@ rule!(
     [RELEASE_TAG, REPOSITORY, STATE]
 );
 rule!(
-    STABLE_PACKPORT,
-    "release.stable-packport",
+    STABLE_REJOIN,
+    "release.stable-rejoin",
     "Stable settles back into main",
     "After stable activation a topology-preserving merge makes its published commit an ancestor of main before another stable activation; exact release and ordinary main movement remain independent.",
     "Stable pointer commit, main ancestry, release-line merge topology, and the next stable activation gate.",
@@ -127,6 +127,6 @@ pub fn all() -> Vec<&'static Rule> {
         &CANONICAL_AUTHORITY, &CANONICAL_BRANCH_PROTECTION, &CANONICAL_MANAGER_STABLE,
         &DEFAULT_SEAT_STABLE, &NONSTABLE_EXACT, &NONSTABLE_ISOLATED,
         &PROMOTION_PROOF_EXACT, &SKILL_CANDIDATE_STAGE, &SKILL_MANAGED_STABLE,
-        &STABLE_PACKPORT, &STABLE_SINGLE_WRITER, &STABLE_SOURCE_LINE,
+        &STABLE_REJOIN, &STABLE_SINGLE_WRITER, &STABLE_SOURCE_LINE,
     ]
 }

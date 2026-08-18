@@ -153,28 +153,23 @@ pub fn source(input: Source<'_>) -> Result<String, String> {
     ))
 }
 
-pub fn packport(
-    root: &Path,
-    version: &str,
-    commit: &str,
-    base_ref: &str,
-) -> Result<String, String> {
+pub fn rejoin(root: &Path, version: &str, commit: &str, base_ref: &str) -> Result<String, String> {
     manager::intent("stable", version)?;
     proof::commit(commit)?;
     let base = text(
-        "resolve packport base",
+        "resolve rejoin base",
         git(root, ["rev-parse", &format!("{base_ref}^{{commit}}")])?,
     )?;
     let output = git(root, ["merge-base", "--is-ancestor", commit, &base])?;
     match output.status.code() {
         Some(0) => Ok(format!(
-            "stable {version} at {commit} is packported into {base_ref} at {base}"
+            "stable {version} at {commit} is rejoined into {base_ref} at {base}"
         )),
         Some(1) => Err(format!(
             "stable {version} at {commit} is not an ancestor of {base_ref} at {base}"
         )),
         _ => Err(format!(
-            "cannot inspect packport topology: {}",
+            "cannot inspect rejoin topology: {}",
             String::from_utf8_lossy(&output.stderr).trim()
         )),
     }

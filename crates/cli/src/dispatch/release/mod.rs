@@ -23,7 +23,7 @@ pub enum Deed {
     Compile,
     Evidence,
     Inspect,
-    Packport,
+    Rejoin,
     Promote,
     Reference,
     Source,
@@ -59,7 +59,7 @@ fn execute(deed: Deed) -> Result<String, String> {
             release.activated,
         ),
         Deed::Surface => surface(&spec),
-        Deed::Packport => engine::topology::packport(
+        Deed::Rejoin => engine::topology::rejoin(
             &spec.root,
             required("PLUMB_RELEASE_VERSION", &release.version)?,
             required("PLUMB_RELEASE_COMMIT", &release.commit)?,
@@ -210,7 +210,7 @@ pub(super) fn promotion(
 }
 
 pub(super) fn settled(root: &Path, version: &str, commit: &str) -> Result<String, String> {
-    engine::topology::packport(root, version, commit, "origin/main")
+    engine::topology::rejoin(root, version, commit, "origin/main")
 }
 
 impl storage::Authority for Authority {

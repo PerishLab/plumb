@@ -104,11 +104,11 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   shape Plumb answers to; refusing one it defines refuses its own product.
 - Plumb owns Cargo discovery and stamping, target builds, archives, skill and
   Debian assembly, manager generation, capsules, storage, verification,
-  activation, smoke, source binding, and packport topology checks. Those
+  activation, smoke, source binding, and rejoin topology checks. Those
   mechanisms do not live in product scripts.
 - `release` holds the truth cycle and `ship` holds every projection of it. A
   verb belongs to whichever object it acts on: `release` keeps `source`,
-  `compile`, `packport`, `authority`, `activate`, and `inspect`, while
+  `compile`, `rejoin`, `authority`, `activate`, and `inspect`, while
   `ship binary` takes `activate`, `assemble`, `build`, `dispatch`, `inspect`,
   `managers`, `matrix`, `publish`, `recovery`, `smoke`, and `verify`, `ship
   cargo` takes `publish` and `rehearse`, `ship oci` takes `build` and `publish`,
@@ -195,7 +195,7 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   The candidate is derived, never named: exactly one published exact seal must
   stand at the frozen commit, and `plumb stable freeze` refuses zero or many.
   Stable binaries are rebuilt with stable identity from that commit.
-- Exact publication binds exactly `refs/tags/<exact-version>`; the called shared workflow freezes its direct event ref and commit once and every job checks out that commit. Product callers expose and forward no second source. `plumb ship binary dispatch` is the generic Forgejo entrypoint and takes only `--version`: it derives the channel, derives the ref that carries it, and sends no identity input at all. Stable alone must originate from `refs/heads/release/vX.Y.Z`. A stable release line is managed by `plumb stable prepare|pick|freeze|packport`, prepared by linear `cherry-pick -x`, frozen before publication, and remains independent from an unblocked `main`. Packport is the last step of a release, not optional tidying: `prepare` and `freeze` refuse while the last stable point is a commit `origin/main` does not hold, because a line opened over an unported one collides on the way back.
+- Exact publication binds exactly `refs/tags/<exact-version>`; the called shared workflow freezes its direct event ref and commit once and every job checks out that commit. Product callers expose and forward no second source. `plumb ship binary dispatch` is the generic Forgejo entrypoint and takes only `--version`: it derives the channel, derives the ref that carries it, and sends no identity input at all. Stable alone must originate from `refs/heads/release/vX.Y.Z`. A stable release line is managed by `plumb stable prepare|pick|freeze|rejoin`, prepared by linear `cherry-pick -x`, frozen before publication, and remains independent from an unblocked `main`. Rejoin is the last step of a release, not optional tidying: `prepare` and `freeze` refuse while the last stable point is a commit `origin/main` does not hold, because a line opened over an unported one collides on the way back.
 - A release run pins its verdict as it pins its generator: `plumb stable prepare` records the datum the line judges against under `.plumb`, the mechanism's own seat that source projection excludes as it excludes `docs/CHANGELOG`, written as TOML because a formatter reads a repository's JSON and machine-owned state is not a repository's to format, and on that line `plumb doctor` reads the recorded stable answers instead of asking a live registry. A line carrying no datum is out of true. The line is the one a run declares in `PLUMB_RELEASE_VERSION`, or failing that the checked-out branch, so CI needs no declaration and none leaks into everything else a job runs. The recording commit owns its seat and sweeps whatever an earlier Plumb left there, so a line migrated forward carries one datum and not two, and `freeze` accepts that commit without cherry-pick provenance because it proves itself: it touches only the seat, and what it leaves there decodes for the line it names. `main` still tracks live latest, because drift detection is its job and reproducibility is the line's.
 - A watch ends only when the whole run graph has. A run that reports success while a job is still in flight, has laid out no job at all, or carries a job that failed has not succeeded, and `plumb ship binary dispatch --watch` says so rather than handing back the dispatch's own good news. A forge refusal always names the operation Plumb was performing when it arrived, and a stale head names the commit the pull actually stands at.
 - The ref carries the release, so neither caller takes a version. Both stay
@@ -236,7 +236,7 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   republishing what stood still or demanding an unpublished dependency exist.
 - Release identity lives in exact seals and the stable pointer; new releases do
   not create Git tags. Historical tags are retained as history, not consensus.
-- After stable succeeds, a local operator packports the release line into
+- After stable succeeds, a local operator rejoins the release line into
   `main` with a topology-preserving merge. The stable commit must become an
   ancestor of `main` before another stable line can activate. This settlement
   is independent from the Actions lane; exact publication and ordinary `main`

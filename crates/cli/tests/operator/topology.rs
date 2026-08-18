@@ -114,7 +114,7 @@ fn topology() {
 
     git(root, &["checkout", "main"]);
     let unsettled = plumb(root)
-        .args(["release", "packport"])
+        .args(["release", "rejoin"])
         .env("PLUMB_RELEASE_VERSION", "v1.2.0")
         .env("PLUMB_RELEASE_COMMIT", &stable)
         .env("PLUMB_RELEASE_BASE", "main")
@@ -125,16 +125,10 @@ fn topology() {
 
     git(
         root,
-        &[
-            "merge",
-            "--no-ff",
-            "release/v1.2.0",
-            "-m",
-            "Packport v1.2.0",
-        ],
+        &["merge", "--no-ff", "release/v1.2.0", "-m", "Rejoin v1.2.0"],
     );
     run(plumb(root)
-        .args(["release", "packport"])
+        .args(["release", "rejoin"])
         .env("PLUMB_RELEASE_VERSION", "v1.2.0")
         .env("PLUMB_RELEASE_COMMIT", &stable)
         .env("PLUMB_RELEASE_BASE", "main"));

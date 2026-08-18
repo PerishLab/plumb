@@ -11,7 +11,7 @@ pub enum Court {
     Nested(bool),
     Paged,
     Prepare(bool, PathBuf),
-    Packport(PathBuf),
+    Rejoin(PathBuf),
 }
 
 pub fn serve(court: Court, count: usize) -> (String, Arc<Mutex<Vec<String>>>) {
@@ -113,10 +113,10 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
                 ]
             }),
         ),
-        Court::Prepare(..) | Court::Packport(_) if request.contains("GET /api/v1/user ") => {
+        Court::Prepare(..) | Court::Rejoin(_) if request.contains("GET /api/v1/user ") => {
             ("200 OK", json!({"login": "operator"}))
         }
-        Court::Prepare(..) | Court::Packport(_)
+        Court::Prepare(..) | Court::Rejoin(_)
             if request.contains("GET ") && request.contains("branch_protections") =>
         {
             (
@@ -134,18 +134,16 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
             }
             ("201 Created", value)
         }
-        Court::Packport(_)
-            if request.contains("POST ") && request.contains("branch_protections") =>
-        {
+        Court::Rejoin(_) if request.contains("POST ") && request.contains("branch_protections") => {
             let mut value = body;
             value["branch_name"] = json!("release/v1.2.0");
             ("201 Created", value)
         }
-        Court::Packport(_) if request.contains("GET ") && request.contains("/branches/") => (
+        Court::Rejoin(_) if request.contains("GET ") && request.contains("/branches/") => (
             "200 OK",
             json!({"commit":{"id":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}),
         ),
-        Court::Packport(_) if request.contains("GET ") && request.contains("/pulls?") => (
+        Court::Rejoin(_) if request.contains("GET ") && request.contains("/pulls?") => (
             "200 OK",
             json!([{
                 "number": 9,
@@ -154,16 +152,16 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
                 "base": {"ref": "main"}
             }]),
         ),
-        Court::Packport(_) if request.contains("POST ") && request.ends_with("/pulls HTTP/1.1") => {
+        Court::Rejoin(_) if request.contains("POST ") && request.ends_with("/pulls HTTP/1.1") => {
             ("201 Created", json!({"number": 12}))
         }
-        Court::Packport(settled)
+        Court::Rejoin(settled)
             if request.contains("POST ") && request.contains("/pulls/12/merge ") =>
         {
             std::fs::write(settled, "settled").expect("settled marker");
             ("204 No Content", Value::Null)
         }
-        Court::Packport(_) if request.contains("GET ") && request.contains("/commits/") => (
+        Court::Rejoin(_) if request.contains("GET ") && request.contains("/commits/") => (
             "200 OK",
             json!({"state":"success","statuses":[{
                 "context":"guard / guard (pull_request)",

@@ -9,7 +9,7 @@ pub fn plan() -> String {
 }
 
 impl Seat<'_> {
-    pub fn ported(&self, version: &str) -> Result<(), String> {
+    pub fn rejoined(&self, version: &str) -> Result<(), String> {
         let base = self.reference("origin/main")?;
         let Some((name, point)) = self.last(version)? else {
             return Ok(());
@@ -19,7 +19,7 @@ impl Seat<'_> {
         }
         Err(format!(
             "stable {name} stands at {point}, which origin/main does not hold; \
-             run plumb stable packport --version {name} before opening the next line"
+             run plumb stable rejoin --version {name} before opening the next line"
         ))
     }
 

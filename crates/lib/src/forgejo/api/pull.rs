@@ -22,7 +22,7 @@ impl Client {
     }
 
     pub fn pull(&self, head: &str, version: &str, body: &str) -> Result<Pull, String> {
-        self.raise("main", head, &format!("Packport {version}"), body)
+        self.raise("main", head, &format!("Rejoin {version}"), body)
     }
 
     pub fn raise(&self, base: &str, head: &str, title: &str, body: &str) -> Result<Pull, String> {

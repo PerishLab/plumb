@@ -37,7 +37,7 @@ fn clean() {
             .as_str()
             .is_some_and(|digest| digest.len() == 64)
     );
-    assert_eq!(report["vocabulary"]["retired"], 1);
+    assert_eq!(report["vocabulary"]["retired"], 2);
     assert_eq!(report["vocabulary"]["coverage"]["tracked"], 0);
     assert_eq!(report["vocabulary"]["hits"], serde_json::json!([]));
 }
