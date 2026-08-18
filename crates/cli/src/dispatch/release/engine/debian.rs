@@ -36,7 +36,7 @@ pub fn build(
     }
     std::fs::write(
         control.join("control"),
-        template.replace("__VERSION__", version.trim_start_matches('v')),
+        template.replace("__VERSION__", &ordered(version)),
     )
     .map_err(|error| format!("cannot write Debian control: {error}"))?;
     for name in ["preinst", "postinst", "prerm", "postrm"] {
@@ -82,6 +82,14 @@ pub fn verify(spec: &Spec, path: &Path) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+fn ordered(version: &str) -> String {
+    let bare = version.trim_start_matches('v');
+    match bare.split_once('-') {
+        Some((release, prerelease)) => format!("{release}~{prerelease}"),
+        None => bare.to_string(),
+    }
 }
 
 fn copy(source: &Path, target: &Path) -> Result<(), String> {
