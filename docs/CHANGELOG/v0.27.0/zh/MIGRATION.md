@@ -45,6 +45,15 @@ job 之后。在二进制发布尚未发出去时手工跑其中一个，现在�
 早先 Plumb 记下的 baseline 里没有它，所以这一版之后的第一次发布会把每个对象**重新计时一次**。
 除此之外不产生任何后果。
 
+## `plumb stable retract` 现在是 `plumb release retract`
+
+点属于发布那一段，所以撤点的动词跟着搬过去。它现在**同时接受 exact 版本与 stable 版本**。
+
+## stable 发布改为先声明、后运行
+
+`plumb stable freeze` 不再打 stable 点。用 `plumb release stamp --version <stable>` 打；
+在它立到线头之前，stable 派发会拒绝。exact 发布用同一个动词，取代 `git tag`。
+
 ## 附件宽度
 
 逐介质的表被一个 `ceiling = 10` 取代，表里只留偏离它的。**原本被允许的，没有一样变成拒绝。**

@@ -42,14 +42,6 @@ pub enum Stable {
         #[arg(long = "dry-run")]
         dry: bool,
     },
-    Stamp {
-        #[arg(long)]
-        version: String,
-        #[arg(long, default_value = "")]
-        repo: String,
-        #[arg(long = "dry-run")]
-        dry: bool,
-    },
     Freeze {
         #[arg(long)]
         version: String,
@@ -63,12 +55,6 @@ pub enum Stable {
         version: String,
         #[arg(long, default_value = "")]
         repo: String,
-        #[arg(long = "dry-run")]
-        dry: bool,
-    },
-    Retract {
-        #[arg(long)]
-        version: String,
         #[arg(long = "dry-run")]
         dry: bool,
     },
@@ -89,4 +75,12 @@ pub fn run(deed: Stable) -> i32 {
             1
         }
     }
+}
+
+pub(super) fn stamp(version: &str, dry: bool) -> Result<String, String> {
+    mark::stamp(version, dry)
+}
+
+pub(super) fn retract(version: &str, dry: bool) -> Result<String, String> {
+    mark::retract(version, dry)
 }

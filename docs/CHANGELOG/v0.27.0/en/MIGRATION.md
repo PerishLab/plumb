@@ -55,6 +55,17 @@ where it used to proceed on the strength of a local capsule file.
 Baselines recorded by an earlier Plumb do not carry it, so the first release
 after this one re-times every object once. Nothing else follows from it.
 
+## `plumb stable retract` is now `plumb release retract`
+
+A point belongs to the release segment, so the verb that removes one moved with
+it. It now accepts an exact version as well as a stable one.
+
+## A stable release is declared before it runs
+
+`plumb stable freeze` no longer stamps the stable point. Stamp it with `plumb
+release stamp --version <stable>`; dispatching stable refuses until it stands at
+the line head. An exact release takes the same verb instead of `git tag`.
+
 ## Attachment widths
 
 The per-attachment table is replaced by one `ceiling` of ten, with the table

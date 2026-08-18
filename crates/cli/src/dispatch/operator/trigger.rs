@@ -28,6 +28,7 @@ pub fn run(options: Dispatch) -> Result<String, String> {
     let client = Client::new(remote)?;
     if channel == "stable" {
         line::freeze(&mut course, &client, &root, &reference)?;
+        super::mark::stood(&root, &version, &reference)?;
     }
     let said = format!(
         "POST /repos/{}/{}/actions/workflows/{workflow}/dispatches (ref={reference}, inputs={inputs})",

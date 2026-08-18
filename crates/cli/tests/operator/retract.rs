@@ -5,16 +5,25 @@ fn retraction() {
     let root = fixture.path();
     repo(root, "https://forge.test/PerishLab/probe.git");
 
-    let exact = command(root, &["stable", "retract", "--version", "v0.10.2-beta.1"]);
+    let exact = command(
+        root,
+        &[
+            "release",
+            "retract",
+            "--version",
+            "v0.10.2-beta.1",
+            "--dry-run",
+        ],
+    );
     let refused = String::from_utf8_lossy(&exact.stderr).to_string();
     assert!(
-        refused.contains("does not belong to channel stable"),
-        "{refused}"
+        refused.contains("https://releases.test/v1/releases/beta/v0.10.2-beta.1/seal.json"),
+        "an exact point is retractable, and reads its own channel: {refused}"
     );
 
     let plan = command(
         root,
-        &["stable", "retract", "--version", "0.10.2", "--dry-run"],
+        &["release", "retract", "--version", "0.10.2", "--dry-run"],
     );
     let printed = String::from_utf8_lossy(&plan.stdout).to_string();
     let refusal = String::from_utf8_lossy(&plan.stderr).to_string();
