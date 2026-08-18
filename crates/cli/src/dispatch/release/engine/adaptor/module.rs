@@ -1,5 +1,7 @@
 use super::super::super::model::Spec;
+use base64::Engine;
 use semver::Version;
+use sha2::{Digest, Sha512};
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -55,25 +57,26 @@ impl Module<'_> {
             std::fs::copy(&archive, seat.path().join(&name))
                 .map_err(|error| format!("cannot stage {}: {error}", archive.display()))?;
             let spec = format!("{package}@{identity}");
-            if self.carried(npm, &spec, token, seat.path())? != Some(identity.to_string()) {
-                let mut publish = vec![
-                    "publish",
-                    name.as_str(),
-                    "--registry",
-                    npm.registry.as_str(),
-                ];
-                let channel = channel(&identity);
-                if let Some(channel) = &channel {
-                    publish.extend(["--tag", channel]);
-                }
-                self.authenticated(&publish, npm, token, seat.path())?;
+            let held = integrity(&archive)?;
+            if let Some(carried) = self.carried(npm, &spec, token, seat.path())? {
+                drift(&spec, &carried, &held)?;
+                continue;
             }
-            self.authenticated(
-                &["view", &spec, "dist.shasum", "--registry", &npm.registry],
-                npm,
-                token,
-                seat.path(),
-            )?;
+            let mut publish = vec![
+                "publish",
+                name.as_str(),
+                "--registry",
+                npm.registry.as_str(),
+            ];
+            let channel = channel(&identity);
+            if let Some(channel) = &channel {
+                publish.extend(["--tag", channel]);
+            }
+            self.authenticated(&publish, npm, token, seat.path())?;
+            let carried = self
+                .carried(npm, &spec, token, seat.path())?
+                .ok_or_else(|| format!("{spec} reports no integrity after publishing it"))?;
+            drift(&spec, &carried, &held)?;
         }
         Ok(format!("published module attachment for {version}"))
     }
@@ -113,7 +116,7 @@ impl Module<'_> {
             .map(|(_, rest)| rest)
             .unwrap_or(&npm.registry);
         let output = Command::new("pnpm")
-            .args(["view", spec, "version", "--registry", &npm.registry])
+            .args(["view", spec, "dist.integrity", "--registry", &npm.registry])
             .current_dir(cwd)
             .env(format!("npm_config_//{seat}:_authToken"), token)
             .output()
@@ -121,9 +124,8 @@ impl Module<'_> {
         if !output.status.success() {
             return Ok(None);
         }
-        Ok(Some(
-            String::from_utf8_lossy(&output.stdout).trim().to_string(),
-        ))
+        let held = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        Ok(Some(held).filter(|held| !held.is_empty()))
     }
 
     fn authenticated(
@@ -186,4 +188,20 @@ fn bare(package: &str) -> &str {
 fn release(version: &str) -> Result<Version, String> {
     Version::parse(version.trim_start_matches('v'))
         .map_err(|error| format!("release version is not semantic: {error}"))
+}
+
+fn integrity(archive: &std::path::Path) -> Result<String, String> {
+    let bytes = std::fs::read(archive)
+        .map_err(|error| format!("cannot read {}: {error}", archive.display()))?;
+    let held = base64::engine::general_purpose::STANDARD.encode(Sha512::digest(&bytes));
+    Ok(format!("sha512-{held}"))
+}
+
+fn drift(spec: &str, carried: &str, held: &str) -> Result<(), String> {
+    if carried == held {
+        return Ok(());
+    }
+    Err(format!(
+        "published module drift: {spec} holds {carried} while this projection carries {held}"
+    ))
 }

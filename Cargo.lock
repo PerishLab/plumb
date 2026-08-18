@@ -499,6 +499,7 @@ dependencies = [
 name = "plumb-cli"
 version = "0.26.0"
 dependencies = [
+ "base64",
  "clap",
  "flate2",
  "locus",

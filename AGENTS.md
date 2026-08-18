@@ -222,8 +222,14 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   and any other answer refuses because a destructive act never runs on a
   reading it cannot trust. It acts on the declaration alone and leaves the line
   standing, so what it removes is a name, never evidence.
-- Exact seal creation is create-only and idempotent by content. Publish and
-  stable activation use separate credentials and separate Plumb commands.
+- Exact seal creation is create-only and idempotent by content, and every
+  attachment projects on the same terms: a projection that finds its object
+  already published compares the published digest against the bytes it just
+  built, and refuses on drift rather than reporting success because a name
+  exists. A registry that answers with an identity and not a digest is the weak
+  case, and the adaptor says which it got instead of letting the caller assume
+  the strong one. Publish and stable activation use separate credentials and
+  separate Plumb commands.
 - `plumb release inspect` takes its exact or stable public URL from the release
   environment and proves release identity. `plumb ship binary inspect` reads
   the same surface and proves the binary projection.

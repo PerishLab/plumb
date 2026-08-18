@@ -98,6 +98,10 @@ unfamiliar or stateful action.
 - A ship object is one attachment: `cargo`, `npm`, `chart`, `cfworker`. Every
   package an attachment declares carries one digest, one version, and ships
   together. `[release.depends]` keys and a seal's inputs use those names.
+- Re-running a publish is safe and is also a check: where the registry answers
+  with a digest, the adaptor compares it against the bytes it just built and
+  refuses with `published <medium> drift` rather than reporting a success it
+  did not verify.
 - How wide an attachment may be is Plumb's law, held in its rules directory
   beside the forge image. Declaring above the width Plumb has released is
   noted, never refused; declaring above the width Plumb permits is refused.
