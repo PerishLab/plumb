@@ -1,12 +1,13 @@
 # The release dimension's managed numbers. A cap here is Plumb's law: widening
 # one is a change to Plumb, never a declaration a product can make for itself.
-# `permitted` is what an attachment may declare, `exercised` is the width this
-# skeleton has actually released. The gap between them is the evidence that a
-# path has never been run.
+# `ceiling` is the width every attachment shares, and `permitted` carries only
+# the attachments that depart from it. `exercised` is the width this skeleton
+# has actually released. The gap between them is the evidence that a path has
+# never been run.
+
+ceiling = 10
 
 [permitted]
-cargo = 2
-npm = 1
 
 [exercised]
 cargo = 2

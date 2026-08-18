@@ -139,7 +139,8 @@ fn attached() {
 fn width() {
     let dir = seat("plumb-release-width");
     let path = dir.to_str().expect("path should be utf8");
-    for package in ["one", "two"] {
+    let names: Vec<String> = (1..=11).map(|index| format!("p{index}")).collect();
+    for package in &names {
         std::fs::create_dir_all(dir.join("packages").join(package)).expect("module seat");
     }
     let declare = |packages: &str| {
@@ -152,14 +153,26 @@ fn width() {
         .expect("manifest should be written");
     };
 
-    declare("[\"@probe/one\"]");
+    let list = |count: usize| {
+        let held: Vec<String> = names[..count]
+            .iter()
+            .map(|name| format!("\"@probe/{name}\""))
+            .collect();
+        format!("[{}]", held.join(", "))
+    };
+
+    declare(&list(1));
     let held = crate::run(&["doctor", path]);
     assert!(!held.contains("attachment declares"), "{held}");
 
-    declare("[\"@probe/one\", \"@probe/two\"]");
+    declare(&list(10));
+    let edge = crate::run(&["doctor", path]);
+    assert!(!edge.contains("and Plumb permits"), "{edge}");
+
+    declare(&list(11));
     let wide = crate::run(&["doctor", path]);
     assert!(
-        wide.contains("the npm attachment declares 2 packages and Plumb permits 1"),
+        wide.contains("the npm attachment declares 11 packages and Plumb permits 10"),
         "{wide}"
     );
 }

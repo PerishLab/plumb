@@ -11,6 +11,7 @@ pub struct Rules {
 }
 
 pub struct Release {
+    pub ceiling: usize,
     pub permitted: BTreeMap<String, usize>,
     pub exercised: BTreeMap<String, usize>,
     pub forge: String,
@@ -93,12 +94,20 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
             },
         },
         release: Release {
+            ceiling: ceiling(&release),
             permitted: counted(&release, "permitted"),
             exercised: counted(&release, "exercised"),
             forge,
         },
     }
 });
+
+fn ceiling(doc: &toml::Table) -> usize {
+    doc.get("ceiling")
+        .and_then(toml::Value::as_integer)
+        .and_then(|held| usize::try_from(held).ok())
+        .unwrap_or_else(|| panic!("rules/release.toml must name ceiling"))
+}
 
 fn counted(doc: &toml::Table, key: &str) -> BTreeMap<String, usize> {
     doc.get(key)

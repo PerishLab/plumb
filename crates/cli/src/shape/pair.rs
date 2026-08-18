@@ -67,7 +67,11 @@ fn widths(spec: &Spec) -> std::collections::BTreeMap<String, usize> {
 fn measured(release: &Release, found: &mut Found) {
     let rules = &crate::rules::RULES.release;
     for (attachment, held) in &release.widths {
-        let permitted = rules.permitted.get(attachment).copied().unwrap_or(1);
+        let permitted = rules
+            .permitted
+            .get(attachment)
+            .copied()
+            .unwrap_or(rules.ceiling);
         if *held > permitted {
             found.push(Seed::wrong(
                 &release_rule::ATTACHMENT_PERMITTED,
