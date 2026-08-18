@@ -96,11 +96,12 @@ impl Landing {
             title.to_string()
         };
         let body = if body.is_empty() {
-            self.repo.text(
+            let held = self.repo.text(
                 &["log", "--reverse", "--format=%B", &range],
                 "git",
                 "cannot read commit bodies",
-            )?
+            )?;
+            below(&held, &title)
         } else {
             body.to_string()
         };
@@ -238,4 +239,10 @@ impl Landing {
         )?;
         Ok(Some(seat))
     }
+}
+
+fn below(body: &str, title: &str) -> String {
+    body.strip_prefix(title)
+        .map(|rest| rest.trim_start_matches('\n').to_string())
+        .unwrap_or_else(|| body.to_string())
 }
