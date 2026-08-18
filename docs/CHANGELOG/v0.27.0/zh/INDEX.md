@@ -83,6 +83,16 @@ stable 以来哪些介质动过」的封印，对镜像**只字未提** —— �
 镜像现在是一个对象：它的 `Containerfile`，加上 `[release.depends]` 添的边；而当镜像包着本次
 发布的归档时，版本也折进去，因为这样的镜像**随发布而动**，无论它的源码有多静止。
 
+## exact 发布从一个机制打出来的点起步
+
+Plumb 打 stable 的点，却把 exact 的点留给了手 —— 开一个 beta 的既定做法是
+`git tag` 加 `git push`。**把这件事做对的机器早就有了** —— 带注释、幂等、拒绝移动一个已经
+立住的点 —— 但它只能经由 `freeze` 到达，而那是 stable 那条路。
+
+`plumb stable stamp --version <exact>` 到得了它。它推导出这个版本属于哪条线、读那条线的
+线头、在那里打点。它拒绝 stable 版本（那属于 `freeze`），而 `freeze` 拒绝 exact 版本。
+**那句裸 `git tag` 从发布流程里消失了。**
+
 ## 更小的几件真事
 
 Debian 包把 semver 字符串**原样**写进 dpkg 的 `Version` 字段。dpkg 把 `-` 读作 upstream 与

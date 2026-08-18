@@ -23,6 +23,7 @@ pub fn run(deed: Stable) -> Result<String, String> {
             commit,
             dry,
         } => pick(&version, &commit, dry),
+        Stable::Stamp { version, repo, dry } => stamp(&version, &repo, dry),
         Stable::Freeze { version, repo, dry } => wall(&version, &repo, dry),
         Stable::Rejoin { version, repo, dry } => rejoin(&version, &repo, dry),
         Stable::Retract { version, dry } => retract(&version, dry),
@@ -63,6 +64,32 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     } else {
         Ok(format!("prepared {name} from {from} at {head}; {recorded}"))
     }
+}
+
+fn stamp(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
+    let channel = super::super::release::channel(raw)?;
+    if channel == "stable" {
+        return Err(format!(
+            "{raw} belongs to channel stable, whose point is stamped by freeze"
+        ));
+    }
+    let version = value::version(raw, &channel)?;
+    let line = value::version(version.split('-').next().unwrap_or_default(), "stable")?;
+    let name = value::branch(&line);
+    let root = git::root()?;
+    let remote = git::remote(&root, repo)?;
+    let mut course = Course::new(dry);
+    let client = Client::new(remote)?;
+    let head = head(&client, &name)?;
+    let spec = super::super::release::model::Spec::read(&root.join("plumb.toml"))?;
+    let said = course.step(
+        format!("git tag -a {version} at {head} on {name}, then push"),
+        || super::mark::point(&root).stamp(&spec.product, &version, &name),
+    )?;
+    if course.dry() {
+        return Ok(course.plan());
+    }
+    said.ok_or_else(|| "the stamp left no report".to_string())
 }
 
 fn pick(version: &str, commit: &str, dry: bool) -> Result<String, String> {

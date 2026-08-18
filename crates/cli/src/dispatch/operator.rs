@@ -42,6 +42,14 @@ pub enum Stable {
         #[arg(long = "dry-run")]
         dry: bool,
     },
+    Stamp {
+        #[arg(long)]
+        version: String,
+        #[arg(long, default_value = "")]
+        repo: String,
+        #[arg(long = "dry-run")]
+        dry: bool,
+    },
     Freeze {
         #[arg(long)]
         version: String,
