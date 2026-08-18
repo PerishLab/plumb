@@ -38,20 +38,12 @@ jobs:
           persist-credentials: false
           ref: ${{ github.sha }}
 
-      - name: Install the Plumb this release is bound to
+      - name: Install stable Plumb
         shell: bash
         run: |
           set -eu
-          if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
-            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.5"
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
-              --channel beta --version v0.26.0-beta.5 \
-              --install-root "$seat/versions" --bin-dir "$seat/bin"
-            printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
-          else
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
-            printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
-          fi
+          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Plan this release
         id: plan
@@ -90,21 +82,13 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-      - name: Install the Plumb this release is bound to
+      - name: Install stable Plumb
         shell: bash
         if: runner.os != 'Windows'
         run: |
           set -eu
-          if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
-            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.5"
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
-              --channel beta --version v0.26.0-beta.5 \
-              --install-root "$seat/versions" --bin-dir "$seat/bin"
-            printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
-          else
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
-            printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
-          fi
+          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Install stable Plumb on Windows
         if: runner.os == 'Windows'
@@ -160,20 +144,12 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-      - name: Install the Plumb this release is bound to
+      - name: Install stable Plumb
         shell: bash
         run: |
           set -eu
-          if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
-            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.5"
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
-              --channel beta --version v0.26.0-beta.5 \
-              --install-root "$seat/versions" --bin-dir "$seat/bin"
-            printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
-          else
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
-            printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
-          fi
+          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Require canonical guard evidence
         env:
@@ -257,21 +233,13 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-      - name: Install the Plumb this release is bound to
+      - name: Install stable Plumb
         shell: bash
         if: runner.os != 'Windows'
         run: |
           set -eu
-          if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
-            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.5"
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
-              --channel beta --version v0.26.0-beta.5 \
-              --install-root "$seat/versions" --bin-dir "$seat/bin"
-            printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
-          else
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
-            printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
-          fi
+          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Install stable Plumb on Windows
         if: runner.os == 'Windows'
@@ -320,20 +288,12 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-      - name: Install the Plumb this release is bound to
+      - name: Install stable Plumb
         shell: bash
         run: |
           set -eu
-          if [ "${{ github.ref }}" = "refs/heads/release/v0.26.0" ]; then
-            seat="$RUNNER_TEMP/plumb-v0.26.0-beta.5"
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
-              --channel beta --version v0.26.0-beta.5 \
-              --install-root "$seat/versions" --bin-dir "$seat/bin"
-            printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
-          else
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
-            printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
-          fi
+          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - uses: actions/download-artifact@v3
         with:

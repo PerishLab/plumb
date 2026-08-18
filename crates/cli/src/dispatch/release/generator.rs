@@ -1,6 +1,4 @@
-use super::model::Spec;
-use super::record::{Generator, GeneratorOrigin, RecoveryIdentity, Seal, sha};
-use std::path::Path;
+use super::record::{Generator, GeneratorOrigin, RecoveryIdentity, Seal};
 
 pub const PRODUCT: &str = "plumb";
 pub const AUTHORITY: &str = "https://releases.plumb.perish.uk";
@@ -9,57 +7,13 @@ pub const BETA_CHANNEL: &str = "beta";
 pub const BETA_VERSION: &str = "v0.26.0-beta.5";
 pub const STABLE_VERSION: &str = "v0.26.0";
 
-pub struct Claim<'a> {
-    pub spec: &'a Spec,
-    pub channel: &'a str,
-    pub version: &'a str,
-    pub commit: &'a str,
-    pub promotion: Option<&'a Path>,
-}
-
-#[derive(Clone, Copy)]
-struct Running<'a> {
-    version: &'a str,
-}
-
-pub fn contract(spec: &Spec) -> Result<(), String> {
-    if spec.product != PRODUCT || spec.authority != AUTHORITY {
-        return Err(format!(
-            "the one-time bootstrap belongs only to {REPOSITORY} at {AUTHORITY}"
-        ));
-    }
-    Ok(())
-}
-
-pub fn resolve(input: Claim<'_>) -> Result<Generator, String> {
-    resolve_with(
-        input,
-        Running {
-            version: plumb::version!("PLUMB"),
-        },
-    )
-}
-
-fn resolve_with(input: Claim<'_>, running: Running<'_>) -> Result<Generator, String> {
-    let origin = if bootstrap(&input, running) {
-        contract(input.spec)?;
-        exact(&input, running)?
-    } else {
-        GeneratorOrigin::Stable {}
-    };
+pub fn resolve() -> Result<Generator, String> {
     Ok(Generator {
-        version: running.version.into(),
+        version: plumb::version!("PLUMB").into(),
         template: super::manager::template(),
-        origin: Some(origin),
-        recovery: bootstrap(&input, running).then(identity),
+        origin: Some(GeneratorOrigin::Stable {}),
+        recovery: None,
     })
-}
-
-fn bootstrap(input: &Claim<'_>, running: Running<'_>) -> bool {
-    input.spec.product == PRODUCT
-        && input.channel == "stable"
-        && input.version == STABLE_VERSION
-        && running.version == BETA_VERSION
 }
 
 fn identity() -> RecoveryIdentity {
@@ -73,37 +27,6 @@ fn identity() -> RecoveryIdentity {
 
 fn exact_identity(generator: &Generator) -> bool {
     generator.recovery.as_ref() == Some(&identity())
-}
-
-fn exact(input: &Claim<'_>, running: Running<'_>) -> Result<GeneratorOrigin, String> {
-    if running.version != BETA_VERSION {
-        return Err(format!(
-            "stable {STABLE_VERSION} requires generator {BETA_VERSION}, got {}",
-            running.version
-        ));
-    }
-    let path = input
-        .promotion
-        .ok_or_else(|| format!("stable {STABLE_VERSION} requires the exact public beta seal"))?;
-    let bytes = std::fs::read(path).map_err(|error| {
-        format!(
-            "cannot read bootstrap beta seal {}: {error}",
-            path.display()
-        )
-    })?;
-    let seal: Seal = serde_json::from_slice(&bytes).map_err(|error| {
-        format!(
-            "cannot parse bootstrap beta seal {}: {error}",
-            path.display()
-        )
-    })?;
-    beta(&seal, input.commit)?;
-    Ok(GeneratorOrigin::ExactRelease {
-        channel: BETA_CHANNEL.into(),
-        version: BETA_VERSION.into(),
-        url: seal.url,
-        sha256: sha(&bytes),
-    })
 }
 
 fn beta(seal: &Seal, commit: &str) -> Result<(), String> {

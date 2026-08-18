@@ -11,7 +11,6 @@ const SHIP: &str = include_str!("../../assets/ship/lane.yml.in");
 const CARRIED: &str = include_str!("../../assets/ship/binary.yml.in");
 const PROJECTED: &str = include_str!("../../assets/ship/project.yml.in");
 const INSTALL: &str = include_str!("../../assets/ship/install.yml.in");
-const BOOTSTRAP: &str = include_str!("../../assets/ship/bootstrap.yml.in");
 const WINDOWS: &str = include_str!("../../assets/ship/windows.yml.in");
 const CAPSULE: &str = include_str!("../../assets/ship/capsule.yml.in");
 const EXACT: &str = include_str!("../../assets/release/exact.yml.in");
@@ -69,7 +68,7 @@ impl Seat<'_> {
             ("plumb", manager("plumb")),
             ("after", if carried { ", seal" } else { "" }.to_string()),
         ]);
-        let held = install(spec, &vars)?;
+        let held = fill(INSTALL, &vars)?;
         vars.insert("carry", matrixed(&held, &vars)?);
         vars.insert("install", held);
         let binary = if carried {
@@ -251,18 +250,6 @@ fn invocation(spec: &Spec, tool: &str) -> String {
     let binary = spec.binaries.first().map_or(tool, String::as_str);
     let deed = if tool == "plumb" { " doctor" } else { "" };
     format!("cargo run --quiet --locked --bin {binary} --{deed}")
-}
-
-fn install(spec: &Spec, vars: &BTreeMap<&str, String>) -> Result<String, String> {
-    use super::super::dispatch::release::generator;
-
-    if generator::contract(spec).is_err() {
-        return fill(INSTALL, vars);
-    }
-    let mut held = vars.clone();
-    held.insert("beta", generator::BETA_VERSION.to_string());
-    held.insert("stable", generator::STABLE_VERSION.to_string());
-    fill(BOOTSTRAP, &held)
 }
 
 fn matrixed(install: &str, vars: &BTreeMap<&str, String>) -> Result<String, String> {
