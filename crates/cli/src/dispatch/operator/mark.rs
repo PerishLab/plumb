@@ -1,7 +1,63 @@
 use super::course::Course;
+use super::value;
 use plumb::forgejo::git::fetch;
 use std::path::Path;
 use std::process::{Command, Output};
+
+pub(super) fn stamp(raw: &str, dry: bool) -> Result<String, String> {
+    let held = named(raw);
+    let channel = super::super::release::channel(&held)?;
+    let version = value::version(&held, &channel)?;
+    let name = value::branch(&line(&version));
+    let root = plumb::forgejo::git::root()?;
+    let spec = super::super::release::model::Spec::read(&root.join("plumb.toml"))?;
+    let seat = point(&root);
+    let head = seat.head(&name)?;
+    let mut course = Course::new(dry);
+    let said = course.step(
+        format!("git tag -a {version} at {head} on {name}, then push"),
+        || seat.stamp(&spec.product, &version, &name),
+    )?;
+    if course.dry() {
+        return Ok(course.plan());
+    }
+    said.ok_or_else(|| "the stamp left no report".to_string())
+}
+
+pub(super) fn retract(raw: &str, dry: bool) -> Result<String, String> {
+    let held = named(raw);
+    let channel = super::super::release::channel(&held)?;
+    let version = value::version(&held, &channel)?;
+    let root = plumb::forgejo::git::root()?;
+    let authority = super::super::release::authority(&root)?;
+    point(&root).retract(&authority, &channel, &version, dry)
+}
+
+pub(super) fn stood(root: &Path, version: &str, name: &str) -> Result<(), String> {
+    let seat = point(root);
+    let head = seat.head(name)?;
+    match seat.seen(version)? {
+        Some(seen) if seen == head => Ok(()),
+        Some(seen) => Err(format!(
+            "{version} stands at {seen}, not {name} at {head}; a stamped point never moves"
+        )),
+        None => Err(format!(
+            "{version} has no release point; run plumb release stamp --version {version}"
+        )),
+    }
+}
+
+fn named(raw: &str) -> String {
+    if raw.starts_with('v') {
+        raw.to_string()
+    } else {
+        format!("v{raw}")
+    }
+}
+
+fn line(version: &str) -> String {
+    version.split('-').next().unwrap_or(version).to_string()
+}
 
 pub struct Point<'a> {
     root: &'a Path,
@@ -12,12 +68,16 @@ pub fn point(root: &Path) -> Point<'_> {
 }
 
 impl Point<'_> {
-    pub fn stamp(&self, product: &str, version: &str, name: &str) -> Result<String, String> {
+    pub fn head(&self, name: &str) -> Result<String, String> {
         fetch(self.root)?;
-        let head = text(
+        text(
             "resolve release head",
             self.git(["rev-parse", &format!("origin/{name}")])?,
-        )?;
+        )
+    }
+
+    pub fn stamp(&self, product: &str, version: &str, name: &str) -> Result<String, String> {
+        let head = self.head(name)?;
         if let Some(seen) = self.seen(version)? {
             return if seen == head {
                 Ok(format!("{version} already stands at {head}"))
@@ -45,8 +105,14 @@ impl Point<'_> {
         Ok(format!("stamped {version} at {head}"))
     }
 
-    pub fn retract(&self, authority: &str, version: &str, dry: bool) -> Result<String, String> {
-        let url = format!("{authority}/v1/releases/stable/{version}/seal.json");
+    pub fn retract(
+        &self,
+        authority: &str,
+        channel: &str,
+        version: &str,
+        dry: bool,
+    ) -> Result<String, String> {
+        let url = format!("{authority}/v1/releases/{channel}/{version}/seal.json");
         let mut course = Course::new(dry);
         if published(&url)? {
             return Err(format!(
@@ -75,7 +141,7 @@ impl Point<'_> {
         Ok(format!("retracted {version}; it projected nothing"))
     }
 
-    fn seen(&self, version: &str) -> Result<Option<String>, String> {
+    pub fn seen(&self, version: &str) -> Result<Option<String>, String> {
         let output = self.git(["rev-parse", &format!("{version}^{{commit}}")])?;
         if output.status.success() {
             Ok(Some(

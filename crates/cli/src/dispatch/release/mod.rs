@@ -26,7 +26,19 @@ pub enum Deed {
     Rejoin,
     Promote,
     Reference,
+    Retract {
+        #[arg(long)]
+        version: String,
+        #[arg(long = "dry-run")]
+        dry: bool,
+    },
     Source,
+    Stamp {
+        #[arg(long)]
+        version: String,
+        #[arg(long = "dry-run")]
+        dry: bool,
+    },
     Surface,
 }
 
@@ -45,6 +57,14 @@ pub fn run(deed: Deed) -> i32 {
 }
 
 fn execute(deed: Deed) -> Result<String, String> {
+    match deed {
+        Deed::Stamp { version, dry } => super::operator::stamp(&version, dry),
+        Deed::Retract { version, dry } => super::operator::retract(&version, dry),
+        deed => carry(deed),
+    }
+}
+
+fn carry(deed: Deed) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let manifest = rig.release.root.join("plumb.toml");
     let spec = model::Spec::read(&manifest)?;
@@ -59,6 +79,9 @@ fn execute(deed: Deed) -> Result<String, String> {
             release.activated,
         ),
         Deed::Surface => surface(&spec),
+        Deed::Stamp { .. } | Deed::Retract { .. } => {
+            Err("a point verb does not read the release environment".into())
+        }
         Deed::Rejoin => engine::topology::rejoin(
             &spec.root,
             required("PLUMB_RELEASE_VERSION", &release.version)?,

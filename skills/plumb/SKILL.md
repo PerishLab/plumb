@@ -65,7 +65,8 @@ plumb lane [ROOT] [--write]
 plumb changelog [ROOT]
 plumb release --help
 plumb ship --help
-plumb stable prepare|pick|stamp|freeze|rejoin|retract --help
+plumb stable prepare|pick|freeze|rejoin --help
+plumb release stamp|retract --version VERSION [--dry-run]
 plumb retire [--root ROOT] [--execute --confirm-repo R --confirm-bucket B --confirm-domain D]
 plumb skill --help
 ```

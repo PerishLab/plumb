@@ -112,18 +112,30 @@ image is now an object: its `Containerfile`, plus whatever `[release.depends]`
 adds, and where the image wraps this release's archive the version folds in too,
 because such an image moves with the release however still its source has been.
 
-## An exact release starts from a point a mechanism made
+## A line and its points are different objects
 
-Plumb stamped the stable point and left the exact one to a hand: the documented
-way to begin a beta was `git tag` followed by `git push`. The machinery for
-doing it properly already existed — annotated, idempotent, refusing to move a
-point that already stands — and was reachable only through `freeze`, which is
-the stable path.
+Plumb stamped the stable point inside `freeze` and left the exact one to a hand:
+the documented way to begin a beta was `git tag` followed by `git push`. The
+machinery for doing it properly already existed — annotated, idempotent,
+refusing to move a point that already stands — and had exactly one caller.
 
-`plumb stable stamp --version <exact>` reaches it. It derives the line the
-version belongs to, reads that line's head, and stamps there. It refuses a
-stable version, which belongs to `freeze`, and `freeze` refuses an exact one.
-The bare `git tag` leaves the release procedure.
+Giving the exact point its own verb made the older seam visible. The verb
+families were organised by who runs them, while the model they implement is
+organised by what they act on, and `stable` held both the line and one of its
+points. A line is always stable; its points are not.
+
+So the objects are separated. `plumb stable` opens, picks onto, freezes and
+rejoins the line, and touches no point. `plumb release stamp` fixes a version
+name to the head of the line it names and `plumb release retract` removes one,
+both for either channel, because a point is what a tag means and a tag is where
+the release segment begins.
+
+`freeze` no longer stamps, so the invariant it carried by construction is
+restated where it can be checked: dispatching a stable release refuses unless
+its point already stands at the line head. A stable release is now declared
+before it runs, in a step that says so. The bare `git tag` leaves the procedure,
+and `retract` stops being stable-only — an exact point can be removed by the
+verb that made it, reading its own channel from the authority.
 
 ## Smaller truths
 

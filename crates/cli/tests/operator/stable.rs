@@ -274,19 +274,15 @@ fn stamped() {
     let fixture = tempfile::tempdir().expect("fixture");
     repo(fixture.path(), "ssh://git@127.0.0.1:9/PerishLab/probe.git");
 
-    let stable = command(
-        fixture.path(),
-        &["stable", "stamp", "--version", "v1.2.0", "--dry-run"],
-    );
-    let refused = String::from_utf8_lossy(&stable.stderr).to_string();
-    assert!(
-        !stable.status.success() && refused.contains("stamped by freeze"),
-        "a stable point belongs to freeze: {refused}"
-    );
-
     let exact = command(
         fixture.path(),
-        &["stable", "stamp", "--version", "v1.2.0-beta.1", "--dry-run"],
+        &[
+            "release",
+            "stamp",
+            "--version",
+            "v1.2.0-beta.1",
+            "--dry-run",
+        ],
     );
     let printed = String::from_utf8_lossy(&exact.stdout).to_string();
     assert!(

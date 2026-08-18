@@ -23,10 +23,8 @@ pub fn run(deed: Stable) -> Result<String, String> {
             commit,
             dry,
         } => pick(&version, &commit, dry),
-        Stable::Stamp { version, repo, dry } => stamp(&version, &repo, dry),
         Stable::Freeze { version, repo, dry } => wall(&version, &repo, dry),
         Stable::Rejoin { version, repo, dry } => rejoin(&version, &repo, dry),
-        Stable::Retract { version, dry } => retract(&version, dry),
     }
 }
 
@@ -66,32 +64,6 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     }
 }
 
-fn stamp(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
-    let channel = super::super::release::channel(raw)?;
-    if channel == "stable" {
-        return Err(format!(
-            "{raw} belongs to channel stable, whose point is stamped by freeze"
-        ));
-    }
-    let version = value::version(raw, &channel)?;
-    let line = value::version(version.split('-').next().unwrap_or_default(), "stable")?;
-    let name = value::branch(&line);
-    let root = git::root()?;
-    let remote = git::remote(&root, repo)?;
-    let mut course = Course::new(dry);
-    let client = Client::new(remote)?;
-    let head = head(&client, &name)?;
-    let spec = super::super::release::model::Spec::read(&root.join("plumb.toml"))?;
-    let said = course.step(
-        format!("git tag -a {version} at {head} on {name}, then push"),
-        || super::mark::point(&root).stamp(&spec.product, &version, &name),
-    )?;
-    if course.dry() {
-        return Ok(course.plan());
-    }
-    said.ok_or_else(|| "the stamp left no report".to_string())
-}
-
 fn pick(version: &str, commit: &str, dry: bool) -> Result<String, String> {
     let version = value::version(version, "stable")?;
     value::commit(commit)?;
@@ -117,16 +89,12 @@ fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
     let spec = super::super::release::model::Spec::read(&root.join("plumb.toml"))?;
     let commit = head(&client, &name)?;
     let exact = super::super::release::promotion(&spec, &commit, &version)?;
-    let stamped = course.step(format!("git tag {version} at {commit}, then push"), || {
-        super::mark::point(&root).stamp(&spec.product, &version, &name)
-    })?;
     if course.dry() {
         return Ok(course.plan());
     }
     Ok(format!(
-        "froze {name} at {commit}; promoting {}; {}",
-        exact.version,
-        stamped.unwrap_or_default()
+        "froze {name} at {commit}; promoting {}",
+        exact.version
     ))
 }
 
@@ -139,13 +107,6 @@ fn head(client: &Client, name: &str) -> Result<String, String> {
         .ok_or_else(|| format!("{name} exposes no head commit"))?;
     value::commit(commit)?;
     Ok(commit.to_string())
-}
-
-fn retract(raw: &str, dry: bool) -> Result<String, String> {
-    let version = value::version(raw, "stable")?;
-    let root = git::root()?;
-    let spec = super::super::release::model::Spec::read(&root.join("plumb.toml"))?;
-    super::mark::point(&root).retract(&spec.authority, &version, dry)
 }
 
 fn rejoin(version: &str, repo: &str, dry: bool) -> Result<String, String> {
