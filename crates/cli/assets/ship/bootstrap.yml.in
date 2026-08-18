@@ -1,4 +1,5 @@
       - name: Install the Plumb this release is bound to
+        shell: bash
         run: |
           set -eu
           if [ "${{ github.ref }}" = "refs/heads/release/{@stable}" ]; then

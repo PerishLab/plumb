@@ -1,4 +1,5 @@
       - name: Install stable Plumb
+        shell: bash
         run: |
           set -eu
           curl -fsSL {@plumb}/manage.sh | sh

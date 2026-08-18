@@ -19,6 +19,9 @@
           ref: ${{ needs.resolve.outputs.commit }}
 
 {@install}
+      - name: Add the declared Rust target
+        run: rustup target add ${{ matrix.target }}
+
       - name: Build one declared target
         run: plumb ship binary build
 
@@ -83,6 +86,7 @@
         run: plumb release compile
 
       - name: Publish and read back the exact release
+        shell: bash
         run: |
           set -eu
           plumb ship binary publish
@@ -90,6 +94,7 @@
 
       - name: Activate the stable consensus
         id: surface
+        shell: bash
         run: |
           set -eu
           plumb ship binary activate

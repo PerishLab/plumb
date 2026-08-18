@@ -41,6 +41,7 @@ jobs:
 {@install}
       - name: Plan this release
         id: plan
+        shell: bash
         run: |
           set -eu
           PLUMB_RELEASE_VERSION=$(plumb release reference)
