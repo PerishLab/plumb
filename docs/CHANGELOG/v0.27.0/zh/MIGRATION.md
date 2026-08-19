@@ -56,6 +56,21 @@ job 之后。在二进制发布尚未发出去时手工跑其中一个，现在�
 早先 Plumb 记下的 baseline 里没有它，所以这一版之后的第一次发布会把每个对象**重新计时一次**。
 除此之外不产生任何后果。
 
+## `plumb stable` 现在是 `plumb release`
+
+**每个动词都搬了家，参数一个没变:**
+
+```
+plumb stable prepare → plumb release prepare
+plumb stable pick    → plumb release pick
+plumb stable freeze  → plumb release freeze
+plumb stable rejoin  → plumb release rejoin
+```
+
+**`stable` 仍然是一个正当的词** —— 通道、latest、指针都还这么叫 —— 所以它**不进退休词典**，
+用到它的地方不会因此 out of true。**搬的只是命令。** 没有任何 lane 调用这些动词，所以
+lane 无需改动。
+
 ## `plumb stable retract` 现在是 `plumb release retract`
 
 点属于发布那一段，所以撤点的动词跟着搬过去。它现在**同时接受 exact 版本与 stable 版本**。

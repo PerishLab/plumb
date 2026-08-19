@@ -18,12 +18,45 @@ use std::path::{Path, PathBuf};
 #[derive(Subcommand)]
 pub enum Deed {
     Activate,
+    Prepare {
+        #[arg(long)]
+        version: String,
+        #[arg(long, default_value = "main")]
+        from: String,
+        #[arg(long, default_value = "")]
+        repo: String,
+        #[arg(long = "dry-run")]
+        dry: bool,
+    },
+    Pick {
+        #[arg(long)]
+        version: String,
+        #[arg(long)]
+        commit: String,
+        #[arg(long = "dry-run")]
+        dry: bool,
+    },
+    Freeze {
+        #[arg(long)]
+        version: String,
+        #[arg(long, default_value = "")]
+        repo: String,
+        #[arg(long = "dry-run")]
+        dry: bool,
+    },
     Authority,
     Channel,
     Compile,
     Evidence,
     Inspect,
-    Rejoin,
+    Rejoin {
+        #[arg(long, default_value = "")]
+        version: String,
+        #[arg(long, default_value = "")]
+        repo: String,
+        #[arg(long = "dry-run")]
+        dry: bool,
+    },
     Promote,
     Reference,
     Retract {
@@ -60,6 +93,10 @@ fn execute(deed: Deed) -> Result<String, String> {
     match deed {
         Deed::Stamp { version, dry } => super::operator::stamp(&version, dry),
         Deed::Retract { version, dry } => super::operator::retract(&version, dry),
+        Deed::Rejoin { ref version, .. } if !version.is_empty() => super::operator::line(deed),
+        Deed::Prepare { .. } | Deed::Pick { .. } | Deed::Freeze { .. } => {
+            super::operator::line(deed)
+        }
         deed => carry(deed),
     }
 }
@@ -82,7 +119,10 @@ fn carry(deed: Deed) -> Result<String, String> {
         Deed::Stamp { .. } | Deed::Retract { .. } => {
             Err("a point verb does not read the release environment".into())
         }
-        Deed::Rejoin => engine::topology::rejoin(
+        Deed::Prepare { .. } | Deed::Pick { .. } | Deed::Freeze { .. } => {
+            Err("a line verb does not read the release environment".into())
+        }
+        Deed::Rejoin { .. } => engine::topology::rejoin(
             &spec.root,
             required("PLUMB_RELEASE_VERSION", &release.version)?,
             required("PLUMB_RELEASE_COMMIT", &release.commit)?,

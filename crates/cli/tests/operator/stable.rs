@@ -208,7 +208,10 @@ fn drift() {
     let origin = format!("{url}/test/probe.git");
     let head = super::datum::lined(fixture.path(), &origin, bare.path(), "release/v1.2.0");
     std::fs::write(&cut, &head).expect("cut");
-    let output = command(fixture.path(), &["stable", "prepare", "--version", "1.2.0"]);
+    let output = command(
+        fixture.path(),
+        &["release", "prepare", "--version", "1.2.0"],
+    );
     assert!(!output.status.success());
     assert!(
         String::from_utf8_lossy(&output.stderr)

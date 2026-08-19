@@ -116,7 +116,7 @@ fn retains() {
         std::env::var("PATH").unwrap_or_default()
     );
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["stable", "rejoin", "--version", "v1.2.0"])
+        .args(["release", "rejoin", "--version", "v1.2.0"])
         .current_dir(fixture.path())
         .env("PATH", path)
         .env("FORGEJO_TOKEN", "test-token")
