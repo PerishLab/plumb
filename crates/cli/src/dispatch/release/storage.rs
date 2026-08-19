@@ -145,22 +145,25 @@ impl<'a> Remote<'a> {
         };
         let path = self
             .get(&object.key)?
-            .ok_or_else(|| format!("stable pointer vanished: {}", object.key))?;
+            .ok_or_else(|| format!("channel pointer vanished: {}", object.key))?;
         let text = std::fs::read_to_string(&path)
-            .map_err(|error| format!("cannot read current stable pointer: {error}"))?;
+            .map_err(|error| format!("cannot read the standing channel pointer: {error}"))?;
         let _ = std::fs::remove_file(path);
         let current: Pointer = serde_json::from_str(&text)
-            .map_err(|error| format!("cannot parse current stable pointer: {error}"))?;
+            .map_err(|error| format!("cannot parse the standing channel pointer: {error}"))?;
         let draft = std::fs::read_to_string(&source)
-            .map_err(|error| format!("cannot read next stable pointer: {error}"))?;
+            .map_err(|error| format!("cannot read the next channel pointer: {error}"))?;
         let next: Pointer = serde_json::from_str(&draft)
-            .map_err(|error| format!("cannot parse next stable pointer: {error}"))?;
+            .map_err(|error| format!("cannot parse the next channel pointer: {error}"))?;
         super::proof::advance(&current, &next)?;
         if current.version == next.version {
             if text == draft {
                 return Ok(());
             }
-            return Err(format!("stable pointer drift at {}", next.version));
+            return Err(format!(
+                "{} pointer drift at {}",
+                next.channel, next.version
+            ));
         }
         let output = self.put(
             object,
