@@ -59,18 +59,21 @@ pub fn advance(
     next: &super::record::Pointer,
 ) -> Result<(), String> {
     let schema = current.schema == 1 && next.schema == 1;
-    let stable = current.channel == "stable" && next.channel == "stable";
-    if !schema || !stable || current.product != next.product {
-        return Err("stable pointer identity mismatch".into());
+    let held = current.channel == next.channel;
+    if !schema || !held || current.product != next.product {
+        return Err(format!(
+            "{} pointer identity mismatch",
+            next.channel.as_str()
+        ));
     }
     let before = Version::parse(current.version.trim_start_matches('v'))
-        .map_err(|error| format!("invalid current stable version: {error}"))?;
+        .map_err(|error| format!("invalid current {} version: {error}", current.channel))?;
     let after = Version::parse(next.version.trim_start_matches('v'))
-        .map_err(|error| format!("invalid next stable version: {error}"))?;
+        .map_err(|error| format!("invalid next {} version: {error}", next.channel))?;
     if after < before {
         return Err(format!(
-            "stable activation would move backwards: {} -> {}",
-            current.version, next.version
+            "{} activation would move backwards: {} -> {}",
+            next.channel, current.version, next.version
         ));
     }
     Ok(())
