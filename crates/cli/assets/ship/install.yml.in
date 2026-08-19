@@ -4,7 +4,6 @@
           set -eu
           held=$(curl -fsSL "{@plumb}/v1/channels/beta.json" 2>/dev/null \
             | sed -n 's/.*"releaseVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p') || held=""
-          case "$GITHUB_REF" in *"/$held") held="" ;; esac
           if [ -n "$held" ]; then
             seat="$RUNNER_TEMP/plumb-$held"
             curl -fsSL {@plumb}/manage.sh | sh -s -- install \
