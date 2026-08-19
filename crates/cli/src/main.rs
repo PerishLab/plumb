@@ -101,10 +101,7 @@ enum Command {
         #[command(subcommand)]
         deed: dispatch::ship::Deed,
     },
-    Stable {
-        #[command(subcommand)]
-        deed: dispatch::operator::Stable,
-    },
+
     Retire {
         #[command(flatten)]
         deed: dispatch::retire::Deed,
@@ -126,7 +123,6 @@ impl Command {
             Self::Lane { .. } => "lane",
             Self::Release { .. } => "release",
             Self::Ship { .. } => "ship",
-            Self::Stable { .. } => "stable",
             Self::Retire { .. } => "retire",
         }
     }
@@ -192,7 +188,6 @@ fn execute(command: Command) -> i32 {
         }
         Command::Release { deed } => dispatch::release::run(deed),
         Command::Ship { deed } => dispatch::ship::run(deed),
-        Command::Stable { deed } => dispatch::operator::run(deed),
         Command::Retire { deed } => dispatch::retire::run(deed),
     }
 }

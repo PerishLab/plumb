@@ -31,7 +31,7 @@ fn late() {
         .args(["update-ref", "refs/remotes/origin/main", &head])
         .current_dir(root));
 
-    let output = command(root, &["stable", "prepare", "--version", "1.3.0"]);
+    let output = command(root, &["release", "prepare", "--version", "1.3.0"]);
     assert!(!output.status.success());
     let said = String::from_utf8_lossy(&output.stderr).to_string();
     assert!(said.contains("stable v1.2.0 stands at"), "{said}");
@@ -57,7 +57,7 @@ fn migrated() {
     .expect("an older Plumb's datum");
     let head = lined(root, &origin, bare.path(), "release/v1.2.0");
     std::fs::write(&cut, &head).expect("cut");
-    let output = command(root, &["stable", "prepare", "--version", "1.2.0"]);
+    let output = command(root, &["release", "prepare", "--version", "1.2.0"]);
     assert!(
         output.status.success(),
         "{}",

@@ -44,7 +44,10 @@ fn protection() {
     let origin = format!("{url}/test/probe.git");
     let head = lined(fixture.path(), &origin, bare.path(), "release/v1.2.0");
     std::fs::write(&cut, &head).expect("cut");
-    let output = command(fixture.path(), &["stable", "prepare", "--version", "1.2.0"]);
+    let output = command(
+        fixture.path(),
+        &["release", "prepare", "--version", "1.2.0"],
+    );
     assert!(
         output.status.success(),
         "{}",
@@ -91,7 +94,7 @@ fn sweeps() {
     let head = lined(root, &origin, bare.path(), "release/v1.2.0");
     std::fs::write(&cut, &head).expect("cut");
 
-    let output = command(root, &["stable", "prepare", "--version", "1.2.0"]);
+    let output = command(root, &["release", "prepare", "--version", "1.2.0"]);
     assert!(
         output.status.success(),
         "{}",

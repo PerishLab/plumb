@@ -1,7 +1,7 @@
 mod open;
 mod settle;
 
-use super::Stable;
+use super::super::release::Deed;
 use super::course::Course;
 use super::value;
 pub use open::freeze;
@@ -10,21 +10,22 @@ use plumb::forgejo::{Client, Remote, git};
 use serde_json::Value;
 use settle::{Settle, settle};
 
-pub fn run(deed: Stable) -> Result<String, String> {
+pub fn run(deed: Deed) -> Result<String, String> {
     match deed {
-        Stable::Prepare {
+        Deed::Prepare {
             version,
             from,
             repo,
             dry,
         } => prepare(&version, &from, &repo, dry),
-        Stable::Pick {
+        Deed::Pick {
             version,
             commit,
             dry,
         } => pick(&version, &commit, dry),
-        Stable::Freeze { version, repo, dry } => wall(&version, &repo, dry),
-        Stable::Rejoin { version, repo, dry } => rejoin(&version, &repo, dry),
+        Deed::Freeze { version, repo, dry } => wall(&version, &repo, dry),
+        Deed::Rejoin { version, repo, dry } => rejoin(&version, &repo, dry),
+        _ => Err("a release verb reached the line seat".into()),
     }
 }
 

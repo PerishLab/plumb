@@ -70,6 +70,21 @@ where it used to proceed on the strength of a local capsule file.
 Baselines recorded by an earlier Plumb do not carry it, so the first release
 after this one re-times every object once. Nothing else follows from it.
 
+## `plumb stable` is now `plumb release`
+
+Every verb moved and none changed its arguments:
+
+```
+plumb stable prepare → plumb release prepare
+plumb stable pick    → plumb release pick
+plumb stable freeze  → plumb release freeze
+plumb stable rejoin  → plumb release rejoin
+```
+
+`stable` remains an ordinary word — the channel, the latest, the pointer — so it
+is not retired and nothing goes out of true for using it. Only the command
+moved. No lane calls these verbs, so no lane changes.
+
 ## `plumb stable retract` is now `plumb release retract`
 
 A point belongs to the release segment, so the verb that removes one moved with

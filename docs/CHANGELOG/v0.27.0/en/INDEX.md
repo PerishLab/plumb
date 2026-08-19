@@ -112,6 +112,34 @@ image is now an object: its `Containerfile`, plus whatever `[release.depends]`
 adds, and where the image wraps this release's archive the version folds in too,
 because such an image moves with the release however still its source has been.
 
+## Locking the contract is one job, so it is one family
+
+`plumb stable` is gone. Its four verbs are `plumb release prepare|pick|freeze|
+rejoin`.
+
+The contract this release exists to model is a version, a lock form, and a
+projection surface. Two of those were in `release` and the third was not: a line
+is the apparatus by which a version is fixed to a commit and made permanent, and
+that is the lock form. It looked like a lifecycle of its own only because it has
+its own git objects. It is not one — a line is cut for one release, carries that
+release's points, and rejoins when the release ends. It has no existence outside
+one.
+
+What made it visible was the alternation. Written in order, a release read
+`stable prepare → stable pick → release stamp → dispatch → stable freeze →
+release stamp → dispatch → stable rejoin`, and every arrow crossed a family
+boundary. The split was not by object or by phase but by implementation medium —
+git refs on one side, the authority on the other — which is a detail wearing a
+family name.
+
+`rejoin` existed in both families meaning two things: performing the merge, and
+proving the topology. It is one verb now. Given a version it performs and proves;
+given none it reads the run's environment and proves what a run already did,
+which is what the shared workflow still calls.
+
+`ship` is untouched. It executes against what was locked, and the binary is one
+of its adaptors like any other.
+
 ## A line and its points are different objects
 
 Plumb stamped the stable point inside `freeze` and left the exact one to a hand:
