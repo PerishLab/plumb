@@ -25,18 +25,17 @@ pub fn publish(path: &Path, authority: &impl Authority) -> Result<String, String
 
 pub fn activate(path: &Path, authority: &impl Authority) -> Result<String, String> {
     let (capsule, root) = Capsule::read(path)?;
-    if capsule.channel != "stable" {
-        return Err("only stable may activate".into());
-    }
     super::verify::published(&capsule)?;
     let pointer = capsule
         .pointer
         .as_ref()
-        .ok_or_else(|| "stable capsule has no pointer".to_string())?;
+        .ok_or_else(|| format!("{} capsule has no channel pointer", capsule.channel))?;
     let remote = Remote::new(authority)?;
     remote.activate(pointer, &root)?;
-    super::verify::consensus(&capsule)?;
-    Ok(format!("activated stable {}", capsule.version))
+    if capsule.channel == "stable" {
+        super::verify::consensus(&capsule)?;
+    }
+    Ok(format!("activated {} {}", capsule.channel, capsule.version))
 }
 
 pub fn shift(path: &Path, authority: &impl Authority) -> Result<String, String> {

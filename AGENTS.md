@@ -241,6 +241,14 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   plan it could not verify. Every mutation a verb performs is declared as one
   step and the printed course is that declaration, so an action reaching the
   remote without a line describing it is not expressible.
+- A line generates itself. Every exact publication points its channel at what
+  that run published, so the next run on any line installs the newest exact
+  Plumb rather than canonical stable, and falls back to stable only when no
+  exact stands. A release that repairs the release mechanism is therefore built
+  by a Plumb that already carries the repair, which is the case that made a
+  one-time bootstrap necessary twice. The generator records what it was: a
+  prerelease binary seals `exact-release` provenance naming its own published
+  seal, and that provenance must name a point on the line being released.
 - Exact seal creation is create-only and idempotent by content, and every
   attachment projects on the same terms: finding its object already published
   compares that digest against the bytes just built and refuses on drift rather

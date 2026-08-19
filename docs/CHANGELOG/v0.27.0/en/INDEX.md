@@ -34,6 +34,23 @@ it reads the run's environment and proves what a run already did. `ship` is
 untouched — it executes against what was locked, and the binary is one of its
 adaptors like any other.
 
+## A line generates itself
+
+A release that repairs the release mechanism was built by the mechanism it
+repairs. v0.26.0 met this and answered it with a one-time bootstrap bound to one
+beta, retired a commit later as an exception that had served its purpose. It was
+needed again in the next version, which is what an exception that recurs is
+called.
+
+Every exact publication now points its channel at what that run published, and
+the install step reads that pointer, so a run installs the newest exact Plumb
+and falls back to canonical stable only when none stands. An exact run carries
+the credential to move its own channel pointer, which it did not before.
+
+The generator records what it was rather than claiming stable: a prerelease
+binary seals `exact-release` provenance naming its own published seal and
+digest, and that provenance must name a point on the line being released.
+
 ## A dry run walks the course it would run
 
 `--dry-run` printed a second document, hand-written beside the code it described.
