@@ -37,19 +37,16 @@ adaptors like any other.
 ## A line generates itself
 
 A release that repairs the release mechanism was built by the mechanism it
-repairs. v0.26.0 met this and answered it with a one-time bootstrap bound to one
-beta, retired a commit later as an exception that had served its purpose. It was
-needed again in the next version, which is what an exception that recurs is
-called.
+repairs. v0.26.0 answered this with a one-time bootstrap, retired a commit later
+as an exception that had served its purpose; the next version needed it again.
 
 Every exact publication now points its channel at what that run published, and
 the install step reads that pointer, so a run installs the newest exact Plumb
 and falls back to canonical stable only when none stands. An exact run carries
-the credential to move its own channel pointer, which it did not before.
-
-The generator records what it was rather than claiming stable: a prerelease
-binary seals `exact-release` provenance naming its own published seal and
-digest, and that provenance must name a point on the line being released.
+the credential to move its own channel pointer, which it did not before. The
+generator also records what it was rather than claiming stable: a prerelease
+binary seals `exact-release` provenance naming its own published seal, and that
+provenance must name a point on the line being released.
 
 ## A dry run walks the course it would run
 
@@ -59,19 +56,19 @@ sends, and `plumb stable freeze` printed two lines while doing six — the sixth
 being `git tag`, pushed. An irreversible action the preview never mentioned, in
 the one review a release gets before the irreversible part.
 
-What blocked a single path was that a preview could not know what it had not
-done. That obstacle was self-imposed, because a read is not a mutation. A dry
-run now performs every read and skips only the writes, so it resolves whether a
-branch stands and prints the commit it would tag. Every mutation is declared as
-one step whose first argument is the sentence describing it, so a write that
-reaches the remote undescribed is not expressible, and a preview that cannot
-read what it needs refuses where before it printed a confident plan.
+What blocked a single path was that a preview could not know what it had not done
+— an obstacle that was self-imposed, because a read is not a mutation. A dry run
+now performs every read and skips only the writes, so it resolves whether a branch
+stands and prints the commit it would tag. Every mutation is declared as one step
+whose first argument is the sentence describing it, so a write that reaches the
+remote undescribed is not expressible, and a preview that cannot read what it
+needs refuses where before it printed a confident plan.
 
 ## The npm evidence is the tarball, not the name
 
-The module adaptor skipped publishing when the registry answered that the
-version existed, and afterwards fetched `dist.shasum` and discarded it. The
-strongest claim the npm lane could make was that a name exists.
+The module adaptor skipped publishing when the registry answered that the version
+existed, then fetched `dist.shasum` and discarded it. The strongest claim the npm
+lane could make was that a name exists.
 
 Whether npm could do better was unknown, so nothing was done. It is known now,
 and measured: a fresh clone at v0.26.0, installed from the lockfile, stamped and
@@ -81,54 +78,45 @@ packed, reproduces the published tarball byte for byte. So `carried` reads
 `package.json`, because `stamp` parses into a map that sorts — reproducibility
 here rests on that, and rested on it by accident.
 
-## A medium publishes only after the release stands
-
-The gate before projecting cargo, npm, oci or chart read the capsule off local
-disk. A capsule is an upload plan built before anything is uploaded, so it proved
-that this machine compiled the version — not that the release stands anywhere. It
-now reads the seal back from the public authority and compares the digest, using
-the fetch `plumb ship binary verify` already performs. It checks the seal alone,
-and fires only for a medium the product declares.
-
 ## A rendered stable lane advances the pointer
 
-Shifting the managers and advancing the consensus pointer are two operations,
-and the rendered lane ran only the first. A stable release therefore published
-every object, reported activation, and left the channel naming the release
-before it; the smokes then installed what was still canonical and reported the
-mismatch they exist to catch.
+Shifting the managers and advancing the consensus pointer are two operations, and
+the rendered lane ran only the first. A stable release therefore published every
+object, reported activation, and left the channel naming the release before it;
+the smokes then installed what was still canonical and reported the mismatch they
+exist to catch.
 
-`v0.26.0` shipped with this in its renderer. Its own release met it and was
-finished by hand; `sidecar v0.8.0` met it as the first stable release rendered by
-that version and could not complete, because the deed needs credentials that
-exist only inside a lane (#346). Any repository whose lanes came from v0.26.0
-carries it, and rendering again is what removes it.
+`v0.26.0` shipped with this in its renderer; its own release was finished by
+hand, and `sidecar v0.8.0` could not complete at all because the deed needs
+credentials that exist only inside a lane (#346). Any repository whose lanes came
+from v0.26.0 carries it, and rendering again is what removes it.
 
 ## Numbers that measure something
 
 The width an attachment could declare was a table whose numbers were whatever the
-products in front of it had needed — a cap set by observed pressure, which is a
-declaration a product makes for itself with extra steps. `ceiling = 10` is one
-number for every attachment. The agent and design document budgets held 320, a
-number measuring nothing, in the document a reader opens first; they now measure
-their source inside a corridor, so the guard tightens on a repository of a dozen
-files and yields where a repository earned it.
+products in front of it had needed, which is a cap a product sets for itself with
+extra steps; `ceiling = 10` is one number for every attachment. The agent and
+design document budgets held 320, a number measuring nothing, in the document a
+reader opens first; they now measure their source inside a corridor.
 
 ## packport becomes rejoin
 
-`packport` is not a word, and `backport` is not this operation: a backport
-carries a fix to an older line, and this merges the frozen line into main so the
-stable commit is reachable from it. `rejoin` reads through the lifecycle:
-prepare, pick, freeze, rejoin. The old word enters the retired dictionary, which
-is what turns a rename into a mechanism — a tracked byte still carrying it is
-out of true, here and in every repository the next release reaches.
+`packport` is not a word, and `backport` is not this operation: a backport carries
+a fix to an older line, and this merges the frozen line into main so the stable
+commit is reachable from it. The old word enters the retired dictionary, which is
+what turns a rename into a mechanism — a tracked byte still carrying it is out of
+true, here and in every repository the next release reaches.
 
 ## Smaller truths
 
+The gate before projecting a medium read the capsule off local disk — an upload
+plan, which proves what was built rather than what stands. It now reads the seal
+back from the authority and compares the digest.
+
 `oci` had no object in the input ledger, so the seal answering which media moved
 said nothing about the image. An image is now an object: its `Containerfile`,
-whatever `[release.depends]` adds, and the release version where the image wraps
-this release's archive.
+whatever `[release.depends]` adds, and the release version where it wraps this
+release's archive.
 
 The Debian package wrote the semver string into the dpkg `Version` field
 verbatim, where `-` separates upstream from revision and an empty revision sorts
@@ -136,7 +124,7 @@ below a present one — so a prerelease claimed to be newer than the release it
 precedes. Only the first `-` becomes a tilde now.
 
 A landed commit said its subject twice, because the title came from `%s` and the
-body from `%B`. `doctor` names an installed brief whose version is not the
-running binary's, as an observation and not a finding. A Cargo rehearsal says
-which packages it cannot rehearse, since an attachment holds one unit whose
-packages pin each other. The bootstrap that generated v0.26.0 is retired.
+body from `%B`. `doctor` names an installed brief whose version is not the running
+binary's, as an observation and not a finding. A Cargo rehearsal says which
+packages it cannot rehearse, since an attachment holds one unit whose packages pin
+each other.
