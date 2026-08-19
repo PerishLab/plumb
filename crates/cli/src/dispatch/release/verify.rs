@@ -25,9 +25,6 @@ pub fn published(capsule: &Capsule) -> Result<(), String> {
 }
 
 pub fn consensus(capsule: &Capsule) -> Result<(), String> {
-    if capsule.channel != "stable" {
-        return Err("only stable has a consensus surface".into());
-    }
     let pointer = capsule
         .pointer
         .as_ref()
@@ -87,9 +84,16 @@ pub fn binary(url: &str, stable: bool) -> Result<String, String> {
     Surface(url).binary(stable)
 }
 
-struct Surface<'a>(&'a str);
+pub(super) struct Surface<'a>(pub(super) &'a str);
 
 impl Surface<'_> {
+    pub(super) fn digest(&self) -> Result<String, String> {
+        let path = self.download("generator")?;
+        let held = super::record::digest(&path).map(|(digest, _)| digest);
+        let _ = std::fs::remove_file(path);
+        held
+    }
+
     fn release(&self, stable: bool) -> Result<String, String> {
         if !stable {
             let seal: Seal = self.read()?;

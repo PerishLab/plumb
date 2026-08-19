@@ -102,13 +102,18 @@
           plumb ship binary publish
           plumb ship binary verify
 
+      - name: Point the channel at what this run published
+        shell: bash
+        run: |
+          set -eu
+          plumb release activate
+
       - name: Activate the stable consensus
         if: needs.resolve.outputs.channel == 'stable'
         shell: bash
         run: |
           set -eu
           plumb ship binary activate
-          plumb release activate
           PLUMB_RELEASE_ACTIVATED=true plumb ship binary verify
 
       - name: Name the generated managers

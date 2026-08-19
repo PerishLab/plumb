@@ -120,7 +120,7 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
         version: input.version.into(),
         commit: input.commit.into(),
         url: url.clone(),
-        generator: generator::resolve()?,
+        generator: generator::resolve(spec.authority.as_str())?,
         artifacts,
         managers,
         changelog: Some(input.changelog),
@@ -148,7 +148,16 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
             seal: &local,
         })?
     } else {
-        (Vec::new(), None)
+        (
+            Vec::new(),
+            Some(draft.channel(Stable {
+                spec: &spec,
+                version: input.version,
+                commit: input.commit,
+                managers: &seat,
+                seal: &local,
+            })?),
+        )
     };
     let capsule = Capsule {
         schema: 1,
@@ -171,6 +180,30 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
 }
 
 impl Draft<'_> {
+    fn channel(&self, input: Stable<'_>) -> Result<Local, String> {
+        let channel = super::manager::channel(input.version)?;
+        let pointer = Pointer {
+            schema: 1,
+            product: input.spec.product.clone(),
+            channel: channel.clone(),
+            version: input.version.into(),
+            commit: input.commit.into(),
+            seal: input.seal.remote.clone(),
+            managers: BTreeMap::new(),
+        };
+        let path = self.root.join(format!("{channel}.json"));
+        json(&path, &pointer)?;
+        let key = format!("v1/channels/{channel}.json");
+        self.local(
+            &path,
+            Route {
+                url: format!("{}/{key}", self.authority),
+                key,
+                mime: "application/json; charset=utf-8".into(),
+            },
+        )
+    }
+
     fn stable(&self, input: Stable<'_>) -> Result<(Vec<Local>, Option<Local>), String> {
         let mut locals = Vec::new();
         let mut managers = BTreeMap::new();
