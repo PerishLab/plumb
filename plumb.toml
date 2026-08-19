@@ -1,6 +1,6 @@
 [[document]]
 strategy = "agent"
-source = [{ path = ".", seal = "21120f1eb7d15652eead2ccca2486b68a2dbfe3bdaad8f1f052537a1f1986de4" }]
+source = [{ path = ".", seal = "e6d5acde27ed14e41cfa1f5dd03ac2c1565966ef0911e3e5fc16ea5c456acfc3" }]
 target-seal = "aeb9cd72bc426acdb23dcdf4f49ae9bde2f86c9e0102effd18d11a056d516e55"
 
 [[document]]
@@ -8,7 +8,7 @@ strategy = "brief"
 name = "plumb"
 source = [
   { path = "crates/cli/src", seal = "352f82dd3632bd7c12ee9a8115dc0b85e295a2d8c41712424ac39acc14042dd1" },
-  { path = "crates/lib/src", seal = "4abb88b792a770d5c150d8a360bbe2f2df3f1b53c41cc7099f4615dbf2b64ba4" },
+  { path = "crates/lib/src", seal = "bd7f038c248e0b416113c787c3ebd9d7327c995576a1f11599303ade24f7ed6a" },
   { path = "crates/macro/src", seal = "c8ae2bfd1091d77db6e6f010560bbf961644c87557ac3005e0bcb85723dd8f19" },
 ]
 target-seal = "d1dfbfd8d7c4a213eff1c431cc21242477b2419464b60f288e249c3c0e561e73"

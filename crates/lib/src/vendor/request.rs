@@ -29,6 +29,8 @@ pub fn send(
     command.args([
         "--silent",
         "--show-error",
+        "--max-time",
+        "120",
         "--request",
         method,
         "--write-out",
@@ -49,6 +51,7 @@ pub fn send(
         .arg(url)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
         .map_err(|error| format!("cannot run curl: {error}"))?;
     let mut config =
@@ -67,10 +70,7 @@ pub fn send(
         .wait_with_output()
         .map_err(|error| format!("cannot wait for curl: {error}"))?;
     if !output.status.success() {
-        return Err(format!(
-            "curl failed: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
-        ));
+        return Err(said(&output, url));
     }
     let text = String::from_utf8_lossy(&output.stdout);
     let (body, status) = text
@@ -86,4 +86,16 @@ pub fn send(
         serde_json::from_str(body).unwrap_or_else(|_| Value::String(body.to_string()))
     };
     Ok(Response { status, value })
+}
+
+fn said(output: &std::process::Output, url: &str) -> String {
+    let held = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    if held.is_empty() {
+        let code = output
+            .status
+            .code()
+            .map_or_else(|| "a signal".to_string(), |held| format!("exit {held}"));
+        return format!("curl reached {url} with {code} and said nothing");
+    }
+    format!("curl failed for {url}: {held}")
 }
