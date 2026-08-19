@@ -20,7 +20,7 @@ fn origin(authority: &str, running: &str) -> Result<GeneratorOrigin, String> {
         .filter(|held| !held.is_empty())
         .ok_or_else(|| format!("generator version names no channel: {running}"))?
         .to_string();
-    let version = format!("v{running}");
+    let version = running.to_string();
     let url = format!("{authority}/v1/releases/{channel}/{version}/seal.json");
     let sha256 = super::verify::Surface(&url).digest()?;
     Ok(GeneratorOrigin::ExactRelease {
