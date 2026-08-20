@@ -19,22 +19,37 @@ impl Seat {
             println!("  no version to read: the repository declares none, so pass --version");
             return 1;
         }
-        let seat = shape::changelog::seat(&self.0, &held);
-        let found = shape::changelog::read(&self.0, &held);
-        if found.is_empty() {
-            println!(
-                "  {} is documented in en and zh",
-                shape::changelog::stamped(&held)
-            );
-            return 0;
+        let stamped = match shape::changelog::identity(&held) {
+            Ok(base) => shape::changelog::stamped(&base),
+            Err(error) => {
+                println!("  {error}");
+                return 1;
+            }
+        };
+        match super::depot::occupied(&stamped) {
+            Err(error) => {
+                println!("  {error}");
+                1
+            }
+            Ok(None) => {
+                println!("  the depot carries no release note for {stamped}");
+                println!();
+                println!(
+                    "  write one under .tmp/plumb/changelog/{stamped} and run plumb depot changelog"
+                );
+                1
+            }
+            Ok(Some(notes)) => {
+                println!(
+                    "  {stamped} is documented in {} objects",
+                    notes.objects.len()
+                );
+                for object in &notes.objects {
+                    println!("    {}", object.path);
+                }
+                0
+            }
         }
-        println!("  {}", seat.display());
-        for line in &found {
-            println!("    {line}");
-        }
-        println!();
-        println!("  a stable release is immutable; what it changed cannot be written afterwards");
-        1
     }
 
     pub fn document(&self) -> i32 {

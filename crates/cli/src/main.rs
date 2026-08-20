@@ -93,6 +93,10 @@ enum Command {
         #[arg(long)]
         write: bool,
     },
+    Depot {
+        #[command(subcommand)]
+        deed: dispatch::depot::Deed,
+    },
     Release {
         #[command(subcommand)]
         deed: dispatch::release::Deed,
@@ -125,6 +129,7 @@ impl Command {
             Self::Changelog { .. } => "changelog",
             Self::Document { .. } => "document",
             Self::Lane { .. } => "lane",
+            Self::Depot { .. } => "depot",
             Self::Release { .. } => "release",
             Self::Ship { .. } => "ship",
             Self::Retire { .. } => "retire",
@@ -191,6 +196,7 @@ fn execute(command: Command) -> i32 {
         Command::Lane { target, write } => {
             dispatch::command::Seat::new(PathBuf::from(target.root)).lane(write)
         }
+        Command::Depot { deed } => dispatch::depot::run(deed),
         Command::Release { deed } => dispatch::release::run(deed),
         Command::Ship { deed } => dispatch::ship::run(deed),
         Command::Retire { deed } => dispatch::retire::run(deed),

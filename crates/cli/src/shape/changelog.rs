@@ -5,9 +5,6 @@ use std::process::Command;
 
 pub use plumb::changelog::Proof;
 
-const TONGUES: [&str; 2] = ["en", "zh"];
-const LEAVES: [&str; 2] = ["INDEX.md", "MIGRATION.md"];
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Pointer {
@@ -79,19 +76,6 @@ pub fn artifacts(repository: &Path, version: &str) -> Result<Vec<PathBuf>, Strin
     Ok(found)
 }
 
-pub fn read(source: &Path, version: &str) -> Vec<String> {
-    let home = seat(source, version);
-    let mut found = Vec::new();
-    for tongue in TONGUES {
-        for leaf in LEAVES {
-            if let Some(note) = judged(&home, tongue, leaf) {
-                found.push(note);
-            }
-        }
-    }
-    found
-}
-
 pub fn previous(authority: &str) -> Result<Option<String>, String> {
     let url = format!(
         "{}/v1/channels/stable.json",
@@ -137,35 +121,24 @@ pub fn previous(authority: &str) -> Result<Option<String>, String> {
     Ok(Some(pointer.commit))
 }
 
-pub fn prove(
-    root: &Path,
-    version: &str,
-    previous: Option<&str>,
-    candidate: &str,
-) -> Result<Proof, String> {
+pub fn prove(root: &Path, home: &Path, version: &str, candidate: &str) -> Result<Proof, String> {
     let version = identity(version)?;
+    let spec = super::super::dispatch::release::model::Spec::read(&root.join("plumb.toml"))?;
+    let previous = previous(&spec.authority)?;
     plumb::changelog::prove(plumb::changelog::Claim {
         root,
+        home,
         version: &version,
-        previous,
+        previous: previous.as_deref(),
         candidate,
     })
-}
-
-fn judged(home: &Path, tongue: &str, leaf: &str) -> Option<String> {
-    let shown = format!("{tongue}/{leaf}");
-    match std::fs::read_to_string(home.join(tongue).join(leaf)) {
-        Ok(text) if !text.trim().is_empty() => None,
-        Ok(_) => Some(format!("{shown} is empty")),
-        Err(_) => Some(format!("{shown} is missing")),
-    }
 }
 
 fn base(version: &str) -> String {
     identity(version).unwrap_or_else(|_| version.trim_start_matches('v').to_string())
 }
 
-fn identity(version: &str) -> Result<String, String> {
+pub fn identity(version: &str) -> Result<String, String> {
     let parsed = Version::parse(version.trim_start_matches('v'))
         .map_err(|error| format!("invalid version {version}: {error}"))?;
     Ok(format!(

@@ -1,30 +1,16 @@
 mod guard;
+pub mod source;
 
 use crate::dispatch::release::model::Spec;
 use serde_json::Value as Json;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-const GUARD: &str = include_str!("../../assets/guard/lane.yml.in");
-const TOOL: &str = include_str!("../../assets/guard/tool.yml.in");
-const PACKAGES: &str = include_str!("../../assets/guard/packages.yml.in");
-const PROOF: &str = include_str!("../../assets/guard/proof.yml.in");
-const ASK: &str = include_str!("../../assets/guard/ask.yml.in");
-const SHIP: &str = include_str!("../../assets/ship/lane.yml.in");
-const CARRIED: &str = include_str!("../../assets/ship/binary.yml.in");
-const PROJECTED: &str = include_str!("../../assets/ship/project.yml.in");
-const INSTALL: &str = include_str!("../../assets/ship/install.yml.in");
-const WINDOWS: &str = include_str!("../../assets/ship/windows.yml.in");
-const CAPSULE: &str = include_str!("../../assets/ship/capsule.yml.in");
-const EXACT: &str = include_str!("../../assets/release/exact.yml.in");
-const STABLE: &str = include_str!("../../assets/release/stable.yml.in");
 const TOOLS: [&str; 2] = ["ectropy", "plumb"];
 
 pub struct Seat<'a>(pub &'a Path);
 
-fn fill(text: &str, vars: &BTreeMap<&str, String>) -> Result<String, String> {
-    plumb::fill::actions(text, vars).map_err(|error| error.to_string())
-}
+use source::{RELEASED, filled, plain};
 
 pub struct Lane {
     pub path: String,
@@ -46,10 +32,16 @@ impl Seat<'_> {
     pub fn render(&self) -> Result<Vec<Lane>, String> {
         let spec = Spec::read(&self.0.join("plumb.toml"))?;
         let mut lanes = vec![self.guard(&spec)?];
+        if self.stocked() {
+            let vars = BTreeMap::from([("forge", crate::rules::RULES.release.forge.clone())]);
+            let rendered = filled("assets/depot/lane.yml.in", &vars)?;
+            lanes.push(self.seat("depot.yml", rendered)?);
+        }
         if !spec.surface().is_empty() {
             lanes.push(self.ship(&spec)?);
-            lanes.push(self.thin("exact.release.yml", EXACT)?);
-            lanes.push(self.thin("stable.release.yml", STABLE)?);
+            for (name, held) in RELEASED {
+                lanes.push(self.thin(name, held)?);
+            }
         }
         let refused = lanes
             .iter()
@@ -71,34 +63,40 @@ impl Seat<'_> {
             ("plumb", manager("plumb")),
             ("after", if carried { ", seal" } else { "" }.to_string()),
         ]);
-        let held = fill(INSTALL, &vars)?;
+        let held = filled("assets/ship/install.yml.in", &vars)?;
         vars.insert("carry", matrixed(&held, &vars)?);
         vars.insert("install", held);
         let binary = if carried {
-            fill(CARRIED, &vars)?
+            filled("assets/ship/binary.yml.in", &vars)?
         } else {
             String::new()
         };
         vars.insert(
             "capsule",
             if carried {
-                CAPSULE.to_string()
+                source::text("assets/ship/capsule.yml.in")?.to_string()
             } else {
                 String::new()
             },
         );
         let project = if projected {
-            fill(PROJECTED, &vars)?
+            filled("assets/ship/project.yml.in", &vars)?
         } else {
             String::new()
         };
         vars.insert("binary", binary);
         vars.insert("project", project);
-        self.seat("ship.yml", fill(SHIP, &vars)?)
+        self.seat("ship.yml", filled("assets/ship/lane.yml.in", &vars)?)
     }
 
-    fn thin(&self, name: &str, template: &str) -> Result<Lane, String> {
-        self.seat(name, fill(template, &BTreeMap::new())?)
+    fn stocked(&self) -> bool {
+        crate::dispatch::depot::record::ROOTS
+            .iter()
+            .all(|(root, _)| self.0.join(root).is_dir())
+    }
+
+    fn thin(&self, name: &str, path: &str) -> Result<Lane, String> {
+        self.seat(name, plain(path)?)
     }
 
     fn seat(&self, name: &str, rendered: String) -> Result<Lane, String> {
@@ -163,7 +161,7 @@ impl Seat<'_> {
             ("env", self.env(spec)),
             ("steps", self.steps(spec)?),
         ]);
-        let rendered = fill(GUARD, &vars)?;
+        let rendered = filled("assets/guard/lane.yml.in", &vars)?;
         Ok(Lane {
             path: path.to_string(),
             found: std::fs::read_to_string(self.0.join(path))
@@ -191,16 +189,16 @@ impl Seat<'_> {
                 continue;
             }
             let vars = BTreeMap::from([("title", title(tool)), ("manager", manager(tool))]);
-            blocks.push(fill(TOOL, &vars)?);
+            blocks.push(filled("assets/guard/tool.yml.in", &vars)?);
         }
         if guarded {
-            blocks.push(ASK.to_string());
+            blocks.push(source::text("assets/guard/ask.yml.in")?.to_string());
         }
         if self.0.join("pnpm-lock.yaml").is_file() {
             let vars = BTreeMap::from([("when", seat.when("web"))]);
-            blocks.push(fill(PACKAGES, &vars)?);
+            blocks.push(filled("assets/guard/packages.yml.in", &vars)?);
         }
-        blocks.push(seat.steps(listed, PROOF)?);
+        blocks.push(seat.steps(listed, source::text("assets/guard/proof.yml.in")?)?);
         Ok(blocks.join("\n"))
     }
 
@@ -278,7 +276,10 @@ fn matrixed(install: &str, vars: &BTreeMap<&str, String>) -> Result<String, Stri
         "        if: runner.os != 'Windows'\n        run: |",
         1,
     );
-    Ok(format!("{guarded}\n{}", fill(WINDOWS, vars)?))
+    Ok(format!(
+        "{guarded}\n{}",
+        filled("assets/ship/windows.yml.in", vars)?
+    ))
 }
 
 fn manager(tool: &str) -> String {

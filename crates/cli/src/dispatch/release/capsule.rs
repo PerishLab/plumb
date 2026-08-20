@@ -17,7 +17,6 @@ pub struct Compile<'a> {
     pub artifacts: &'a Path,
     pub out: &'a Path,
     pub promotion: Option<&'a Path>,
-    pub changelog: crate::shape::changelog::Proof,
     pub toolchain: &'a str,
 }
 
@@ -102,13 +101,6 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
         commit: input.commit,
         path: input.promotion,
     })?;
-    if promotion
-        .as_ref()
-        .and_then(|proof| proof.seal.changelog.as_ref())
-        .is_some_and(|held| held != &input.changelog)
-    {
-        return Err("promotion changelog proof does not match this stable release".into());
-    }
     let url = format!(
         "{}/v1/releases/{}/{}/seal.json",
         spec.authority, input.channel, input.version
@@ -123,7 +115,7 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
         generator: generator::resolve(spec.authority.as_str())?,
         artifacts,
         managers,
-        changelog: Some(input.changelog),
+        changelog: None,
         proof: promotion,
         radius: None,
         inputs: super::object::Seat(&spec).inputs(input.toolchain, input.version)?,

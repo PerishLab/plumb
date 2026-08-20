@@ -2,6 +2,7 @@ use crate::config::Cascade;
 use std::path::PathBuf;
 
 const RELEASES: &str = "https://releases.plumb.perish.uk";
+const DEPOT: &str = "https://depot.plumb.perish.uk";
 
 #[derive(Debug, PartialEq, Cascade)]
 pub struct Rig {
@@ -17,6 +18,8 @@ pub struct Rig {
     pub activate: Authority,
     #[cascade(section)]
     pub lock: Authority,
+    #[cascade(section)]
+    pub depot: Depot,
     #[cascade(section)]
     pub workflow: Workflow,
     #[cascade(section)]
@@ -150,6 +153,27 @@ pub struct Guard {
     pub contexts: String,
 }
 
+#[derive(Debug, PartialEq, Cascade)]
+#[cascade(section)]
+pub struct Depot {
+    pub source: String,
+    pub channel: String,
+    pub seat: PathBuf,
+    #[cascade(section)]
+    pub authority: Authority,
+}
+
+impl Default for Depot {
+    fn default() -> Self {
+        Self {
+            source: DEPOT.to_string(),
+            channel: "stable".to_string(),
+            seat: PathBuf::new(),
+            authority: Authority::default(),
+        }
+    }
+}
+
 #[derive(Debug, Default, PartialEq, Cascade)]
 #[cascade(section)]
 pub struct Workflow {
@@ -182,6 +206,7 @@ impl Default for Rig {
             publish: Authority::default(),
             activate: Authority::default(),
             lock: Authority::default(),
+            depot: Depot::default(),
             workflow: Workflow::default(),
             site: Site::default(),
             guard: Guard::default(),

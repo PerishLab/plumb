@@ -1,0 +1,37 @@
+name: depot
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - crates/cli/assets/**
+      - crates/cli/rules/**
+      - crates/lib/rules/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: depot-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  depot:
+    runs-on: docker
+    container:
+      image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Publish
+        env:
+          PLUMB_DEPOT_AUTHORITY_ACCESS: ${{ secrets.DEPOT_PUBLISH_S3_ACCESS_KEY }}
+          PLUMB_DEPOT_AUTHORITY_SECRET: ${{ secrets.DEPOT_PUBLISH_S3_SECRET_KEY }}
+          PLUMB_DEPOT_AUTHORITY_BUCKET: ${{ secrets.DEPOT_PUBLISH_S3_BUCKET }}
+          PLUMB_DEPOT_AUTHORITY_ENDPOINT: ${{ secrets.DEPOT_PUBLISH_S3_ENDPOINT }}
+        run: |
+          set -eu
+          cargo run --quiet --locked --bin plumb -- depot publish

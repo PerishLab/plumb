@@ -4,7 +4,7 @@ pub fn resolve(authority: &str) -> Result<Generator, String> {
     let running = plumb::version!("PLUMB").to_string();
     Ok(Generator {
         version: running.clone(),
-        template: super::manager::template(),
+        template: super::manager::template()?,
         origin: Some(origin(authority, &running)?),
         recovery: None,
     })

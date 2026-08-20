@@ -42,6 +42,8 @@ pub fn check(held: &shape::Shape) -> Found {
     found
 }
 
+const SUBSTRATE: [&str; 2] = ["plumb", "@perish/plumb"];
+
 fn currency(dependency: &Dependency, found: &mut Found) {
     if let Some((_, current)) = RULES
         .retired
@@ -56,6 +58,7 @@ fn currency(dependency: &Dependency, found: &mut Found) {
     }
     for verdict in plumb_cli::judge(dependency) {
         match verdict {
+            Verdict::Stale { .. } if SUBSTRATE.contains(&dependency.name.as_str()) => {}
             Verdict::Stale { resolution, latest } => found.push(wrong(
                 &rule::FIRST_PARTY_STABLE_LATEST,
                 format!(

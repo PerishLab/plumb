@@ -1,6 +1,7 @@
 use super::model::Rule;
 
 pub mod consensus;
+pub mod depot;
 pub mod dispatch;
 pub mod document;
 mod domain;
@@ -52,6 +53,7 @@ pub(crate) use rule;
 pub fn all() -> Vec<&'static Rule> {
     [
         consensus::all(),
+        depot::all(),
         document::all(),
         env::all(),
         structure::all(),

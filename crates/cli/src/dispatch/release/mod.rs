@@ -198,9 +198,6 @@ fn compile(spec: &model::Spec, release: &plumb::rig::Release) -> Result<String, 
     let channel = required("PLUMB_RELEASE_CHANNEL", &release.channel)?;
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
     let commit = required("PLUMB_RELEASE_COMMIT", &release.commit)?;
-    let previous = crate::shape::changelog::previous(&spec.authority)?;
-    let changelog =
-        crate::shape::changelog::prove(&spec.root, version, previous.as_deref(), commit)?;
     capsule::compile(capsule::Compile {
         spec: &spec.manifest(),
         channel,
@@ -209,7 +206,6 @@ fn compile(spec: &model::Spec, release: &plumb::rig::Release) -> Result<String, 
         artifacts: &artifacts(release)?,
         out: &output(release)?,
         promotion: release.promotion.as_deref(),
-        changelog,
         toolchain: &release.toolchain,
     })
 }

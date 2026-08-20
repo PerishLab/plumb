@@ -7,16 +7,18 @@ struct Repo<'a>(&'a Path);
 #[test]
 fn measured() {
     let fixture = tempfile::tempdir().expect("fixture");
+    let seat = tempfile::tempdir().expect("staged");
     let root = fixture.path();
     let repo = Repo(root);
     repo.init();
-    repo.logged("1.0.0", "old\n");
+    std::fs::write(root.join("prior.rs"), "old\n").expect("prior");
     let base = repo.commit("base");
-    repo.logged("1.1.0", "new\n");
     std::fs::write(root.join("source.rs"), "line\n").expect("source");
     let candidate = repo.commit("candidate");
+    staged(seat.path(), "note\n");
     let proof = prove(Claim {
         root,
+        home: seat.path(),
         version: "1.1.0",
         previous: Some(&base),
         candidate: &candidate,
@@ -30,28 +32,35 @@ fn measured() {
 }
 
 #[test]
-fn frozen() {
+fn bounded() {
     let fixture = tempfile::tempdir().expect("fixture");
+    let held = tempfile::tempdir().expect("staged");
     let root = fixture.path();
     let repo = Repo(root);
     repo.init();
-    repo.logged("1.0.0", "old\n");
+    std::fs::write(root.join("prior.rs"), "old\n").expect("prior");
     let base = repo.commit("base");
-    repo.logged("1.1.0", "new\n");
-    std::fs::write(
-        root.join("docs/CHANGELOG/v1.0.0/en/INDEX.md"),
-        "rewritten\n",
-    )
-    .expect("rewrite history");
+    std::fs::write(root.join("source.rs"), "line\n").expect("source");
     let candidate = repo.commit("candidate");
+    staged(held.path(), &"line\n".repeat(200));
     let error = prove(Claim {
         root,
+        home: held.path(),
         version: "1.1.0",
         previous: Some(&base),
         candidate: &candidate,
     })
-    .expect_err("frozen history");
-    assert!(error.contains("mutates frozen changelog v1.0.0"), "{error}");
+    .expect_err("above budget");
+    assert!(error.contains("above diff budget"), "{error}");
+}
+
+fn staged(home: &Path, text: &str) {
+    for tongue in ["en", "zh"] {
+        let seat = home.join(tongue);
+        std::fs::create_dir_all(&seat).expect("changelog seat");
+        std::fs::write(seat.join("INDEX.md"), text).expect("index");
+        std::fs::write(seat.join("MIGRATION.md"), text).expect("migration");
+    }
 }
 
 impl Repo<'_> {
@@ -59,15 +68,6 @@ impl Repo<'_> {
         self.run(&["init", "-q"]);
         self.run(&["config", "user.name", "Fixture"]);
         self.run(&["config", "user.email", "fixture@example.test"]);
-    }
-
-    fn logged(&self, version: &str, text: &str) {
-        for tongue in ["en", "zh"] {
-            let seat = self.0.join(format!("docs/CHANGELOG/v{version}/{tongue}"));
-            std::fs::create_dir_all(&seat).expect("changelog seat");
-            std::fs::write(seat.join("INDEX.md"), text).expect("index");
-            std::fs::write(seat.join("MIGRATION.md"), text).expect("migration");
-        }
     }
 
     fn commit(&self, message: &str) -> String {

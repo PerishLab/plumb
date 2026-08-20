@@ -118,6 +118,7 @@ macro_rules! namespace {
 }
 
 namespace!(CONFIG, "config", "runtime policy vocabulary", PRODUCT);
+namespace!(DEPOT_NS, "depot", "configuration distribution", PLUMB);
 namespace!(DEPS, "deps", "dependency posture", PLUMB);
 namespace!(DOCUMENT, "document", "governed repository prose", PLUMB);
 namespace!(DISPATCH_NS, "dispatch", "process dispatch shape", SIDECAR);
@@ -138,6 +139,7 @@ namespace!(WEB_NS, "web", "web application shape", WEB);
 
 pub static NAMESPACES: &[&Namespace] = &[
     &CONFIG,
+    &DEPOT_NS,
     &DEPS,
     &DOCUMENT,
     &DISPATCH_NS,

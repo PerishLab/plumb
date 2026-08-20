@@ -4,6 +4,8 @@ use std::process::Command;
 mod datum;
 #[path = "doctor/dependency.rs"]
 mod dependency;
+#[path = "doctor/depot.rs"]
+mod depot;
 #[path = "doctor/document.rs"]
 mod document;
 #[path = "doctor/json.rs"]

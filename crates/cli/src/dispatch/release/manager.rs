@@ -3,14 +3,15 @@ use semver::Version;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-const UNIX: &str = include_str!("../../../assets/manager/unix.sh.in");
-const WINDOWS: &str = include_str!("../../../assets/manager/windows.ps1.in");
-
-pub fn template() -> String {
+pub fn template() -> Result<String, String> {
     let mut bytes = Vec::new();
-    bytes.extend_from_slice(UNIX.as_bytes());
-    bytes.extend_from_slice(WINDOWS.as_bytes());
-    super::record::sha(&bytes)
+    bytes.extend_from_slice(
+        crate::shape::lane::source::text("assets/manager/unix.sh.in")?.as_bytes(),
+    );
+    bytes.extend_from_slice(
+        crate::shape::lane::source::text("assets/manager/windows.ps1.in")?.as_bytes(),
+    );
+    Ok(super::record::sha(&bytes))
 }
 
 pub fn write(spec: &Path, channel: &str, version: &str, out: &Path) -> Result<String, String> {
@@ -58,13 +59,23 @@ fn render(spec: &Spec, channel: &str, version: &str) -> Result<(String, Option<S
         ("windows_key", String::new()),
         ("windows_root", String::new()),
     ]);
-    let unix = plumb::fill::fill(UNIX, &vars).map_err(|error| error.to_string())?;
+    let unix = plumb::fill::fill(
+        crate::shape::lane::source::text("assets/manager/unix.sh.in")?,
+        &vars,
+    )
+    .map_err(|error| error.to_string())?;
     let windows = match spec.windows() {
         Some(target) => {
             vars.insert("windows_archive", target.archive.clone());
             vars.insert("windows_key", target.key.clone());
             vars.insert("windows_root", String::new());
-            Some(plumb::fill::fill(WINDOWS, &vars).map_err(|error| error.to_string())?)
+            Some(
+                plumb::fill::fill(
+                    crate::shape::lane::source::text("assets/manager/windows.ps1.in")?,
+                    &vars,
+                )
+                .map_err(|error| error.to_string())?,
+            )
         }
         None => None,
     };

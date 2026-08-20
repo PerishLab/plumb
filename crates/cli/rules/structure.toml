@@ -93,6 +93,10 @@ name = "deploy"
 note = "Site deployment on explicit dispatch. Carried by design, which is not governed yet; no governed repository holds this lane as of 2026-08-20."
 
 [[lane.member]]
+name = "depot"
+note = "Rendered configuration-distribution lane. Only a repository recording the depot roots renders it; plumb alone as of 2026-08-20."
+
+[[lane.member]]
 name = "exact.release"
 note = "Rendered exact-release lane. crest, plumb, sidecar. Succeeds release-exact."
 

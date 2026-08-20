@@ -10,6 +10,7 @@ pub mod forgejo;
 mod proof;
 #[cfg(any(feature = "vendor", feature = "skill"))]
 pub mod rig;
+pub mod seat;
 #[cfg(feature = "skill")]
 pub mod skill;
 #[cfg(feature = "vendor")]

@@ -6,6 +6,7 @@ use std::collections::BTreeSet;
 use text::{COMPONENTS, CONCURRENCY, CONTAINER};
 
 pub(crate) mod catalog;
+mod depot;
 mod deps;
 pub(crate) mod doctor;
 pub(crate) mod finding;

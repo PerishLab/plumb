@@ -91,6 +91,7 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
     };
     let mut findings = judge(&held);
     findings.extend(retired(&vocabulary));
+    findings.extend(super::depot::judge(&snapshot));
     let summary = Summary::new(&findings);
     let ok = summary.wrong == 0 && summary.blind == 0;
     if json {

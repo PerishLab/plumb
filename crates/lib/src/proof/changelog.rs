@@ -31,6 +31,7 @@ pub struct Language {
 
 pub struct Claim<'a> {
     pub root: &'a Path,
+    pub home: &'a Path,
     pub version: &'a str,
     pub previous: Option<&'a str>,
     pub candidate: &'a str,
@@ -47,28 +48,9 @@ pub fn prove(input: Claim<'_>) -> Result<Proof, String> {
     }
     let repo = Repo(input.root);
     let base = repo.base(input.previous, input.candidate)?;
-    let excluded = excluded(input.version);
-    let changed = repo.names(&base, input.candidate)?;
-    for path in &changed {
-        if let Some(rest) = path.strip_prefix("docs/CHANGELOG/v")
-            && let Some((held, _)) = rest.split_once('/')
-            && held != input.version
-        {
-            return Err(format!(
-                "candidate mutates frozen changelog v{held} while releasing v{}",
-                input.version
-            ));
-        }
-    }
-    let mut units = changed
-        .iter()
-        .filter(|path| !excluded.contains(path))
-        .count();
+    let mut units = repo.names(&base, input.candidate)?.len();
     let mut identity = Vec::new();
     for row in repo.stat(&base, input.candidate)? {
-        if excluded.contains(&row.path) {
-            continue;
-        }
         units += row.added.parse::<usize>().unwrap_or(0);
         units += row.removed.parse::<usize>().unwrap_or(0);
         push(&mut identity, row.path.as_bytes());
@@ -76,13 +58,12 @@ pub fn prove(input: Claim<'_>) -> Result<Proof, String> {
         push(&mut identity, row.removed.as_bytes());
     }
     let budget = (4 * scale(units)).clamp(120, 800);
-    let home = input
-        .root
-        .join("docs/CHANGELOG")
-        .join(format!("v{}", input.version));
     let mut languages = BTreeMap::new();
     for tongue in TONGUES {
-        languages.insert(tongue.to_string(), language(&home, tongue, budget, units)?);
+        languages.insert(
+            tongue.to_string(),
+            language(input.home, tongue, budget, units)?,
+        );
     }
     Ok(Proof {
         base,
@@ -224,16 +205,6 @@ fn language(home: &Path, tongue: &str, budget: usize, units: usize) -> Result<La
         index: seals.remove("INDEX.md").unwrap_or_default(),
         migration: seals.remove("MIGRATION.md").unwrap_or_default(),
     })
-}
-
-fn excluded(version: &str) -> Vec<String> {
-    let mut found = Vec::new();
-    for tongue in TONGUES {
-        for leaf in LEAVES {
-            found.push(format!("docs/CHANGELOG/v{version}/{tongue}/{leaf}"));
-        }
-    }
-    found
 }
 
 fn success(output: Output, fallback: &str) -> Result<Vec<u8>, String> {

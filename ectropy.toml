@@ -76,6 +76,7 @@ paths = [
     "crates/*/tests/**/*.rs",
     "crates/lib/src/config.rs",
     "crates/lib/src/forgejo/settings.rs",
+    "crates/lib/src/seat.rs",
     "crates/macro/src/parse.rs",
     "packages/*/tests/**/*.test.ts",
     "packages/*/tests/**/*.test.tsx",

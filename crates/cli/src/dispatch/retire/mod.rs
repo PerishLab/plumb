@@ -1,4 +1,3 @@
-mod clock;
 mod cloud;
 mod forge;
 mod store;
@@ -76,7 +75,7 @@ fn act(deed: Deed) -> Result<String, String> {
         return Err(format!("duplicate persistent token {}", names.writer));
     }
     let writer = writers.first().map(|held| held.id.clone());
-    let until = clock::ahead(MINUTES)?;
+    let until = super::clock::ahead(MINUTES)?;
     let permits = (
         factory.permission(ADMIN.0, ADMIN.1)?,
         factory.permission(ITEM.0, ITEM.1)?,

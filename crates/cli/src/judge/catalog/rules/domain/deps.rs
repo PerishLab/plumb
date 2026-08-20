@@ -44,7 +44,7 @@ rule!(
     FIRST_PARTY_STABLE_LATEST,
     "deps.first-party-stable-latest",
     "First-party dependencies resolve to stable latest",
-    "A direct dependency published by perish.code resolves exactly to the live latest non-prerelease, non-yanked version at its compiled registry authority.",
+    "A direct dependency published by perish.code resolves exactly to the live latest non-prerelease, non-yanked version at its compiled registry authority, except the plumb substrate, whose currency the depot floor decides.",
     "Direct Deno and Cargo declarations, their exact lock resolutions, and live registry metadata.",
     Mechanized,
     PLUMB,

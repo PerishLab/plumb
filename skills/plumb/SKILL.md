@@ -39,6 +39,11 @@ use Doctor before changing its shape.
 - A **datum** is the stable answers a release line judges against, recorded by
   `prepare` under `.plumb` and read there by `doctor` in place of a live
   registry, so the frozen candidate keeps the verdict it was proved with.
+- A **depot** is Plumb's store for the configuration it would otherwise only
+  compile in: rules and lane templates as immutable objects under a timestamped
+  version, plus one movable channel pointer naming the current one. A synced
+  seat answers before the compiled bytes, and the compiled bytes stay as the
+  permanent floor, so a repository that never syncs is not thereby blind.
 - A **site** is a declared application whose deploy, binding, and reachability
   are independently evidenced.
 - A **retirement** destroys one declared delivery chain in a fixed order; it is
@@ -66,6 +71,10 @@ plumb workflow status [ROOT] [--since REV]
 plumb workflow ask LANE [ROOT]
 plumb workflow hash|lock KEY [ROOT]
 plumb changelog [ROOT]
+plumb depot publish [ROOT] [--version FLOOR] [--dry-run]
+plumb depot changelog [ROOT] --version VERSION [--from DIR] [--keep] [--dry-run]
+plumb depot sync
+plumb depot show
 plumb release --help
 plumb ship --help
 plumb release prepare|pick|freeze|rejoin|stamp|retract --version VERSION [--dry-run]
@@ -125,6 +134,18 @@ unfamiliar or stateful action.
   run: secrets under `workflow_call`, an empty matrix, an installed tool absent
   from the job path, or a release lane that follows a push. Only the forge parses
   a lane body, so a local check must stand where the text is written.
+- A release note is a seat in the depot, one known address per released
+  version, and it is mutable because ship is not: identity is paid once at the
+  version and its seal, so a note about that version can only be improved.
+  Publishing refuses a language pair that is empty or above its diff-derived
+  budget; compiling a release checks neither, so a note can never fail a
+  release. Notes stage in the repository's temporary seat and are cleared once
+  the depot holds them, so they never enter the tree.
+- The depot is read from the held seat and never fetched, so a stale seat is an
+  observation and a seat that cannot be read is blind. Two laws stand on it: the
+  roots this repository records are carried by the held version under the same
+  digest, and the running binary is at or above the floor that version declares.
+  Publishing refuses roots carrying uncommitted change.
 - Stable default skill seats accept canonical stable only. Validate every
   other candidate in an exact, isolated stage path.
 - A governed repository declares `[[document]]` strategies. Unknown
