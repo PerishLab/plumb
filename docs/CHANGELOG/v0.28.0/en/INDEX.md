@@ -74,3 +74,14 @@ whether or not it declares anything.
 A repository whose product is the tool installs the released tool beside its own
 build, because asking whether a step may be skipped must not first compile the
 thing that would have run it.
+
+## Stable promotion takes the latest exact seal at the commit
+
+An exact release that published and then failed downstream can never be run
+again. A run advances its channel pointer, and the seal records the generator
+that pointer named, so the second attempt computes a seal the first already made
+immutable. Burning the number is the only way forward.
+
+Promotion therefore takes the newest published exact seal standing at the frozen
+commit instead of refusing when more than one does. A commit carrying none still
+refuses, because a stable release must come from an exact one that ran.

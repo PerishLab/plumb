@@ -127,7 +127,22 @@ impl Fixture<'_> {
     pub fn seal(&self, version: &str) {
         let seat = self.root.join("releases/v1/releases/beta").join(version);
         std::fs::create_dir_all(&seat).expect("published seal root");
-        std::fs::write(seat.join("seal.json"), "{}\n").expect("published seal");
+        let body = serde_json::json!({
+            "schema": 1,
+            "product": "plumb",
+            "channel": "beta",
+            "releaseVersion": version,
+            "commit": "0000000000000000000000000000000000000000",
+            "url": format!("https://releases.test/v1/releases/beta/{version}/seal.json"),
+            "generator": { "version": version, "template": "0" },
+            "artifacts": {},
+            "managers": {},
+        });
+        std::fs::write(
+            seat.join("seal.json"),
+            format!("{}\n", serde_json::to_string_pretty(&body).expect("seal")),
+        )
+        .expect("published seal");
     }
 }
 

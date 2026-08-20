@@ -67,27 +67,22 @@ pub fn fetch(spec: &Spec, commit: &str, version: &str, output: &Path) -> Result<
 }
 
 fn settle(found: Vec<Exact>, commit: &str, version: &str) -> Result<Exact, String> {
-    if found.len() == 1 {
-        return found
-            .into_iter()
-            .next()
-            .ok_or_else(|| "promotion source vanished".to_string());
-    }
     if found.is_empty() {
         return Err(format!(
             "no published exact seal stands at {commit} for stable {version}"
         ));
     }
-    let named = found
-        .iter()
-        .map(|exact| exact.version.as_str())
-        .collect::<Vec<_>>()
-        .join(", ");
-    Err(format!(
-        "{} published exact seals stand at {commit} for stable {version}: {named}; \
-         rerun one exact release instead of tagging another",
-        found.len()
-    ))
+    let mut ranked = Vec::new();
+    for exact in found {
+        let parsed = Version::parse(exact.version.trim_start_matches('v'))
+            .map_err(|error| format!("invalid exact version: {error}"))?;
+        ranked.push((parsed, exact));
+    }
+    ranked.sort_by(|left, right| left.0.cmp(&right.0));
+    ranked
+        .pop()
+        .map(|(_, exact)| exact)
+        .ok_or_else(|| "promotion source vanished".to_string())
 }
 
 fn trunk(version: &str) -> Result<(u64, u64, u64), String> {
