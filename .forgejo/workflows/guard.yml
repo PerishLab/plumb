@@ -20,6 +20,12 @@ jobs:
     runs-on: docker
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
+    env:
+      PLUMB_WORKFLOW_SEAT: ${{ github.repository }}
+      PLUMB_LOCK_ACCESS: ${{ secrets.workflow_lock_s3_access_key }}
+      PLUMB_LOCK_SECRET: ${{ secrets.workflow_lock_s3_secret_key }}
+      PLUMB_LOCK_BUCKET: ${{ secrets.workflow_lock_s3_bucket }}
+      PLUMB_LOCK_ENDPOINT: ${{ secrets.workflow_lock_s3_endpoint }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -30,25 +36,64 @@ jobs:
           curl -fsSL https://releases.ectropy.perish.uk/manage.sh | sh
           printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
 
+      - name: Install stable Plumb
+        run: |
+          set -eu
+          curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Ask what this run must repeat
+        id: workflow
+        run: |
+          set -eu
+          plumb workflow ask guard >> "$GITHUB_OUTPUT" || true
+
       - name: Seat the package store outside the source
         run: echo "PNPM_CONFIG_STORE_DIR=$RUNNER_TEMP/pnpm-store" >> "$GITHUB_ENV"
       - name: Install declared packages
+        if: steps.workflow.outputs.web != 'false'
         run: |
           set -eu
           corepack enable
           pnpm install --frozen-lockfile
 
-      - name: Guard
+      - name: Guard rust
+        if: steps.workflow.outputs.rust != 'false'
         run: |
           set -eu
           cargo fmt --all --check
           cargo clippy --all-targets -- -D warnings
-          cargo test --locked
           cargo check --locked --workspace --all-targets --release
+          plumb workflow lock guard/rust || true
+
+      - name: Guard test
+        if: steps.workflow.outputs.test != 'false'
+        run: |
+          set -eu
+          cargo test --locked
+          plumb workflow lock guard/test || true
+
+      - name: Guard web
+        if: steps.workflow.outputs.web != 'false'
+        run: |
+          set -eu
           pnpm biome ci .
           pnpm -r exec tsc --noEmit
           pnpm -r test
           pnpm --filter @plumb/web build
+          plumb workflow lock guard/web || true
+
+      - name: Guard plumb
+        if: steps.workflow.outputs.plumb != 'false'
+        run: |
+          set -eu
           cargo run --quiet --locked --bin plumb -- doctor .
+          plumb workflow lock guard/plumb || true
+
+      - name: Guard ectropy
+        if: steps.workflow.outputs.ectropy != 'false'
+        run: |
+          set -eu
           ectropy .
+          plumb workflow lock guard/ectropy || true
 

@@ -106,6 +106,10 @@ enum Command {
         #[command(flatten)]
         deed: dispatch::retire::Deed,
     },
+    Workflow {
+        #[command(subcommand)]
+        deed: dispatch::workflow::Deed,
+    },
 }
 
 impl Command {
@@ -124,6 +128,7 @@ impl Command {
             Self::Release { .. } => "release",
             Self::Ship { .. } => "ship",
             Self::Retire { .. } => "retire",
+            Self::Workflow { .. } => "workflow",
         }
     }
 }
@@ -189,6 +194,7 @@ fn execute(command: Command) -> i32 {
         Command::Release { deed } => dispatch::release::run(deed),
         Command::Ship { deed } => dispatch::ship::run(deed),
         Command::Retire { deed } => dispatch::retire::run(deed),
+        Command::Workflow { deed } => dispatch::workflow::run(deed),
     }
 }
 

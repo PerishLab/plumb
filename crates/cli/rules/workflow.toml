@@ -1,0 +1,24 @@
+# The workflow dimension's classic input suites. A suite names the paths a
+# well-known toolchain reads, so a product declares intent instead of copying a
+# list. Adding a path here is a change to Plumb, never one a product makes for
+# itself.
+
+[suite]
+cargo = [
+  ".cargo",
+  "Cargo.lock",
+  "Cargo.toml",
+  "clippy.toml",
+  "crates",
+  "rust-toolchain.toml",
+  "rustfmt.toml",
+]
+pnpm = [
+  "apps",
+  "biome.json",
+  "package.json",
+  "packages",
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
+  "tsconfig.json",
+]

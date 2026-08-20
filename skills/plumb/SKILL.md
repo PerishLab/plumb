@@ -62,6 +62,9 @@ plumb document [ROOT]
 plumb radius --root [LABEL=]PATH --product PRODUCT --candidate VERSION
 plumb policy [ROOT] --write
 plumb lane [ROOT] [--write]
+plumb workflow status [ROOT] [--since REV]
+plumb workflow ask LANE [ROOT]
+plumb workflow hash|lock KEY [ROOT]
 plumb changelog [ROOT]
 plumb release --help
 plumb ship --help

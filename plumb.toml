@@ -1,17 +1,17 @@
 [[document]]
 strategy = "agent"
-source = [{ path = ".", seal = "e6d5acde27ed14e41cfa1f5dd03ac2c1565966ef0911e3e5fc16ea5c456acfc3" }]
-target-seal = "aeb9cd72bc426acdb23dcdf4f49ae9bde2f86c9e0102effd18d11a056d516e55"
+source = [{ path = ".", seal = "ea2662c9d3840f5948c311853e38c6553f652d4409e6698475b2ecc9e6ca5c87" }]
+target-seal = "b98644b2c4c139fa3014208929771bb629efadbcbbbcce8ff893e373fc532117"
 
 [[document]]
 strategy = "brief"
 name = "plumb"
 source = [
-  { path = "crates/cli/src", seal = "352f82dd3632bd7c12ee9a8115dc0b85e295a2d8c41712424ac39acc14042dd1" },
-  { path = "crates/lib/src", seal = "bd7f038c248e0b416113c787c3ebd9d7327c995576a1f11599303ade24f7ed6a" },
+  { path = "crates/cli/src", seal = "80116be5c73a7067c54e2cf9ffbbde42d0121575b2f42df8102385d0e34e0bcd" },
+  { path = "crates/lib/src", seal = "f30566a4918e5582b0a1e2a1a9b616d08aedd111b65d113016bc6e0c2f2567dd" },
   { path = "crates/macro/src", seal = "c8ae2bfd1091d77db6e6f010560bbf961644c87557ac3005e0bcb85723dd8f19" },
 ]
-target-seal = "d1dfbfd8d7c4a213eff1c431cc21242477b2419464b60f288e249c3c0e561e73"
+target-seal = "8159f486cbe6a411dbbe3ef490c6627b8e12c61ac50e944bbca6f515bf66bb53"
 
 [release]
 product = "plumb"
@@ -46,3 +46,10 @@ packages = ["@perish/plumb"]
 [release.cfworker]
 account = "a6776d8a453d1b84d01576245a9c4f8d"
 domain = "plumb.perish.uk"
+
+[workflow.hash.guard]
+"rust" = ["suite://cargo"]
+"test" = ["*"]
+"web" = ["suite://pnpm"]
+"ectropy" = ["ectropy.toml", "apps", "crates", "docs", "packages", "skills"]
+"plumb" = ["*"]

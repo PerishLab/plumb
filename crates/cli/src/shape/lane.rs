@@ -1,3 +1,5 @@
+mod guard;
+
 use crate::dispatch::release::model::Spec;
 use serde_json::Value as Json;
 use std::collections::BTreeMap;
@@ -6,7 +8,8 @@ use std::path::Path;
 const GUARD: &str = include_str!("../../assets/guard/lane.yml.in");
 const TOOL: &str = include_str!("../../assets/guard/tool.yml.in");
 const PACKAGES: &str = include_str!("../../assets/guard/packages.yml.in");
-const PROOFS: &str = include_str!("../../assets/guard/proofs.yml.in");
+const PROOF: &str = include_str!("../../assets/guard/proof.yml.in");
+const ASK: &str = include_str!("../../assets/guard/ask.yml.in");
 const SHIP: &str = include_str!("../../assets/ship/lane.yml.in");
 const CARRIED: &str = include_str!("../../assets/ship/binary.yml.in");
 const PROJECTED: &str = include_str!("../../assets/ship/project.yml.in");
@@ -157,6 +160,7 @@ impl Seat<'_> {
         let path = ".forgejo/workflows/guard.yml";
         let vars = BTreeMap::from([
             ("forge", crate::rules::RULES.release.forge.clone()),
+            ("env", self.env(spec)),
             ("steps", self.steps(spec)?),
         ]);
         let rendered = fill(GUARD, &vars)?;
@@ -169,48 +173,64 @@ impl Seat<'_> {
         })
     }
 
+    fn env(&self, spec: &Spec) -> String {
+        let seat = guard::Seat::read(self.0);
+        if seat.any(&self.proofs(spec)) {
+            return guard::LOCK.to_string();
+        }
+        String::new()
+    }
+
     fn steps(&self, spec: &Spec) -> Result<String, String> {
+        let seat = guard::Seat::read(self.0);
+        let listed = self.proofs(spec);
         let mut blocks = Vec::new();
+        let guarded = seat.any(&listed);
         for tool in TOOLS {
-            if spec.product == tool {
+            if spec.product == tool && !guarded {
                 continue;
             }
             let vars = BTreeMap::from([("title", title(tool)), ("manager", manager(tool))]);
             blocks.push(fill(TOOL, &vars)?);
         }
-        if self.0.join("pnpm-lock.yaml").is_file() {
-            blocks.push(PACKAGES.to_string());
+        if guarded {
+            blocks.push(ASK.to_string());
         }
-        let proofs = self
-            .proofs(spec)
-            .into_iter()
-            .map(|line| format!("          {line}"))
-            .collect::<Vec<_>>()
-            .join("\n");
-        blocks.push(fill(PROOFS, &BTreeMap::from([("proofs", proofs)]))?);
+        if self.0.join("pnpm-lock.yaml").is_file() {
+            let vars = BTreeMap::from([("when", seat.when("web"))]);
+            blocks.push(fill(PACKAGES, &vars)?);
+        }
+        blocks.push(seat.steps(listed, PROOF)?);
         Ok(blocks.join("\n"))
     }
 
-    fn proofs(&self, spec: &Spec) -> Vec<String> {
+    fn proofs(&self, spec: &Spec) -> Vec<guard::Proof> {
         let mut lines = Vec::new();
+        let mut push = |key, line: String| lines.push(guard::Proof { key, line });
         if self.0.join("Cargo.toml").is_file() {
-            lines.push("cargo fmt --all --check".to_string());
-            lines.push("cargo clippy --all-targets -- -D warnings".to_string());
-            lines.push("cargo test --locked".to_string());
-            lines.push("cargo check --locked --workspace --all-targets --release".to_string());
+            push("rust", "cargo fmt --all --check".to_string());
+            push(
+                "rust",
+                "cargo clippy --all-targets -- -D warnings".to_string(),
+            );
+            push(
+                "rust",
+                "cargo check --locked --workspace --all-targets --release".to_string(),
+            );
+            push("test", "cargo test --locked".to_string());
         }
         if self.0.join("pnpm-lock.yaml").is_file() {
             if self.0.join("biome.json").is_file() {
-                lines.push("pnpm biome ci .".to_string());
+                push("web", "pnpm biome ci .".to_string());
             }
-            lines.push("pnpm -r exec tsc --noEmit".to_string());
-            lines.push("pnpm -r test".to_string());
+            push("web", "pnpm -r exec tsc --noEmit".to_string());
+            push("web", "pnpm -r test".to_string());
         }
         for name in self.sites() {
-            lines.push(format!("pnpm --filter {name} build"));
+            push("web", format!("pnpm --filter {name} build"));
         }
         for tool in TOOLS.iter().rev() {
-            lines.push(format!("{} .", invocation(spec, tool)));
+            push(tool, format!("{} .", invocation(spec, tool)));
         }
         lines
     }

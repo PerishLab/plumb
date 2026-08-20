@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::LazyLock;
 
 pub struct Rules {
+    pub suites: BTreeMap<String, Vec<String>>,
     pub dirs: BTreeSet<String>,
     pub lanes: BTreeSet<String>,
     pub retired: Vec<(String, String)>,
@@ -41,6 +42,28 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
             })
             .unwrap_or_default()
     };
+    let workflow: toml::Table = include_str!("../rules/workflow.toml")
+        .parse()
+        .expect("rules/workflow.toml must parse");
+    let suites = workflow
+        .get("suite")
+        .and_then(toml::Value::as_table)
+        .map(|table| {
+            table
+                .iter()
+                .map(|(name, value)| {
+                    let held = value
+                        .as_array()
+                        .expect("rules/workflow.toml suite must hold paths")
+                        .iter()
+                        .filter_map(toml::Value::as_str)
+                        .map(str::to_string)
+                        .collect();
+                    (name.clone(), held)
+                })
+                .collect()
+        })
+        .unwrap_or_default();
     let deps: toml::Table = include_str!("../rules/deps.toml")
         .parse()
         .expect("rules/deps.toml must parse");
@@ -83,6 +106,7 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
         .unwrap_or_else(|| panic!("rules/release.toml must name forge.image"))
         .to_string();
     Rules {
+        suites,
         dirs: set("dirs"),
         lanes: set("lanes"),
         retired,

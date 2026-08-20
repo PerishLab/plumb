@@ -1,4 +1,0 @@
-      - name: Guard
-        run: |
-          set -eu
-{@proofs}

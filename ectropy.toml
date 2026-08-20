@@ -35,6 +35,11 @@ paths = ["crates/cli/src/dispatch"]
 
 [[boundary]]
 allow = ["fanout"]
+note = "the workflow command adds one integration test peer to the established command tests"
+paths = ["crates/cli/tests"]
+
+[[boundary]]
+allow = ["fanout"]
 note = "the skill budget observation adds one rule and one repository shape probe to the established inventories"
 paths = [
     "crates/cli/src/judge/catalog/rules",

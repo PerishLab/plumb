@@ -11,6 +11,7 @@ pub(crate) mod operator;
 mod pack;
 pub mod pair;
 mod policy;
+pub mod workflow;
 
 pub use crate::judge::finding::Found;
 pub use dependency::{Dependencies, Dependency};

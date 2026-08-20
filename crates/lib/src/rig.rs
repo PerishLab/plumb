@@ -16,6 +16,10 @@ pub struct Rig {
     #[cascade(section)]
     pub activate: Authority,
     #[cascade(section)]
+    pub lock: Authority,
+    #[cascade(section)]
+    pub workflow: Workflow,
+    #[cascade(section)]
     pub site: Site,
     #[cascade(section)]
     pub guard: Guard,
@@ -148,6 +152,13 @@ pub struct Guard {
 
 #[derive(Debug, Default, PartialEq, Cascade)]
 #[cascade(section)]
+pub struct Workflow {
+    pub force: bool,
+    pub seat: String,
+}
+
+#[derive(Debug, Default, PartialEq, Cascade)]
+#[cascade(section)]
 pub struct Authority {
     pub access: String,
     pub secret: String,
@@ -170,6 +181,8 @@ impl Default for Rig {
             },
             publish: Authority::default(),
             activate: Authority::default(),
+            lock: Authority::default(),
+            workflow: Workflow::default(),
             site: Site::default(),
             guard: Guard::default(),
         }

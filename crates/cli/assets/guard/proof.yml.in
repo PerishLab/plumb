@@ -1,0 +1,4 @@
+      - name: Guard {@key}
+{@when}        run: |
+          set -eu
+{@lines}
