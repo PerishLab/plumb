@@ -60,6 +60,7 @@ impl Tree<'_> {
                 ),
             ));
         }
+        found.extend(self.capped(&members, &member, held));
         let Some(holds) = member.holds.as_deref() else {
             return found;
         };
@@ -143,6 +144,31 @@ impl Tree<'_> {
                 &law::SEAT_ANCHORED,
                 format!("{member} carries none of {}", anchor.join(", ")),
             ));
+        }
+        found
+    }
+
+    fn capped(&self, members: &BTreeSet<String>, member: &rule::Member, held: &str) -> Vec<Seed> {
+        let (Some(leaf), Some(bytes)) = (member.leaf.as_deref(), member.bytes) else {
+            return Vec::new();
+        };
+        let mut found = Vec::new();
+        for name in members {
+            let path = format!("{name}/{leaf}");
+            let Some(entry) = self.0.entries().iter().find(|entry| entry.path() == path) else {
+                found.push(wrong(
+                    &law::SEAT_MEMBER,
+                    format!("{path} is not a tracked leaf"),
+                ));
+                continue;
+            };
+            let held = format!(
+                "{path} carries {} bytes where {held} caps {bytes}",
+                entry.bytes().len()
+            );
+            if entry.bytes().len() > bytes {
+                found.push(wrong(&law::SEAT_MEMBER, held));
+            }
         }
         found
     }

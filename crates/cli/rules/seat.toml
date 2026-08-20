@@ -4,8 +4,12 @@
 # member it holds.
 #
 # An entry carries `name` and `note`. `holds` names what a member's own name
-# must be, and `count` fixes how many members the seat may hold. Both are
-# assertions Plumb owns; a repository selects them and never states its own.
+# must be, `count` fixes how many members the seat may hold, and `leaf` with
+# `bytes` caps a named file inside every member. All are assertions Plumb owns;
+# a repository selects them and never states its own.
+#
+# A cap is a knob, not a verdict. It sits here rather than in the binary so
+# moving it is a row edited and published, never a release.
 
 [member]
 rule = "structure.seat-member"
@@ -20,3 +24,9 @@ note = "One member, named after the repository that carries it. Measured 2026-08
 name = "version-named"
 holds = "version"
 note = "Every member names a released version. docs/CHANGELOG alone, where shape/changelog.rs holds the same assertion for one path."
+
+[[member.entry]]
+name = "wayfinder"
+leaf = "SKILL.md"
+bytes = 3072
+note = "A brief is the minimal authoritative wayfinding a coding agent reads, not prose a person skims. It states what the tool is, when it is silent, and which authority answers what; it never restates a surface that answers for itself. Three kilobytes is where four of the six briefs in this domain already sit, so the cap holds the shape that was found rather than one that was imposed."

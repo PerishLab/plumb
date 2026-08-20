@@ -20,8 +20,8 @@ note = "governed, members unjudged"
 
 [[layout.seat]]
 path = "charts/*"
-rule = ["rule://seat/named-after-repository"]
-note = "one member, named after the repository"
+rule = ["rule://seat/named-after-repository", "rule://seat/wayfinder"]
+note = "one member, named after the repository, carrying a capped brief"
 
 [[layout.file]]
 name = ["plumb.toml", "AGENTS.md"]
@@ -43,7 +43,11 @@ fn seated(held: &str) -> tempfile::TempDir {
         .map(|held| held.to_string_lossy().to_string())
         .expect("fixture name");
     std::fs::create_dir_all(seat.path().join("charts").join(&named)).expect("chart");
-    std::fs::write(seat.path().join("charts").join(&named).join("kept"), "held").expect("leaf");
+    std::fs::write(
+        seat.path().join("charts").join(&named).join("SKILL.md"),
+        "# held\n",
+    )
+    .expect("leaf");
     track(seat.path());
     seat
 }
@@ -139,4 +143,37 @@ fn unread() {
         assert!(shown.contains("blind"), "{shown}");
         assert!(shown.contains(held), "{shown}");
     }
+}
+
+#[test]
+fn capped() {
+    let seat = seated(DECLARED);
+    let named = seat
+        .path()
+        .file_name()
+        .map(|held| held.to_string_lossy().to_string())
+        .expect("fixture name");
+    let leaf = seat.path().join("charts").join(&named).join("SKILL.md");
+    std::fs::write(&leaf, "x".repeat(4096)).expect("fat leaf");
+    track(seat.path());
+    let held = report(seat.path());
+    assert!(
+        held.contains("carries 4096 bytes where rule://seat/wayfinder caps 3072"),
+        "{held}"
+    );
+}
+
+#[test]
+fn absent() {
+    let seat = seated(DECLARED);
+    let named = seat
+        .path()
+        .file_name()
+        .map(|held| held.to_string_lossy().to_string())
+        .expect("fixture name");
+    std::fs::remove_file(seat.path().join("charts").join(&named).join("SKILL.md")).expect("gone");
+    std::fs::write(seat.path().join("charts").join(&named).join("kept"), "held").expect("leaf");
+    track(seat.path());
+    let held = report(seat.path());
+    assert!(held.contains("SKILL.md is not a tracked leaf"), "{held}");
 }

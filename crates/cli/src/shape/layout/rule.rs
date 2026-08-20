@@ -6,6 +6,8 @@ pub struct Reference {
 pub struct Member {
     pub holds: Option<String>,
     pub count: Option<usize>,
+    pub leaf: Option<String>,
+    pub bytes: Option<usize>,
 }
 
 pub fn parse(held: &str) -> Result<Reference, String> {
@@ -46,11 +48,20 @@ pub fn member(reference: &Reference) -> Result<Member, String> {
             .get("holds")
             .and_then(toml::Value::as_str)
             .map(str::to_string),
-        count: entry
-            .get("count")
-            .and_then(toml::Value::as_integer)
-            .and_then(|held| usize::try_from(held).ok()),
+        count: sized(entry, "count"),
+        leaf: entry
+            .get("leaf")
+            .and_then(toml::Value::as_str)
+            .map(str::to_string),
+        bytes: sized(entry, "bytes"),
     })
+}
+
+fn sized(entry: &toml::Value, key: &str) -> Option<usize> {
+    entry
+        .get(key)
+        .and_then(toml::Value::as_integer)
+        .and_then(|held| usize::try_from(held).ok())
 }
 
 pub fn named(name: &str, holds: &str, repository: &str) -> bool {
