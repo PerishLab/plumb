@@ -1,3 +1,4 @@
+pub mod affirm;
 mod judge;
 mod read;
 mod rule;

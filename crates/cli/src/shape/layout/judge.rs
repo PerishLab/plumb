@@ -1,18 +1,27 @@
-use super::{Declared, Held, Seat, rule};
+use super::{Declared, Group, Held, Seat, affirm, rule};
 use crate::judge::catalog::rules::structure as law;
 use crate::judge::finding::{Seed, blind, unknown, wrong};
 use plumb::snapshot::Snapshot;
 use std::collections::BTreeSet;
 
-pub fn judge(snapshot: &Snapshot, held: &Held, repository: &str) -> Vec<Seed> {
+pub fn judge(
+    snapshot: &Snapshot,
+    held: &Held,
+    repository: &str,
+    affirmed: &affirm::Held,
+) -> Vec<Seed> {
     match held {
         Held::Wrong(error) => vec![blind(&law::KNOWN_DIRECTORY, error.clone())],
-        Held::Stated(declared) => Tree(snapshot, repository).judge(declared),
+        Held::Stated(declared) => Tree(snapshot, repository, affirmed).judge(declared),
         _ => Vec::new(),
     }
 }
 
-struct Tree<'a>(&'a Snapshot, &'a str);
+struct Tree<'a>(&'a Snapshot, &'a str, &'a affirm::Held);
+
+fn named(group: &Group) -> Vec<String> {
+    group.names.clone()
+}
 
 impl Tree<'_> {
     fn judge(&self, declared: &Declared) -> Vec<Seed> {
@@ -27,14 +36,69 @@ impl Tree<'_> {
         for seat in declared.seats.iter().filter(|seat| !seat.retired) {
             for held in &seat.rule {
                 found.extend(self.applied(seat, held));
+                found.extend(self.affirmed(declared, held, &self.leaves(seat, held)));
             }
         }
         for group in declared.groups.iter().filter(|group| !group.retired) {
             for held in &group.rule {
-                if let Err(error) = rule::parse(held).and_then(|held| rule::member(&held)) {
-                    found.push(blind(&law::SEAT_MEMBER, error));
+                match rule::parse(held).and_then(|held| rule::member(&held)) {
+                    Err(error) => found.push(blind(&law::SEAT_MEMBER, error)),
+                    Ok(_) => found.extend(self.affirmed(declared, held, &named(group))),
                 }
             }
+        }
+        found
+    }
+
+    fn leaves(&self, seat: &Seat, held: &str) -> Vec<String> {
+        let Ok(member) = rule::parse(held).and_then(|held| rule::member(&held)) else {
+            return Vec::new();
+        };
+        let (Some(container), Some(leaf)) = (seat.container(), member.leaf) else {
+            return Vec::new();
+        };
+        self.members(container)
+            .into_iter()
+            .map(|name| format!("{name}/{leaf}"))
+            .collect()
+    }
+
+    fn affirmed(&self, declared: &Declared, held: &str, targets: &[String]) -> Vec<Seed> {
+        let Ok(member) = rule::parse(held).and_then(|held| rule::member(&held)) else {
+            return Vec::new();
+        };
+        if member.affirms.is_empty() || targets.is_empty() {
+            return Vec::new();
+        }
+        let unread = member
+            .affirms
+            .iter()
+            .filter(|name| !rule::face(name))
+            .cloned()
+            .collect::<Vec<_>>();
+        if !unread.is_empty() {
+            return vec![blind(
+                &law::SEAT_AFFIRMED,
+                format!(
+                    "{held} names faces this Plumb cannot read: {}",
+                    unread.join(", ")
+                ),
+            )];
+        }
+        let faces = affirm::Faces(self.0).taken(declared, &member.affirms);
+        let authority = affirm::authority(&faces);
+        let mut found = Vec::new();
+        for target in targets {
+            if self.2.authority(target) == Some(authority.as_str()) {
+                continue;
+            }
+            found.push(wrong(
+                &law::SEAT_AFFIRMED,
+                format!(
+                    "{target} was affirmed against a different {}; reread it and run plumb affirm; see: plumb cookbook affirmed",
+                    member.affirms.join(", ")
+                ),
+            ));
         }
         found
     }

@@ -7,6 +7,10 @@ struct Entry {
 
 const ENTRIES: &[Entry] = &[
     Entry {
+        name: "affirmed",
+        body: plumb::seat::resource!("cookbook/affirmed.txt"),
+    },
+    Entry {
         name: "seat",
         body: plumb::seat::resource!("cookbook/seat.txt"),
     },

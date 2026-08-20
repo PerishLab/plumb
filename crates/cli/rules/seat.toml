@@ -30,3 +30,9 @@ name = "wayfinder"
 leaf = "SKILL.md"
 bytes = 3072
 note = "A brief is the minimal authoritative wayfinding a coding agent reads, not prose a person skims. It states what the tool is, when it is silent, and which authority answers what; it never restates a surface that answers for itself. Three kilobytes is where four of the six briefs in this domain already sit, so the cap holds the shape that was found rather than one that was imposed."
+
+[[member.entry]]
+name = "affirmed"
+leaf = "SKILL.md"
+affirms = ["declaration", "seat", "lane"]
+note = "A brief points at authorities, so it goes stale when an authority moves and not when a byte moves. The affirmation is taken over the faces named here rather than over the source tree, and which faces those are is the adjustable part: measured 2026-08-21, a source-tree trigger fired nineteen times in thirty commits where four moved anything a wayfinder points at. Add a face when something a brief relies on starts moving without waking anyone. Applied to a seat it affirms the named leaf of every member; applied to a file group it affirms every file the group names."

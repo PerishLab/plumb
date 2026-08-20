@@ -6,7 +6,12 @@ pub fn read(root: &Path, snapshot: Result<&Snapshot, &Refusal>) -> Read {
     let held = stated(root);
     let repository = crate::anchor::Anchor(root).repo().unwrap_or_default();
     let found = match snapshot {
-        Ok(snapshot) => super::judge::judge(snapshot, &held, &repository),
+        Ok(snapshot) => super::judge::judge(
+            snapshot,
+            &held,
+            &repository,
+            &super::affirm::Held::read(root),
+        ),
         Err(_) => Vec::new(),
     };
     Read { held, found }

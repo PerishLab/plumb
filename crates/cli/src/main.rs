@@ -100,6 +100,12 @@ enum Command {
     Cookbook {
         entry: Option<String>,
     },
+    Affirm {
+        #[command(flatten)]
+        target: Root,
+        #[arg(long)]
+        write: bool,
+    },
     Depot {
         #[command(subcommand)]
         deed: dispatch::depot::Deed,
@@ -138,6 +144,7 @@ impl Command {
             Self::Lane { .. } => "lane",
             Self::Layout { .. } => "layout",
             Self::Cookbook { .. } => "cookbook",
+            Self::Affirm { .. } => "affirm",
             Self::Depot { .. } => "depot",
             Self::Release { .. } => "release",
             Self::Ship { .. } => "ship",
@@ -209,6 +216,9 @@ fn execute(command: Command) -> i32 {
             dispatch::command::Seat::new(PathBuf::from(target.root)).layout()
         }
         Command::Cookbook { entry } => dispatch::cookbook::run(entry),
+        Command::Affirm { target, write } => {
+            dispatch::command::Seat::new(PathBuf::from(target.root)).affirm(write)
+        }
         Command::Depot { deed } => dispatch::depot::run(deed),
         Command::Release { deed } => dispatch::release::run(deed),
         Command::Ship { deed } => dispatch::ship::run(deed),

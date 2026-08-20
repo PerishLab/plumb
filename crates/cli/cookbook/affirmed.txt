@@ -1,0 +1,29 @@
+# affirmed
+
+## Trigger
+
+A wayfinder was affirmed against a different set of authority faces than the
+ones standing now.
+
+## Move
+
+Read the target against what moved, then record. The finding names the faces its
+rule watches, so `git diff` between the two authorities tells you where to look:
+`declaration` is the repository's own plumb.toml, `seat` is the layout it
+declares, `lane` is the workflow set. Fix what the wayfinder now gets wrong, then
+`plumb affirm --write`. Recording without reading buys nothing: the record is
+evidence that someone looked, and it is worth exactly the looking.
+
+Never widen the faces to stop a finding. Which faces a rule watches is a row in
+the rule set so it can be corrected, not so it can be quieted, and a face removed
+because it kept firing is a face that was doing its job.
+
+## Evidence
+
+The affirmation this replaced was taken over the whole source tree. Measured over
+thirty commits it fired nineteen times, and four of those moved anything a
+wayfinder points at.
+
+## EXIT
+
+Remove this entry when a wayfinder can state which of its claims an authority broke, or when the affirmation law retires.

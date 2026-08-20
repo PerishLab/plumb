@@ -1,0 +1,10 @@
+[[record]]
+target = "skills/plumb/SKILL.md"
+rule = "rule://seat/affirmed"
+authority = "f4ad6ac69ce6e5e00fabf03f54e9037048a3561cad4365792dfe134040bda795"
+
+[[record]]
+target = "AGENTS.md"
+rule = "rule://seat/affirmed"
+authority = "f4ad6ac69ce6e5e00fabf03f54e9037048a3561cad4365792dfe134040bda795"
+

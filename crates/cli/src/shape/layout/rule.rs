@@ -8,6 +8,7 @@ pub struct Member {
     pub count: Option<usize>,
     pub leaf: Option<String>,
     pub bytes: Option<usize>,
+    pub affirms: Vec<String>,
 }
 
 pub fn parse(held: &str) -> Result<Reference, String> {
@@ -54,6 +55,16 @@ pub fn member(reference: &Reference) -> Result<Member, String> {
             .and_then(toml::Value::as_str)
             .map(str::to_string),
         bytes: sized(entry, "bytes"),
+        affirms: entry
+            .get("affirms")
+            .and_then(toml::Value::as_array)
+            .map(|list| {
+                list.iter()
+                    .filter_map(toml::Value::as_str)
+                    .map(str::to_string)
+                    .collect()
+            })
+            .unwrap_or_default(),
     })
 }
 
@@ -74,6 +85,10 @@ pub fn named(name: &str, holds: &str, repository: &str) -> bool {
 
 pub fn known(holds: &str) -> bool {
     matches!(holds, "repository" | "version")
+}
+
+pub fn face(name: &str) -> bool {
+    matches!(name, "declaration" | "seat" | "lane")
 }
 
 fn versioned(name: &str) -> bool {

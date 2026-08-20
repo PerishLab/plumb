@@ -115,6 +115,41 @@ impl Seat {
         0
     }
 
+    pub fn affirm(&self, write: bool) -> i32 {
+        let owed = match crate::shape::layout::affirm::owed(&self.0) {
+            Ok(owed) => owed,
+            Err(error) => {
+                eprintln!("plumb affirm {}: {error}", self.0.display());
+                return 1;
+            }
+        };
+        println!("plumb affirm {}", self.0.display());
+        println!();
+        if owed.is_empty() {
+            println!("  no declared rule asks for an affirmation");
+            return 0;
+        }
+        for held in &owed {
+            println!("  {} {}", held.rule, held.target);
+            println!("    authority = \"{}\"", held.authority);
+        }
+        println!();
+        if !write {
+            println!("  record these only after reading every target against what moved");
+            return 0;
+        }
+        match crate::shape::layout::affirm::write(&self.0, &owed) {
+            Ok(()) => {
+                println!("  wrote {}", crate::shape::layout::affirm::SEAT);
+                0
+            }
+            Err(error) => {
+                eprintln!("plumb affirm {}: {error}", self.0.display());
+                1
+            }
+        }
+    }
+
     pub fn layout(&self) -> i32 {
         let held = crate::shape::layout::stated(&self.0);
         println!("plumb layout {}", self.0.display());

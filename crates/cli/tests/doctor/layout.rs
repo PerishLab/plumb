@@ -177,3 +177,34 @@ fn absent() {
     let held = report(seat.path());
     assert!(held.contains("SKILL.md is not a tracked leaf"), "{held}");
 }
+
+#[test]
+fn affirmed() {
+    let seat = seated(&DECLARED.replace(
+        "rule = [\"rule://seat/named-after-repository\", \"rule://seat/wayfinder\"]",
+        "rule = [\"rule://seat/affirmed\"]",
+    ));
+    let held = report(seat.path());
+    assert!(held.contains("was affirmed against a different"), "{held}");
+    assert!(held.contains("plumb cookbook affirmed"), "{held}");
+}
+
+#[test]
+fn recorded() {
+    let seat = seated(&DECLARED.replace(
+        "rule = [\"rule://seat/named-after-repository\", \"rule://seat/wayfinder\"]",
+        "rule = [\"rule://seat/affirmed\"]",
+    ));
+    let done = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["affirm", seat.path().to_str().expect("utf8"), "--write"])
+        .output()
+        .expect("plumb");
+    assert!(
+        done.status.success(),
+        "{}",
+        String::from_utf8_lossy(&done.stderr)
+    );
+    track(seat.path());
+    let held = report(seat.path());
+    assert!(!held.contains("was affirmed against a different"), "{held}");
+}
