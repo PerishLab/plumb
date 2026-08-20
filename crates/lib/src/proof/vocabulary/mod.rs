@@ -7,7 +7,7 @@ pub use super::snapshot::Refusal;
 
 pub const CODEC: &str = "p64-v1";
 pub const SCHEMA: &str = "plumb.vocabulary/v1";
-const BUNDLED: &str = include_str!("../../../rules/vocabulary.toml");
+const BUNDLED: &str = crate::seat::resource!("rules/vocabulary.toml");
 
 mod codec;
 
