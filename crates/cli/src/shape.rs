@@ -6,6 +6,7 @@ pub(crate) mod dependency;
 pub mod document;
 mod forge;
 pub mod lane;
+pub mod layout;
 mod node;
 pub(crate) mod operator;
 mod pack;
@@ -19,7 +20,6 @@ pub use dependency::{Dependencies, Dependency};
 pub struct Shape {
     pub wrappers: BTreeSet<String>,
     pub dirs: BTreeSet<String>,
-    pub actions: BTreeSet<String>,
     pub block: Option<i64>,
     pub path: Option<i64>,
     pub grants: BTreeSet<String>,
@@ -52,6 +52,7 @@ pub struct Shape {
     pub policy: Vec<String>,
     pub guard: String,
     pub documents: document::Read,
+    pub layout: layout::Read,
 }
 
 struct Root<'a>(&'a Path);
@@ -208,12 +209,12 @@ pub fn capture(
         }
     }
     let documents = document::read(root, snapshot.as_ref());
+    let held = layout::read(root, snapshot.as_ref());
     let release = pair::release(root);
     let ships = release.attachments.clone();
     Shape {
         wrappers: seat.names(".runseal/wrappers", ".ts"),
         dirs: snapshot.as_ref().map(Root::dirs).unwrap_or_default(),
-        actions: operator.actions(),
         block: limit("block"),
         path: limit("path"),
         grants,
@@ -249,6 +250,7 @@ pub fn capture(
         root: root.to_path_buf(),
         guard: guarded.source,
         documents,
+        layout: held,
     }
 }
 

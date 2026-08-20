@@ -80,6 +80,26 @@ rule!(
     [ECTROPY_TAG, REPOSITORY]
 );
 rule!(
+    KNOWN_FILE,
+    "structure.known-file",
+    "Root files have a known role",
+    "Every file at the repository root sits in a declared layout group.",
+    "Repository root file names compared with the declared layout.",
+    Mechanized,
+    PLUMB,
+    [REPOSITORY]
+);
+rule!(
+    SEAT_ANCHORED,
+    "structure.seat-anchored",
+    "A seat member carries its anchor",
+    "A member of a seat declaring anchors carries one of them, because a directory earns its seat by what it holds rather than by what it is called.",
+    "Declared seat anchors compared with the leaves each member records.",
+    Mechanized,
+    PLUMB,
+    [REPOSITORY]
+);
+rule!(
     KNOWN_DIRECTORY,
     "structure.known-directory",
     "Top-level directories have a known role",
@@ -197,7 +217,8 @@ pub fn all() -> Vec<&'static Rule> {
         &ECTROPY_POLICY_PRESENT, &ECTROPY_POLICY_READABLE,
         &GUARD_CHECKS_RELEASE_PROFILE, &GUARD_CONCURRENCY,
         &GUARD_RUNS_DOCTOR, &GUARD_RUNS_ECTROPY, &GUARD_USES_CURRENT_ECTROPY_MODE,
-        &GUARD_LANE_PRESENT, &KNOWN_DIRECTORY, &KNOWN_WORKFLOW,
+        &GUARD_LANE_PRESENT, &KNOWN_DIRECTORY, &KNOWN_FILE, &KNOWN_WORKFLOW,
+        &SEAT_ANCHORED,
         &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
         &RELEASE_LANE_PRESENT, &RELEASE_SOURCE_BOUND, &RESERVED_COMPONENTS_SEAT,
         &SITE_DEPLOY_LANE, &TRANSITIONAL_WRAPPERS_OBSERVED,

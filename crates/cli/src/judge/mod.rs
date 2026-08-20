@@ -166,12 +166,16 @@ impl shape::Shape {
                 found.push(wrong(&structure_rule::ECTROPY_POLICY, line.clone()));
             }
         }
-        for name in &self.dirs {
-            if !RULES.dirs.contains(name) && !self.actions.contains(name) {
-                found.push(unknown(
-                    &structure_rule::KNOWN_DIRECTORY,
-                    format!("directory {name} has no shadow in the skeleton"),
-                ));
+        if self.declared() {
+            found.extend(self.layout.found.clone());
+        } else {
+            for name in &self.dirs {
+                if !RULES.dirs.contains(name) {
+                    found.push(unknown(
+                        &structure_rule::KNOWN_DIRECTORY,
+                        format!("directory {name} has no shadow in the skeleton"),
+                    ));
+                }
             }
         }
         found.extend(shape::pair::judge(self));
@@ -187,6 +191,13 @@ impl shape::Shape {
         }
         found
     }
+    fn declared(&self) -> bool {
+        matches!(
+            self.layout.held,
+            shape::layout::Held::Stated(_) | shape::layout::Held::Wrong(_)
+        )
+    }
+
     fn matched(&self, found: &mut Found) {
         for path in &self.bounds {
             if !self.root.join(path).exists() {

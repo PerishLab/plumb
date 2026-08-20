@@ -53,6 +53,14 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - EVERY ELEMENT STAYS REMOVABLE. Encoding combinations is the point — many
   choices here are only defensible together, not alone — but no element may
   become unremovable, or its justification decays from finding to story.
+- A SEAT IS EARNED, NOT NAMED. `[layout]` declares where something may sit and
+  what a member must carry to earn that seat, so a directory is legal for
+  holding a `Cargo.toml` rather than for being spelled `crates`. Root files are
+  declared in groups, and a repository that declares no layout is judged by the
+  released name sets exactly as before: adoption is incremental, and a layout
+  that cannot be read is blind rather than quietly permitted. `anchor = []` says
+  a level is governed while its members are not judged, so a deferred decision
+  stays visible as data instead of as a gap.
 - NOTHING INVENTS A LOCATION. `plumb::seat` anchors at run time and
   `plumb::seat::resource!` at compile time, so a caller states what it wants
   rather than where it sits. A carried resource resolves against the crate that

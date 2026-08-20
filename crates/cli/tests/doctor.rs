@@ -10,6 +10,8 @@ mod depot;
 mod document;
 #[path = "doctor/json.rs"]
 mod json;
+#[path = "doctor/layout.rs"]
+mod layout;
 #[path = "doctor/migration.rs"]
 mod migration;
 #[path = "doctor/release.rs"]

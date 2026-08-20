@@ -115,6 +115,35 @@ impl Seat {
         0
     }
 
+    pub fn layout(&self) -> i32 {
+        let held = crate::shape::layout::stated(&self.0);
+        println!("plumb layout {}", self.0.display());
+        println!();
+        match &held {
+            crate::shape::layout::Held::Outside => {
+                println!("  no plumb.toml selects this root");
+                1
+            }
+            crate::shape::layout::Held::Wrong(error) => {
+                println!("  {error}");
+                1
+            }
+            crate::shape::layout::Held::Absent => {
+                println!("  no layout is declared; the released name sets still judge this root");
+                0
+            }
+            crate::shape::layout::Held::Stated(declared) => {
+                for seat in &declared.seats {
+                    println!("  {}", seat.shown());
+                }
+                for group in &declared.groups {
+                    println!("  {}", group.shown());
+                }
+                0
+            }
+        }
+    }
+
     pub fn lane(&self, write: bool) -> i32 {
         let seat = shape::lane::Seat(&self.0);
         let lanes = match seat.render() {
