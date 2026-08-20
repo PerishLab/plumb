@@ -1,3 +1,4 @@
+use crate::dispatch::depot::{Held, held};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::LazyLock;
 
@@ -28,12 +29,21 @@ pub struct Cargo {
 }
 
 pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
-    let doc: toml::Table = plumb::seat::resource!("rules/structure.toml")
-        .parse()
-        .expect("rules/structure.toml must parse");
-    let workflow: toml::Table = plumb::seat::resource!("rules/workflow.toml")
-        .parse()
-        .expect("rules/workflow.toml must parse");
+    let seat = held();
+    let doc: toml::Table = carried(
+        &seat,
+        "rules/structure.toml",
+        plumb::seat::resource!("rules/structure.toml"),
+    )
+    .parse()
+    .expect("rules/structure.toml must parse");
+    let workflow: toml::Table = carried(
+        &seat,
+        "rules/workflow.toml",
+        plumb::seat::resource!("rules/workflow.toml"),
+    )
+    .parse()
+    .expect("rules/workflow.toml must parse");
     let suites = workflow
         .get("suite")
         .and_then(toml::Value::as_table)
@@ -53,9 +63,13 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
                 .collect()
         })
         .unwrap_or_default();
-    let deps: toml::Table = plumb::seat::resource!("rules/deps.toml")
-        .parse()
-        .expect("rules/deps.toml must parse");
+    let deps: toml::Table = carried(
+        &seat,
+        "rules/deps.toml",
+        plumb::seat::resource!("rules/deps.toml"),
+    )
+    .parse()
+    .expect("rules/deps.toml must parse");
     let retired = deps
         .get("retired")
         .and_then(toml::Value::as_array)
@@ -85,9 +99,13 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
                 .collect()
         })
         .unwrap_or_default();
-    let release: toml::Table = plumb::seat::resource!("rules/release.toml")
-        .parse()
-        .expect("rules/release.toml must parse");
+    let release: toml::Table = carried(
+        &seat,
+        "rules/release.toml",
+        plumb::seat::resource!("rules/release.toml"),
+    )
+    .parse()
+    .expect("rules/release.toml must parse");
     let forge = release
         .get("forge")
         .and_then(|table| table.get("image"))
@@ -114,6 +132,11 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
         },
     }
 });
+
+fn carried(seat: &Held, path: &str, factory: &'static str) -> String {
+    seat.read(path, factory)
+        .unwrap_or_else(|_| factory.to_string())
+}
 
 fn members(doc: &toml::Table, key: &str) -> BTreeSet<String> {
     doc.get(key)
