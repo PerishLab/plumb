@@ -38,12 +38,26 @@ fn derived() {
         fixture.seal(exact);
     }
     let many = promote(&fixture, &candidate, &proof);
-    let crowded = String::from_utf8_lossy(&many.stderr).to_string();
-    assert!(!many.status.success(), "{crowded}");
-    assert!(crowded.contains("2 published exact seals"), "{crowded}");
-    assert!(
-        crowded.contains("v1.2.0-beta.7, v1.2.0-beta.8"),
-        "{crowded}"
+    let latest = format!(
+        "{}{}",
+        String::from_utf8_lossy(&many.stdout),
+        String::from_utf8_lossy(&many.stderr)
     );
-    assert!(!proof.exists(), "{crowded}");
+    assert!(many.status.success(), "{latest}");
+    assert!(latest.contains("v1.2.0-beta.8"), "{latest}");
+    assert!(proof.exists(), "{latest}");
+
+    std::fs::remove_file(&proof).expect("proof should clear");
+    for exact in ["v1.2.0-beta.9", "v1.2.0-beta.10"] {
+        fixture.tag(exact);
+        fixture.seal(exact);
+    }
+    let ranked = promote(&fixture, &candidate, &proof);
+    let shown = format!(
+        "{}{}",
+        String::from_utf8_lossy(&ranked.stdout),
+        String::from_utf8_lossy(&ranked.stderr)
+    );
+    assert!(ranked.status.success(), "{shown}");
+    assert!(shown.contains("v1.2.0-beta.10"), "{shown}");
 }
