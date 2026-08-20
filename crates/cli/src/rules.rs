@@ -31,17 +31,6 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
     let doc: toml::Table = include_str!("../rules/structure.toml")
         .parse()
         .expect("rules/structure.toml must parse");
-    let set = |key: &str| -> BTreeSet<String> {
-        doc.get(key)
-            .and_then(toml::Value::as_array)
-            .map(|list| {
-                list.iter()
-                    .filter_map(toml::Value::as_str)
-                    .map(str::to_string)
-                    .collect()
-            })
-            .unwrap_or_default()
-    };
     let workflow: toml::Table = include_str!("../rules/workflow.toml")
         .parse()
         .expect("rules/workflow.toml must parse");
@@ -107,8 +96,8 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
         .to_string();
     Rules {
         suites,
-        dirs: set("dirs"),
-        lanes: set("lanes"),
+        dirs: members(&doc, "dir"),
+        lanes: members(&doc, "lane"),
         retired,
         blacklist,
         stable: Stable {
@@ -125,6 +114,24 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
         },
     }
 });
+
+fn members(doc: &toml::Table, key: &str) -> BTreeSet<String> {
+    doc.get(key)
+        .and_then(|value| value.get("member"))
+        .and_then(toml::Value::as_array)
+        .map(|list| list.iter().filter_map(permitted).collect())
+        .unwrap_or_default()
+}
+
+fn permitted(value: &toml::Value) -> Option<String> {
+    if value.get("kind").and_then(toml::Value::as_str) == Some("retired") {
+        return None;
+    }
+    value
+        .get("name")
+        .and_then(toml::Value::as_str)
+        .map(str::to_string)
+}
 
 fn ceiling(doc: &toml::Table) -> usize {
     doc.get("ceiling")

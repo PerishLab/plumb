@@ -1,23 +1,139 @@
 # The structure dimension's membership sets. Repaying an unknown-shape debt is a
 # row added here, not a function rewritten. Whitelists of legal names; a name in
 # none of them is unknown shape.
+#
+# A member carries `name` and `note`. The note is data, not a comment, so
+# `plumb rule show` can print why a name is permitted; a member nobody can
+# justify has no note to write and does not belong here. `kind` defaults to
+# `machine`; `kind = "retired"` keeps a member on the page with its reason and
+# takes it out of the set, because a name deleted outright takes its evidence
+# with it.
+#
+# Exercise counts below were measured across the fifteen governed repositories
+# on 2026-08-20. They are evidence, not law: re-measure before trusting them.
 
-dirs = [
-  "app",
-  "apps",
-  "charts",
-  "clusters",
-  "crates",
-  "deploy",
-  "dist",
-  "docs",
-  "examples",
-  "hosts",
-  "lib",
-  "packages",
-  "repos",
-  "runner-control",
-  "skills",
-  "tests",
-]
-lanes = ["deploy", "exact.release", "guard", "probe", "release-binary", "release-cargo", "release-exact", "release-runner", "release-stable", "ship", "stable.release"]
+[dir]
+rule = "structure.known-directory"
+
+[[dir.member]]
+name = "app"
+note = "One anchor crate directly at the root, for a repository whose only Rust member is itself. runseal alone."
+
+[[dir.member]]
+name = "apps"
+note = "Deployable applications. codehull, ensign, plumb, stim."
+
+[[dir.member]]
+name = "charts"
+note = "Helm chart carriers the ship adaptors project onto. codehull, ensign, plumb."
+
+[[dir.member]]
+name = "clusters"
+note = "Cluster declarations. Carried by infra, which is not governed yet; no governed repository holds this seat as of 2026-08-20."
+
+[[dir.member]]
+name = "crates"
+note = "Rust members. Eleven governed repositories; the most exercised seat here."
+
+[[dir.member]]
+name = "deploy"
+note = "Deployment substrate outside the application. codehull, ensign."
+
+# Every repository ignores dist/, and `Root::dirs` reads the Git snapshot, so a
+# dist seat can never reach this set. Retired because it is unjudgeable, not
+# because it is unpopular: no observable behaviour changes.
+[[dir.member]]
+name = "dist"
+kind = "retired"
+note = "Build output. Ignored in every repository, therefore never present in the snapshot this set is compared against."
+
+[[dir.member]]
+name = "docs"
+note = "Today holds only CHANGELOG. Scheduled to disappear whole: perish.code/plumb-release-contract moves release notes to the depot, and this member retires with them."
+
+[[dir.member]]
+name = "examples"
+note = "Runnable specimens beside the product. sidecar."
+
+[[dir.member]]
+name = "hosts"
+note = "Host declarations. hardrig."
+
+[[dir.member]]
+name = "lib"
+kind = "retired"
+note = "Zero occurrences across all twenty-one repositories, governed and ungoverned. Rust members live under crates, node members under packages; nothing claimed this name."
+
+[[dir.member]]
+name = "packages"
+note = "Publishable node packages. crest, plumb, sidecar."
+
+[[dir.member]]
+name = "repos"
+note = "Vendored repository trees. Carried by infra, which is not governed yet; no governed repository holds this seat as of 2026-08-20."
+
+[[dir.member]]
+name = "runner-control"
+note = "Forgejo runner lifecycle. Carried by actions, which is not governed yet; no governed repository holds this seat as of 2026-08-20."
+
+[[dir.member]]
+name = "skills"
+note = "Operating briefs. concord, ectropy, ensign, locus, plumb, runseal."
+
+[[dir.member]]
+name = "tests"
+kind = "retired"
+note = "Zero occurrences across all twenty-one repositories. Tests live beside their member: crates/*/tests, apps/*/tests, packages/*/tests."
+
+[lane]
+rule = "structure.known-workflow"
+
+[[lane.member]]
+name = "deploy"
+note = "Site deployment on explicit dispatch. Carried by design, which is not governed yet; no governed repository holds this lane as of 2026-08-20."
+
+[[lane.member]]
+name = "exact.release"
+note = "Rendered exact-release lane. crest, plumb, sidecar. Succeeds release-exact."
+
+[[lane.member]]
+name = "guard"
+note = "The one canonical guard lane. All fifteen governed repositories carry it."
+
+[[lane.member]]
+name = "platform"
+kind = "machine"
+note = "Manual cross-platform test lane on macOS and Windows runners, dispatch only. sidecar. Added 2026-08-20 to repay a live unknown-shape finding."
+
+[[lane.member]]
+name = "probe"
+kind = "retired"
+note = "Zero occurrences across all twenty-one repositories. Nothing in the skeleton renders or dispatches it."
+
+[[lane.member]]
+name = "release-binary"
+note = "Shared called workflow for binary releases. Lives in actions, which is not governed yet."
+
+[[lane.member]]
+name = "release-cargo"
+note = "Shared called workflow for Cargo-only releases. Lives in actions, which is not governed yet."
+
+[[lane.member]]
+name = "release-exact"
+note = "Legacy exact-release lane. Eleven governed repositories. Superseded by exact.release; both stand while adoption is incremental."
+
+[[lane.member]]
+name = "release-runner"
+note = "Shared called workflow for runner releases. Lives in actions, which is not governed yet."
+
+[[lane.member]]
+name = "release-stable"
+note = "Legacy stable-release lane. Eight governed repositories. Superseded by stable.release."
+
+[[lane.member]]
+name = "ship"
+note = "Rendered ship lane carrying every declared medium. crest, plumb, sidecar."
+
+[[lane.member]]
+name = "stable.release"
+note = "Rendered stable-release lane. crest, plumb, sidecar. Succeeds release-stable."
