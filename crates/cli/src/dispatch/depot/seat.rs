@@ -1,4 +1,5 @@
-use super::record::{LEAF, Manifest, Notes, POINTER, Pointer, changelog, latest, versions};
+use super::notes::{Notes, changelog};
+use super::record::{LEAF, Manifest, POINTER, Pointer, latest, versions};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

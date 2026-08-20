@@ -1,3 +1,4 @@
+pub mod notes;
 pub mod record;
 mod seat;
 mod store;
@@ -23,7 +24,7 @@ pub fn manifest() -> Result<Option<record::Manifest>, String> {
     }
 }
 
-pub fn occupied(version: &str) -> Result<Option<record::Notes>, String> {
+pub fn occupied(version: &str) -> Result<Option<notes::Notes>, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     seat::notes(&rig.depot.source, version)
 }
@@ -157,7 +158,7 @@ impl Tree<'_> {
         };
         let commit = self.commit()?;
         let proof = crate::shape::changelog::prove(self.0, &source, wanted.version, &commit)?;
-        let batch = record::Batch::gather(&source, wanted.version, &commit)?;
+        let batch = notes::Batch::gather(&source, wanted.version, &commit)?;
         if wanted.dry {
             return Ok(format!(
                 "{}\n{} lines within a budget of {} for {} units",

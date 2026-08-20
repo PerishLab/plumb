@@ -1,4 +1,5 @@
-use super::record::{Batch, LEAF, Plan, Pointer, changelog, latest, versions};
+use super::notes::{Batch, changelog};
+use super::record::{LEAF, Plan, Pointer, latest, versions};
 use crate::dispatch::release::storage::Authority;
 use std::io::Write;
 use std::process::{Command, Output};
