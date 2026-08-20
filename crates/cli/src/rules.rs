@@ -28,10 +28,10 @@ pub struct Cargo {
 }
 
 pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
-    let doc: toml::Table = include_str!("../rules/structure.toml")
+    let doc: toml::Table = plumb::seat::resource!("rules/structure.toml")
         .parse()
         .expect("rules/structure.toml must parse");
-    let workflow: toml::Table = include_str!("../rules/workflow.toml")
+    let workflow: toml::Table = plumb::seat::resource!("rules/workflow.toml")
         .parse()
         .expect("rules/workflow.toml must parse");
     let suites = workflow
@@ -53,7 +53,7 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
                 .collect()
         })
         .unwrap_or_default();
-    let deps: toml::Table = include_str!("../rules/deps.toml")
+    let deps: toml::Table = plumb::seat::resource!("rules/deps.toml")
         .parse()
         .expect("rules/deps.toml must parse");
     let retired = deps
@@ -85,7 +85,7 @@ pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
                 .collect()
         })
         .unwrap_or_default();
-    let release: toml::Table = include_str!("../rules/release.toml")
+    let release: toml::Table = plumb::seat::resource!("rules/release.toml")
         .parse()
         .expect("rules/release.toml must parse");
     let forge = release

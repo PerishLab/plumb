@@ -53,6 +53,11 @@ ensign: `crates` for rust members, `apps` for deployable applications,
 - EVERY ELEMENT STAYS REMOVABLE. Encoding combinations is the point — many
   choices here are only defensible together, not alone — but no element may
   become unremovable, or its justification decays from finding to story.
+- NOTHING INVENTS A LOCATION. `plumb::seat` anchors at run time and
+  `plumb::seat::resource!` at compile time, so a caller states what it wants
+  rather than where it sits. A carried resource resolves against the crate that
+  writes it, and a path leaving that crate refuses before it compiles, because a
+  source file that moved must not break a resource it does not own.
 - plumb MUST PASS ITSELF. Running the CLI here has to come back clean, or the
   relation above does not hold for the one repo that declares it.
 

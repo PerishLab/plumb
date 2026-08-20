@@ -10,67 +10,67 @@ pub const RELEASED: [(&str, &str); 2] = [
 pub const FACTORY: [(&str, &str); 16] = [
     (
         "assets/depot/lane.yml.in",
-        include_str!("../../../assets/depot/lane.yml.in"),
+        plumb::seat::resource!("assets/depot/lane.yml.in"),
     ),
     (
         "assets/guard/ask.yml.in",
-        include_str!("../../../assets/guard/ask.yml.in"),
+        plumb::seat::resource!("assets/guard/ask.yml.in"),
     ),
     (
         "assets/guard/lane.yml.in",
-        include_str!("../../../assets/guard/lane.yml.in"),
+        plumb::seat::resource!("assets/guard/lane.yml.in"),
     ),
     (
         "assets/guard/packages.yml.in",
-        include_str!("../../../assets/guard/packages.yml.in"),
+        plumb::seat::resource!("assets/guard/packages.yml.in"),
     ),
     (
         "assets/guard/proof.yml.in",
-        include_str!("../../../assets/guard/proof.yml.in"),
+        plumb::seat::resource!("assets/guard/proof.yml.in"),
     ),
     (
         "assets/guard/tool.yml.in",
-        include_str!("../../../assets/guard/tool.yml.in"),
+        plumb::seat::resource!("assets/guard/tool.yml.in"),
     ),
     (
         "assets/manager/unix.sh.in",
-        include_str!("../../../assets/manager/unix.sh.in"),
+        plumb::seat::resource!("assets/manager/unix.sh.in"),
     ),
     (
         "assets/manager/windows.ps1.in",
-        include_str!("../../../assets/manager/windows.ps1.in"),
+        plumb::seat::resource!("assets/manager/windows.ps1.in"),
     ),
     (
         "assets/release/exact.yml.in",
-        include_str!("../../../assets/release/exact.yml.in"),
+        plumb::seat::resource!("assets/release/exact.yml.in"),
     ),
     (
         "assets/release/stable.yml.in",
-        include_str!("../../../assets/release/stable.yml.in"),
+        plumb::seat::resource!("assets/release/stable.yml.in"),
     ),
     (
         "assets/ship/binary.yml.in",
-        include_str!("../../../assets/ship/binary.yml.in"),
+        plumb::seat::resource!("assets/ship/binary.yml.in"),
     ),
     (
         "assets/ship/capsule.yml.in",
-        include_str!("../../../assets/ship/capsule.yml.in"),
+        plumb::seat::resource!("assets/ship/capsule.yml.in"),
     ),
     (
         "assets/ship/install.yml.in",
-        include_str!("../../../assets/ship/install.yml.in"),
+        plumb::seat::resource!("assets/ship/install.yml.in"),
     ),
     (
         "assets/ship/lane.yml.in",
-        include_str!("../../../assets/ship/lane.yml.in"),
+        plumb::seat::resource!("assets/ship/lane.yml.in"),
     ),
     (
         "assets/ship/project.yml.in",
-        include_str!("../../../assets/ship/project.yml.in"),
+        plumb::seat::resource!("assets/ship/project.yml.in"),
     ),
     (
         "assets/ship/windows.yml.in",
-        include_str!("../../../assets/ship/windows.yml.in"),
+        plumb::seat::resource!("assets/ship/windows.yml.in"),
     ),
 ];
 
