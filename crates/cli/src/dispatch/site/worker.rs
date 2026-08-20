@@ -49,7 +49,7 @@ impl Seat<'_> {
         .map_err(|error| format!("cannot upload a worker version: {error}"))?;
         let version = stamped(&raw)?;
         let url = format!("https://{}-{}.{}", &version[..8], app.worker, root(site)?);
-        reachable(&url)?;
+        reachable(&url, site)?;
         Ok(format!("staged {} {} at {url}", app.worker, self.version))
     }
 
@@ -63,7 +63,7 @@ impl Seat<'_> {
                 ("CLOUDFLARE_API_TOKEN", &site.token),
             ],
         })?;
-        reachable(&format!("https://{}/", held.domain))?;
+        reachable(&format!("https://{}/", held.domain), site)?;
         Ok(format!(
             "settled {} {} on {}",
             app.worker, self.version, held.domain
@@ -141,12 +141,36 @@ fn stamped(raw: &str) -> Result<String, String> {
         .ok_or_else(|| "wrangler named no worker version".to_string())
 }
 
-fn reachable(url: &str) -> Result<(), String> {
+fn reachable(url: &str, site: &Site) -> Result<(), String> {
+    let mut why = String::new();
+    for turn in 0..site.turns.max(1) {
+        why = match answered(url) {
+            Ok(true) => {
+                println!("  200 {url}");
+                return Ok(());
+            }
+            Ok(false) => format!("{url} did not answer 200"),
+            Err(error) => error,
+        };
+        println!("  retry {url} ({why})");
+        if turn + 1 < site.turns && site.delay > 0 {
+            std::thread::sleep(std::time::Duration::from_millis(site.delay));
+        }
+    }
+    Err(format!("{url} never answered: {why}"))
+}
+
+fn answered(url: &str) -> Result<bool, String> {
     let code = super::process::text(
         "curl",
         &[
             "--silent",
+            "--show-error",
             "--location",
+            "--connect-timeout",
+            "10",
+            "--max-time",
+            "30",
             "--output",
             "/dev/null",
             "--write-out",
@@ -155,9 +179,5 @@ fn reachable(url: &str) -> Result<(), String> {
         ],
         Path::new("."),
     )?;
-    if code == "200" {
-        Ok(())
-    } else {
-        Err(format!("{url} answered HTTP {code}"))
-    }
+    Ok(code == "200")
 }

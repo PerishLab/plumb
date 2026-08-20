@@ -139,7 +139,9 @@ unfamiliar or stateful action.
   version and its seal, so a note about that version can only be improved.
   Publishing refuses a language pair that is empty or above its diff-derived
   budget; compiling a release checks neither, so a note can never fail a
-  release. Notes stage in the repository's temporary seat and are cleared once
+  release. Its floor is zero, while a configuration version's floor defaults to
+  the Plumb that published it: the floor belongs to what is carried, and only
+  that Plumb is proven to read that configuration. Notes stage in the repository's temporary seat and are cleared once
   the depot holds them, so they never enter the tree.
 - The depot is read from the held seat and never fetched, so a stale seat is an
   observation and a seat that cannot be read is blind. Two laws stand on it: the

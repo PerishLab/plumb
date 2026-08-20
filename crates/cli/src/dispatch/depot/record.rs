@@ -2,7 +2,6 @@ use plumb::snapshot::Snapshot;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
 
 pub const FORMAT: u32 = 1;
 pub const LEAF: &str = "plumb.toml";
@@ -181,100 +180,4 @@ pub fn versions(channel: &str, mark: &str) -> String {
 
 pub fn latest(channel: &str) -> String {
     format!("channels/{channel}/latest/{POINTER}")
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct Notes {
-    pub format: u32,
-    pub version: String,
-    pub commit: String,
-    #[serde(default, rename = "object")]
-    pub objects: Vec<Object>,
-}
-
-pub struct Batch {
-    pub notes: Notes,
-    pub bodies: BTreeMap<String, Vec<u8>>,
-}
-
-impl Batch {
-    pub fn gather(source: &Path, version: &str, commit: &str) -> Result<Self, String> {
-        let mut bodies = BTreeMap::new();
-        let mut objects = Vec::new();
-        for path in walk(source)? {
-            let name = path
-                .strip_prefix(source)
-                .map_err(|error| {
-                    format!(
-                        "{} is outside {}: {error}",
-                        path.display(),
-                        source.display()
-                    )
-                })?
-                .to_string_lossy()
-                .replace('\\', "/");
-            let bytes = std::fs::read(&path)
-                .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-            objects.push(Object {
-                path: name.clone(),
-                sha256: sha(&bytes),
-                size: bytes.len() as u64,
-            });
-            bodies.insert(name, bytes);
-        }
-        if objects.is_empty() {
-            return Err(format!("{} holds no release note", source.display()));
-        }
-        objects.sort();
-        Ok(Self {
-            notes: Notes {
-                format: FORMAT,
-                version: version.to_string(),
-                commit: commit.to_string(),
-                objects,
-            },
-            bodies,
-        })
-    }
-}
-
-impl Notes {
-    pub fn parse(text: &str) -> Result<Self, String> {
-        let held: Self =
-            toml::from_str(text).map_err(|error| format!("cannot parse release notes: {error}"))?;
-        if held.format != FORMAT {
-            return Err(format!(
-                "release notes format must be {FORMAT}, got {}",
-                held.format
-            ));
-        }
-        Ok(held)
-    }
-
-    pub fn encode(&self) -> Result<String, String> {
-        toml::to_string(self).map_err(|error| format!("cannot encode release notes: {error}"))
-    }
-}
-
-pub fn changelog(version: &str) -> String {
-    format!("changelog/{version}")
-}
-
-fn walk(root: &Path) -> Result<Vec<PathBuf>, String> {
-    let mut found = Vec::new();
-    let listed = std::fs::read_dir(root)
-        .map_err(|error| format!("cannot read {}: {error}", root.display()))?;
-    for entry in listed {
-        let path = entry
-            .map_err(|error| format!("cannot read {}: {error}", root.display()))?
-            .path();
-        if path.is_dir() {
-            found.extend(walk(&path)?);
-        } else {
-            found.push(path);
-        }
-    }
-    found.sort();
-    Ok(found)
 }

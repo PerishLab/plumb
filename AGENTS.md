@@ -197,7 +197,12 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   Demanding immutability a second time would buy nothing and would forbid
   exactly the correction downstream most wants. Seals therefore carry no
   changelog proof; those written before this rule are still read, never written
-  again.
+  again. A note declares a floor of zero, because the floor belongs to what is
+  carried rather than to whoever published it: configuration is read by the
+  mechanism, so the only Plumb proven to read a version of it is the one that
+  wrote it, and defaulting lower would assert a compatibility nobody measured.
+  Prose has no such reader, so no Plumb can fail to read it and none is
+  refused.
 - An optional `docs/CHANGELOG/v<base-version>/artifacts/` contributes its flat
   regular-file set to exact prerelease and stable seals. Plumb preserves bytes
   under filenames and owns only generic safety and collision refusal; product
