@@ -18,6 +18,11 @@ path = "apps/*"
 anchor = []
 note = "governed, members unjudged"
 
+[[layout.seat]]
+path = "charts/*"
+rule = ["rule://seat/named-after-repository"]
+note = "one member, named after the repository"
+
 [[layout.file]]
 name = ["plumb.toml", "AGENTS.md"]
 note = "the governance pair"
@@ -32,6 +37,13 @@ fn seated(held: &str) -> tempfile::TempDir {
         std::fs::write(seat.path().join(name).join("kept"), "held").expect("leaf");
     }
     std::fs::write(seat.path().join("crates/cli/Cargo.toml"), "").expect("anchor");
+    let named = seat
+        .path()
+        .file_name()
+        .map(|held| held.to_string_lossy().to_string())
+        .expect("fixture name");
+    std::fs::create_dir_all(seat.path().join("charts").join(&named)).expect("chart");
+    std::fs::write(seat.path().join("charts").join(&named).join("kept"), "held").expect("leaf");
     track(seat.path());
     seat
 }
@@ -100,4 +112,31 @@ fn refused() {
         held.contains("layout carries no field called novel"),
         "{held}"
     );
+}
+
+#[test]
+fn ruled() {
+    let seat = seated(DECLARED);
+    std::fs::create_dir_all(seat.path().join("charts/novel")).expect("novel");
+    std::fs::write(seat.path().join("charts/novel/kept"), "held").expect("leaf");
+    track(seat.path());
+    let held = report(seat.path());
+    assert!(
+        held.contains("charts holds 2 members where rule://seat/named-after-repository fixes 1"),
+        "{held}"
+    );
+    assert!(
+        held.contains("charts/novel is not named as rule://seat/named-after-repository requires"),
+        "{held}"
+    );
+}
+
+#[test]
+fn unread() {
+    for held in ["rule://seat/nosuch", "rule://nosuchset", "file://x"] {
+        let seat = seated(&DECLARED.replace("rule://seat/named-after-repository", held));
+        let shown = report(seat.path());
+        assert!(shown.contains("blind"), "{shown}");
+        assert!(shown.contains(held), "{shown}");
+    }
 }

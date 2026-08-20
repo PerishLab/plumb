@@ -1,13 +1,13 @@
 [[document]]
 strategy = "agent"
-source = [{ path = ".", seal = "045a35b544dddab6e0e1086e2586ebc626867b3d51f75879044b7673c9db960f" }]
+source = [{ path = ".", seal = "8aa632946b32f9e8ff6fc0843f8194c327c25e2a2a503854b09442dbc97c352b" }]
 target-seal = "42743b7337371cd09b240a6c97d55b8393d6a14009ee33e3e235701ce4401c0c"
 
 [[document]]
 strategy = "brief"
 name = "plumb"
 source = [
-  { path = "crates/cli/src", seal = "0c547a26400022e083bc56cd3bcf4b2ad5db03d9274a7519f163b47e0aa4dc05" },
+  { path = "crates/cli/src", seal = "e5bb4f2c8058c84089b91268ba1c93c62c446b08d8e7988b8e26b180469c2e2e" },
   { path = "crates/lib/src", seal = "734672b05c4ac8251592d3e72c27b92451c7fd7ca1f2dacd337f1d4aa3572905" },
   { path = "crates/macro/src", seal = "4e094c2cb2e103b54df74fe50b4c4496b3d0bd5da4712c642824a6ced0b80ac5" },
 ]
@@ -18,13 +18,11 @@ target-seal = "253fa9a06369cee08c15075e7cd636f8f326be122bc721584253495d903404d6"
 [[layout.seat]]
 path = "crates/*"
 anchor = ["Cargo.toml"]
-rule = ["rule://cargo"]
-note = "Rust members. The anchor is also the identity: a member of this seat is judged by the cargo toolchain."
+note = "Rust members. The anchor is also the identity, and a cargo rule set naming what that means is owed."
 
 [[layout.seat]]
 path = "packages/*"
 anchor = ["package.json"]
-rule = ["rule://pnpm"]
 note = "Publishable node packages."
 
 [[layout.seat]]
@@ -34,15 +32,18 @@ note = "The anchor set is undecided. codehull/apps/web and ensign/apps/web each 
 
 [[layout.seat]]
 path = "charts/*"
-note = "Helm chart carriers, one per repository, named after it. Three of three across the domain."
+rule = ["rule://seat/named-after-repository"]
+note = "Helm chart carriers. Three of three across the domain."
 
 [[layout.seat]]
 path = "skills/*"
-note = "Operating briefs, one per repository, named after it. Six of six. Rejudged when the skills line is decided."
+rule = ["rule://seat/named-after-repository"]
+note = "Operating briefs. Six of six. Rejudged when the skills line is decided."
 
 [[layout.seat]]
 path = "docs/CHANGELOG/*"
-note = "Immutable release history, one seat per version. Retires whole when release notes move to the depot."
+rule = ["rule://seat/version-named"]
+note = "Immutable release history. Retires whole when release notes move to the depot."
 
 [[layout.seat]]
 path = ".forgejo"
@@ -62,17 +63,14 @@ note = "Carried by every governed repository. AGENTS.md is the one entrypoint a 
 
 [[layout.file]]
 name = ["plumb.toml", "ectropy.toml", "runseal.toml", "locus.toml", "sidecar.toml"]
-rule = ["rule://tool"]
-note = "A root <tool>.toml is legal where <tool> names a perish.code tool. That roster is hardcoded in shape/lane.rs today and holds two names."
+note = "A root <tool>.toml is legal where <tool> names a perish.code tool. That roster is hardcoded in shape/lane.rs today and holds two names; a rule naming it is owed."
 
 [[layout.file]]
 name = ["Cargo.toml", "Cargo.lock"]
-rule = ["rule://cargo"]
 note = "Workspace anchors."
 
 [[layout.file]]
 name = ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "biome.json", ".npmrc"]
-rule = ["rule://pnpm"]
 note = "The pnpm workspace anchors."
 
 [[layout.file]]

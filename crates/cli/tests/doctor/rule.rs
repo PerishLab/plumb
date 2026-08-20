@@ -94,8 +94,8 @@ fn catalog() {
     let mechanized = json(&["rule", "list", "--standing", "mechanized", "--json"]);
     let prose = json(&["rule", "list", "--standing", "prose-only", "--json"]);
     assert_eq!(all["schema"], "plumb.rule-list/v1");
-    assert_eq!(all["rules"].as_array().map(Vec::len), Some(124));
-    assert_eq!(mechanized["rules"].as_array().map(Vec::len), Some(83));
+    assert_eq!(all["rules"].as_array().map(Vec::len), Some(125));
+    assert_eq!(mechanized["rules"].as_array().map(Vec::len), Some(84));
     assert_eq!(prose["rules"].as_array().map(Vec::len), Some(39));
 
     for (deed, schema, field) in [

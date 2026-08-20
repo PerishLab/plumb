@@ -1,23 +1,84 @@
-use super::{Declared, Held, Seat};
+use super::{Declared, Held, Seat, rule};
 use crate::judge::catalog::rules::structure as law;
 use crate::judge::finding::{Seed, blind, unknown, wrong};
 use plumb::snapshot::Snapshot;
 use std::collections::BTreeSet;
 
-pub fn judge(snapshot: &Snapshot, held: &Held) -> Vec<Seed> {
+pub fn judge(snapshot: &Snapshot, held: &Held, repository: &str) -> Vec<Seed> {
     match held {
         Held::Wrong(error) => vec![blind(&law::KNOWN_DIRECTORY, error.clone())],
-        Held::Stated(declared) => Tree(snapshot).judge(declared),
+        Held::Stated(declared) => Tree(snapshot, repository).judge(declared),
         _ => Vec::new(),
     }
 }
 
-struct Tree<'a>(&'a Snapshot);
+struct Tree<'a>(&'a Snapshot, &'a str);
 
 impl Tree<'_> {
     fn judge(&self, declared: &Declared) -> Vec<Seed> {
         let mut found = self.covered(declared);
         found.extend(self.anchored(declared));
+        found.extend(self.ruled(declared));
+        found
+    }
+
+    fn ruled(&self, declared: &Declared) -> Vec<Seed> {
+        let mut found = Vec::new();
+        for seat in declared.seats.iter().filter(|seat| !seat.retired) {
+            for held in &seat.rule {
+                found.extend(self.applied(seat, held));
+            }
+        }
+        for group in declared.groups.iter().filter(|group| !group.retired) {
+            for held in &group.rule {
+                if let Err(error) = rule::parse(held).and_then(|held| rule::member(&held)) {
+                    found.push(blind(&law::SEAT_MEMBER, error));
+                }
+            }
+        }
+        found
+    }
+
+    fn applied(&self, seat: &Seat, held: &str) -> Vec<Seed> {
+        let member = match rule::parse(held).and_then(|held| rule::member(&held)) {
+            Ok(member) => member,
+            Err(error) => return vec![blind(&law::SEAT_MEMBER, error)],
+        };
+        let Some(container) = seat.container() else {
+            return Vec::new();
+        };
+        let members = self.members(container);
+        let mut found = Vec::new();
+        if let Some(count) = member.count
+            && members.len() != count
+        {
+            found.push(wrong(
+                &law::SEAT_MEMBER,
+                format!(
+                    "{container} holds {} members where {held} fixes {count}",
+                    members.len()
+                ),
+            ));
+        }
+        let Some(holds) = member.holds.as_deref() else {
+            return found;
+        };
+        if !rule::known(holds) {
+            found.push(blind(
+                &law::SEAT_MEMBER,
+                format!("{held} names a shape called {holds} this Plumb cannot read"),
+            ));
+            return found;
+        }
+        for name in members {
+            let leaf = name.rsplit('/').next().unwrap_or(&name);
+            if !rule::named(leaf, holds, self.1) {
+                found.push(wrong(
+                    &law::SEAT_MEMBER,
+                    format!("{name} is not named as {held} requires"),
+                ));
+            }
+        }
         found
     }
 

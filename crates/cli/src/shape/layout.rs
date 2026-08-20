@@ -1,5 +1,6 @@
 mod judge;
 mod read;
+mod rule;
 
 pub use read::{read, stated};
 

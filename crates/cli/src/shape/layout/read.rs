@@ -4,8 +4,9 @@ use std::path::Path;
 
 pub fn read(root: &Path, snapshot: Result<&Snapshot, &Refusal>) -> Read {
     let held = stated(root);
+    let repository = crate::anchor::Anchor(root).repo().unwrap_or_default();
     let found = match snapshot {
-        Ok(snapshot) => super::judge::judge(snapshot, &held),
+        Ok(snapshot) => super::judge::judge(snapshot, &held, &repository),
         Err(_) => Vec::new(),
     };
     Read { held, found }

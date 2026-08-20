@@ -1,0 +1,22 @@
+# The seat dimension: what a seat requires of the members it holds, where the
+# requirement is a shape rather than a file. A seat naming one of these entries
+# through `rule://seat/<name>` gets that entry's assertions applied to every
+# member it holds.
+#
+# An entry carries `name` and `note`. `holds` names what a member's own name
+# must be, and `count` fixes how many members the seat may hold. Both are
+# assertions Plumb owns; a repository selects them and never states its own.
+
+[member]
+rule = "structure.seat-member"
+
+[[member.entry]]
+name = "named-after-repository"
+holds = "repository"
+count = 1
+note = "One member, named after the repository that carries it. Measured 2026-08-20: charts three of three, skills six of six. This is the shape structure.anchor-unique and structure.package-directory-name each hardcode for one seat."
+
+[[member.entry]]
+name = "version-named"
+holds = "version"
+note = "Every member names a released version. docs/CHANGELOG alone, where shape/changelog.rs holds the same assertion for one path."

@@ -100,6 +100,16 @@ rule!(
     [REPOSITORY]
 );
 rule!(
+    SEAT_MEMBER,
+    "structure.seat-member",
+    "A seat holds the members its rule requires",
+    "A seat naming a member rule holds members of the count and the name shape that rule fixes.",
+    "Declared seat rules compared with the members each seat records.",
+    Mechanized,
+    PLUMB,
+    [REPOSITORY]
+);
+rule!(
     KNOWN_DIRECTORY,
     "structure.known-directory",
     "Top-level directories have a known role",
@@ -218,7 +228,7 @@ pub fn all() -> Vec<&'static Rule> {
         &GUARD_CHECKS_RELEASE_PROFILE, &GUARD_CONCURRENCY,
         &GUARD_RUNS_DOCTOR, &GUARD_RUNS_ECTROPY, &GUARD_USES_CURRENT_ECTROPY_MODE,
         &GUARD_LANE_PRESENT, &KNOWN_DIRECTORY, &KNOWN_FILE, &KNOWN_WORKFLOW,
-        &SEAT_ANCHORED,
+        &SEAT_ANCHORED, &SEAT_MEMBER,
         &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
         &RELEASE_LANE_PRESENT, &RELEASE_SOURCE_BOUND, &RESERVED_COMPONENTS_SEAT,
         &SITE_DEPLOY_LANE, &TRANSITIONAL_WRAPPERS_OBSERVED,

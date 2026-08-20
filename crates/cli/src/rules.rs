@@ -28,6 +28,26 @@ pub struct Cargo {
     pub index: String,
 }
 
+pub const SETS: [(&str, &str); 5] = [
+    ("deps", plumb::seat::resource!("rules/deps.toml")),
+    ("release", plumb::seat::resource!("rules/release.toml")),
+    ("seat", plumb::seat::resource!("rules/seat.toml")),
+    ("structure", plumb::seat::resource!("rules/structure.toml")),
+    ("workflow", plumb::seat::resource!("rules/workflow.toml")),
+];
+
+pub fn set(name: &str) -> Result<toml::Table, String> {
+    let factory = SETS
+        .iter()
+        .find(|(held, _)| *held == name)
+        .map(|(_, factory)| *factory)
+        .ok_or_else(|| format!("rule://{name} names no released set"))?;
+    held()
+        .read(&format!("rules/{name}.toml"), factory)?
+        .parse()
+        .map_err(|error| format!("rules/{name}.toml does not parse: {error}"))
+}
+
 pub static RULES: LazyLock<Rules> = LazyLock::new(|| {
     let seat = held();
     let doc: toml::Table = carried(
