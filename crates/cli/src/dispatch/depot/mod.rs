@@ -156,9 +156,8 @@ impl Tree<'_> {
         } else {
             PathBuf::from(wanted.from)
         };
-        let commit = self.commit()?;
-        let proof = crate::shape::changelog::prove(self.0, &source, wanted.version, &commit)?;
-        let batch = notes::Batch::gather(&source, wanted.version, &commit)?;
+        let proof = crate::shape::changelog::prove(self.0, &source, wanted.version)?;
+        let batch = notes::Batch::gather(&source, wanted.version, &proof.candidate)?;
         if wanted.dry {
             return Ok(format!(
                 "{}\n{} lines within a budget of {} for {} units",

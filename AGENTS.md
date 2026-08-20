@@ -183,8 +183,10 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   address in the depot where downstream migration guidance lives, and a version
   whose note says only that the source is the guidance has still occupied it,
   because what the address buys is that a reader never has to guess whether one
-  exists. Publishing a note binds the previous public stable commit to the
-  candidate, measures textual churn plus changed paths, and refuses a language
+  exists. Publishing a note binds the stable before that version to the version's
+  own point, both read from tags rather than from a live channel pointer, because
+  a note written after the release would otherwise measure itself against itself.
+  It measures textual churn plus changed paths, and refuses a language
   pair above its diff-derived budget or one that is empty: the ceiling bounds
   sprawl and the floor keeps the seat occupied. Compiling a release does none of
   this, so a note can never fail a release.

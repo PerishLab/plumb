@@ -1,17 +1,8 @@
 use semver::Version;
-use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub use plumb::changelog::Proof;
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Pointer {
-    schema: u32,
-    channel: String,
-    commit: String,
-}
 
 pub fn stamped(version: &str) -> String {
     match version.strip_prefix('v') {
@@ -76,62 +67,53 @@ pub fn artifacts(repository: &Path, version: &str) -> Result<Vec<PathBuf>, Strin
     Ok(found)
 }
 
-pub fn previous(authority: &str) -> Result<Option<String>, String> {
-    let url = format!(
-        "{}/v1/channels/stable.json",
-        authority.trim_end_matches('/')
-    );
-    let output = tempfile::NamedTempFile::new()
-        .map_err(|error| format!("cannot stage previous stable pointer: {error}"))?;
-    let response = Command::new("curl")
-        .args(["--silent", "--show-error", "--location", "--output"])
-        .arg(output.path())
-        .args(["--write-out", "%{http_code}", &url])
-        .output()
-        .map_err(|error| format!("cannot execute curl: {error}"))?;
-    if !response.status.success() {
-        let error = String::from_utf8_lossy(&response.stderr).trim().to_string();
-        return Err(format!(
-            "cannot read previous stable pointer {url}: {}",
-            if error.is_empty() {
-                "curl failed"
-            } else {
-                &error
-            }
-        ));
-    }
-    let status = String::from_utf8_lossy(&response.stdout).trim().to_string();
-    if status == "404" {
-        return Ok(None);
-    }
-    if status != "200" {
-        return Err(format!(
-            "cannot read previous stable pointer {url}: HTTP {status}"
-        ));
-    }
-    let bytes = std::fs::read(output.path())
-        .map_err(|error| format!("cannot read previous stable pointer {url}: {error}"))?;
-    let pointer: Pointer = serde_json::from_slice(&bytes)
-        .map_err(|error| format!("cannot parse previous stable pointer {url}: {error}"))?;
-    if pointer.schema != 1 || pointer.channel != "stable" || !commit(&pointer.commit) {
-        return Err(format!(
-            "previous stable pointer {url} has invalid identity"
-        ));
-    }
-    Ok(Some(pointer.commit))
-}
-
-pub fn prove(root: &Path, home: &Path, version: &str, candidate: &str) -> Result<Proof, String> {
+pub fn prove(root: &Path, home: &Path, version: &str) -> Result<Proof, String> {
     let version = identity(version)?;
-    let spec = super::super::dispatch::release::model::Spec::read(&root.join("plumb.toml"))?;
-    let previous = previous(&spec.authority)?;
+    let stamped = stamped(&version);
+    let candidate = point(root, &stamped)?;
+    let previous = prior(root, &version)?;
     plumb::changelog::prove(plumb::changelog::Claim {
         root,
         home,
         version: &version,
         previous: previous.as_deref(),
-        candidate,
+        candidate: &candidate,
     })
+}
+
+fn point(root: &Path, tag: &str) -> Result<String, String> {
+    let output = Command::new("git")
+        .current_dir(root)
+        .args(["rev-list", "-n", "1", tag])
+        .output()
+        .map_err(|error| format!("cannot run git rev-list: {error}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "{tag} names no point in this repository; a release note describes a version that shipped"
+        ));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn prior(root: &Path, version: &str) -> Result<Option<String>, String> {
+    let held =
+        Version::parse(version).map_err(|error| format!("invalid version {version}: {error}"))?;
+    let output = Command::new("git")
+        .current_dir(root)
+        .args(["tag", "--list", "v*"])
+        .output()
+        .map_err(|error| format!("cannot run git tag: {error}"))?;
+    let mut found = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter_map(|line| Version::parse(line.trim().trim_start_matches('v')).ok())
+        .filter(|held| held.pre.is_empty())
+        .filter(|other| other < &held)
+        .collect::<Vec<_>>();
+    found.sort();
+    match found.pop() {
+        Some(base) => point(root, &format!("v{base}")).map(Some),
+        None => Ok(None),
+    }
 }
 
 fn base(version: &str) -> String {
@@ -145,11 +127,4 @@ pub fn identity(version: &str) -> Result<String, String> {
         "{}.{}.{}",
         parsed.major, parsed.minor, parsed.patch
     ))
-}
-
-fn commit(value: &str) -> bool {
-    (40..=64).contains(&value.len())
-        && value
-            .chars()
-            .all(|held| held.is_ascii_digit() || ('a'..='f').contains(&held))
 }
