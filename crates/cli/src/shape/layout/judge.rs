@@ -55,7 +55,7 @@ impl Tree<'_> {
             found.push(wrong(
                 &law::SEAT_MEMBER,
                 format!(
-                    "{container} holds {} members where {held} fixes {count}",
+                    "{container} holds {} members where {held} fixes {count}; see: plumb cookbook seat",
                     members.len()
                 ),
             ));
@@ -76,7 +76,7 @@ impl Tree<'_> {
             if !rule::named(leaf, holds, self.1) {
                 found.push(wrong(
                     &law::SEAT_MEMBER,
-                    format!("{name} is not named as {held} requires"),
+                    format!("{name} is not named as {held} requires; see: plumb cookbook seat"),
                 ));
             }
         }
@@ -102,7 +102,7 @@ impl Tree<'_> {
             if !heads.contains(name) {
                 found.push(unknown(
                     &law::KNOWN_DIRECTORY,
-                    format!("directory {name} sits in no declared seat"),
+                    format!("directory {name} sits in no declared seat; see: plumb cookbook seat"),
                 ));
             }
         }
@@ -110,7 +110,7 @@ impl Tree<'_> {
             if !names.contains(name) {
                 found.push(unknown(
                     &law::KNOWN_FILE,
-                    format!("file {name} sits in no declared seat"),
+                    format!("file {name} sits in no declared seat; see: plumb cookbook seat"),
                 ));
             }
         }
@@ -142,7 +142,10 @@ impl Tree<'_> {
             }
             found.push(wrong(
                 &law::SEAT_ANCHORED,
-                format!("{member} carries none of {}", anchor.join(", ")),
+                format!(
+                    "{member} carries none of {}; see: plumb cookbook seat",
+                    anchor.join(", ")
+                ),
             ));
         }
         found
@@ -163,7 +166,7 @@ impl Tree<'_> {
                 continue;
             };
             let held = format!(
-                "{path} carries {} bytes where {held} caps {bytes}",
+                "{path} carries {} bytes where {held} caps {bytes}; see: plumb cookbook wayfinder",
                 entry.bytes().len()
             );
             if entry.bytes().len() > bytes {

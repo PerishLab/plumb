@@ -40,6 +40,7 @@ plumb <command> --help     # every flag and contract
 plumb rule list|show       # the current law, its standing and evidence
 plumb doctor . --json      # this repository's shape and findings
 plumb layout .             # the seats this repository declares
+plumb cookbook [entry]     # what to do about a finding that names one
 ```
 
 Copying a standing list into prose is how a brief starts lying. This one holds

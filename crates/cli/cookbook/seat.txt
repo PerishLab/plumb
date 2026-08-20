@@ -1,0 +1,28 @@
+# seat
+
+## Trigger
+
+A layout finding: a directory or file in no declared seat, a member carrying
+none of its seat's anchors, or a seat holding the wrong members.
+
+## Move
+
+Read which of three things is true before touching anything. The repository is
+wrong, and the path moves into a seat that already exists. The layout is wrong,
+and a seat is owed a row with a note saying what it holds and why. Or the shape
+is real and undecided, and the seat takes `anchor = []`, which says the level is
+governed while its members are not judged. Never widen a seat to silence a
+finding: a seat that admits anything states nothing. An `unknown shape` is an
+observation and not an accusation, so it may stand while the answer is being
+found; an `out of true` may not.
+
+## Evidence
+
+The escape hatch this engine replaced admitted any directory carrying an
+`action.yml`, which is a seat and an anchor written as a branch. Generalising it
+cost one row; keeping it would have cost a second special case for every shape
+the domain grew.
+
+## EXIT
+
+Remove this entry when a layout finding can name the seat it wants, or when the seat law retires.

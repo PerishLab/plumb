@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 pub(crate) mod audit;
 pub mod clock;
 pub mod command;
+pub mod cookbook;
 pub mod depot;
 pub mod land;
 pub mod operator;
