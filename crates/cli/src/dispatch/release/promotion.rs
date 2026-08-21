@@ -1,4 +1,4 @@
-use super::super::{channel, model::Spec, proof, verify};
+use super::{channel, model::Spec, proof, verify};
 use plumb::forgejo::git;
 use semver::Version;
 use std::path::Path;

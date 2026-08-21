@@ -3,6 +3,7 @@ mod datum;
 mod line;
 mod mark;
 mod pick;
+pub(in crate::dispatch) mod topology;
 mod trigger;
 mod value;
 

@@ -1,4 +1,4 @@
-use super::super::model::Spec;
+use super::model::Spec;
 use semver::Version;
 use serde::Deserialize;
 use std::collections::BTreeMap;

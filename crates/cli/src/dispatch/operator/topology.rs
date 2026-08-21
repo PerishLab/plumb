@@ -1,4 +1,4 @@
-use super::super::{channel, proof};
+use crate::dispatch::release::{channel, proof};
 use std::path::Path;
 use std::process::{Command, Output};
 
@@ -160,14 +160,22 @@ pub fn rejoin(root: &Path, version: &str, commit: &str, base_ref: &str) -> Resul
         "resolve rejoin base",
         git(root, ["rev-parse", &format!("{base_ref}^{{commit}}")])?,
     )?;
-    let output = git(root, ["merge-base", "--is-ancestor", commit, &base])?;
-    match output.status.code() {
-        Some(0) => Ok(format!(
+    if ancestor(root, commit, &base)? {
+        Ok(format!(
             "stable {version} at {commit} is rejoined into {base_ref} at {base}"
-        )),
-        Some(1) => Err(format!(
+        ))
+    } else {
+        Err(format!(
             "stable {version} at {commit} is not an ancestor of {base_ref} at {base}"
-        )),
+        ))
+    }
+}
+
+pub fn ancestor(root: &Path, point: &str, base: &str) -> Result<bool, String> {
+    let output = git(root, ["merge-base", "--is-ancestor", point, base])?;
+    match output.status.code() {
+        Some(0) => Ok(true),
+        Some(1) => Ok(false),
         _ => Err(format!(
             "cannot inspect rejoin topology: {}",
             String::from_utf8_lossy(&output.stderr).trim()

@@ -10,7 +10,7 @@ impl Seat<'_> {
         let Some((name, point)) = self.last(version)? else {
             return Ok(());
         };
-        if self.ancestor(&point, &base) {
+        if super::super::topology::ancestor(self.0, &point, &base)? {
             return Ok(());
         }
         Err(format!(
@@ -42,11 +42,6 @@ impl Seat<'_> {
             &format!("resolve {name}"),
             self.git(["rev-parse", "--verify", name]),
         )
-    }
-
-    fn ancestor(&self, point: &str, base: &str) -> bool {
-        self.git(["merge-base", "--is-ancestor", point, base])
-            .is_ok_and(|output| output.status.success())
     }
 
     fn git<const N: usize>(&self, args: [&str; N]) -> Result<Output, String> {

@@ -1,7 +1,7 @@
 use super::{archive, skill};
 mod debian;
-use crate::dispatch::release::engine::workspace::Workspace;
 use crate::dispatch::release::model::{Format, Spec};
+use crate::dispatch::release::workspace::Workspace;
 use crate::dispatch::release::{artifact, artifact::Asset};
 use serde_json::json;
 use std::collections::{BTreeMap, BTreeSet};
@@ -49,7 +49,7 @@ impl Product<'_> {
         let workspace = Workspace::read(&self.spec.root)?;
         let binaries = workspace.build(
             self.spec,
-            crate::dispatch::release::engine::workspace::Build {
+            crate::dispatch::release::workspace::Build {
                 triple: &target.triple,
                 version: input.version,
                 channel: input.channel,

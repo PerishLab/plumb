@@ -1,15 +1,16 @@
 pub(super) mod artifact;
 pub(in crate::dispatch) mod channel;
 mod deed;
-pub(super) mod engine;
 pub(super) mod manager;
 pub(crate) mod model;
 pub(in crate::dispatch) mod output;
 mod plan;
+pub(in crate::dispatch) mod promotion;
 pub(super) mod proof;
 pub(super) mod record;
 pub(super) mod storage;
 pub(super) mod verify;
+pub(in crate::dispatch) mod workspace;
 
 pub use deed::Deed;
 use plumb::rig::{Authority, Rig};
@@ -65,13 +66,13 @@ fn carry(deed: Deed) -> Result<String, String> {
         Deed::Prepare { .. } | Deed::Pick { .. } | Deed::Freeze { .. } => {
             Err("a line verb does not read the release environment".into())
         }
-        Deed::Rejoin { .. } => engine::topology::rejoin(
+        Deed::Rejoin { .. } => crate::dispatch::operator::topology::rejoin(
             &spec.root,
             required("PLUMB_RELEASE_VERSION", &release.version)?,
             required("PLUMB_RELEASE_COMMIT", &release.commit)?,
             required("PLUMB_RELEASE_BASE", &release.base)?,
         ),
-        Deed::Promote => engine::promotion::fetch(
+        Deed::Promote => promotion::fetch(
             &spec,
             required("PLUMB_RELEASE_COMMIT", &release.commit)?,
             required("PLUMB_RELEASE_VERSION", &release.version)?,
@@ -80,8 +81,8 @@ fn carry(deed: Deed) -> Result<String, String> {
                 .as_deref()
                 .ok_or_else(|| "PLUMB_RELEASE_PROMOTION is required".to_string())?,
         ),
-        Deed::Evidence => engine::topology::evidence(
-            engine::topology::Guard {
+        Deed::Evidence => crate::dispatch::operator::topology::evidence(
+            crate::dispatch::operator::topology::Guard {
                 api: required("PLUMB_GUARD_API", &rig.guard.api)?,
                 repository: required("PLUMB_GUARD_REPOSITORY", &rig.guard.repository)?,
                 token: required("PLUMB_GUARD_TOKEN", &rig.guard.token)?,
@@ -162,12 +163,12 @@ pub(super) fn promotion(
     spec: &model::Spec,
     commit: &str,
     version: &str,
-) -> Result<engine::promotion::Exact, String> {
-    engine::promotion::derive(spec, commit, version)
+) -> Result<promotion::Exact, String> {
+    promotion::derive(spec, commit, version)
 }
 
 pub(super) fn settled(root: &Path, version: &str, commit: &str) -> Result<String, String> {
-    engine::topology::rejoin(root, version, commit, "origin/main")
+    crate::dispatch::operator::topology::rejoin(root, version, commit, "origin/main")
 }
 
 impl storage::Authority for Authority {

@@ -147,8 +147,8 @@ impl Seat<'_> {
         let Some(attachment) = &self.0.cargo else {
             return Ok(());
         };
-        let seats = crate::dispatch::release::engine::workspace::Workspace::read(&self.0.root)?
-            .seats(&self.0.root);
+        let seats =
+            crate::dispatch::release::workspace::Workspace::read(&self.0.root)?.seats(&self.0.root);
         let mut roots = Vec::new();
         for package in &attachment.packages {
             let seat = seats
