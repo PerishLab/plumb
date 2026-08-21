@@ -1,0 +1,26 @@
+Hold the truth cycle of a product release.
+
+Sixteen verbs sit in three classes, and the class decides where a verb may run.
+A line verb -- prepare, pick, freeze, rejoin --version -- operates a release
+line from a working tree and refuses to read the release environment. A point
+verb -- stamp, retract -- acts on one version and refuses it too. Every other
+verb is a carry verb: it runs inside a release lane and reads PLUMB_RELEASE_*,
+so calling one by hand without that environment is refused by name.
+
+The channel is derived, never named beside the version. A version begins with v
+and parses as semver; no prerelease means stable, and a prerelease must read
+exactly <name>.<number> with a number above zero, which makes <name> the
+channel. Stable originates only from refs/heads/release/<version>, and every
+other channel only from refs/tags/<version>.
+
+A stable release is a promotion, not a first publication. Cut the line with
+prepare, move commits onto it with pick, and freeze it, which both walls the
+line and resolves the exact non-stable seal the promotion will embed. Publish
+that exact release first, then dispatch stable from the line: promote fetches
+the derived proof, compile seals it, and activate points the channel at what
+the run published. After activation, rejoin merges the published commit back so
+main holds it, and both prepare and freeze refuse to open the next line until
+it does.
+
+A stamped point never moves, and retraction acts only on a declaration: once a
+version is published at the authority, retract refuses it.

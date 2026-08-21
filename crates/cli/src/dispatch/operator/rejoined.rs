@@ -15,7 +15,7 @@ impl Seat<'_> {
         }
         Err(format!(
             "stable {name} stands at {point}, which origin/main does not hold; \
-             run plumb stable rejoin --version {name} before opening the next line"
+             run plumb release rejoin --version {name} before opening the next line"
         ))
     }
 

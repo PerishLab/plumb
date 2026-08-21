@@ -1,5 +1,6 @@
 mod artifact;
 mod capsule;
+mod deed;
 pub(super) mod engine;
 pub(crate) mod generator;
 pub(super) mod manager;
@@ -11,69 +12,9 @@ pub(super) mod smoke;
 pub(super) mod storage;
 pub(super) mod verify;
 
-use clap::Subcommand;
+pub use deed::Deed;
 use plumb::rig::{Authority, Rig};
 use std::path::{Path, PathBuf};
-
-#[derive(Subcommand)]
-pub enum Deed {
-    Activate,
-    Prepare {
-        #[arg(long)]
-        version: String,
-        #[arg(long, default_value = "main")]
-        from: String,
-        #[arg(long, default_value = "")]
-        repo: String,
-        #[arg(long = "dry-run")]
-        dry: bool,
-    },
-    Pick {
-        #[arg(long)]
-        version: String,
-        #[arg(long)]
-        commit: String,
-        #[arg(long = "dry-run")]
-        dry: bool,
-    },
-    Freeze {
-        #[arg(long)]
-        version: String,
-        #[arg(long, default_value = "")]
-        repo: String,
-        #[arg(long = "dry-run")]
-        dry: bool,
-    },
-    Authority,
-    Channel,
-    Compile,
-    Evidence,
-    Inspect,
-    Rejoin {
-        #[arg(long, default_value = "")]
-        version: String,
-        #[arg(long, default_value = "")]
-        repo: String,
-        #[arg(long = "dry-run")]
-        dry: bool,
-    },
-    Promote,
-    Reference,
-    Retract {
-        #[arg(long)]
-        version: String,
-        #[arg(long = "dry-run")]
-        dry: bool,
-    },
-    Source,
-    Stamp {
-        #[arg(long)]
-        version: String,
-        #[arg(long = "dry-run")]
-        dry: bool,
-    },
-    Surface,
-}
 
 pub fn run(deed: Deed) -> i32 {
     let result = execute(deed);

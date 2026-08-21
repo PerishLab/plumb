@@ -36,7 +36,7 @@ fn late() {
     let said = String::from_utf8_lossy(&output.stderr).to_string();
     assert!(said.contains("stable v1.2.0 stands at"), "{said}");
     assert!(
-        said.contains("plumb stable rejoin --version v1.2.0"),
+        said.contains("plumb release rejoin --version v1.2.0"),
         "{said}"
     );
 }

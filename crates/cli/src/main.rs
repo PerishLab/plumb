@@ -123,7 +123,10 @@ enum Command {
         #[command(subcommand)]
         deed: dispatch::depot::Deed,
     },
-    #[command(about = "Hold the truth cycle of a product release")]
+    #[command(
+        about = "Hold the truth cycle of a product release",
+        long_about = dispatch::depot::carried("help/release.txt", plumb::seat::resource!("help/release.txt"))
+    )]
     Release {
         #[command(subcommand)]
         deed: dispatch::release::Deed,
