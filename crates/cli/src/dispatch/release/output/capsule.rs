@@ -1,3 +1,5 @@
+mod object;
+
 use super::generator;
 use crate::dispatch::release::artifact;
 use crate::dispatch::release::channel;
@@ -120,7 +122,7 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
         changelog: None,
         proof: promotion,
         radius: None,
-        inputs: super::object::Seat(&spec).inputs(input.toolchain, input.version)?,
+        inputs: object::Seat(&spec).inputs(input.toolchain, input.version)?,
     };
     let path = input.out.join("seal.json");
     json(&path, &seal)?;

@@ -1,6 +1,6 @@
-use super::artifact;
-use super::cloud::Bond;
-use super::model::App;
+use crate::dispatch::ship::site::artifact;
+use crate::dispatch::ship::site::cloud::Bond;
+use crate::dispatch::ship::site::model::App;
 use plumb::rig::Site;
 use std::process::Command;
 

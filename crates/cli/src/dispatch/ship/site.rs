@@ -5,7 +5,6 @@ mod inspect;
 mod model;
 mod plan;
 mod process;
-mod reach;
 mod settings;
 mod worker;
 

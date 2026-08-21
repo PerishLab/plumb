@@ -3,7 +3,6 @@ mod datum;
 mod line;
 mod mark;
 mod pick;
-mod rejoined;
 mod trigger;
 mod value;
 

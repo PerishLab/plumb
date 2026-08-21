@@ -1,3 +1,5 @@
+mod reach;
+
 use super::cloud::Bond;
 use super::model::App;
 use super::process::Call;
@@ -42,7 +44,7 @@ pub fn run(root: &Path) -> Result<String, String> {
         }
         Bond::Yes => {}
     }
-    let reached = super::reach::run(&app, &site, bond)?;
+    let reached = reach::run(&app, &site, bond)?;
     println!("  reachable {}", if reached { "yes" } else { "no" });
     Ok("site deploy: ok".into())
 }

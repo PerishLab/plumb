@@ -1,4 +1,5 @@
-use super::{archive, debian, skill};
+use super::{archive, skill};
+mod debian;
 use crate::dispatch::release::engine::workspace::Workspace;
 use crate::dispatch::release::model::{Format, Spec};
 use crate::dispatch::release::{artifact, artifact::Asset};

@@ -1,4 +1,5 @@
 mod open;
+mod rejoined;
 mod settle;
 
 use super::super::release::Deed;
@@ -35,7 +36,7 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     let root = git::root()?;
     let remote = git::remote(&root, repo)?;
     let mut course = Course::new(dry);
-    super::rejoined::Seat(&root).rejoined(&version)?;
+    rejoined::Seat(&root).rejoined(&version)?;
     let client = Client::new(remote)?;
     let standing = client.branch(&name)?.is_some();
     let head = if standing {
@@ -84,7 +85,7 @@ fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
     let root = git::root()?;
     let remote = git::remote(&root, repo)?;
     let mut course = Course::new(dry);
-    super::rejoined::Seat(&root).rejoined(&version)?;
+    rejoined::Seat(&root).rejoined(&version)?;
     let client = Client::new(remote)?;
     freeze(&mut course, &client, &root, &name)?;
     let spec = super::super::release::model::Spec::read(&root.join("plumb.toml"))?;

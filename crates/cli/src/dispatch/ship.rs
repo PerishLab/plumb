@@ -1,7 +1,5 @@
 mod adaptor;
 mod archive;
-mod debian;
-mod ledger;
 mod package;
 mod site;
 mod skill;

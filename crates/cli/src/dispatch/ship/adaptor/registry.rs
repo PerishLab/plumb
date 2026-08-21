@@ -1,5 +1,5 @@
-use super::super::ledger;
-use super::manifest;
+mod ledger;
+mod manifest;
 use crate::dispatch::release::engine::workspace::{Workspace, release};
 use crate::dispatch::release::model::{Cargo, Spec};
 use flate2::read::GzDecoder;
