@@ -144,9 +144,9 @@ impl Image<'_> {
         let Some(oci) = &self.spec.oci else {
             return Ok(format!("{} has no image attachment", self.spec.product));
         };
-        let identity = crate::command::ship::Identity {
+        let identity = crate::command::ship::attachment::Identity {
             user: &oci.account,
-            token: crate::command::ship::registry_token(credential)?,
+            token: crate::command::ship::attachment::registry_token(credential)?,
         };
         let reference = reference(oci, version);
         self.login(&oci.registry, &identity)?;
@@ -170,7 +170,7 @@ impl Image<'_> {
     fn login(
         &self,
         registry: &str,
-        identity: &crate::command::ship::Identity<'_>,
+        identity: &crate::command::ship::attachment::Identity<'_>,
     ) -> Result<(), String> {
         let mut child = Command::new("docker")
             .args([

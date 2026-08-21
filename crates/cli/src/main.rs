@@ -130,7 +130,10 @@ enum Command {
         #[command(subcommand)]
         deed: command::release::Deed,
     },
-    #[command(about = "Project one release onto one medium")]
+    #[command(
+        about = "Project one release onto one medium",
+        long_about = command::depot::carried("help/ship.txt", plumb::seat::resource!("help/ship.txt"))
+    )]
     Ship {
         #[command(subcommand)]
         deed: command::ship::Deed,

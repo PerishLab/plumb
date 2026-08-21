@@ -1,0 +1,30 @@
+Project one release onto one medium.
+
+A release is held once and shipped many times. Each medium is a group of verbs
+under ship, and every group answers to the same declaration: the [release]
+attachment in plumb.toml. The seven are binary, cargo, oci, npm, chart,
+cfworker, and site. binary is the product itself; cargo, oci, npm and chart
+carry it to a registry; cfworker and site put a web application on its edge and
+need no binary at all.
+
+The four registry groups answer even when the repository declares no attachment
+of their kind: they say so and succeed. A lane that runs the same steps for
+every product has to be able to call all of them, and a product that ships no
+chart is not a failing product.
+
+Inputs arrive in the environment, never as arguments. The registry groups read
+PLUMB_RELEASE_VERSION, and build additionally reads the channel, the commit and
+the target triple; a missing one refuses by name. Registry credentials arrive
+as PLUMB_RELEASE_REGISTRY_TOKEN and must be a Cargo Bearer credential. Site
+authority is separate and enters through PLUMB_SITE_TOKEN, PLUMB_SITE_ACCOUNT
+and PLUMB_SITE_DOMAIN. No credential enters an argument or a log.
+
+Publishing to a registry is sealed. Where the product carries a binary, cargo,
+oci, npm and chart each read the release capsule first, refuse if it seals a
+different version than the projection carries, and prove the sealed object is
+reachable before anything leaves the machine. Rehearsals are not sealed, which
+is what makes them rehearsals.
+
+Publishing is idempotent where the medium allows it. An image reference that is
+already published is compared: identical content is accepted and reported,
+different content is refused as drift rather than overwritten.

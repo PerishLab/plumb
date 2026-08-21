@@ -42,7 +42,7 @@ impl Module<'_> {
         let Some(npm) = &self.spec.npm else {
             return Ok(format!("{} has no module attachment", self.spec.product));
         };
-        let token = crate::command::ship::registry_token(credential)?;
+        let token = crate::command::ship::attachment::registry_token(credential)?;
         self.pack(version)?;
         let identity = release(version)?;
         for package in &npm.packages {

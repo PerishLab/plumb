@@ -1,5 +1,6 @@
 mod adaptor;
 mod archive;
+mod attachment;
 mod package;
 mod site;
 mod skill;
@@ -11,26 +12,32 @@ use plumb::rig::Rig;
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(about = "Build, prove, and publish the product's own artifacts")]
     Binary {
         #[command(subcommand)]
         deed: Binary,
     },
+    #[command(about = "Carry the release to its Cargo registry")]
     Cargo {
         #[command(subcommand)]
         deed: Cargo,
     },
+    #[command(about = "Carry the release to its Helm chart registry")]
     Chart {
         #[command(subcommand)]
         deed: Chart,
     },
+    #[command(about = "Carry the release to its npm registry")]
     Npm {
         #[command(subcommand)]
         deed: Npm,
     },
+    #[command(about = "Carry the release to its image registry")]
     Oci {
         #[command(subcommand)]
         deed: Oci,
     },
+    #[command(about = "Put the site's version worker on its edge")]
     Cfworker {
         #[command(subcommand)]
         deed: Cfworker,
@@ -47,31 +54,43 @@ pub enum Deed {
 
 #[derive(Subcommand)]
 pub enum Cfworker {
+    #[command(about = "Build the version worker and put it on its edge")]
     Publish,
+    #[command(about = "Prove the previews the worker needs are reachable, and build nothing")]
     Rehearse,
 }
 
 #[derive(Subcommand)]
 pub enum Cargo {
+    #[command(about = "Publish every declared crate, in the order the attachment declares")]
     Publish,
+    #[command(about = "Package every declared crate without uploading anything")]
     Rehearse,
 }
 
 #[derive(Subcommand)]
 pub enum Oci {
+    #[command(
+        about = "Build the declared image from the Containerfile with this release's payload"
+    )]
     Build,
+    #[command(about = "Push the built image, or accept the identical one already published")]
     Publish,
 }
 
 #[derive(Subcommand)]
 pub enum Chart {
+    #[command(about = "Stamp the chart with this version and package it")]
     Package,
+    #[command(about = "Package the chart and push it to its registry")]
     Publish,
 }
 
 #[derive(Subcommand)]
 pub enum Npm {
+    #[command(about = "Stamp and pack every declared package")]
     Pack,
+    #[command(about = "Pack every declared package and publish it")]
     Publish,
 }
 
@@ -99,28 +118,38 @@ pub enum Site {
 
 #[derive(Subcommand)]
 pub enum Binary {
+    #[command(about = "Shift the stable manager roots onto this published version")]
     Activate,
+    #[command(about = "Gather the declared assets, and the skill archive, into the artifact seat")]
     Assemble,
+    #[command(about = "Compile the product for one target triple and archive it")]
     Build,
+    #[command(about = "Dispatch the release workflow for one version on the forge")]
     Dispatch {
         #[command(flatten)]
         options: super::operator::Dispatch,
     },
+    #[command(about = "Read what the release surface publishes for this version")]
     Inspect,
+    #[command(about = "Render the manager scripts this channel and version owe")]
     Managers,
+    #[command(about = "Print the declared target matrix as one build JSON")]
     Matrix,
+    #[command(about = "Upload every capsule object and its seal, then prove they are reachable")]
     Publish,
+    #[command(about = "Install this version through its published manager, then clean up")]
     Smoke,
+    #[command(about = "Prove the capsule's objects are published, and its projection if activated")]
     Verify,
 }
 
 pub fn run(deed: Deed) -> i32 {
     let result = match deed {
         Deed::Binary { deed } => binary(deed),
-        Deed::Cargo { deed } => cargo(deed),
-        Deed::Chart { deed } => chart(deed),
-        Deed::Npm { deed } => npm(deed),
-        Deed::Oci { deed } => oci(deed),
+        Deed::Cargo { deed } => attachment::cargo(deed),
+        Deed::Chart { deed } => attachment::chart(deed),
+        Deed::Npm { deed } => attachment::npm(deed),
+        Deed::Oci { deed } => attachment::oci(deed),
         Deed::Cfworker { deed } => cfworker(deed),
         Deed::Site { deed } => site(deed),
     };
@@ -134,103 +163,6 @@ pub fn run(deed: Deed) -> i32 {
             1
         }
     }
-}
-
-fn cargo(deed: Cargo) -> Result<String, String> {
-    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
-    let release = &rig.release;
-    let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
-    let attachment = adaptor::registry::registry(&spec);
-    match deed {
-        Cargo::Publish => {
-            sealed(&spec, release, version, spec.cargo.is_some())?;
-            attachment.publish(version, &release.registry_token)
-        }
-        Cargo::Rehearse => attachment.rehearse(version, &release.registry_token),
-    }
-}
-
-fn oci(deed: Oci) -> Result<String, String> {
-    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
-    let release = &rig.release;
-    let carrier = adaptor::image::image(&spec);
-    let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
-    match deed {
-        Oci::Build => carrier.build(version, &release.commit, &artifacts(release)?),
-        Oci::Publish => {
-            sealed(&spec, release, version, spec.oci.is_some())?;
-            carrier.publish(version, &release.registry_token)
-        }
-    }
-}
-
-fn chart(deed: Chart) -> Result<String, String> {
-    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
-    let release = &rig.release;
-    let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
-    let carrier = adaptor::chart::chart(&spec);
-    match deed {
-        Chart::Package => carrier.package(version),
-        Chart::Publish => {
-            sealed(&spec, release, version, spec.chart.is_some())?;
-            carrier.publish(version, &release.registry_token)
-        }
-    }
-}
-
-fn npm(deed: Npm) -> Result<String, String> {
-    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
-    let release = &rig.release;
-    let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
-    let carrier = adaptor::module::module(&spec);
-    match deed {
-        Npm::Pack => carrier.pack(version),
-        Npm::Publish => {
-            sealed(&spec, release, version, spec.npm.is_some())?;
-            carrier.publish(version, &release.registry_token)
-        }
-    }
-}
-
-pub(super) fn registry_token(credential: &str) -> Result<&str, String> {
-    let credential = required("PLUMB_RELEASE_REGISTRY_TOKEN", credential)?;
-    credential
-        .strip_prefix("Bearer ")
-        .filter(|token| !token.chars().any(char::is_whitespace))
-        .filter(|token| !token.is_empty())
-        .ok_or_else(|| "PLUMB_RELEASE_REGISTRY_TOKEN must be a Cargo Bearer credential".into())
-}
-
-pub struct Identity<'a> {
-    pub user: &'a str,
-    pub token: &'a str,
-}
-
-fn sealed(
-    spec: &super::release::model::Spec,
-    release: &plumb::rig::Release,
-    version: &str,
-    declared: bool,
-) -> Result<(), String> {
-    if !spec.binary() {
-        return Ok(());
-    }
-    let path = capsule(release)?;
-    let (compiled, _) = super::release::record::Capsule::read(&path)?;
-    if compiled.version != version {
-        return Err(format!(
-            "capsule seals {} while the projection carries {version}",
-            compiled.version
-        ));
-    }
-    if !declared {
-        return Ok(());
-    }
-    verify::object(&compiled.seal)
 }
 
 fn cfworker(deed: Cfworker) -> Result<String, String> {

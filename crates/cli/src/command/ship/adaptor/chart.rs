@@ -39,9 +39,9 @@ impl Chart<'_> {
         let Some(chart) = &self.spec.chart else {
             return Ok(format!("{} has no chart attachment", self.spec.product));
         };
-        let identity = crate::command::ship::Identity {
+        let identity = crate::command::ship::attachment::Identity {
             user: &chart.account,
-            token: crate::command::ship::registry_token(credential)?,
+            token: crate::command::ship::attachment::registry_token(credential)?,
         };
         self.package(version)?;
         let semver = release(version)?;
@@ -123,7 +123,7 @@ impl Chart<'_> {
     fn login(
         &self,
         registry: &str,
-        identity: &crate::command::ship::Identity<'_>,
+        identity: &crate::command::ship::attachment::Identity<'_>,
     ) -> Result<(), String> {
         let mut child = Command::new("helm")
             .args([
