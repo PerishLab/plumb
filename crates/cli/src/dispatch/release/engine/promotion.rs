@@ -1,4 +1,4 @@
-use super::super::{manager, model::Spec, proof, verify};
+use super::super::{channel, model::Spec, proof, verify};
 use plumb::forgejo::git;
 use semver::Version;
 use std::path::Path;
@@ -11,11 +11,11 @@ pub struct Exact {
 
 pub fn derive(spec: &Spec, commit: &str, version: &str) -> Result<Exact, String> {
     proof::commit(commit)?;
-    manager::intent("stable", version)?;
+    channel::intent("stable", version)?;
     let wanted = trunk(version)?;
     let mut found = Vec::new();
     for tag in git::tags(&spec.root, commit)? {
-        let Ok(channel) = manager::channel(&tag) else {
+        let Ok(channel) = channel::channel(&tag) else {
             continue;
         };
         if channel == "stable" || trunk(&tag)? != wanted {

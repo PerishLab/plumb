@@ -53,7 +53,7 @@ allow = [
 ]
 note = "the one-time Plumb bootstrap contract uses explicit provenance and identity terms plus exact refusal combinations"
 paths = [
-    "crates/cli/src/dispatch/release/generator.rs",
+    "crates/cli/src/dispatch/release/output/generator.rs",
     "crates/cli/src/dispatch/release/record.rs",
 ]
 

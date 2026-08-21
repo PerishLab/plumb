@@ -40,7 +40,7 @@ impl Product<'_> {
     }
 
     pub fn build(&self, input: Build<'_>) -> Result<String, String> {
-        crate::dispatch::release::manager::intent(input.channel, input.version)?;
+        crate::dispatch::release::channel::intent(input.channel, input.version)?;
         crate::dispatch::release::proof::commit(input.commit)?;
         let target = self.spec.target(input.target)?;
         std::fs::create_dir_all(input.artifacts)

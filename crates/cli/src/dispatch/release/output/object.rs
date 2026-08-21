@@ -1,5 +1,5 @@
-use super::model::Spec;
-use super::record::Input;
+use crate::dispatch::release::model::Spec;
+use crate::dispatch::release::record::Input;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -82,14 +82,14 @@ impl Seat<'_> {
             "{}/v1/channels/stable.json",
             spec.authority.trim_end_matches('/')
         );
-        let Some(pointer) = super::verify::optional(&url)? else {
+        let Some(pointer) = crate::dispatch::release::verify::optional(&url)? else {
             return Ok(BTreeMap::new());
         };
         let seat = pointer
             .pointer("/seal/url")
             .and_then(serde_json::Value::as_str)
             .ok_or_else(|| "the stable pointer names no seal".to_string())?;
-        let Some(seal) = super::verify::optional(seat)? else {
+        let Some(seal) = crate::dispatch::release::verify::optional(seat)? else {
             return Ok(BTreeMap::new());
         };
         let Some(held) = seal.get("inputs").filter(|held| !held.is_null()) else {
@@ -147,7 +147,8 @@ impl Seat<'_> {
         let Some(attachment) = &self.0.cargo else {
             return Ok(());
         };
-        let seats = super::engine::workspace::Workspace::read(&self.0.root)?.seats(&self.0.root);
+        let seats = crate::dispatch::release::engine::workspace::Workspace::read(&self.0.root)?
+            .seats(&self.0.root);
         let mut roots = Vec::new();
         for package in &attachment.packages {
             let seat = seats

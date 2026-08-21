@@ -1,10 +1,10 @@
-use super::record::{Generator, GeneratorOrigin, Seal};
+use crate::dispatch::release::record::{Generator, GeneratorOrigin, Seal};
 
 pub fn resolve(authority: &str) -> Result<Generator, String> {
     let running = plumb::version!("PLUMB").to_string();
     Ok(Generator {
         version: running.clone(),
-        template: super::manager::template()?,
+        template: crate::dispatch::release::manager::template()?,
         origin: Some(origin(authority, &running)?),
         recovery: None,
     })
@@ -22,7 +22,7 @@ fn origin(authority: &str, running: &str) -> Result<GeneratorOrigin, String> {
         .to_string();
     let version = running.to_string();
     let url = format!("{authority}/v1/releases/{channel}/{version}/seal.json");
-    let sha256 = super::verify::Surface(&url).digest()?;
+    let sha256 = crate::dispatch::release::verify::Surface(&url).digest()?;
     Ok(GeneratorOrigin::ExactRelease {
         channel,
         version,

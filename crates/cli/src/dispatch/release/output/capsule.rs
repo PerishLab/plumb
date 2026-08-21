@@ -1,9 +1,11 @@
-use super::manager;
-use super::model::{Format, Spec};
-use super::proof;
-pub use super::record::{Capsule, Local, Pointer};
-use super::record::{Remote, Seal, digest, json};
-use super::{artifact, generator};
+use super::generator;
+use crate::dispatch::release::artifact;
+use crate::dispatch::release::channel;
+use crate::dispatch::release::manager;
+use crate::dispatch::release::model::{Format, Spec};
+use crate::dispatch::release::proof;
+pub use crate::dispatch::release::record::{Capsule, Local, Pointer};
+use crate::dispatch::release::record::{Remote, Seal, digest, json};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -40,7 +42,7 @@ struct Route {
 }
 
 pub fn compile(input: Compile<'_>) -> Result<String, String> {
-    manager::intent(input.channel, input.version)?;
+    channel::intent(input.channel, input.version)?;
     proof::commit(input.commit)?;
     let spec = Spec::read(input.spec)?;
     if input.out.exists() {
@@ -173,7 +175,7 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
 
 impl Draft<'_> {
     fn channel(&self, input: Stable<'_>) -> Result<Local, String> {
-        let channel = super::manager::channel(input.version)?;
+        let channel = crate::dispatch::release::channel::channel(input.version)?;
         let pointer = Pointer {
             schema: 1,
             product: input.spec.product.clone(),

@@ -1,4 +1,4 @@
-use super::super::{manager, proof};
+use super::super::{channel, proof};
 use std::path::Path;
 use std::process::{Command, Output};
 
@@ -114,12 +114,12 @@ pub fn reference(held: &str) -> Result<String, String> {
         .ok_or_else(|| {
             format!("release source must be an exact tag or a release line, got {held}")
         })?;
-    manager::channel(version)?;
+    channel::channel(version)?;
     Ok(version.to_string())
 }
 
 pub fn bind(input: Source<'_>) -> Result<String, String> {
-    manager::intent(input.channel, input.version)?;
+    channel::intent(input.channel, input.version)?;
     proof::commit(input.commit)?;
     let reference = input.reference;
     success(
@@ -154,7 +154,7 @@ pub fn bind(input: Source<'_>) -> Result<String, String> {
 }
 
 pub fn rejoin(root: &Path, version: &str, commit: &str, base_ref: &str) -> Result<String, String> {
-    manager::intent("stable", version)?;
+    channel::intent("stable", version)?;
     proof::commit(commit)?;
     let base = text(
         "resolve rejoin base",

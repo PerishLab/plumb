@@ -183,7 +183,7 @@ fn current(seal: &Seal) -> Result<(), String> {
     if seal.schema != 1 || seal.channel.is_empty() || seal.version.is_empty() {
         return Err("exact seal is not current".into());
     }
-    super::generator::audit(seal)
+    super::output::generator::audit(seal)
 }
 
 fn audit(seal: &Seal) -> Result<(), String> {

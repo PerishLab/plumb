@@ -1,9 +1,9 @@
 use super::model::Spec;
-use super::{engine::topology, manager};
+use super::{channel, engine::topology};
 
 pub fn plan(spec: &Spec, reference: &str, commit: &str) -> Result<String, String> {
     let version = topology::reference(reference)?;
-    let channel = manager::channel(&version)?;
+    let channel = channel::channel(&version)?;
     topology::bind(topology::Source {
         root: &spec.root,
         channel: &channel,

@@ -1,11 +1,10 @@
 pub(super) mod artifact;
-mod capsule;
+pub(in crate::dispatch) mod channel;
 mod deed;
 pub(super) mod engine;
-pub(crate) mod generator;
 pub(super) mod manager;
 pub(crate) mod model;
-pub(super) mod object;
+pub(in crate::dispatch) mod output;
 mod plan;
 pub(super) mod proof;
 pub(super) mod record;
@@ -97,7 +96,7 @@ fn compile(spec: &model::Spec, release: &plumb::rig::Release) -> Result<String, 
     let channel = required("PLUMB_RELEASE_CHANNEL", &release.channel)?;
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
     let commit = required("PLUMB_RELEASE_COMMIT", &release.commit)?;
-    capsule::compile(capsule::Compile {
+    output::capsule::compile(output::capsule::Compile {
         spec: &spec.manifest(),
         channel,
         version,
@@ -148,7 +147,7 @@ fn rebase(root: &Path, path: &Path) -> PathBuf {
 }
 
 pub(super) fn channel(version: &str) -> Result<String, String> {
-    manager::channel(version)
+    channel::channel(version)
 }
 
 pub(super) fn authority(root: &Path) -> Result<String, String> {
