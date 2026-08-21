@@ -118,7 +118,7 @@ pub fn reference(held: &str) -> Result<String, String> {
     Ok(version.to_string())
 }
 
-pub fn source(input: Source<'_>) -> Result<String, String> {
+pub fn bind(input: Source<'_>) -> Result<String, String> {
     manager::intent(input.channel, input.version)?;
     proof::commit(input.commit)?;
     let reference = input.reference;

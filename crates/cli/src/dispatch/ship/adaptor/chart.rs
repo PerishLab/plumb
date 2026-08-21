@@ -1,4 +1,4 @@
-use super::super::super::model::Spec;
+use crate::dispatch::release::model::Spec;
 use semver::Version;
 use std::io::Write;
 use std::path::PathBuf;
@@ -51,7 +51,7 @@ impl Chart<'_> {
         let archive = self.archive(&held, &semver);
         let seat = format!("oci://{}/{owner}/{held}", chart.registry);
         if let Some(carried) = self.carried(&seat, &semver)? {
-            let held = super::super::super::record::digest(&archive)?.0;
+            let held = crate::dispatch::release::record::digest(&archive)?.0;
             if carried != held {
                 return Err(format!(
                     "published chart drift: {seat} holds {carried} while this projection carries {held}"
@@ -117,7 +117,7 @@ impl Chart<'_> {
             }
         }
         let path = held.ok_or_else(|| format!("{seat} answered with no chart archive"))?;
-        Ok(Some(super::super::super::record::digest(&path)?.0))
+        Ok(Some(crate::dispatch::release::record::digest(&path)?.0))
     }
 
     fn login(
@@ -180,15 +180,15 @@ impl Chart<'_> {
     }
 }
 
-fn owner(chart: &super::super::super::model::Chart) -> Result<String, String> {
+fn owner(chart: &crate::dispatch::release::model::Chart) -> Result<String, String> {
     seat(chart, 0)
 }
 
-fn name(chart: &super::super::super::model::Chart) -> Result<String, String> {
+fn name(chart: &crate::dispatch::release::model::Chart) -> Result<String, String> {
     seat(chart, 1)
 }
 
-fn seat(chart: &super::super::super::model::Chart, index: usize) -> Result<String, String> {
+fn seat(chart: &crate::dispatch::release::model::Chart, index: usize) -> Result<String, String> {
     chart
         .chart
         .split('/')

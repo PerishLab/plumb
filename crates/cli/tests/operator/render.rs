@@ -13,15 +13,17 @@ fn planned() {
         .split("- name: Plan this release")
         .nth(1)
         .expect("plan step");
+    let derived = plan.find("plumb release plan").expect("plan derivation");
     let version = plan
         .find("export PLUMB_RELEASE_VERSION")
         .expect("version export");
-    let channel = plan
-        .find("plumb release channel")
-        .expect("channel derivation");
     assert!(
-        version < channel,
-        "a derivation reading the version must run after the export that carries it: {plan}"
+        derived < version,
+        "the exports must read a plan the lane already derived: {plan}"
+    );
+    assert!(
+        !plan.contains("plumb release reference") && !plan.contains("plumb release channel"),
+        "the lane must not stitch a plan out of separate derivations: {plan}"
     );
 }
 

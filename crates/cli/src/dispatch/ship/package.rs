@@ -1,7 +1,7 @@
-use super::super::model::{Format, Spec};
-use super::super::{artifact, artifact::Asset};
 use super::{archive, debian, skill};
 use crate::dispatch::release::engine::workspace::Workspace;
+use crate::dispatch::release::model::{Format, Spec};
+use crate::dispatch::release::{artifact, artifact::Asset};
 use serde_json::json;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -40,15 +40,15 @@ impl Product<'_> {
     }
 
     pub fn build(&self, input: Build<'_>) -> Result<String, String> {
-        super::super::manager::intent(input.channel, input.version)?;
-        super::super::proof::commit(input.commit)?;
+        crate::dispatch::release::manager::intent(input.channel, input.version)?;
+        crate::dispatch::release::proof::commit(input.commit)?;
         let target = self.spec.target(input.target)?;
         std::fs::create_dir_all(input.artifacts)
             .map_err(|error| format!("cannot create {}: {error}", input.artifacts.display()))?;
         let workspace = Workspace::read(&self.spec.root)?;
         let binaries = workspace.build(
             self.spec,
-            super::workspace::Build {
+            crate::dispatch::release::engine::workspace::Build {
                 triple: &target.triple,
                 version: input.version,
                 channel: input.channel,

@@ -30,7 +30,7 @@ paths = [
 
 [[boundary]]
 allow = ["fanout"]
-note = "ship adds one top level command module while site and registry still stand apart; the inventory drops back under the limit once both fold into ship as adaptors"
+note = "site has folded into ship and the inventory did not drop back under the limit, because what stands here is not one stray adaptor but a command set that has never been layered; perish.code/plumb-modules-layered retires this row"
 paths = ["crates/cli/src/dispatch"]
 
 [[boundary]]

@@ -1,18 +1,18 @@
 mod artifact;
 mod cloud;
+mod deploy;
 mod inspect;
 mod model;
 mod plan;
 mod process;
 mod reach;
 mod settings;
-mod ship;
 mod worker;
 
 use std::path::Path;
 
 pub(super) fn deploy(root: &Path) -> Result<String, String> {
-    ship::run(root)
+    deploy::run(root)
 }
 
 pub(super) fn inspect(root: &Path) -> Result<String, String> {

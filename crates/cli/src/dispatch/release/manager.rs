@@ -128,7 +128,7 @@ pub(super) fn channel(value: &str) -> Result<String, String> {
     Ok(named.into())
 }
 
-pub(super) fn intent(channel: &str, value: &str) -> Result<(), String> {
+pub(in crate::dispatch) fn intent(channel: &str, value: &str) -> Result<(), String> {
     if channel.is_empty()
         || !channel
             .chars()

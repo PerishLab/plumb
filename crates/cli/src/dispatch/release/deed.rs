@@ -2,6 +2,10 @@ use clap::Subcommand;
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(about = "Derive and prove this release plan, and report it as JSON")]
+    Plan,
+    #[command(about = "Report the media this product declares as JSON")]
+    Surface,
     #[command(about = "Point the channel at the release this run published")]
     Activate,
     #[command(about = "Open or reuse the release line for a stable version and record its datum")]
@@ -33,10 +37,6 @@ pub enum Deed {
         #[arg(long = "dry-run")]
         dry: bool,
     },
-    #[command(about = "Print the canonical release authority this product declares")]
-    Authority,
-    #[command(about = "Derive the channel the release version names")]
-    Channel,
     #[command(about = "Compile the capsule this release publishes")]
     Compile,
     #[command(about = "Wait for the canonical guard to prove this release commit")]
@@ -54,8 +54,6 @@ pub enum Deed {
     },
     #[command(about = "Fetch the exact seal and digest a stable promotion embeds")]
     Promote,
-    #[command(about = "Derive the release version the source ref names")]
-    Reference,
     #[command(about = "Withdraw an unpublished release point")]
     Retract {
         #[arg(long)]
@@ -63,8 +61,6 @@ pub enum Deed {
         #[arg(long = "dry-run")]
         dry: bool,
     },
-    #[command(about = "Prove the source ref, commit, and channel agree before publication")]
-    Source,
     #[command(about = "Stamp the release point at the head of its line")]
     Stamp {
         #[arg(long)]
@@ -72,6 +68,4 @@ pub enum Deed {
         #[arg(long = "dry-run")]
         dry: bool,
     },
-    #[command(about = "Report the media this product declares as JSON")]
-    Surface,
 }

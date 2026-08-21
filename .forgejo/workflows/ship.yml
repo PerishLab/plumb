@@ -60,17 +60,17 @@ jobs:
         shell: bash
         run: |
           set -eu
-          PLUMB_RELEASE_VERSION=$(plumb release reference)
+          plan=$(plumb release plan)
+          PLUMB_RELEASE_VERSION=$(printf '%s' "$plan" | jq -r '.version')
           export PLUMB_RELEASE_VERSION
-          PLUMB_RELEASE_CHANNEL=$(plumb release channel)
+          PLUMB_RELEASE_CHANNEL=$(printf '%s' "$plan" | jq -r '.channel')
           export PLUMB_RELEASE_CHANNEL
-          plumb release source
           {
             echo "channel=$PLUMB_RELEASE_CHANNEL"
             echo "commit=$PLUMB_RELEASE_COMMIT"
             echo "version=$PLUMB_RELEASE_VERSION"
             echo "targets=$(plumb ship binary matrix)"
-            echo "project=$(plumb release surface | jq -c '.project')"
+            echo "project=$(printf '%s' "$plan" | jq -c '.project')"
           } >> "$GITHUB_OUTPUT"
 
   build:

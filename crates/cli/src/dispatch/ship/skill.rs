@@ -1,5 +1,5 @@
-use super::super::model::Spec;
 use super::archive::{Member, bundle};
+use crate::dispatch::release::model::Spec;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};

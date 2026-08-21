@@ -1,4 +1,4 @@
-use super::super::super::model::Spec;
+use crate::dispatch::release::model::Spec;
 use base64::Engine;
 use semver::Version;
 use sha2::{Digest, Sha512};
@@ -105,7 +105,7 @@ impl Module<'_> {
 
     fn carried(
         &self,
-        npm: &super::super::super::model::Npm,
+        npm: &crate::dispatch::release::model::Npm,
         spec: &str,
         token: &str,
         cwd: &std::path::Path,
@@ -131,7 +131,7 @@ impl Module<'_> {
     fn authenticated(
         &self,
         args: &[&str],
-        npm: &super::super::super::model::Npm,
+        npm: &crate::dispatch::release::model::Npm,
         token: &str,
         cwd: &std::path::Path,
     ) -> Result<(), String> {

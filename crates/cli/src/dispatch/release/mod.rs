@@ -1,4 +1,4 @@
-mod artifact;
+pub(super) mod artifact;
 mod capsule;
 mod deed;
 pub(super) mod engine;
@@ -6,9 +6,9 @@ pub(crate) mod generator;
 pub(super) mod manager;
 pub(crate) mod model;
 pub(super) mod object;
-mod proof;
+mod plan;
+pub(super) mod proof;
 pub(super) mod record;
-pub(super) mod smoke;
 pub(super) mod storage;
 pub(super) mod verify;
 
@@ -48,15 +48,18 @@ fn carry(deed: Deed) -> Result<String, String> {
     let spec = model::Spec::read(&manifest)?;
     let release = &rig.release;
     match deed {
+        Deed::Plan => plan::plan(
+            &spec,
+            required("PLUMB_RELEASE_SOURCE", &release.source)?,
+            required("PLUMB_RELEASE_COMMIT", &release.commit)?,
+        ),
+        Deed::Surface => plan::surface(&spec),
         Deed::Activate => storage::activate(&capsule(release)?, &rig.activate),
-        Deed::Authority => Ok(spec.authority.clone()),
-        Deed::Channel => manager::channel(required("PLUMB_RELEASE_VERSION", &release.version)?),
         Deed::Compile => compile(&spec, release),
         Deed::Inspect => verify::inspect(
             required("PLUMB_RELEASE_URL", &release.url)?,
             release.activated,
         ),
-        Deed::Surface => surface(&spec),
         Deed::Stamp { .. } | Deed::Retract { .. } => {
             Err("a point verb does not read the release environment".into())
         }
@@ -87,52 +90,7 @@ fn carry(deed: Deed) -> Result<String, String> {
             },
             &rig.guard.contexts,
         ),
-        Deed::Reference => {
-            engine::topology::reference(required("PLUMB_RELEASE_SOURCE", &release.source)?)
-        }
-        Deed::Source => engine::topology::source(engine::topology::Source {
-            root: &spec.root,
-            channel: required("PLUMB_RELEASE_CHANNEL", &release.channel)?,
-            version: required("PLUMB_RELEASE_VERSION", &release.version)?,
-            commit: required("PLUMB_RELEASE_COMMIT", &release.commit)?,
-            reference: required("PLUMB_RELEASE_SOURCE", &release.source)?,
-        }),
     }
-}
-
-fn prepared(medium: &str) -> Result<&'static str, String> {
-    match medium {
-        "cargo" | "cfworker" => Ok("rehearse"),
-        "chart" => Ok("package"),
-        "npm" => Ok("pack"),
-        "oci" => Ok("build"),
-        _ => Err(format!("{medium} names no deed that prepares it")),
-    }
-}
-
-fn surface(spec: &model::Spec) -> Result<String, String> {
-    let media = spec.surface();
-    let row = |medium: &&str| serde_json::json!({ "medium": medium });
-    let include = media.iter().map(row).collect::<Vec<_>>();
-    let project = media
-        .iter()
-        .filter(|medium| **medium != "binary")
-        .map(|medium| {
-            prepared(medium)
-                .map(|prepare| serde_json::json!({ "medium": medium, "prepare": prepare }))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    let seal = media
-        .iter()
-        .filter(|medium| **medium == "binary")
-        .map(|_| serde_json::json!({ "held": "seal" }))
-        .collect::<Vec<_>>();
-    serde_json::to_string(&serde_json::json!({
-        "include": include,
-        "project": { "include": project },
-        "seal": { "include": seal },
-    }))
-    .map_err(|error| error.to_string())
 }
 
 fn compile(spec: &model::Spec, release: &plumb::rig::Release) -> Result<String, String> {

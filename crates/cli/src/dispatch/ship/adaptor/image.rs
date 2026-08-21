@@ -1,4 +1,4 @@
-use super::super::super::model::Spec;
+use crate::dispatch::release::model::Spec;
 
 const LINUX: &str = "x86_64-unknown-linux-gnu";
 const PAYLOAD: &str = "uk.perish.plumb.payload";
@@ -62,7 +62,7 @@ impl Image<'_> {
             "{}/v1/releases/{channel}/{version}/seal.json",
             self.spec.authority.trim_end_matches('/')
         );
-        let seal = super::super::super::verify::optional(&url)?
+        let seal = crate::dispatch::release::verify::optional(&url)?
             .ok_or_else(|| format!("the authority serves no seal at {url}"))?;
         let remote = seal
             .get("artifacts")
@@ -84,7 +84,7 @@ impl Image<'_> {
             .map_err(|error| format!("cannot open {}: {error}", seat.display()))?;
         let path = seat.join(archive);
         fetch(&held("url"), &path)?;
-        let digest = super::super::super::record::digest(&path)?.0;
+        let digest = crate::dispatch::release::record::digest(&path)?.0;
         if digest != held("sha256") {
             return Err(format!(
                 "published payload drift: {} serves {digest} while the seal records {}",
@@ -136,7 +136,7 @@ impl Image<'_> {
                 return Err(format!("{} carries no {binary}", source.display()));
             }
         }
-        let payload = super::super::super::record::digest(&source)?.0;
+        let payload = crate::dispatch::release::record::digest(&source)?.0;
         Ok((seat, payload))
     }
 
@@ -266,7 +266,7 @@ impl Image<'_> {
     }
 }
 
-fn reference(oci: &super::super::super::model::Oci, version: &str) -> String {
+fn reference(oci: &crate::dispatch::release::model::Oci, version: &str) -> String {
     format!("{}/{}:{version}", oci.registry, oci.image)
 }
 

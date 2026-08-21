@@ -1,4 +1,4 @@
-use super::model::Spec;
+use crate::dispatch::release::model::Spec;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

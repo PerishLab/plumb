@@ -1,6 +1,13 @@
-use super::release::{
-    artifacts, capsule, engine, manager, output, required, smoke, storage, verify,
-};
+mod adaptor;
+mod archive;
+mod debian;
+mod ledger;
+mod package;
+mod site;
+mod skill;
+mod smoke;
+
+use super::release::{artifacts, capsule, manager, output, required, storage, verify};
 use clap::Subcommand;
 use plumb::rig::Rig;
 
@@ -136,7 +143,7 @@ fn cargo(deed: Cargo) -> Result<String, String> {
     let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
     let release = &rig.release;
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
-    let attachment = engine::adaptor::registry::registry(&spec);
+    let attachment = adaptor::registry::registry(&spec);
     match deed {
         Cargo::Publish => {
             sealed(&spec, release, version, spec.cargo.is_some())?;
@@ -150,7 +157,7 @@ fn oci(deed: Oci) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
     let release = &rig.release;
-    let carrier = engine::adaptor::image::image(&spec);
+    let carrier = adaptor::image::image(&spec);
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
     match deed {
         Oci::Build => carrier.build(version, &release.commit, &artifacts(release)?),
@@ -166,7 +173,7 @@ fn chart(deed: Chart) -> Result<String, String> {
     let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
     let release = &rig.release;
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
-    let carrier = engine::adaptor::chart::chart(&spec);
+    let carrier = adaptor::chart::chart(&spec);
     match deed {
         Chart::Package => carrier.package(version),
         Chart::Publish => {
@@ -181,7 +188,7 @@ fn npm(deed: Npm) -> Result<String, String> {
     let spec = super::release::model::Spec::read(&rig.release.root.join("plumb.toml"))?;
     let release = &rig.release;
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
-    let carrier = engine::adaptor::module::module(&spec);
+    let carrier = adaptor::module::module(&spec);
     match deed {
         Npm::Pack => carrier.pack(version),
         Npm::Publish => {
@@ -230,19 +237,19 @@ fn sealed(
 
 fn cfworker(deed: Cfworker) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let seat = super::site::Worker {
+    let seat = site::Worker {
         root: &rig.release.root,
         channel: required("PLUMB_RELEASE_CHANNEL", &rig.release.channel)?,
         version: required("PLUMB_RELEASE_VERSION", &rig.release.version)?,
     };
-    super::site::worker(seat, matches!(deed, Cfworker::Publish))
+    site::worker(seat, matches!(deed, Cfworker::Publish))
 }
 
 fn site(deed: Site) -> Result<String, String> {
     match deed {
-        Site::Deploy { root } => super::site::deploy(&root),
-        Site::Inspect { root } => super::site::inspect(&root),
-        Site::Plan { root } => super::site::plan(&root),
+        Site::Deploy { root } => site::deploy(&root),
+        Site::Inspect { root } => site::inspect(&root),
+        Site::Plan { root } => site::plan(&root),
     }
 }
 
@@ -253,11 +260,11 @@ fn binary(deed: Binary) -> Result<String, String> {
     let release = &rig.release;
     match deed {
         Binary::Activate => storage::shift(&capsule(release)?, &rig.activate),
-        Binary::Assemble => engine::package::product(&spec).assemble(
+        Binary::Assemble => package::product(&spec).assemble(
             required("PLUMB_RELEASE_VERSION", &release.version)?,
             &artifacts(release)?,
         ),
-        Binary::Build => engine::package::product(&spec).build(engine::package::Build {
+        Binary::Build => package::product(&spec).build(package::Build {
             target: required("PLUMB_RELEASE_TARGET", &release.target)?,
             version: required("PLUMB_RELEASE_VERSION", &release.version)?,
             channel: required("PLUMB_RELEASE_CHANNEL", &release.channel)?,
@@ -275,7 +282,7 @@ fn binary(deed: Binary) -> Result<String, String> {
             required("PLUMB_RELEASE_VERSION", &release.version)?,
             &output(release)?,
         ),
-        Binary::Matrix => engine::package::product(&spec).matrix(),
+        Binary::Matrix => package::product(&spec).matrix(),
         Binary::Publish => storage::publish(&capsule(release)?, &rig.publish),
         Binary::Smoke => smoke::run(
             &manifest,

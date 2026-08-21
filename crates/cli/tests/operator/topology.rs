@@ -65,50 +65,53 @@ fn topology() {
     let main = git(root, &["rev-parse", "HEAD"]);
 
     git(root, &["tag", "v1.2.0-beta.1"]);
-    run(plumb(root)
-        .args(["release", "source"])
-        .env("PLUMB_RELEASE_CHANNEL", "beta")
-        .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1")
+    let held = plumb(root)
+        .args(["release", "plan"])
         .env("PLUMB_RELEASE_COMMIT", &main)
-        .env("PLUMB_RELEASE_SOURCE", "refs/tags/v1.2.0-beta.1"));
+        .env("PLUMB_RELEASE_SOURCE", "refs/tags/v1.2.0-beta.1")
+        .output()
+        .expect("plumb should run");
+    assert!(
+        held.status.success(),
+        "{}",
+        String::from_utf8_lossy(&held.stderr)
+    );
+    let said = String::from_utf8_lossy(&held.stdout);
+    assert!(said.contains(r#""version":"v1.2.0-beta.1""#), "{said}");
+    assert!(said.contains(r#""channel":"beta""#), "{said}");
 
     let branched = plumb(root)
-        .args(["release", "source"])
-        .env("PLUMB_RELEASE_CHANNEL", "beta")
-        .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1")
+        .args(["release", "plan"])
         .env("PLUMB_RELEASE_COMMIT", &main)
         .env("PLUMB_RELEASE_SOURCE", "refs/heads/main")
         .output()
         .expect("plumb should run");
     assert!(!branched.status.success());
     assert!(
-        String::from_utf8_lossy(&branched.stderr).contains("refs/tags/v1.2.0-beta.1"),
+        String::from_utf8_lossy(&branched.stderr).contains("exact tag or a release line"),
         "{}",
         String::from_utf8_lossy(&branched.stderr)
     );
 
-    run(plumb(root)
-        .args(["release", "channel"])
-        .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1"));
-
-    let wrong = plumb(root)
-        .args(["release", "source"])
-        .env("PLUMB_RELEASE_CHANNEL", "stable")
-        .env("PLUMB_RELEASE_VERSION", "v1.2.0")
+    git(root, &["tag", "v1.2.0"]);
+    let loose = plumb(root)
+        .args(["release", "plan"])
         .env("PLUMB_RELEASE_COMMIT", &main)
-        .env("PLUMB_RELEASE_SOURCE", "refs/heads/main")
+        .env("PLUMB_RELEASE_SOURCE", "refs/tags/v1.2.0")
         .output()
         .expect("plumb should run");
-    assert!(!wrong.status.success());
-    assert!(String::from_utf8_lossy(&wrong.stderr).contains("refs/heads/release/v1.2.0"));
+    assert!(!loose.status.success());
+    assert!(
+        String::from_utf8_lossy(&loose.stderr).contains("refs/heads/release/v1.2.0"),
+        "{}",
+        String::from_utf8_lossy(&loose.stderr)
+    );
 
     git(root, &["checkout", "-b", "release/v1.2.0"]);
     git(root, &["commit", "--allow-empty", "-m", "stable"]);
     let stable = git(root, &["rev-parse", "HEAD"]);
     run(plumb(root)
-        .args(["release", "source"])
-        .env("PLUMB_RELEASE_CHANNEL", "stable")
-        .env("PLUMB_RELEASE_VERSION", "v1.2.0")
+        .args(["release", "plan"])
         .env("PLUMB_RELEASE_COMMIT", &stable)
         .env("PLUMB_RELEASE_SOURCE", "refs/heads/release/v1.2.0"));
 
