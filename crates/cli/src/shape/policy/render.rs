@@ -23,14 +23,12 @@ pub fn render(root: &Path, text: &str) -> Result<String, String> {
     );
     doc.insert(
         "limit".to_string(),
-        toml::Value::Table(toml::Table::from_iter([
-            ("block".to_string(), toml::Value::Integer(4)),
-            ("fanout".to_string(), toml::Value::Integer(10)),
-            ("file".to_string(), toml::Value::Integer(300)),
-            ("markup".to_string(), toml::Value::Integer(8)),
-            ("param".to_string(), toml::Value::Integer(4)),
-            ("path".to_string(), toml::Value::Integer(4)),
-        ])),
+        toml::Value::Table(
+            crate::catalog::set::LIMITS
+                .iter()
+                .map(|(name, value)| (name.clone(), toml::Value::Integer(*value)))
+                .collect(),
+        ),
     );
     doc.insert(
         "comment".to_string(),

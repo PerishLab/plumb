@@ -36,6 +36,25 @@ pub const SETS: [(&str, &str); 5] = [
     ("workflow", plumb::seat::resource!("rules/workflow.toml")),
 ];
 
+pub static LIMITS: LazyLock<BTreeMap<String, i64>> = LazyLock::new(|| {
+    let doc: toml::Table = carried(
+        &held(),
+        "rules/limit.toml",
+        plumb::seat::resource!("rules/limit.toml"),
+    )
+    .parse()
+    .expect("rules/limit.toml must parse");
+    doc.get("limit")
+        .and_then(toml::Value::as_table)
+        .map(|table| {
+            table
+                .iter()
+                .filter_map(|(name, value)| Some((name.clone(), value.as_integer()?)))
+                .collect()
+        })
+        .unwrap_or_else(|| panic!("rules/limit.toml must hold a limit table"))
+});
+
 pub fn read(name: &str) -> Result<toml::Table, String> {
     let factory = SETS
         .iter()

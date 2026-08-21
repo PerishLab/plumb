@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::path::Path;
 
 mod render;
@@ -200,21 +200,13 @@ struct Policy<'a>(&'a toml::Value);
 
 impl Policy<'_> {
     fn limits(&self, found: &mut Vec<String>) {
-        let want = BTreeMap::from([
-            ("block", 4),
-            ("fanout", 10),
-            ("file", 300),
-            ("markup", 8),
-            ("param", 4),
-            ("path", 4),
-        ]);
-        for (name, value) in want {
+        for (name, value) in crate::catalog::set::LIMITS.iter() {
             let seen = self
                 .0
                 .get("limit")
                 .and_then(|table| table.get(name))
                 .and_then(toml::Value::as_integer);
-            if seen != Some(value) {
+            if seen != Some(*value) {
                 found.push(format!("ectropy limit {name} must be {value}"));
             }
         }
