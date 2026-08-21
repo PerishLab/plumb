@@ -1,4 +1,4 @@
-use super::{Rule, rule};
+use super::{Mechanism, rule};
 
 mod guard;
 mod site;
@@ -9,218 +9,35 @@ pub use guard::{
 };
 pub use site::SITE_DEPLOY_LANE;
 
-rule!(
-    GUARD_LANE_PRESENT,
-    "structure.guard-lane-present",
-    "Guard has one authority workflow lane",
-    "A governed repository carries one canonical guard workflow at its repository authority's seat without requiring a repository-local wrapper.",
-    "The Forgejo guard or GitHub quality workflow seat.",
-    Mechanized,
-    PLUMB,
-    [ADOPTION, REPOSITORY]
-);
-rule!(
-    ECTROPY_POLICY_PRESENT,
-    "structure.ectropy-policy-present",
-    "Ectropy policy is present",
-    "A governed repository declares its ectropy policy.",
-    "The repository-root ectropy.toml seat.",
-    Mechanized,
-    ECTROPY,
-    [ECTROPY_TAG, REPOSITORY]
-);
-rule!(
-    PACKAGE_UNDER_PACKAGES,
-    "structure.package-under-packages",
-    "Publishable packages sit under packages",
-    "A publishable Node package lives below packages/ rather than at repository root.",
-    "Package manifests at the root and below packages/.",
-    Mechanized,
-    PLUMB,
-    [REPOSITORY]
-);
-rule!(
-    PACKAGE_DIRECTORY_NAME,
-    "structure.package-directory-name",
-    "Package directory matches package name",
-    "The final package name segment matches its directory under packages/.",
-    "Package manifest names and their directory seats.",
-    Mechanized,
-    PLUMB,
-    [REPOSITORY]
-);
+rule!(GUARD_LANE_PRESENT, "structure.guard-lane-present");
+rule!(ECTROPY_POLICY_PRESENT, "structure.ectropy-policy-present");
+rule!(PACKAGE_UNDER_PACKAGES, "structure.package-under-packages");
+rule!(PACKAGE_DIRECTORY_NAME, "structure.package-directory-name");
 rule!(
     RESERVED_COMPONENTS_SEAT,
-    "structure.reserved-components-seat",
-    "Reusable components stay in the design system",
-    "packages/components is reserved; reusable components belong to the design system.",
-    "The packages/components directory seat.",
-    Mechanized,
-    WEB,
-    [REPOSITORY, WEB_TAG]
+    "structure.reserved-components-seat"
 );
-rule!(
-    ECTROPY_POLICY_READABLE,
-    "structure.ectropy-policy-readable",
-    "Ectropy policy is readable",
-    "The shape checker must be able to parse the repository's ectropy policy.",
-    "Parsing ectropy.toml.",
-    Mechanized,
-    ECTROPY,
-    [ECTROPY_TAG, REPOSITORY]
-);
-rule!(
-    ECTROPY_POLICY,
-    "structure.ectropy-policy",
-    "Ectropy policy matches repository shape",
-    "The repository policy is reconciled with the grants and limits its current shape earns.",
-    "The declared policy compared with plumb's rendered policy.",
-    Mechanized,
-    ECTROPY,
-    [ECTROPY_TAG, REPOSITORY]
-);
-rule!(
-    KNOWN_FILE,
-    "structure.known-file",
-    "Root files have a known role",
-    "Every file at the repository root sits in a declared layout group.",
-    "Repository root file names compared with the declared layout.",
-    Mechanized,
-    PLUMB,
-    [REPOSITORY]
-);
-rule!(
-    SEAT_ANCHORED,
-    "structure.seat-anchored",
-    "A seat member carries its anchor",
-    "A member of a seat declaring anchors carries one of them, because a directory earns its seat by what it holds rather than by what it is called.",
-    "Declared seat anchors compared with the leaves each member records.",
-    Mechanized,
-    PLUMB,
-    [REPOSITORY]
-);
-rule!(
-    SEAT_MEMBER,
-    "structure.seat-member",
-    "A seat holds the members its rule requires",
-    "A seat naming a member rule holds members of the count and the name shape that rule fixes.",
-    "Declared seat rules compared with the members each seat records.",
-    Mechanized,
-    PLUMB,
-    [REPOSITORY]
-);
-rule!(
-    SEAT_AFFIRMED,
-    "structure.seat-affirmed",
-    "A wayfinder was affirmed against the authorities it points at",
-    "A target under a rule declaring affirmation faces carries a record taken over those faces as they stand.",
-    "The recorded authority beside the faces the rule names.",
-    Mechanized,
-    PLUMB,
-    [DOCUMENT_TAG, REPOSITORY]
-);
-rule!(
-    KNOWN_DIRECTORY,
-    "structure.known-directory",
-    "Top-level directories have a known role",
-    "Every top-level directory sits in a declared seat, or has a shadow in the skeleton where no layout is declared.",
-    "Repository top-level directory names against the declared layout, or against the released name sets where none is declared.",
-    Mechanized,
-    PLUMB,
-    [REPOSITORY]
-);
-rule!(
-    KNOWN_WORKFLOW,
-    "structure.known-workflow",
-    "Workflows have known roles",
-    "Every workflow has a shadow in the skeleton.",
-    "Workflow names under the repository's CI directory.",
-    Mechanized,
-    PLUMB,
-    [REPOSITORY]
-);
-rule!(
-    BOUNDARY_EXISTS,
-    "structure.boundary-exists",
-    "Declared boundaries exist",
-    "Every path named as a repository boundary exists.",
-    "Boundary paths declared in repository policy.",
-    Mechanized,
-    ECTROPY,
-    [ECTROPY_TAG, REPOSITORY]
-);
-rule!(
-    ANCHOR_PRESENT,
-    "structure.anchor-present",
-    "Rust repositories carry an anchor crate",
-    "A Rust repository has one crate named after the repository.",
-    "Cargo package names across the workspace.",
-    Mechanized,
-    PLUMB,
-    [CARGO_TAG, REPOSITORY]
-);
-rule!(
-    ANCHOR_UNIQUE,
-    "structure.anchor-unique",
-    "The anchor crate is unique",
-    "Exactly one workspace crate is named after the repository.",
-    "Cargo package names across the workspace.",
-    Mechanized,
-    PLUMB,
-    [CARGO_TAG, REPOSITORY]
-);
-rule!(
-    API_ENTRYPOINT,
-    "structure.api-entrypoint",
-    "API crates are executable",
-    "A crate named api carries an executable entrypoint.",
-    "Cargo targets and source seats in api crates.",
-    Mechanized,
-    PLUMB,
-    [CARGO_TAG, DISPATCH]
-);
+rule!(ECTROPY_POLICY_READABLE, "structure.ectropy-policy-readable");
+rule!(ECTROPY_POLICY, "structure.ectropy-policy");
+rule!(KNOWN_FILE, "structure.known-file");
+rule!(SEAT_ANCHORED, "structure.seat-anchored");
+rule!(SEAT_MEMBER, "structure.seat-member");
+rule!(SEAT_AFFIRMED, "structure.seat-affirmed");
+rule!(KNOWN_DIRECTORY, "structure.known-directory");
+rule!(KNOWN_WORKFLOW, "structure.known-workflow");
+rule!(BOUNDARY_EXISTS, "structure.boundary-exists");
+rule!(ANCHOR_PRESENT, "structure.anchor-present");
+rule!(ANCHOR_UNIQUE, "structure.anchor-unique");
+rule!(API_ENTRYPOINT, "structure.api-entrypoint");
 rule!(
     CASCADE_DERIVES_IN_ANCHOR,
-    "structure.cascade-derives-in-anchor",
-    "Cascade derives live in the anchor",
-    "Repository runtime vocabulary is declared in the anchor crate, not a leaf.",
-    "Cascade derive sites compared with anchor and executable api crates.",
-    Mechanized,
-    PLUMB,
-    [CARGO_TAG, CONFIGURATION]
+    "structure.cascade-derives-in-anchor"
 );
-rule!(
-    CARGO_TARGET_IGNORED,
-    "structure.cargo-target-ignored",
-    "Cargo target output is ignored",
-    "A Rust repository ignores target/ at its root.",
-    "Cargo.toml presence and exact target/ lines in .gitignore.",
-    Mechanized,
-    CARGO,
-    [CARGO_TAG, REPOSITORY]
-);
-rule!(
-    RELEASE_LANE_PRESENT,
-    "structure.release-lane-present",
-    "Release surfaces have canonical lanes",
-    "A binary release declaration is paired with exact-candidate and stable-consensus workflows.",
-    "The release table in plumb.toml and workflow names.",
-    Mechanized,
-    RELEASE,
-    [RELEASE_TAG, REPOSITORY]
-);
-rule!(
-    RELEASE_SOURCE_BOUND,
-    "structure.release-source-bound",
-    "Release callers leave one event source",
-    "Exact and stable product workflows expose and forward no source or second ref input; the called shared workflow binds its direct event ref and commit.",
-    "The release-exact.yml and release-stable.yml caller inputs and workflow_call bindings, plus the called workflow event context.",
-    Mechanized,
-    RELEASE,
-    [RELEASE_TAG, REPOSITORY]
-);
+rule!(CARGO_TARGET_IGNORED, "structure.cargo-target-ignored");
+rule!(RELEASE_LANE_PRESENT, "structure.release-lane-present");
+rule!(RELEASE_SOURCE_BOUND, "structure.release-source-bound");
 #[rustfmt::skip]
-pub fn all() -> Vec<&'static Rule> {
+pub fn mechanisms() -> Vec<&'static Mechanism> {
     vec![
         &ANCHOR_PRESENT, &ANCHOR_UNIQUE, &API_ENTRYPOINT, &BOUNDARY_EXISTS,
         &CARGO_TARGET_IGNORED, &CASCADE_DERIVES_IN_ANCHOR, &ECTROPY_POLICY,

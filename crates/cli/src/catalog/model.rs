@@ -40,13 +40,13 @@ pub struct Rule {
     pub tags: &'static [&'static Tag],
 }
 
-pub struct Mechanism(pub Rule);
+pub struct Mechanism(pub &'static str);
 
 impl Deref for Mechanism {
     type Target = Rule;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        super::rules::held(self.0)
     }
 }
 

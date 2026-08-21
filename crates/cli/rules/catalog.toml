@@ -1,17 +1,24 @@
-# Every rule the catalogue holds that no mechanism is attached to. A rule with a
-# mechanism keeps its text beside the code that computes it, because the two
-# move together; a rule that is only stated has nothing holding it to a binary,
-# and holding it in one anyway meant a release to change a sentence.
+# Every rule the catalogue holds, and nothing about how any of them is judged.
 #
-# Carried, so a wording, an owner, a tag, or a whole new stated rule is one
-# depot publish. The identity is `id`, and it is the only thing other records
-# may point at: `namespace.name`, both canonical tokens. `owner` and every
-# `tags` entry name taxonomy ids, which stay compiled because a name nobody
-# can resolve is worse than a name nobody wrote.
+# A rule is two things that were fused: what it says, and what computes it. The
+# text -- what is required, of whom, and what evidence answers it -- is carried
+# here. The mechanism stays in the binary, bound to the text by `id` alone, so
+# eighty rules that are checked by code and forty-one that are checked by a
+# reader are held the same way and read the same way.
 #
-# `standing` is `prose-only` when the law is stated and judged by a reader, and
-# `observed` when Plumb reports what it sees without ruling on it. A rule that
-# grows a mechanism leaves this file for the module that computes it.
+# Carried, so a wording, an owner, a tag, or a whole new rule is one depot
+# publish, scoped to a channel and reversible. Changing what a rule *computes*
+# is still a release, and should be.
+#
+# `id` is `namespace.name`, both canonical tokens, and it is the only thing any
+# other record may point at. `owner` and every `tags` entry name taxonomy ids.
+# `standing` is `mechanized` when code computes it, `prose-only` when a reader
+# judges it, and `observed` when Plumb reports what it sees without ruling.
+#
+# A carried catalogue that does not name every mechanism the running binary
+# holds is not used at all: the compiled text is read instead, whole. A partial
+# catalogue is worse than an old one, because the rule that goes missing is the
+# one nobody notices until it fires.
 
 [[rule]]
 id = "config.vocabulary-owned-by-product"
@@ -21,6 +28,312 @@ evidence = "Product config types and imports from the substrate."
 standing = "prose-only"
 owner = "product"
 tags = ["configuration", "ownership"]
+
+[[rule]]
+id = "depot.roots-published"
+summary = "The depot carries what this repository records"
+law = "Every configuration root this repository records is present in the held depot version under the same digest."
+evidence = "Git-recorded root objects compared with the manifest of the held depot version."
+standing = "mechanized"
+owner = "plumb"
+tags = ["configuration", "repository"]
+
+[[rule]]
+id = "depot.schema-supported"
+summary = "The running binary meets the depot floor"
+law = "The running plumb is at or above the version the held depot manifest declares as its schema floor."
+evidence = "The running version compared with the schema floor of the held depot manifest."
+standing = "mechanized"
+owner = "plumb"
+tags = ["configuration", "adoption"]
+
+[[rule]]
+id = "deps.current-dependency-name"
+summary = "Dependencies use their current names"
+law = "A dependency renamed in the workshop is consumed under its current name."
+evidence = "Dependency names in Deno configuration."
+standing = "mechanized"
+owner = "plumb"
+tags = ["dependency"]
+
+[[rule]]
+id = "deps.first-party-stable-latest"
+summary = "First-party dependencies resolve to stable latest"
+law = "A direct dependency published by perish.code resolves exactly to the live latest non-prerelease, non-yanked version at its compiled registry authority, except the plumb substrate, whose currency the depot floor decides."
+evidence = "Direct Deno and Cargo declarations, their exact lock resolutions, and live registry metadata."
+standing = "mechanized"
+owner = "plumb"
+tags = ["dependency"]
+
+[[rule]]
+id = "deps.rust-binary-uses-clap"
+summary = "Rust binaries use clap"
+law = "A shipped Rust binary exposes its command surface through clap."
+evidence = "Cargo targets and the dependency graph."
+standing = "mechanized"
+owner = "plumb"
+tags = ["cargo", "dependency"]
+
+[[rule]]
+id = "deps.rust-binary-uses-plumb"
+summary = "Rust binaries use plumb"
+law = "A shipped Rust binary builds on the plumb substrate."
+evidence = "Cargo targets and the dependency graph."
+standing = "mechanized"
+owner = "plumb"
+tags = ["cargo", "dependency"]
+
+[[rule]]
+id = "deps.self-built-dependency-unpinned"
+summary = "Self-built dependencies track latest"
+law = "First-party Deno dependencies carry no version requirement so their exact stable version is owned by the lock."
+evidence = "Dependency requirements in Deno configuration."
+standing = "mechanized"
+owner = "plumb"
+tags = ["dependency"]
+
+[[rule]]
+id = "deps.styling-package-allowed"
+summary = "Web styling stays inside the design system"
+law = "A web package does not bypass the design system with a blacklisted styling package."
+evidence = "Node dependency maps across workspace packages."
+standing = "mechanized"
+owner = "web"
+tags = ["dependency", "web"]
+
+[[rule]]
+id = "dispatch.api-accepts-stamp"
+summary = "API accepts the readiness stamp"
+law = "The API accepts the supervisor's --sidecar-stamp contract."
+evidence = "API Rust source."
+standing = "mechanized"
+owner = "sidecar"
+tags = ["dispatch"]
+
+[[rule]]
+id = "dispatch.api-consumes-port"
+summary = "API consumes its leased port"
+law = "The API launch or source consumes the sidecar-leased port."
+evidence = "API Rust source and sidecar launch environment."
+standing = "mechanized"
+owner = "sidecar"
+tags = ["configuration", "dispatch"]
+
+[[rule]]
+id = "dispatch.api-emits-readiness"
+summary = "API emits endpoint readiness"
+law = "The API writes readiness carrying role api and its endpoint."
+evidence = "API Rust source."
+standing = "mechanized"
+owner = "sidecar"
+tags = ["dispatch"]
+
+[[rule]]
+id = "dispatch.api-health-route"
+summary = "API health uses the leased port"
+law = "The api health URL targets {port}/api/health."
+evidence = "The api health_url template in sidecar.toml."
+standing = "mechanized"
+owner = "sidecar"
+tags = ["dispatch"]
+
+[[rule]]
+id = "dispatch.api-image-present"
+summary = "Production carries an API image"
+law = "A production web/API repository carries deploy/api.Dockerfile."
+evidence = "The API image build seat."
+standing = "mechanized"
+owner = "release"
+tags = ["dispatch", "release"]
+
+[[rule]]
+id = "dispatch.api-namespace-mounted"
+summary = "API mounts the /api namespace"
+law = "The API application nests its public routes below /api."
+evidence = "API Rust source."
+standing = "mechanized"
+owner = "sidecar"
+tags = ["dispatch"]
+
+[[rule]]
+id = "dispatch.api-port-leased"
+summary = "Sidecar leases the API port"
+law = "The api sidecar asks the supervisor to lease port zero."
+evidence = "The api sidecar port in sidecar.toml."
+standing = "mechanized"
+owner = "sidecar"
+tags = ["dispatch"]
+
+[[rule]]
+id = "dispatch.api-ready-role"
+summary = "API readiness names its role"
+law = "The api sidecar readiness contract expects role api."
+evidence = "The api readiness table in sidecar.toml."
+standing = "mechanized"
+owner = "sidecar"
+tags = ["dispatch"]
+
+[[rule]]
+id = "dispatch.api-role-declared"
+summary = "Sidecar declares the API role"
+law = "The sidecar manifest carries a sidecar named api."
+evidence = "The sidecars array in sidecar.toml."
+standing = "mechanized"
+owner = "sidecar"
+tags = ["dispatch"]
+
+[[rule]]
+id = "dispatch.cargo-chart-version-train"
+summary = "Cargo and charts share one version"
+law = "Cargo, chart version, and chart appVersion move on one release identity."
+evidence = "Cargo.toml and charts/*/Chart.yaml versions."
+standing = "mechanized"
+owner = "release"
+tags = ["cargo", "release"]
+
+[[rule]]
+id = "dispatch.chart-splits-ingress"
+summary = "Ingress splits API and web routes"
+law = "Production ingress routes /api to api and / to web."
+evidence = "Ingress templates below charts/*/templates."
+standing = "mechanized"
+owner = "release"
+tags = ["dispatch", "release"]
+
+[[rule]]
+id = "dispatch.chart-splits-workloads"
+summary = "Charts split API and web workloads"
+law = "Production charts declare distinct api and web workloads."
+evidence = "Workload templates below charts/*/templates."
+standing = "mechanized"
+owner = "release"
+tags = ["dispatch", "release"]
+
+[[rule]]
+id = "dispatch.sidecar-manifest-present"
+summary = "Web/API pairs declare sidecars"
+law = "A repository with a web app and executable API declares sidecar.toml."
+evidence = "The repository-root sidecar.toml seat."
+standing = "mechanized"
+owner = "sidecar"
+tags = ["dispatch"]
+
+[[rule]]
+id = "dispatch.sidecar-manifest-readable"
+summary = "Sidecar manifests are readable"
+law = "The process dispatch manifest parses as TOML."
+evidence = "Parsing repository-root sidecar.toml."
+standing = "mechanized"
+owner = "sidecar"
+tags = ["configuration", "dispatch"]
+
+[[rule]]
+id = "dispatch.web-app-declared"
+summary = "Sidecar declares the web app"
+law = "The sidecar app is named web."
+evidence = "The app table in sidecar.toml."
+standing = "mechanized"
+owner = "sidecar"
+tags = ["dispatch", "web"]
+
+[[rule]]
+id = "dispatch.web-health-port"
+summary = "Web health uses the leased port"
+law = "The web health URL contains the {port} template."
+evidence = "The web app health_url in sidecar.toml."
+standing = "mechanized"
+owner = "sidecar"
+tags = ["dispatch", "web"]
+
+[[rule]]
+id = "dispatch.web-image-does-not-own-dispatch"
+summary = "Web image does not proxy API dispatch"
+law = "The web image leaves public API dispatch to the deployment layer."
+evidence = "Proxy and server directives in deploy/web.Dockerfile."
+standing = "mechanized"
+owner = "web"
+tags = ["dispatch", "web"]
+
+[[rule]]
+id = "dispatch.web-image-present"
+summary = "Production carries a web image"
+law = "A production web/API repository carries deploy/web.Dockerfile."
+evidence = "The web image build seat."
+standing = "mechanized"
+owner = "release"
+tags = ["release", "web"]
+
+[[rule]]
+id = "dispatch.web-image-runs-design-runtime"
+summary = "Web image runs the design runtime"
+law = "The production web image runs the server emitted by the design build."
+evidence = "deploy/web.Dockerfile."
+standing = "mechanized"
+owner = "web"
+tags = ["dispatch", "web"]
+
+[[rule]]
+id = "dispatch.web-inherits-api-endpoint"
+summary = "Web inherits the API endpoint"
+law = "The web app inherits api.endpoint under its own API_URL vocabulary."
+evidence = "The web inherits_env entries in sidecar.toml."
+standing = "mechanized"
+owner = "sidecar"
+tags = ["configuration", "dispatch"]
+
+[[rule]]
+id = "dispatch.web-port-leased"
+summary = "Sidecar leases the web port"
+law = "The web app asks the supervisor to lease port zero."
+evidence = "The web app port in sidecar.toml."
+standing = "mechanized"
+owner = "sidecar"
+tags = ["dispatch", "web"]
+
+[[rule]]
+id = "env.edition-2024"
+summary = "Rust uses edition 2024"
+law = "A Rust repository in the skeleton uses edition 2024."
+evidence = "The workspace or package edition declared in Cargo.toml."
+standing = "mechanized"
+owner = "plumb"
+tags = ["cargo", "repository"]
+
+[[rule]]
+id = "env.rolling-ci-container"
+summary = "CI tracks the rolling workshop container"
+law = "The guard lane uses the workshop CI container without pinning a tag."
+evidence = "The container image reference in the guard workflow."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
+id = "release.attachment-deliverable"
+summary = "Declared attachments resolve to a delivering lane"
+law = "Every declared release attachment resolves to a shared release lane that carries its projection and that this repository actually calls."
+evidence = "The release attachment tables in plumb.toml and the shared workflows named by the repository's release callers."
+standing = "mechanized"
+owner = "release"
+tags = ["release", "repository"]
+
+[[rule]]
+id = "release.attachment-exercised"
+summary = "Unexercised width stays visible"
+law = "The width a product declares is reported against the width this skeleton has actually released, so a path no release has ever run says so instead of passing as proven."
+evidence = "The attachment tables in plumb.toml against the exercised widths in Plumb's release rules."
+standing = "mechanized"
+owner = "release"
+tags = ["release", "repository"]
+
+[[rule]]
+id = "release.attachment-permitted"
+summary = "Attachments declare no more than Plumb permits"
+law = "An attachment declares at most the number of packages Plumb permits it, because every package past the first adds ordering, cross-pinning, and partial failure to the mechanism, and a product cannot grant itself a wider shape by declaring one."
+evidence = "The attachment tables in plumb.toml against the permitted widths in Plumb's release rules."
+standing = "mechanized"
+owner = "release"
+tags = ["ownership", "release"]
 
 [[rule]]
 id = "release.canonical-authority"
@@ -57,6 +370,15 @@ evidence = "Workflow job graph and credential placement."
 standing = "prose-only"
 owner = "release"
 tags = ["release"]
+
+[[rule]]
+id = "release.datum-recorded"
+summary = "Release lines judge against a recorded datum"
+law = "A release line carries the stable answers its judgement rests on, recorded once when the line is cut, so every later judgement measures the frozen candidate against that datum instead of a registry that moves under it."
+evidence = "The datum leaf under the mechanism seat in the release line's own tree."
+standing = "mechanized"
+owner = "release"
+tags = ["dependency", "release"]
 
 [[rule]]
 id = "release.default-seat-stable"
@@ -113,6 +435,15 @@ owner = "release"
 tags = ["release"]
 
 [[rule]]
+id = "release.lane-rendered"
+summary = "Release lanes stand as this Plumb renders them"
+law = "Every governed lane in a repository is the exact text the current Plumb renders from that repository's declaration, so no lane is hand-written or left behind by an older Plumb."
+evidence = "The lane templates carried by the running Plumb, the release table in plumb.toml, and the tracked workflow bytes."
+standing = "mechanized"
+owner = "release"
+tags = ["release", "repository"]
+
+[[rule]]
 id = "release.manifest-stamped"
 summary = "The published manifest is stamped"
 law = "A release stamps the manifest the publisher actually reads."
@@ -156,6 +487,15 @@ evidence = "Public responses compared with the exact seal."
 standing = "prose-only"
 owner = "release"
 tags = ["release"]
+
+[[rule]]
+id = "release.spec-declared"
+summary = "Products declare release inputs once"
+law = "One strict product spec owns authority, version probe, binaries, platform archives, and extra assets, and the current Plumb reads it whole or refuses it by name."
+evidence = "The release table in plumb.toml read by the same strict spec reader every release verb uses."
+standing = "mechanized"
+owner = "release"
+tags = ["ownership", "release"]
 
 [[rule]]
 id = "release.stable-rejoin"
@@ -347,6 +687,42 @@ owner = "product"
 tags = ["state"]
 
 [[rule]]
+id = "structure.anchor-present"
+summary = "Rust repositories carry an anchor crate"
+law = "A Rust repository has one crate named after the repository."
+evidence = "Cargo package names across the workspace."
+standing = "mechanized"
+owner = "plumb"
+tags = ["cargo", "repository"]
+
+[[rule]]
+id = "structure.anchor-unique"
+summary = "The anchor crate is unique"
+law = "Exactly one workspace crate is named after the repository."
+evidence = "Cargo package names across the workspace."
+standing = "mechanized"
+owner = "plumb"
+tags = ["cargo", "repository"]
+
+[[rule]]
+id = "structure.api-entrypoint"
+summary = "API crates are executable"
+law = "A crate named api carries an executable entrypoint."
+evidence = "Cargo targets and source seats in api crates."
+standing = "mechanized"
+owner = "plumb"
+tags = ["cargo", "dispatch"]
+
+[[rule]]
+id = "structure.boundary-exists"
+summary = "Declared boundaries exist"
+law = "Every path named as a repository boundary exists."
+evidence = "Boundary paths declared in repository policy."
+standing = "mechanized"
+owner = "ectropy"
+tags = ["ectropy", "repository"]
+
+[[rule]]
 id = "structure.canonical-branch-protection"
 summary = "Managed repositories share branch protection"
 law = "Every Plumb-managed repository carries byte-identical main and release/** baseline rules; exact release rules follow only PREPARING or FROZEN state, and settled release branches remain frozen."
@@ -354,6 +730,213 @@ evidence = "Forgejo branch-protection responses projected onto the canonical ski
 standing = "prose-only"
 owner = "plumb"
 tags = ["release", "repository", "state"]
+
+[[rule]]
+id = "structure.cargo-target-ignored"
+summary = "Cargo target output is ignored"
+law = "A Rust repository ignores target/ at its root."
+evidence = "Cargo.toml presence and exact target/ lines in .gitignore."
+standing = "mechanized"
+owner = "cargo"
+tags = ["cargo", "repository"]
+
+[[rule]]
+id = "structure.cascade-derives-in-anchor"
+summary = "Cascade derives live in the anchor"
+law = "Repository runtime vocabulary is declared in the anchor crate, not a leaf."
+evidence = "Cascade derive sites compared with anchor and executable api crates."
+standing = "mechanized"
+owner = "plumb"
+tags = ["cargo", "configuration"]
+
+[[rule]]
+id = "structure.ectropy-policy"
+summary = "Ectropy policy matches repository shape"
+law = "The repository policy is reconciled with the grants and limits its current shape earns."
+evidence = "The declared policy compared with plumb's rendered policy."
+standing = "mechanized"
+owner = "ectropy"
+tags = ["ectropy", "repository"]
+
+[[rule]]
+id = "structure.ectropy-policy-present"
+summary = "Ectropy policy is present"
+law = "A governed repository declares its ectropy policy."
+evidence = "The repository-root ectropy.toml seat."
+standing = "mechanized"
+owner = "ectropy"
+tags = ["ectropy", "repository"]
+
+[[rule]]
+id = "structure.ectropy-policy-readable"
+summary = "Ectropy policy is readable"
+law = "The shape checker must be able to parse the repository's ectropy policy."
+evidence = "Parsing ectropy.toml."
+standing = "mechanized"
+owner = "ectropy"
+tags = ["ectropy", "repository"]
+
+[[rule]]
+id = "structure.guard-checks-release-profile"
+summary = "Guard exercises the release profile"
+law = "A Rust repository guard type-checks the profile its consumers build, not only the one its tests run."
+evidence = "The canonical guard workflow source."
+standing = "mechanized"
+owner = "plumb"
+tags = ["adoption", "repository"]
+
+[[rule]]
+id = "structure.guard-concurrency"
+summary = "Guard cancels superseded runs"
+law = "The guard workflow shares the canonical concurrency group and cancels superseded work."
+evidence = "The guard workflow concurrency block."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
+id = "structure.guard-lane-present"
+summary = "Guard has one authority workflow lane"
+law = "A governed repository carries one canonical guard workflow at its repository authority's seat without requiring a repository-local wrapper."
+evidence = "The Forgejo guard or GitHub quality workflow seat."
+standing = "mechanized"
+owner = "plumb"
+tags = ["adoption", "repository"]
+
+[[rule]]
+id = "structure.guard-runs-doctor"
+summary = "Guard runs plumb doctor"
+law = "The repository guard invokes the travelling shape check."
+evidence = "The canonical guard workflow source."
+standing = "mechanized"
+owner = "plumb"
+tags = ["adoption", "repository"]
+
+[[rule]]
+id = "structure.guard-runs-ectropy"
+summary = "Guard runs Ectropy explicitly"
+law = "The repository guard invokes Ectropy's errors-only checker directly."
+evidence = "The canonical guard workflow source."
+standing = "mechanized"
+owner = "ectropy"
+tags = ["adoption", "ectropy", "repository"]
+
+[[rule]]
+id = "structure.guard-uses-current-ectropy-mode"
+summary = "Guard uses the current Ectropy mode"
+law = "The repository guard carries neither the retired strict mode nor debt mode."
+evidence = "The canonical guard workflow Ectropy invocation."
+standing = "mechanized"
+owner = "ectropy"
+tags = ["adoption", "ectropy", "repository"]
+
+[[rule]]
+id = "structure.known-directory"
+summary = "Top-level directories have a known role"
+law = "Every top-level directory sits in a declared seat, or has a shadow in the skeleton where no layout is declared."
+evidence = "Repository top-level directory names against the declared layout, or against the released name sets where none is declared."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
+id = "structure.known-file"
+summary = "Root files have a known role"
+law = "Every file at the repository root sits in a declared layout group."
+evidence = "Repository root file names compared with the declared layout."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
+id = "structure.known-workflow"
+summary = "Workflows have known roles"
+law = "Every workflow has a shadow in the skeleton."
+evidence = "Workflow names under the repository's CI directory."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
+id = "structure.package-directory-name"
+summary = "Package directory matches package name"
+law = "The final package name segment matches its directory under packages/."
+evidence = "Package manifest names and their directory seats."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
+id = "structure.package-under-packages"
+summary = "Publishable packages sit under packages"
+law = "A publishable Node package lives below packages/ rather than at repository root."
+evidence = "Package manifests at the root and below packages/."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
+id = "structure.release-lane-present"
+summary = "Release surfaces have canonical lanes"
+law = "A binary release declaration is paired with exact-candidate and stable-consensus workflows."
+evidence = "The release table in plumb.toml and workflow names."
+standing = "mechanized"
+owner = "release"
+tags = ["release", "repository"]
+
+[[rule]]
+id = "structure.release-source-bound"
+summary = "Release callers leave one event source"
+law = "Exact and stable product workflows expose and forward no source or second ref input; the called shared workflow binds its direct event ref and commit."
+evidence = "The release-exact.yml and release-stable.yml caller inputs and workflow_call bindings, plus the called workflow event context."
+standing = "mechanized"
+owner = "release"
+tags = ["release", "repository"]
+
+[[rule]]
+id = "structure.reserved-components-seat"
+summary = "Reusable components stay in the design system"
+law = "packages/components is reserved; reusable components belong to the design system."
+evidence = "The packages/components directory seat."
+standing = "mechanized"
+owner = "web"
+tags = ["repository", "web"]
+
+[[rule]]
+id = "structure.seat-affirmed"
+summary = "A wayfinder was affirmed against the authorities it points at"
+law = "A target under a rule declaring affirmation faces carries a record taken over those faces as they stand."
+evidence = "The recorded authority beside the faces the rule names."
+standing = "mechanized"
+owner = "plumb"
+tags = ["document", "repository"]
+
+[[rule]]
+id = "structure.seat-anchored"
+summary = "A seat member carries its anchor"
+law = "A member of a seat declaring anchors carries one of them, because a directory earns its seat by what it holds rather than by what it is called."
+evidence = "Declared seat anchors compared with the leaves each member records."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
+id = "structure.seat-member"
+summary = "A seat holds the members its rule requires"
+law = "A seat naming a member rule holds members of the count and the name shape that rule fixes."
+evidence = "Declared seat rules compared with the members each seat records."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
+id = "structure.site-deploy-lane"
+summary = "Sites have a deploy lane"
+law = "A repository declaring a site carries a deploy workflow."
+evidence = "Site applications and workflow names."
+standing = "mechanized"
+owner = "release"
+tags = ["release", "site", "web"]
 
 [[rule]]
 id = "structure.transitional-wrappers-observed"
@@ -381,3 +964,147 @@ evidence = "Manifest documentation and the variable table passed to fill."
 standing = "prose-only"
 owner = "product"
 tags = ["configuration", "ownership"]
+
+[[rule]]
+id = "vocabulary.retired-term-absent"
+summary = "Retired domain terms leave the active closure"
+law = "A term in Plumb's transitional retired dictionary is absent from Git-tracked paths and current working-tree bytes outside docs/CHANGELOG."
+evidence = "The bundled p64-v1 dictionary compared with tracked path and file bytes."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository", "vocabulary"]
+
+[[rule]]
+id = "web.build-script-present"
+summary = "Web exposes a build script"
+law = "The web package declares a build script."
+evidence = "The scripts map in apps/web/package.json."
+standing = "mechanized"
+owner = "web"
+tags = ["web"]
+
+[[rule]]
+id = "web.component-file-kind"
+summary = "Components are TSX files"
+law = "The web component tree contains only lowercase directories and .svelte files."
+evidence = "Files below apps/web/src/lib/components."
+standing = "mechanized"
+owner = "web"
+tags = ["web"]
+
+[[rule]]
+id = "web.convention-path-lowercase"
+summary = "Convention paths are lowercase"
+law = "Component and hook convention paths use lowercase names."
+evidence = "Names below web component and hook directories."
+standing = "mechanized"
+owner = "web"
+tags = ["web"]
+
+[[rule]]
+id = "web.design-dependency"
+summary = "Web uses the design system"
+law = "A Svelte/Vite app depends on the workshop design package."
+evidence = "The web package dependency maps."
+standing = "mechanized"
+owner = "web"
+tags = ["dependency", "web"]
+
+[[rule]]
+id = "web.design-plugin-active"
+summary = "The design plugin is active"
+law = "The Vite configuration activates the workshop design plugin."
+evidence = "Recognized Vite configuration files."
+standing = "mechanized"
+owner = "web"
+tags = ["configuration", "web"]
+
+[[rule]]
+id = "web.design-plugin-dependency"
+summary = "Web carries the design plugin"
+law = "A Svelte/Vite app carries the design plugin through the design package."
+evidence = "The web package dependency maps."
+standing = "mechanized"
+owner = "web"
+tags = ["dependency", "web"]
+
+[[rule]]
+id = "web.guard-builds-web"
+summary = "Guard builds the web app"
+law = "The repository guard builds the named web package."
+evidence = "The web package name and canonical guard workflow source."
+standing = "mechanized"
+owner = "web"
+tags = ["adoption", "web"]
+
+[[rule]]
+id = "web.hook-file-kind"
+summary = "Hooks are lowercase .ts files"
+law = "The web hook tree contains lowercase .ts files. The directory identifies a hook, so the file name does not carry a use- prefix; that spelling is two words and the single-word law refuses it. Name the file for the subject and let it export the hooks: health.ts exports useHealth."
+evidence = "Files below apps/web/src/lib/hooks."
+standing = "mechanized"
+owner = "web"
+tags = ["web"]
+
+[[rule]]
+id = "web.svelte-under-components"
+summary = "Library TSX lives under components"
+law = "Reusable web library TSX lives below lib/components."
+evidence = "Direct files below apps/web/src/lib."
+standing = "mechanized"
+owner = "web"
+tags = ["web"]
+
+[[rule]]
+id = "web.view-file-kind"
+summary = "Views contain route TSX files"
+law = "The views tree contains only route .svelte files."
+evidence = "Files below apps/web/src/views."
+standing = "mechanized"
+owner = "web"
+tags = ["web"]
+
+[[rule]]
+id = "web.view-path-segment"
+summary = "View paths are route segments"
+law = "View directories and route stems use lowercase route-segment grammar."
+evidence = "Names below apps/web/src/views."
+standing = "mechanized"
+owner = "web"
+tags = ["web"]
+
+[[rule]]
+id = "web.views-manifest-loaded"
+summary = "Web loads the views manifest"
+law = "The web source imports the virtual views manifest."
+evidence = "TypeScript source under apps/web/src."
+standing = "mechanized"
+owner = "web"
+tags = ["web"]
+
+[[rule]]
+id = "web.views-manifest-rendered"
+summary = "Web renders the views manifest"
+law = "The web source renders its virtual views through the design system."
+evidence = "TypeScript source under apps/web/src."
+standing = "mechanized"
+owner = "web"
+tags = ["web"]
+
+[[rule]]
+id = "web.views-types-declared"
+summary = "Web declares the views module type"
+law = "The web sources declare the virtual views module so its catalog type is checked."
+evidence = "Ambient declarations under apps/web/src."
+standing = "mechanized"
+owner = "web"
+tags = ["configuration", "web"]
+
+[[rule]]
+id = "web.vite-does-not-own-dispatch"
+summary = "Vite does not own sidecar dispatch"
+law = "Vite receives dispatch through the design runtime rather than reading sidecar environment."
+evidence = "Recognized Vite configuration files."
+standing = "mechanized"
+owner = "web"
+tags = ["dispatch", "web"]

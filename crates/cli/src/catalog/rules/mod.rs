@@ -1,6 +1,6 @@
-use super::model::{Rule, Standing};
+use super::model::{Mechanism, Rule, Standing};
 use super::taxonomy::{Owner, Tag};
-use crate::command::depot::held;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::LazyLock;
 
 pub mod depot;
@@ -14,64 +14,58 @@ pub mod web;
 pub use domain::{deps, vocabulary};
 
 macro_rules! rule {
-    (
-        $name:ident, $id:literal, $summary:literal, $law:literal,
-        $evidence:literal, Mechanized, $owner:ident, [$($tag:ident),+ $(,)?]
-    ) => {
+    ($name:ident, $id:literal) => {
         pub static $name: $crate::catalog::model::Mechanism =
-            $crate::catalog::model::Mechanism(
-                $crate::catalog::model::Rule {
-                    id: $id,
-                    summary: $summary,
-                    law: $law,
-                    evidence: $evidence,
-                    standing: $crate::catalog::model::Standing::Mechanized,
-                    owner: &$crate::catalog::taxonomy::$owner,
-                    tags: &[$(&$crate::catalog::taxonomy::$tag),+],
-                },
-            );
-    };
-    (
-        $name:ident, $id:literal, $summary:literal, $law:literal,
-        $evidence:literal, $standing:ident, $owner:ident, [$($tag:ident),+ $(,)?]
-    ) => {
-        pub static $name: $crate::catalog::model::Rule =
-            $crate::catalog::model::Rule {
-            id: $id,
-            summary: $summary,
-            law: $law,
-            evidence: $evidence,
-            standing: $crate::catalog::model::Standing::$standing,
-            owner: &$crate::catalog::taxonomy::$owner,
-            tags: &[$(&$crate::catalog::taxonomy::$tag),+],
-        };
+            $crate::catalog::model::Mechanism($id);
     };
 }
 
 pub(crate) use rule;
 
 pub fn all() -> Vec<&'static Rule> {
+    HELD.iter().collect()
+}
+
+pub fn held(id: &str) -> &'static Rule {
+    INDEX
+        .get(id)
+        .copied()
+        .unwrap_or_else(|| panic!("the catalogue holds no rule {id}"))
+}
+
+fn mechanisms() -> Vec<&'static Mechanism> {
     [
-        stated(),
-        depot::all(),
-        env::all(),
-        structure::all(),
-        deps::all(),
-        web::all(),
-        dispatch::all(),
-        release::all(),
-        vocabulary::all(),
+        depot::mechanisms(),
+        dispatch::mechanisms(),
+        env::mechanisms(),
+        structure::mechanisms(),
+        deps::mechanisms(),
+        web::mechanisms(),
+        release::mechanisms(),
+        vocabulary::mechanisms(),
     ]
     .into_iter()
     .flatten()
     .collect()
 }
 
-static STATED: LazyLock<Vec<Rule>> = LazyLock::new(|| {
+static INDEX: LazyLock<BTreeMap<&'static str, &'static Rule>> =
+    LazyLock::new(|| HELD.iter().map(|rule| (rule.id, rule)).collect());
+
+static HELD: LazyLock<Vec<Rule>> = LazyLock::new(|| {
     let factory = plumb::seat::resource!("rules/catalog.toml");
-    let text = held()
+    let text = crate::command::depot::held()
         .read(SEAT, factory)
         .unwrap_or_else(|_| factory.to_string());
+    let seen = read(&text);
+    let named = seen.iter().map(|rule| rule.id).collect::<BTreeSet<_>>();
+    if mechanisms().iter().all(|held| named.contains(held.0)) {
+        return seen;
+    }
+    read(factory)
+});
+
+fn read(text: &str) -> Vec<Rule> {
     let doc: toml::Table = text
         .parse()
         .unwrap_or_else(|error| panic!("{SEAT} does not parse: {error}"));
@@ -81,13 +75,9 @@ static STATED: LazyLock<Vec<Rule>> = LazyLock::new(|| {
         .iter()
         .map(carry)
         .collect()
-});
+}
 
 const SEAT: &str = "rules/catalog.toml";
-
-pub fn stated() -> Vec<&'static Rule> {
-    STATED.iter().collect()
-}
 
 fn carry(value: &toml::Value) -> Rule {
     let id = word(value, "id");

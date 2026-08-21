@@ -25,7 +25,7 @@ pub struct Finding {
 impl Seed {
     pub fn wrong(rule: &'static Mechanism, evidence: impl Into<String>) -> Self {
         Self {
-            rule: &rule.0,
+            rule: &**rule,
             grade: "out of true",
             evidence: evidence.into(),
         }
@@ -33,7 +33,7 @@ impl Seed {
 
     pub fn blind(rule: &'static Mechanism, evidence: impl Into<String>) -> Self {
         Self {
-            rule: &rule.0,
+            rule: &**rule,
             grade: "blind",
             evidence: evidence.into(),
         }
@@ -41,7 +41,7 @@ impl Seed {
 
     pub fn noted(rule: &'static Mechanism, evidence: impl Into<String>) -> Self {
         Self {
-            rule: &rule.0,
+            rule: &**rule,
             grade: "noted",
             evidence: evidence.into(),
         }
@@ -49,7 +49,7 @@ impl Seed {
 
     pub fn unknown(rule: &'static Mechanism, evidence: impl Into<String>) -> Self {
         Self {
-            rule: &rule.0,
+            rule: &**rule,
             grade: "unknown shape",
             evidence: evidence.into(),
         }
