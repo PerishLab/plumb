@@ -36,7 +36,7 @@ pub const SETS: [(&str, &str); 5] = [
     ("workflow", plumb::seat::resource!("rules/workflow.toml")),
 ];
 
-pub fn set(name: &str) -> Result<toml::Table, String> {
+pub fn read(name: &str) -> Result<toml::Table, String> {
     let factory = SETS
         .iter()
         .find(|(held, _)| *held == name)

@@ -1,6 +1,7 @@
 pub mod model;
 pub mod query;
 pub mod rules;
+pub mod set;
 pub mod taxonomy;
 
 use model::{Coverage, Rule, Standing};

@@ -1,5 +1,5 @@
-use super::catalog::model::Coverage;
-use super::{catalog, finding, judge};
+use super::{finding, judge};
+use crate::catalog::model::Coverage;
 use crate::shape;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -94,7 +94,7 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
             findings,
             briefs: briefs(),
             summary,
-            coverage: catalog::coverage(),
+            coverage: crate::catalog::coverage(),
         };
         println!(
             "{}",
@@ -179,7 +179,7 @@ impl Vocabulary {
 fn retired(
     result: &Result<plumb::vocabulary::Report, plumb::vocabulary::Refusal>,
 ) -> Vec<finding::Finding> {
-    use super::catalog::rules::vocabulary::RETIRED_TERM_ABSENT;
+    use crate::catalog::rules::vocabulary::RETIRED_TERM_ABSENT;
 
     match result {
         Ok(report) => report

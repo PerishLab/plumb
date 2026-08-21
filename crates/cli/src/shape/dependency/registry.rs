@@ -1,5 +1,5 @@
 use super::{Dependencies, Ecosystem, retired};
-use crate::rules::RULES;
+use crate::catalog::set::RULES;
 use std::collections::BTreeMap;
 use std::process::Command;
 

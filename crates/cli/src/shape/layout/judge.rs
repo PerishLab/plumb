@@ -1,5 +1,5 @@
 use super::{Declared, Group, Held, Seat, affirm, rule};
-use crate::judge::catalog::rules::structure as law;
+use crate::catalog::rules::structure as law;
 use crate::judge::finding::{Seed, blind, unknown, wrong};
 use plumb::snapshot::Snapshot;
 use std::collections::BTreeSet;

@@ -17,16 +17,16 @@ macro_rules! rule {
         $name:ident, $id:literal, $summary:literal, $law:literal,
         $evidence:literal, Mechanized, $owner:ident, [$($tag:ident),+ $(,)?]
     ) => {
-        pub static $name: $crate::judge::catalog::model::Mechanism =
-            $crate::judge::catalog::model::Mechanism(
-                $crate::judge::catalog::model::Rule {
+        pub static $name: $crate::catalog::model::Mechanism =
+            $crate::catalog::model::Mechanism(
+                $crate::catalog::model::Rule {
                     id: $id,
                     summary: $summary,
                     law: $law,
                     evidence: $evidence,
-                    standing: $crate::judge::catalog::model::Standing::Mechanized,
-                    owner: &$crate::judge::catalog::taxonomy::$owner,
-                    tags: &[$(&$crate::judge::catalog::taxonomy::$tag),+],
+                    standing: $crate::catalog::model::Standing::Mechanized,
+                    owner: &$crate::catalog::taxonomy::$owner,
+                    tags: &[$(&$crate::catalog::taxonomy::$tag),+],
                 },
             );
     };
@@ -34,15 +34,15 @@ macro_rules! rule {
         $name:ident, $id:literal, $summary:literal, $law:literal,
         $evidence:literal, $standing:ident, $owner:ident, [$($tag:ident),+ $(,)?]
     ) => {
-        pub static $name: $crate::judge::catalog::model::Rule =
-            $crate::judge::catalog::model::Rule {
+        pub static $name: $crate::catalog::model::Rule =
+            $crate::catalog::model::Rule {
             id: $id,
             summary: $summary,
             law: $law,
             evidence: $evidence,
-            standing: $crate::judge::catalog::model::Standing::$standing,
-            owner: &$crate::judge::catalog::taxonomy::$owner,
-            tags: &[$(&$crate::judge::catalog::taxonomy::$tag),+],
+            standing: $crate::catalog::model::Standing::$standing,
+            owner: &$crate::catalog::taxonomy::$owner,
+            tags: &[$(&$crate::catalog::taxonomy::$tag),+],
         };
     };
 }

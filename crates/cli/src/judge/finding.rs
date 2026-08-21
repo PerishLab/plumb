@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use super::catalog::model::{Mechanism, Rule, Standing};
+use crate::catalog::model::{Mechanism, Rule, Standing};
 
 pub type Found = Vec<Seed>;
 

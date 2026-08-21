@@ -1,6 +1,6 @@
 mod production;
-use crate::judge::catalog::model::Mechanism;
-use crate::judge::catalog::rules::dispatch as rule;
+use crate::catalog::model::Mechanism;
+use crate::catalog::rules::dispatch as rule;
 use crate::judge::finding::{Found, Seed};
 use serde_json::Value as Json;
 use std::path::{Path, PathBuf};

@@ -42,7 +42,7 @@ paths = ["crates/cli/tests"]
 allow = ["fanout"]
 note = "the skill budget observation adds one rule and one repository shape probe to the established inventories"
 paths = [
-    "crates/cli/src/judge/catalog/rules",
+    "crates/cli/src/catalog/rules",
     "crates/cli/src/shape",
 ]
 

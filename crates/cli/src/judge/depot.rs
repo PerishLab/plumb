@@ -1,5 +1,5 @@
-use super::catalog::rules::depot::{DEPOT_PUBLISHED, DEPOT_SCHEMA};
 use super::finding::{Finding, Seed};
+use crate::catalog::rules::depot::{DEPOT_PUBLISHED, DEPOT_SCHEMA};
 use crate::command::depot::record::{Manifest, Object, inventory};
 use plumb::snapshot::{Refusal, Snapshot};
 use semver::Version;

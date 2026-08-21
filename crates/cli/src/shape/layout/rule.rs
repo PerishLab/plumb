@@ -29,7 +29,7 @@ pub fn parse(held: &str) -> Result<Reference, String> {
 }
 
 pub fn member(reference: &Reference) -> Result<Member, String> {
-    let doc = crate::rules::set(&reference.set)?;
+    let doc = crate::catalog::set::read(&reference.set)?;
     let slug = reference
         .slug
         .as_deref()

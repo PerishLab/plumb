@@ -1,7 +1,7 @@
 use super::{Found, Shape};
+use crate::catalog::rules::release as release_rule;
+use crate::catalog::rules::structure as rule;
 use crate::command::release::model::Spec;
-use crate::judge::catalog::rules::release as release_rule;
-use crate::judge::catalog::rules::structure as rule;
 use crate::judge::finding::Seed;
 use crate::judge::show;
 use std::collections::BTreeSet;
@@ -65,7 +65,7 @@ fn widths(spec: &Spec) -> std::collections::BTreeMap<String, usize> {
 }
 
 fn measured(release: &Release, found: &mut Found) {
-    let rules = &crate::rules::RULES.release;
+    let rules = &crate::catalog::set::RULES.release;
     for (attachment, held) in &release.widths {
         let permitted = rules
             .permitted

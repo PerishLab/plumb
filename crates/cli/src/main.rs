@@ -1,7 +1,7 @@
 mod anchor;
+mod catalog;
 mod command;
 mod judge;
-mod rules;
 mod shape;
 mod skill;
 
@@ -84,7 +84,7 @@ enum Command {
     #[command(about = "Query the catalogued law by namespace, tag, standing, or owner")]
     Rule {
         #[command(subcommand)]
-        deed: judge::catalog::query::Deed,
+        deed: catalog::query::Deed,
     },
     #[command(about = "Read the release notes a version owes")]
     Changelog {
@@ -223,7 +223,7 @@ fn execute(command: Command) -> i32 {
             command::render::Seat::new(PathBuf::from(target.root)).policy(write)
         }
         Command::Skill { deed } => skill::run(deed),
-        Command::Rule { deed } => judge::catalog::query::run(deed),
+        Command::Rule { deed } => catalog::query::run(deed),
         Command::Changelog { target, version } => {
             command::render::Seat::new(PathBuf::from(target.root)).changelog(version)
         }

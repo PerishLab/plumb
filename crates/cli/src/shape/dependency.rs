@@ -1,7 +1,7 @@
 mod cargo;
 mod registry;
 
-use crate::rules::RULES;
+use crate::catalog::set::RULES;
 use plumb::datum::Datum;
 use std::path::Path;
 

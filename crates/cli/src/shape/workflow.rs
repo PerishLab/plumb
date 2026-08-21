@@ -1,4 +1,4 @@
-use crate::rules::RULES;
+use crate::catalog::set::RULES;
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;

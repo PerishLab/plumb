@@ -1,7 +1,7 @@
-use super::catalog::rules::deps as rule;
-use super::catalog::rules::release::DATUM_RECORDED;
 use super::finding::{blind, wrong};
-use crate::rules::RULES;
+use crate::catalog::rules::deps as rule;
+use crate::catalog::rules::release::DATUM_RECORDED;
+use crate::catalog::set::RULES;
 use crate::shape::{self, Dependency, Found};
 use plumb_cli::Verdict;
 

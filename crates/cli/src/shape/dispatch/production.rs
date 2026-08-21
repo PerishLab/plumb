@@ -1,5 +1,5 @@
 use super::{Found, wrong};
-use crate::judge::catalog::rules::dispatch as rule;
+use crate::catalog::rules::dispatch as rule;
 use std::path::{Path, PathBuf};
 
 pub(super) fn read(root: &Path, found: &mut Found) {

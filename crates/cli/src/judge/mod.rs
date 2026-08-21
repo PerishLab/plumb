@@ -1,11 +1,11 @@
 use self::finding::{Finding, blind, unknown, wrong};
-use crate::{rules::RULES, shape};
-use catalog::rules::{env as env_rule, structure as structure_rule};
+use crate::catalog::rules::{env as env_rule, structure as structure_rule};
+use crate::catalog::set::RULES;
+use crate::shape;
 use shape::Found;
 use std::collections::BTreeSet;
 use text::{COMPONENTS, CONCURRENCY, CONTAINER};
 
-pub(crate) mod catalog;
 mod depot;
 mod deps;
 pub(crate) mod doctor;
@@ -37,7 +37,9 @@ fn lanes(held: &shape::Shape) -> Found {
     shape::lane::Seat(&held.root)
         .drift()
         .into_iter()
-        .map(|evidence| finding::Seed::noted(&catalog::rules::release::LANE_RENDERED, evidence))
+        .map(|evidence| {
+            finding::Seed::noted(&crate::catalog::rules::release::LANE_RENDERED, evidence)
+        })
         .collect()
 }
 
