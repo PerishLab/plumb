@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - crates/cli/assets/**
+      - crates/cli/cookbook/**
+      - crates/cli/help/**
       - crates/cli/rules/**
       - crates/lib/rules/**
   workflow_dispatch:

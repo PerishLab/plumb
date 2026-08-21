@@ -29,12 +29,21 @@ pub fn occupied(version: &str) -> Result<Option<notes::Notes>, String> {
     seat::notes(&rig.depot.source, version)
 }
 
+pub fn carried(path: &str, factory: &'static str) -> String {
+    held()
+        .read(path, factory)
+        .unwrap_or_else(|_| factory.to_string())
+}
+
 pub fn held() -> Held {
     seat::held(&Rig::resolve(None).unwrap_or_default().depot.seat)
 }
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(
+        about = "Publish this repository's recorded configuration roots as one immutable version"
+    )]
     Publish {
         #[arg(default_value = ".")]
         root: String,
@@ -43,6 +52,7 @@ pub enum Deed {
         #[arg(long = "dry-run")]
         dry: bool,
     },
+    #[command(about = "Stage or publish the release notes one version owes")]
     Changelog {
         #[arg(default_value = ".")]
         root: String,
@@ -55,7 +65,9 @@ pub enum Deed {
         #[arg(long = "dry-run")]
         dry: bool,
     },
+    #[command(about = "Bring the local seat to the version the channel names")]
     Sync,
+    #[command(about = "Report the source, the seat, and the version held there")]
     Show,
 }
 

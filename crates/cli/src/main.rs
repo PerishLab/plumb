@@ -19,12 +19,17 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    #[command(about = "Judge this repository against the skeleton and report every finding")]
     Doctor {
         #[command(flatten)]
         target: Root,
         #[arg(long)]
         json: bool,
     },
+    #[command(
+        about = "Project a clean topic branch onto its base and wait for its guard",
+        long_about = dispatch::depot::carried("help/land.txt", plumb::seat::resource!("help/land.txt"))
+    )]
     Land {
         #[command(flatten)]
         target: Root,
@@ -41,6 +46,7 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    #[command(about = "Prove one committed delta stays inside the declared write paths")]
     Precommit {
         #[command(flatten)]
         target: Root,
@@ -53,6 +59,7 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    #[command(about = "Report which repositories a candidate version would reach")]
     Radius {
         #[arg(long, required = true)]
         root: Vec<String>,
@@ -63,62 +70,79 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    #[command(about = "Render the ectropy policy this repository's shape earns")]
     Policy {
         #[command(flatten)]
         target: Root,
         #[arg(long)]
         write: bool,
     },
+    #[command(about = "Install, inspect, and upgrade the briefs a release carries")]
     Skill {
         #[command(subcommand)]
         deed: skill::Deed,
     },
+    #[command(about = "Query the catalogued law by namespace, tag, standing, or owner")]
     Rule {
         #[command(subcommand)]
         deed: judge::catalog::query::Deed,
     },
+    #[command(about = "Read the release notes a version owes")]
     Changelog {
         #[command(flatten)]
         target: Root,
         #[arg(long)]
         version: Option<String>,
     },
+    #[command(about = "Render the workflows this repository declares")]
     Lane {
         #[command(flatten)]
         target: Root,
         #[arg(long)]
         write: bool,
     },
+    #[command(
+        about = "Render the seats and file groups this repository declares",
+        long_about = dispatch::depot::carried("help/layout.txt", plumb::seat::resource!("help/layout.txt"))
+    )]
     Layout {
         #[command(flatten)]
         target: Root,
     },
-    Cookbook {
-        entry: Option<String>,
-    },
+    #[command(about = "Read what to do about a finding that names an entry")]
+    Cookbook { entry: Option<String> },
+    #[command(about = "Record that a wayfinder was read against the authorities it points at")]
     Affirm {
         #[command(flatten)]
         target: Root,
         #[arg(long)]
         write: bool,
     },
+    #[command(about = "Publish, sync, and show the configuration Plumb carries")]
     Depot {
         #[command(subcommand)]
         deed: dispatch::depot::Deed,
     },
+    #[command(about = "Hold the truth cycle of a product release")]
     Release {
         #[command(subcommand)]
         deed: dispatch::release::Deed,
     },
+    #[command(about = "Project one release onto one medium")]
     Ship {
         #[command(subcommand)]
         deed: dispatch::ship::Deed,
     },
 
+    #[command(
+        about = "Destroy one declared delivery chain in a fixed order",
+        long_about = dispatch::depot::carried("help/retire.txt", plumb::seat::resource!("help/retire.txt"))
+    )]
     Retire {
         #[command(flatten)]
         deed: dispatch::retire::Deed,
     },
+    #[command(about = "Ask and record what a rendered lane may skip")]
     Workflow {
         #[command(subcommand)]
         deed: dispatch::workflow::Deed,

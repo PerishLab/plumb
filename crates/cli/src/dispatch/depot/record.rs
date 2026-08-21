@@ -6,10 +6,12 @@ use std::collections::BTreeMap;
 pub const FORMAT: u32 = 1;
 pub const LEAF: &str = "plumb.toml";
 pub const POINTER: &str = "metadata.json";
-pub const ROOTS: [(&str, &str); 3] = [
+pub const ROOTS: [(&str, &str); 5] = [
     ("crates/cli/rules", "rules"),
     ("crates/lib/rules", "rules"),
     ("crates/cli/assets", "assets"),
+    ("crates/cli/cookbook", "cookbook"),
+    ("crates/cli/help", "help"),
 ];
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

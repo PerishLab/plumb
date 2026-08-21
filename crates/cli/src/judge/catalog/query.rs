@@ -6,25 +6,32 @@ use std::collections::BTreeSet;
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(
+        about = "List the law, narrowed by namespace, tag, standing, owner, or their absence"
+    )]
     List {
         #[command(flatten)]
         select: Select,
         #[arg(long)]
         json: bool,
     },
+    #[command(about = "Print one rule: its law, its evidence, its standing, and who owns it")]
     Show {
         id: String,
         #[arg(long)]
         json: bool,
     },
+    #[command(about = "List the namespaces the catalogue divides itself into")]
     Namespaces {
         #[arg(long)]
         json: bool,
     },
+    #[command(about = "List the tags rules are filed under")]
     Tags {
         #[arg(long)]
         json: bool,
     },
+    #[command(about = "List the owners a rule may be answerable to")]
     Owners {
         #[arg(long)]
         json: bool,

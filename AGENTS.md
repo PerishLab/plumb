@@ -4,12 +4,20 @@ This repository is the workshop's living skeleton. `ectropy .` must print
 `clean` before anything lands, and CI runs the complete repository guard in
 explicit fail-fast order. Ectropy has one severity: every finding is an error.
 
+Four surfaces answer, and knowing which one to ask is most of knowing this
+repository. **The source** says what a thing does and why it exists; it is the
+only one that cannot be wrong. **`--help`** says how to use it, and covers every
+command. **`plumb cookbook`** says what to do when something fired, and covers
+only the findings whose remedy the finding itself does not give. **This file**
+says what none of the other three can, which is why it is short and why anything
+belonging to them is removed from it on sight. Ask the surface that owns the
+question rather than trusting the nearest prose.
+
 ## The relation
 
-ectropy owns its blindspots: a construct it cannot parse is the checker's
-responsibility, not the author's exception. plumb inherits that relation for
-SHAPES. If a repository in this ecosystem has no shadow here, plumb owes the
-shape. Divergence is an error in the skeleton.
+plumb holds to the constitution ectropy enforces, and inherits it for shapes.
+If a repository in this ecosystem has no shadow here, plumb owes the shape:
+divergence is an error in the skeleton, never an exception in the repository.
 
 Downstream repositories do not get scanned by plumb, and plumb does not know
 they exist. The CLI travels to them: install it, run it in a repository, read
@@ -18,29 +26,28 @@ link, and it is the only one.
 
 ## Layout
 
-- `crates/cli` — the CLI, published as a binary through the release lanes.
-- `crates/lib` and `crates/macro` — the substrate and derive consumed by the
-  ecosystem.
-- `crates/lib/src/forgejo` — Plumb orchestration and Git adaptors over
-  Runseal's structured Forgejo operations. It owns no HTTP sender and reads no
-  `tea.yml`; authority enters through `FORGEJO_URL` with
-  `FORGEJO_TOKEN_FILE` or `FORGEJO_TOKEN`.
+These are the nodes `[layout]` has not converged on. Each leaves this list when a
+seat can state it; nothing belongs here that a seat, a rule, or a verb already
+answers for.
+
+- `crates/lib/src/forgejo` — Plumb orchestration and Git adaptors over Runseal's
+  structured Forgejo operations. It owns no HTTP sender and reads no `tea.yml`.
 - `crates/cli/src/dispatch/site` and `retire` — Cloudflare interpretation and
   orchestration over Runseal's structured Cloudflare operations. Plumb owns no
-  authenticated Cloudflare HTTP sender or raw route dialect.
-- `apps/web` — the site at plumb.perish.uk, declared as `[release.cfworker]` and projected by the rendered
-  ship lane like any other medium: an exact channel stages a version behind its own preview URL and only
-  stable reaches the domain, and the deploy lane that dispatched `plumb ship site deploy` is gone. It is the
-  Svelte specimen the web shape checks, and the shape moved with it: a web app carries `@perish/design`,
-  and views and components are `.svelte` files.
-- `packages/*` — publishable specimens, when they earn their place.
-- `Containerfile` and `charts/*` — the image and chart carriers the ship
-  adaptors project onto.
-
-The layout is not invented; it is the union already demonstrated by codehull and
-ensign: `crates` for rust members, `apps` for deployable applications,
-`packages` for publishable node packages, `skills` for operating briefs, and
-`docs/CHANGELOG` for immutable release history.
+  authenticated Cloudflare HTTP sender and no raw route dialect.
+- `crates/cli/{rules,assets,cookbook,help}` — the resources this binary carries.
+  Rules and assets are depot roots; cookbook and help are not yet. Each is one
+  file per addressable thing, and the address is the path: a rule set is its
+  name, a cookbook entry is the finding that sends you there, and long help is
+  the command path, so `plumb ship site deploy` reads `help/ship/site/deploy.txt`.
+  Prose an agent reads as contract is carried, never inlined in a literal.
+  All four publish to the depot and read seat-first, and help alone falls back to
+  its compiled bytes without a word when the seat cannot be read: help is not a
+  verdict, and a tool whose `--help` fails when a store is unreachable fails
+  exactly where it is needed most. A law read from a stale seat would be a lie,
+  so rules refuse instead.
+- `apps/web` — the Svelte specimen the web shape checks. Its seat declares no
+  anchor, so nothing yet states what an app must carry to earn one.
 
 ## Boundaries
 
@@ -48,295 +55,42 @@ ensign: `crates` for rust members, `apps` for deployable applications,
   published, or it is not exercised and will rot exactly like boilerplate. What
   is described but not run must say so.
 - CHECKING BEFORE SCAFFOLDING. `check` ships before `new`. A generator encodes
-  guesses; a diff harvests facts, and the ecosystem already holds eleven repos
-  of facts.
+  guesses; a diff harvests facts, and the ecosystem already holds the facts.
 - EVERY ELEMENT STAYS REMOVABLE. Encoding combinations is the point — many
   choices here are only defensible together, not alone — but no element may
   become unremovable, or its justification decays from finding to story.
-- A SEAT IS EARNED, NOT NAMED. `[layout]` declares where something may sit and
-  what a member must carry to earn that seat, so a directory is legal for
-  holding a `Cargo.toml` rather than for being spelled `crates`. Root files are
-  declared in groups, and a repository that declares no layout is judged by the
-  released name sets exactly as before: adoption is incremental, and a layout
-  that cannot be read is blind rather than quietly permitted. `anchor = []` says
-  a level is governed while its members are not judged, so a deferred decision
-  stays visible as data instead of as a gap.
 - NOTHING INVENTS A LOCATION. `plumb::seat` anchors at run time and
   `plumb::seat::resource!` at compile time, so a caller states what it wants
-  rather than where it sits. A carried resource resolves against the crate that
-  writes it, and a path leaving that crate refuses before it compiles, because a
-  source file that moved must not break a resource it does not own.
+  rather than where it sits.
 - plumb MUST PASS ITSELF. Running the CLI here has to come back clean, or the
   relation above does not hold for the one repo that declares it.
 
 ## Documents
 
-- The prose surface is whatever `[layout]` admits and nothing else. A tracked
-  file in no declared seat or group is unknown shape, so a fourth Markdown file
-  is refused by the same law that refuses a fourth top-level directory, and no
-  document mechanism stands beside it.
-- `AGENTS.md` is the one entrypoint a coding agent reads as authority for this
-  repository, and `skills/<name>/SKILL.md` the one it reads for this tool. Both
-  are capped by their seat's rule, because a wayfinder's size is the size of the
-  drift surface: an agent acts on what it reads, so a restated law that has since
-  moved is an agent working from a false premise.
-- Neither may restate a surface that answers for itself. A command list belongs
-  to `--help`, a standing list of laws to `plumb rule list`, and a remedy to a
-  `plumb cookbook` entry the finding names.
-- Both are affirmed against the authority faces their rule declares, not against
-  the source tree, and the record lives in `.plumb/affirmed.toml` rather than in
-  a declaration every line of work must take a turn holding. Which faces a rule
-  watches is a published row, because the answer will move.
-- Everything else a repository knows belongs where it can be judged or where it
-  can be found: in the code, in a rule set, in a note beside the key it is about,
-  or in the Concord task that owns the work. A document nobody must read and no
+- Everything a repository knows belongs where it can be judged or where it can be
+  found: in the code, in a rule set, in a note beside the key it is about, or in
+  the Concord task that owns the work. A document nobody must read and no
   mechanism keeps true is the worst of the four.
 
 ## Release
 
-- The root `plumb.toml` `[release]` table is the complete product-owned release
-  declaration: product, authority, binaries, Rust targets, and typed product
-  inputs such as a skill, Cargo attachment, or Debian payload. Platform keys,
-  archive names, environment prefixes, and artifact metadata are derived.
-- A release declares a binary shape, or one attachment, or both. A skill and a
-  Debian payload ride the binary authority and cannot stand without it, while
-  every other attachment names a registry that holds its own ledger, so a
-  release may declare one and nothing else. The shape a product declares is the
-  shape Plumb answers to; refusing one it defines refuses its own product.
-- Plumb owns Cargo discovery and stamping, target builds, archives, skill and
-  Debian assembly, manager generation, capsules, storage, verification,
-  activation, smoke, source binding, and rejoin topology checks. Those
-  mechanisms do not live in product scripts.
-- `release` holds the truth cycle and `ship` holds every projection of it. A
-  verb belongs to whichever object it acts on: `release` keeps `source`,
-  `compile`, `rejoin`, `authority`, `activate`, and `inspect`, while
-  `ship binary` takes `activate`, `assemble`, `build`, `dispatch`, `inspect`,
-  `managers`, `matrix`, `publish`, `recovery`, `smoke`, and `verify`, `ship
-  cargo` takes `publish` and `rehearse`, `ship oci` takes `build` and `publish`,
-  `ship chart` takes `package` and `publish`, and `ship npm` takes `pack` and
-  `publish`. Release activation advances only the consensus pointer and release
-  inspection proves only pointer and seal identity. Binary activation shifts
-  generated managers and binary inspection proves the projected artifacts and
-  managers. A projection never keeps a compatibility alias for a verb that
-  moved.
-- The adaptor set is a closed enumeration in Plumb, one entry per medium the
-  ecosystem publishes to: `binary`, `site`, `cargo`, `npm`, `oci`, and `chart`.
-  All six are absorbed, because a medium with no name here is a medium every
-  repository invents for itself. The enumeration landed before the projections
-  did, which is why filling each one in was an addition rather than a break.
-  Nothing enters it on speculation: an entry earns its place from a medium
-  already published to, never from one that might be.
-- A capsule covers what a capsule can cover, and the gate is keyed to the
-  declaration rather than to the medium. A release that declares a binary shape
-  compiles a capsule, so every publishing deed refuses one that seals another
-  version, exactly as `ship binary publish` takes the capsule as its payload. A
-  release that declares no binary shape compiles no capsule and holds no
-  authority to keep one in, so demanding one would refuse a shape Plumb itself
-  defines; those deeds answer to the declared projection surface instead. The
-  deeds that only prepare -- `cargo rehearse`, `oci build`, `chart package`,
-  `npm pack` -- stay outside the rule either way, because they mutate nothing
-  beyond the working tree. Publication remains the one irreversible point of a
-  release.
-- That rule binds a release that carries a seal, and whether one does is a
-  declaration rather than an environment. A release naming a product and an
-  authority compiles a capsule and publishes it; a release declaring only
-  attachments compiles none, because nothing produces one and no authority
-  holds one, so its projections answer to the registries that receive them.
-  Reading the gate from a release output path instead refused a shape Plumb
-  itself defines, for a reason that had nothing to do with the deed asked for.
-- `Containerfile`, `charts/plumb`, and `packages/plumb` are carriers. They exist
-  so the image, chart, and module adaptors project a real medium rather than a
-  described one, and each now fixes the shape a published artifact of its kind
-  takes here: the module carries `build`, `test`, `typecheck` and `prepack` with
-  every tool pinned through the workspace catalog, and the chart carries a
-  minimal workload a cluster would admit. The content is deliberately small and
-  deliberately real; each takes a responsibility of its own when one earns the
-  seat.
-- Every Plumb-owned artifact is byte-reproducible from the declared payload.
-  Archive members are ordered and carry canonical timestamps, owners, and
-  modes; MSVC binaries use the reproducible linker mode. Rebuilding one exact
-  version from one commit must produce the same seal.
+- `release` holds the truth cycle and `ship` holds every projection of it. No
+  verb and no rule states that division for you, which is why it is here.
 - This repository renders and carries its own release lanes and reaches no
-  shared workflow. Actions still owns the reusable matrix, artifact transport,
-  credential binding, and sequencing for repositories not yet rendered.
-- Every permanent release resolves canonical stable Plumb once and freezes that
-  exact stable version across all jobs. The one release that did not was v0.26.0, which removed the projection skip and
-  so could not be generated by the version that still held it: its stable seal
-  records the published exact beta that generated it, and Plumb still reads that
-  provenance back. Producing it is gone; nothing can record it again.
-- Exact releases live at `v1/releases/<channel>/<exact-version>/seal.json`.
-  Non-stable has no moving pointer and no activation operation. Consumers name
-  both channel and exact version.
-- Stable alone owns `v1/channels/stable.json`, `/manage.sh`, and
-  `/manage.ps1`. Stable activation conditionally updates the generated root
-  managers, then commits consensus by compare-and-swap of the stable pointer.
-  The pointer is the only moving truth.
-- The default install and bin seats admit only stable from the canonical
-  release authority. Every other channel requires an exact version plus
-  explicit install and bin paths disjoint from the defaults. Default stable
-  mutation holds one lock, stages before switching, proves ownership on every
-  destructive path, and refuses an implicit rollback.
-- A release note is a seat, not a gate. Every released version has one known
-  address in the depot where downstream migration guidance lives, and a version
-  whose note says only that the source is the guidance has still occupied it,
-  because what the address buys is that a reader never has to guess whether one
-  exists. Publishing a note binds the stable before that version to the version's
-  own point, both read from tags rather than from a live channel pointer, because
-  a note written after the release would otherwise measure itself against itself.
-  It measures textual churn plus changed paths, and refuses a language
-  pair above its diff-derived budget or one that is empty: the ceiling bounds
-  sprawl and the floor keeps the seat occupied. Compiling a release does none of
-  this, so a note can never fail a release.
-- Release notes are mutable, and they may be because ship is not. Identity is
-  paid once, at the object that carries it: the version, its artifacts, its
-  seal, and its channel pointer are immutable and proved elsewhere, so a note
-  about that version cannot mislead a reader about which version it describes.
-  It can only be improved, which is what a migration guide needs — a hazard
-  found three days after a version shipped belongs in that version's note.
-  Demanding immutability a second time would buy nothing and would forbid
-  exactly the correction downstream most wants. Seals therefore carry no
-  changelog proof; those written before this rule are still read, never written
-  again. A note declares a floor of zero, because the floor belongs to what is
-  carried rather than to whoever published it: configuration is read by the
-  mechanism, so the only Plumb proven to read a version of it is the one that
-  wrote it, and defaulting lower would assert a compatibility nobody measured.
-  Prose has no such reader, so no Plumb can fail to read it and none is
-  refused.
-- An optional `docs/CHANGELOG/v<base-version>/artifacts/` contributes its flat
-  regular-file set to exact prerelease and stable seals. Plumb preserves bytes
-  under filenames and owns only generic safety and collision refusal; product
-  semantics do not enter the release model.
-- Stable is `X.Y.Z`. Every non-stable release is
-  `X.Y.Z-<channel>.N`. Stable promotion embeds the complete exact candidate
-  seal and its digest, and requires the same product, base version, and commit.
-  The candidate is derived, never named: it is the latest published exact seal standing at the
-  frozen commit, and a commit carrying none refuses. Many stand there whenever an exact release
-  published and then failed downstream, because such a release can never be run again: a run
-  advances its channel pointer and the seal records the generator that pointer named, so the
-  second attempt computes a seal the first already made immutable. Burning the number is the only
-  way forward, and promotion takes the newest rather than refusing what burning leaves behind.
-  Stable binaries are rebuilt with stable identity from that commit.
-- Exact publication binds exactly `refs/tags/<exact-version>`; the called shared workflow freezes its direct event ref and commit once and every job checks out that commit. Product callers expose and forward no second source. `plumb ship binary dispatch` is the generic Forgejo entrypoint and takes only `--version`: it derives the channel, derives the ref that carries it, and sends no identity input at all. Stable alone must originate from `refs/heads/release/vX.Y.Z`. A stable release line is managed by `plumb release prepare|pick|freeze|rejoin`, prepared by linear `cherry-pick -x`, frozen before publication, and remains independent from an unblocked `main`. Rejoin is the last step of a release, not optional tidying: `prepare` and `freeze` refuse while the last stable point is a commit `origin/main` does not hold, because a line opened over an unported one collides on the way back.
-- A release run pins its verdict as it pins its generator: `plumb stable prepare` records the datum the line judges against under `.plumb`, the mechanism's own seat that source projection excludes as it excludes `docs/CHANGELOG`, written as TOML because a formatter reads a repository's JSON and machine-owned state is not a repository's to format, and on that line `plumb doctor` reads the recorded stable answers instead of asking a live registry. A line carrying no datum is out of true. The line is the one a run declares in `PLUMB_RELEASE_VERSION`, or failing that the checked-out branch, so CI needs no declaration and none leaks into everything else a job runs. The recording commit owns its seat and sweeps whatever an earlier Plumb left there, so a line migrated forward carries one datum and not two, and `freeze` accepts that commit without cherry-pick provenance because it proves itself: it touches only the seat, and what it leaves there decodes for the line it names. `main` still tracks live latest, because drift detection is its job and reproducibility is the line's.
-- A watch ends only when the whole run graph has. A run that reports success while a job is still in flight, has laid out no job at all, or carries a job that failed has not succeeded, and `plumb ship binary dispatch --watch` says so rather than handing back the dispatch's own good news. A forge refusal always names the operation Plumb was performing when it arrived, and a stale head names the commit the pull actually stands at.
-- The ref carries the release, so neither caller takes a version. Both stay
-  dispatched by an operator, who selects the ref instead of typing an identity:
-  `release-exact.yml` on the exact tag, `release-stable.yml` on the frozen
-  release line. Both forward only guard evidence, never an identity. A
-  release never follows from a push, so the anchor is chosen from refs that
-  already exist and no lane starts by accident.
-- The channel is read from the version, never named beside it. `plumb release
-  channel` derives it and is the only place that rule lives: `X.Y.Z` is stable
-  and `X.Y.Z-<channel>.N` names its own channel. An exact version therefore
-  carries its channel into every job that resolves it.
-- A branch is a line and a tag is a point. `release/vX.Y.Z` accumulates the
-  picked commits and remains the permanent audit boundary; the tag records
-  which commit was published. A tag is a declaration and a convenience, not
-  evidence: it may move, while the published seal cannot, and the seal wins
-  wherever the two disagree. Stable carries both a line and a point, and the
-  line stays the audit boundary; the point exists so a declared release has one
-  removable handle.
-- Locking the contract is one job, so it is one family. The contract is a
-  version, a lock form, and a projection surface; `plumb release` holds all
-  three. `prepare`, `pick`, `freeze` and `rejoin` carry the lock form — a line
-  is the apparatus by which a version is fixed to a commit and made permanent,
-  and it exists for one release and rejoins when that release ends, so it was
-  never a lifecycle beside the release. `stamp` and `retract` make and remove
-  the point, for either channel. `reference`, `channel` and `surface` read the
-  version and the surface. `plumb ship` executes against what was locked, and
-  the binary is one of its adaptors like any other. An exact release starts from
-  a point a mechanism made rather than a hand, and a stable release is declared
-  before it runs: dispatching stable refuses unless its point already stands at
-  the line head. `release rejoin` performs the merge when given a version and
-  proves the topology when a run gives it none. Retraction reads the release authority first and continues only on a
-  plain absence: a served seal refuses because the version projected something,
-  and any other answer refuses because a destructive act never runs on a
-  reading it cannot trust. It acts on the declaration alone and leaves the line
-  standing, so what it removes is a name, never evidence.
-- A dry run performs every read and no write. It resolves the same conditions
-  the real run resolves — whether the line already stands, which commit it
-  points at — so what it prints is what would happen from the state the remote
-  is actually in, rather than a guess written beside the code. It therefore
-  needs the network and the same credentials, and refuses rather than print a
-  plan it could not verify. Every mutation a verb performs is declared as one
-  step and the printed course is that declaration, so an action reaching the
-  remote without a line describing it is not expressible.
-- A line generates itself. Every exact publication points its channel at what
-  that run published, so the next run on any line installs the newest exact
-  Plumb rather than canonical stable, and falls back to stable only when no
-  exact stands. A release that repairs the release mechanism is therefore built
-  by a Plumb that already carries the repair, which is the case that made a
-  one-time bootstrap necessary twice. The generator records what it was: a
-  prerelease binary seals `exact-release` provenance naming its own published
-  seal, and that provenance must name a point on the line being released.
-- Exact seal creation is create-only and idempotent by content, and every
-  attachment projects on the same terms: finding its object already published
-  compares that digest against the bytes just built and refuses on drift rather
-  than treat a name as evidence, and where a registry answers with an identity
-  and not a digest that is the weak case, which the adaptor says rather than let
-  a caller assume the strong one. A product carrying a binary projects a declared
-  medium only once that release's seal reads back from the authority at the
-  digest the capsule assembled — a capsule is an upload plan, proving what was
-  built, not what stands. Publish and stable activation use separate credentials
-  and separate Plumb commands.
-- `plumb release inspect` takes its exact or stable public URL from the release
-  environment and proves release identity. `plumb ship binary inspect` reads
-  the same surface and proves the binary projection.
-- `plumb ship binary smoke` performs the shared cross-platform generated-manager
-  install, exact `--version` probe, update, and uninstall cycle from the product
-  declaration.
-- Cargo rehearses the first package it will project, then publishes and reads
-  back every package before preparing its dependent. A package that did not
-  move keeps the release it last changed in, and every requirement on it names
-  that one, so `plumb` and `plumb-macro` stay coupled exactly without
-  republishing what stood still or demanding an unpublished dependency exist.
-- Release identity lives in exact seals and the stable pointer; new releases do
-  not create Git tags. Historical tags are retained as history, not consensus.
-- After stable succeeds, a local operator rejoins the release line into
-  `main` with a topology-preserving merge. The stable commit must become an
-  ancestor of `main` before another stable line can activate. This settlement
-  is independent from the Actions lane; exact publication and ordinary `main`
-  work remain unblocked. The settled release branch remains permanently frozen
-  as the stable version's source and audit boundary; the merge request never
-  asks Forgejo to delete it.
-- A registry projection takes its identity from the declaration and its secret
-  from the environment: `account` on the image and chart attachments names the
-  forge identity, and `PLUMB_RELEASE_REGISTRY_TOKEN` carries the credential. An
-  account is a public name, so a lane that supplied it would hold a decision the
-  product owns; a credential is not, so it never enters the manifest. An owner
-  segment in an
-  image or chart path names an organisation, which is not an account, so no
-  login is derived from it. A module published under a prerelease version
-  carries its channel as the distribution tag, because a registry that defaults
-  a prerelease to latest would hand consumers an unreleased build.
-- Every product repository uses the same Forgejo secret names:
-  `RELEASE_PUBLISH_S3_*`, `RELEASE_ACTIVATE_S3_*`, and optional
-  `RELEASE_REGISTRY_TOKEN`. Authority comes from `plumb.toml`, not a repository
-  variable.
+  shared caller, because the tool that renders a lane cannot depend on a copy of
+  itself to render its own.
 
-## Site
-
-- A repository declares one site with `apps/*/wrangler.jsonc`; Plumb derives
-  its package, assets, worker, routes, and fingerprint without a repository
-  ship wrapper.
-- `plumb ship site plan` is credential-free, `plumb ship site inspect` reads
-  Cloudflare state, and `plumb ship site deploy` builds, uploads, reads binding,
-  and proves the public edge serves the built fingerprint. The site is an
-  adaptor rather than a command of its own, so nothing projects outside `ship`.
-- Site authority enters only through `PLUMB_SITE_TOKEN`,
-  `PLUMB_SITE_ACCOUNT`, and `PLUMB_SITE_DOMAIN`. The token never enters command
-  arguments or logs; it reaches Cloudflare through Runseal's in-process
-  dialect.
-- Deploy, bound, and reachable are separate outcomes. Binding is
-  `yes|no|unknown`; `PLUMB_SITE_BLIND=true` can excuse failed reachability only
-  when binding is positively known.
+The verbs are `plumb release --help` and `plumb ship --help`. The laws are
+`plumb rule list --namespace release`, twenty four of them, and they state the
+product surface, the rendered lane, the seats a stable label may take, and the
+isolation every non-stable release owes. Why the contract has this shape, and
+every decision that put it there, is `perish.code/plumb-release-contract`.
 
 ## Cold-start
 
-Plumb owns the complete life of a governed product's release surface: land,
-guard, release, publish, stable, site, and retire. Retirement is the mirror of
-release, not a foreign errand, and it lives here because everything it destroys
-is something Plumb declared, published, or protected.
+Retirement is the mirror of release, not a foreign errand, and it lives here
+because everything it destroys is something Plumb declared, published, or
+protected.
 
 Plumb does not cold-start. It creates no repository, no bucket, and no domain
 that does not already exist, and it never infers or repairs missing external
@@ -344,26 +98,5 @@ state. A missing authority blocks at its owning control plane. This is an
 implementation constraint, not a permission one: no provisioning call exists in
 this codebase, and adding one is the change that must be refused, because the
 authority Plumb already holds is sufficient to provision if such a call were
-ever written.
-
-Plumb may derive ephemeral authority to act on what it governs. `plumb retire`
-cuts short-lived scoped tokens from the declared factory in `PLUMB_RETIRE_*`,
-bounds them with an expiry, and revokes them in an arm that runs whether the
-sweep succeeded or failed. A derived token never enters command arguments or
-logs, and no derived token outlives the command that cut it. The factory
-credential itself is provisioned elsewhere; Plumb consumes it and never mints
-one.
-
-Plumb itself needs one explicit genesis ceremony to publish and activate the
-first release that contains this substrate. The ceremony runs the source-built
-binary once with the same capsule protocol and separate credentials. No
-bootstrap branch or alternate permanent workflow survives genesis.
-
-Retirement destroys and cannot be undone, so it is bounded by declaration
-rather than by argument. A product that can be retired names its bucket and
-zone under `[release.retire]`; one that declares nothing cannot be retired at
-all. The dry run is the default and reads no credentials. `--execute` acts only
-when `--confirm-repo`, `--confirm-bucket`, and `--confirm-domain` each equal
-their target verbatim, and the destructive order is fixed: inventory, archive
-and purge credentials, revoke the writer, detach the domain, empty and delete
-the bucket, delete the repository, remove the local escrow.
+ever written. An absence is the one thing the source cannot show you, which is
+why it is stated here and nowhere else.

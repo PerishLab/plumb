@@ -123,8 +123,8 @@ rule!(
     KNOWN_DIRECTORY,
     "structure.known-directory",
     "Top-level directories have a known role",
-    "Every top-level directory has a shadow in the skeleton or a matching workflow.",
-    "Repository top-level directory names.",
+    "Every top-level directory sits in a declared seat, or has a shadow in the skeleton where no layout is declared.",
+    "Repository top-level directory names against the declared layout, or against the released name sets where none is declared.",
     Mechanized,
     PLUMB,
     [REPOSITORY]

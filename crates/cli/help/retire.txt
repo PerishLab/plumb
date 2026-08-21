@@ -1,0 +1,21 @@
+Destroy one declared delivery chain in a fixed order.
+
+Retirement is bounded by declaration, never by argument. A product that can be
+retired names its bucket and zone under [release.retire]; one that declares
+nothing cannot be retired at all, and says so instead of asking.
+
+The dry run is the default and reads no credentials. It prints the target and
+the plan, which is the same fixed order --execute follows: inventory, archive
+and purge credentials, revoke the writer, detach the domain, empty and delete
+the bucket, delete the repository, remove the local escrow.
+
+--execute acts only when --confirm-repo, --confirm-bucket, and --confirm-domain
+each equal their target verbatim. A confirmation that merely looks right is
+refused by name.
+
+Authority enters through PLUMB_RETIRE_ACCOUNT and PLUMB_RETIRE_TOKEN. Plumb
+cuts short-lived scoped tokens from that factory, bounds them with an expiry,
+and revokes them in an arm that runs whether the sweep succeeded or failed. A
+derived token never enters a command argument or a log, and none outlives the
+command that cut it. The factory credential itself is provisioned elsewhere:
+Plumb consumes it and never mints one.

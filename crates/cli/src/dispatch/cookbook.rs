@@ -37,11 +37,11 @@ fn render(name: Option<&str>) -> Result<String, String> {
     let Some(name) = name else {
         return Ok(ledger());
     };
-    ENTRIES
+    let entry = ENTRIES
         .iter()
         .find(|entry| entry.name == name)
-        .map(|entry| entry.body.to_string())
-        .ok_or_else(|| format!("unknown cookbook entry `{name}`; available: {}", names()))
+        .ok_or_else(|| format!("unknown cookbook entry `{name}`; available: {}", names()))?;
+    super::depot::held().read(&format!("cookbook/{name}.txt"), entry.body)
 }
 
 fn ledger() -> String {

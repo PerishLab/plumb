@@ -1,0 +1,8 @@
+Build, upload, and prove the edge serves what was built.
+
+Deployed, bound, and reachable are three outcomes, not one. Binding is yes, no,
+or unknown, because a denied control-plane read is not evidence that a domain is
+unbound.
+
+PLUMB_SITE_BLIND=true excuses a failed reachability check only where binding is
+positively known. It cannot excuse an unknown one.

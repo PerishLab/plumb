@@ -1,0 +1,9 @@
+Project a clean topic branch onto its base and wait for its guard.
+
+Forgejo authority enters through FORGEJO_URL with either FORGEJO_TOKEN_FILE or
+FORGEJO_TOKEN. Plumb neither discovers nor parses tea.yml, and it owns no HTTP
+sender of its own: every operation goes through Runseal's published dialect.
+
+The source branch is kept. What lands is a one-commit projection at
+land/<branch>, and the merge is fast-forward-only against the exact candidate
+the guard passed.

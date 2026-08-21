@@ -30,6 +30,10 @@ pub enum Deed {
         #[command(subcommand)]
         deed: Cfworker,
     },
+    #[command(
+        about = "Project a declared site onto its edge",
+        long_about = super::depot::carried("help/ship/site.txt", plumb::seat::resource!("help/ship/site.txt"))
+    )]
     Site {
         #[command(subcommand)]
         deed: Site,
@@ -68,14 +72,20 @@ pub enum Npm {
 
 #[derive(Subcommand)]
 pub enum Site {
+    #[command(
+        about = "Build, upload, and prove the edge serves what was built",
+        long_about = super::depot::carried("help/ship/site/deploy.txt", plumb::seat::resource!("help/ship/site/deploy.txt"))
+    )]
     Deploy {
         #[arg(long, default_value = ".")]
         root: std::path::PathBuf,
     },
+    #[command(about = "Read what Cloudflare currently holds for this site")]
     Inspect {
         #[arg(long, default_value = ".")]
         root: std::path::PathBuf,
     },
+    #[command(about = "Derive the site from the build without reaching any credential")]
     Plan {
         #[arg(long, default_value = ".")]
         root: std::path::PathBuf,

@@ -1,0 +1,17 @@
+Render the seats and file groups this repository declares.
+
+A seat says where something may sit and an anchor says what a member must carry
+to earn it, so crates/*/{Cargo.toml} makes a directory legal for holding a
+Cargo.toml rather than for being spelled crates. Coverage is judged at the top
+level: a directory or root file in no declared seat is an unknown shape. Depth
+enters only where a seat declares members and an anchor to judge them by.
+
+Adoption is incremental. A repository declaring no [layout] is judged by the
+released name sets exactly as before. A declared layout that cannot be read is
+blind rather than quietly permitted: it does not fall back to those name sets,
+because a repository claiming rules Plumb cannot read has not been judged
+leniently, it has not been judged.
+
+anchor = [] governs a level while leaving its members unjudged, so a shape that
+is real and undecided stays visible as data instead of as a gap. A retired seat
+keeps its row and stops judging, and the name it held becomes unknown again.

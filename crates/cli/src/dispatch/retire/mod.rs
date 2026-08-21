@@ -21,15 +21,34 @@ const MINUTES: u64 = 15;
 
 #[derive(Args)]
 pub struct Deed {
-    #[arg(long, default_value = ".")]
+    #[arg(
+        long,
+        default_value = ".",
+        help = "Repository root whose [release.retire] declares the chain"
+    )]
     pub root: PathBuf,
-    #[arg(long)]
+    #[arg(
+        long,
+        help = "Destroy for real; without it the run is a dry plan that reads no credentials"
+    )]
     pub execute: bool,
-    #[arg(long = "confirm-repo", default_value = "")]
+    #[arg(
+        long = "confirm-repo",
+        default_value = "",
+        help = "Must equal the target repository verbatim"
+    )]
     pub repo: String,
-    #[arg(long = "confirm-bucket", default_value = "")]
+    #[arg(
+        long = "confirm-bucket",
+        default_value = "",
+        help = "Must equal the target bucket verbatim"
+    )]
     pub bucket: String,
-    #[arg(long = "confirm-domain", default_value = "")]
+    #[arg(
+        long = "confirm-domain",
+        default_value = "",
+        help = "Must equal the target domain verbatim"
+    )]
     pub domain: String,
 }
 

@@ -1,0 +1,9 @@
+Project a declared site onto its edge.
+
+A repository declares one site with apps/*/wrangler.jsonc, and Plumb derives its
+package, assets, worker, routes, and fingerprint from the build. No repository
+ship wrapper stands between them.
+
+Authority enters only through PLUMB_SITE_TOKEN, PLUMB_SITE_ACCOUNT, and
+PLUMB_SITE_DOMAIN. The token never enters an argument or a log: it reaches
+Cloudflare through Runseal's in-process dialect.

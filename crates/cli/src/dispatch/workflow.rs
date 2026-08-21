@@ -1,30 +1,37 @@
 mod remote;
 
+mod spread;
+
 use crate::shape;
 use clap::Subcommand;
 use plumb::cli::Root;
 use plumb::rig::Rig;
 use remote::{Remote, SEAT};
+use spread::spread;
 use std::path::{Path, PathBuf};
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(about = "Report what the recorded runs of this repository's lanes did")]
     Status {
         #[command(flatten)]
         target: Root,
         #[arg(long, default_value = "")]
         since: String,
     },
+    #[command(about = "Ask, per key, whether a lane may skip the step that key owns")]
     Ask {
         lane: String,
         #[command(flatten)]
         target: Root,
     },
+    #[command(about = "Print the input hash one declared key resolves to")]
     Hash {
         key: String,
         #[command(flatten)]
         target: Root,
     },
+    #[command(about = "Record that one key already ran, beside the release objects")]
     Lock {
         key: String,
         #[command(flatten)]
@@ -284,15 +291,4 @@ impl Seat {
         }
         0
     }
-}
-
-fn spread(held: &shape::workflow::Held, root: &str) -> Option<String> {
-    let found = held.contribution(root);
-    if root.starts_with("key://") {
-        return Some(format!("{} paths", found.len()));
-    }
-    if root.starts_with("suite://") {
-        return Some(found.join(" "));
-    }
-    None
 }

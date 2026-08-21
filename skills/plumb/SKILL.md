@@ -11,6 +11,10 @@ Plumb governs a repository carrying `plumb.toml` at its root. Outside that
 boundary this brief is silent. Read the repository's own `AGENTS.md`, then run
 Doctor before changing its shape and again after.
 
+Four surfaces answer: the source says what a thing does, `--help` says how to
+use it, `plumb cookbook` says what to do when something fired, and this brief
+says what none of those can. Ask the one that owns the question.
+
 ## Objects
 
 - A **repository** is the root selected by `plumb.toml`.
@@ -42,6 +46,10 @@ plumb doctor . --json      # this repository's shape and findings
 plumb layout .             # the seats this repository declares
 plumb cookbook [entry]     # what to do about a finding that names one
 ```
+
+`--help` answers before you act and covers every command; a cookbook entry
+answers after something fired and exists only where the finding does not already
+tell you the move.
 
 Copying a standing list into prose is how a brief starts lying. This one holds
 objects and points at authorities; it states no flag and no law.

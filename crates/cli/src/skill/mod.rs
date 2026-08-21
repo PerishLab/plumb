@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(about = "Install a released brief into every agent seat this machine carries")]
     Install {
         #[arg(long, default_value = "stable")]
         channel: String,
@@ -15,6 +16,7 @@ pub enum Deed {
         #[arg(long)]
         force: bool,
     },
+    #[command(about = "Move installed briefs to the version the channel names")]
     Upgrade {
         #[arg(long, default_value = "stable")]
         channel: String,
@@ -25,6 +27,7 @@ pub enum Deed {
         #[arg(long)]
         json: bool,
     },
+    #[command(about = "Report which brief each agent seat holds and against which binary")]
     Status {
         #[arg(long, default_value = "stable")]
         channel: String,
@@ -33,6 +36,7 @@ pub enum Deed {
         #[arg(long)]
         json: bool,
     },
+    #[command(about = "Unpack a brief into a staging path without touching an agent seat")]
     Stage {
         #[arg(long)]
         channel: String,
@@ -41,7 +45,9 @@ pub enum Deed {
         #[arg(long)]
         path: PathBuf,
     },
+    #[command(about = "List the agent seats this machine carries")]
     List,
+    #[command(about = "Remove an installed brief from the seats that own it")]
     Uninstall,
 }
 
