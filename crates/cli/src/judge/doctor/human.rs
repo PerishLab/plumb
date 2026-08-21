@@ -46,23 +46,6 @@ pub fn render(seen: Held<'_>) {
         held.path.unwrap_or(0),
         show(&held.grants)
     );
-    for document in &held.documents.held {
-        println!(
-            "  document  {} target={} source={} budget={} text={} leaves={}",
-            document.strategy.id(),
-            document.target,
-            document.sources.len(),
-            document
-                .budget
-                .map_or_else(|| "?".into(), |held| held.to_string()),
-            document
-                .lines
-                .map_or_else(|| "?".into(), |held| held.to_string()),
-            document
-                .leaves
-                .map_or_else(|| "?".into(), |held| held.to_string()),
-        );
-    }
     match vocabulary {
         Ok(report) => println!(
             "  vocabulary {} {} retired={} scanned={}/{}",

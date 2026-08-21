@@ -83,10 +83,6 @@ enum Command {
         #[arg(long)]
         version: Option<String>,
     },
-    Document {
-        #[command(flatten)]
-        target: Root,
-    },
     Lane {
         #[command(flatten)]
         target: Root,
@@ -140,7 +136,6 @@ impl Command {
             Self::Skill { .. } => "skill",
             Self::Rule { .. } => "rule",
             Self::Changelog { .. } => "changelog",
-            Self::Document { .. } => "document",
             Self::Lane { .. } => "lane",
             Self::Layout { .. } => "layout",
             Self::Cookbook { .. } => "cookbook",
@@ -205,9 +200,6 @@ fn execute(command: Command) -> i32 {
         Command::Rule { deed } => judge::catalog::query::run(deed),
         Command::Changelog { target, version } => {
             dispatch::command::Seat::new(PathBuf::from(target.root)).changelog(version)
-        }
-        Command::Document { target } => {
-            dispatch::command::Seat::new(PathBuf::from(target.root)).document()
         }
         Command::Lane { target, write } => {
             dispatch::command::Seat::new(PathBuf::from(target.root)).lane(write)

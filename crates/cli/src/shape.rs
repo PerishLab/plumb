@@ -3,7 +3,6 @@ use std::path::Path;
 
 pub mod changelog;
 pub(crate) mod dependency;
-pub mod document;
 mod forge;
 pub mod lane;
 pub mod layout;
@@ -51,7 +50,6 @@ pub struct Shape {
     pub web: Option<Found>,
     pub policy: Vec<String>,
     pub guard: String,
-    pub documents: document::Read,
     pub layout: layout::Read,
 }
 
@@ -208,7 +206,6 @@ pub fn capture(
             }
         }
     }
-    let documents = document::read(root, snapshot.as_ref());
     let held = layout::read(root, snapshot.as_ref());
     let release = pair::release(root);
     let ships = release.attachments.clone();
@@ -249,7 +246,6 @@ pub fn capture(
         bounds: policy::bounds(doc.as_ref()),
         root: root.to_path_buf(),
         guard: guarded.source,
-        documents,
         layout: held,
     }
 }

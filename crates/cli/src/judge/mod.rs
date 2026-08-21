@@ -20,7 +20,6 @@ pub fn judge(held: &shape::Shape) -> Vec<Finding> {
     let mut notes = Vec::new();
     for found in [
         held.env(),
-        shape::document::check(held),
         held.structure(),
         deps::check(held),
         held.web.clone().unwrap_or_default(),

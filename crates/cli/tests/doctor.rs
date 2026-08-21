@@ -6,8 +6,6 @@ mod datum;
 mod dependency;
 #[path = "doctor/depot.rs"]
 mod depot;
-#[path = "doctor/document.rs"]
-mod document;
 #[path = "doctor/json.rs"]
 mod json;
 #[path = "doctor/layout.rs"]

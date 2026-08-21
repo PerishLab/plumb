@@ -52,32 +52,6 @@ impl Seat {
         }
     }
 
-    pub fn document(&self) -> i32 {
-        let snapshot = plumb::snapshot::Snapshot::read(&self.0);
-        let held = shape::capture(&self.0, &snapshot);
-        println!("plumb document {}", self.0.display());
-        println!();
-        match &held.documents.config {
-            shape::document::Config::Held(_) => {}
-            shape::document::Config::Blind(error) | shape::document::Config::Wrong(error) => {
-                println!("  {error}");
-                return 1;
-            }
-            _ => {
-                println!("  no document binding is declared");
-                return 1;
-            }
-        }
-        if let Some(error) = &held.documents.blind {
-            println!("  {error}");
-            return 1;
-        }
-        let ok = held.documents.held.iter().all(Self::proposal);
-        println!();
-        println!("  record these seals only after reading every named source and target");
-        i32::from(!ok)
-    }
-
     pub fn policy(&self, write: bool) -> i32 {
         let path = self.0.join("ectropy.toml");
         let text = match std::fs::read_to_string(&path) {
@@ -228,42 +202,5 @@ impl Seat {
         println!();
         println!("  run plumb lane --write to render what this repository declares");
         1
-    }
-
-    fn proposal(document: &shape::document::Document) -> bool {
-        println!("  {} {}", document.strategy.id(), document.target);
-        let mut ok = document.sources.iter().all(Self::source);
-        if let Some(seal) = &document.actual {
-            println!("    target-seal = \"{seal}\"");
-        } else {
-            ok = false;
-        }
-        for error in &document.errors {
-            println!("    {error}");
-            ok = false;
-        }
-        ok
-    }
-
-    fn source(source: &shape::document::Source) -> bool {
-        if !source.loose.is_empty() {
-            println!(
-                "    source {} holds untracked leaves; git add or ignore them first: {}",
-                source.path,
-                shape::document::named(&source.loose)
-            );
-            return false;
-        }
-        match (&source.actual, &source.error) {
-            (Some(seal), _) => {
-                println!("    source {} seal = \"{seal}\"", source.path);
-                true
-            }
-            (_, Some(error)) => {
-                println!("    {error}");
-                false
-            }
-            _ => false,
-        }
     }
 }

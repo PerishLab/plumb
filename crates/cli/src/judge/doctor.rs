@@ -41,17 +41,6 @@ struct Shape {
     sites: Vec<String>,
     dependencies: Vec<Dependency>,
     law: Law,
-    documents: Vec<Document>,
-}
-
-#[derive(Serialize)]
-struct Document {
-    strategy: &'static str,
-    target: String,
-    source: usize,
-    text: Option<usize>,
-    budget: Option<usize>,
-    leaves: Option<usize>,
 }
 
 #[derive(Serialize)]
@@ -240,19 +229,6 @@ impl Shape {
                 path: held.path.unwrap_or(0),
                 grants: held.grants.iter().cloned().collect(),
             },
-            documents: held
-                .documents
-                .held
-                .iter()
-                .map(|document| Document {
-                    strategy: document.strategy.id(),
-                    target: document.target.clone(),
-                    source: document.sources.len(),
-                    text: document.lines,
-                    budget: document.budget,
-                    leaves: document.leaves,
-                })
-                .collect(),
         }
     }
 }
