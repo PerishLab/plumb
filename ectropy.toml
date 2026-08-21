@@ -40,11 +40,8 @@ paths = ["crates/cli/tests"]
 
 [[boundary]]
 allow = ["fanout"]
-note = "the skill budget observation adds one rule and one repository shape probe to the established inventories"
-paths = [
-    "crates/cli/src/catalog/rules",
-    "crates/cli/src/shape",
-]
+note = "the skill budget observation adds one repository shape probe to the established inventory"
+paths = ["crates/cli/src/shape"]
 
 [[boundary]]
 allow = [

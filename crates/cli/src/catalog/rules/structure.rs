@@ -130,16 +130,6 @@ rule!(
     [REPOSITORY]
 );
 rule!(
-    TRANSITIONAL_WRAPPERS_OBSERVED,
-    "structure.transitional-wrappers-observed",
-    "Transitional wrappers remain visible",
-    "Repository-authored wrappers are transitional or product-specific observations, not a required generic lifecycle inventory.",
-    "Wrapper names below .runseal/wrappers in Doctor's positive shape snapshot.",
-    Observed,
-    PLUMB,
-    [ADOPTION, REPOSITORY]
-);
-rule!(
     KNOWN_WORKFLOW,
     "structure.known-workflow",
     "Workflows have known roles",
@@ -241,6 +231,6 @@ pub fn all() -> Vec<&'static Rule> {
         &SEAT_AFFIRMED, &SEAT_ANCHORED, &SEAT_MEMBER,
         &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
         &RELEASE_LANE_PRESENT, &RELEASE_SOURCE_BOUND, &RESERVED_COMPONENTS_SEAT,
-        &SITE_DEPLOY_LANE, &TRANSITIONAL_WRAPPERS_OBSERVED,
+        &SITE_DEPLOY_LANE,
     ]
 }
