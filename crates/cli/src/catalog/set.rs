@@ -36,15 +36,19 @@ pub const SETS: [(&str, &str); 5] = [
     ("workflow", plumb::seat::resource!("rules/workflow.toml")),
 ];
 
-pub static LIMITS: LazyLock<BTreeMap<String, i64>> = LazyLock::new(|| {
-    let doc: toml::Table = carried(
+pub static POLICY: LazyLock<toml::Table> = LazyLock::new(|| {
+    carried(
         &held(),
-        "rules/limit.toml",
-        plumb::seat::resource!("rules/limit.toml"),
+        "rules/policy.toml",
+        plumb::seat::resource!("rules/policy.toml"),
     )
     .parse()
-    .expect("rules/limit.toml must parse");
-    doc.get("limit")
+    .expect("rules/policy.toml must parse")
+});
+
+pub fn limits() -> BTreeMap<String, i64> {
+    POLICY
+        .get("limit")
         .and_then(toml::Value::as_table)
         .map(|table| {
             table
@@ -52,8 +56,16 @@ pub static LIMITS: LazyLock<BTreeMap<String, i64>> = LazyLock::new(|| {
                 .filter_map(|(name, value)| Some((name.clone(), value.as_integer()?)))
                 .collect()
         })
-        .unwrap_or_else(|| panic!("rules/limit.toml must hold a limit table"))
-});
+        .unwrap_or_else(|| panic!("rules/policy.toml must hold a limit table"))
+}
+
+pub fn setting(section: &str, key: &str) -> bool {
+    POLICY
+        .get(section)
+        .and_then(|table| table.get(key))
+        .and_then(toml::Value::as_bool)
+        .unwrap_or_else(|| panic!("rules/policy.toml must hold {section}.{key}"))
+}
 
 pub fn read(name: &str) -> Result<toml::Table, String> {
     let factory = SETS

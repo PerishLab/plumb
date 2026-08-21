@@ -48,8 +48,16 @@ pub fn check(root: &Path, doc: &toml::Value) -> Vec<String> {
         &mut found,
     );
     policy.limits(&mut found);
-    policy.setting(("comment", "allow"), false, &mut found);
-    policy.setting(("word", "single"), true, &mut found);
+    policy.setting(
+        ("comment", "allow"),
+        crate::catalog::set::setting("comment", "allow"),
+        &mut found,
+    );
+    policy.setting(
+        ("word", "single"),
+        crate::catalog::set::setting("word", "single"),
+        &mut found,
+    );
     compare(
         "test grant",
         policy.syntax("grant", "test"),
@@ -200,13 +208,13 @@ struct Policy<'a>(&'a toml::Value);
 
 impl Policy<'_> {
     fn limits(&self, found: &mut Vec<String>) {
-        for (name, value) in crate::catalog::set::LIMITS.iter() {
+        for (name, value) in crate::catalog::set::limits() {
             let seen = self
                 .0
                 .get("limit")
-                .and_then(|table| table.get(name))
+                .and_then(|table| table.get(&name))
                 .and_then(toml::Value::as_integer);
-            if seen != Some(*value) {
+            if seen != Some(value) {
                 found.push(format!("ectropy limit {name} must be {value}"));
             }
         }

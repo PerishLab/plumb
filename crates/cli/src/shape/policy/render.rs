@@ -24,9 +24,9 @@ pub fn render(root: &Path, text: &str) -> Result<String, String> {
     doc.insert(
         "limit".to_string(),
         toml::Value::Table(
-            crate::catalog::set::LIMITS
-                .iter()
-                .map(|(name, value)| (name.clone(), toml::Value::Integer(*value)))
+            crate::catalog::set::limits()
+                .into_iter()
+                .map(|(name, value)| (name, toml::Value::Integer(value)))
                 .collect(),
         ),
     );
@@ -34,14 +34,14 @@ pub fn render(root: &Path, text: &str) -> Result<String, String> {
         "comment".to_string(),
         toml::Value::Table(toml::Table::from_iter([(
             "allow".to_string(),
-            toml::Value::Boolean(false),
+            toml::Value::Boolean(crate::catalog::set::setting("comment", "allow")),
         )])),
     );
     doc.insert(
         "word".to_string(),
         toml::Value::Table(toml::Table::from_iter([(
             "single".to_string(),
-            toml::Value::Boolean(true),
+            toml::Value::Boolean(crate::catalog::set::setting("word", "single")),
         )])),
     );
     merge(&mut doc, ("grant", "test"), want.tests.clone(), false);

@@ -1,0 +1,39 @@
+# The part of a repository's ectropy policy that plumb writes the same way for
+# every repository. What is derived from a repository's own shape -- which files
+# are scanned, where the module roots are -- is computed and does not live here.
+#
+# plumb renders these sections into ectropy.toml and judges what it finds there
+# against this same file, so there is one source and no pair of copies to drift
+# apart. Before this file existed the numbers were written twice inside the
+# binary and nothing compared them.
+#
+# Carried, so changing any of it is one depot publish, scoped to a channel and
+# reversible, instead of a release and an estate upgrade. A repository that
+# cannot meet a limit does not raise it: it states a [[boundary]] naming the
+# paths and the reason, and the note says which task retires the row. A limit
+# with no retirement condition stops being a limit.
+
+[limit]
+# Nested blocks inside one function body.
+block = 4
+# Entries directly inside one scanned directory. Hitting it means a layer is
+# missing, not that the layer is full.
+fanout = 10
+# Lines in one file.
+file = 300
+# Nesting depth of markup elements.
+markup = 8
+# Parameters on one function.
+param = 4
+# Directory levels below a module root.
+path = 4
+
+[comment]
+# Code says what it does by being read. A comment that explains it is a second
+# statement of the same thing, free to drift from the first.
+allow = false
+
+[word]
+# One identifier, one word. A compound name is usually two responsibilities that
+# have not been separated yet.
+single = true
