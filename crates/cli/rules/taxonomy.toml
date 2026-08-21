@@ -1,0 +1,174 @@
+# The words a rule may be filed under: who it is answerable to, what it is about,
+# and which part of the skeleton it belongs to.
+#
+# Nothing here judges anything. It is the vocabulary the catalogue is written
+# in, and it is carried beside the catalogue so that adding an owner, renaming a
+# scope, or writing a better summary is one depot publish rather than a release.
+#
+# Every id is a canonical token: lowercase letters, digits, and single hyphens.
+# A rule names one `owner` and one or more `tags` from this file, and its own id
+# begins with a `namespace` from it. A name that resolves to nothing here is not
+# a rule the catalogue can hold, so a taxonomy that fails to answer the carried
+# catalogue is not used: the compiled pair is read instead, both files together.
+
+[[owner]]
+id = "cargo"
+summary = "the Rust package and release boundary"
+
+[[owner]]
+id = "ectropy"
+summary = "the syntax and policy checker"
+
+[[owner]]
+id = "plumb"
+summary = "the travelling repository skeleton"
+
+[[owner]]
+id = "product"
+summary = "the binary that owns its vocabulary"
+
+[[owner]]
+id = "release"
+summary = "the publishing and deployment lane"
+
+[[owner]]
+id = "sidecar"
+summary = "the local process dispatch layer"
+
+[[owner]]
+id = "skill"
+summary = "the released agent operating brief"
+
+[[owner]]
+id = "web"
+summary = "the web application layer"
+
+[[tag]]
+id = "adoption"
+summary = "operator entrypoint adoption"
+
+[[tag]]
+id = "cargo"
+summary = "Rust workspace and package shape"
+
+[[tag]]
+id = "configuration"
+summary = "runtime configuration and templates"
+
+[[tag]]
+id = "dependency"
+summary = "dependency naming and policy"
+
+[[tag]]
+id = "dispatch"
+summary = "process dispatch and readiness"
+
+[[tag]]
+id = "document"
+summary = "governed repository prose"
+
+[[tag]]
+id = "ectropy"
+summary = "ectropy policy and execution"
+
+[[tag]]
+id = "ownership"
+summary = "resource ownership boundaries"
+
+[[tag]]
+id = "release"
+summary = "release and deployment lanes"
+
+[[tag]]
+id = "repository"
+summary = "repository skeleton shape"
+
+[[tag]]
+id = "site"
+summary = "site build and deployment shape"
+
+[[tag]]
+id = "skill"
+summary = "agent operating briefs"
+
+[[tag]]
+id = "state"
+summary = "machine-owned durable state"
+
+[[tag]]
+id = "vocabulary"
+summary = "domain vocabulary lifecycle"
+
+[[tag]]
+id = "web"
+summary = "web application and site shape"
+
+[[namespace]]
+id = "config"
+summary = "runtime policy vocabulary"
+owner = "product"
+
+[[namespace]]
+id = "depot"
+summary = "configuration distribution"
+owner = "plumb"
+
+[[namespace]]
+id = "deps"
+summary = "dependency posture"
+owner = "plumb"
+
+[[namespace]]
+id = "document"
+summary = "governed repository prose"
+owner = "plumb"
+
+[[namespace]]
+id = "dispatch"
+summary = "process dispatch shape"
+owner = "sidecar"
+
+[[namespace]]
+id = "env"
+summary = "repository execution environment"
+owner = "plumb"
+
+[[namespace]]
+id = "release"
+summary = "release lane anatomy"
+owner = "release"
+
+[[namespace]]
+id = "site"
+summary = "site deployment semantics"
+owner = "release"
+
+[[namespace]]
+id = "skill"
+summary = "released agent brief"
+owner = "skill"
+
+[[namespace]]
+id = "state"
+summary = "machine-owned state"
+owner = "product"
+
+[[namespace]]
+id = "structure"
+summary = "repository skeleton"
+owner = "plumb"
+
+[[namespace]]
+id = "template"
+summary = "config text variables"
+owner = "product"
+
+[[namespace]]
+id = "vocabulary"
+summary = "domain vocabulary lifecycle"
+owner = "plumb"
+
+[[namespace]]
+id = "web"
+summary = "web application shape"
+owner = "web"

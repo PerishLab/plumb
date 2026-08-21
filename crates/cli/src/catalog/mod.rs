@@ -6,11 +6,146 @@ pub mod taxonomy;
 
 use model::{Coverage, Rule, Standing};
 use std::collections::BTreeSet;
+use std::sync::LazyLock;
+use taxonomy::{Namespace, Owner, Tag};
 
 pub fn all() -> Vec<&'static Rule> {
     let mut rules = rules::all();
     rules.sort_by_key(|rule| rule.id);
     rules
+}
+
+pub(crate) struct Held {
+    pub owners: Vec<&'static Owner>,
+    pub tags: Vec<&'static Tag>,
+    pub namespaces: Vec<&'static Namespace>,
+    pub rules: Vec<&'static Rule>,
+}
+
+const WORDS: &str = "rules/taxonomy.toml";
+const LAW: &str = "rules/catalog.toml";
+
+pub(crate) fn held() -> &'static Held {
+    &HELD
+}
+
+static HELD: LazyLock<Held> = LazyLock::new(|| {
+    let words = plumb::seat::resource!("rules/taxonomy.toml");
+    let law = plumb::seat::resource!("rules/catalog.toml");
+    let seat = crate::command::depot::held();
+    let carried = (
+        seat.read(WORDS, words)
+            .unwrap_or_else(|_| words.to_string()),
+        seat.read(LAW, law).unwrap_or_else(|_| law.to_string()),
+    );
+    gather(&carried.0, &carried.1)
+        .filter(covered)
+        .unwrap_or_else(|| gather(words, law).expect("the compiled catalogue must hold"))
+});
+
+fn covered(held: &Held) -> bool {
+    rules::mechanisms()
+        .iter()
+        .all(|mechanism| seek(&held.rules, mechanism.0).is_some())
+}
+
+pub(crate) fn seek(held: &[&'static Rule], id: &str) -> Option<&'static Rule> {
+    held.binary_search_by_key(&id, |rule| rule.id)
+        .ok()
+        .map(|seat| held[seat])
+}
+
+fn gather(words: &str, law: &str) -> Option<Held> {
+    let words: toml::Table = words.parse().ok()?;
+    let owners = words
+        .get("owner")?
+        .as_array()?
+        .iter()
+        .map(|value| {
+            Some(&*Box::leak(Box::new(Owner {
+                id: word(value, "id")?,
+                summary: word(value, "summary")?,
+            })))
+        })
+        .collect::<Option<Vec<_>>>()?;
+    let tags = words
+        .get("tag")?
+        .as_array()?
+        .iter()
+        .map(|value| {
+            Some(&*Box::leak(Box::new(Tag {
+                id: word(value, "id")?,
+                summary: word(value, "summary")?,
+            })))
+        })
+        .collect::<Option<Vec<_>>>()?;
+    let namespaces = words
+        .get("namespace")?
+        .as_array()?
+        .iter()
+        .map(|value| {
+            Some(&*Box::leak(Box::new(Namespace {
+                id: word(value, "id")?,
+                summary: word(value, "summary")?,
+                owner: named(&owners, word(value, "owner")?)?,
+            })))
+        })
+        .collect::<Option<Vec<_>>>()?;
+    let law: toml::Table = law.parse().ok()?;
+    let mut rules = law
+        .get("rule")?
+        .as_array()?
+        .iter()
+        .map(|value| {
+            let filed = value
+                .get("tags")?
+                .as_array()?
+                .iter()
+                .map(|tag| named(&tags, Box::leak(tag.as_str()?.to_string().into_boxed_str())))
+                .collect::<Option<Vec<_>>>()?;
+            Some(&*Box::leak(Box::new(Rule {
+                id: word(value, "id")?,
+                summary: word(value, "summary")?,
+                law: word(value, "law")?,
+                evidence: word(value, "evidence")?,
+                standing: Standing::parse(word(value, "standing")?)?,
+                owner: named(&owners, word(value, "owner")?)?,
+                tags: Box::leak(filed.into_boxed_slice()),
+            })))
+        })
+        .collect::<Option<Vec<_>>>()?;
+    rules.sort_by_key(|rule| rule.id);
+    Some(Held {
+        owners,
+        tags,
+        namespaces,
+        rules,
+    })
+}
+
+fn word(value: &toml::Value, key: &str) -> Option<&'static str> {
+    let held = value.get(key)?.as_str()?;
+    Some(Box::leak(held.to_string().into_boxed_str()))
+}
+
+fn named<T: Named>(held: &[&'static T], id: &str) -> Option<&'static T> {
+    held.iter().copied().find(|item| item.id() == id)
+}
+
+pub(crate) trait Named {
+    fn id(&self) -> &'static str;
+}
+
+impl Named for Owner {
+    fn id(&self) -> &'static str {
+        self.id
+    }
+}
+
+impl Named for Tag {
+    fn id(&self) -> &'static str {
+        self.id
+    }
 }
 
 pub fn find(id: &str) -> Option<&'static Rule> {
@@ -45,7 +180,7 @@ pub fn validate() -> Result<(), String> {
         .iter()
         .map(|owner| owner.id)
         .collect::<BTreeSet<_>>();
-    for namespace in taxonomy::NAMESPACES {
+    for namespace in taxonomy::NAMESPACES.iter() {
         if !owners.contains(namespace.owner.id) {
             return Err(format!(
                 "namespace {} names unknown owner {}",
