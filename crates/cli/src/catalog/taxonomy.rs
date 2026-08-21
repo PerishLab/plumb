@@ -1,28 +1,32 @@
 use serde::Serialize;
-use std::sync::LazyLock;
 
 pub struct Owner {
-    pub id: &'static str,
-    pub summary: &'static str,
+    pub id: String,
+    pub summary: String,
 }
 
 pub struct Tag {
-    pub id: &'static str,
-    pub summary: &'static str,
+    pub id: String,
+    pub summary: String,
 }
 
 pub struct Namespace {
-    pub id: &'static str,
-    pub summary: &'static str,
-    pub owner: &'static Owner,
+    pub id: String,
+    pub summary: String,
+    pub owner: String,
 }
 
-pub static OWNERS: LazyLock<Vec<&'static Owner>> = LazyLock::new(|| super::held().owners.clone());
+pub fn owners() -> &'static [Owner] {
+    &super::held().owners
+}
 
-pub static TAGS: LazyLock<Vec<&'static Tag>> = LazyLock::new(|| super::held().tags.clone());
+pub fn tags() -> &'static [Tag] {
+    &super::held().tags
+}
 
-pub static NAMESPACES: LazyLock<Vec<&'static Namespace>> =
-    LazyLock::new(|| super::held().namespaces.clone());
+pub fn namespaces() -> &'static [Namespace] {
+    &super::held().namespaces
+}
 
 #[derive(Serialize)]
 pub struct Ownership {
@@ -46,8 +50,8 @@ pub struct Scope {
 impl From<&'static Owner> for Ownership {
     fn from(owner: &'static Owner) -> Self {
         Self {
-            id: owner.id,
-            summary: owner.summary,
+            id: &owner.id,
+            summary: &owner.summary,
         }
     }
 }
@@ -55,8 +59,8 @@ impl From<&'static Owner> for Ownership {
 impl From<&'static Tag> for Label {
     fn from(tag: &'static Tag) -> Self {
         Self {
-            id: tag.id,
-            summary: tag.summary,
+            id: &tag.id,
+            summary: &tag.summary,
         }
     }
 }
@@ -64,9 +68,9 @@ impl From<&'static Tag> for Label {
 impl From<&'static Namespace> for Scope {
     fn from(namespace: &'static Namespace) -> Self {
         Self {
-            id: namespace.id,
-            summary: namespace.summary,
-            owner: namespace.owner.id,
+            id: &namespace.id,
+            summary: &namespace.summary,
+            owner: &namespace.owner,
         }
     }
 }

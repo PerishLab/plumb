@@ -1,4 +1,3 @@
-use super::taxonomy::{Owner, Tag};
 use serde::Serialize;
 use std::ops::Deref;
 
@@ -31,13 +30,13 @@ impl Standing {
 }
 
 pub struct Rule {
-    pub id: &'static str,
-    pub summary: &'static str,
-    pub law: &'static str,
-    pub evidence: &'static str,
+    pub id: String,
+    pub summary: String,
+    pub law: String,
+    pub evidence: String,
     pub standing: Standing,
-    pub owner: &'static Owner,
-    pub tags: &'static [&'static Tag],
+    pub owner: String,
+    pub tags: Vec<String>,
 }
 
 pub struct Mechanism(pub &'static str);
@@ -51,14 +50,14 @@ impl Deref for Mechanism {
 }
 
 impl Rule {
-    pub fn namespace(&self) -> &'static str {
+    pub fn namespace(&self) -> &str {
         self.id
             .split_once('.')
             .map(|(namespace, _)| namespace)
             .expect("catalog validation requires a namespace")
     }
 
-    pub fn name(&self) -> &'static str {
+    pub fn name(&self) -> &str {
         self.id
             .split_once('.')
             .map(|(_, name)| name)
@@ -82,15 +81,15 @@ pub struct View {
 impl From<&'static Rule> for View {
     fn from(rule: &'static Rule) -> Self {
         Self {
-            id: rule.id,
+            id: &rule.id,
             namespace: rule.namespace(),
             name: rule.name(),
-            summary: rule.summary,
-            law: rule.law,
-            evidence: rule.evidence,
+            summary: &rule.summary,
+            law: &rule.law,
+            evidence: &rule.evidence,
             standing: rule.standing,
-            owner: rule.owner.id,
-            tags: rule.tags.iter().map(|tag| tag.id).collect(),
+            owner: &rule.owner,
+            tags: rule.tags.iter().map(String::as_str).collect(),
         }
     }
 }

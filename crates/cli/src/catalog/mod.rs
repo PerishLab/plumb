@@ -11,15 +11,15 @@ use taxonomy::{Namespace, Owner, Tag};
 
 pub fn all() -> Vec<&'static Rule> {
     let mut rules = rules::all();
-    rules.sort_by_key(|rule| rule.id);
+    rules.sort_by(|one, two| one.id.cmp(&two.id));
     rules
 }
 
 pub(crate) struct Held {
-    pub owners: Vec<&'static Owner>,
-    pub tags: Vec<&'static Tag>,
-    pub namespaces: Vec<&'static Namespace>,
-    pub rules: Vec<&'static Rule>,
+    pub owners: Vec<Owner>,
+    pub tags: Vec<Tag>,
+    pub namespaces: Vec<Namespace>,
+    pub rules: Vec<Rule>,
 }
 
 const WORDS: &str = "rules/taxonomy.toml";
@@ -49,10 +49,10 @@ fn covered(held: &Held) -> bool {
         .all(|mechanism| seek(&held.rules, mechanism.0).is_some())
 }
 
-pub(crate) fn seek(held: &[&'static Rule], id: &str) -> Option<&'static Rule> {
-    held.binary_search_by_key(&id, |rule| rule.id)
+pub(crate) fn seek<'a>(held: &'a [Rule], id: &str) -> Option<&'a Rule> {
+    held.binary_search_by_key(&id, |rule| rule.id.as_str())
         .ok()
-        .map(|seat| held[seat])
+        .map(|seat| &held[seat])
 }
 
 fn gather(words: &str, law: &str) -> Option<Held> {
@@ -62,10 +62,10 @@ fn gather(words: &str, law: &str) -> Option<Held> {
         .as_array()?
         .iter()
         .map(|value| {
-            Some(&*Box::leak(Box::new(Owner {
+            Some(Owner {
                 id: word(value, "id")?,
                 summary: word(value, "summary")?,
-            })))
+            })
         })
         .collect::<Option<Vec<_>>>()?;
     let tags = words
@@ -73,10 +73,10 @@ fn gather(words: &str, law: &str) -> Option<Held> {
         .as_array()?
         .iter()
         .map(|value| {
-            Some(&*Box::leak(Box::new(Tag {
+            Some(Tag {
                 id: word(value, "id")?,
                 summary: word(value, "summary")?,
-            })))
+            })
         })
         .collect::<Option<Vec<_>>>()?;
     let namespaces = words
@@ -84,11 +84,13 @@ fn gather(words: &str, law: &str) -> Option<Held> {
         .as_array()?
         .iter()
         .map(|value| {
-            Some(&*Box::leak(Box::new(Namespace {
+            let owner = word(value, "owner")?;
+            named(owners.iter().map(|owner| &owner.id), &owner)?;
+            Some(Namespace {
                 id: word(value, "id")?,
                 summary: word(value, "summary")?,
-                owner: named(&owners, word(value, "owner")?)?,
-            })))
+                owner,
+            })
         })
         .collect::<Option<Vec<_>>>()?;
     let law: toml::Table = law.parse().ok()?;
@@ -101,20 +103,26 @@ fn gather(words: &str, law: &str) -> Option<Held> {
                 .get("tags")?
                 .as_array()?
                 .iter()
-                .map(|tag| named(&tags, Box::leak(tag.as_str()?.to_string().into_boxed_str())))
+                .map(|tag| {
+                    let tag = tag.as_str()?.to_string();
+                    named(tags.iter().map(|held| &held.id), &tag)?;
+                    Some(tag)
+                })
                 .collect::<Option<Vec<_>>>()?;
-            Some(&*Box::leak(Box::new(Rule {
+            let owner = word(value, "owner")?;
+            named(owners.iter().map(|owner| &owner.id), &owner)?;
+            Some(Rule {
                 id: word(value, "id")?,
                 summary: word(value, "summary")?,
                 law: word(value, "law")?,
                 evidence: word(value, "evidence")?,
-                standing: Standing::parse(word(value, "standing")?)?,
-                owner: named(&owners, word(value, "owner")?)?,
-                tags: Box::leak(filed.into_boxed_slice()),
-            })))
+                standing: Standing::parse(&word(value, "standing")?)?,
+                owner,
+                tags: filed,
+            })
         })
         .collect::<Option<Vec<_>>>()?;
-    rules.sort_by_key(|rule| rule.id);
+    rules.sort_by(|one, two| one.id.cmp(&two.id));
     Some(Held {
         owners,
         tags,
@@ -123,29 +131,12 @@ fn gather(words: &str, law: &str) -> Option<Held> {
     })
 }
 
-fn word(value: &toml::Value, key: &str) -> Option<&'static str> {
-    let held = value.get(key)?.as_str()?;
-    Some(Box::leak(held.to_string().into_boxed_str()))
+fn word(value: &toml::Value, key: &str) -> Option<String> {
+    Some(value.get(key)?.as_str()?.to_string())
 }
 
-fn named<T: Named>(held: &[&'static T], id: &str) -> Option<&'static T> {
-    held.iter().copied().find(|item| item.id() == id)
-}
-
-pub(crate) trait Named {
-    fn id(&self) -> &'static str;
-}
-
-impl Named for Owner {
-    fn id(&self) -> &'static str {
-        self.id
-    }
-}
-
-impl Named for Tag {
-    fn id(&self) -> &'static str {
-        self.id
-    }
+fn named<'a>(mut held: impl Iterator<Item = &'a String>, id: &str) -> Option<()> {
+    held.any(|held| held == id).then_some(())
 }
 
 pub fn find(id: &str) -> Option<&'static Rule> {
@@ -169,32 +160,44 @@ pub fn coverage() -> Coverage {
 }
 
 pub fn validate() -> Result<(), String> {
-    unique("owner", taxonomy::OWNERS.iter().map(|item| item.id))?;
-    unique("tag", taxonomy::TAGS.iter().map(|item| item.id))?;
-    unique("namespace", taxonomy::NAMESPACES.iter().map(|item| item.id))?;
-    unique("rule", all().iter().map(|rule| rule.id))?;
-    canonical("owner", taxonomy::OWNERS.iter().map(|item| item.id))?;
-    canonical("tag", taxonomy::TAGS.iter().map(|item| item.id))?;
-    canonical("namespace", taxonomy::NAMESPACES.iter().map(|item| item.id))?;
-    let owners = taxonomy::OWNERS
+    unique(
+        "owner",
+        taxonomy::owners().iter().map(|item| item.id.as_str()),
+    )?;
+    unique("tag", taxonomy::tags().iter().map(|item| item.id.as_str()))?;
+    unique(
+        "namespace",
+        taxonomy::namespaces().iter().map(|item| item.id.as_str()),
+    )?;
+    unique("rule", all().iter().map(|rule| rule.id.as_str()))?;
+    canonical(
+        "owner",
+        taxonomy::owners().iter().map(|item| item.id.as_str()),
+    )?;
+    canonical("tag", taxonomy::tags().iter().map(|item| item.id.as_str()))?;
+    canonical(
+        "namespace",
+        taxonomy::namespaces().iter().map(|item| item.id.as_str()),
+    )?;
+    let owners = taxonomy::owners()
         .iter()
-        .map(|owner| owner.id)
+        .map(|owner| owner.id.as_str())
         .collect::<BTreeSet<_>>();
-    for namespace in taxonomy::NAMESPACES.iter() {
-        if !owners.contains(namespace.owner.id) {
+    for namespace in taxonomy::namespaces().iter() {
+        if !owners.contains(namespace.owner.as_str()) {
             return Err(format!(
                 "namespace {} names unknown owner {}",
-                namespace.id, namespace.owner.id
+                namespace.id, namespace.owner
             ));
         }
     }
-    let namespaces = taxonomy::NAMESPACES
+    let namespaces = taxonomy::namespaces()
         .iter()
-        .map(|namespace| namespace.id)
+        .map(|namespace| namespace.id.as_str())
         .collect::<BTreeSet<_>>();
-    let tags = taxonomy::TAGS
+    let tags = taxonomy::tags()
         .iter()
-        .map(|tag| tag.id)
+        .map(|tag| tag.id.as_str())
         .collect::<BTreeSet<_>>();
     for rule in all() {
         let Some((namespace, name)) = rule.id.split_once('.') else {
@@ -206,7 +209,7 @@ pub fn validate() -> Result<(), String> {
         if !namespaces.contains(namespace) {
             return Err(format!("rule {} names unknown namespace", rule.id));
         }
-        if !owners.contains(rule.owner.id) {
+        if !owners.contains(rule.owner.as_str()) {
             return Err(format!("rule {} names unknown owner", rule.id));
         }
         if rule.summary.is_empty() || rule.law.is_empty() || rule.evidence.is_empty() {
@@ -215,14 +218,14 @@ pub fn validate() -> Result<(), String> {
         if rule.tags.is_empty() {
             return Err(format!("rule {} has no tags", rule.id));
         }
-        for tag in rule.tags {
-            if !tags.contains(tag.id) {
-                return Err(format!("rule {} names unknown tag {}", rule.id, tag.id));
+        for tag in &rule.tags {
+            if !tags.contains(tag.as_str()) {
+                return Err(format!("rule {} names unknown tag {}", rule.id, tag));
             }
         }
         unique(
             &format!("tag on rule {}", rule.id),
-            rule.tags.iter().map(|tag| tag.id),
+            rule.tags.iter().map(String::as_str),
         )?;
     }
     Ok(())

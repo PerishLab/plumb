@@ -64,8 +64,8 @@ impl Finding {
             scope: seed.rule.namespace(),
             evidence: seed.evidence,
             standing: seed.rule.standing,
-            owner: seed.rule.owner.id,
-            tags: seed.rule.tags.iter().map(|tag| tag.id).collect(),
+            owner: &seed.rule.owner,
+            tags: seed.rule.tags.iter().map(String::as_str).collect(),
         }
     }
 }

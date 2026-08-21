@@ -20,7 +20,7 @@ macro_rules! rule {
 pub(crate) use rule;
 
 pub fn all() -> Vec<&'static Rule> {
-    super::held().rules.clone()
+    super::held().rules.iter().collect()
 }
 
 pub fn held(id: &str) -> &'static Rule {
