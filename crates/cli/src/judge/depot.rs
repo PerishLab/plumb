@@ -1,12 +1,12 @@
 use super::catalog::rules::depot::{DEPOT_PUBLISHED, DEPOT_SCHEMA};
 use super::finding::{Finding, Seed};
-use crate::dispatch::depot::record::{Manifest, Object, inventory};
+use crate::command::depot::record::{Manifest, Object, inventory};
 use plumb::snapshot::{Refusal, Snapshot};
 use semver::Version;
 use std::collections::BTreeMap;
 
 pub fn judge(snapshot: &Result<Snapshot, Refusal>) -> Vec<Finding> {
-    let manifest = match crate::dispatch::depot::manifest() {
+    let manifest = match crate::command::depot::manifest() {
         Ok(None) => return Vec::new(),
         Ok(Some(manifest)) => manifest,
         Err(error) => return vec![Finding::new(Seed::blind(&DEPOT_PUBLISHED, error))],

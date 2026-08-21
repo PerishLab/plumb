@@ -1,5 +1,5 @@
 use super::{Found, Shape};
-use crate::dispatch::release::model::Spec;
+use crate::command::release::model::Spec;
 use crate::judge::catalog::rules::release as release_rule;
 use crate::judge::catalog::rules::structure as rule;
 use crate::judge::finding::Seed;

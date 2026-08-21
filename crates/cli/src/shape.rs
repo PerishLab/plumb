@@ -1,3 +1,5 @@
+mod dispatch;
+pub mod web;
 use std::collections::BTreeSet;
 use std::path::Path;
 
@@ -240,8 +242,8 @@ pub fn capture(
         named: crate::anchor::Anchor(root).names(),
         derived: crate::anchor::Anchor(root).derives(),
         entries: crate::anchor::Anchor(root).entries(),
-        dispatch: crate::dispatch::read(root),
-        web: crate::web::read(root),
+        dispatch: dispatch::read(root),
+        web: web::read(root),
         policy,
         bounds: policy::bounds(doc.as_ref()),
         root: root.to_path_buf(),

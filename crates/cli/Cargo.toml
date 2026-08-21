@@ -15,8 +15,8 @@ name = "plumb"
 path = "src/main.rs"
 
 [[test]]
-name = "dispatch"
-path = "tests/dispatch/mod.rs"
+name = "command"
+path = "tests/command/mod.rs"
 
 [[test]]
 name = "operator"

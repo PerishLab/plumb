@@ -24,14 +24,14 @@ paths = ["docs/CHANGELOG"]
 allow = ["fanout"]
 note = "the bounded self-hosting bootstrap adds one production module to the established release inventory"
 paths = [
-    "crates/cli/src/dispatch/release",
+    "crates/cli/src/command/release",
     "crates/cli/tests/operator",
 ]
 
 [[boundary]]
 allow = ["fanout"]
 note = "site has folded into ship and the inventory did not drop back under the limit, because what stands here is not one stray adaptor but a command set that has never been layered; perish.code/plumb-modules-layered retires this row"
-paths = ["crates/cli/src/dispatch"]
+paths = ["crates/cli/src/command"]
 
 [[boundary]]
 allow = ["fanout"]
@@ -53,8 +53,8 @@ allow = [
 ]
 note = "the one-time Plumb bootstrap contract uses explicit provenance and identity terms plus exact refusal combinations"
 paths = [
-    "crates/cli/src/dispatch/release/output/generator.rs",
-    "crates/cli/src/dispatch/release/record.rs",
+    "crates/cli/src/command/release/output/generator.rs",
+    "crates/cli/src/command/release/record.rs",
 ]
 
 [comment]

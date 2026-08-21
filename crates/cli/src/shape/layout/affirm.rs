@@ -1,5 +1,5 @@
 use super::{Declared, Group, Seat};
-use crate::dispatch::depot::record::sha;
+use crate::command::depot::record::sha;
 use plumb::snapshot::Snapshot;
 use std::collections::BTreeMap;
 use std::path::Path;

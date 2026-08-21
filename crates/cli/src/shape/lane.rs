@@ -1,7 +1,7 @@
 mod guard;
 pub mod source;
 
-use crate::dispatch::release::model::Spec;
+use crate::command::release::model::Spec;
 use serde_json::Value as Json;
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -90,7 +90,7 @@ impl Seat<'_> {
     }
 
     fn stocked(&self) -> bool {
-        crate::dispatch::depot::record::ROOTS
+        crate::command::depot::record::ROOTS
             .iter()
             .all(|(root, _)| self.0.join(root).is_dir())
     }

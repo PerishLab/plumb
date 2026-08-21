@@ -1,10 +1,9 @@
 mod anchor;
-mod dispatch;
+mod command;
 mod judge;
 mod rules;
 mod shape;
 mod skill;
-mod web;
 
 use clap::{Parser, Subcommand};
 use plumb::cli::Root;
@@ -28,7 +27,7 @@ enum Command {
     },
     #[command(
         about = "Project a clean topic branch onto its base and wait for its guard",
-        long_about = dispatch::depot::carried("help/land.txt", plumb::seat::resource!("help/land.txt"))
+        long_about = command::depot::carried("help/land.txt", plumb::seat::resource!("help/land.txt"))
     )]
     Land {
         #[command(flatten)]
@@ -103,7 +102,7 @@ enum Command {
     },
     #[command(
         about = "Render the seats and file groups this repository declares",
-        long_about = dispatch::depot::carried("help/layout.txt", plumb::seat::resource!("help/layout.txt"))
+        long_about = command::depot::carried("help/layout.txt", plumb::seat::resource!("help/layout.txt"))
     )]
     Layout {
         #[command(flatten)]
@@ -121,34 +120,34 @@ enum Command {
     #[command(about = "Publish, sync, and show the configuration Plumb carries")]
     Depot {
         #[command(subcommand)]
-        deed: dispatch::depot::Deed,
+        deed: command::depot::Deed,
     },
     #[command(
         about = "Hold the truth cycle of a product release",
-        long_about = dispatch::depot::carried("help/release.txt", plumb::seat::resource!("help/release.txt"))
+        long_about = command::depot::carried("help/release.txt", plumb::seat::resource!("help/release.txt"))
     )]
     Release {
         #[command(subcommand)]
-        deed: dispatch::release::Deed,
+        deed: command::release::Deed,
     },
     #[command(about = "Project one release onto one medium")]
     Ship {
         #[command(subcommand)]
-        deed: dispatch::ship::Deed,
+        deed: command::ship::Deed,
     },
 
     #[command(
         about = "Destroy one declared delivery chain in a fixed order",
-        long_about = dispatch::depot::carried("help/retire.txt", plumb::seat::resource!("help/retire.txt"))
+        long_about = command::depot::carried("help/retire.txt", plumb::seat::resource!("help/retire.txt"))
     )]
     Retire {
         #[command(flatten)]
-        deed: dispatch::retire::Deed,
+        deed: command::retire::Deed,
     },
     #[command(about = "Ask and record what a rendered lane may skip")]
     Workflow {
         #[command(subcommand)]
-        deed: dispatch::workflow::Deed,
+        deed: command::workflow::Deed,
     },
 }
 
@@ -187,7 +186,7 @@ fn execute(command: Command) -> i32 {
             watch,
             dry,
             json,
-        } => dispatch::land::run(dispatch::land::Input {
+        } => command::land::run(command::land::Input {
             root: PathBuf::from(target.root),
             base,
             title,
@@ -221,28 +220,28 @@ fn execute(command: Command) -> i32 {
             json,
         }),
         Command::Policy { target, write } => {
-            dispatch::command::Seat::new(PathBuf::from(target.root)).policy(write)
+            command::render::Seat::new(PathBuf::from(target.root)).policy(write)
         }
         Command::Skill { deed } => skill::run(deed),
         Command::Rule { deed } => judge::catalog::query::run(deed),
         Command::Changelog { target, version } => {
-            dispatch::command::Seat::new(PathBuf::from(target.root)).changelog(version)
+            command::render::Seat::new(PathBuf::from(target.root)).changelog(version)
         }
         Command::Lane { target, write } => {
-            dispatch::command::Seat::new(PathBuf::from(target.root)).lane(write)
+            command::render::Seat::new(PathBuf::from(target.root)).lane(write)
         }
         Command::Layout { target } => {
-            dispatch::command::Seat::new(PathBuf::from(target.root)).layout()
+            command::render::Seat::new(PathBuf::from(target.root)).layout()
         }
-        Command::Cookbook { entry } => dispatch::cookbook::run(entry),
+        Command::Cookbook { entry } => command::cookbook::run(entry),
         Command::Affirm { target, write } => {
-            dispatch::command::Seat::new(PathBuf::from(target.root)).affirm(write)
+            command::render::Seat::new(PathBuf::from(target.root)).affirm(write)
         }
-        Command::Depot { deed } => dispatch::depot::run(deed),
-        Command::Release { deed } => dispatch::release::run(deed),
-        Command::Ship { deed } => dispatch::ship::run(deed),
-        Command::Retire { deed } => dispatch::retire::run(deed),
-        Command::Workflow { deed } => dispatch::workflow::run(deed),
+        Command::Depot { deed } => command::depot::run(deed),
+        Command::Release { deed } => command::release::run(deed),
+        Command::Ship { deed } => command::ship::run(deed),
+        Command::Retire { deed } => command::retire::run(deed),
+        Command::Workflow { deed } => command::workflow::run(deed),
     }
 }
 
@@ -251,7 +250,7 @@ fn main() {
         Ok(cli) => cli.command,
         Err(error) => {
             let code = error.exit_code();
-            let run = dispatch::audit::Run::start("parse");
+            let run = command::audit::Run::start("parse");
             let _ = error.print();
             if let Some(run) = run {
                 run.finish(code);
@@ -259,7 +258,7 @@ fn main() {
             std::process::exit(code);
         }
     };
-    let run = dispatch::audit::Run::start(command.name());
+    let run = command::audit::Run::start(command.name());
     let code = execute(command);
     if let Some(run) = run {
         run.finish(code);
