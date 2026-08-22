@@ -104,7 +104,7 @@ exclude = []
 roots = []
 [limit]
 block = 4
-path = 4
+path = 3
 param = 4
 markup = 8
 file = 300
