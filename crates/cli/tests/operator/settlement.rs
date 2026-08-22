@@ -42,11 +42,16 @@ targets = ["x86_64-unknown-linux-gnu"]
         &bin.join("git"),
         r#"#!/bin/sh
 set -eu
+printf 'git %s\n' "$*" >> "$COURT_CALLS"
 case "$*" in
   "rev-parse --show-toplevel") printf '%s\n' "$COURT_ROOT" ;;
   "remote get-url origin") printf '%s\n' "https://forge.test/test/probe.git" ;;
   "fetch --prune origin") ;;
   "rev-parse origin/main^{commit}") printf '%s\n' "cccccccccccccccccccccccccccccccccccccccc" ;;
+  "rev-parse origin/main^{tree}") printf '%s\n' "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" ;;
+  "commit-tree "*) printf '%s\n' "dddddddddddddddddddddddddddddddddddddddd" ;;
+  "diff-tree --quiet "*) ;;
+  "push --force-with-lease origin "*) ;;
   "merge-base --is-ancestor "*) test -f "$COURT_SETTLED" ;;
   *) printf '%s\n' "unexpected git: $*" >&2; exit 1 ;;
 esac
@@ -136,10 +141,23 @@ fn retains() {
     assert!(text.contains("retained frozen release/v1.2.0"), "{text}");
     let calls = std::fs::read_to_string(calls).expect("calls");
     assert!(!calls.contains("DELETE"), "{calls}");
+    assert!(
+        calls.contains(
+            "git commit-tree eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee -p cccccccccccccccccccccccccccccccccccccccc -p bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        ),
+        "the rejoin commit must keep main's tree and name the release as its second parent: {calls}"
+    );
+    assert!(
+        calls.contains(
+            "git push --force-with-lease origin dddddddddddddddddddddddddddddddddddddddd:refs/heads/rejoin/v1.2.0"
+        ),
+        "the guarded pull must stand on the topology-only commit: {calls}"
+    );
     let held = forge_calls.lock().expect("forge calls");
     let merge = held
         .iter()
         .find(|line| line.contains("/pulls/12/merge"))
         .expect("merge");
     assert!(merge.contains(r#""delete_branch_after_merge":false"#));
+    assert!(merge.contains(r#""Do":"fast-forward-only""#), "{merge}");
 }

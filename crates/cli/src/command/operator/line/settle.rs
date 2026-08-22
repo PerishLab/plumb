@@ -1,15 +1,22 @@
 use super::super::course::Course;
 use super::super::value;
 use super::plan;
-use plumb::forgejo::{Client, Remote, git};
+use plumb::forgejo::{Client, Remote, Strategy, git};
 use serde_json::Value;
 use std::path::Path;
+use std::process::{Command, Output};
 use std::time::{Duration, Instant};
 
 struct Published {
     version: String,
     commit: String,
     url: String,
+}
+
+struct Join<'a> {
+    root: &'a Path,
+    published: &'a Published,
+    name: &'a str,
 }
 
 pub struct Settle<'a> {
@@ -50,7 +57,15 @@ pub fn settle(course: &mut Course, held: Settle<'_>) -> Result<String, String> {
         client.protect(name, "frozen")
     })?;
     if !settled(root, &published)? {
-        joined(course, &client, &published, name)?;
+        joined(
+            course,
+            &client,
+            Join {
+                root,
+                published: &published,
+                name,
+            },
+        )?;
         if course.dry() {
             return Ok(String::new());
         }
@@ -67,35 +82,124 @@ pub fn settle(course: &mut Course, held: Settle<'_>) -> Result<String, String> {
     ))
 }
 
-fn joined(
-    course: &mut Course,
-    client: &Client,
-    published: &Published,
-    name: &str,
-) -> Result<(), String> {
+fn joined(course: &mut Course, client: &Client, held: Join<'_>) -> Result<(), String> {
+    let Join {
+        published, name, ..
+    } = held;
     let remote = client.remote();
-    let standing = client.find(name)?;
+    let projection = format!("rejoin/{}", published.version);
+    let made =
+        format!("git commit-tree origin/main with {name} as second parent, then push {projection}");
+    let head = course.step(made, || topology(&held, &projection))?;
+    if course.dry() {
+        course.step(
+            format!(
+                "POST /repos/{}/{}/pulls ({projection} -> main, fast-forward-only)",
+                remote.owner, remote.repo
+            ),
+            || Ok(()),
+        )?;
+        course.step(
+            "await guard on the topology-only merge, then fast-forward that pull",
+            || Ok(()),
+        )?;
+        return Ok(());
+    }
+    let head = head.ok_or_else(|| "the settlement made no topology commit".to_string())?;
+    let standing = client.find(&projection)?;
     let said = format!(
-        "POST /repos/{}/{}/pulls ({name} -> main, merge commit)",
+        "POST /repos/{}/{}/pulls ({projection} -> main, fast-forward-only)",
         remote.owner, remote.repo
     );
     let body = format!("Topology-preserving settlement of {}.", published.url);
     let pull = match standing {
         Some(pull) => Some(pull),
-        None => course.step(said, || client.pull(name, &published.version, &body))?,
+        None => course.step(said, || {
+            client.raise(
+                "main",
+                &projection,
+                &format!("Rejoin {}", published.version),
+                &body,
+            )
+        })?,
     };
-    let commit = &published.commit;
     let said = match &pull {
-        Some(pull) => format!("await guard on {commit}, then merge pull #{}", pull.number),
-        None => format!("await guard on {commit}, then merge that pull"),
+        Some(pull) => format!(
+            "await guard on {head}, then fast-forward pull #{}",
+            pull.number
+        ),
+        None => format!("await guard on {head}, then fast-forward that pull"),
     };
     course
         .step(said, || {
             let pull = pull.ok_or_else(|| "the settlement left no pull".to_string())?;
-            guard(client, pull.number, commit)?;
-            client.merge(pull.number, commit)
+            guard(client, pull.number, &head)?;
+            client.settle(pull.number, &head, Strategy::Forward)
         })
         .map(|_| ())
+}
+
+fn topology(held: &Join<'_>, projection: &str) -> Result<String, String> {
+    let base = read(
+        "resolve main for rejoin",
+        command(held, &["rev-parse", "origin/main^{commit}"])?,
+    )?;
+    let tree = read(
+        "resolve main tree for rejoin",
+        command(held, &["rev-parse", "origin/main^{tree}"])?,
+    )?;
+    let message = format!("Rejoin {}", held.published.version);
+    let head = read(
+        "make topology-only rejoin",
+        command(
+            held,
+            &[
+                "commit-tree",
+                &tree,
+                "-p",
+                &base,
+                "-p",
+                &held.published.commit,
+                "-m",
+                &message,
+            ],
+        )?,
+    )?;
+    value::commit(&head)?;
+    success(
+        "verify topology-only rejoin tree",
+        command(held, &["diff-tree", "--quiet", &base, &head])?,
+    )?;
+    let refspec = format!("{head}:refs/heads/{projection}");
+    success(
+        "push topology-only rejoin",
+        command(held, &["push", "--force-with-lease", "origin", &refspec])?,
+    )?;
+    Ok(head)
+}
+
+fn command(held: &Join<'_>, args: &[&str]) -> Result<Output, String> {
+    Command::new("git")
+        .args(args)
+        .current_dir(held.root)
+        .output()
+        .map_err(|error| format!("cannot run git: {error}"))
+}
+
+fn success(action: &str, output: Output) -> Result<(), String> {
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "{action} failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ))
+    }
+}
+
+fn read(action: &str, output: Output) -> Result<String, String> {
+    success(action, output.clone())?;
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 fn settled(root: &Path, published: &Published) -> Result<bool, String> {
