@@ -7,7 +7,7 @@ pub const RELEASED: [(&str, &str); 2] = [
     ("stable.release.yml", "assets/release/stable.yml.in"),
 ];
 
-pub const FACTORY: [(&str, &str); 16] = [
+pub const FACTORY: [(&str, &str); 17] = [
     (
         "assets/depot/lane.yml.in",
         plumb::seat::resource!("assets/depot/lane.yml.in"),
@@ -27,6 +27,10 @@ pub const FACTORY: [(&str, &str); 16] = [
     (
         "assets/guard/proof.yml.in",
         plumb::seat::resource!("assets/guard/proof.yml.in"),
+    ),
+    (
+        "assets/guard/sync.yml.in",
+        plumb::seat::resource!("assets/guard/sync.yml.in"),
     ),
     (
         "assets/guard/tool.yml.in",
@@ -78,6 +82,17 @@ static SOURCE: LazyLock<Result<BTreeMap<&'static str, String>, String>> = LazyLo
 
 fn read() -> Result<BTreeMap<&'static str, String>, String> {
     let seat = held();
+    let lane = FACTORY
+        .iter()
+        .find(|(path, _)| *path == "assets/guard/lane.yml.in")
+        .expect("the factory must carry its guard lane");
+    let schema = seat.read(lane.0, lane.1)?;
+    if !schema.contains("depot-sync/v1") {
+        return Ok(FACTORY
+            .into_iter()
+            .map(|(path, factory)| (path, factory.to_string()))
+            .collect());
+    }
     let mut listed = BTreeMap::new();
     for (path, factory) in FACTORY {
         listed.insert(path, seat.read(path, factory)?);

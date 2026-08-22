@@ -186,12 +186,13 @@ impl Seat<'_> {
         let mut blocks = Vec::new();
         let guarded = seat.any(&listed);
         for tool in TOOLS {
-            if spec.product == tool && !guarded {
+            if spec.product == tool && !guarded && tool != "plumb" {
                 continue;
             }
             let vars = BTreeMap::from([("title", title(tool)), ("manager", manager(tool))]);
             blocks.push(filled("assets/guard/tool.yml.in", &vars)?);
         }
+        blocks.push(source::text("assets/guard/sync.yml.in")?.to_string());
         if guarded {
             blocks.push(source::text("assets/guard/ask.yml.in")?.to_string());
         }

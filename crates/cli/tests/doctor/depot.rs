@@ -79,4 +79,6 @@ fn drift() {
         "{out}"
     );
     assert!(out.contains("carries no rules/vocabulary.toml"), "{out}");
+    assert!(out.contains("0 out of true"), "{out}");
+    assert!(out.contains("noted"), "{out}");
 }

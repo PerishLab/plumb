@@ -27,6 +27,7 @@ impl Fixture<'_> {
         );
         held.env("PATH", path)
             .env("FAKE_S3_ROOT", self.root)
+            .env("PLUMB_DEPOT_SEAT", self.root.join("depot"))
             .env("PLUMB_RELEASE_ROOT", self.root);
         held
     }

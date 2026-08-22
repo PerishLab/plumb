@@ -31,10 +31,10 @@ tags = ["configuration", "ownership"]
 
 [[rule]]
 id = "depot.roots-published"
-summary = "The depot carries what this repository records"
-law = "Every configuration root this repository records is present in the held depot version under the same digest."
+summary = "Depot publication lag is visible"
+law = "Differences between configuration roots this repository records and the held depot version remain visible until automatic publication converges them."
 evidence = "Git-recorded root objects compared with the manifest of the held depot version."
-standing = "mechanized"
+standing = "observed"
 owner = "plumb"
 tags = ["configuration", "repository"]
 

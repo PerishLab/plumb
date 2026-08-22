@@ -1,4 +1,5 @@
 name: guard
+# depot-sync/v1
 
 on:
   pull_request:

@@ -1,0 +1,4 @@
+      - name: Sync the Plumb depot
+        run: |
+          set -eu
+          plumb depot sync

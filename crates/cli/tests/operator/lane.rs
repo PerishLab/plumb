@@ -53,6 +53,11 @@ fn derived() {
     );
     assert!(guard.contains("cargo fmt --all --check"), "{guard}");
     assert!(guard.contains("plumb doctor ."), "{guard}");
+    assert_eq!(guard.matches("plumb depot sync").count(), 1, "{guard}");
+    let install = guard.find("Install stable Plumb").expect("Plumb install");
+    let sync = guard.find("plumb depot sync").expect("depot sync");
+    let doctor = guard.find("plumb doctor .").expect("Doctor");
+    assert!(install < sync && sync < doctor, "{guard}");
     assert!(guard.contains("ectropy ."), "{guard}");
     assert!(!guard.contains("pnpm"), "{guard}");
     assert!(!guard.contains("{@"), "{guard}");

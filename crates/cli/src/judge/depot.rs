@@ -68,11 +68,11 @@ fn compare(objects: &[Object], manifest: &Manifest) -> Vec<Finding> {
                 manifest.metadata.version, object.path
             ),
         };
-        found.push(Finding::new(Seed::wrong(&DEPOT_PUBLISHED, evidence)));
+        found.push(Finding::new(Seed::noted(&DEPOT_PUBLISHED, evidence)));
     }
     for path in carried.keys() {
         if !objects.iter().any(|object| object.path == *path) {
-            found.push(Finding::new(Seed::wrong(
+            found.push(Finding::new(Seed::noted(
                 &DEPOT_PUBLISHED,
                 format!(
                     "the held depot {} carries {path}, which this repository no longer records",
