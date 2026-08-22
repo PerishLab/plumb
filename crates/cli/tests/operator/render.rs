@@ -13,18 +13,30 @@ fn planned() {
         .split("- name: Plan this release")
         .nth(1)
         .expect("plan step");
-    let derived = plan.find("plumb release plan").expect("plan derivation");
+    let probe = plan
+        .find("plumb release plan --help")
+        .expect("plan capability probe");
+    let derived = plan
+        .find("plan=$(plumb release plan)")
+        .expect("plan derivation");
     let version = plan
         .find("export PLUMB_RELEASE_VERSION")
         .expect("version export");
     assert!(
-        derived < version,
-        "the exports must read a plan the lane already derived: {plan}"
+        probe < derived && derived < version,
+        "a capable generator must derive the plan before exporting it: {plan}"
     );
-    assert!(
-        !plan.contains("plumb release reference") && !plan.contains("plumb release channel"),
-        "the lane must not stitch a plan out of separate derivations: {plan}"
-    );
+    for deed in [
+        "PLUMB_RELEASE_VERSION=$(plumb release reference)",
+        "PLUMB_RELEASE_CHANNEL=$(plumb release channel)",
+        "plumb release source",
+        "plumb release surface",
+    ] {
+        assert!(
+            plan.contains(deed),
+            "a lane held by the preceding generator is missing legacy deed {deed}: {plan}"
+        );
+    }
 }
 
 #[test]
