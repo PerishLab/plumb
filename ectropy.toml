@@ -16,6 +16,27 @@ paths = [
 ]
 
 [[boundary]]
+allow = ["path"]
+note = "the old release capsule tree remains one level deeper until perish.code/plumb-closure-rewritten retires this row"
+paths = [
+    "crates/cli/src/command/release/output/capsule/files.rs",
+    "crates/cli/src/command/release/output/capsule/object.rs",
+]
+
+[[boundary]]
+allow = ["path"]
+note = "the old registry adaptor tree remains one level deeper until perish.code/plumb-closure-rewritten retires this row"
+paths = [
+    "crates/cli/src/command/ship/adaptor/registry/ledger.rs",
+    "crates/cli/src/command/ship/adaptor/registry/manifest.rs",
+]
+
+[[boundary]]
+allow = ["path"]
+note = "the old site deployment tree remains one level deeper until perish.code/plumb-closure-rewritten retires this row"
+paths = ["crates/cli/src/command/ship/site/deploy/reach.rs"]
+
+[[boundary]]
 allow = ["fanout"]
 note = "stable release identity requires one immutable version seat directly under docs/CHANGELOG"
 paths = ["docs/CHANGELOG"]
@@ -86,7 +107,7 @@ fanout = 10
 file = 300
 markup = 8
 param = 4
-path = 4
+path = 3
 
 [module]
 roots = [

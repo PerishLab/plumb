@@ -36,12 +36,15 @@ pub const SETS: [(&str, &str); 5] = [
     ("workflow", plumb::seat::resource!("rules/workflow.toml")),
 ];
 
+pub static FACTORY: LazyLock<toml::Table> = LazyLock::new(|| {
+    shaped(plumb::seat::resource!("rules/policy.toml"))
+        .expect("the compiled rules/policy.toml must hold its complete shape")
+});
+
 pub static POLICY: LazyLock<toml::Table> = LazyLock::new(|| {
     let factory = plumb::seat::resource!("rules/policy.toml");
     let text = carried(&held(), "rules/policy.toml", factory);
-    shaped(&text).unwrap_or_else(|| {
-        shaped(factory).expect("the compiled rules/policy.toml must hold its complete shape")
-    })
+    shaped(&text).unwrap_or_else(|| (*FACTORY).clone())
 });
 
 fn shaped(text: &str) -> Option<toml::Table> {
@@ -55,7 +58,15 @@ fn shaped(text: &str) -> Option<toml::Table> {
 }
 
 pub fn limits() -> BTreeMap<String, i64> {
-    POLICY
+    measured(&POLICY)
+}
+
+pub fn factory() -> BTreeMap<String, i64> {
+    measured(&FACTORY)
+}
+
+fn measured(policy: &toml::Table) -> BTreeMap<String, i64> {
+    policy
         .get("limit")
         .and_then(toml::Value::as_table)
         .map(|table| {

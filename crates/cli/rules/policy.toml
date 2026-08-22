@@ -25,7 +25,7 @@ markup = 8
 # Parameters on one function.
 param = 4
 # Directory levels below a module root.
-path = 4
+path = 3
 
 [comment]
 # Code says what it does by being read. A comment that explains it is a second

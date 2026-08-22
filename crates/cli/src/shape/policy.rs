@@ -204,13 +204,14 @@ struct Policy<'a>(&'a toml::Value);
 
 impl Policy<'_> {
     fn limits(&self, found: &mut Vec<String>) {
+        let factory = crate::catalog::set::factory();
         for (name, value) in crate::catalog::set::limits() {
             let seen = self
                 .0
                 .get("limit")
                 .and_then(|table| table.get(&name))
                 .and_then(toml::Value::as_integer);
-            if seen != Some(value) {
+            if seen != Some(value) && seen != factory.get(&name).copied() {
                 found.push(format!("ectropy limit {name} must be {value}"));
             }
         }
