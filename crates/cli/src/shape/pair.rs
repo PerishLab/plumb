@@ -7,11 +7,14 @@ use crate::judge::show;
 use std::collections::BTreeSet;
 use std::path::Path;
 
+mod identity;
+
 #[derive(Default)]
 pub struct Release {
     pub attachments: BTreeSet<String>,
     pub widths: std::collections::BTreeMap<String, usize>,
     pub refusal: Option<String>,
+    pub blind: Option<String>,
 }
 
 pub fn release(root: &Path) -> Release {
@@ -24,11 +27,13 @@ pub fn release(root: &Path) -> Release {
             attachments: attachments(&spec),
             widths: widths(&spec),
             refusal: None,
+            blind: identity::Seat(root).blind(&spec.product, plumb::commit!("PLUMB")),
         },
         Err(refusal) => Release {
             attachments: BTreeSet::new(),
             widths: std::collections::BTreeMap::new(),
             refusal: Some(refusal),
+            blind: None,
         },
     }
 }
@@ -156,7 +161,7 @@ impl Judge<'_> {
                 "Cargo.toml without target/ in .gitignore".to_string(),
             ));
         }
-        spec(held.release.refusal.as_deref(), &mut found);
+        spec(&held.release, &mut found);
         measured(&held.release, &mut found);
         deliverable(&held.release, &held.root, &mut found);
         if held.ships.contains("binary") {
@@ -223,12 +228,15 @@ impl Judge<'_> {
     }
 }
 
-fn spec(refusal: Option<&str>, found: &mut Found) {
-    if let Some(refusal) = refusal {
+fn spec(release: &Release, found: &mut Found) {
+    if let Some(refusal) = &release.refusal {
         found.push(Seed::wrong(
             &release_rule::SPEC_DECLARED,
             format!("plumb.toml declares a release the current Plumb refuses: {refusal}"),
         ));
+    }
+    if let Some(blind) = &release.blind {
+        found.push(Seed::blind(&release_rule::SPEC_DECLARED, blind));
     }
 }
 

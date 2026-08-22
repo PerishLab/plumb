@@ -36,6 +36,7 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     let root = git::root()?;
     let remote = git::remote(&root, repo)?;
     let mut course = Course::new(dry);
+    git::fetch(&root)?;
     rejoined::Seat(&root).rejoined(&version)?;
     let client = Client::new(remote)?;
     let standing = client.branch(&name)?.is_some();
@@ -85,6 +86,7 @@ fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
     let root = git::root()?;
     let remote = git::remote(&root, repo)?;
     let mut course = Course::new(dry);
+    git::fetch(&root)?;
     rejoined::Seat(&root).rejoined(&version)?;
     let client = Client::new(remote)?;
     freeze(&mut course, &client, &root, &name)?;

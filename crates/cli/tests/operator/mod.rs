@@ -15,6 +15,7 @@ mod forgejo;
 mod image;
 #[cfg(unix)]
 mod lane;
+mod line;
 mod precommit;
 #[cfg(unix)]
 mod promotion;

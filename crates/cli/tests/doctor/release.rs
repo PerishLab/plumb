@@ -31,12 +31,24 @@ fn refused() {
 
     std::fs::write(
         dir.join("plumb.toml"),
-        "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\n[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
+        "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\n[release.npm]\nregistry = \"https://example.invalid/npm/\"\npackages = [\"@probe/foo\"]\n\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
     )
     .expect("manifest should be written");
-    let captured = crate::run(&["doctor", path]);
-    assert!(captured.contains("the current Plumb refuses"), "{captured}");
-    assert!(captured.contains("cannot parse"), "{captured}");
+    let captured = crate::run(&["doctor", "--json", path]);
+    let report: serde_json::Value = serde_json::from_str(&captured).expect("doctor json");
+    assert_eq!(report["summary"]["out_of_true"], 1, "{captured}");
+    assert!(
+        report["findings"]
+            .as_array()
+            .is_some_and(|findings| findings.iter().any(|finding| {
+                finding["code"] == "release.spec-declared"
+                    && finding["evidence"].as_str().is_some_and(|evidence| {
+                        evidence.contains("the current Plumb refuses")
+                            && evidence.contains("cannot parse")
+                    })
+            })),
+        "{captured}"
+    );
 
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }

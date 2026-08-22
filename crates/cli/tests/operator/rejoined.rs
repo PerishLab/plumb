@@ -42,6 +42,62 @@ fn late() {
 }
 
 #[test]
+fn refreshes() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let bare = tempfile::tempdir().expect("bare");
+    let root = fixture.path();
+    let cut = root.join("cut");
+    let (url, _) = serve(Court::Prepare(true, cut.clone()), 1);
+    let origin = format!("{url}/test/probe.git");
+    let head = lined(root, &origin, bare.path(), "release/v1.3.0");
+    std::fs::write(&cut, &head).expect("cut");
+    run(Command::new("git")
+        .args(["tag", "v1.2.0", &head])
+        .current_dir(root));
+
+    let tree = Command::new("git")
+        .args(["rev-parse", &format!("{head}^{{tree}}")])
+        .current_dir(root)
+        .output()
+        .expect("git tree");
+    let tree = String::from_utf8_lossy(&tree.stdout).trim().to_string();
+    let severed = Command::new("git")
+        .args([
+            "commit-tree",
+            &tree,
+            "-m",
+            "Move main away from the stable point",
+        ])
+        .env("GIT_AUTHOR_NAME", "probe")
+        .env("GIT_AUTHOR_EMAIL", "probe@test")
+        .env("GIT_COMMITTER_NAME", "probe")
+        .env("GIT_COMMITTER_EMAIL", "probe@test")
+        .current_dir(bare.path())
+        .output()
+        .expect("git commit-tree");
+    assert!(
+        severed.status.success(),
+        "{}",
+        String::from_utf8_lossy(&severed.stderr)
+    );
+    let severed = String::from_utf8_lossy(&severed.stdout).trim().to_string();
+    run(Command::new("git")
+        .args(["update-ref", "refs/heads/main", &severed])
+        .current_dir(bare.path()));
+
+    let output = command(root, &["release", "prepare", "--version", "1.3.0"]);
+    assert!(!output.status.success());
+    let said = String::from_utf8_lossy(&output.stderr).to_string();
+    assert!(said.contains("which origin/main does not hold"), "{said}");
+    let refreshed = Command::new("git")
+        .args(["rev-parse", "origin/main"])
+        .current_dir(root)
+        .output()
+        .expect("git rev-parse");
+    assert_eq!(String::from_utf8_lossy(&refreshed.stdout).trim(), severed);
+}
+
+#[test]
 fn migrated() {
     let fixture = tempfile::tempdir().expect("fixture");
     let bare = tempfile::tempdir().expect("bare");

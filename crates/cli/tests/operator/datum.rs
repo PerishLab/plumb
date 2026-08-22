@@ -4,11 +4,14 @@ use std::path::Path;
 use std::process::Command;
 
 pub fn lined(root: &Path, origin: &str, bare: &Path, line: &str) -> String {
-    repo(root, origin);
     run(Command::new("git").args(["init", "-q", "--bare"]).arg(bare));
-    let stand = format!("url.{}.pushInsteadOf", bare.display());
+    let local = format!("file://{}", bare.display());
+    repo(root, &local);
+    let forge = origin
+        .strip_suffix("/test/probe.git")
+        .expect("fixture origin");
     run(Command::new("git")
-        .args(["config", &stand, origin])
+        .args(["config", "plumb.test-forgejo-url", forge])
         .current_dir(root));
     run(Command::new("git")
         .args(["config", "user.email", "probe@test"])
@@ -22,6 +25,9 @@ pub fn lined(root: &Path, origin: &str, bare: &Path, line: &str) -> String {
         .current_dir(root));
     run(Command::new("git")
         .args(["push", "-q", "origin", &format!("HEAD:refs/heads/{line}")])
+        .current_dir(root));
+    run(Command::new("git")
+        .args(["push", "-q", "origin", "HEAD:refs/heads/main"])
         .current_dir(root));
     let head = Command::new("git")
         .args(["rev-parse", "HEAD"])

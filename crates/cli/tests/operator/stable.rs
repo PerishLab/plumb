@@ -23,14 +23,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 }
 
 pub fn command(root: &Path, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(args)
-        .current_dir(root)
-        .env("FORGEJO_TOKEN", "test-token")
-        .env("HARNESS_RUN_POLL_MS", "1")
-        .env("HARNESS_RUN_TIMEOUT_MS", "100")
-        .output()
-        .expect("plumb")
+    super::line::plumb(root, args).output().expect("plumb")
 }
 
 pub fn run(command: &mut Command) {

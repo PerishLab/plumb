@@ -502,7 +502,7 @@ id = "release.stable-rejoin"
 summary = "Stable settles back into main"
 law = "After stable activation a topology-preserving merge makes its published commit an ancestor of main before another stable activation; exact release and ordinary main movement remain independent."
 evidence = "Stable pointer commit, main ancestry, release-line merge topology, and the next stable activation gate."
-standing = "prose-only"
+standing = "mechanized"
 owner = "release"
 tags = ["ownership", "release", "state"]
 
