@@ -44,16 +44,26 @@ jobs:
         shell: bash
         run: |
           set -eu
-          plan=$(plumb release plan)
-          PLUMB_RELEASE_VERSION=$(printf '%s' "$plan" | jq -r '.version')
+          if plumb release plan --help >/dev/null 2>&1; then
+            plan=$(plumb release plan)
+            PLUMB_RELEASE_VERSION=$(printf '%s' "$plan" | jq -r '.version')
+            PLUMB_RELEASE_CHANNEL=$(printf '%s' "$plan" | jq -r '.channel')
+            PLUMB_RELEASE_PROJECT=$(printf '%s' "$plan" | jq -c '.project')
+          else
+            PLUMB_RELEASE_VERSION=$(plumb release reference)
+            export PLUMB_RELEASE_VERSION
+            PLUMB_RELEASE_CHANNEL=$(plumb release channel)
+            export PLUMB_RELEASE_CHANNEL
+            plumb release source
+            PLUMB_RELEASE_PROJECT=$(plumb release surface | jq -c '.project')
+          fi
           export PLUMB_RELEASE_VERSION
-          PLUMB_RELEASE_CHANNEL=$(printf '%s' "$plan" | jq -r '.channel')
           export PLUMB_RELEASE_CHANNEL
           {
             echo "channel=$PLUMB_RELEASE_CHANNEL"
             echo "commit=$PLUMB_RELEASE_COMMIT"
             echo "version=$PLUMB_RELEASE_VERSION"
             echo "targets=$(plumb ship binary matrix)"
-            echo "project=$(printf '%s' "$plan" | jq -c '.project')"
+            echo "project=$PLUMB_RELEASE_PROJECT"
           } >> "$GITHUB_OUTPUT"
 {@binary}{@project}
