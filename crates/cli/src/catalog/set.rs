@@ -37,14 +37,22 @@ pub const SETS: [(&str, &str); 5] = [
 ];
 
 pub static POLICY: LazyLock<toml::Table> = LazyLock::new(|| {
-    carried(
-        &held(),
-        "rules/policy.toml",
-        plumb::seat::resource!("rules/policy.toml"),
-    )
-    .parse()
-    .expect("rules/policy.toml must parse")
+    let factory = plumb::seat::resource!("rules/policy.toml");
+    let text = carried(&held(), "rules/policy.toml", factory);
+    shaped(&text).unwrap_or_else(|| {
+        shaped(factory).expect("the compiled rules/policy.toml must hold its complete shape")
+    })
 });
+
+fn shaped(text: &str) -> Option<toml::Table> {
+    let table: toml::Table = text.parse().ok()?;
+    for name in ["shape", "web"] {
+        if table.get(name)?.as_array()?.is_empty() {
+            return None;
+        }
+    }
+    Some(table)
+}
 
 pub fn limits() -> BTreeMap<String, i64> {
     POLICY

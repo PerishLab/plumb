@@ -96,97 +96,93 @@ impl Expected {
             tests: BTreeSet::new(),
             bans: BTreeSet::new(),
         };
-        if root.join("crates").is_dir() {
-            held.rust("crates/**/*.rs", "crates/*");
-        }
-        if root.join("app").is_dir() {
-            held.include.insert("app/src/**/*.rs".to_string());
-            held.include.insert("app/tests/**/*.rs".to_string());
-            held.roots.insert("app/src".to_string());
-            held.roots.insert("app/tests".to_string());
-            held.tests.insert("app/tests/**/*.rs".to_string());
-            if root.join(".runseal").is_dir() {
-                held.include.insert(".runseal/**".to_string());
-                held.roots.insert(".runseal".to_string());
+        for row in rows("shape") {
+            let table = row
+                .as_table()
+                .unwrap_or_else(|| panic!("rules/policy.toml shape rows must be tables"));
+            if list(table, "when")
+                .iter()
+                .all(|path| root.join(path).is_dir())
+            {
+                held.apply(table, "include", Part::Include);
+                held.apply(table, "exclude", Part::Exclude);
+                held.apply(table, "roots", Part::Root);
+                held.apply(table, "tests", Part::Test);
+                held.apply(table, "bans", Part::Ban);
             }
         }
-        if root.join("apps").is_dir() {
-            held.web(root, "apps");
-        }
-        if root.join("packages").is_dir() {
-            held.web(root, "packages");
-        }
-        if root.join("lib").is_dir() {
-            held.include.insert("lib/**/*.ts".to_string());
-            held.include.insert("lib/**/*.tsx".to_string());
-            held.roots.insert("lib".to_string());
-        }
-        if root.join("tests").is_dir() {
-            held.include.insert("tests/**/*.ts".to_string());
-            held.include.insert("tests/**/*.tsx".to_string());
-            held.roots.insert("tests".to_string());
-            held.tests.insert("tests/**/*.test.ts".to_string());
-            held.tests.insert("tests/**/*.test.tsx".to_string());
-        }
-        if root.join("docs").is_dir() {
-            held.include.insert("docs/**/*.md".to_string());
-            held.roots.insert("docs".to_string());
-        }
-        if root.join("skills").is_dir() {
-            held.include.insert("skills/**/*.md".to_string());
-            held.roots.insert("skills/*".to_string());
-        }
-        if root.join("crates").is_dir() || root.join("app").is_dir() {
-            held.exclude.insert("**/target/**".to_string());
-        }
-        if ["apps", "packages", "lib"]
-            .iter()
-            .any(|seat| root.join(seat).is_dir())
-        {
-            held.exclude.insert("**/node_modules/**".to_string());
-        }
-        if ["apps", "packages"]
-            .iter()
-            .any(|seat| root.join(seat).is_dir())
-        {
-            held.exclude.insert("**/dist/**".to_string());
-        }
-        if root.join("apps/web/src/lib/components").is_dir() {
-            held.bans
-                .insert("apps/web/src/lib/components/**".to_string());
+        for row in rows("web") {
+            let table = row
+                .as_table()
+                .unwrap_or_else(|| panic!("rules/policy.toml web rows must be tables"));
+            let seat = table
+                .get("seat")
+                .and_then(toml::Value::as_str)
+                .unwrap_or_else(|| panic!("rules/policy.toml web rows must name a seat"));
+            let base = root.join(seat);
+            if !base.is_dir() {
+                continue;
+            }
+            held.apply(table, "include", Part::Include);
+            held.apply(table, "exclude", Part::Exclude);
+            held.apply(table, "roots", Part::Root);
+            held.apply(table, "tests", Part::Test);
+            let svelte = extension(&base, "svelte");
+            let tsx = extension(&base, "tsx");
+            if svelte {
+                held.apply(table, "svelte-include", Part::Include);
+                held.apply(table, "svelte-exclude", Part::Exclude);
+            }
+            if !svelte || tsx {
+                held.apply(table, "tsx-include", Part::Include);
+                held.apply(table, "tsx-tests", Part::Test);
+            }
         }
         held
     }
 
-    fn rust(&mut self, include: &str, root: &str) {
-        self.include.insert(include.to_string());
-        self.roots.insert(format!("{root}/src"));
-        self.roots.insert(format!("{root}/tests"));
-        self.tests.insert(format!("{root}/tests/**/*.rs"));
+    fn apply(&mut self, table: &toml::Table, key: &str, part: Part) {
+        let target = match part {
+            Part::Include => &mut self.include,
+            Part::Exclude => &mut self.exclude,
+            Part::Root => &mut self.roots,
+            Part::Test => &mut self.tests,
+            Part::Ban => &mut self.bans,
+        };
+        target.extend(list(table, key));
     }
+}
 
-    fn web(&mut self, root: &Path, seat: &str) {
-        let svelte = extension(&root.join(seat), "svelte");
-        let tsx = !svelte || extension(&root.join(seat), "tsx");
-        for suffix in ["ts", "css", "scss"] {
-            self.include.insert(format!("{seat}/**/*.{suffix}"));
-        }
-        if svelte {
-            self.include.insert(format!("{seat}/**/*.svelte"));
-            self.exclude.insert("**/.svelte-kit/**".to_string());
-        }
-        if tsx {
-            self.include.insert(format!("{seat}/**/*.tsx"));
-        }
-        self.roots.insert(format!("{seat}/*/src"));
-        if seat == "packages" {
-            self.roots.insert(format!("{seat}/*/lib"));
-        }
-        self.roots.insert(format!("{seat}/*/tests"));
-        self.tests.insert(format!("{seat}/*/tests/**/*.test.ts"));
-        if tsx {
-            self.tests.insert(format!("{seat}/*/tests/**/*.test.tsx"));
-        }
+enum Part {
+    Include,
+    Exclude,
+    Root,
+    Test,
+    Ban,
+}
+
+fn rows(name: &str) -> &'static [toml::Value] {
+    crate::catalog::set::POLICY
+        .get(name)
+        .and_then(toml::Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_else(|| panic!("rules/policy.toml must hold {name} rows"))
+}
+
+fn list(table: &toml::Table, key: &str) -> BTreeSet<String> {
+    match table.get(key) {
+        Some(value) => value
+            .as_array()
+            .unwrap_or_else(|| panic!("rules/policy.toml {key} must be a list"))
+            .iter()
+            .map(|value| {
+                value
+                    .as_str()
+                    .unwrap_or_else(|| panic!("rules/policy.toml {key} must hold strings"))
+                    .to_string()
+            })
+            .collect(),
+        None => BTreeSet::new(),
     }
 }
 

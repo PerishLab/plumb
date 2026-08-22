@@ -31,6 +31,20 @@ fn policy(root: &Path, write: bool) -> std::process::Output {
     command.output().expect("plumb should run")
 }
 
+fn stock(seat: &Path, policy: &str) {
+    let mark = "29990101T000000Z";
+    let rules = seat.join(mark).join("rules");
+    std::fs::create_dir_all(&rules).expect("seat should be made");
+    std::fs::write(rules.join("policy.toml"), policy).expect("policy should be held");
+    std::fs::write(
+        seat.join("metadata.json"),
+        format!(
+            "{{\"format\":1,\"product\":\"plumb\",\"channel\":\"stable\",\"version\":\"{mark}\",\"source\":\"fixture\",\"commit\":\"\"}}"
+        ),
+    )
+    .expect("pointer should be held");
+}
+
 #[test]
 fn blacklist() {
     let root = std::env::temp_dir().join("plumb-blacklist");
@@ -178,6 +192,58 @@ fn svelte() {
     assert!(text.contains("**/.svelte-kit/**"), "{text}");
     assert!(!text.contains("apps/**/*.tsx"), "{text}");
     assert!(!text.contains("packages/**/*.tsx"), "{text}");
+}
+
+#[test]
+fn carriage() {
+    let root = tempfile::tempdir().expect("fixture");
+    let seat = tempfile::tempdir().expect("seat");
+    std::fs::create_dir_all(root.path().join("docs")).expect("fixture should be made");
+    std::fs::write(root.path().join("ectropy.toml"), "").expect("policy should be written");
+    let factory = include_str!("../rules/policy.toml");
+    stock(
+        seat.path(),
+        &factory.replace("docs/**/*.md", "notes/**/*.md"),
+    );
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args([
+            "policy",
+            root.path().to_str().expect("path should be utf8"),
+            "--write",
+        ])
+        .env("PLUMB_DEPOT_SEAT", seat.path())
+        .output()
+        .expect("plumb should run");
+    assert!(output.status.success(), "{output:?}");
+    let text = std::fs::read_to_string(root.path().join("ectropy.toml"))
+        .expect("reconciled policy should be readable");
+    assert!(text.contains("notes/**/*.md"), "{text}");
+    assert!(!text.contains("docs/**/*.md"), "{text}");
+}
+
+#[test]
+fn fallback() {
+    let root = tempfile::tempdir().expect("fixture");
+    let seat = tempfile::tempdir().expect("seat");
+    std::fs::create_dir_all(root.path().join("docs")).expect("fixture should be made");
+    std::fs::write(root.path().join("ectropy.toml"), "").expect("policy should be written");
+    stock(
+        seat.path(),
+        "[limit]\nblock=4\nfanout=10\nfile=300\nmarkup=8\nparam=4\npath=4\n[comment]\nallow=false\n[word]\nsingle=true\n",
+    );
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args([
+            "policy",
+            root.path().to_str().expect("path should be utf8"),
+            "--write",
+        ])
+        .env("PLUMB_DEPOT_SEAT", seat.path())
+        .output()
+        .expect("plumb should run");
+    assert!(output.status.success(), "{output:?}");
+    let text = std::fs::read_to_string(root.path().join("ectropy.toml"))
+        .expect("reconciled policy should be readable");
+    assert!(text.contains("docs/**/*.md"), "{text}");
 }
 
 #[test]
