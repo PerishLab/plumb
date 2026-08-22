@@ -34,7 +34,7 @@ sha2 = "0.10"
 tar = { version = "0.4", optional = true }
 ureq = { version = "3", optional = true }
 pin-project-lite = "0.2"
-plumb-macro = { path = "../macro", version = "=0.29.0", registry = "perish" }
+plumb-macro = { path = "../macro", version = "=0.30.0", registry = "perish" }
 runseal = { version = "=0.17.0", registry = "perish", default-features = false, optional = true }
 serde = { version = "1", features = ["derive"] }
 toml = "0.9"
