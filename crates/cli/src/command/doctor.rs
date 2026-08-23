@@ -1,4 +1,5 @@
 use crate::catalog::model::Coverage;
+use crate::command::depot;
 use crate::judge::{self, finding};
 use crate::shape;
 use serde::Serialize;
@@ -78,9 +79,10 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
         Ok(snapshot) => plumb::vocabulary::observe(snapshot),
         Err(error) => Err(error.clone()),
     };
+    let depot = depot::observe(&snapshot);
     let mut findings = judge::judge(&held);
     findings.extend(judge::vocabulary::judge(&vocabulary));
-    findings.extend(judge::depot::judge(&snapshot));
+    findings.extend(judge::depot::judge(&depot));
     let summary = Summary::new(&findings);
     let ok = summary.wrong == 0 && summary.blind == 0;
     if json {

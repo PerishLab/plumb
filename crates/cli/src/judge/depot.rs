@@ -1,28 +1,33 @@
 use super::finding::{Finding, Seed};
 use crate::catalog::rules::depot::{DEPOT_PUBLISHED, DEPOT_SCHEMA};
-use crate::command::depot::record::{Manifest, Object, inventory};
-use plumb::snapshot::{Refusal, Snapshot};
+use crate::command::depot::Evidence;
+use crate::command::depot::record::{Manifest, Object};
 use semver::Version;
 use std::collections::BTreeMap;
 
-pub fn judge(snapshot: &Result<Snapshot, Refusal>) -> Vec<Finding> {
-    let manifest = match crate::command::depot::manifest() {
-        Ok(None) => return Vec::new(),
-        Ok(Some(manifest)) => manifest,
-        Err(error) => return vec![Finding::new(Seed::blind(&DEPOT_PUBLISHED, error))],
+pub fn judge(evidence: &Evidence) -> Vec<Finding> {
+    let (manifest, inventory) = match evidence {
+        Evidence::Absent => return Vec::new(),
+        Evidence::Blind(error) => {
+            return vec![Finding::new(Seed::blind(&DEPOT_PUBLISHED, error.clone()))];
+        }
+        Evidence::Held {
+            manifest,
+            inventory,
+        } => (manifest, inventory),
     };
-    let mut found = floor(&manifest);
-    let Ok(snapshot) = snapshot else {
+    let mut found = floor(manifest);
+    let Some(inventory) = inventory else {
         return found;
     };
-    match inventory(snapshot) {
-        Ok((objects, _)) if objects.is_empty() => found,
-        Ok((objects, _)) => {
-            found.extend(compare(&objects, &manifest));
+    match inventory {
+        Ok(objects) if objects.is_empty() => found,
+        Ok(objects) => {
+            found.extend(compare(objects, manifest));
             found
         }
         Err(error) => {
-            found.push(Finding::new(Seed::blind(&DEPOT_PUBLISHED, error)));
+            found.push(Finding::new(Seed::blind(&DEPOT_PUBLISHED, error.clone())));
             found
         }
     }

@@ -5,11 +5,36 @@ mod store;
 
 use clap::Subcommand;
 use plumb::rig::Rig;
-use plumb::snapshot::Snapshot;
+use plumb::snapshot::{Refusal, Snapshot};
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
 pub use seat::Held;
+
+pub enum Evidence {
+    Absent,
+    Blind(String),
+    Held {
+        manifest: record::Manifest,
+        inventory: Option<Result<Vec<record::Object>, String>>,
+    },
+}
+
+pub fn observe(snapshot: &Result<Snapshot, Refusal>) -> Evidence {
+    let manifest = match manifest() {
+        Ok(None) => return Evidence::Absent,
+        Ok(Some(manifest)) => manifest,
+        Err(error) => return Evidence::Blind(error),
+    };
+    let inventory = snapshot
+        .as_ref()
+        .ok()
+        .map(|snapshot| record::inventory(snapshot).map(|(objects, _)| objects));
+    Evidence::Held {
+        manifest,
+        inventory,
+    }
+}
 
 pub fn manifest() -> Result<Option<record::Manifest>, String> {
     match held() {
