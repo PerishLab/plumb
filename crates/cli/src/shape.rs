@@ -32,7 +32,8 @@ pub struct Shape {
     pub ships: BTreeSet<String>,
     pub sites: BTreeSet<String>,
     pub ignore: String,
-    pub bounds: Vec<String>,
+    pub bounds: Vec<(String, bool)>,
+    pub components: bool,
     pub root: std::path::PathBuf,
     pub rust: bool,
     pub runseal: bool,
@@ -212,6 +213,13 @@ pub fn capture(
     let held = layout::read(root, snapshot.as_ref());
     let release = pair::release(root);
     let ships = release.attachments.clone();
+    let bounds = policy::bounds(doc.as_ref())
+        .into_iter()
+        .map(|path| {
+            let exists = root.join(&path).exists();
+            (path, exists)
+        })
+        .collect();
     Shape {
         wrappers: seat.names(".runseal/wrappers", ".ts"),
         dirs: snapshot.as_ref().map(Root::dirs).unwrap_or_default(),
@@ -226,6 +234,9 @@ pub fn capture(
         ships,
         sites: pair::sites(root),
         ignore: std::fs::read_to_string(root.join(".gitignore")).unwrap_or_default(),
+        bounds,
+        components: root.join("packages/components").is_dir(),
+        root: root.to_path_buf(),
         rust: root.join("Cargo.toml").exists(),
         runseal: root.join("runseal.toml").is_file() || root.join(".runseal").is_dir(),
         guards: guarded.lanes,
@@ -247,8 +258,6 @@ pub fn capture(
         dispatch: dispatch::read(root),
         web: web::read(root),
         policy,
-        bounds: policy::bounds(doc.as_ref()),
-        root: root.to_path_buf(),
         guard: guarded.source,
         layout: held,
     }

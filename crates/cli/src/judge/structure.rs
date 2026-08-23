@@ -86,7 +86,7 @@ impl Structure<'_> {
                 ));
             }
         }
-        if held.root.join("packages/components").is_dir() {
+        if held.components {
             found.push(wrong(&rule::RESERVED_COMPONENTS_SEAT, COMPONENTS));
         }
         if let Some(why) = &held.unread {
@@ -136,8 +136,8 @@ impl Structure<'_> {
     }
 
     fn matched(&self, found: &mut Found) {
-        for path in &self.0.bounds {
-            if !self.0.root.join(path).exists() {
+        for (path, exists) in &self.0.bounds {
+            if !exists {
                 found.push(wrong(
                     &rule::BOUNDARY_EXISTS,
                     format!("boundary names {path} which does not exist"),
