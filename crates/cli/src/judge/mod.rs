@@ -6,11 +6,11 @@ use shape::Found;
 use std::collections::BTreeSet;
 use text::{COMPONENTS, CONCURRENCY, CONTAINER};
 
-mod depot;
+pub(crate) mod depot;
 mod deps;
-pub(crate) mod doctor;
 pub(crate) mod finding;
 mod text;
+pub(crate) mod vocabulary;
 
 pub use text::show;
 

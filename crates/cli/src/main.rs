@@ -180,7 +180,7 @@ impl Command {
 
 fn execute(command: Command) -> i32 {
     match command {
-        Command::Doctor { target, json } => judge::doctor::run(PathBuf::from(target.root), json),
+        Command::Doctor { target, json } => command::doctor::run(PathBuf::from(target.root), json),
         Command::Land {
             target,
             base,

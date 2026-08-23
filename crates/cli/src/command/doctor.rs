@@ -1,5 +1,5 @@
-use super::{finding, judge};
 use crate::catalog::model::Coverage;
+use crate::judge::{self, finding};
 use crate::shape;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -78,9 +78,9 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
         Ok(snapshot) => plumb::vocabulary::observe(snapshot),
         Err(error) => Err(error.clone()),
     };
-    let mut findings = judge(&held);
-    findings.extend(retired(&vocabulary));
-    findings.extend(super::depot::judge(&snapshot));
+    let mut findings = judge::judge(&held);
+    findings.extend(judge::vocabulary::judge(&vocabulary));
+    findings.extend(judge::depot::judge(&snapshot));
     let summary = Summary::new(&findings);
     let ok = summary.wrong == 0 && summary.blind == 0;
     if json {
@@ -173,32 +173,6 @@ impl Vocabulary {
                 refusal: Some(refusal),
             },
         }
-    }
-}
-
-fn retired(
-    result: &Result<plumb::vocabulary::Report, plumb::vocabulary::Refusal>,
-) -> Vec<finding::Finding> {
-    use crate::catalog::rules::vocabulary::RETIRED_TERM_ABSENT;
-
-    match result {
-        Ok(report) => report
-            .hits
-            .iter()
-            .map(|hit| {
-                finding::Finding::new(finding::Seed::wrong(
-                    &RETIRED_TERM_ABSENT,
-                    format!(
-                        "{} contains retired domain term {} in {}",
-                        hit.path, hit.term, hit.surface
-                    ),
-                ))
-            })
-            .collect(),
-        Err(error) => vec![finding::Finding::new(finding::Seed::blind(
-            &RETIRED_TERM_ABSENT,
-            error.to_string(),
-        ))],
     }
 }
 

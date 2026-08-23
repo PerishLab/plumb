@@ -1,5 +1,5 @@
-use super::super::{finding, show};
 use super::Summary;
+use crate::judge::{finding, show};
 use crate::shape;
 use std::path::Path;
 

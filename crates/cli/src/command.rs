@@ -2,6 +2,7 @@ pub(crate) mod audit;
 pub mod clock;
 pub mod cookbook;
 pub mod depot;
+pub mod doctor;
 pub mod land;
 pub mod operator;
 pub mod precommit;
