@@ -204,7 +204,7 @@ fn execute(command: Command) -> i32 {
             head,
             write,
             json,
-        } => judge::precommit::run(judge::precommit::Input {
+        } => command::precommit::run(command::precommit::Input {
             root: PathBuf::from(target.root),
             base,
             head,
