@@ -4,6 +4,7 @@ pub mod cookbook;
 pub mod depot;
 pub mod land;
 pub mod operator;
+pub mod radius;
 pub mod release;
 pub mod render;
 pub mod retire;

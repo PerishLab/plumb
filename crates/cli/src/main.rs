@@ -216,7 +216,7 @@ fn execute(command: Command) -> i32 {
             product,
             candidate,
             json,
-        } => judge::radius::run(judge::radius::Input {
+        } => command::radius::run(command::radius::Input {
             roots: root,
             product,
             candidate,
