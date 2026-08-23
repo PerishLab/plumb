@@ -4,6 +4,7 @@ use shape::Found;
 
 pub(crate) mod depot;
 mod deps;
+mod dispatch;
 mod env;
 pub(crate) mod finding;
 mod structure;
@@ -20,7 +21,7 @@ pub fn judge(held: &shape::Shape) -> Vec<Finding> {
         structure::judge(held),
         deps::check(held),
         web::judge(held.web.as_ref()),
-        held.dispatch.clone().unwrap_or_default(),
+        dispatch::judge(held.dispatch.as_ref()),
         lanes(held),
     ] {
         for seed in found {

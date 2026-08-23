@@ -1,22 +1,74 @@
 mod production;
-use crate::catalog::model::Mechanism;
-use crate::catalog::rules::dispatch as rule;
-use crate::judge::finding::{Found, Seed};
 use serde_json::Value as Json;
 use std::path::{Path, PathBuf};
 
-pub fn read(root: &Path) -> Option<Found> {
+pub struct Evidence {
+    pub(crate) manifest: Manifest,
+    pub(crate) code: Code,
+    pub(crate) production: Production,
+}
+
+pub(crate) enum Manifest {
+    Absent,
+    Unread(String),
+    Held(Sidecar),
+}
+
+pub(crate) struct Sidecar {
+    pub(crate) api: Option<Api>,
+    pub(crate) app: App,
+}
+
+pub(crate) struct Api {
+    pub(crate) port: bool,
+    pub(crate) ready: bool,
+    pub(crate) health: bool,
+}
+
+pub(crate) struct App {
+    pub(crate) named: bool,
+    pub(crate) port: bool,
+    pub(crate) health: bool,
+    pub(crate) binding: bool,
+}
+
+pub(crate) struct Code {
+    pub(crate) port: bool,
+    pub(crate) stamp: bool,
+    pub(crate) ready: bool,
+    pub(crate) namespace: bool,
+}
+
+pub(crate) struct Production {
+    pub(crate) api: bool,
+    pub(crate) web: Image,
+    pub(crate) workloads: bool,
+    pub(crate) ingress: bool,
+    pub(crate) aligned: bool,
+}
+
+pub(crate) enum Image {
+    Absent,
+    Unread,
+    Held(Plane),
+}
+
+pub(crate) struct Plane {
+    pub(crate) runtime: bool,
+    pub(crate) dispatch: bool,
+}
+
+pub fn read(root: &Path) -> Option<Evidence> {
     let workspace = Workspace(root);
     let web = workspace.package()?;
     if !contains(&web, "svelte") || !contains(&web, "vite") || !workspace.executable() {
         return None;
     }
-
-    let mut found = Found::new();
-    workspace.sidecar(&mut found);
-    workspace.api(&mut found);
-    production::read(root, &mut found);
-    Some(found)
+    Some(Evidence {
+        manifest: workspace.sidecar(),
+        code: workspace.api(),
+        production: production::read(root),
+    })
 }
 
 struct Workspace<'a>(&'a Path);
@@ -61,104 +113,45 @@ impl Workspace<'_> {
         named && target
     }
 
-    fn sidecar(&self, found: &mut Found) {
+    fn sidecar(&self) -> Manifest {
         let path = self.0.join("sidecar.toml");
         let Ok(text) = std::fs::read_to_string(&path) else {
-            wrong(
-                found,
-                &rule::SIDECAR_MANIFEST_PRESENT,
-                "web/api pair has no sidecar.toml",
-            );
-            return;
+            return Manifest::Absent;
         };
         let doc = match text.parse::<toml::Table>() {
             Ok(doc) => toml::Value::Table(doc),
             Err(error) => {
-                found.push(Seed::blind(
-                    &rule::SIDECAR_MANIFEST_READABLE,
-                    format!(
-                        "cannot read sidecar.toml: {}",
-                        error.to_string().lines().next().unwrap_or("")
-                    ),
-                ));
-                return;
+                return Manifest::Unread(
+                    error.to_string().lines().next().unwrap_or("").to_string(),
+                );
             }
         };
-
         let api = doc
             .get("sidecars")
             .and_then(toml::Value::as_array)
             .and_then(|list| {
                 list.iter()
                     .find(|entry| entry.get("name").and_then(toml::Value::as_str) == Some("api"))
-            });
-        match api {
-            None => wrong(
-                found,
-                &rule::API_ROLE_DECLARED,
-                "sidecar does not declare the api role",
-            ),
-            Some(api) => {
-                if api.get("port").and_then(toml::Value::as_integer) != Some(0) {
-                    wrong(
-                        found,
-                        &rule::API_PORT_LEASED,
-                        "sidecar api must lease port 0",
-                    );
-                }
-                if api
+            })
+            .map(|api| Api {
+                port: api.get("port").and_then(toml::Value::as_integer) == Some(0),
+                ready: api
                     .get("ready")
                     .and_then(|ready| ready.get("role"))
                     .and_then(toml::Value::as_str)
-                    != Some("api")
-                {
-                    wrong(
-                        found,
-                        &rule::API_READY_ROLE,
-                        "sidecar api must declare ready role api",
-                    );
-                }
-                if !port(api.get("health_url"), Some("/api/health")) {
-                    wrong(
-                        found,
-                        &rule::API_HEALTH_ROUTE,
-                        "sidecar api health_url must target {port}/api/health",
-                    );
-                }
-            }
-        }
-
+                    == Some("api"),
+                health: port(api.get("health_url"), Some("/api/health")),
+            });
         let app = doc.get("app");
-        if app
+        let named = app
             .and_then(|app| app.get("name"))
             .and_then(toml::Value::as_str)
-            != Some("web")
-        {
-            wrong(
-                found,
-                &rule::WEB_APP_DECLARED,
-                "sidecar does not declare the web app",
-            );
-        }
-        if app
+            == Some("web");
+        let leased = app
             .and_then(|app| app.get("port"))
             .and_then(toml::Value::as_integer)
-            != Some(0)
-        {
-            wrong(
-                found,
-                &rule::WEB_PORT_LEASED,
-                "sidecar web must lease port 0",
-            );
-        }
-        if !port(app.and_then(|app| app.get("health_url")), None) {
-            wrong(
-                found,
-                &rule::WEB_HEALTH_PORT,
-                "sidecar web health_url must use {port}",
-            );
-        }
-
+            == Some(0);
+        let health = port(app.and_then(|app| app.get("health_url")), None);
         let binding = app
             .and_then(|app| app.get("inherits_env"))
             .and_then(toml::Value::as_array)
@@ -168,49 +161,29 @@ impl Workspace<'_> {
                         && entry.get("name").and_then(toml::Value::as_str) == Some("API_URL")
                 })
             });
-        if !binding {
-            wrong(
-                found,
-                &rule::WEB_INHERITS_API_ENDPOINT,
-                "sidecar web must inherit api.endpoint as API_URL",
-            );
-        }
+        Manifest::Held(Sidecar {
+            api,
+            app: App {
+                named,
+                port: leased,
+                health,
+                binding,
+            },
+        })
     }
 
-    fn api(&self, found: &mut Found) {
+    fn api(&self) -> Code {
         let source = self.source(&self.0.join("crates/api/src"), "rs");
         let launch = std::fs::read_to_string(self.0.join("sidecar.toml")).unwrap_or_default();
-        if !source.contains("SIDECAR_PORT") && !launch.contains("SIDECAR_PORT") && !mapping(&launch)
-        {
-            wrong(
-                found,
-                &rule::API_CONSUMES_PORT,
-                "api does not consume SIDECAR_PORT",
-            );
-        }
-        if !source.contains("sidecar_stamp") && !source.contains("sidecar-stamp") {
-            wrong(
-                found,
-                &rule::API_ACCEPTS_STAMP,
-                "api does not accept --sidecar-stamp",
-            );
-        }
-        if !["\"role\"", "\"api\"", "\"endpoint\""]
-            .iter()
-            .all(|needle| source.contains(needle))
-        {
-            wrong(
-                found,
-                &rule::API_EMITS_READINESS,
-                "api does not emit api endpoint readiness",
-            );
-        }
-        if !source.contains("\"/api\"") || !source.contains(".nest(") {
-            wrong(
-                found,
-                &rule::API_NAMESPACE_MOUNTED,
-                "api does not mount the /api namespace",
-            );
+        Code {
+            port: source.contains("SIDECAR_PORT")
+                || launch.contains("SIDECAR_PORT")
+                || mapping(&launch),
+            stamp: source.contains("sidecar_stamp") || source.contains("sidecar-stamp"),
+            ready: ["\"role\"", "\"api\"", "\"endpoint\""]
+                .iter()
+                .all(|needle| source.contains(needle)),
+            namespace: source.contains("\"/api\"") && source.contains(".nest("),
         }
     }
 
@@ -259,8 +232,4 @@ fn collect(root: &Path, extension: &str, found: &mut Vec<PathBuf>) {
             found.push(path);
         }
     }
-}
-
-fn wrong(found: &mut Found, rule: &'static Mechanism, evidence: &str) {
-    found.push(Seed::wrong(rule, evidence));
 }

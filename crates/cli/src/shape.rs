@@ -1,4 +1,4 @@
-mod dispatch;
+pub(crate) mod dispatch;
 pub mod web;
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -48,7 +48,7 @@ pub struct Shape {
     pub named: Vec<(String, String)>,
     pub derived: Vec<String>,
     pub entries: Vec<String>,
-    pub dispatch: Option<Found>,
+    pub dispatch: Option<dispatch::Evidence>,
     pub web: Option<web::Evidence>,
     pub policy: Vec<String>,
     pub guard: String,

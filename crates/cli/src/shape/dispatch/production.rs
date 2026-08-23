@@ -1,65 +1,30 @@
-use super::{Found, wrong};
-use crate::catalog::rules::dispatch as rule;
+use super::{Image, Plane, Production};
 use std::path::{Path, PathBuf};
 
-pub(super) fn read(root: &Path, found: &mut Found) {
-    let production = Production(root);
-    if !root.join("deploy/api.Dockerfile").is_file() {
-        wrong(
-            found,
-            &rule::API_IMAGE_PRESENT,
-            "production has no api image seat",
-        );
-    }
+pub(super) fn read(root: &Path) -> Production {
+    let production = Reader(root);
     let image = root.join("deploy/web.Dockerfile");
-    if !image.is_file() {
-        wrong(
-            found,
-            &rule::WEB_IMAGE_PRESENT,
-            "production has no web image seat",
-        );
-    } else if let Ok(text) = std::fs::read_to_string(image) {
-        if !text.contains("dist/.perish/server.mjs") {
-            wrong(
-                found,
-                &rule::WEB_IMAGE_RUNS_DESIGN_RUNTIME,
-                "web image does not run the emitted design runtime",
-            );
+    let web = if !image.is_file() {
+        Image::Absent
+    } else {
+        match std::fs::read_to_string(image) {
+            Ok(text) => Image::Held(Plane {
+                runtime: text.contains("dist/.perish/server.mjs"),
+                dispatch: !Manifest(&text).proxy(),
+            }),
+            Err(_) => Image::Unread,
         }
-        if Manifest(&text).proxy() {
-            wrong(
-                found,
-                &rule::WEB_IMAGE_DOES_NOT_OWN_DISPATCH,
-                "web image still owns public proxy dispatch",
-            );
-        }
-    }
-
+    };
     let templates = production.templates();
     let api = templates
         .iter()
         .any(|text| Manifest(text).workload() && Manifest(text).role("api"));
-    let web = templates
+    let role = templates
         .iter()
         .any(|text| Manifest(text).workload() && Manifest(text).role("web"));
-    if !api || !web {
-        wrong(
-            found,
-            &rule::CHART_SPLITS_WORKLOADS,
-            "chart does not split api and web workloads",
-        );
-    }
     let ingress = templates
         .iter()
         .any(|text| Manifest(text).ingress("/api", "api") && Manifest(text).ingress("/", "web"));
-    if !ingress {
-        wrong(
-            found,
-            &rule::CHART_SPLITS_INGRESS,
-            "chart ingress does not split /api and / between api and web",
-        );
-    }
-
     let cargo = production.version();
     let aligned = production.charts().iter().any(|path| {
         let Ok(text) = std::fs::read_to_string(path) else {
@@ -69,18 +34,18 @@ pub(super) fn read(root: &Path, found: &mut Found) {
         let app = Manifest(&text).value("appVersion");
         cargo.as_deref() == version.as_deref() && version == app
     });
-    if !aligned {
-        wrong(
-            found,
-            &rule::CARGO_CHART_VERSION_TRAIN,
-            "Cargo and chart do not share one version train",
-        );
+    Production {
+        api: root.join("deploy/api.Dockerfile").is_file(),
+        web,
+        workloads: api && role,
+        ingress,
+        aligned,
     }
 }
 
-struct Production<'a>(&'a Path);
+struct Reader<'a>(&'a Path);
 
-impl Production<'_> {
+impl Reader<'_> {
     fn templates(&self) -> Vec<String> {
         let mut paths = Vec::new();
         let Ok(charts) = std::fs::read_dir(self.0.join("charts")) else {
