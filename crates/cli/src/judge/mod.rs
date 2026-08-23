@@ -22,7 +22,7 @@ pub fn judge(held: &shape::Shape) -> Vec<Finding> {
         deps::check(held),
         web::judge(held.web.as_ref()),
         dispatch::judge(held.dispatch.as_ref()),
-        lanes(held),
+        lanes(&held.drift),
     ] {
         for seed in found {
             notes.push(Finding::new(seed));
@@ -31,10 +31,10 @@ pub fn judge(held: &shape::Shape) -> Vec<Finding> {
     notes
 }
 
-fn lanes(held: &shape::Shape) -> Found {
-    shape::lane::Seat(&held.root)
-        .drift()
-        .into_iter()
+fn lanes(drift: &[String]) -> Found {
+    drift
+        .iter()
+        .cloned()
         .map(|evidence| {
             finding::Seed::noted(&crate::catalog::rules::release::LANE_RENDERED, evidence)
         })
