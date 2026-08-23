@@ -49,7 +49,7 @@ pub struct Shape {
     pub derived: Vec<String>,
     pub entries: Vec<String>,
     pub dispatch: Option<Found>,
-    pub web: Option<Found>,
+    pub web: Option<web::Evidence>,
     pub policy: Vec<String>,
     pub guard: String,
     pub layout: layout::Read,

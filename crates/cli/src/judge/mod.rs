@@ -9,6 +9,7 @@ pub(crate) mod finding;
 mod structure;
 mod text;
 pub(crate) mod vocabulary;
+mod web;
 
 pub use text::show;
 
@@ -18,7 +19,7 @@ pub fn judge(held: &shape::Shape) -> Vec<Finding> {
         env::judge(held),
         structure::judge(held),
         deps::check(held),
-        held.web.clone().unwrap_or_default(),
+        web::judge(held.web.as_ref()),
         held.dispatch.clone().unwrap_or_default(),
         lanes(held),
     ] {
