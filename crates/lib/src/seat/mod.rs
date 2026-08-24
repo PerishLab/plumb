@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
 
+pub mod depot;
+
 pub use plumb_macro::resource;
 
 pub const TMP: &str = ".tmp";

@@ -82,7 +82,7 @@ fn spec(release: &Release, found: &mut Found) {
 }
 
 fn measured(release: &Release, found: &mut Found) {
-    let rules = &crate::catalog::set::RULES.release;
+    let rules = &crate::catalog::set::current().release;
     for (attachment, held) in &release.widths {
         let permitted = rules
             .permitted

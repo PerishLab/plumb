@@ -19,12 +19,12 @@ pub fn judge(evidence: &Evidence) -> Found {
         want.exclude.clone(),
         &mut found,
     );
-    found.extend(either(
+    compare(
         "module roots",
         policy.list("module", "roots"),
         want.roots.clone(),
-        evidence.factory.roots.clone(),
-    ));
+        &mut found,
+    );
     policy.limits(&mut found);
     policy.setting(
         ("comment", "allow"),
@@ -64,14 +64,13 @@ struct Policy<'a>(&'a toml::Value);
 
 impl Policy<'_> {
     fn limits(&self, found: &mut Vec<String>) {
-        let factory = crate::catalog::set::factory();
         for (name, value) in crate::catalog::set::limits() {
             let seen = self
                 .0
                 .get("limit")
                 .and_then(|table| table.get(&name))
                 .and_then(toml::Value::as_integer);
-            if seen != Some(value) && seen != factory.get(&name).copied() {
+            if seen != Some(value) {
                 found.push(format!("ectropy limit {name} must be {value}"));
             }
         }
@@ -123,23 +122,6 @@ fn compare(name: &str, have: BTreeSet<String>, want: BTreeSet<String>, found: &m
     for value in have.difference(&want) {
         found.push(format!("unexpected ectropy {name} {value}"));
     }
-}
-
-fn either(
-    name: &str,
-    have: BTreeSet<String>,
-    want: BTreeSet<String>,
-    factory: BTreeSet<String>,
-) -> Vec<String> {
-    if have == want || have == factory {
-        return Vec::new();
-    }
-    let mut found = Vec::new();
-    require(name, have.clone(), want.clone(), &mut found);
-    for value in have.difference(&want) {
-        found.push(format!("unexpected ectropy {name} {value}"));
-    }
-    found
 }
 
 fn require(name: &str, have: BTreeSet<String>, want: BTreeSet<String>, found: &mut Vec<String>) {

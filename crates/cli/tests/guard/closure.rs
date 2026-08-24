@@ -32,10 +32,11 @@ fn root() -> PathBuf {
 }
 
 fn plumb(args: &[&str]) -> Output {
+    let seat = super::support::depot(&[]);
     Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(args)
         .env("PLUMB_LOCUS_ENABLED", "false")
-        .env("PLUMB_DEPOT_SEAT", "/tmp/plumb-closure-empty-depot")
+        .env("PLUMB_DEPOT_SEAT", seat.path())
         .output()
         .expect("plumb should run")
 }
@@ -44,7 +45,8 @@ fn success(args: &[&str]) -> Output {
     let output = plumb(args);
     assert!(
         output.status.success(),
-        "plumb {args:?}: {}",
+        "plumb {args:?}: {}{}",
+        String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
     output

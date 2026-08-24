@@ -97,8 +97,11 @@ struct Owners {
 }
 
 pub fn run(deed: Deed) -> i32 {
+    if let Err(error) = super::prepare() {
+        return sour(&format!("cannot read synced catalog: {error}"));
+    }
     if let Err(error) = super::validate() {
-        return sour(&format!("invalid built-in catalog: {error}"));
+        return sour(&format!("invalid synced catalog: {error}"));
     }
     match deed {
         Deed::List { select, json } => list(select, json),

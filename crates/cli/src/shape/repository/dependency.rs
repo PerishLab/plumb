@@ -1,6 +1,6 @@
 mod cargo;
 
-use crate::catalog::set::RULES;
+use crate::catalog::set;
 use std::path::Path;
 
 pub use plumb_cli::{Dependency, Ecosystem};
@@ -24,8 +24,8 @@ impl Dependencies {
 pub fn read(root: &Path) -> Dependencies {
     let mut found = cargo::read(
         root,
-        &RULES.stable.cargo.registry,
-        &RULES.stable.cargo.index,
+        &set::current().stable.cargo.registry,
+        &set::current().stable.cargo.index,
     );
     found.normalize();
     found

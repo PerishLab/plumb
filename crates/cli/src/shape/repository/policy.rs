@@ -25,7 +25,6 @@ pub fn bounds(doc: Option<&toml::Value>) -> Vec<String> {
 pub(crate) struct Evidence {
     pub actual: toml::Value,
     pub expected: Expected,
-    pub factory: Expected,
 }
 
 impl Evidence {
@@ -33,7 +32,6 @@ impl Evidence {
         Self {
             actual,
             expected: Expected::read(root),
-            factory: Expected::factory(root),
         }
     }
 }
@@ -48,11 +46,10 @@ pub(crate) struct Expected {
 
 impl Expected {
     pub(crate) fn read(root: &Path) -> Self {
-        Self::from(root, &crate::catalog::set::POLICY)
-    }
-
-    pub(crate) fn factory(root: &Path) -> Self {
-        Self::from(root, &crate::catalog::set::FACTORY)
+        Self::from(
+            root,
+            crate::catalog::set::policy().expect("policy access must follow depot preparation"),
+        )
     }
 
     fn from(root: &Path, policy: &toml::Table) -> Self {

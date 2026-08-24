@@ -32,12 +32,7 @@ pub fn manifest() -> Result<Option<record::Manifest>, String> {
     match held() {
         Held::Factory => Ok(None),
         Held::Blind(error) => Err(error),
-        Held::Seat(base) => {
-            let file = base.join(record::LEAF);
-            let text = std::fs::read_to_string(&file)
-                .map_err(|error| format!("cannot read {}: {error}", file.display()))?;
-            record::Manifest::parse(&text).map(Some)
-        }
+        Held::Seat(seat) => Ok(Some(seat.manifest().clone())),
     }
 }
 

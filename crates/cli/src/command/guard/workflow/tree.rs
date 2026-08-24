@@ -1,4 +1,4 @@
-use crate::catalog::set::RULES;
+use crate::catalog::set;
 use crate::shape::workflow::Key;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -48,7 +48,7 @@ impl Tree {
             sponge.update([0]);
         }
         sponge.update([1]);
-        sponge.update(RULES.release.forge.as_bytes());
+        sponge.update(set::current().release.forge.as_bytes());
         sponge.update([0]);
         for (path, meta) in self.under(&key.paths) {
             sponge.update(path.as_bytes());
