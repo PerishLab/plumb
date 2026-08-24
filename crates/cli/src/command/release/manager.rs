@@ -53,14 +53,6 @@ fn render(spec: &Spec, channel: &str, version: &str) -> Result<(String, Option<S
         ("default_version", version.to_string()),
         ("binaries", spec.binaries.join(" ")),
         ("version_probe", "exact-v".to_string()),
-        (
-            "sync",
-            if spec.product == "plumb" {
-                "  \"$LOCAL_BIN_DIR/plumb\" depot sync".to_string()
-            } else {
-                String::new()
-            },
-        ),
         ("unix_platforms", unix(spec)),
         ("windows_archive", String::new()),
         ("windows_key", String::new()),
@@ -76,14 +68,6 @@ fn render(spec: &Spec, channel: &str, version: &str) -> Result<(String, Option<S
             vars.insert("windows_archive", target.archive.clone());
             vars.insert("windows_key", target.key.clone());
             vars.insert("windows_root", String::new());
-            vars.insert(
-                "sync",
-                if spec.product == "plumb" {
-                    "        & $binPath depot sync".to_string()
-                } else {
-                    String::new()
-                },
-            );
             Some(
                 plumb::fill::fill(
                     crate::command::lane::source::text("assets/manager/windows.ps1.in")?,

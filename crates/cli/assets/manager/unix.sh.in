@@ -638,7 +638,9 @@ install_{product}() {{
     ENTRY_STAGE=
     "$entry" --version
   done
-{sync}
+  if [ "{product}" = plumb ]; then
+    "$LOCAL_BIN_DIR/plumb" depot sync
+  fi
 
   old_versions "$VERSION" | while IFS= read -r old; do
     [ -n "$old" ] || continue
