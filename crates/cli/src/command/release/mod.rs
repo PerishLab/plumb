@@ -4,16 +4,14 @@ mod deed;
 pub(super) mod manager;
 pub(in crate::command) mod output;
 mod plan;
-pub(in crate::command) mod promotion;
-pub(super) mod proof;
-pub(super) mod record;
-pub(super) mod storage;
-pub(super) mod verify;
+mod truth;
 pub(in crate::command) mod workspace;
 
 pub use deed::Deed;
 use plumb::rig::{Authority, Rig};
 use std::path::{Path, PathBuf};
+use truth::promotion;
+pub(super) use truth::{proof, record, storage, verify};
 
 use crate::shape::release::Spec;
 

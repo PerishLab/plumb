@@ -12,11 +12,8 @@ paths = [
 
 [[boundary]]
 allow = ["fanout"]
-note = "the bounded self-hosting bootstrap adds one production module to the established release inventory"
-paths = [
-    "crates/cli/src/command/release",
-    "crates/cli/tests/operator",
-]
+note = "the operator integration target predates explicit per-group test targets; it retires as the harness is split without hiding fixture dependencies"
+paths = ["crates/cli/tests/operator"]
 
 [[boundary]]
 allow = ["fanout"]
@@ -41,7 +38,7 @@ allow = [
 note = "the one-time Plumb bootstrap contract uses explicit provenance and identity terms plus exact refusal combinations"
 paths = [
     "crates/cli/src/command/release/output/generator.rs",
-    "crates/cli/src/command/release/record.rs",
+    "crates/cli/src/command/release/truth/record.rs",
 ]
 
 [comment]
