@@ -5,6 +5,7 @@ use crate::shape;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
+pub(crate) mod dependency;
 mod human;
 
 #[derive(Serialize)]
@@ -74,7 +75,7 @@ struct Summary {
 pub fn run(root: PathBuf, json: bool) -> i32 {
     let snapshot = plumb::snapshot::Snapshot::read(&root);
     let mut held = shape::capture(&root, &snapshot);
-    held.dependencies.judge(&root, line(&root).as_deref());
+    dependency::observe(&mut held.dependencies, &root, line(&root).as_deref());
     let vocabulary = match &snapshot {
         Ok(snapshot) => plumb::vocabulary::observe(snapshot),
         Err(error) => Err(error.clone()),

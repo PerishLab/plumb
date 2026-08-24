@@ -1,4 +1,4 @@
-use crate::shape::dependency;
+use crate::command::doctor::dependency;
 use plumb::datum::{self, Datum};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};

@@ -1,5 +1,7 @@
-use super::{Dependencies, Ecosystem, retired};
+use super::retired;
 use crate::catalog::set::RULES;
+use crate::shape::Dependencies;
+use plumb_cli::Ecosystem;
 use std::collections::BTreeMap;
 use std::process::Command;
 
