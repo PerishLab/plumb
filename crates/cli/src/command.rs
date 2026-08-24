@@ -1,16 +1,11 @@
-pub(crate) mod audit;
-pub(crate) mod changelog;
-pub mod clock;
-pub mod cookbook;
 pub mod depot;
 pub mod doctor;
-pub mod land;
+mod guard;
 pub(crate) mod lane;
 pub mod operator;
-pub mod precommit;
-pub mod radius;
 pub mod release;
-pub mod render;
 pub mod retire;
 pub mod ship;
-pub mod workflow;
+
+pub(crate) use guard::{audit, changelog};
+pub use guard::{clock, cookbook, land, precommit, radius, render, workflow};

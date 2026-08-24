@@ -11,11 +11,6 @@ paths = [
 ]
 
 [[boundary]]
-allow = ["fanout"]
-note = "site has folded into ship and the inventory did not drop back under the limit, because what stands here is not one stray adaptor but a command set that has never been layered; perish.code/plumb-modules-layered retires this row"
-paths = ["crates/cli/src/command"]
-
-[[boundary]]
 allow = [
     "combination",
     "word",
