@@ -48,7 +48,7 @@ impl Web<'_> {
         .find_map(|name| std::fs::read_to_string(self.0.join("apps/web").join(name)).ok())
         .unwrap_or_default();
         let source = self.sources(&self.0.join("apps/web/src"));
-        let guard = super::operator::Operator(self.0).guard().source;
+        let guard = super::lane::Operator(self.0).guard().source;
         let name = package.get("name").and_then(Json::as_str);
         let plane = Plane {
             design: has(&package, "@perish/design"),

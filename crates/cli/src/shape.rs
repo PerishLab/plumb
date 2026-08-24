@@ -7,7 +7,6 @@ pub(crate) mod dependency;
 pub mod lane;
 pub mod layout;
 mod node;
-pub(crate) mod operator;
 mod pack;
 pub mod pair;
 pub(crate) mod policy;
@@ -175,7 +174,7 @@ pub fn capture(
     snapshot: &Result<plumb::snapshot::Snapshot, plumb::snapshot::Refusal>,
 ) -> Shape {
     let seat = Root(root);
-    let operator = operator::Operator(root);
+    let operator = lane::Operator(root);
     let guarded = operator.guard();
     let laws = root.join("ectropy.toml");
     let text = std::fs::read_to_string(&laws).unwrap_or_default();
