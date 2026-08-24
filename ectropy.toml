@@ -16,11 +16,6 @@ note = "site has folded into ship and the inventory did not drop back under the 
 paths = ["crates/cli/src/command"]
 
 [[boundary]]
-allow = ["fanout"]
-note = "the workflow command adds one integration test peer to the established command tests"
-paths = ["crates/cli/tests"]
-
-[[boundary]]
 allow = [
     "combination",
     "word",

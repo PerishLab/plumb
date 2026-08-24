@@ -202,7 +202,7 @@ fn carriage() {
     let seat = tempfile::tempdir().expect("seat");
     std::fs::create_dir_all(root.path().join("docs")).expect("fixture should be made");
     std::fs::write(root.path().join("ectropy.toml"), "").expect("policy should be written");
-    let factory = include_str!("../rules/policy.toml");
+    let factory = include_str!("../../rules/policy.toml");
     stock(
         seat.path(),
         &factory.replace("docs/**/*.md", "notes/**/*.md"),
@@ -228,7 +228,7 @@ fn transition() {
     let root = tempfile::tempdir().expect("fixture");
     let seat = tempfile::tempdir().expect("seat");
     govern(root.path());
-    let compiled = include_str!("../rules/policy.toml");
+    let compiled = include_str!("../../rules/policy.toml");
     std::fs::write(root.path().join("ectropy.toml"), compiled).expect("compiled policy");
     stock(seat.path(), &compiled.replace("path = 3", "path = 4"));
     let judged = Command::new(env!("CARGO_BIN_EXE_plumb"))

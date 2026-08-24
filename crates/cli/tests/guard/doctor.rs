@@ -27,7 +27,7 @@ fn seat() -> std::path::PathBuf {
         .to_path_buf()
 }
 
-fn govern(root: &std::path::Path) {
+pub(crate) fn govern(root: &std::path::Path) {
     let status = Command::new("git")
         .args([
             "-C",
@@ -40,13 +40,13 @@ fn govern(root: &std::path::Path) {
     assert!(status.success(), "fixture should become a repository");
 }
 
-fn fixture() -> tempfile::TempDir {
+pub(crate) fn fixture() -> tempfile::TempDir {
     let seat = tempfile::tempdir().expect("fixture");
     govern(seat.path());
     seat
 }
 
-fn run(args: &[&str]) -> String {
+pub(crate) fn run(args: &[&str]) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(args)
         .env_remove("PLUMB_RELEASE_VERSION")
