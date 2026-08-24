@@ -1,4 +1,5 @@
-use plumb::depot::{FORMAT, Manifest, Metadata, Object, Pointer, Schema, Seat, sha};
+use plumb::depot::{FORMAT, Manifest, Metadata, Object, Pointer, Schema, Seat, sha, supports};
+use semver::Version;
 use std::path::Path;
 
 fn stock(root: &Path, body: &str) -> (Manifest, Pointer) {
@@ -87,4 +88,16 @@ fn paths() {
             .unwrap_err()
             .contains("repeats")
     );
+}
+
+#[test]
+fn prerelease() {
+    let beta = Version::parse("0.31.0-beta.3").expect("beta");
+    let stable = Version::parse("0.31.0").expect("stable");
+    let next = Version::parse("0.32.0").expect("next");
+    let newer = Version::parse("0.31.0-beta.4").expect("newer beta");
+
+    assert!(supports(&beta, &stable));
+    assert!(!supports(&beta, &next));
+    assert!(!supports(&beta, &newer));
 }
