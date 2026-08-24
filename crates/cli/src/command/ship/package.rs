@@ -1,8 +1,8 @@
 use super::{archive, skill};
 mod debian;
-use crate::command::release::model::{Format, Spec};
 use crate::command::release::workspace::Workspace;
 use crate::command::release::{artifact, artifact::Asset};
+use crate::shape::release::{Format, Spec};
 use serde_json::json;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};

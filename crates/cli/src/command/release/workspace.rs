@@ -1,4 +1,4 @@
-use super::model::Spec;
+use crate::shape::release::Spec;
 use semver::Version;
 use serde::Deserialize;
 use std::collections::BTreeMap;

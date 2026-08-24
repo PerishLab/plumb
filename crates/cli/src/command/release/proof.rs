@@ -1,5 +1,5 @@
-use super::model::Spec;
 use super::record::{Promotion, Seal, sha};
+use crate::shape::release::Spec;
 use semver::Version;
 use std::path::Path;
 

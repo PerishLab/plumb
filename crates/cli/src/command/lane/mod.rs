@@ -2,8 +2,8 @@ mod forge;
 mod guard;
 pub(crate) mod source;
 
-use crate::command::release::model::Spec;
 use crate::shape::lane::{Evidence, Projection};
+use crate::shape::release::Spec;
 use serde_json::Value as Json;
 use std::collections::BTreeMap;
 use std::path::Path;

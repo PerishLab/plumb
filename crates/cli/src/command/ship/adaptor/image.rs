@@ -1,4 +1,4 @@
-use crate::command::release::model::Spec;
+use crate::shape::release::Spec;
 
 const LINUX: &str = "x86_64-unknown-linux-gnu";
 const PAYLOAD: &str = "uk.perish.plumb.payload";
@@ -266,7 +266,7 @@ impl Image<'_> {
     }
 }
 
-fn reference(oci: &crate::command::release::model::Oci, version: &str) -> String {
+fn reference(oci: &crate::shape::release::Oci, version: &str) -> String {
     format!("{}/{}:{version}", oci.registry, oci.image)
 }
 

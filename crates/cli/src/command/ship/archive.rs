@@ -1,4 +1,4 @@
-use crate::command::release::model::Format;
+use crate::shape::release::Format;
 use flate2::{Compression, GzBuilder};
 use std::collections::BTreeMap;
 use std::fs::File;

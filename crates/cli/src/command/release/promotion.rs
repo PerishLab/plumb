@@ -1,4 +1,5 @@
-use super::{channel, model::Spec, proof, verify};
+use super::{channel, proof, verify};
+use crate::shape::release::Spec;
 use plumb::forgejo::git;
 use semver::Version;
 use std::path::Path;

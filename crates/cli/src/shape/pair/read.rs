@@ -1,5 +1,5 @@
 use super::identity;
-use crate::command::release::model::Spec;
+use crate::shape::release::Spec;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 

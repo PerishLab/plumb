@@ -1,5 +1,5 @@
-use crate::command::release::model::Spec;
 use crate::command::release::record::Input;
+use crate::shape::release::Spec;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};

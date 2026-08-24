@@ -90,7 +90,7 @@ fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
     rejoined::Seat(&root).rejoined(&version)?;
     let client = Client::new(remote)?;
     freeze(&mut course, &client, &root, &name)?;
-    let spec = super::super::release::model::Spec::read(&root.join("plumb.toml"))?;
+    let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
     let commit = head(&client, &name)?;
     let exact = super::super::release::promotion(&spec, &commit, &version)?;
     if course.dry() {

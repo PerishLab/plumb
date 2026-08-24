@@ -186,7 +186,7 @@ fn site(deed: Site) -> Result<String, String> {
 fn binary(deed: Binary) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let manifest = rig.release.root.join("plumb.toml");
-    let spec = super::release::model::Spec::read(&manifest)?;
+    let spec = crate::shape::release::Spec::read(&manifest)?;
     let release = &rig.release;
     match deed {
         Binary::Activate => storage::shift(&capsule(release)?, &rig.activate),

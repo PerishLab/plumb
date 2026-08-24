@@ -1,4 +1,4 @@
-use super::model::Spec;
+use crate::shape::release::Spec;
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 

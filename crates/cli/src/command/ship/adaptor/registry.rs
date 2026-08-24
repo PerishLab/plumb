@@ -1,7 +1,7 @@
 mod ledger;
 mod manifest;
-use crate::command::release::model::{Cargo, Spec};
 use crate::command::release::workspace::{Workspace, release};
+use crate::shape::release::{Cargo, Spec};
 use flate2::read::GzDecoder;
 use semver::Version;
 use std::collections::BTreeMap;

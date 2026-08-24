@@ -1,5 +1,5 @@
 use crate::command::release::artifact::Asset;
-use crate::command::release::model::Spec;
+use crate::shape::release::Spec;
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 

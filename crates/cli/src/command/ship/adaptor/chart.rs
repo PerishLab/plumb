@@ -1,4 +1,4 @@
-use crate::command::release::model::Spec;
+use crate::shape::release::Spec;
 use semver::Version;
 use std::io::Write;
 use std::path::PathBuf;
@@ -180,15 +180,15 @@ impl Chart<'_> {
     }
 }
 
-fn owner(chart: &crate::command::release::model::Chart) -> Result<String, String> {
+fn owner(chart: &crate::shape::release::Chart) -> Result<String, String> {
     seat(chart, 0)
 }
 
-fn name(chart: &crate::command::release::model::Chart) -> Result<String, String> {
+fn name(chart: &crate::shape::release::Chart) -> Result<String, String> {
     seat(chart, 1)
 }
 
-fn seat(chart: &crate::command::release::model::Chart, index: usize) -> Result<String, String> {
+fn seat(chart: &crate::shape::release::Chart, index: usize) -> Result<String, String> {
     chart
         .chart
         .split('/')

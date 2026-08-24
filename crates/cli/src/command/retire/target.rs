@@ -1,4 +1,4 @@
-use super::super::release::model::Spec;
+use crate::shape::release::Spec;
 use plumb::forgejo::{Remote, git};
 use std::path::{Path, PathBuf};
 

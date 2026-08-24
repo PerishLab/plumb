@@ -1,6 +1,6 @@
 use super::channel;
-use super::model::Spec;
 use crate::command::operator::topology;
+use crate::shape::release::Spec;
 
 pub fn plan(spec: &Spec, reference: &str, commit: &str) -> Result<String, String> {
     let version = topology::reference(reference)?;

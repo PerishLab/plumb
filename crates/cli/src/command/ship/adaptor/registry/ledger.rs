@@ -1,4 +1,4 @@
-use crate::command::release::model::{Cargo, Spec};
+use crate::shape::release::{Cargo, Spec};
 use semver::Version;
 use serde::Deserialize;
 use std::process::Command;

@@ -1,6 +1,6 @@
 use super::model::App;
 use super::process::Call;
-use crate::command::release::model::{Cfworker, Spec};
+use crate::shape::release::{Cfworker, Spec};
 use plumb::rig::Site;
 use serde_json::{Value, json};
 use std::path::Path;

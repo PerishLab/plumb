@@ -4,10 +4,10 @@ use super::generator;
 use crate::command::release::artifact;
 use crate::command::release::channel;
 use crate::command::release::manager;
-use crate::command::release::model::{Format, Spec};
 use crate::command::release::proof;
 pub use crate::command::release::record::{Capsule, Local, Pointer};
 use crate::command::release::record::{Remote, Seal, digest, json};
+use crate::shape::release::{Format, Spec};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 

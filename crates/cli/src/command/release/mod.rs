@@ -2,7 +2,6 @@ pub(super) mod artifact;
 pub(in crate::command) mod channel;
 mod deed;
 pub(super) mod manager;
-pub(crate) mod model;
 pub(in crate::command) mod output;
 mod plan;
 pub(in crate::command) mod promotion;
@@ -15,6 +14,8 @@ pub(in crate::command) mod workspace;
 pub use deed::Deed;
 use plumb::rig::{Authority, Rig};
 use std::path::{Path, PathBuf};
+
+use crate::shape::release::Spec;
 
 pub fn run(deed: Deed) -> i32 {
     let result = execute(deed);
@@ -45,7 +46,7 @@ fn execute(deed: Deed) -> Result<String, String> {
 fn carry(deed: Deed) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let manifest = rig.release.root.join("plumb.toml");
-    let spec = model::Spec::read(&manifest)?;
+    let spec = Spec::read(&manifest)?;
     let release = &rig.release;
     match deed {
         Deed::Plan => plan::plan(
@@ -93,7 +94,7 @@ fn carry(deed: Deed) -> Result<String, String> {
     }
 }
 
-fn compile(spec: &model::Spec, release: &plumb::rig::Release) -> Result<String, String> {
+fn compile(spec: &Spec, release: &plumb::rig::Release) -> Result<String, String> {
     let channel = required("PLUMB_RELEASE_CHANNEL", &release.channel)?;
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
     let commit = required("PLUMB_RELEASE_COMMIT", &release.commit)?;
@@ -152,7 +153,7 @@ pub(super) fn channel(version: &str) -> Result<String, String> {
 }
 
 pub(super) fn authority(root: &Path) -> Result<String, String> {
-    model::Spec::read(&root.join("plumb.toml")).map(|spec| spec.authority)
+    Spec::read(&root.join("plumb.toml")).map(|spec| spec.authority)
 }
 
 pub(super) fn inspect(url: &str) -> Result<String, String> {
@@ -160,7 +161,7 @@ pub(super) fn inspect(url: &str) -> Result<String, String> {
 }
 
 pub(super) fn promotion(
-    spec: &model::Spec,
+    spec: &Spec,
     commit: &str,
     version: &str,
 ) -> Result<promotion::Exact, String> {

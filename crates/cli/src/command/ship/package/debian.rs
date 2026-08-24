@@ -1,4 +1,4 @@
-use crate::command::release::model::Spec;
+use crate::shape::release::Spec;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;

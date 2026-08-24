@@ -10,7 +10,7 @@ pub(super) fn stamp(raw: &str, dry: bool) -> Result<String, String> {
     let version = value::version(&held, &channel)?;
     let name = value::branch(&line(&version));
     let root = plumb::forgejo::git::root()?;
-    let spec = super::super::release::model::Spec::read(&root.join("plumb.toml"))?;
+    let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
     let seat = point(&root);
     let head = seat.head(&name)?;
     let mut course = Course::new(dry);

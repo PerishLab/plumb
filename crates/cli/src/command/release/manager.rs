@@ -1,4 +1,4 @@
-use super::model::Spec;
+use crate::shape::release::Spec;
 use std::collections::BTreeMap;
 use std::path::Path;
 
