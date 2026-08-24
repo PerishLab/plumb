@@ -54,6 +54,7 @@ jobs:
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
           fi
+          plumb depot sync
 
       - name: Plan this release
         id: plan
@@ -119,6 +120,7 @@ jobs:
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
           fi
+          plumb depot sync
 
       - name: Install stable Plumb on Windows
         if: runner.os == 'Windows'
@@ -128,6 +130,7 @@ jobs:
           $manager = Join-Path $env:RUNNER_TEMP 'manage-plumb.ps1'
           Invoke-WebRequest -UseBasicParsing -Uri 'https://releases.plumb.perish.uk/manage.ps1' -OutFile $manager
           & $manager install
+          & (Join-Path $HOME '.local/bin/plumb.exe') depot sync
           (Join-Path $HOME '.local/bin') | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Add the declared Rust target
@@ -190,6 +193,7 @@ jobs:
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
           fi
+          plumb depot sync
 
       - name: Require canonical guard evidence
         env:
@@ -295,6 +299,7 @@ jobs:
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
           fi
+          plumb depot sync
 
       - name: Install stable Plumb on Windows
         if: runner.os == 'Windows'
@@ -304,6 +309,7 @@ jobs:
           $manager = Join-Path $env:RUNNER_TEMP 'manage-plumb.ps1'
           Invoke-WebRequest -UseBasicParsing -Uri 'https://releases.plumb.perish.uk/manage.ps1' -OutFile $manager
           & $manager install
+          & (Join-Path $HOME '.local/bin/plumb.exe') depot sync
           (Join-Path $HOME '.local/bin') | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Smoke the generated manager
@@ -359,6 +365,7 @@ jobs:
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
           fi
+          plumb depot sync
 
       - uses: actions/download-artifact@v3
         with:
