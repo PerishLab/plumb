@@ -1,6 +1,4 @@
-mod object;
-
-use super::generator;
+use super::{files, generator, object};
 use crate::command::release::artifact;
 use crate::command::release::channel;
 use crate::command::release::manager;
@@ -10,8 +8,6 @@ use crate::command::release::record::{Remote, Seal, digest, json};
 use crate::shape::release::{Format, Spec};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-
-mod files;
 
 pub struct Compile<'a> {
     pub spec: &'a Path,
