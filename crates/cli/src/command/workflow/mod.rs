@@ -1,6 +1,7 @@
 mod remote;
 
 mod spread;
+mod tree;
 
 use crate::shape;
 use clap::Subcommand;
@@ -78,7 +79,7 @@ impl Seat {
     }
 
     fn current(&self, held: &shape::workflow::Held) -> i32 {
-        let tree = match shape::workflow::Tree::read(self.root(), None) {
+        let tree = match tree::Tree::read(self.root(), None) {
             Ok(tree) => tree,
             Err(error) => {
                 println!("  {error}");
@@ -108,7 +109,7 @@ impl Seat {
     }
 
     fn replay(&self, held: &shape::workflow::Held, since: &str) -> i32 {
-        let commits = match shape::workflow::history(self.root(), since) {
+        let commits = match tree::history(self.root(), since) {
             Ok(commits) => commits,
             Err(error) => {
                 println!("  {error}");
@@ -122,7 +123,7 @@ impl Seat {
         let mut prior: Vec<String> = Vec::new();
         let mut kept = vec![0usize; held.keys.len()];
         for commit in &commits {
-            let tree = match shape::workflow::Tree::read(self.root(), Some(commit)) {
+            let tree = match tree::Tree::read(self.root(), Some(commit)) {
                 Ok(tree) => tree,
                 Err(error) => {
                     println!("  {error}");
@@ -161,7 +162,7 @@ impl Seat {
             .iter()
             .find(|held| held.name() == key)
             .ok_or_else(|| format!("no key called {key} is declared"))?;
-        let tree = shape::workflow::Tree::read(self.root(), None)?;
+        let tree = tree::Tree::read(self.root(), None)?;
         Ok(tree.digest(found))
     }
 
@@ -189,19 +190,14 @@ impl Seat {
                 Rig::default()
             }
         };
-        let tree = shape::workflow::Tree::read(self.root(), None).ok();
+        let tree = tree::Tree::read(self.root(), None).ok();
         for key in listed {
             println!("{}={}", key.output(), self.runs(&rig, key, tree.as_ref()));
         }
         0
     }
 
-    fn runs(
-        &self,
-        rig: &Rig,
-        key: &shape::workflow::Key,
-        tree: Option<&shape::workflow::Tree>,
-    ) -> bool {
+    fn runs(&self, rig: &Rig, key: &shape::workflow::Key, tree: Option<&tree::Tree>) -> bool {
         if rig.workflow.force {
             return true;
         }
