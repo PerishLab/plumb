@@ -1,4 +1,6 @@
 use crate::shape;
+
+mod affirm;
 use std::path::PathBuf;
 
 pub struct Seat(PathBuf);
@@ -90,7 +92,7 @@ impl Seat {
     }
 
     pub fn affirm(&self, write: bool) -> i32 {
-        let owed = match crate::shape::layout::affirm::owed(&self.0) {
+        let owed = match affirm::owed(&self.0) {
             Ok(owed) => owed,
             Err(error) => {
                 eprintln!("plumb affirm {}: {error}", self.0.display());
@@ -112,9 +114,9 @@ impl Seat {
             println!("  record these only after reading every target against what moved");
             return 0;
         }
-        match crate::shape::layout::affirm::write(&self.0, &owed) {
+        match affirm::write(&self.0, &owed) {
             Ok(()) => {
-                println!("  wrote {}", crate::shape::layout::affirm::SEAT);
+                println!("  wrote {}", affirm::SEAT);
                 0
             }
             Err(error) => {

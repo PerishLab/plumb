@@ -1,13 +1,17 @@
-pub mod affirm;
-mod judge;
+pub(crate) mod affirm;
 mod read;
-mod rule;
 
 pub use read::{read, stated};
 
 pub struct Read {
     pub held: Held,
-    pub found: crate::judge::finding::Found,
+    pub(crate) evidence: Option<Evidence>,
+}
+
+pub(crate) struct Evidence {
+    pub snapshot: plumb::snapshot::Snapshot,
+    pub repository: String,
+    pub affirmed: affirm::Held,
 }
 
 #[derive(Clone)]

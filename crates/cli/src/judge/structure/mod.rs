@@ -5,6 +5,7 @@ use crate::catalog::set::RULES;
 use crate::shape;
 use std::collections::BTreeSet;
 
+pub(crate) mod layout;
 mod release;
 
 pub fn judge(held: &shape::Shape) -> Found {
@@ -105,7 +106,7 @@ impl Structure<'_> {
             }
         }
         if self.declared() {
-            found.extend(held.layout.found.clone());
+            found.extend(layout::judge(&held.layout));
         } else {
             for name in &held.dirs {
                 if !RULES.dirs.contains(name) {

@@ -1,20 +1,15 @@
-use super::{Declared, Group, Held, Read, Seat};
+use super::{Declared, Evidence, Group, Held, Read, Seat, affirm};
 use plumb::snapshot::{Refusal, Snapshot};
 use std::path::Path;
 
 pub fn read(root: &Path, snapshot: Result<&Snapshot, &Refusal>) -> Read {
     let held = stated(root);
-    let repository = crate::anchor::Anchor(root).repo().unwrap_or_default();
-    let found = match snapshot {
-        Ok(snapshot) => super::judge::judge(
-            snapshot,
-            &held,
-            &repository,
-            &super::affirm::Held::read(root),
-        ),
-        Err(_) => Vec::new(),
-    };
-    Read { held, found }
+    let evidence = snapshot.ok().map(|snapshot| Evidence {
+        snapshot: snapshot.clone(),
+        repository: crate::anchor::Anchor(root).repo().unwrap_or_default(),
+        affirmed: affirm::Held::read(root),
+    });
+    Read { held, evidence }
 }
 
 pub fn stated(root: &Path) -> Held {

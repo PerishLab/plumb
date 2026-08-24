@@ -1,9 +1,9 @@
-pub struct Reference {
+pub(crate) struct Reference {
     pub set: String,
     pub slug: Option<String>,
 }
 
-pub struct Member {
+pub(crate) struct Member {
     pub holds: Option<String>,
     pub count: Option<usize>,
     pub leaf: Option<String>,
@@ -11,7 +11,7 @@ pub struct Member {
     pub affirms: Vec<String>,
 }
 
-pub fn parse(held: &str) -> Result<Reference, String> {
+pub(crate) fn parse(held: &str) -> Result<Reference, String> {
     let rest = held
         .strip_prefix("rule://")
         .ok_or_else(|| format!("{held} carries no known scheme"))?;
@@ -28,7 +28,7 @@ pub fn parse(held: &str) -> Result<Reference, String> {
     })
 }
 
-pub fn member(reference: &Reference) -> Result<Member, String> {
+pub(crate) fn member(reference: &Reference) -> Result<Member, String> {
     let doc = crate::catalog::set::read(&reference.set)?;
     let slug = reference
         .slug

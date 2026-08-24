@@ -7,7 +7,7 @@ mod deps;
 mod dispatch;
 mod env;
 pub(crate) mod finding;
-mod structure;
+pub(crate) mod structure;
 mod text;
 pub(crate) mod vocabulary;
 mod web;

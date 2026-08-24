@@ -1,10 +1,27 @@
-use super::{Declared, Group, Held, Seat, affirm, rule};
+mod face;
+pub(crate) mod rule;
+
+pub(crate) use face::{Faces, authority};
+
 use crate::catalog::rules::structure as law;
 use crate::judge::finding::{Seed, blind, unknown, wrong};
+use crate::shape::layout::{Declared, Group, Held, Read, Seat, affirm};
 use plumb::snapshot::Snapshot;
 use std::collections::BTreeSet;
 
-pub fn judge(
+pub fn judge(read: &Read) -> Vec<Seed> {
+    let Some(evidence) = &read.evidence else {
+        return Vec::new();
+    };
+    verdict(
+        &evidence.snapshot,
+        &read.held,
+        &evidence.repository,
+        &evidence.affirmed,
+    )
+}
+
+fn verdict(
     snapshot: &Snapshot,
     held: &Held,
     repository: &str,
@@ -85,8 +102,8 @@ impl Tree<'_> {
                 ),
             )];
         }
-        let faces = affirm::Faces(self.0).taken(declared, &member.affirms);
-        let authority = affirm::authority(&faces);
+        let faces = Faces(self.0).taken(declared, &member.affirms);
+        let authority = authority(&faces);
         let mut found = Vec::new();
         for target in targets {
             if self.2.authority(target) == Some(authority.as_str()) {
