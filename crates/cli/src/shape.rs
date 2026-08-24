@@ -34,7 +34,6 @@ pub struct Shape {
     pub ignore: String,
     pub bounds: Vec<(String, bool)>,
     pub components: bool,
-    pub root: std::path::PathBuf,
     pub rust: bool,
     pub runseal: bool,
     pub guards: Vec<(String, String)>,
@@ -211,7 +210,9 @@ pub fn capture(
         }
     }
     let held = layout::read(root, snapshot.as_ref());
-    let release = pair::release(root);
+    let lanes = seat.names(".forgejo/workflows", ".yml");
+    let paired = pair::Root(root);
+    let release = paired.release(&lanes);
     let ships = release.attachments.clone();
     let bounds = policy::bounds(doc.as_ref())
         .into_iter()
@@ -228,15 +229,14 @@ pub fn capture(
         grants,
         laws: laws.exists(),
         unread,
-        lanes: seat.names(".forgejo/workflows", ".yml"),
+        lanes,
         drift: lane::Seat(root).drift(),
         release,
         ships,
-        sites: pair::sites(root),
+        sites: paired.sites(),
         ignore: std::fs::read_to_string(root.join(".gitignore")).unwrap_or_default(),
         bounds,
         components: root.join("packages/components").is_dir(),
-        root: root.to_path_buf(),
         rust: root.join("Cargo.toml").exists(),
         runseal: root.join("runseal.toml").is_file() || root.join(".runseal").is_dir(),
         guards: guarded.lanes,
