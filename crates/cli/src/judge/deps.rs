@@ -1,8 +1,8 @@
-use super::finding::{blind, wrong};
+use super::finding::{Found, blind, wrong};
 use crate::catalog::rules::deps as rule;
 use crate::catalog::rules::release::DATUM_RECORDED;
 use crate::catalog::set::RULES;
-use crate::shape::{self, Dependency, Found};
+use crate::shape::{self, Dependency};
 use plumb_cli::Verdict;
 
 pub fn check(held: &shape::Shape) -> Found {

@@ -1,6 +1,5 @@
-use crate::judge::finding;
+use crate::judge::finding::{self, Found};
 use crate::shape;
-use shape::Found;
 
 pub fn judge(evidence: &shape::lane::Evidence) -> Found {
     evidence

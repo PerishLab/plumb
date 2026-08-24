@@ -14,7 +14,6 @@ pub(crate) mod policy;
 pub(crate) mod release;
 pub mod workflow;
 
-pub use crate::judge::finding::Found;
 pub use dependency::{Dependencies, Dependency};
 
 pub struct Shape {
