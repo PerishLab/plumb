@@ -146,7 +146,7 @@ impl Image<'_> {
         };
         let identity = crate::command::ship::attachment::Identity {
             user: &oci.account,
-            token: crate::command::ship::attachment::registry_token(credential)?,
+            token: crate::command::ship::attachment::credential(credential)?,
         };
         let reference = reference(oci, version);
         self.login(&oci.registry, &identity)?;

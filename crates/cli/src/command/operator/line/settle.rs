@@ -5,7 +5,7 @@ use plumb::forgejo::{Client, Remote, Strategy, git};
 use serde_json::Value;
 use std::path::Path;
 use std::process::{Command, Output};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 struct Published {
     version: String,
@@ -212,15 +212,15 @@ fn settled(root: &Path, published: &Published) -> Result<bool, String> {
 
 fn guard(client: &Client, pull: u64, commit: &str) -> Result<(), String> {
     let harness = plumb::forgejo::harness()?;
-    let deadline = Instant::now() + Duration::from_millis(harness.guard_timeout_ms);
+    let deadline = Instant::now() + harness.guard.timeout.duration();
     while Instant::now() < deadline {
         let state = client.context(commit, "guard / guard (pull_request)")?;
         if state.count == 0 {
-            std::thread::sleep(Duration::from_millis(harness.guard_register_ms));
+            std::thread::sleep(harness.guard.register.duration());
         } else if state.state == "success" {
             return Ok(());
         } else if state.state == "pending" {
-            std::thread::sleep(Duration::from_millis(harness.guard_pending_ms));
+            std::thread::sleep(harness.guard.pending.duration());
         } else {
             return Err(format!(
                 "rejoin guard {} on {commit}; PR #{pull} left open",
@@ -230,7 +230,7 @@ fn guard(client: &Client, pull: u64, commit: &str) -> Result<(), String> {
     }
     Err(format!(
         "rejoin guard still pending on {commit} after {}s; PR #{pull} left open",
-        harness.guard_timeout_ms / 1000
+        harness.guard.timeout.seconds()
     ))
 }
 

@@ -11,9 +11,9 @@ pub(super) fn cargo(deed: super::Cargo) -> Result<String, String> {
     match deed {
         super::Cargo::Publish => {
             sealed(&spec, release, version, spec.cargo.is_some())?;
-            attachment.publish(version, &release.registry_token)
+            attachment.publish(version, &release.credential)
         }
-        super::Cargo::Rehearse => attachment.rehearse(version, &release.registry_token),
+        super::Cargo::Rehearse => attachment.rehearse(version, &release.credential),
     }
 }
 
@@ -27,7 +27,7 @@ pub(super) fn oci(deed: super::Oci) -> Result<String, String> {
         super::Oci::Build => carrier.build(version, &release.commit, &artifacts(release)?),
         super::Oci::Publish => {
             sealed(&spec, release, version, spec.oci.is_some())?;
-            carrier.publish(version, &release.registry_token)
+            carrier.publish(version, &release.credential)
         }
     }
 }
@@ -42,7 +42,7 @@ pub(super) fn chart(deed: super::Chart) -> Result<String, String> {
         super::Chart::Package => carrier.package(version),
         super::Chart::Publish => {
             sealed(&spec, release, version, spec.chart.is_some())?;
-            carrier.publish(version, &release.registry_token)
+            carrier.publish(version, &release.credential)
         }
     }
 }
@@ -57,12 +57,12 @@ pub(super) fn npm(deed: super::Npm) -> Result<String, String> {
         super::Npm::Pack => carrier.pack(version),
         super::Npm::Publish => {
             sealed(&spec, release, version, spec.npm.is_some())?;
-            carrier.publish(version, &release.registry_token)
+            carrier.publish(version, &release.credential)
         }
     }
 }
 
-pub(in crate::command::ship) fn registry_token(credential: &str) -> Result<&str, String> {
+pub(in crate::command::ship) fn credential(credential: &str) -> Result<&str, String> {
     let credential = required("PLUMB_RELEASE_REGISTRY_TOKEN", credential)?;
     credential
         .strip_prefix("Bearer ")

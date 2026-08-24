@@ -61,11 +61,57 @@ pub struct Target {
 
 #[derive(Debug, PartialEq, Cascade)]
 pub struct Harness {
-    pub run_poll_ms: u64,
-    pub run_timeout_ms: u64,
-    pub guard_register_ms: u64,
-    pub guard_pending_ms: u64,
-    pub guard_timeout_ms: u64,
+    #[cascade(section)]
+    pub run: Run,
+    #[cascade(section)]
+    pub guard: Gate,
+}
+
+#[derive(Debug, Default, PartialEq, Cascade)]
+#[cascade(section)]
+pub struct Run {
+    #[cascade(name = "poll_ms")]
+    pub poll: Millis,
+    #[cascade(name = "timeout_ms")]
+    pub timeout: Millis,
+}
+
+#[derive(Debug, Default, PartialEq, Cascade)]
+#[cascade(section)]
+pub struct Gate {
+    #[cascade(name = "register_ms")]
+    pub register: Millis,
+    #[cascade(name = "pending_ms")]
+    pub pending: Millis,
+    #[cascade(name = "timeout_ms")]
+    pub timeout: Millis,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, serde::Deserialize)]
+#[serde(transparent)]
+pub struct Millis(u64);
+
+impl Millis {
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+
+    pub fn duration(&self) -> std::time::Duration {
+        std::time::Duration::from_millis(self.0)
+    }
+
+    pub fn seconds(&self) -> u64 {
+        self.0 / 1000
+    }
+}
+
+impl crate::config::Env for Millis {
+    fn read(value: &str) -> Result<Self, String> {
+        value
+            .parse()
+            .map(Self)
+            .map_err(|error: std::num::ParseIntError| error.to_string())
+    }
 }
 
 #[derive(Debug, PartialEq, Cascade)]
@@ -115,11 +161,15 @@ impl Default for Site {
 impl Default for Harness {
     fn default() -> Self {
         Self {
-            run_poll_ms: 10_000,
-            run_timeout_ms: 3_600_000,
-            guard_register_ms: 5_000,
-            guard_pending_ms: 10_000,
-            guard_timeout_ms: 240_000,
+            run: Run {
+                poll: Millis::new(10_000),
+                timeout: Millis::new(3_600_000),
+            },
+            guard: Gate {
+                register: Millis::new(5_000),
+                pending: Millis::new(10_000),
+                timeout: Millis::new(240_000),
+            },
         }
     }
 }
@@ -140,7 +190,8 @@ pub struct Release {
     pub capsule: PathBuf,
     pub url: String,
     pub activated: bool,
-    pub registry_token: String,
+    #[cascade(name = "registry_token")]
+    pub credential: String,
     pub toolchain: String,
 }
 
@@ -186,21 +237,22 @@ pub struct Workflow {
 pub struct Authority {
     pub access: String,
     pub secret: String,
-    pub secret_file: PathBuf,
+    #[cascade(name = "secret_file")]
+    pub file: PathBuf,
     pub bucket: String,
     pub endpoint: String,
 }
 
 impl Authority {
     pub fn load(&mut self) -> Result<(), String> {
-        if !self.secret.is_empty() || self.secret_file.as_os_str().is_empty() {
+        if !self.secret.is_empty() || self.file.as_os_str().is_empty() {
             return Ok(());
         }
-        let held = std::fs::read_to_string(&self.secret_file)
-            .map_err(|error| format!("cannot read {}: {error}", self.secret_file.display()))?;
+        let held = std::fs::read_to_string(&self.file)
+            .map_err(|error| format!("cannot read {}: {error}", self.file.display()))?;
         let held = held.trim();
         if held.is_empty() {
-            return Err(format!("{} holds no secret", self.secret_file.display()));
+            return Err(format!("{} holds no secret", self.file.display()));
         }
         self.secret = held.to_string();
         Ok(())

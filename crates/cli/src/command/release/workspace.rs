@@ -8,14 +8,16 @@ use std::process::Command;
 #[derive(Deserialize)]
 pub struct Workspace {
     packages: Vec<Package>,
-    target_directory: PathBuf,
+    #[serde(rename = "target_directory")]
+    target: PathBuf,
 }
 
 #[derive(Deserialize)]
 struct Package {
     name: String,
     version: String,
-    manifest_path: PathBuf,
+    #[serde(rename = "manifest_path")]
+    manifest: PathBuf,
     targets: Vec<Target>,
 }
 
@@ -38,7 +40,7 @@ impl Workspace {
         self.packages
             .iter()
             .filter_map(|package| {
-                let seat = package.manifest_path.parent()?;
+                let seat = package.manifest.parent()?;
                 let held = seat.strip_prefix(&base).unwrap_or(seat);
                 Some((package.name.clone(), held.to_path_buf()))
             })
@@ -141,7 +143,7 @@ impl Workspace {
                 ""
             };
             let path = self
-                .target_directory
+                .target
                 .join(input.triple)
                 .join("release")
                 .join(format!("{binary}{suffix}"));
@@ -157,7 +159,7 @@ impl Workspace {
         self.packages
             .iter()
             .find(|package| package.name == name)
-            .map(|package| (package.manifest_path.as_path(), package.version.as_str()))
+            .map(|package| (package.manifest.as_path(), package.version.as_str()))
             .ok_or_else(|| format!("Cargo attachment package is absent: {name}"))
     }
 }

@@ -41,7 +41,7 @@ impl Chart<'_> {
         };
         let identity = crate::command::ship::attachment::Identity {
             user: &chart.account,
-            token: crate::command::ship::attachment::registry_token(credential)?,
+            token: crate::command::ship::attachment::credential(credential)?,
         };
         self.package(version)?;
         let semver = release(version)?;

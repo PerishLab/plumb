@@ -73,45 +73,5 @@ include = [
 description = "A domain vocabulary report binds its scan to the exact bundled dictionary bytes."
 name = "dictionary_digest"
 
-[[vocabulary.term]]
-description = "Cargo metadata names a package manifest path as one schema field."
-name = "manifest_path"
-
-[[vocabulary.term]]
-description = "An authority may name a file carrying its secret instead of placing secret bytes in the environment."
-name = "secret_file"
-
-[[vocabulary.term]]
-description = "The operator harness names its pending guard poll interval in milliseconds."
-name = "guard_pending_ms"
-
-[[vocabulary.term]]
-description = "The operator harness names its absent guard registration poll interval in milliseconds."
-name = "guard_register_ms"
-
-[[vocabulary.term]]
-description = "The operator harness names its guard deadline in milliseconds."
-name = "guard_timeout_ms"
-
-[[vocabulary.term]]
-description = "The Cargo registry token is one release authority field."
-name = "registry_token"
-
-[[vocabulary.term]]
-description = "The registry account is the login the token belongs to, and a path owner is not one."
-name = "registry_account"
-
-[[vocabulary.term]]
-description = "The operator harness names its workflow poll interval in milliseconds."
-name = "run_poll_ms"
-
-[[vocabulary.term]]
-description = "The operator harness names its workflow deadline in milliseconds."
-name = "run_timeout_ms"
-
-[[vocabulary.term]]
-description = "Cargo metadata names its build target directory as one schema field."
-name = "target_directory"
-
 [word]
 single = true

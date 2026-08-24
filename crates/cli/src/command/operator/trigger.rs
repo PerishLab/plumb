@@ -3,7 +3,7 @@ use super::course::Course;
 use super::{line, value};
 use plumb::forgejo::{Client, Outcome, git};
 use serde_json::{Value, json};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 const JOBS: usize = 4;
 const LINES: usize = 12;
@@ -88,7 +88,7 @@ fn present(root: &std::path::Path, workflow: &str) -> Result<(), String> {
 
 fn watch(client: &Client, id: u64, url: &str) -> Result<String, String> {
     let harness = plumb::forgejo::harness()?;
-    let deadline = Instant::now() + Duration::from_millis(harness.run_timeout_ms);
+    let deadline = Instant::now() + harness.run.timeout.duration();
     while Instant::now() < deadline {
         match client.outcome(id)? {
             Outcome::Success => return Ok(format!("run {id}: success")),
@@ -97,7 +97,7 @@ fn watch(client: &Client, id: u64, url: &str) -> Result<String, String> {
             }
             Outcome::Waiting => {}
         }
-        std::thread::sleep(Duration::from_millis(harness.run_poll_ms));
+        std::thread::sleep(harness.run.poll.duration());
     }
     Err(format!(
         "run {id}: still running past the watch timeout\n{url}"

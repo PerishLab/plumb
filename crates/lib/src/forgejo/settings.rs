@@ -1,5 +1,5 @@
 use crate::config::Cascade as _;
-use crate::rig::Harness;
+use crate::rig::{Harness, Millis};
 use std::collections::BTreeMap;
 
 pub fn vars(url: String) -> Result<BTreeMap<String, String>, String> {
@@ -25,14 +25,18 @@ pub fn harness() -> Result<Harness, String> {
         .map(|seen| Harness::default().merge(seen))
         .map_err(|error| error.to_string())?;
     let base = Harness::default();
-    held.run_poll_ms = nonzero(held.run_poll_ms, base.run_poll_ms);
-    held.run_timeout_ms = nonzero(held.run_timeout_ms, base.run_timeout_ms);
-    held.guard_register_ms = nonzero(held.guard_register_ms, base.guard_register_ms);
-    held.guard_pending_ms = nonzero(held.guard_pending_ms, base.guard_pending_ms);
-    held.guard_timeout_ms = nonzero(held.guard_timeout_ms, base.guard_timeout_ms);
+    held.run.poll = nonzero(held.run.poll, base.run.poll);
+    held.run.timeout = nonzero(held.run.timeout, base.run.timeout);
+    held.guard.register = nonzero(held.guard.register, base.guard.register);
+    held.guard.pending = nonzero(held.guard.pending, base.guard.pending);
+    held.guard.timeout = nonzero(held.guard.timeout, base.guard.timeout);
     Ok(held)
 }
 
-fn nonzero(value: u64, fallback: u64) -> u64 {
-    if value == 0 { fallback } else { value }
+fn nonzero(value: Millis, fallback: Millis) -> Millis {
+    if value == Millis::default() {
+        fallback
+    } else {
+        value
+    }
 }

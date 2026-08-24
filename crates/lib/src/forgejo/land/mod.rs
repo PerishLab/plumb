@@ -157,14 +157,13 @@ fn shape(landing: &Landing, candidate: &Candidate, pull: u64, url: &str) -> Repo
 
 fn guard(client: &Client, head: &str, pull: u64) -> Result<(), Refusal> {
     let knobs = harness().map_err(|error| refuse("forge", error))?;
-    let deadline =
-        std::time::Instant::now() + std::time::Duration::from_millis(knobs.guard_timeout_ms);
+    let deadline = std::time::Instant::now() + knobs.guard.timeout.duration();
     while std::time::Instant::now() < deadline {
         let state = client
             .combined(head)
             .map_err(|error| refuse("forge", error))?;
         if state.count == 0 {
-            std::thread::sleep(std::time::Duration::from_millis(knobs.guard_register_ms));
+            std::thread::sleep(knobs.guard.register.duration());
             continue;
         }
         if state.state == "success" {
@@ -176,13 +175,13 @@ fn guard(client: &Client, head: &str, pull: u64) -> Result<(), Refusal> {
                 format!("guard {} on {head}; pull #{pull} left open", state.state),
             ));
         }
-        std::thread::sleep(std::time::Duration::from_millis(knobs.guard_pending_ms));
+        std::thread::sleep(knobs.guard.pending.duration());
     }
     Err(refuse(
         "guardpending",
         format!(
             "guard still pending on {head} after {}s; pull #{pull} left open",
-            knobs.guard_timeout_ms / 1000
+            knobs.guard.timeout.seconds()
         ),
     ))
 }

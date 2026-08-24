@@ -23,6 +23,8 @@ impl Default for Bind {
 #[cascade(strict)]
 struct Rig {
     name: String,
+    #[cascade(name = "legacy_name")]
+    alias: String,
     count: u16,
     #[cascade(section)]
     listen: Bind,
@@ -37,6 +39,7 @@ impl Default for Rig {
     fn default() -> Self {
         Rig {
             name: "base".to_string(),
+            alias: "plain".to_string(),
             count: 4,
             listen: Bind::default(),
             theme: "plain".to_string(),
@@ -63,12 +66,40 @@ fn defaults() {
 
 #[test]
 #[cfg(any(feature = "vendor", feature = "skill"))]
+fn harness() {
+    let get = |key: &str| match key {
+        "HARNESS_RUN_POLL_MS" => Some("250".to_string()),
+        "HARNESS_GUARD_TIMEOUT_MS" => Some("9000".to_string()),
+        _ => None,
+    };
+    let held = plumb::rig::Harness::default()
+        .merge(plumb::rig::Harness::lookup("HARNESS", &get).expect("harness env"));
+    assert_eq!(held.run.poll.duration().as_millis(), 250);
+    assert_eq!(held.guard.timeout.seconds(), 9);
+}
+
+#[test]
+#[cfg(any(feature = "vendor", feature = "skill"))]
+fn mapped() {
+    let get = |key: &str| match key {
+        "PLUMB_RELEASE_REGISTRY_TOKEN" => Some("Bearer held".to_string()),
+        "PLUMB_PUBLISH_SECRET_FILE" => Some("secret/path".to_string()),
+        _ => None,
+    };
+    let held =
+        plumb::rig::Rig::default().merge(plumb::rig::Rig::lookup("PLUMB", &get).expect("rig env"));
+    assert_eq!(held.release.credential, "Bearer held");
+    assert_eq!(held.publish.file, std::path::PathBuf::from("secret/path"));
+}
+
+#[test]
+#[cfg(any(feature = "vendor", feature = "skill"))]
 fn authority() {
     let dir = tempfile::tempdir().expect("fixture");
     let file = dir.path().join("secret");
     std::fs::write(&file, "held\n").expect("secret");
     let mut authority = plumb::rig::Authority {
-        secret_file: std::path::PathBuf::from(&file),
+        file: std::path::PathBuf::from(&file),
         ..plumb::rig::Authority::default()
     };
     authority.load().expect("secret should load");
@@ -82,13 +113,14 @@ fn filed() {
     let path = dir.join("rig.toml");
     std::fs::write(
         &path,
-        "name = \"filed\"\n[listen]\nport = 9\n[extras]\nkey = \"value\"\n",
+        "name = \"filed\"\nlegacy_name = \"carried\"\n[listen]\nport = 9\n[extras]\nkey = \"value\"\n",
     )
     .expect("file should be written");
     let over = plumb::config::load::<RigPartial>(&path).expect("file should parse");
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     let held = Rig::default().merge(over);
     assert_eq!(held.name, "filed");
+    assert_eq!(held.alias, "carried");
     assert_eq!(held.listen.port, 9);
     assert_eq!(held.listen.host, "127.0.0.1");
     assert_eq!(held.count, 4);
@@ -115,6 +147,7 @@ fn strict() {
 fn veiled() {
     let get = |key: &str| match key {
         "RIG_NAME" => Some("veiled".to_string()),
+        "RIG_LEGACY_NAME" => Some("mapped".to_string()),
         "RIG_LISTEN_PORT" => Some("7".to_string()),
         "RIG_TAG" => Some("held".to_string()),
         _ => None,
@@ -125,6 +158,7 @@ fn veiled() {
     }
     .merge(Rig::lookup("RIG", &get).expect("env should read"));
     assert_eq!(held.name, "veiled");
+    assert_eq!(held.alias, "mapped");
     assert_eq!(held.listen.port, 7);
     assert_eq!(held.tag.as_deref(), Some("held"));
 }

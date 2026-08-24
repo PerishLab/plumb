@@ -23,8 +23,7 @@ pub fn evidence(guard: Guard<'_>, contexts: &str) -> Result<String, String> {
         return Ok("no canonical guard evidence is required".to_string());
     }
     let harness = plumb::forgejo::harness()?;
-    let deadline =
-        std::time::Instant::now() + std::time::Duration::from_millis(harness.guard_timeout_ms);
+    let deadline = std::time::Instant::now() + harness.guard.timeout.duration();
     let url = format!(
         "{}/repos/{}/commits/{}/status",
         guard.api.trim_end_matches('/'),
@@ -45,12 +44,12 @@ pub fn evidence(guard: Guard<'_>, contexts: &str) -> Result<String, String> {
                 guard.commit
             ));
         }
-        std::thread::sleep(std::time::Duration::from_millis(harness.guard_pending_ms));
+        std::thread::sleep(harness.guard.pending.duration());
     }
     Err(format!(
         "canonical guard evidence did not settle on {} within {}s",
         guard.commit,
-        harness.guard_timeout_ms / 1000
+        harness.guard.timeout.seconds()
     ))
 }
 

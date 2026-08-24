@@ -1,12 +1,13 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
-    Attribute, Data, DeriveInput, Field, Fields, GenericArgument as Argument, Ident,
+    Attribute, Data, DeriveInput, Field, Fields, GenericArgument as Argument, Ident, LitStr,
     PathArguments as Arguments, Type,
 };
 
 struct Row {
     name: Ident,
+    external: String,
     ty: Type,
     section: bool,
     arg: bool,
@@ -92,17 +93,21 @@ impl Row {
     fn held(&self, vis: &syn::Visibility) -> TokenStream {
         let field = &self.name;
         let ty = &self.ty;
+        let rename = (self.name != self.external).then(|| {
+            let external = &self.external;
+            quote! { #[serde(rename = #external)] }
+        });
         if self.section {
-            quote! { #[serde(default)] #vis #field: <#ty as ::plumb::config::Cascade>::Partial }
+            quote! { #[serde(default)] #rename #vis #field: <#ty as ::plumb::config::Cascade>::Partial }
         } else {
-            quote! { #vis #field: ::core::option::Option<#ty> }
+            quote! { #rename #vis #field: ::core::option::Option<#ty> }
         }
     }
 
     fn read(&self) -> TokenStream {
         let field = &self.name;
         let ty = &self.ty;
-        let upper = self.name.to_string().to_uppercase();
+        let upper = self.external.to_uppercase();
         if self.section {
             return quote! {
                 #field: <#ty as ::plumb::config::Cascade>::lookup(
@@ -138,7 +143,7 @@ impl Row {
 
     fn arm(&self, vis: &syn::Visibility) -> TokenStream {
         let field = &self.name;
-        let long = self.name.to_string().replace('_', "-");
+        let long = self.external.replace('_', "-");
         let ty = bare(&self.ty).unwrap_or(&self.ty);
         quote! { #[arg(long = #long)] #vis #field: Option<#ty> }
     }
@@ -230,6 +235,7 @@ fn marked(attrs: &[Attribute]) -> Result<Mode, syn::Error> {
 fn row(field: &Field) -> Result<Row, syn::Error> {
     let mut section = false;
     let mut arg = false;
+    let mut external = None;
     for attr in &field.attrs {
         if !attr.path().is_ident("cascade") {
             continue;
@@ -243,7 +249,17 @@ fn row(field: &Field) -> Result<Row, syn::Error> {
                 arg = true;
                 return Ok(());
             }
-            Err(meta.error("use #[cascade(section)] or #[cascade(arg)]"))
+            if meta.path.is_ident("name") {
+                let value = meta.value()?.parse::<LitStr>()?.value();
+                external = Some(
+                    (!value.is_empty())
+                        .then_some(value)
+                        .ok_or_else(|| meta.error("cascade field name must not be empty"))?,
+                );
+                return Ok(());
+            }
+            Err(meta
+                .error("use #[cascade(section)], #[cascade(arg)], or #[cascade(name = \"field\")]"))
         })?;
     }
     if section && arg {
@@ -252,8 +268,10 @@ fn row(field: &Field) -> Result<Row, syn::Error> {
             "a section field cannot take #[cascade(arg)]",
         ));
     }
+    let name = field.ident.clone().expect("fields are named");
     Ok(Row {
-        name: field.ident.clone().expect("fields are named"),
+        external: external.unwrap_or_else(|| name.to_string()),
+        name,
         ty: field.ty.clone(),
         section,
         arg,

@@ -11,7 +11,8 @@ struct Metadata {
 
 #[derive(Deserialize)]
 struct Package {
-    manifest_path: std::path::PathBuf,
+    #[serde(rename = "manifest_path")]
+    manifest: std::path::PathBuf,
     dependencies: Vec<Declared>,
 }
 
@@ -78,16 +79,12 @@ pub fn read(root: &Path, registry: &str, index: &str) -> Dependencies {
                 continue;
             }
             if dependency.source.as_deref() == Some(index) {
-                declarations.push((
-                    package.manifest_path.clone(),
-                    dependency.name,
-                    dependency.req,
-                ));
+                declarations.push((package.manifest.clone(), dependency.name, dependency.req));
             } else if dependency.source.is_some() {
                 found.blind.push(format!(
                     "cannot read Cargo registry {registry} for {} in {}: source is {}",
                     dependency.name,
-                    seat(root, &package.manifest_path),
+                    seat(root, &package.manifest),
                     dependency.source.as_deref().unwrap_or_default(),
                 ));
             }
