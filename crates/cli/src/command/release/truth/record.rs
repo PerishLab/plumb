@@ -19,14 +19,14 @@ pub struct Generator {
     pub version: String,
     pub template: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub origin: Option<GeneratorOrigin>,
+    pub origin: Option<Origin>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub recovery: Option<RecoveryIdentity>,
+    pub recovery: Option<Recovery>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
-pub struct RecoveryIdentity {
+pub struct Recovery {
     pub repository: String,
     pub authority: String,
     pub beta: String,
@@ -40,16 +40,18 @@ pub struct RecoveryIdentity {
     rename_all = "kebab-case",
     rename_all_fields = "camelCase"
 )]
-pub enum GeneratorOrigin {
+pub enum Origin {
     Stable {},
-    ExactRelease {
+    #[serde(rename = "exact-release")]
+    Exact {
         channel: String,
         #[serde(rename = "releaseVersion")]
         version: String,
         url: String,
         sha256: String,
     },
-    SourceBuilt {
+    #[serde(rename = "source-built")]
+    Source {
         repository: String,
         commit: String,
     },

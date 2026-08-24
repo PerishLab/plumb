@@ -10,17 +10,6 @@ paths = [
     "apps/web/vitest.config.ts",
 ]
 
-[[boundary]]
-allow = [
-    "combination",
-    "word",
-]
-note = "the one-time Plumb bootstrap contract uses explicit provenance and identity terms plus exact refusal combinations"
-paths = [
-    "crates/cli/src/command/release/output/generator.rs",
-    "crates/cli/src/command/release/truth/record.rs",
-]
-
 [comment]
 allow = false
 

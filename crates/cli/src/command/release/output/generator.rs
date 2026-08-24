@@ -1,4 +1,4 @@
-use crate::command::release::record::{Generator, GeneratorOrigin, Seal};
+use crate::command::release::record::{Generator, Origin, Seal};
 
 pub fn resolve(authority: &str) -> Result<Generator, String> {
     let running = plumb::version!("PLUMB").to_string();
@@ -10,9 +10,9 @@ pub fn resolve(authority: &str) -> Result<Generator, String> {
     })
 }
 
-fn origin(authority: &str, running: &str) -> Result<GeneratorOrigin, String> {
+fn origin(authority: &str, running: &str) -> Result<Origin, String> {
     let Some((_, pre)) = running.split_once('-') else {
-        return Ok(GeneratorOrigin::Stable {});
+        return Ok(Origin::Stable {});
     };
     let channel = pre
         .split('.')
@@ -23,7 +23,7 @@ fn origin(authority: &str, running: &str) -> Result<GeneratorOrigin, String> {
     let version = running.to_string();
     let url = format!("{authority}/v1/releases/{channel}/{version}/seal.json");
     let sha256 = crate::command::release::verify::Surface(&url).digest()?;
-    Ok(GeneratorOrigin::ExactRelease {
+    Ok(Origin::Exact {
         channel,
         version,
         url,
@@ -32,7 +32,7 @@ fn origin(authority: &str, running: &str) -> Result<GeneratorOrigin, String> {
 }
 
 pub fn audit(seal: &Seal) -> Result<(), String> {
-    let Some(GeneratorOrigin::ExactRelease {
+    let Some(Origin::Exact {
         channel,
         version,
         url,
