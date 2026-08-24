@@ -25,6 +25,7 @@ pub fn bounds(doc: Option<&toml::Value>) -> Vec<String> {
 pub(crate) struct Evidence {
     pub actual: toml::Value,
     pub expected: Expected,
+    pub factory: Expected,
 }
 
 impl Evidence {
@@ -32,6 +33,7 @@ impl Evidence {
         Self {
             actual,
             expected: Expected::read(root),
+            factory: Expected::factory(root),
         }
     }
 }
@@ -46,6 +48,14 @@ pub(crate) struct Expected {
 
 impl Expected {
     pub(crate) fn read(root: &Path) -> Self {
+        Self::from(root, &crate::catalog::set::POLICY)
+    }
+
+    pub(crate) fn factory(root: &Path) -> Self {
+        Self::from(root, &crate::catalog::set::FACTORY)
+    }
+
+    fn from(root: &Path, policy: &toml::Table) -> Self {
         let mut held = Self {
             include: BTreeSet::new(),
             exclude: BTreeSet::new(),
@@ -53,7 +63,7 @@ impl Expected {
             tests: BTreeSet::new(),
             bans: BTreeSet::new(),
         };
-        for row in rows("shape") {
+        for row in rows(policy, "shape") {
             let table = row
                 .as_table()
                 .unwrap_or_else(|| panic!("rules/policy.toml shape rows must be tables"));
@@ -68,7 +78,7 @@ impl Expected {
                 held.apply(table, "bans", Part::Ban);
             }
         }
-        for row in rows("web") {
+        for row in rows(policy, "web") {
             let table = row
                 .as_table()
                 .unwrap_or_else(|| panic!("rules/policy.toml web rows must be tables"));
@@ -118,8 +128,8 @@ enum Part {
     Ban,
 }
 
-fn rows(name: &str) -> &'static [toml::Value] {
-    crate::catalog::set::POLICY
+fn rows<'a>(policy: &'a toml::Table, name: &str) -> &'a [toml::Value] {
+    policy
         .get(name)
         .and_then(toml::Value::as_array)
         .map(Vec::as_slice)

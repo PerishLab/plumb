@@ -19,12 +19,12 @@ pub fn judge(evidence: &Evidence) -> Found {
         want.exclude.clone(),
         &mut found,
     );
-    compare(
+    found.extend(either(
         "module roots",
         policy.list("module", "roots"),
         want.roots.clone(),
-        &mut found,
-    );
+        evidence.factory.roots.clone(),
+    ));
     policy.limits(&mut found);
     policy.setting(
         ("comment", "allow"),
@@ -123,6 +123,23 @@ fn compare(name: &str, have: BTreeSet<String>, want: BTreeSet<String>, found: &m
     for value in have.difference(&want) {
         found.push(format!("unexpected ectropy {name} {value}"));
     }
+}
+
+fn either(
+    name: &str,
+    have: BTreeSet<String>,
+    want: BTreeSet<String>,
+    factory: BTreeSet<String>,
+) -> Vec<String> {
+    if have == want || have == factory {
+        return Vec::new();
+    }
+    let mut found = Vec::new();
+    require(name, have.clone(), want.clone(), &mut found);
+    for value in have.difference(&want) {
+        found.push(format!("unexpected ectropy {name} {value}"));
+    }
+    found
 }
 
 fn require(name: &str, have: BTreeSet<String>, want: BTreeSet<String>, found: &mut Vec<String>) {

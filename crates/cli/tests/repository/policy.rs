@@ -227,10 +227,16 @@ fn carriage() {
 fn transition() {
     let root = tempfile::tempdir().expect("fixture");
     let seat = tempfile::tempdir().expect("seat");
+    std::fs::create_dir_all(root.path().join("apps/web")).expect("web seat");
     govern(root.path());
     let compiled = include_str!("../../rules/policy.toml");
-    std::fs::write(root.path().join("ectropy.toml"), compiled).expect("compiled policy");
-    stock(seat.path(), &compiled.replace("path = 3", "path = 4"));
+    let rendered = policy(root.path(), true);
+    assert!(rendered.status.success(), "{rendered:?}");
+    let carried = compiled.replace("path = 3", "path = 4").replace(
+        "roots = [\"apps/*/src\", \"apps/*/tests\"]",
+        "roots = [\"apps/*\", \"apps/*/src\", \"apps/*/tests\"]",
+    );
+    stock(seat.path(), &carried);
     let judged = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.path().to_str().expect("path should be utf8")])
         .env("PLUMB_DEPOT_SEAT", seat.path())
@@ -238,6 +244,12 @@ fn transition() {
         .expect("plumb should run");
     assert!(
         !String::from_utf8_lossy(&judged.stdout).contains("ectropy limit path must be"),
+        "{}",
+        String::from_utf8_lossy(&judged.stdout)
+    );
+    assert!(
+        !String::from_utf8_lossy(&judged.stdout)
+            .contains("missing ectropy module roots apps/* [structure]"),
         "{}",
         String::from_utf8_lossy(&judged.stdout)
     );
