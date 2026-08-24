@@ -8,19 +8,11 @@ fn run(root: &Path, seat: &Path) -> String {
         .env("PLUMB_DEPOT_SEAT", seat)
         .output()
         .expect("plumb should run");
-    String::from_utf8_lossy(&output.stdout).to_string()
-}
-
-fn record(root: &Path, path: &str, text: &str) {
-    let file = root.join(path);
-    std::fs::create_dir_all(file.parent().expect("parent")).expect("seat should be made");
-    std::fs::write(&file, text).expect("file should be written");
-    let status = Command::new("git")
-        .args(["add", path])
-        .current_dir(root)
-        .status()
-        .expect("git should run");
-    assert!(status.success(), "fixture should record {path}");
+    format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    )
 }
 
 fn stock(seat: &Path, mark: &str, manifest: &str) {
@@ -35,19 +27,13 @@ fn stock(seat: &Path, mark: &str, manifest: &str) {
     .expect("pointer");
 }
 
-fn roots(root: &Path) {
-    record(root, "crates/cli/rules/structure.toml", "dirs = []\n");
-    record(root, "crates/lib/rules/vocabulary.toml", "schema = 1\n");
-    record(root, "crates/cli/assets/guard/lane.yml.in", "name: guard\n");
-}
-
 #[test]
-fn factory() {
+fn absent() {
     let fixture = super::fixture();
     let empty = tempfile::tempdir().expect("seat");
-    roots(fixture.path());
     let out = run(fixture.path(), empty.path());
-    assert!(!out.contains("[depot]"), "{out}");
+    assert!(out.contains("cannot read synced rules"), "{out}");
+    assert!(out.contains("run plumb depot sync"), "{out}");
 }
 
 #[test]
@@ -66,19 +52,15 @@ fn floor() {
 #[test]
 fn drift() {
     let fixture = super::fixture();
-    let seat = tempfile::tempdir().expect("seat");
-    roots(fixture.path());
-    stock(
-        seat.path(),
-        "29990101T000000Z",
-        "[schema]\nformat = 1\nversion = \"v0.0.1\"\n\n[metadata]\nversion = \"29990101T000000Z\"\nsource = \"https://depot.plumb.perish.uk\"\nchannel = \"stable\"\ncommit = \"\"\n\n[[object]]\npath = \"rules/structure.toml\"\nsha256 = \"0000000000000000000000000000000000000000000000000000000000000000\"\nsize = 1\n",
-    );
+    let seat = super::super::support::depot(&[]);
+    std::fs::write(
+        seat.path().join("29990101T000000Z/rules/structure.toml"),
+        "drift",
+    )
+    .expect("drift rule");
     let out = run(fixture.path(), seat.path());
     assert!(
-        out.contains("carries a different rules/structure.toml"),
+        out.contains("depot object drift: rules/structure.toml"),
         "{out}"
     );
-    assert!(out.contains("carries no rules/vocabulary.toml"), "{out}");
-    assert!(out.contains("0 out of true"), "{out}");
-    assert!(out.contains("noted"), "{out}");
 }

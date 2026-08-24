@@ -1,5 +1,5 @@
 use super::retired;
-use crate::catalog::set::RULES;
+use crate::catalog::set;
 use crate::shape::Dependencies;
 use plumb_cli::Ecosystem;
 use std::collections::BTreeMap;
@@ -28,7 +28,7 @@ fn fetch(ecosystem: Ecosystem, name: &str) -> Result<String, String> {
     let url = match ecosystem {
         Ecosystem::Cargo => format!(
             "{}/{}",
-            RULES
+            set::current()
                 .stable
                 .cargo
                 .index

@@ -1,4 +1,4 @@
-use crate::catalog::set::RULES;
+use crate::catalog::set;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
@@ -57,7 +57,7 @@ impl Held {
                 .unwrap_or_default();
         }
         if let Some(name) = root.strip_prefix("suite://") {
-            return RULES.suites.get(name).cloned().unwrap_or_default();
+            return set::current().suites.get(name).cloned().unwrap_or_default();
         }
         vec![root.to_string()]
     }
@@ -84,7 +84,7 @@ pub fn read(root: &Path) -> Held {
     }
     for key in &keys {
         let lane = key.segments.first().cloned().unwrap_or_default();
-        if !RULES.lanes.contains(&lane) {
+        if !set::current().lanes.contains(&lane) {
             return refuse(format!("workflow.hash names no lane called {lane}"));
         }
         if key.roots.is_empty() {
@@ -180,7 +180,7 @@ fn leaf(list: &[toml::Value], name: &str) -> Result<Vec<String>, String> {
 }
 
 fn suite(name: &str, key: &str) -> Result<Vec<String>, String> {
-    RULES
+    set::current()
         .suites
         .get(name)
         .cloned()

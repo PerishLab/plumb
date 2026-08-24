@@ -7,7 +7,7 @@ pub use super::snapshot::Refusal;
 
 pub const CODEC: &str = "p64-v1";
 pub const SCHEMA: &str = "plumb.vocabulary/v2";
-const BUNDLED: &str = crate::seat::resource!("rules/vocabulary.toml");
+const RULE: &str = "rules/vocabulary.toml";
 
 mod codec;
 
@@ -58,8 +58,10 @@ struct Closure<'a> {
 }
 
 impl Dictionary {
-    pub fn bundled() -> Result<Self, Refusal> {
-        Self::parse(BUNDLED)
+    pub fn synced() -> Result<Self, Refusal> {
+        let seat = crate::depot::rules().map_err(|error| refuse("depot", error))?;
+        let source = seat.read(RULE).map_err(|error| refuse("depot", error))?;
+        Self::parse(&source)
     }
 
     pub fn parse(source: &str) -> Result<Self, Refusal> {
@@ -104,7 +106,7 @@ impl Dictionary {
 }
 
 pub fn inspect(root: &Path) -> Result<Report, Refusal> {
-    let dictionary = Dictionary::bundled()?;
+    let dictionary = Dictionary::synced()?;
     scan(root, &dictionary)
 }
 
@@ -117,7 +119,7 @@ pub fn scan(root: &Path, dictionary: &Dictionary) -> Result<Report, Refusal> {
 }
 
 pub fn observe(snapshot: &Snapshot) -> Result<Report, Refusal> {
-    let dictionary = Dictionary::bundled()?;
+    let dictionary = Dictionary::synced()?;
     sift(snapshot, &dictionary)
 }
 

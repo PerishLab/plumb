@@ -1,7 +1,9 @@
 use plumb::snapshot::Snapshot;
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
+
+pub use plumb::depot::{
+    FORMAT, LEAF, Manifest, Metadata, Object, POINTER, Pointer, Schema, latest, sha, versions,
+};
 
 pub(crate) enum Evidence {
     Absent,
@@ -12,9 +14,6 @@ pub(crate) enum Evidence {
     },
 }
 
-pub const FORMAT: u32 = 1;
-pub const LEAF: &str = "plumb.toml";
-pub const POINTER: &str = "metadata.json";
 pub const ROOTS: [(&str, &str); 5] = [
     ("crates/cli/rules", "rules"),
     ("crates/lib/rules", "rules"),
@@ -22,39 +21,6 @@ pub const ROOTS: [(&str, &str); 5] = [
     ("crates/cli/cookbook", "cookbook"),
     ("crates/cli/help", "help"),
 ];
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct Manifest {
-    pub schema: Schema,
-    pub metadata: Metadata,
-    #[serde(default, rename = "object")]
-    pub objects: Vec<Object>,
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct Schema {
-    pub format: u32,
-    pub version: String,
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct Metadata {
-    pub version: String,
-    pub source: String,
-    pub channel: String,
-    pub commit: String,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct Object {
-    pub path: String,
-    pub sha256: String,
-    pub size: u64,
-}
 
 pub struct Plan {
     pub manifest: Manifest,
@@ -106,89 +72,4 @@ impl Plan {
             bodies,
         })
     }
-}
-
-impl Manifest {
-    pub fn parse(text: &str) -> Result<Self, String> {
-        let held: Self = toml::from_str(text)
-            .map_err(|error| format!("cannot parse a depot manifest: {error}"))?;
-        if held.schema.format != FORMAT {
-            return Err(format!(
-                "depot manifest format must be {FORMAT}, got {}",
-                held.schema.format
-            ));
-        }
-        Ok(held)
-    }
-
-    pub fn encode(&self) -> Result<String, String> {
-        toml::to_string(self).map_err(|error| format!("cannot encode a depot manifest: {error}"))
-    }
-
-    pub fn verify(&self, path: &str, bytes: &[u8]) -> Result<(), String> {
-        let object = self
-            .objects
-            .iter()
-            .find(|held| held.path == path)
-            .ok_or_else(|| format!("depot manifest names no object at {path}"))?;
-        if object.sha256 != sha(bytes) || object.size != bytes.len() as u64 {
-            return Err(format!("depot object drift: {path}"));
-        }
-        Ok(())
-    }
-}
-
-pub fn sha(bytes: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(bytes);
-    format!("{:x}", hasher.finalize())
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct Pointer {
-    pub format: u32,
-    pub product: String,
-    pub channel: String,
-    pub version: String,
-    pub source: String,
-    pub commit: String,
-}
-
-impl Pointer {
-    pub fn new(metadata: &Metadata, product: &str) -> Self {
-        Self {
-            format: FORMAT,
-            product: product.to_string(),
-            channel: metadata.channel.clone(),
-            version: metadata.version.clone(),
-            source: metadata.source.clone(),
-            commit: metadata.commit.clone(),
-        }
-    }
-
-    pub fn parse(text: &str) -> Result<Self, String> {
-        let held: Self = serde_json::from_str(text)
-            .map_err(|error| format!("cannot parse a depot pointer: {error}"))?;
-        if held.format != FORMAT {
-            return Err(format!(
-                "depot pointer format must be {FORMAT}, got {}",
-                held.format
-            ));
-        }
-        Ok(held)
-    }
-
-    pub fn encode(&self) -> Result<String, String> {
-        serde_json::to_string_pretty(self)
-            .map_err(|error| format!("cannot encode a depot pointer: {error}"))
-    }
-}
-
-pub fn versions(channel: &str, mark: &str) -> String {
-    format!("channels/{channel}/versions/{mark}")
-}
-
-pub fn latest(channel: &str) -> String {
-    format!("channels/{channel}/latest/{POINTER}")
 }

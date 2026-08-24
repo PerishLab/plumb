@@ -1,7 +1,7 @@
 use super::finding::{Found, blind, unknown, wrong};
 use super::text::{COMPONENTS, CONCURRENCY};
 use crate::catalog::rules::structure as rule;
-use crate::catalog::set::RULES;
+use crate::catalog::set;
 use crate::shape;
 use std::collections::BTreeSet;
 
@@ -109,7 +109,7 @@ impl Structure<'_> {
             found.extend(layout::judge(&held.layout));
         } else {
             for name in &held.dirs {
-                if !RULES.dirs.contains(name) {
+                if !set::current().dirs.contains(name) {
                     found.push(unknown(
                         &rule::KNOWN_DIRECTORY,
                         format!("directory {name} has no shadow in the skeleton"),
@@ -121,7 +121,7 @@ impl Structure<'_> {
         self.matched(&mut found);
         self.anchored(&mut found);
         for name in &held.lanes {
-            if !RULES.lanes.contains(name) {
+            if !set::current().lanes.contains(name) {
                 found.push(unknown(
                     &rule::KNOWN_WORKFLOW,
                     format!("workflow {name} has no shadow in the skeleton"),

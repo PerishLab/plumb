@@ -583,6 +583,7 @@ function Install-Product {{
         Move-Item -Force -LiteralPath $next -Destination $binPath
         $next = $null
         & $binPath --version
+{sync}
 
         foreach ($found in @(Get-ChildItem -LiteralPath $installRoot -Directory)) {{
             if ($found.Name -eq $resolvedVersion -or !(Version-Owned $found.Name)) {{

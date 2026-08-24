@@ -30,14 +30,9 @@ pub fn observe(snapshot: &Result<Snapshot, Refusal>) -> Evidence {
 
 pub fn manifest() -> Result<Option<record::Manifest>, String> {
     match held() {
-        Held::Factory => Ok(None),
+        Held::Absent => Ok(None),
         Held::Blind(error) => Err(error),
-        Held::Seat(base) => {
-            let file = base.join(record::LEAF);
-            let text = std::fs::read_to_string(&file)
-                .map_err(|error| format!("cannot read {}: {error}", file.display()))?;
-            record::Manifest::parse(&text).map(Some)
-        }
+        Held::Seat(seat) => Ok(Some(seat.manifest().clone())),
     }
 }
 
@@ -127,7 +122,7 @@ fn show(rig: &Rig, over: &Path) -> Result<String, String> {
     let base = seat::root(over)?;
     let held = seat::held(over);
     let mark = match &held {
-        Held::Factory => "factory".to_string(),
+        Held::Absent => "unsynced".to_string(),
         Held::Blind(error) => return Err(error.clone()),
         Held::Seat(_) => held.mark().unwrap_or_default(),
     };

@@ -24,8 +24,10 @@ impl Seat<'_> {
         let spec = Spec::read(&self.0.join("plumb.toml"))?;
         let mut lanes = vec![self.guard(&spec)?];
         if self.stocked() {
-            let vars =
-                BTreeMap::from([("forge", crate::catalog::set::RULES.release.forge.clone())]);
+            let vars = BTreeMap::from([(
+                "forge",
+                crate::catalog::set::current().release.forge.clone(),
+            )]);
             let rendered = filled("assets/depot/lane.yml.in", &vars)?;
             lanes.push(self.seat("depot.yml", rendered)?);
         }
@@ -51,7 +53,10 @@ impl Seat<'_> {
         let carried = media.contains(&"binary");
         let projected = media.iter().any(|medium| *medium != "binary");
         let mut vars = BTreeMap::from([
-            ("forge", crate::catalog::set::RULES.release.forge.clone()),
+            (
+                "forge",
+                crate::catalog::set::current().release.forge.clone(),
+            ),
             ("plumb", manager("plumb")),
             ("after", if carried { ", seal" } else { "" }.to_string()),
         ]);
@@ -141,7 +146,10 @@ impl Seat<'_> {
     fn guard(&self, spec: &Spec) -> Result<Expected, String> {
         let path = ".forgejo/workflows/guard.yml";
         let vars = BTreeMap::from([
-            ("forge", crate::catalog::set::RULES.release.forge.clone()),
+            (
+                "forge",
+                crate::catalog::set::current().release.forge.clone(),
+            ),
             ("env", self.env(spec)),
             ("steps", self.steps(spec)?),
         ]);

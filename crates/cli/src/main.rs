@@ -248,6 +248,17 @@ fn execute(command: Command) -> i32 {
     }
 }
 
+fn prepare(command: &Command) -> Result<(), String> {
+    if matches!(command, Command::Depot { .. }) {
+        return Ok(());
+    }
+    plumb::depot::rules()?;
+    catalog::prepare()?;
+    catalog::set::prepare()?;
+    plumb::vocabulary::Dictionary::synced().map_err(|error| error.to_string())?;
+    Ok(())
+}
+
 fn main() {
     let command = match Cli::try_parse() {
         Ok(cli) => cli.command,
@@ -262,7 +273,13 @@ fn main() {
         }
     };
     let run = command::audit::Run::start(command.name());
-    let code = execute(command);
+    let code = match prepare(&command) {
+        Ok(()) => execute(command),
+        Err(error) => {
+            eprintln!("plumb: cannot read synced rules: {error}\nrun plumb depot sync");
+            1
+        }
+    };
     if let Some(run) = run {
         run.finish(code);
     }

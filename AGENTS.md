@@ -35,17 +35,17 @@ answers for.
 - `crates/cli/src/dispatch/site` and `retire` — Cloudflare interpretation and
   orchestration over Runseal's structured Cloudflare operations. Plumb owns no
   authenticated Cloudflare HTTP sender and no raw route dialect.
-- `crates/cli/{rules,assets,cookbook,help}` — the resources this binary carries.
-  Rules and assets are depot roots; cookbook and help are not yet. Each is one
+- `crates/cli/{rules,assets,cookbook,help}` — Plumb's governed resources. Rules
+  and assets are depot roots; cookbook and help are not yet. Each is one
   file per addressable thing, and the address is the path: a rule set is its
   name, a cookbook entry is the finding that sends you there, and long help is
   the command path, so `plumb ship site deploy` reads `help/ship/site/deploy.txt`.
   Prose an agent reads as contract is carried, never inlined in a literal.
-  All four publish to the depot and read seat-first, and help alone falls back to
-  its compiled bytes without a word when the seat cannot be read: help is not a
+  Rules exist only in a verified synced seat and never fall back to compiled
+  bytes. Assets read seat-first; cookbook and help retain compiled copies, and
+  help falls back without a word when the seat cannot be read: help is not a
   verdict, and a tool whose `--help` fails when a store is unreachable fails
-  exactly where it is needed most. A law read from a stale seat would be a lie,
-  so rules refuse instead.
+  exactly where it is needed most.
 - `apps/web` — the Svelte specimen the web shape checks. Its seat declares no
   anchor, so nothing yet states what an app must carry to earn one.
 
@@ -59,9 +59,9 @@ answers for.
 - EVERY ELEMENT STAYS REMOVABLE. Encoding combinations is the point — many
   choices here are only defensible together, not alone — but no element may
   become unremovable, or its justification decays from finding to story.
-- NOTHING INVENTS A LOCATION. `plumb::seat` anchors at run time and
-  `plumb::seat::resource!` at compile time, so a caller states what it wants
-  rather than where it sits.
+- NOTHING INVENTS A LOCATION. `plumb::seat` anchors at run time;
+  non-rule fallback resources may use `plumb::seat::resource!` at compile time,
+  so a caller states what it wants rather than where it sits.
 - plumb MUST PASS ITSELF. Running the CLI here has to come back clean, or the
   relation above does not hold for the one repo that declares it.
 

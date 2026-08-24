@@ -1,7 +1,7 @@
 use super::finding::{Found, blind, wrong};
 use crate::catalog::rules::deps as rule;
 use crate::catalog::rules::release::DATUM_RECORDED;
-use crate::catalog::set::RULES;
+use crate::catalog::set;
 use crate::shape::{self, Dependency};
 use plumb_cli::Verdict;
 
@@ -32,7 +32,7 @@ pub fn check(held: &shape::Shape) -> Found {
         currency(dependency, &mut found);
     }
     for (seat, name) in &held.node {
-        if RULES.blacklist.contains(name) {
+        if set::current().blacklist.contains(name) {
             found.push(wrong(
                 &rule::STYLING_PACKAGE_ALLOWED,
                 format!("{seat} depends on blacklisted styling package {name}"),
@@ -45,7 +45,7 @@ pub fn check(held: &shape::Shape) -> Found {
 const SUBSTRATE: [&str; 2] = ["plumb", "@perish/plumb"];
 
 fn currency(dependency: &Dependency, found: &mut Found) {
-    if let Some((_, current)) = RULES
+    if let Some((_, current)) = set::current()
         .retired
         .iter()
         .find(|(name, _)| name == &dependency.name)

@@ -26,22 +26,23 @@ const WORDS: &str = "rules/taxonomy.toml";
 const LAW: &str = "rules/catalog.toml";
 
 pub(crate) fn held() -> &'static Held {
-    &HELD
+    HELD.as_ref()
+        .expect("catalogue access must follow depot preparation")
 }
 
-static HELD: LazyLock<Held> = LazyLock::new(|| {
-    let words = plumb::seat::resource!("rules/taxonomy.toml");
-    let law = plumb::seat::resource!("rules/catalog.toml");
-    let seat = crate::command::depot::held();
-    let carried = (
-        seat.read(WORDS, words)
-            .unwrap_or_else(|_| words.to_string()),
-        seat.read(LAW, law).unwrap_or_else(|_| law.to_string()),
-    );
-    gather(&carried.0, &carried.1)
-        .filter(covered)
-        .unwrap_or_else(|| gather(words, law).expect("the compiled catalogue must hold"))
+static HELD: LazyLock<Result<Held, String>> = LazyLock::new(|| {
+    let seat = plumb::depot::rules()?;
+    let words = seat.read(WORDS)?;
+    let law = seat.read(LAW)?;
+    let held = gather(&words, &law).ok_or_else(|| "the synced catalogue is invalid".to_string())?;
+    covered(&held)
+        .then_some(held)
+        .ok_or_else(|| "the synced catalogue does not cover every mechanism".to_string())
 });
+
+pub fn prepare() -> Result<(), String> {
+    HELD.as_ref().map(|_| ()).map_err(Clone::clone)
+}
 
 fn covered(held: &Held) -> bool {
     rules::mechanisms()

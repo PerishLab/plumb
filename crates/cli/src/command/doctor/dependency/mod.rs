@@ -1,6 +1,6 @@
 mod registry;
 
-use crate::catalog::set::RULES;
+use crate::catalog::set;
 use crate::shape::{Dependencies, dependency};
 use plumb::datum::Datum;
 use std::path::Path;
@@ -76,5 +76,5 @@ impl Observer<'_> {
 }
 
 pub(super) fn retired(name: &str) -> bool {
-    RULES.retired.iter().any(|(held, _)| held == name)
+    set::current().retired.iter().any(|(held, _)| held == name)
 }

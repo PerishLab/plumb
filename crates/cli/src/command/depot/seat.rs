@@ -4,21 +4,15 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub const KEY: &str = "plumb";
-pub const HOME: &str = "depot";
 
 pub enum Held {
-    Factory,
-    Seat(PathBuf),
+    Absent,
+    Seat(plumb::depot::Seat),
     Blind(String),
 }
 
 pub fn root(over: &Path) -> Result<PathBuf, String> {
-    if !over.as_os_str().is_empty() {
-        return Ok(over.to_path_buf());
-    }
-    plumb::seat::global(KEY)
-        .map(|base| base.join(HOME))
-        .ok_or_else(|| "cannot anchor the plumb seat: no home is declared".to_string())
+    plumb::depot::root(over)
 }
 
 pub fn held(over: &Path) -> Held {
@@ -28,14 +22,10 @@ pub fn held(over: &Path) -> Held {
     };
     let marker = base.join(POINTER);
     if !marker.is_file() {
-        return Held::Factory;
+        return Held::Absent;
     }
-    let text = match std::fs::read_to_string(&marker) {
-        Ok(text) => text,
-        Err(error) => return Held::Blind(format!("cannot read {}: {error}", marker.display())),
-    };
-    match Pointer::parse(&text) {
-        Ok(pointer) => Held::Seat(base.join(&pointer.version)),
+    match plumb::depot::Seat::at(&base) {
+        Ok(seat) => Held::Seat(seat),
         Err(error) => Held::Blind(error),
     }
 }
@@ -43,21 +33,15 @@ pub fn held(over: &Path) -> Held {
 impl Held {
     pub fn read(&self, path: &str, factory: &'static str) -> Result<String, String> {
         match self {
-            Self::Factory => Ok(factory.to_string()),
+            Self::Absent => Ok(factory.to_string()),
             Self::Blind(error) => Err(format!("the plumb depot seat is unreadable: {error}")),
-            Self::Seat(base) => {
-                let file = base.join(path);
-                std::fs::read_to_string(&file)
-                    .map_err(|error| format!("cannot read {}: {error}", file.display()))
-            }
+            Self::Seat(seat) => seat.read(path),
         }
     }
 
     pub fn mark(&self) -> Option<String> {
         match self {
-            Self::Seat(base) => base
-                .file_name()
-                .map(|name| name.to_string_lossy().to_string()),
+            Self::Seat(seat) => Some(seat.mark().to_string()),
             _ => None,
         }
     }

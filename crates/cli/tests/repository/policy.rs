@@ -15,6 +15,7 @@ fn govern(root: &Path) {
 }
 
 fn run(root: &Path) -> String {
+    super::support::stock(&root.join(".plumb-test-depot"), &[]);
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("path should be utf8")])
         .env("PLUMB_DEPOT_SEAT", root.join(".plumb-test-depot"))
@@ -24,6 +25,7 @@ fn run(root: &Path) -> String {
 }
 
 fn policy(root: &Path, write: bool) -> std::process::Output {
+    super::support::stock(&root.join(".plumb-test-depot"), &[]);
     let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
     command.args(["policy", root.to_str().expect("path should be utf8")]);
     command.env("PLUMB_DEPOT_SEAT", root.join(".plumb-test-depot"));
@@ -34,17 +36,12 @@ fn policy(root: &Path, write: bool) -> std::process::Output {
 }
 
 fn stock(seat: &Path, policy: &str) {
-    let mark = "29990101T000000Z";
-    let rules = seat.join(mark).join("rules");
-    std::fs::create_dir_all(&rules).expect("seat should be made");
-    std::fs::write(rules.join("policy.toml"), policy).expect("policy should be held");
-    std::fs::write(
-        seat.join("metadata.json"),
-        format!(
-            "{{\"format\":1,\"product\":\"plumb\",\"channel\":\"stable\",\"version\":\"{mark}\",\"source\":\"fixture\",\"commit\":\"\"}}"
-        ),
-    )
-    .expect("pointer should be held");
+    super::support::stock(seat, &[("rules/policy.toml", policy)]);
+}
+
+fn source() -> String {
+    std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("rules/policy.toml"))
+        .expect("policy source")
 }
 
 #[test]
@@ -202,10 +199,9 @@ fn carriage() {
     let seat = tempfile::tempdir().expect("seat");
     std::fs::create_dir_all(root.path().join("docs")).expect("fixture should be made");
     std::fs::write(root.path().join("ectropy.toml"), "").expect("policy should be written");
-    let factory = include_str!("../../rules/policy.toml");
     stock(
         seat.path(),
-        &factory.replace("docs/**/*.md", "notes/**/*.md"),
+        &source().replace("docs/**/*.md", "notes/**/*.md"),
     );
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args([
@@ -229,10 +225,9 @@ fn transition() {
     let seat = tempfile::tempdir().expect("seat");
     std::fs::create_dir_all(root.path().join("apps/web")).expect("web seat");
     govern(root.path());
-    let compiled = include_str!("../../rules/policy.toml");
     let rendered = policy(root.path(), true);
     assert!(rendered.status.success(), "{rendered:?}");
-    let carried = compiled.replace("path = 3", "path = 4").replace(
+    let carried = source().replace("path = 3", "path = 4").replace(
         "roots = [\"apps/*/src\", \"apps/*/tests\"]",
         "roots = [\"apps/*\", \"apps/*/src\", \"apps/*/tests\"]",
     );
@@ -243,20 +238,15 @@ fn transition() {
         .output()
         .expect("plumb should run");
     assert!(
-        !String::from_utf8_lossy(&judged.stdout).contains("ectropy limit path must be"),
+        String::from_utf8_lossy(&judged.stdout).contains("ectropy limit path must be 4"),
         "{}",
         String::from_utf8_lossy(&judged.stdout)
     );
-    assert!(
-        !String::from_utf8_lossy(&judged.stdout)
-            .contains("missing ectropy module roots apps/* [structure]"),
-        "{}",
-        String::from_utf8_lossy(&judged.stdout)
-    );
+    assert!(!judged.status.success());
 }
 
 #[test]
-fn fallback() {
+fn refusal() {
     let root = tempfile::tempdir().expect("fixture");
     let seat = tempfile::tempdir().expect("seat");
     std::fs::create_dir_all(root.path().join("docs")).expect("fixture should be made");
@@ -274,10 +264,15 @@ fn fallback() {
         .env("PLUMB_DEPOT_SEAT", seat.path())
         .output()
         .expect("plumb should run");
-    assert!(output.status.success(), "{output:?}");
+    assert!(!output.status.success(), "{output:?}");
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("rules/policy.toml must hold shape rows"),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let text = std::fs::read_to_string(root.path().join("ectropy.toml"))
         .expect("reconciled policy should be readable");
-    assert!(text.contains("docs/**/*.md"), "{text}");
+    assert!(text.is_empty(), "{text}");
 }
 
 #[test]
