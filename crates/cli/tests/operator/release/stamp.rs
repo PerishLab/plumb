@@ -28,7 +28,7 @@ fn stamped() {
     std::fs::create_dir_all(&artifacts).expect("artifact root");
     std::fs::create_dir_all(root.join("crates/core")).expect("crate root");
     std::fs::create_dir_all(root.join("crates/macro")).expect("crate root");
-    let fixture = super::fixture::Fixture {
+    let fixture = super::world::Fixture {
         root,
         tools: &tools,
     };
@@ -41,7 +41,7 @@ fn stamped() {
             "plumb.toml",
             &format!(
                 "{}[release.cargo]\nregistry = \"perish\"\npackages = [\"family-macro\", \"family-core\"]\n",
-                super::fixture::SPEC
+                super::world::SPEC
             ),
         ),
         (
@@ -65,7 +65,7 @@ fn stamped() {
     fixture.tag("v1.2.0-beta.7");
     fixture.archive(&artifacts, "v1.2.0-beta.7");
     let out = root.join("beta");
-    super::fixture::run(
+    super::world::run(
         fixture
             .command()
             .args(["release", "compile"])
@@ -101,7 +101,7 @@ fn stamped() {
     fixture.track("crates");
 
     let said = String::from_utf8_lossy(
-        &super::fixture::run(
+        &super::world::run(
             fixture
                 .command()
                 .args(["ship", "cargo", "rehearse"])
@@ -126,7 +126,7 @@ fn stamped() {
     );
     assert!(!said.contains("not projected"), "{said}");
 
-    super::fixture::run(
+    super::world::run(
         fixture
             .command()
             .current_dir(root)

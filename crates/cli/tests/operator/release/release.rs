@@ -1,4 +1,4 @@
-use super::fixture::{Fixture, SPEC, run};
+use super::world::{Fixture, SPEC, run};
 use std::path::Path;
 use std::process::Command;
 

@@ -1,4 +1,4 @@
-use super::forgejo::{Court, serve};
+use super::world::{Court, serve};
 use sha2::{Digest, Sha256};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;

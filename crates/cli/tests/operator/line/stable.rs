@@ -1,4 +1,4 @@
-use super::forgejo::{Court, serve};
+use super::world::{Court, serve};
 use std::path::Path;
 use std::process::{Command, Output};
 
@@ -23,7 +23,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 }
 
 pub fn command(root: &Path, args: &[&str]) -> Output {
-    super::line::plumb(root, args).output().expect("plumb")
+    super::command::plumb(root, args).output().expect("plumb")
 }
 
 pub fn run(command: &mut Command) {

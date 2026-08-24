@@ -1,5 +1,5 @@
-use super::fixture::{Fixture, SPEC};
 use super::release::{Compile, compile};
+use super::world::{Fixture, SPEC};
 
 fn measured(out: &std::path::Path) -> serde_json::Value {
     let text = std::fs::read_to_string(out.join("seal.json")).expect("seal");

@@ -5,7 +5,7 @@ use std::process::Command;
 #[test]
 fn atoms() {
     let home = tempfile::tempdir().expect("temp");
-    super::govern(home.path());
+    super::world::govern(home.path());
     let trace = home.path().join("trace.json");
     let report = home.path().join("audit.jsonl");
     let output = plumb()
@@ -54,7 +54,7 @@ fn atoms() {
 #[test]
 fn explicit() {
     let home = tempfile::tempdir().expect("temp");
-    super::govern(home.path());
+    super::world::govern(home.path());
     let report = home.path().join("audit.jsonl");
     let output = plumb()
         .arg("--version")
@@ -81,7 +81,7 @@ fn explicit() {
 #[test]
 fn identity() {
     let home = tempfile::tempdir().expect("temp");
-    super::govern(home.path());
+    super::world::govern(home.path());
     let trace = home.path().join("trace.json");
     let report = home.path().join("audit.jsonl");
     let output = plumb()
@@ -114,7 +114,7 @@ fn identity() {
 fn muted() {
     for enabled in [None, Some("false")] {
         let home = tempfile::tempdir().expect("temp");
-        super::govern(home.path());
+        super::world::govern(home.path());
         let trace = home.path().join("trace.json");
         let report = home.path().join("audit.jsonl");
         let mut command = plumb();
@@ -138,7 +138,7 @@ fn muted() {
 #[test]
 fn malformed() {
     let home = tempfile::tempdir().expect("temp");
-    super::govern(home.path());
+    super::world::govern(home.path());
     let report = home.path().join("audit.jsonl");
     let output = plumb()
         .args(["doctor", home.path().to_str().expect("path")])
@@ -158,7 +158,7 @@ fn malformed() {
 #[test]
 fn collectors() {
     let home = tempfile::tempdir().expect("temp");
-    super::govern(home.path());
+    super::world::govern(home.path());
     let atoms = invoke(
         home.path(),
         "environment:PLUMB_AUDIT_TARGET",
@@ -173,7 +173,7 @@ fn collectors() {
     assert!(atoms[1].collections().is_empty());
 
     let home = tempfile::tempdir().expect("temp");
-    super::govern(home.path());
+    super::world::govern(home.path());
     let atoms = invoke(home.path(), "argv:1", None);
     assert_eq!(
         atoms[0].context()["plumb.target"],
@@ -183,7 +183,7 @@ fn collectors() {
     assert_eq!(atoms[0].collections()[0].selector(), "1");
 
     let home = tempfile::tempdir().expect("temp");
-    super::govern(home.path());
+    super::world::govern(home.path());
     let atoms = invoke(
         home.path(),
         "environment:PLUMB_AUDIT_MISSING,process:id",
@@ -197,7 +197,7 @@ fn collectors() {
 #[test]
 fn invalid() {
     let home = tempfile::tempdir().expect("temp");
-    super::govern(home.path());
+    super::world::govern(home.path());
     let report = home.path().join("audit.jsonl");
     let output = plumb()
         .args(["doctor", home.path().to_str().expect("path")])

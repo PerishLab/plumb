@@ -1,4 +1,4 @@
-use super::fixture::Fixture;
+use super::world::Fixture;
 use std::path::Path;
 use std::process::Output;
 

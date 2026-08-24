@@ -1,65 +1,14 @@
-use std::process::Command;
-
 #[cfg(unix)]
 mod audit;
-#[cfg(unix)]
-mod datum;
-#[cfg(unix)]
-mod digest;
-#[cfg(unix)]
-mod fixture;
-#[cfg(unix)]
-mod forgejo;
-#[cfg(unix)]
-mod image;
-#[cfg(unix)]
-mod lane;
-mod line;
 mod precommit;
-#[cfg(unix)]
-mod promotion;
 #[cfg(unix)]
 mod registry;
 #[cfg(unix)]
-mod rejoined;
-#[cfg(unix)]
-mod release;
-#[cfg(unix)]
-mod render;
-#[cfg(unix)]
-mod retract;
-#[cfg(unix)]
-mod settlement;
-#[cfg(unix)]
 mod site;
-#[cfg(unix)]
-mod stable;
-#[cfg(unix)]
-mod stamp;
 mod surface;
-#[cfg(unix)]
-mod topology;
+mod world;
 
-fn govern(root: &std::path::Path) {
-    let status = Command::new("git")
-        .args([
-            "-C",
-            root.to_str().expect("path should be utf8"),
-            "init",
-            "-q",
-        ])
-        .status()
-        .expect("git should run");
-    assert!(status.success(), "fixture should become a repository");
-}
-
-fn run(root: &std::path::Path) -> String {
-    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["doctor", root.to_str().expect("path should be utf8")])
-        .output()
-        .expect("plumb should run");
-    String::from_utf8_lossy(&output.stdout).to_string()
-}
+use world::{govern, run};
 
 #[test]
 fn actions() {

@@ -1,4 +1,4 @@
-use super::fixture::{Fixture, SPEC};
+use super::world::{Fixture, SPEC};
 use sha2::{Digest, Sha256};
 use std::os::unix::fs::PermissionsExt;
 

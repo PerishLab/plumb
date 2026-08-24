@@ -19,8 +19,16 @@ name = "command"
 path = "tests/command/mod.rs"
 
 [[test]]
-name = "operator"
-path = "tests/operator/mod.rs"
+name = "operator-line"
+path = "tests/operator/line/main.rs"
+
+[[test]]
+name = "operator-release"
+path = "tests/operator/release/main.rs"
+
+[[test]]
+name = "operator-repository"
+path = "tests/operator/repository/main.rs"
 
 [dependencies]
 plumb = { path = "../lib", features = ["radius", "skill", "vendor"] }
