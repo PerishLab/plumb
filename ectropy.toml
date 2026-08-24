@@ -21,11 +21,6 @@ note = "the workflow command adds one integration test peer to the established c
 paths = ["crates/cli/tests"]
 
 [[boundary]]
-allow = ["fanout"]
-note = "the skill budget observation adds one repository shape probe to the established inventory"
-paths = ["crates/cli/src/shape"]
-
-[[boundary]]
 allow = [
     "combination",
     "word",

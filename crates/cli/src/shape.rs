@@ -3,18 +3,16 @@ pub mod web;
 use std::collections::BTreeSet;
 use std::path::Path;
 
-pub(crate) mod dependency;
-pub(crate) mod depot;
 pub mod lane;
-pub mod layout;
-mod node;
-mod pack;
 pub mod pair;
-pub(crate) mod policy;
 pub(crate) mod release;
+mod repository;
 pub mod workflow;
 
-pub use dependency::{Dependencies, Dependency};
+pub use repository::dependency::{Dependencies, Dependency};
+pub use repository::layout;
+pub(crate) use repository::{dependency, depot, policy};
+use repository::{node, pack};
 
 pub struct Shape {
     pub wrappers: BTreeSet<String>,
