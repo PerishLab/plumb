@@ -26,7 +26,6 @@ struct Report {
 struct Vocabulary {
     schema: &'static str,
     codec: &'static str,
-    #[serde(rename = "dictionary_digest")]
     digest: Option<String>,
     retired: Option<usize>,
     coverage: Option<plumb::vocabulary::Coverage>,

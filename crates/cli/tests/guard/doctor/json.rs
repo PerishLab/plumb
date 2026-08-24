@@ -32,10 +32,10 @@ fn clean() {
     assert_eq!(classified, 122);
     assert!(report["shape"]["wrappers"].is_array());
     assert!(report["shape"]["layout"].is_array());
-    assert_eq!(report["vocabulary"]["schema"], "plumb.vocabulary/v1");
+    assert_eq!(report["vocabulary"]["schema"], "plumb.vocabulary/v2");
     assert_eq!(report["vocabulary"]["codec"], "p64-v1");
     assert!(
-        report["vocabulary"]["dictionary_digest"]
+        report["vocabulary"]["digest"]
             .as_str()
             .is_some_and(|digest| digest.len() == 64)
     );

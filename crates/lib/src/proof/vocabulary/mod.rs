@@ -6,7 +6,7 @@ use std::path::Path;
 pub use super::snapshot::Refusal;
 
 pub const CODEC: &str = "p64-v1";
-pub const SCHEMA: &str = "plumb.vocabulary/v1";
+pub const SCHEMA: &str = "plumb.vocabulary/v2";
 const BUNDLED: &str = crate::seat::resource!("rules/vocabulary.toml");
 
 mod codec;
@@ -23,7 +23,6 @@ pub struct Dictionary {
 pub struct Report {
     pub schema: &'static str,
     pub codec: &'static str,
-    #[serde(rename = "dictionary_digest")]
     pub digest: String,
     pub retired: usize,
     pub coverage: Coverage,
