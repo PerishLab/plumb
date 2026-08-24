@@ -1,5 +1,4 @@
 pub mod notes;
-pub mod record;
 mod seat;
 mod store;
 
@@ -9,16 +8,9 @@ use plumb::snapshot::{Refusal, Snapshot};
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
-pub use seat::Held;
+use crate::shape::depot::{self as record, Evidence};
 
-pub enum Evidence {
-    Absent,
-    Blind(String),
-    Held {
-        manifest: record::Manifest,
-        inventory: Option<Result<Vec<record::Object>, String>>,
-    },
-}
+pub use seat::Held;
 
 pub fn observe(snapshot: &Result<Snapshot, Refusal>) -> Evidence {
     let manifest = match manifest() {

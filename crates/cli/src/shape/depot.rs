@@ -3,6 +3,15 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 
+pub(crate) enum Evidence {
+    Absent,
+    Blind(String),
+    Held {
+        manifest: Manifest,
+        inventory: Option<Result<Vec<Object>, String>>,
+    },
+}
+
 pub const FORMAT: u32 = 1;
 pub const LEAF: &str = "plumb.toml";
 pub const POINTER: &str = "metadata.json";

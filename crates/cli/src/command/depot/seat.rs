@@ -1,5 +1,5 @@
 use super::notes::{Notes, changelog};
-use super::record::{LEAF, Manifest, POINTER, Pointer, latest, versions};
+use crate::shape::depot::{LEAF, Manifest, POINTER, Pointer, latest, versions};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

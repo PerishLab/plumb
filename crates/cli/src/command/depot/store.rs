@@ -1,6 +1,6 @@
 use super::notes::{Batch, changelog};
-use super::record::{LEAF, Plan, Pointer, latest, versions};
 use crate::command::release::storage::Authority;
+use crate::shape::depot::{LEAF, Plan, Pointer, latest, versions};
 use std::io::Write;
 use std::process::{Command, Output};
 

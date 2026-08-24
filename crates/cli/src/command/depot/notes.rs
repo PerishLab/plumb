@@ -1,4 +1,4 @@
-use super::record::{FORMAT, Object, sha};
+use crate::shape::depot::{FORMAT, Object, sha};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};

@@ -1,4 +1,4 @@
-use crate::command::depot::record::sha;
+use crate::shape::depot::sha;
 use crate::shape::layout::Declared;
 use plumb::snapshot::Snapshot;
 use std::collections::{BTreeMap, BTreeSet};

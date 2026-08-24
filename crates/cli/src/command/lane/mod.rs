@@ -82,7 +82,7 @@ impl Seat<'_> {
     }
 
     fn stocked(&self) -> bool {
-        crate::command::depot::record::ROOTS
+        crate::shape::depot::ROOTS
             .iter()
             .all(|(root, _)| self.0.join(root).is_dir())
     }

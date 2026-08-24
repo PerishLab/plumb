@@ -1,7 +1,6 @@
 use super::finding::{Finding, Seed};
 use crate::catalog::rules::depot::{DEPOT_PUBLISHED, DEPOT_SCHEMA};
-use crate::command::depot::Evidence;
-use crate::command::depot::record::{Manifest, Object};
+use crate::shape::depot::{Evidence, Manifest, Object};
 use semver::Version;
 use std::collections::BTreeMap;
 
