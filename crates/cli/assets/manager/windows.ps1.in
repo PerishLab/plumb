@@ -583,7 +583,9 @@ function Install-Product {{
         Move-Item -Force -LiteralPath $next -Destination $binPath
         $next = $null
         & $binPath --version
-{sync}
+        if ('{product}' -eq 'plumb') {{
+            & $binPath depot sync
+        }}
 
         foreach ($found in @(Get-ChildItem -LiteralPath $installRoot -Directory)) {{
             if ($found.Name -eq $resolvedVersion -or !(Version-Owned $found.Name)) {{

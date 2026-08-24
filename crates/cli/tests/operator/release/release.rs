@@ -167,7 +167,7 @@ fn intent() {
     let manager = std::fs::read_to_string(out.join("manage.sh")).expect("manager");
     assert!(manager.contains("CHANNEL=${PROBE_CHANNEL:-canary}"));
     assert!(manager.contains("VERSION=${PROBE_VERSION:-v1.2.0-canary.9}"));
-    assert!(!manager.contains("depot sync"));
+    assert!(manager.contains("if [ \"probe\" = plumb ]; then"));
     assert!(!out.join("canonical").exists());
 }
 
@@ -190,5 +190,6 @@ fn syncs() {
         .env("PLUMB_RELEASE_VERSION", "v1.2.0")
         .env("PLUMB_RELEASE_OUTPUT", &out));
     let manager = std::fs::read_to_string(out.join("manage.sh")).expect("manager");
+    assert!(manager.contains("if [ \"plumb\" = plumb ]; then"));
     assert!(manager.contains("\"$LOCAL_BIN_DIR/plumb\" depot sync"));
 }
