@@ -50,11 +50,13 @@ jobs:
               --channel beta --version "$held" \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
+            tool="$seat/bin/plumb"
           else
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+            tool="$HOME/.local/bin/plumb"
           fi
-          plumb depot sync
+          "$tool" depot sync
 
       - name: Plan this release
         id: plan
@@ -116,11 +118,13 @@ jobs:
               --channel beta --version "$held" \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
+            tool="$seat/bin/plumb"
           else
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+            tool="$HOME/.local/bin/plumb"
           fi
-          plumb depot sync
+          "$tool" depot sync
 
       - name: Install stable Plumb on Windows
         if: runner.os == 'Windows'
@@ -189,11 +193,13 @@ jobs:
               --channel beta --version "$held" \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
+            tool="$seat/bin/plumb"
           else
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+            tool="$HOME/.local/bin/plumb"
           fi
-          plumb depot sync
+          "$tool" depot sync
 
       - name: Require canonical guard evidence
         env:
@@ -295,11 +301,13 @@ jobs:
               --channel beta --version "$held" \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
+            tool="$seat/bin/plumb"
           else
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+            tool="$HOME/.local/bin/plumb"
           fi
-          plumb depot sync
+          "$tool" depot sync
 
       - name: Install stable Plumb on Windows
         if: runner.os == 'Windows'
@@ -361,11 +369,13 @@ jobs:
               --channel beta --version "$held" \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
+            tool="$seat/bin/plumb"
           else
             curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+            tool="$HOME/.local/bin/plumb"
           fi
-          plumb depot sync
+          "$tool" depot sync
 
       - uses: actions/download-artifact@v3
         with:
