@@ -23,7 +23,8 @@ pub struct Dictionary {
 pub struct Report {
     pub schema: &'static str,
     pub codec: &'static str,
-    pub dictionary_digest: String,
+    #[serde(rename = "dictionary_digest")]
+    pub digest: String,
     pub retired: usize,
     pub coverage: Coverage,
     pub hits: Vec<Hit>,
@@ -133,7 +134,7 @@ fn report(dictionary: &Dictionary, coverage: Coverage, hits: Vec<Hit>) -> Report
     Report {
         schema: SCHEMA,
         codec: CODEC,
-        dictionary_digest: dictionary.digest.clone(),
+        digest: dictionary.digest.clone(),
         retired: dictionary.terms.len(),
         ok: hits.is_empty(),
         coverage,

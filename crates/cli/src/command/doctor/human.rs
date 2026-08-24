@@ -50,7 +50,7 @@ pub fn render(seen: Held<'_>) {
         Ok(report) => println!(
             "  vocabulary {} {} retired={} scanned={}/{}",
             report.codec,
-            &report.dictionary_digest[..12],
+            &report.digest[..12],
             report.retired,
             report.coverage.scanned,
             report.coverage.tracked

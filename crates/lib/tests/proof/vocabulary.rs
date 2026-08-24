@@ -66,6 +66,20 @@ fn empty() {
 }
 
 #[test]
+fn digest() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let first = Dictionary::parse("schema = 1\ncodec = \"p64-v1\"\nretired = []\n")
+        .expect("first dictionary");
+    let second = Dictionary::parse("schema = 1\ncodec = \"p64-v1\"\nretired = []\n\n")
+        .expect("second dictionary");
+    let first = scan(fixture.path(), &first).expect("first report");
+    let second = scan(fixture.path(), &second).expect("second report");
+
+    assert_eq!(first.digest.len(), 64);
+    assert_ne!(first.digest, second.digest);
+}
+
+#[test]
 fn closure() {
     let fixture = repo();
     let root = fixture.path();

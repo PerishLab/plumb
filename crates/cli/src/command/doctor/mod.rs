@@ -26,7 +26,8 @@ struct Report {
 struct Vocabulary {
     schema: &'static str,
     codec: &'static str,
-    dictionary_digest: Option<String>,
+    #[serde(rename = "dictionary_digest")]
+    digest: Option<String>,
     retired: Option<usize>,
     coverage: Option<plumb::vocabulary::Coverage>,
     hits: Vec<plumb::vocabulary::Hit>,
@@ -159,7 +160,7 @@ impl Vocabulary {
             Ok(report) => Self {
                 schema: report.schema,
                 codec: report.codec,
-                dictionary_digest: Some(report.dictionary_digest),
+                digest: Some(report.digest),
                 retired: Some(report.retired),
                 coverage: Some(report.coverage),
                 hits: report.hits,
@@ -169,7 +170,7 @@ impl Vocabulary {
             Err(refusal) => Self {
                 schema: plumb::vocabulary::SCHEMA,
                 codec: plumb::vocabulary::CODEC,
-                dictionary_digest: None,
+                digest: None,
                 retired: None,
                 coverage: None,
                 hits: Vec::new(),
