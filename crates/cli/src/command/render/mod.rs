@@ -1,6 +1,7 @@
 use crate::shape;
 
 mod affirm;
+mod policy;
 use std::path::PathBuf;
 
 pub struct Seat(PathBuf);
@@ -64,7 +65,7 @@ impl Seat {
                 return 1;
             }
         };
-        let rendered = match shape::reconcile(&self.0, &text) {
+        let rendered = match policy::render(&self.0, &text) {
             Ok(rendered) => rendered,
             Err(error) => {
                 eprintln!("plumb policy {}: {error}", self.0.display());

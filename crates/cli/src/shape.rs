@@ -12,7 +12,7 @@ mod node;
 pub(crate) mod operator;
 mod pack;
 pub mod pair;
-mod policy;
+pub(crate) mod policy;
 pub mod workflow;
 
 pub use crate::judge::finding::Found;
@@ -51,7 +51,7 @@ pub struct Shape {
     pub entries: Vec<String>,
     pub dispatch: Option<dispatch::Evidence>,
     pub web: Option<web::Evidence>,
-    pub policy: Vec<String>,
+    pub(crate) policy: Option<policy::Evidence>,
     pub guard: String,
     pub layout: layout::Read,
 }
@@ -186,10 +186,9 @@ pub fn capture(
     let doc = read.ok().map(toml::Value::Table);
     let policy = if laws.exists() {
         doc.as_ref()
-            .map(|doc| policy::check(root, doc))
-            .unwrap_or_default()
+            .map(|doc| policy::Evidence::read(root, doc.clone()))
     } else {
-        Vec::new()
+        None
     };
     let limit = |key: &str| {
         doc.as_ref()
@@ -287,7 +286,4 @@ fn mark(text: &str) -> Option<String> {
 fn quoted(text: &str) -> Option<String> {
     let seat = text.find("\"version\"")?;
     text[seat..].split('"').nth(3).map(str::to_string)
-}
-pub fn reconcile(root: &Path, text: &str) -> Result<String, String> {
-    policy::render(root, text)
 }

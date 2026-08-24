@@ -6,6 +6,7 @@ use crate::shape;
 use std::collections::BTreeSet;
 
 pub(crate) mod layout;
+mod policy;
 mod release;
 
 pub fn judge(held: &shape::Shape) -> Found {
@@ -100,10 +101,8 @@ impl Structure<'_> {
                     why.lines().next().unwrap_or("")
                 ),
             ));
-        } else {
-            for line in &held.policy {
-                found.push(wrong(&rule::ECTROPY_POLICY, line.clone()));
-            }
+        } else if let Some(policy) = &held.policy {
+            found.extend(policy::judge(policy));
         }
         if self.declared() {
             found.extend(layout::judge(&held.layout));

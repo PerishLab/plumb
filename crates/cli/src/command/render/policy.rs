@@ -1,4 +1,4 @@
-use super::Expected;
+use crate::shape::policy::Expected;
 use std::collections::BTreeSet;
 use std::path::Path;
 
