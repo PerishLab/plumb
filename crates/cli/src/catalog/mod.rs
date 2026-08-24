@@ -31,7 +31,7 @@ pub(crate) fn held() -> &'static Held {
 }
 
 static HELD: LazyLock<Result<Held, String>> = LazyLock::new(|| {
-    let seat = plumb::depot::Seat::open()?;
+    let seat = plumb::depot::rules()?;
     let words = seat.read(WORDS)?;
     let law = seat.read(LAW)?;
     let held = gather(&words, &law).ok_or_else(|| "the synced catalogue is invalid".to_string())?;

@@ -16,3 +16,6 @@ mod stamp;
 mod topology;
 #[cfg(unix)]
 mod world;
+
+#[path = "../../support.rs"]
+mod support;

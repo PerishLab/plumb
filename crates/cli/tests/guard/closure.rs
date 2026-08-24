@@ -120,7 +120,7 @@ fn doctor() {
     let report: Value = serde_json::from_slice(&output.stdout).expect("doctor json");
     assert_eq!(report["operation"], "doctor");
     assert_eq!(report["ok"], true);
-    assert_eq!(report["clean"], true);
+    assert_eq!(report["clean"], true, "{report:#}");
     assert_eq!(report["findings"], serde_json::json!([]));
     let coverage = &report["coverage"];
     let total = ["mechanized", "observed", "prose_only"]

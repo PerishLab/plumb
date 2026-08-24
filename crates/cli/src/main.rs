@@ -252,8 +252,7 @@ fn prepare(command: &Command) -> Result<(), String> {
     if matches!(command, Command::Depot { .. }) {
         return Ok(());
     }
-    let seat = plumb::depot::Seat::open()?;
-    seat.supported(plumb::version!("PLUMB"))?;
+    plumb::depot::rules()?;
     catalog::prepare()?;
     catalog::set::prepare()?;
     plumb::vocabulary::Dictionary::synced().map_err(|error| error.to_string())?;

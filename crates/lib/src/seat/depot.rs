@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use std::path::{Component, Path, PathBuf};
+use std::sync::LazyLock;
 
 pub const FORMAT: u32 = 1;
 pub const LEAF: &str = "plumb.toml";
@@ -54,6 +55,16 @@ pub struct Pointer {
 pub struct Seat {
     base: PathBuf,
     manifest: Manifest,
+}
+
+static RULES: LazyLock<Result<Seat, String>> = LazyLock::new(|| {
+    let seat = Seat::open()?;
+    seat.supported(crate::version!("PLUMB"))?;
+    Ok(seat)
+});
+
+pub fn rules() -> Result<&'static Seat, String> {
+    RULES.as_ref().map_err(Clone::clone)
 }
 
 impl Seat {

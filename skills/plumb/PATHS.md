@@ -4,7 +4,8 @@
 
 1. Resolve the repository root by its `plumb.toml`.
 2. Read the repository's own instructions.
-3. Run `plumb doctor .` before changing shape.
+3. Run `plumb doctor .` before changing shape. If Plumb reports an absent or
+   unreadable rule seat, run `plumb depot sync` and repeat Doctor.
 4. Inspect the relevant files and make the smallest coherent change.
 5. Run Doctor again, then the repository's complete guard.
 

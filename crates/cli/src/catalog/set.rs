@@ -106,7 +106,7 @@ pub fn current() -> &'static Rules {
 }
 
 fn table(path: &str) -> Result<toml::Table, String> {
-    let text = plumb::depot::Seat::open()?.read(path)?;
+    let text = plumb::depot::rules()?.read(path)?;
     text.parse()
         .map_err(|error| format!("{path} does not parse: {error}"))
 }

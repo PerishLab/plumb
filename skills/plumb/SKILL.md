@@ -31,9 +31,11 @@ says what none of those can. Ask the one that owns the question.
 - A **landing** projects a clean topic branch onto its base and waits for guard.
 - A **release** is an immutable product identity; a **projection** renders one
   onto one medium.
-- The **depot** carries Plumb's own configuration as immutable objects. A synced
-  seat answers before the compiled bytes, which stay as the floor. Reading is
-  local and never fetches.
+- The **depot** carries Plumb's own configuration as immutable objects. Rules
+  exist only in a verified synced seat; they are never compiled into the binary
+  and reading them never fetches. Installation syncs the seat, while an absent,
+  drifted, or unsupported seat refuses rule-dependent commands and names
+  `plumb depot sync` as the remedy.
 
 ## Authorities
 

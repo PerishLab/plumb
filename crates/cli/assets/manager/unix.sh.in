@@ -638,6 +638,7 @@ install_{product}() {{
     ENTRY_STAGE=
     "$entry" --version
   done
+{sync}
 
   old_versions "$VERSION" | while IFS= read -r old; do
     [ -n "$old" ] || continue

@@ -54,11 +54,13 @@ fn drift() {
     let fixture = super::fixture();
     let seat = super::super::support::depot(&[]);
     std::fs::write(
-        seat.path()
-            .join("29990101T000000Z/rules/structure.toml"),
+        seat.path().join("29990101T000000Z/rules/structure.toml"),
         "drift",
     )
     .expect("drift rule");
     let out = run(fixture.path(), seat.path());
-    assert!(out.contains("depot object drift: rules/structure.toml"), "{out}");
+    assert!(
+        out.contains("depot object drift: rules/structure.toml"),
+        "{out}"
+    );
 }

@@ -59,9 +59,7 @@ struct Closure<'a> {
 
 impl Dictionary {
     pub fn synced() -> Result<Self, Refusal> {
-        let seat = crate::depot::Seat::open().map_err(|error| refuse("depot", error))?;
-        seat.supported(crate::version!("PLUMB"))
-            .map_err(|error| refuse("depot", error))?;
+        let seat = crate::depot::rules().map_err(|error| refuse("depot", error))?;
         let source = seat.read(RULE).map_err(|error| refuse("depot", error))?;
         Self::parse(&source)
     }

@@ -14,3 +14,4 @@
             curl -fsSL {@plumb}/manage.sh | sh
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
           fi
+          plumb depot sync

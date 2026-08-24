@@ -6,7 +6,7 @@ use std::process::Command;
 pub const KEY: &str = "plumb";
 
 pub enum Held {
-    Factory,
+    Absent,
     Seat(plumb::depot::Seat),
     Blind(String),
 }
@@ -22,7 +22,7 @@ pub fn held(over: &Path) -> Held {
     };
     let marker = base.join(POINTER);
     if !marker.is_file() {
-        return Held::Factory;
+        return Held::Absent;
     }
     match plumb::depot::Seat::at(&base) {
         Ok(seat) => Held::Seat(seat),
@@ -33,7 +33,7 @@ pub fn held(over: &Path) -> Held {
 impl Held {
     pub fn read(&self, path: &str, factory: &'static str) -> Result<String, String> {
         match self {
-            Self::Factory => Ok(factory.to_string()),
+            Self::Absent => Ok(factory.to_string()),
             Self::Blind(error) => Err(format!("the plumb depot seat is unreadable: {error}")),
             Self::Seat(seat) => seat.read(path),
         }

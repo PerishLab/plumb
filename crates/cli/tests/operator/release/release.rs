@@ -155,6 +155,7 @@ fn intent() {
     let temp = tempfile::tempdir().expect("temp root");
     let root = temp.path();
     let out = root.join("managers");
+    super::support::stock(&root.join("depot"), &[]);
     std::fs::write(root.join("plumb.toml"), SPEC).expect("release manifest");
     let fixture = Fixture { root, tools: root };
     run(fixture
@@ -166,5 +167,28 @@ fn intent() {
     let manager = std::fs::read_to_string(out.join("manage.sh")).expect("manager");
     assert!(manager.contains("CHANNEL=${PROBE_CHANNEL:-canary}"));
     assert!(manager.contains("VERSION=${PROBE_VERSION:-v1.2.0-canary.9}"));
+    assert!(!manager.contains("depot sync"));
     assert!(!out.join("canonical").exists());
+}
+
+#[test]
+fn syncs() {
+    let temp = tempfile::tempdir().expect("temp root");
+    let root = temp.path();
+    let out = root.join("managers");
+    super::support::stock(&root.join("depot"), &[]);
+    std::fs::write(
+        root.join("plumb.toml"),
+        SPEC.replace("product = \"probe\"", "product = \"plumb\""),
+    )
+    .expect("release manifest");
+    let fixture = Fixture { root, tools: root };
+    run(fixture
+        .command()
+        .args(["ship", "binary", "managers"])
+        .env("PLUMB_RELEASE_CHANNEL", "stable")
+        .env("PLUMB_RELEASE_VERSION", "v1.2.0")
+        .env("PLUMB_RELEASE_OUTPUT", &out));
+    let manager = std::fs::read_to_string(out.join("manage.sh")).expect("manager");
+    assert!(manager.contains("\"$LOCAL_BIN_DIR/plumb\" depot sync"));
 }
