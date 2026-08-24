@@ -59,7 +59,7 @@ pub fn run(options: Dispatch) -> Result<String, String> {
 }
 
 fn current(root: &std::path::Path) -> Result<(), String> {
-    let stale = crate::shape::lane::Seat(root).stale();
+    let stale = crate::command::lane::Seat(root).stale();
     if stale.is_empty() {
         return Ok(());
     }
@@ -70,11 +70,15 @@ fn current(root: &std::path::Path) -> Result<(), String> {
 }
 
 fn present(root: &std::path::Path, workflow: &str) -> Result<(), String> {
-    let Ok(lanes) = crate::shape::lane::Seat(root).render() else {
+    let Ok(evidence) = crate::command::lane::Seat(root).project() else {
         return Ok(());
     };
     let path = format!(".forgejo/workflows/{workflow}");
-    if lanes.iter().any(|lane| lane.path == path && lane.absent()) {
+    if evidence
+        .projected()
+        .iter()
+        .any(|lane| lane.path == path && lane.absent())
+    {
         return Err(format!(
             "a release cannot start on a lane this repository has not rendered: {path}; run plumb lane --write"
         ));

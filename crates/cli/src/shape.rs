@@ -5,7 +5,6 @@ use std::path::Path;
 
 pub mod changelog;
 pub(crate) mod dependency;
-mod forge;
 pub mod lane;
 pub mod layout;
 mod node;
@@ -27,7 +26,7 @@ pub struct Shape {
     pub laws: bool,
     pub unread: Option<String>,
     pub lanes: BTreeSet<String>,
-    pub drift: Vec<String>,
+    pub lane: lane::Evidence,
     pub release: pair::Release,
     pub ships: BTreeSet<String>,
     pub sites: BTreeSet<String>,
@@ -209,7 +208,8 @@ pub fn capture(
         }
     }
     let held = layout::read(root, snapshot.as_ref());
-    let lanes = seat.names(".forgejo/workflows", ".yml");
+    let lane = lane::read(root);
+    let lanes = lane.names();
     let paired = pair::Root(root);
     let release = paired.release(&lanes);
     let ships = release.attachments.clone();
@@ -229,7 +229,7 @@ pub fn capture(
         laws: laws.exists(),
         unread,
         lanes,
-        drift: lane::Seat(root).drift(),
+        lane,
         release,
         ships,
         sites: paired.sites(),

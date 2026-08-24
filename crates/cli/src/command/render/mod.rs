@@ -157,9 +157,9 @@ impl Seat {
     }
 
     pub fn lane(&self, write: bool) -> i32 {
-        let seat = shape::lane::Seat(&self.0);
-        let lanes = match seat.render() {
-            Ok(lanes) => lanes,
+        let seat = crate::command::lane::Seat(&self.0);
+        let evidence = match seat.project() {
+            Ok(evidence) => evidence,
             Err(error) => {
                 eprintln!("plumb lane {}: {error}", self.0.display());
                 return 1;
@@ -168,9 +168,9 @@ impl Seat {
         println!("plumb lane {}", self.0.display());
         println!();
         if !write {
-            return Self::proposed(&lanes);
+            return Self::proposed(evidence.projected());
         }
-        match seat.write(&lanes) {
+        match seat.write(evidence.projected()) {
             Ok(written) if written.is_empty() => {
                 println!("  every rendered lane already stands as written");
                 0
@@ -188,7 +188,7 @@ impl Seat {
         }
     }
 
-    fn proposed(lanes: &[shape::lane::Lane]) -> i32 {
+    fn proposed(lanes: &[shape::lane::Projection]) -> i32 {
         let mut drifted = 0;
         for lane in lanes {
             if !lane.drifted() {

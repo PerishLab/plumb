@@ -4,6 +4,7 @@ pub mod cookbook;
 pub mod depot;
 pub mod doctor;
 pub mod land;
+pub(crate) mod lane;
 pub mod operator;
 pub mod precommit;
 pub mod radius;

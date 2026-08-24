@@ -5,10 +5,10 @@ use std::path::Path;
 pub fn template() -> Result<String, String> {
     let mut bytes = Vec::new();
     bytes.extend_from_slice(
-        crate::shape::lane::source::text("assets/manager/unix.sh.in")?.as_bytes(),
+        crate::command::lane::source::text("assets/manager/unix.sh.in")?.as_bytes(),
     );
     bytes.extend_from_slice(
-        crate::shape::lane::source::text("assets/manager/windows.ps1.in")?.as_bytes(),
+        crate::command::lane::source::text("assets/manager/windows.ps1.in")?.as_bytes(),
     );
     Ok(super::record::sha(&bytes))
 }
@@ -59,7 +59,7 @@ fn render(spec: &Spec, channel: &str, version: &str) -> Result<(String, Option<S
         ("windows_root", String::new()),
     ]);
     let unix = plumb::fill::fill(
-        crate::shape::lane::source::text("assets/manager/unix.sh.in")?,
+        crate::command::lane::source::text("assets/manager/unix.sh.in")?,
         &vars,
     )
     .map_err(|error| error.to_string())?;
@@ -70,7 +70,7 @@ fn render(spec: &Spec, channel: &str, version: &str) -> Result<(String, Option<S
             vars.insert("windows_root", String::new());
             Some(
                 plumb::fill::fill(
-                    crate::shape::lane::source::text("assets/manager/windows.ps1.in")?,
+                    crate::command::lane::source::text("assets/manager/windows.ps1.in")?,
                     &vars,
                 )
                 .map_err(|error| error.to_string())?,
