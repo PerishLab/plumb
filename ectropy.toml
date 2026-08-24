@@ -2,14 +2,6 @@
 paths = ["apps/web/src/lib/components/**"]
 syntax = "style"
 
-[[boundary]]
-allow = ["path"]
-note = "vite and vitest require root-level config files; the apps root becomes law only after the depot catalog can migrate atomically"
-paths = [
-    "apps/web/vite.config.ts",
-    "apps/web/vitest.config.ts",
-]
-
 [comment]
 allow = false
 
@@ -46,6 +38,7 @@ path = 3
 
 [module]
 roots = [
+    "apps/*",
     "apps/*/src",
     "apps/*/tests",
     "crates/*/src",
