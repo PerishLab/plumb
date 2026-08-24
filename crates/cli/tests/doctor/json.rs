@@ -29,7 +29,7 @@ fn clean() {
         .iter()
         .map(|standing| coverage[standing].as_u64().expect("coverage count"))
         .sum::<u64>();
-    assert_eq!(classified, 121);
+    assert_eq!(classified, 122);
     assert!(report["shape"]["wrappers"].is_array());
     assert!(report["shape"]["layout"].is_array());
     assert_eq!(report["vocabulary"]["schema"], "plumb.vocabulary/v1");

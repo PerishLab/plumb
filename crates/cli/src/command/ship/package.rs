@@ -82,7 +82,7 @@ impl Product<'_> {
     }
 
     pub fn assemble(&self, version: &str, artifacts: &Path) -> Result<String, String> {
-        let assets = artifact::list(self.spec, version)?;
+        let assets = artifact::list(self.spec)?;
         self.gather(artifacts, &assets)?;
         if self.spec.skill {
             let path = artifacts.join(format!("{}-skill.tar.gz", self.spec.product));

@@ -79,22 +79,11 @@ impl Fixture<'_> {
         }
     }
 
-    pub fn changelog(&self, version: &str) {
-        let seat = self.root.join("docs/CHANGELOG").join(version);
-        for language in ["en", "zh"] {
-            std::fs::create_dir_all(seat.join(language)).expect("changelog language root");
-            for leaf in ["INDEX.md", "MIGRATION.md"] {
-                std::fs::write(seat.join(language).join(leaf), "complete\n")
-                    .expect("changelog leaf");
-            }
-        }
-    }
-
     pub fn candidate(&self) -> String {
         run(Command::new("git")
             .arg("-C")
             .arg(self.root)
-            .args(["add", "plumb.toml", "docs"]));
+            .args(["add", "plumb.toml"]));
         run(Command::new("git")
             .arg("-C")
             .arg(self.root)

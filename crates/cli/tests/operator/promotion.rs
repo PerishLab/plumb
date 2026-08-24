@@ -24,7 +24,6 @@ fn derived() {
         tools: &tools,
     };
     fixture.seed();
-    fixture.changelog("v1.2.0");
     let candidate = fixture.candidate();
     let proof = root.join("promotion/seal.json");
 

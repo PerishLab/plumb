@@ -48,7 +48,6 @@ fn cycle() {
         tools: &tools,
     };
     fixture.seed();
-    fixture.changelog("v1.2.0");
     let candidate = fixture.candidate();
     fixture.tag("v1.2.0-beta.7");
     fixture.archive(&artifacts, "v1.2.0-beta.7");

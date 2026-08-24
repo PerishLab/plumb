@@ -1,4 +1,5 @@
 mod face;
+mod retired;
 pub(crate) mod rule;
 
 pub(crate) use face::{Faces, authority};
@@ -42,7 +43,8 @@ fn named(group: &Group) -> Vec<String> {
 
 impl Tree<'_> {
     fn judge(&self, declared: &Declared) -> Vec<Seed> {
-        let mut found = self.covered(declared);
+        let mut found = retired::judge(self.0, declared);
+        found.extend(self.covered(declared));
         found.extend(self.anchored(declared));
         found.extend(self.ruled(declared));
         found
@@ -168,13 +170,11 @@ impl Tree<'_> {
         let heads = declared
             .seats
             .iter()
-            .filter(|seat| !seat.retired)
             .map(Seat::head)
             .collect::<BTreeSet<_>>();
         let names = declared
             .groups
             .iter()
-            .filter(|group| !group.retired)
             .flat_map(|group| group.names.iter().map(String::as_str))
             .collect::<BTreeSet<_>>();
         let (dirs, files) = self.top();

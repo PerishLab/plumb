@@ -95,6 +95,40 @@ fn stray() {
 }
 
 #[test]
+fn retired() {
+    let declared = format!(
+        "{DECLARED}\n[[layout.seat]]\npath = \"docs/CHANGELOG/*\"\nkind = \"retired\"\nnote = \"history moved to the depot\"\n"
+    );
+    let seat = seated(&declared);
+    std::fs::create_dir_all(seat.path().join("docs/CHANGELOG/v1.0.0")).expect("history");
+    std::fs::write(
+        seat.path().join("docs/CHANGELOG/v1.0.0/INDEX.md"),
+        "returned",
+    )
+    .expect("note");
+    track(seat.path());
+    let held = report(seat.path());
+    assert!(
+        held.contains("retired seat docs/CHANGELOG/* still holds tracked paths"),
+        "{held}"
+    );
+    assert!(
+        !held.contains("directory docs sits in no declared seat"),
+        "{held}"
+    );
+}
+
+#[test]
+fn tombstone() {
+    let declared = format!(
+        "{DECLARED}\n[[layout.seat]]\npath = \"docs/CHANGELOG/*\"\nkind = \"retired\"\nnote = \"history moved to the depot\"\n"
+    );
+    let seat = seated(&declared);
+    let held = report(seat.path());
+    assert!(!held.contains("retired seat"), "{held}");
+}
+
+#[test]
 fn naked() {
     let seat = seated(DECLARED);
     std::fs::create_dir_all(seat.path().join("crates/bare")).expect("bare");

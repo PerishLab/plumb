@@ -151,7 +151,7 @@ struct Tree<'a>(&'a Path);
 
 impl Tree<'_> {
     fn publish(&self, version: &str, dry: bool) -> Result<String, String> {
-        let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
+        let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
         let snapshot = Snapshot::read(self.0).map_err(|error| error.to_string())?;
         self.clean()?;
         let metadata = record::Metadata {
@@ -172,11 +172,12 @@ impl Tree<'_> {
         if dry {
             return plan.manifest.encode();
         }
+        rig.depot.authority.load()?;
         store::Remote::new(&rig.depot.authority)?.publish(&plan)
     }
 
     fn notes(&self, wanted: Wanted<'_>) -> Result<String, String> {
-        let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
+        let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
         let staged = wanted.from.is_empty();
         let source = if staged {
             plumb::seat::tmp(self.0, seat::KEY)
@@ -206,6 +207,7 @@ impl Tree<'_> {
                 proof.units
             ));
         }
+        rig.depot.authority.load()?;
         let held = store::Remote::new(&rig.depot.authority)?.stock(&batch)?;
         if staged && !wanted.keep {
             std::fs::remove_dir_all(&source)

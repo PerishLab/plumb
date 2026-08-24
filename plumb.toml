@@ -32,8 +32,8 @@ note = "Operating briefs. Six of six. Rejudged when the skills line is decided."
 
 [[layout.seat]]
 path = "docs/CHANGELOG/*"
-rule = ["rule://seat/version-named"]
-note = "Immutable release history. Retires whole when release notes move to the depot."
+kind = "retired"
+note = "Release notes live in the depot; this tombstone keeps the retired source seat absent."
 
 [[layout.seat]]
 path = ".forgejo"
@@ -110,5 +110,5 @@ domain = "plumb.perish.uk"
 "rust" = ["suite://cargo"]
 "test" = ["*"]
 "web" = ["suite://pnpm"]
-"ectropy" = ["ectropy.toml", "apps", "crates", "docs", "packages", "skills"]
+"ectropy" = ["ectropy.toml", "apps", "crates", "packages", "skills"]
 "plumb" = ["*"]

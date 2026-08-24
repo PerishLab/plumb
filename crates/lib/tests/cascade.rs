@@ -62,6 +62,20 @@ fn defaults() {
 }
 
 #[test]
+#[cfg(any(feature = "vendor", feature = "skill"))]
+fn authority() {
+    let dir = tempfile::tempdir().expect("fixture");
+    let file = dir.path().join("secret");
+    std::fs::write(&file, "held\n").expect("secret");
+    let mut authority = plumb::rig::Authority {
+        secret_file: std::path::PathBuf::from(&file),
+        ..plumb::rig::Authority::default()
+    };
+    authority.load().expect("secret should load");
+    assert_eq!(authority.secret, "held");
+}
+
+#[test]
 fn filed() {
     let dir = std::env::temp_dir().join("plumb-cascade-file");
     std::fs::create_dir_all(&dir).expect("fixture should be made");

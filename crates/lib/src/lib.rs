@@ -1,15 +1,12 @@
 extern crate self as plumb;
 
-pub mod cancel;
 pub mod cli;
 pub mod config;
-pub mod context;
 pub mod fill;
 #[cfg(feature = "vendor")]
 pub mod forgejo;
 mod proof;
-#[cfg(any(feature = "vendor", feature = "skill"))]
-pub mod rig;
+mod runtime;
 pub mod seat;
 #[cfg(feature = "skill")]
 pub mod skill;
@@ -22,7 +19,10 @@ pub use forgejo::land;
 #[cfg(feature = "radius")]
 pub use proof::radius;
 
-pub use proof::{boundary, changelog, datum, snapshot, trace, vocabulary};
+pub use proof::{boundary, changelog, datum, snapshot, vocabulary};
+#[cfg(any(feature = "vendor", feature = "skill"))]
+pub use runtime::rig;
+pub use runtime::{cancel, context, trace};
 
 pub use serde;
 

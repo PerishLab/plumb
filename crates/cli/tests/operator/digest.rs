@@ -27,7 +27,6 @@ fn inputs() {
     )
     .expect("manifest");
     std::fs::write(root.join("charts/probe/Chart.yaml"), "name: probe\n").expect("chart");
-    fixture.changelog("v1.2.0");
     fixture.track("charts");
     let candidate = fixture.candidate();
     fixture.tag("v1.2.0-beta.7");
@@ -178,7 +177,6 @@ fn carried() {
     std::fs::write(root.join("Containerfile"), "FROM scratch\n").expect("containerfile");
     std::fs::create_dir_all(root.join("charts/probe")).expect("chart root");
     std::fs::write(root.join("charts/probe/Chart.yaml"), "name: probe\n").expect("chart");
-    fixture.changelog("v1.2.0");
     fixture.track("Containerfile");
     fixture.track("charts");
     let candidate = fixture.candidate();

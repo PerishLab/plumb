@@ -77,9 +77,9 @@ fn closure() {
     let report = scan(root, &dictionary(&[encode("retired").expect("encode")])).expect("scan");
     assert!(!report.ok);
     assert_eq!(report.coverage.tracked, 2);
-    assert_eq!(report.coverage.scanned, 1);
-    assert_eq!(report.coverage.exempt, 1);
-    assert_eq!(report.hits.len(), 2);
+    assert_eq!(report.coverage.scanned, 2);
+    assert_eq!(report.coverage.exempt, 0);
+    assert_eq!(report.hits.len(), 3);
     assert!(report.hits.iter().any(|hit| hit.surface == "path"));
     assert!(report.hits.iter().any(|hit| hit.surface == "content"));
 }

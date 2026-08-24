@@ -17,6 +17,7 @@ fn govern(root: &Path) {
 fn run(root: &Path) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("path should be utf8")])
+        .env("PLUMB_DEPOT_SEAT", root.join(".plumb-test-depot"))
         .output()
         .expect("plumb should run");
     String::from_utf8_lossy(&output.stdout).to_string()
@@ -25,6 +26,7 @@ fn run(root: &Path) -> String {
 fn policy(root: &Path, write: bool) -> std::process::Output {
     let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
     command.args(["policy", root.to_str().expect("path should be utf8")]);
+    command.env("PLUMB_DEPOT_SEAT", root.join(".plumb-test-depot"));
     if write {
         command.arg("--write");
     }

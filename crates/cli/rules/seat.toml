@@ -23,7 +23,8 @@ note = "One member, named after the repository that carries it. Measured 2026-08
 [[member.entry]]
 name = "version-named"
 holds = "version"
-note = "Every member names a released version. docs/CHANGELOG alone, where shape/changelog.rs holds the same assertion for one path."
+kind = "retired"
+note = "Release-note versions moved to the depot; no active repository seat selects this historical naming rule."
 
 [[member.entry]]
 name = "wayfinder"

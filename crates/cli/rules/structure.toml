@@ -49,7 +49,8 @@ note = "Build output. Ignored in every repository, therefore never present in th
 
 [[dir.member]]
 name = "docs"
-note = "Today holds only CHANGELOG. Scheduled to disappear whole: perish.code/plumb-release-contract moves release notes to the depot, and this member retires with them."
+kind = "retired"
+note = "Release notes moved to the depot; repositories no longer carry a docs seat."
 
 [[dir.member]]
 name = "examples"

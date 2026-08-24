@@ -25,6 +25,7 @@ rule!(SEAT_MEMBER, "structure.seat-member");
 rule!(SEAT_AFFIRMED, "structure.seat-affirmed");
 rule!(KNOWN_DIRECTORY, "structure.known-directory");
 rule!(KNOWN_WORKFLOW, "structure.known-workflow");
+rule!(RETIRED_SEAT_ABSENT, "structure.retired-seat-absent");
 rule!(BOUNDARY_EXISTS, "structure.boundary-exists");
 rule!(ANCHOR_PRESENT, "structure.anchor-present");
 rule!(ANCHOR_UNIQUE, "structure.anchor-unique");
@@ -48,6 +49,7 @@ pub fn mechanisms() -> Vec<&'static Mechanism> {
         &SEAT_AFFIRMED, &SEAT_ANCHORED, &SEAT_MEMBER,
         &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
         &RELEASE_LANE_PRESENT, &RELEASE_SOURCE_BOUND, &RESERVED_COMPONENTS_SEAT,
+        &RETIRED_SEAT_ABSENT,
         &SITE_DEPLOY_LANE,
     ]
 }

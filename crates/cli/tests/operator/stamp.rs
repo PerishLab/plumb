@@ -59,7 +59,6 @@ fn stamped() {
     ] {
         std::fs::write(root.join(seat), text).expect("fixture file");
     }
-    fixture.changelog("v1.2.0");
     fixture.track("Cargo.toml");
     fixture.track("crates");
     let candidate = fixture.candidate();

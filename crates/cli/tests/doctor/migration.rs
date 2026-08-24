@@ -68,9 +68,6 @@ fn migrated(root: &Path) {
 
 fn script(name: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(Path::parent)
-        .expect("repository root")
-        .join("docs/CHANGELOG/v0.18.19")
+        .join("tests/fixtures/migration-v0.18.19")
         .join(name)
 }

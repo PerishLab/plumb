@@ -153,10 +153,6 @@ impl Closure<'_> {
         };
         let mut hits = Vec::new();
         for entry in entries {
-            if exempt(entry.path()) {
-                coverage.exempt += 1;
-                continue;
-            }
             hits.extend(matches(
                 entry.path(),
                 entry.path().as_bytes(),
@@ -197,10 +193,6 @@ fn contains(haystack: &[u8], needle: &[u8]) -> bool {
             .zip(needle)
             .all(|(left, right)| left.eq_ignore_ascii_case(right))
     })
-}
-
-fn exempt(path: &str) -> bool {
-    path == "docs/CHANGELOG" || path.starts_with("docs/CHANGELOG/")
 }
 
 pub(super) fn refuse(kind: &'static str, message: impl Into<String>) -> Refusal {

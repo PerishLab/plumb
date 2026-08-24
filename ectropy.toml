@@ -3,22 +3,12 @@ paths = ["apps/web/src/lib/components/**"]
 syntax = "style"
 
 [[boundary]]
-allow = ["fanout"]
-note = "the Runseal-backed Forgejo adaptor is a peer of the existing removable substrate modules"
-paths = ["crates/lib/src"]
-
-[[boundary]]
 allow = ["path"]
-note = "vite and vitest require root-level config files; path law anchors to src and tests"
+note = "vite and vitest require root-level config files; the apps root becomes law only after the depot catalog can migrate atomically"
 paths = [
     "apps/web/vite.config.ts",
     "apps/web/vitest.config.ts",
 ]
-
-[[boundary]]
-allow = ["fanout"]
-note = "stable release identity requires one immutable version seat directly under docs/CHANGELOG"
-paths = ["docs/CHANGELOG"]
 
 [[boundary]]
 allow = ["fanout"]
@@ -94,7 +84,6 @@ roots = [
     "apps/*/tests",
     "crates/*/src",
     "crates/*/tests",
-    "docs",
     "packages/*/lib",
     "packages/*/src",
     "packages/*/tests",
@@ -114,7 +103,6 @@ include = [
     "apps/**/*.svelte",
     "apps/**/*.ts",
     "crates/**/*.rs",
-    "docs/**/*.md",
     "packages/**/*.css",
     "packages/**/*.scss",
     "packages/**/*.ts",
@@ -129,6 +117,10 @@ name = "dictionary_digest"
 [[vocabulary.term]]
 description = "Cargo metadata names a package manifest path as one schema field."
 name = "manifest_path"
+
+[[vocabulary.term]]
+description = "An authority may name a file carrying its secret instead of placing secret bytes in the environment."
+name = "secret_file"
 
 [[vocabulary.term]]
 description = "The operator harness names its pending guard poll interval in milliseconds."

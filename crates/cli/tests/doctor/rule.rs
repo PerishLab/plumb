@@ -96,7 +96,7 @@ fn catalog() {
     let prose = json(&["rule", "list", "--standing", "prose-only", "--json"]);
     assert_eq!(all["schema"], "plumb.rule-list/v1");
     let total = all["rules"].as_array().map(Vec::len).expect("all rules");
-    assert_eq!(total, 121);
+    assert_eq!(total, 122);
     let classified = [&mechanized, &observed, &prose]
         .iter()
         .map(|report| report["rules"].as_array().map(Vec::len).expect("rules"))

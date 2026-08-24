@@ -51,7 +51,7 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
     }
     let seat = input.out.join("managers");
     manager::write(input.spec, input.channel, input.version, &seat)?;
-    let assets = artifact::list(&spec, input.version)?;
+    let assets = artifact::list(&spec)?;
     let declared = files::declared(&spec, &assets);
     files::complete(input.artifacts, &declared)?;
     let payload = input.out.join("payload");

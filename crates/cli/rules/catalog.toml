@@ -903,6 +903,15 @@ owner = "web"
 tags = ["repository", "web"]
 
 [[rule]]
+id = "structure.retired-seat-absent"
+summary = "Retired layout seats stay absent"
+law = "A layout seat or root-file group marked retired carries no tracked path."
+evidence = "The Git snapshot compared with retired declarations in the repository layout."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
 id = "structure.seat-affirmed"
 summary = "A wayfinder was affirmed against the authorities it points at"
 law = "A target under a rule declaring affirmation faces carries a record taken over those faces as they stand."
@@ -968,7 +977,7 @@ tags = ["configuration", "ownership"]
 [[rule]]
 id = "vocabulary.retired-term-absent"
 summary = "Retired domain terms leave the active closure"
-law = "A term in Plumb's transitional retired dictionary is absent from Git-tracked paths and current working-tree bytes outside docs/CHANGELOG."
+law = "A term in Plumb's transitional retired dictionary is absent from Git-tracked paths and current working-tree bytes."
 evidence = "The bundled p64-v1 dictionary compared with tracked path and file bytes."
 standing = "mechanized"
 owner = "plumb"
