@@ -24,14 +24,6 @@ paths = [
 ]
 
 [[boundary]]
-allow = ["path"]
-note = "the old registry adaptor tree remains one level deeper until perish.code/plumb-closure-rewritten retires this row"
-paths = [
-    "crates/cli/src/command/ship/adaptor/registry/ledger.rs",
-    "crates/cli/src/command/ship/adaptor/registry/manifest.rs",
-]
-
-[[boundary]]
 allow = ["fanout"]
 note = "stable release identity requires one immutable version seat directly under docs/CHANGELOG"
 paths = ["docs/CHANGELOG"]

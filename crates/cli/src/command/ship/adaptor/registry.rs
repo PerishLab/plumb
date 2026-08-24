@@ -1,5 +1,4 @@
-mod ledger;
-mod manifest;
+use super::{ledger, manifest};
 use crate::command::release::workspace::{Workspace, release};
 use crate::shape::release::{Cargo, Spec};
 use flate2::read::GzDecoder;
