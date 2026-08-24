@@ -2,7 +2,7 @@ use semver::Version;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub use plumb::changelog::Proof;
+pub(crate) use plumb::changelog::Proof;
 
 pub fn stamped(version: &str) -> String {
     match version.strip_prefix('v') {

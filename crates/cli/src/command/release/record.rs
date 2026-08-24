@@ -104,7 +104,7 @@ pub struct Seal {
     pub artifacts: BTreeMap<String, Remote>,
     pub managers: BTreeMap<String, Remote>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub changelog: Option<crate::shape::changelog::Proof>,
+    pub changelog: Option<crate::command::changelog::Proof>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub proof: Option<Promotion>,
     #[serde(skip_serializing_if = "Option::is_none")]

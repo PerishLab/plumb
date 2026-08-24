@@ -22,8 +22,8 @@ impl Seat {
             println!("  no version to read: the repository declares none, so pass --version");
             return 1;
         }
-        let stamped = match shape::changelog::identity(&held) {
-            Ok(base) => shape::changelog::stamped(&base),
+        let stamped = match crate::command::changelog::identity(&held) {
+            Ok(base) => crate::command::changelog::stamped(&base),
             Err(error) => {
                 println!("  {error}");
                 return 1;

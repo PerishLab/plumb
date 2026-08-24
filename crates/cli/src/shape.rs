@@ -3,7 +3,6 @@ pub mod web;
 use std::collections::BTreeSet;
 use std::path::Path;
 
-pub mod changelog;
 pub(crate) mod dependency;
 pub mod lane;
 pub mod layout;

@@ -38,7 +38,7 @@ pub fn list(spec: &Spec, version: &str) -> Result<Vec<Asset>, String> {
         .map(|target| target.archive.clone())
         .chain(assets.iter().map(|asset| asset.file.clone()))
         .collect::<BTreeSet<_>>();
-    for path in crate::shape::changelog::artifacts(&spec.root, version)? {
+    for path in crate::command::changelog::artifacts(&spec.root, version)? {
         let name = path
             .file_name()
             .and_then(|name| name.to_str())

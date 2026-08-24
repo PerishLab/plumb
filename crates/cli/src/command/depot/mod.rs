@@ -193,7 +193,7 @@ impl Tree<'_> {
         } else {
             PathBuf::from(wanted.from)
         };
-        let proof = crate::shape::changelog::prove(self.0, &source, wanted.version)?;
+        let proof = crate::command::changelog::prove(self.0, &source, wanted.version)?;
         let batch = notes::Batch::gather(&source, wanted.version, &proof.candidate)?;
         if wanted.dry {
             return Ok(format!(
