@@ -105,7 +105,7 @@ impl Seat {
         let floor = &self.manifest.schema.version;
         let least = semver::Version::parse(floor.trim_start_matches('v'))
             .map_err(|error| format!("cannot parse depot floor {floor}: {error}"))?;
-        if held < least {
+        if !supports(&held, &least) {
             return Err(format!(
                 "the synced depot declares a floor of {floor}, above the running {running}"
             ));
@@ -116,6 +116,14 @@ impl Seat {
     pub fn mark(&self) -> &str {
         &self.manifest.metadata.version
     }
+}
+
+pub fn supports(running: &semver::Version, floor: &semver::Version) -> bool {
+    let mut held = running.clone();
+    if floor.pre.is_empty() {
+        held.pre = semver::Prerelease::EMPTY;
+    }
+    held >= *floor
 }
 
 impl Manifest {

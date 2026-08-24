@@ -93,7 +93,7 @@ impl Notes {
                 self.floor
             ));
         };
-        if held >= least {
+        if plumb::depot::supports(&held, &least) {
             return Ok(());
         }
         Err(format!(

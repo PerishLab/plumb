@@ -41,7 +41,7 @@ fn floor(manifest: &Manifest) -> Vec<Finding> {
             format!("cannot compare a running {running} with a depot floor of {declared}"),
         ))];
     };
-    if held >= least {
+    if plumb::depot::supports(&held, &least) {
         return Vec::new();
     }
     vec![Finding::new(Seed::wrong(
