@@ -5,6 +5,8 @@ use crate::catalog::set::RULES;
 use crate::shape;
 use std::collections::BTreeSet;
 
+mod release;
+
 pub fn judge(held: &shape::Shape) -> Found {
     Structure(held).judge()
 }
@@ -114,7 +116,7 @@ impl Structure<'_> {
                 }
             }
         }
-        found.extend(shape::pair::judge(held));
+        found.extend(release::judge(held));
         self.matched(&mut found);
         self.anchored(&mut found);
         for name in &held.lanes {
