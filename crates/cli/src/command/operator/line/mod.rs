@@ -45,6 +45,11 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     } else {
         opened(&mut course, &client, &name, from)?
     };
+    let head = course
+        .step(super::version::plan(&version, &name), || {
+            super::version::project(&root, &name, &version, &head)
+        })?
+        .unwrap_or(head);
     let recorded = course
         .step(super::datum::plan(&version), || {
             super::datum::record(super::datum::Cut {

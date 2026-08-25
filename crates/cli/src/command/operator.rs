@@ -6,6 +6,7 @@ mod pick;
 pub(in crate::command) mod topology;
 mod trigger;
 mod value;
+mod version;
 
 use clap::Args;
 

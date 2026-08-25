@@ -17,6 +17,14 @@ pub fn registry(spec: &Spec) -> Registry<'_> {
 }
 
 impl Registry<'_> {
+    pub(in crate::command) fn prepare(&self, version: &str) -> Result<(), String> {
+        if !self.spec.root.join("Cargo.toml").is_file() {
+            return Ok(());
+        }
+        let identity = release(version)?;
+        self.project(&identity)
+    }
+
     pub fn rehearse(&self, version: &str, token: &str) -> Result<String, String> {
         let Some(cargo) = &self.spec.cargo else {
             return Ok(format!("{} has no Cargo attachment", self.spec.product));
@@ -132,17 +140,13 @@ impl Registry<'_> {
         Ok(&cargo.packages)
     }
 
-    fn pins(cargo: &Cargo, identity: &Version) -> BTreeMap<String, String> {
-        cargo
+    fn stamp(&self, cargo: &Cargo, version: &str) -> Result<(), String> {
+        let identity = release(version)?;
+        let pins = cargo
             .packages
             .iter()
             .map(|package| (package.clone(), identity.to_string()))
-            .collect()
-    }
-
-    fn stamp(&self, cargo: &Cargo, version: &str) -> Result<(), String> {
-        let identity = release(version)?;
-        let pins = Self::pins(cargo, &identity);
+            .collect::<BTreeMap<_, _>>();
         let workspace = Workspace::read(&self.spec.root)?;
         let root = self.spec.root.join("Cargo.toml");
         let mut document = manifest::read(&root)?;
@@ -179,6 +183,67 @@ impl Registry<'_> {
         let mut document = manifest::read(&root)?;
         manifest::dependencies(&mut document, &pins)?;
         manifest::write(&root, &document)
+    }
+    fn project(&self, identity: &Version) -> Result<(), String> {
+        let lock = self.spec.root.join("Cargo.lock");
+        let locked = lock.is_file();
+        let workspace = Workspace::read(&self.spec.root);
+        if !locked && lock.is_file() {
+            std::fs::remove_file(&lock)
+                .map_err(|error| format!("cannot remove generated {}: {error}", lock.display()))?;
+        }
+        let workspace = workspace?;
+        let manifests = workspace.manifests();
+        let pins = manifests
+            .keys()
+            .map(|name| (name.clone(), identity.to_string()))
+            .collect::<BTreeMap<_, _>>();
+        let root = self.spec.root.join("Cargo.toml");
+        let mut paths = manifests.values().cloned().collect::<Vec<_>>();
+        if !paths.contains(&root) {
+            paths.push(root.clone());
+        }
+        paths.sort();
+        paths.dedup();
+        for path in paths {
+            let mut document = manifest::read(&path)?;
+            if path == root {
+                if document["workspace"]["package"]["version"]
+                    .as_str()
+                    .is_some()
+                {
+                    document["workspace"]["package"]["version"] =
+                        toml_edit::value(identity.to_string());
+                } else if document["package"]["version"].as_str().is_some() {
+                    document["package"]["version"] = toml_edit::value(identity.to_string());
+                }
+            } else if document["package"]["version"].as_str().is_some() {
+                document["package"]["version"] = toml_edit::value(identity.to_string());
+            }
+            manifest::dependencies(&mut document, &pins)?;
+            manifest::write(&path, &document)?;
+        }
+        self.lock(identity, &pins)
+    }
+
+    fn lock(&self, identity: &Version, pins: &BTreeMap<String, String>) -> Result<(), String> {
+        let path = self.spec.root.join("Cargo.lock");
+        if !path.is_file() {
+            return Ok(());
+        }
+        let mut document = manifest::read(&path)?;
+        let packages = document["package"]
+            .as_array_of_tables_mut()
+            .ok_or_else(|| "Cargo.lock has no package array".to_string())?;
+        for package in packages.iter_mut() {
+            let Some(name) = package.get("name").and_then(toml_edit::Item::as_str) else {
+                continue;
+            };
+            if pins.contains_key(name) && !package.contains_key("source") {
+                package["version"] = toml_edit::value(identity.to_string());
+            }
+        }
+        manifest::write(&path, &document)
     }
 
     fn command<const N: usize>(&self, args: [&str; N], token: &str) -> Result<(), String> {

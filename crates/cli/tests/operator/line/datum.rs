@@ -129,3 +129,158 @@ fn sweeps() {
         "the datum commit owns its seat: {listed}"
     );
 }
+
+#[test]
+fn versions() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let bare = tempfile::tempdir().expect("bare");
+    let root = fixture.path();
+    let cut = root.join("cut");
+    let (url, _) = serve(Court::Prepare(true, cut.clone()), 14);
+    let origin = format!("{url}/test/probe.git");
+    lined(root, &origin, bare.path(), "release/v1.2.0");
+    std::fs::write(root.join("plumb.toml"), RELEASE).expect("release");
+    for path in [
+        "crates/macro",
+        "crates/lib",
+        "packages/probe",
+        "charts/probe",
+    ] {
+        std::fs::create_dir_all(root.join(path)).expect("seat");
+    }
+    std::fs::write(root.join("Cargo.toml"), CARGO).expect("workspace");
+    std::fs::write(root.join("crates/macro/Cargo.toml"), MACRO).expect("macro");
+    std::fs::write(root.join("crates/macro/lib.rs"), "").expect("macro source");
+    std::fs::write(root.join("crates/lib/Cargo.toml"), LIB).expect("lib");
+    std::fs::write(root.join("crates/lib/lib.rs"), "").expect("lib source");
+    std::fs::write(root.join("packages/probe/package.json"), PACKAGE).expect("package");
+    std::fs::write(root.join("charts/probe/Chart.yaml"), CHART).expect("chart");
+    run(Command::new("cargo")
+        .arg("generate-lockfile")
+        .current_dir(root));
+    run(Command::new("git").args(["add", "-A"]).current_dir(root));
+    run(Command::new("git")
+        .args(["commit", "-q", "-m", "Stand version seats up"])
+        .current_dir(root));
+    run(Command::new("git")
+        .args(["push", "-q", "origin", "HEAD:refs/heads/main"])
+        .current_dir(root));
+    run(Command::new("git")
+        .args(["push", "-q", "origin", "HEAD:refs/heads/release/v1.2.0"])
+        .current_dir(root));
+    let head = show(root, "--format=%H --no-patch HEAD").trim().to_string();
+    run(Command::new("git")
+        .args(["update-ref", "refs/remotes/origin/main", &head])
+        .current_dir(root));
+    std::fs::write(&cut, &head).expect("cut");
+
+    let output = command(root, &["release", "prepare", "--version", "1.2.0"]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let cargo = show(bare.path(), "release/v1.2.0:Cargo.toml");
+    let library = show(bare.path(), "release/v1.2.0:crates/lib/Cargo.toml");
+    let lock = show(bare.path(), "release/v1.2.0:Cargo.lock");
+    let package = show(bare.path(), "release/v1.2.0:packages/probe/package.json");
+    let chart = show(bare.path(), "release/v1.2.0:charts/probe/Chart.yaml");
+    assert!(cargo.contains("version = \"1.2.0\""), "{cargo}");
+    assert!(library.contains("version = \"=1.2.0\""), "{library}");
+    assert_eq!(lock.matches("version = \"1.2.0\"").count(), 2, "{lock}");
+    assert!(package.contains("\"version\": \"1.2.0\""), "{package}");
+    assert!(chart.contains("version: 1.2.0"), "{chart}");
+    assert!(chart.contains("appVersion: \"1.2.0\""), "{chart}");
+    let touched = show(bare.path(), "--name-only --format= release/v1.2.0");
+    assert!(
+        touched
+            .lines()
+            .all(|path| path.starts_with(".plumb/releases/")),
+        "datum must remain its own commit: {touched}"
+    );
+    let first = show(bare.path(), "--format=%H --no-patch release/v1.2.0")
+        .trim()
+        .to_string();
+    std::fs::write(&cut, &first).expect("current cut");
+    let repeated = command(root, &["release", "prepare", "--version", "1.2.0"]);
+    assert!(
+        repeated.status.success(),
+        "{}",
+        String::from_utf8_lossy(&repeated.stderr)
+    );
+    let second = show(bare.path(), "--format=%H --no-patch release/v1.2.0");
+    assert_eq!(
+        first,
+        second.trim(),
+        "repeated prepare must not move the line"
+    );
+}
+
+fn show(root: &Path, object: &str) -> String {
+    let mut args = vec!["show"];
+    args.extend(object.split_whitespace());
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(root)
+        .output()
+        .expect("git show");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout).to_string()
+}
+
+const RELEASE: &str = r#"[release]
+product = "probe"
+authority = "https://releases.test"
+binaries = ["probe"]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[release.cargo]
+registry = "perish"
+packages = ["probe-macro", "probe-lib"]
+
+[release.npm]
+registry = "https://registry.test/npm/"
+packages = ["@test/probe"]
+
+[release.chart]
+registry = "registry.test"
+chart = "test/probe"
+account = "test"
+"#;
+
+const CARGO: &str = r#"[workspace]
+members = ["crates/macro", "crates/lib"]
+resolver = "3"
+
+[workspace.package]
+version = "1.1.0"
+edition = "2024"
+"#;
+
+const MACRO: &str = r#"[package]
+name = "probe-macro"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+path = "lib.rs"
+"#;
+
+const LIB: &str = r#"[package]
+name = "probe-lib"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+probe-macro = { path = "../macro", version = "=1.1.0" }
+"#;
+
+const PACKAGE: &str = "{\"name\":\"@test/probe\",\"version\":\"1.1.0\"}\n";
+const CHART: &str = "name: probe\nversion: 1.1.0\nappVersion: \"1.1.0\"\n";

@@ -35,6 +35,13 @@ pub struct Build<'a> {
 }
 
 impl Workspace {
+    pub fn manifests(&self) -> BTreeMap<String, PathBuf> {
+        self.packages
+            .iter()
+            .map(|package| (package.name.clone(), package.manifest.clone()))
+            .collect()
+    }
+
     pub fn seats(&self, root: &Path) -> BTreeMap<String, PathBuf> {
         let base = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
         self.packages
