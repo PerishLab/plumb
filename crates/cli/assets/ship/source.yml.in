@@ -1,0 +1,19 @@
+      - name: Build the Plumb this release carries
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -eu
+          cargo build --quiet --locked --bin plumb
+          tool=$(command -v plumb)
+          cp "$GITHUB_WORKSPACE/target/debug/plumb" "$tool"
+          "$tool" --version
+
+      - name: Build the Plumb this release carries on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cargo build --quiet --locked --bin plumb
+          $tool = (Get-Command plumb.exe).Source
+          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'target/debug/plumb.exe') $tool -Force
+          & $tool --version

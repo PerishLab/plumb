@@ -7,7 +7,7 @@ pub const RELEASED: [(&str, &str); 2] = [
     ("stable.release.yml", "assets/release/stable.yml.in"),
 ];
 
-pub const FACTORY: [(&str, &str); 17] = [
+pub const FACTORY: [(&str, &str); 18] = [
     (
         "assets/depot/lane.yml.in",
         plumb::seat::resource!("assets/depot/lane.yml.in"),
@@ -73,43 +73,41 @@ pub const FACTORY: [(&str, &str); 17] = [
         plumb::seat::resource!("assets/ship/project.yml.in"),
     ),
     (
+        "assets/ship/source.yml.in",
+        plumb::seat::resource!("assets/ship/source.yml.in"),
+    ),
+    (
         "assets/ship/windows.yml.in",
         plumb::seat::resource!("assets/ship/windows.yml.in"),
     ),
 ];
 
-static SOURCE: LazyLock<Result<BTreeMap<&'static str, String>, String>> = LazyLock::new(read);
+static CARRIED: LazyLock<Result<bool, String>> = LazyLock::new(carried);
 
-fn read() -> Result<BTreeMap<&'static str, String>, String> {
+fn carried() -> Result<bool, String> {
     let seat = held();
     let lane = FACTORY
         .iter()
         .find(|(path, _)| *path == "assets/guard/lane.yml.in")
         .expect("the factory must carry its guard lane");
     let schema = seat.read(lane.0, lane.1)?;
-    if !schema.contains("depot-sync/v1") {
-        return Ok(FACTORY
-            .into_iter()
-            .map(|(path, factory)| (path, factory.to_string()))
-            .collect());
-    }
-    let mut listed = BTreeMap::new();
-    for (path, factory) in FACTORY {
-        listed.insert(path, seat.read(path, factory)?);
-    }
-    Ok(listed)
+    Ok(schema.contains("depot-sync/v1"))
 }
 
-pub fn text(path: &str) -> Result<&'static str, String> {
-    let listed = SOURCE.as_ref().map_err(Clone::clone)?;
-    listed
-        .get(path)
-        .map(String::as_str)
-        .ok_or_else(|| format!("no template is carried at {path}"))
+pub fn text(path: &str) -> Result<String, String> {
+    let (_, factory) = FACTORY
+        .iter()
+        .find(|(held, _)| *held == path)
+        .ok_or_else(|| format!("no template is carried at {path}"))?;
+    if *CARRIED.as_ref().map_err(Clone::clone)? {
+        held().read(path, factory)
+    } else {
+        Ok(factory.to_string())
+    }
 }
 
 pub fn filled(path: &str, vars: &BTreeMap<&str, String>) -> Result<String, String> {
-    plumb::fill::actions(text(path)?, vars).map_err(|error| error.to_string())
+    plumb::fill::actions(&text(path)?, vars).map_err(|error| error.to_string())
 }
 
 pub fn plain(path: &str) -> Result<String, String> {
