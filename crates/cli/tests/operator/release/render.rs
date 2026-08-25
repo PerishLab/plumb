@@ -112,6 +112,11 @@ fn portable() {
         ship.contains("shell: pwsh") && ship.contains("manage.ps1"),
         "a Windows runner has no bash, so its install is written in its own shell: {ship}"
     );
+    assert!(
+        ship.contains("Join-Path $env:RUNNER_TEMP 'plumb-bootstrap'")
+            && !ship.contains("Join-Path $HOME '.local/bin/plumb.exe'"),
+        "a reused Windows runner must isolate its bootstrap from the persistent home seat: {ship}"
+    );
 }
 
 #[test]
