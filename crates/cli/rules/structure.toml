@@ -106,6 +106,10 @@ name = "guard"
 note = "The one canonical guard lane. All fifteen governed repositories carry it."
 
 [[lane.member]]
+name = "plan.atom"
+note = "The public cold-start planner. Actions resolves its exact implementation and Plumb judges the caller's relevant work."
+
+[[lane.member]]
 name = "platform"
 kind = "machine"
 note = "Manual cross-platform test lane on macOS and Windows runners, dispatch only. sidecar. Added 2026-08-20 to repay a live unknown-shape finding."
