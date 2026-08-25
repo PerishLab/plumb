@@ -92,6 +92,24 @@ pub struct Radius {
     pub blind: Vec<Unread>,
 }
 
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[serde(
+    deny_unknown_fields,
+    tag = "kind",
+    rename_all = "kebab-case",
+    rename_all_fields = "camelCase"
+)]
+pub enum Provenance {
+    #[default]
+    Native,
+    #[serde(rename = "legacy-adopted")]
+    Adopted {
+        tag: String,
+        cargo: Vec<String>,
+        npm: Vec<String>,
+    },
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Seal {
@@ -103,6 +121,8 @@ pub struct Seal {
     pub commit: String,
     pub url: String,
     pub generator: Generator,
+    #[serde(default)]
+    pub provenance: Provenance,
     pub artifacts: BTreeMap<String, Remote>,
     pub managers: BTreeMap<String, Remote>,
     #[serde(default, rename = "changelog", skip_serializing)]

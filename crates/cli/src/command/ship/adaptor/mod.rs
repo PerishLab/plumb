@@ -1,6 +1,6 @@
 pub mod chart;
 pub mod image;
-mod ledger;
+pub(in crate::command) mod ledger;
 mod manifest;
 pub mod module;
 pub mod registry;

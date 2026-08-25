@@ -2,6 +2,15 @@ use clap::Subcommand;
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(about = "Adopt a tagged legacy release after external package readback")]
+    Adopt {
+        #[arg(default_value = ".")]
+        root: String,
+        #[arg(long)]
+        version: String,
+        #[arg(long = "dry-run")]
+        dry: bool,
+    },
     #[command(about = "Derive and prove this release plan, and report it as JSON")]
     Plan,
     #[command(about = "Report the media this product declares as JSON")]

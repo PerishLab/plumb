@@ -14,6 +14,26 @@ pub fn module(spec: &Spec) -> Module<'_> {
 }
 
 impl Module<'_> {
+    pub(in crate::command) fn present(
+        &self,
+        version: &str,
+        credential: &str,
+    ) -> Result<(), String> {
+        let Some(npm) = &self.spec.npm else {
+            return Ok(());
+        };
+        let token = crate::command::ship::attachment::credential(credential)?;
+        let seat = tempfile::tempdir()
+            .map_err(|error| format!("cannot open a module readback seat: {error}"))?;
+        for package in &npm.packages {
+            let spec = format!("{package}@{}", release(version)?);
+            if self.carried(npm, &spec, token, seat.path())?.is_none() {
+                return Err(format!("module registry carries no {spec}"));
+            }
+        }
+        Ok(())
+    }
+
     pub fn pack(&self, version: &str) -> Result<String, String> {
         let Some(npm) = &self.spec.npm else {
             return Ok(format!("{} has no module attachment", self.spec.product));

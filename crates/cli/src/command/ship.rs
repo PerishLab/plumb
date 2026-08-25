@@ -1,4 +1,4 @@
-mod adaptor;
+pub(in crate::command) mod adaptor;
 mod archive;
 mod attachment;
 mod package;

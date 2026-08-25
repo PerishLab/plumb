@@ -31,6 +31,9 @@ pub fn run(deed: Deed) -> i32 {
 
 fn execute(deed: Deed) -> Result<String, String> {
     match deed {
+        Deed::Adopt { root, version, dry } => {
+            truth::adopt::run(&PathBuf::from(root), &version, dry)
+        }
         Deed::Stamp { version, dry } => super::operator::stamp(&version, dry),
         Deed::Retract { version, dry } => super::operator::retract(&version, dry),
         Deed::Rejoin { ref version, .. } if !version.is_empty() => super::operator::line(deed),
@@ -47,6 +50,7 @@ fn carry(deed: Deed) -> Result<String, String> {
     let spec = Spec::read(&manifest)?;
     let release = &rig.release;
     match deed {
+        Deed::Adopt { .. } => Err("adoption does not read the release environment".into()),
         Deed::Plan => plan::plan(
             &spec,
             required("PLUMB_RELEASE_SOURCE", &release.source)?,

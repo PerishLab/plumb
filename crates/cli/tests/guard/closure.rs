@@ -97,7 +97,7 @@ fn command() {
     capture(Vec::new(), &mut held);
     assert_eq!(
         digest(&held),
-        "592abbf6da8dfda3b6d6d0ef77ee1302e3ab8e0049ed7a20e071dff86674c168"
+        "6a990a9cb492eb0782c63d129a1b0c2ad5249bb820db2262a2ffe29478155b8a"
     );
 }
 

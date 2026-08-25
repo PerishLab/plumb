@@ -113,6 +113,7 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
         commit: input.commit.into(),
         url: url.clone(),
         generator: generator::resolve(spec.authority.as_str())?,
+        provenance: crate::command::release::record::Provenance::Native,
         artifacts,
         managers,
         legacy: None,

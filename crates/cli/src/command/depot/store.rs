@@ -3,6 +3,8 @@ use crate::shape::depot::Batch;
 use std::io::Write;
 use std::process::{Command, Output};
 
+mod readback;
+
 pub struct Remote<'a> {
     held: &'a dyn Authority,
 }
@@ -40,7 +42,7 @@ impl<'a> Remote<'a> {
             &format!("{base}/{}", plumb::depot::v2::LEAF),
             body.as_bytes(),
         )?;
-        if advance {
+        let pointer = if advance {
             let pointer = plumb::depot::v2::Pointer::new(manifest, body.as_bytes())?;
             let latest = plumb::depot::v2::latest(
                 &manifest.release.product,
@@ -48,7 +50,11 @@ impl<'a> Remote<'a> {
                 &manifest.release.channel,
             )?;
             self.advance(&latest, &pointer)?;
-        }
+            Some(pointer.encode()?)
+        } else {
+            None
+        };
+        readback::prove(plan, &base, &body, pointer.as_deref())?;
         Ok(format!(
             "published {} depot snapshot {} {}{}",
             manifest.derivative.label(),
