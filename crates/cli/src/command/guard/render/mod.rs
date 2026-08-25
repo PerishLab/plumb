@@ -29,7 +29,7 @@ impl Seat {
                 return 1;
             }
         };
-        match super::depot::occupied(&stamped) {
+        match super::depot::occupied(&self.0, &stamped) {
             Err(error) => {
                 println!("  {error}");
                 1
@@ -42,12 +42,9 @@ impl Seat {
                 );
                 1
             }
-            Ok(Some(notes)) => {
-                println!(
-                    "  {stamped} is documented in {} objects",
-                    notes.objects.len()
-                );
-                for object in &notes.objects {
+            Ok(Some(objects)) => {
+                println!("  {stamped} is documented in {} objects", objects.len());
+                for object in &objects {
                     println!("    {}", object.path);
                 }
                 0

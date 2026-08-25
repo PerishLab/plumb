@@ -18,10 +18,11 @@ pub fn observe(snapshot: &Result<Snapshot, Refusal>) -> Evidence {
         Ok(Some(manifest)) => manifest,
         Err(error) => return Evidence::Blind(error),
     };
-    let inventory = snapshot
-        .as_ref()
-        .ok()
-        .map(|snapshot| record::inventory(snapshot).map(|(objects, _)| objects));
+    let inventory = snapshot.as_ref().ok().and_then(|snapshot| {
+        record::configuration(snapshot.root())
+            .ok()
+            .map(|_| record::inventory(snapshot).map(|(objects, _)| objects))
+    });
     Evidence::Held {
         manifest,
         inventory,
@@ -36,9 +37,20 @@ pub fn manifest() -> Result<Option<record::Manifest>, String> {
     }
 }
 
-pub fn occupied(version: &str) -> Result<Option<notes::Notes>, String> {
-    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    seat::notes(&rig.depot.source, version)
+pub fn occupied(root: &Path, version: &str) -> Result<Option<Vec<record::Object>>, String> {
+    let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
+    let depot = spec.derivative(plumb::depot::v2::Kind::Changelog)?;
+    let channel = crate::command::release::channel(version)?;
+    if let Some(manifest) = seat::derivative(seat::Query {
+        source: &depot.source,
+        product: &spec.product,
+        channel: &channel,
+        version,
+        derivative: plumb::depot::v2::Kind::Changelog,
+    })? {
+        return Ok(Some(manifest.objects));
+    }
+    seat::notes(&depot.source, version).map(|held| held.map(|notes| notes.objects))
 }
 
 pub fn carried(path: &str, factory: &'static str) -> String {
@@ -48,23 +60,21 @@ pub fn carried(path: &str, factory: &'static str) -> String {
 }
 
 pub fn held() -> Held {
-    seat::held(&Rig::resolve(None).unwrap_or_default().depot.seat)
+    seat::held(&Rig::resolve(None).unwrap_or_default().rules.seat)
 }
 
 #[derive(Subcommand)]
 pub enum Deed {
-    #[command(
-        about = "Publish this repository's recorded configuration roots as one immutable version"
-    )]
+    #[command(about = "Publish a Release-bound configuration snapshot after exact validation")]
     Publish {
         #[arg(default_value = ".")]
         root: String,
-        #[arg(long, default_value = "")]
+        #[arg(long)]
         version: String,
         #[arg(long = "dry-run")]
         dry: bool,
     },
-    #[command(about = "Stage or publish the release notes one version owes")]
+    #[command(about = "Publish the changelog derivative one stable Release owes")]
     Changelog {
         #[arg(default_value = ".")]
         root: String,
@@ -77,9 +87,9 @@ pub enum Deed {
         #[arg(long = "dry-run")]
         dry: bool,
     },
-    #[command(about = "Bring the local seat to the version the channel names")]
+    #[command(about = "Bring the local Plumb rules seat to the version its channel names")]
     Sync,
-    #[command(about = "Report the source, the seat, and the version held there")]
+    #[command(about = "Report the Plumb rules source, local seat, and held version")]
     Show,
 }
 
@@ -98,7 +108,7 @@ pub fn run(deed: Deed) -> i32 {
 
 fn execute(deed: Deed) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let over = PathBuf::from(&rig.depot.seat);
+    let over = PathBuf::from(&rig.rules.seat);
     match deed {
         Deed::Publish { root, version, dry } => Tree(&PathBuf::from(root)).publish(&version, dry),
         Deed::Changelog {
@@ -113,7 +123,7 @@ fn execute(deed: Deed) -> Result<String, String> {
             keep,
             dry,
         }),
-        Deed::Sync => seat::sync(&rig.depot.source, &rig.depot.channel, &over),
+        Deed::Sync => seat::sync(&rig.rules.source, &rig.rules.channel, &over),
         Deed::Show => show(&rig, &over),
     }
 }
@@ -128,9 +138,9 @@ fn show(rig: &Rig, over: &Path) -> Result<String, String> {
     };
     Ok(format!(
         "depot {} {}\n  source {}\n  seat   {}",
-        rig.depot.channel,
+        rig.rules.channel,
         mark,
-        rig.depot.source,
+        rig.rules.source,
         base.display()
     ))
 }
@@ -147,28 +157,28 @@ struct Tree<'a>(&'a Path);
 impl Tree<'_> {
     fn publish(&self, version: &str, dry: bool) -> Result<String, String> {
         let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
+        let spec = crate::shape::release::Spec::read(&self.0.join("plumb.toml"))?;
+        let depot = spec.derivative(plumb::depot::v2::Kind::Configuration)?;
+        let release = crate::command::release::depot(&spec);
+        let binding = release.binding(version, true)?;
         let snapshot = Snapshot::read(self.0).map_err(|error| error.to_string())?;
         self.clean()?;
-        let metadata = record::Metadata {
-            version: super::clock::mark()?,
-            source: rig.depot.source.trim_end_matches('/').to_string(),
-            channel: rig.depot.channel.clone(),
-            commit: self.commit()?,
-        };
-        let schema = record::Schema {
-            format: record::FORMAT,
-            version: if version.is_empty() {
-                plumb::version!("PLUMB").to_string()
-            } else {
-                version.to_string()
+        let plan = record::Batch::configuration(
+            &snapshot,
+            record::Draft {
+                source: depot.source.clone(),
+                release: binding.release.clone(),
+                timestamp: super::clock::mark()?,
+                commit: self.commit()?,
             },
-        };
-        let plan = record::Plan::gather(&snapshot, metadata, schema)?;
+        )?;
+        crate::command::release::validate_depot(&spec, &binding, &plan)?;
         if dry {
             return plan.manifest.encode();
         }
+        let advance = release.current(&binding.release)?;
         rig.depot.authority.load()?;
-        store::Remote::new(&rig.depot.authority)?.publish(&plan)
+        store::Remote::new(&rig.depot.authority)?.derive(&plan, advance)
     }
 
     fn notes(&self, wanted: Wanted<'_>) -> Result<String, String> {
@@ -182,11 +192,36 @@ impl Tree<'_> {
             PathBuf::from(wanted.from)
         };
         let proof = crate::command::changelog::prove(self.0, &source, wanted.version)?;
-        let batch = notes::Batch::gather(&source, wanted.version, &proof.candidate)?;
+        let spec = crate::shape::release::Spec::read(&self.0.join("plumb.toml"))?;
+        let depot = spec.derivative(plumb::depot::v2::Kind::Changelog)?;
+        let release = crate::command::release::depot(&spec);
+        let binding = release.binding(wanted.version, false)?;
+        if binding.release.channel != "stable" {
+            return Err(format!(
+                "the {} channel does not owe a changelog derivative",
+                binding.release.channel
+            ));
+        }
+        if binding.release.commit != proof.candidate {
+            return Err(format!(
+                "changelog proves commit {}, but release {} seals {}",
+                proof.candidate, binding.release.version, binding.release.commit
+            ));
+        }
+        let batch = notes::Batch::gather(&source)?;
+        let plan = record::Batch::changelog(
+            record::Draft {
+                source: depot.source.clone(),
+                release: binding.release.clone(),
+                timestamp: super::clock::mark()?,
+                commit: proof.candidate.clone(),
+            },
+            batch.bodies,
+        )?;
         if wanted.dry {
             return Ok(format!(
                 "{}\n{} lines within a budget of {} for {} units",
-                batch.notes.encode()?,
+                plan.manifest.encode()?,
                 proof
                     .languages
                     .values()
@@ -202,8 +237,9 @@ impl Tree<'_> {
                 proof.units
             ));
         }
+        let advance = release.current(&binding.release)?;
         rig.depot.authority.load()?;
-        let held = store::Remote::new(&rig.depot.authority)?.stock(&batch)?;
+        let held = store::Remote::new(&rig.depot.authority)?.derive(&plan, advance)?;
         if staged && !wanted.keep {
             std::fs::remove_dir_all(&source)
                 .map_err(|error| format!("cannot clear {}: {error}", source.display()))?;
@@ -214,7 +250,8 @@ impl Tree<'_> {
 
     fn clean(&self) -> Result<(), String> {
         let mut args = vec!["status", "--porcelain", "--"];
-        for (root, _) in record::ROOTS {
+        let roots = record::configuration(self.0)?;
+        for (root, _) in &roots {
             args.push(root);
         }
         let output = self.git(&args)?;

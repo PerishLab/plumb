@@ -1,6 +1,5 @@
-use super::notes::{Batch, changelog};
 use crate::command::release::storage::Authority;
-use crate::shape::depot::{LEAF, Plan, Pointer, latest, versions};
+use crate::shape::depot::Batch;
 use std::io::Write;
 use std::process::{Command, Output};
 
@@ -26,33 +25,36 @@ impl<'a> Remote<'a> {
         Ok(Self { held })
     }
 
-    pub fn publish(&self, plan: &Plan) -> Result<String, String> {
-        let metadata = &plan.manifest.metadata;
-        let seat = versions(&metadata.channel, &metadata.version);
+    pub fn derive(&self, plan: &Batch, advance: bool) -> Result<String, String> {
+        let manifest = &plan.manifest;
+        let base = plumb::depot::v2::snapshots(
+            &manifest.release,
+            manifest.derivative,
+            &manifest.snapshot.timestamp,
+        )?;
         for (path, bytes) in &plan.bodies {
-            self.create(&format!("{seat}/{path}"), bytes)?;
+            self.create(&format!("{base}/{path}"), bytes)?;
         }
-        let manifest = plan.manifest.encode()?;
-        self.create(&format!("{seat}/{LEAF}"), manifest.as_bytes())?;
-        let pointer = Pointer::new(metadata, "plumb").encode()?;
-        self.shift(&latest(&metadata.channel), pointer.as_bytes())?;
-        Ok(format!(
-            "published depot {} {}",
-            metadata.channel, metadata.version
-        ))
-    }
-
-    pub fn stock(&self, batch: &Batch) -> Result<String, String> {
-        let seat = changelog(&batch.notes.version);
-        for (path, bytes) in &batch.bodies {
-            self.shift(&format!("{seat}/{path}"), bytes)?;
+        let body = manifest.encode()?;
+        self.create(
+            &format!("{base}/{}", plumb::depot::v2::LEAF),
+            body.as_bytes(),
+        )?;
+        if advance {
+            let pointer = plumb::depot::v2::Pointer::new(manifest, body.as_bytes())?;
+            let latest = plumb::depot::v2::latest(
+                &manifest.release.product,
+                manifest.derivative,
+                &manifest.release.channel,
+            )?;
+            self.advance(&latest, &pointer)?;
         }
-        let notes = batch.notes.encode()?;
-        self.shift(&format!("{seat}/{LEAF}"), notes.as_bytes())?;
         Ok(format!(
-            "published depot changelog {} carrying {} objects",
-            batch.notes.version,
-            batch.notes.objects.len()
+            "published {} depot snapshot {} {}{}",
+            manifest.derivative.label(),
+            manifest.release.version,
+            manifest.snapshot.timestamp,
+            if advance { " and advanced latest" } else { "" }
         ))
     }
 
@@ -82,7 +84,9 @@ impl<'a> Remote<'a> {
         }
     }
 
-    fn shift(&self, key: &str, bytes: &[u8]) -> Result<(), String> {
+    fn advance(&self, key: &str, next: &plumb::depot::v2::Pointer) -> Result<(), String> {
+        let text = next.encode()?;
+        let bytes = text.as_bytes();
         let rule = Rule {
             cache: "public, max-age=60, must-revalidate",
             header: "--if-none-match",
@@ -96,6 +100,15 @@ impl<'a> Remote<'a> {
                 Err(failure("create pointer", key, &output))
             };
         };
+        let standing = self
+            .read(key)?
+            .ok_or_else(|| format!("depot pointer vanished: {key}"))?;
+        let standing = String::from_utf8(standing)
+            .map_err(|error| format!("depot pointer at {key} is not UTF-8: {error}"))?;
+        let current = plumb::depot::v2::Pointer::parse(&standing)?;
+        if !current.advance(next)? {
+            return Ok(());
+        }
         let output = self.put(
             key,
             bytes,

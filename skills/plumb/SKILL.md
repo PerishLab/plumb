@@ -29,13 +29,14 @@ says what none of those can. Ask the one that owns the question.
   repository declaring no layout is judged by the released name sets instead.
 - A **boundary** proves one committed delta stays inside declared write paths.
 - A **landing** projects a clean topic branch onto its base and waits for guard.
-- A **release** is an immutable product identity; a **projection** renders one
-  onto one medium.
-- The **depot** carries Plumb's own configuration as immutable objects. Rules
-  exist only in a verified synced seat; they are never compiled into the binary
-  and reading them never fetches. Installation syncs the seat, while an absent,
-  drifted, or unsupported seat refuses rule-dependent commands and names
-  `plumb depot sync` as the remedy.
+- A **release** is version truth. **Ship** projects it through workflows;
+  **depot** carries configuration or changelog derivatives. Snapshots iterate
+  by timestamp while binding Release channel, version, commit, and seal; only
+  current stable advances latest. `[release.depot]` declares public capability;
+  a product's Runseal profile holds write authority.
+- Plumb's **rules seat** consumes configuration. Rules are never compiled or
+  fetched while reading; an invalid seat names `plumb depot sync`. Publishing
+  validates with the exact released product binary.
 
 ## Authorities
 

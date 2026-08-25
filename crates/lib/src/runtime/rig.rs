@@ -19,6 +19,8 @@ pub struct Rig {
     #[cascade(section)]
     pub lock: Authority,
     #[cascade(section)]
+    pub rules: Rules,
+    #[cascade(section)]
     pub depot: Depot,
     #[cascade(section)]
     pub workflow: Workflow,
@@ -204,23 +206,27 @@ pub struct Guard {
     pub contexts: String,
 }
 
-#[derive(Debug, PartialEq, Cascade)]
+#[derive(Debug, Default, PartialEq, Cascade)]
 #[cascade(section)]
 pub struct Depot {
-    pub source: String,
-    pub channel: String,
-    pub seat: PathBuf,
     #[cascade(section)]
     pub authority: Authority,
 }
 
-impl Default for Depot {
+#[derive(Debug, PartialEq, Cascade)]
+#[cascade(section)]
+pub struct Rules {
+    pub source: String,
+    pub channel: String,
+    pub seat: PathBuf,
+}
+
+impl Default for Rules {
     fn default() -> Self {
         Self {
             source: DEPOT.to_string(),
             channel: "stable".to_string(),
             seat: PathBuf::new(),
-            authority: Authority::default(),
         }
     }
 }
@@ -275,6 +281,7 @@ impl Default for Rig {
             publish: Authority::default(),
             activate: Authority::default(),
             lock: Authority::default(),
+            rules: Rules::default(),
             depot: Depot::default(),
             workflow: Workflow::default(),
             site: Site::default(),

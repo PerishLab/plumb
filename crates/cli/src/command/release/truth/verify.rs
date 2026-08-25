@@ -84,9 +84,64 @@ pub fn binary(url: &str, stable: bool) -> Result<String, String> {
     Surface(url).binary(stable)
 }
 
+pub(in crate::command) fn active(
+    authority: &str,
+    release: &plumb::depot::v2::Release,
+) -> Result<bool, String> {
+    if release.channel != "stable" {
+        return Ok(false);
+    }
+    let url = format!("{authority}/v1/channels/stable.json");
+    let pointer: Pointer = Surface(&url).read()?;
+    let standing = (
+        pointer.schema,
+        &pointer.product,
+        &pointer.channel,
+        &pointer.version,
+        &pointer.commit,
+        &pointer.seal.url,
+        &pointer.seal.sha256,
+    );
+    let wanted = (
+        1,
+        &release.product,
+        &release.channel,
+        &release.version,
+        &release.commit,
+        &release.seal.url,
+        &release.seal.sha256,
+    );
+    if standing != wanted {
+        return Ok(false);
+    }
+    Ok(true)
+}
+
 pub(in crate::command::release) struct Surface<'a>(pub(in crate::command::release) &'a str);
 
 impl Surface<'_> {
+    pub(in crate::command::release) fn sealed(
+        &self,
+        binary: bool,
+    ) -> Result<(Seal, String), String> {
+        let path = self.download("depot-release")?;
+        let held = (|| {
+            let seal: Seal = parse(&path)?;
+            if seal.url != self.0 {
+                return Err("exact seal URL disagrees with its record".into());
+            }
+            if binary {
+                audit(&seal)?;
+            } else {
+                current(&seal)?;
+            }
+            let (digest, _) = super::record::digest(&path)?;
+            Ok((seal, digest))
+        })();
+        let _ = std::fs::remove_file(path);
+        held
+    }
+
     pub(in crate::command::release) fn digest(&self) -> Result<String, String> {
         let path = self.download("generator")?;
         let held = super::record::digest(&path).map(|(digest, _)| digest);
@@ -223,7 +278,7 @@ fn local(object: &Local) -> Result<(), String> {
     Ok(())
 }
 
-fn fetch(remote: &Remote) -> Result<PathBuf, String> {
+pub(super) fn fetch(remote: &Remote) -> Result<PathBuf, String> {
     let path = Surface(&remote.url).download(&remote.name)?;
     let result = super::record::digest(&path).and_then(|(digest, size)| {
         if digest == remote.sha256 && size == remote.size {

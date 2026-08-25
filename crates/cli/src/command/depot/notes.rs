@@ -1,4 +1,4 @@
-use crate::shape::depot::{FORMAT, Object, sha};
+use crate::shape::depot::{FORMAT, Object};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -18,14 +18,12 @@ pub struct Notes {
 }
 
 pub struct Batch {
-    pub notes: Notes,
     pub bodies: BTreeMap<String, Vec<u8>>,
 }
 
 impl Batch {
-    pub fn gather(source: &Path, version: &str, commit: &str) -> Result<Self, String> {
+    pub fn gather(source: &Path) -> Result<Self, String> {
         let mut bodies = BTreeMap::new();
-        let mut objects = Vec::new();
         for path in walk(source)? {
             let name = path
                 .strip_prefix(source)
@@ -40,27 +38,12 @@ impl Batch {
                 .replace('\\', "/");
             let bytes = std::fs::read(&path)
                 .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-            objects.push(Object {
-                path: name.clone(),
-                sha256: sha(&bytes),
-                size: bytes.len() as u64,
-            });
             bodies.insert(name, bytes);
         }
-        if objects.is_empty() {
+        if bodies.is_empty() {
             return Err(format!("{} holds no release note", source.display()));
         }
-        objects.sort();
-        Ok(Self {
-            notes: Notes {
-                format: FORMAT,
-                floor: FLOOR.to_string(),
-                version: version.to_string(),
-                commit: commit.to_string(),
-                objects,
-            },
-            bodies,
-        })
+        Ok(Self { bodies })
     }
 }
 
@@ -100,10 +83,6 @@ impl Notes {
             "release notes for {} declare a floor of {}, above the running {running}",
             self.version, self.floor
         ))
-    }
-
-    pub fn encode(&self) -> Result<String, String> {
-        toml::to_string(self).map_err(|error| format!("cannot encode release notes: {error}"))
     }
 }
 

@@ -87,9 +87,8 @@ impl Seat<'_> {
     }
 
     fn stocked(&self) -> bool {
-        crate::shape::depot::ROOTS
-            .iter()
-            .all(|(root, _)| self.0.join(root).is_dir())
+        crate::shape::depot::configuration(self.0)
+            .is_ok_and(|roots| roots.iter().all(|(root, _)| self.0.join(root).is_dir()))
     }
 
     fn thin(&self, name: &str, path: &str) -> Result<Expected, String> {

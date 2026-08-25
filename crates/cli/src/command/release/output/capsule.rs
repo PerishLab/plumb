@@ -115,7 +115,7 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
         generator: generator::resolve(spec.authority.as_str())?,
         artifacts,
         managers,
-        changelog: None,
+        legacy: None,
         proof: promotion,
         radius: None,
         inputs: object::Seat(&spec).inputs(input.toolchain, input.version)?,

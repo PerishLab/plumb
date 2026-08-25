@@ -116,6 +116,45 @@ fn carried() {
 }
 
 #[test]
+fn depot() {
+    let dir = seat("plumb-release-depot");
+    let path = dir.to_str().expect("path should be utf8");
+
+    std::fs::write(
+        dir.join("plumb.toml"),
+        format!(
+            "{BINARY}\n[release.depot]\nsource = \"https://depot.foo.example\"\nderivatives = [\"configuration\", \"changelog\"]\nvalidator = [\"foo\", \"guard\"]\n"
+        ),
+    )
+    .expect("manifest should be written");
+    let held = crate::run(&["doctor", path]);
+    assert!(!held.contains("the current Plumb refuses"), "{held}");
+
+    std::fs::write(
+        dir.join("plumb.toml"),
+        format!(
+            "{BINARY}\n[release.depot]\nsource = \"https://depot.foo.example\"\nderivatives = [\"artifact\"]\n"
+        ),
+    )
+    .expect("manifest should be written");
+    let unknown = crate::run(&["doctor", path]);
+    assert!(unknown.contains("the current Plumb refuses"), "{unknown}");
+
+    std::fs::write(
+        dir.join("plumb.toml"),
+        "[release]\nproduct = \"foo\"\nauthority = \"https://releases.foo.example\"\n[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n[release.depot]\nsource = \"https://depot.foo.example\"\nderivatives = [\"configuration\"]\nvalidator = [\"foo\", \"guard\"]\n",
+    )
+    .expect("manifest should be written");
+    let source = crate::run(&["doctor", path]);
+    assert!(
+        source.contains("configuration derivative requires an exact released binary"),
+        "{source}"
+    );
+
+    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
+}
+
+#[test]
 fn attached() {
     let dir = seat("plumb-release-attachment-only");
     let path = dir.to_str().expect("path should be utf8");

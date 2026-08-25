@@ -7,6 +7,31 @@ anchor = ["Cargo.toml"]
 note = "Rust members. The anchor is also the identity, and a cargo rule set naming what that means is owed."
 
 [[layout.seat]]
+path = "crates/cli/rules"
+depot = "rules"
+note = "CLI rules projected into the configuration derivative."
+
+[[layout.seat]]
+path = "crates/lib/rules"
+depot = "rules"
+note = "Library rules projected into the configuration derivative."
+
+[[layout.seat]]
+path = "crates/cli/assets"
+depot = "assets"
+note = "CLI templates projected into the configuration derivative."
+
+[[layout.seat]]
+path = "crates/cli/cookbook"
+depot = "cookbook"
+note = "Cookbook entries projected into the configuration derivative."
+
+[[layout.seat]]
+path = "crates/cli/help"
+depot = "help"
+note = "Help entries projected into the configuration derivative."
+
+[[layout.seat]]
 path = "packages/*"
 anchor = ["package.json"]
 note = "Publishable node packages."
@@ -83,6 +108,11 @@ targets = [
   "x86_64-pc-windows-msvc",
 ]
 skill = true
+
+[release.depot]
+source = "https://depot.plumb.perish.uk"
+derivatives = ["configuration", "changelog"]
+validator = ["plumb", "guard"]
 
 [release.oci]
 registry = "git.perish.top"

@@ -1,38 +1,17 @@
 mod attachment;
+mod depot;
 mod retire;
 mod shape;
+mod target;
 
 pub use attachment::{Cargo, Cfworker, Chart, Deb, Npm, Oci};
+pub use depot::Depot;
 pub use retire::Retire;
+pub use target::{Format, Target};
 
 use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Format {
-    Tar,
-    Zip,
-}
-
-impl Format {
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::Tar => "tar.gz",
-            Self::Zip => "zip",
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct Target {
-    pub triple: String,
-    pub key: String,
-    pub systems: Vec<String>,
-    pub archive: String,
-    pub format: Format,
-    pub runner: String,
-}
 
 #[derive(Clone, Debug)]
 pub struct Spec {
@@ -50,6 +29,7 @@ pub struct Spec {
     pub depends: std::collections::BTreeMap<String, Vec<PathBuf>>,
     pub deb: Option<Deb>,
     pub retire: Option<Retire>,
+    pub depot: Option<Depot>,
 }
 
 #[derive(Deserialize)]
@@ -73,6 +53,7 @@ struct Raw {
     depends: std::collections::BTreeMap<String, Vec<PathBuf>>,
     deb: Option<Deb>,
     retire: Option<Retire>,
+    depot: Option<Depot>,
 }
 impl Spec {
     pub fn read(path: &Path) -> Result<Self, String> {
@@ -97,12 +78,13 @@ impl Spec {
             depends,
             deb,
             retire,
+            depot,
         } = held.release;
         let mut spec = Self {
             root: root.to_path_buf(),
             target: targets
                 .iter()
-                .map(|triple| target(&product, triple))
+                .map(|triple| target::resolve(&product, triple))
                 .collect::<Result<Vec<_>, _>>()?,
             product,
             authority,
@@ -116,6 +98,7 @@ impl Spec {
             depends,
             deb,
             retire,
+            depot,
         };
         if let Some(deb) = &mut spec.deb {
             deb.root = rebase(root, &deb.root);
@@ -145,7 +128,7 @@ impl Spec {
         if !binary {
             self.standalone()?;
         }
-        if binary {
+        if binary || !self.product.is_empty() || !self.authority.is_empty() {
             token("product", &self.product, false)?;
             if !self.authority.starts_with("https://")
                 || self.authority.ends_with('/')
@@ -153,6 +136,8 @@ impl Spec {
             {
                 return Err("authority must be one normalized https URL".into());
             }
+        }
+        if binary {
             if self.binaries.is_empty() {
                 return Err("release must declare at least one binary".into());
             }
@@ -184,6 +169,13 @@ impl Spec {
         }
         if let Some(retire) = &self.retire {
             retire.validate()?;
+        }
+        if let Some(depot) = &self.depot {
+            token("product", &self.product, false)?;
+            if self.authority.is_empty() {
+                return Err("a depot declaration requires release authority".into());
+            }
+            depot.validate(&self.binaries)?;
         }
         for held in self.attachments() {
             held?;
@@ -226,44 +218,6 @@ impl Spec {
             .find(|target| target.triple == triple)
             .ok_or_else(|| format!("release does not declare target {triple}"))
     }
-}
-
-fn target(product: &str, triple: &str) -> Result<Target, String> {
-    let (key, systems, format, runner) = match triple {
-        "x86_64-unknown-linux-gnu" => (
-            "linux-x64",
-            &["Linux:x86_64", "Linux:amd64"][..],
-            Format::Tar,
-            "linux",
-        ),
-        "aarch64-apple-darwin" => (
-            "darwin-arm64",
-            &["Darwin:arm64", "Darwin:aarch64"][..],
-            Format::Tar,
-            "macos",
-        ),
-        "x86_64-apple-darwin" => (
-            "darwin-x64",
-            &["Darwin:x86_64", "Darwin:amd64"][..],
-            Format::Tar,
-            "macos",
-        ),
-        "x86_64-pc-windows-msvc" => (
-            "windows-x64",
-            &["Windows:x86_64", "Windows:amd64"][..],
-            Format::Zip,
-            "windows",
-        ),
-        _ => return Err(format!("unsupported release target {triple}")),
-    };
-    Ok(Target {
-        triple: triple.into(),
-        key: key.into(),
-        systems: systems.iter().map(|system| (*system).into()).collect(),
-        archive: format!("{product}-{triple}.{}", format.name()),
-        format,
-        runner: runner.into(),
-    })
 }
 
 pub(super) fn token(subject: &str, value: &str, upper: bool) -> Result<(), String> {

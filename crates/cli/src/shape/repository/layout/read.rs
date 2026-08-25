@@ -110,16 +110,43 @@ impl<'a> Fields<'a> {
 fn seat(value: &toml::Value) -> Result<Seat, String> {
     let table = value.as_table().ok_or("a layout seat must be a table")?;
     let held = Fields(table);
-    held.known(&["path", "anchor", "rule", "kind", "note"])?;
+    held.known(&["path", "anchor", "rule", "kind", "note", "depot"])?;
     let path = held.text("path")?;
     if path.is_empty() || path.starts_with('/') || path.contains("//") {
         return Err(format!("layout seat {path} is not a seat path"));
+    }
+    let depot = match table.get("depot") {
+        None => None,
+        Some(value) => Some(
+            value
+                .as_str()
+                .ok_or("layout depot must be one seat name")?
+                .to_string(),
+        ),
+    };
+    if let Some(target) = &depot {
+        if path.contains('*') {
+            return Err(format!(
+                "depot configuration seat {path} cannot be a pattern"
+            ));
+        }
+        if target.is_empty()
+            || !target
+                .bytes()
+                .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+        {
+            return Err(format!("layout depot target {target} is not one seat name"));
+        }
+        if held.retired()? {
+            return Err(format!("retired layout seat {path} cannot feed the depot"));
+        }
     }
     Ok(Seat {
         path,
         anchor: held.names("anchor")?,
         rule: held.names("rule")?.unwrap_or_default(),
         retired: held.retired()?,
+        depot,
     })
 }
 

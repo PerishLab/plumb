@@ -150,6 +150,12 @@ pub(super) fn channel(version: &str) -> Result<String, String> {
     channel::channel(version)
 }
 
+pub(in crate::command) use truth::depot::validate as validate_depot;
+
+pub(in crate::command) fn depot(spec: &Spec) -> truth::depot::Source<'_> {
+    truth::depot::Source(spec)
+}
+
 pub(super) fn authority(root: &Path) -> Result<String, String> {
     Spec::read(&root.join("plumb.toml")).map(|spec| spec.authority)
 }
