@@ -7,7 +7,7 @@ pub const RELEASED: [(&str, &str); 2] = [
     ("stable.release.yml", "assets/release/stable.yml.in"),
 ];
 
-pub const FACTORY: [(&str, &str); 18] = [
+pub const FACTORY: [(&str, &str); 19] = [
     (
         "assets/depot/lane.yml.in",
         plumb::seat::resource!("assets/depot/lane.yml.in"),
@@ -15,6 +15,10 @@ pub const FACTORY: [(&str, &str); 18] = [
     (
         "assets/guard/ask.yml.in",
         plumb::seat::resource!("assets/guard/ask.yml.in"),
+    ),
+    (
+        "assets/guard/atom.yml.in",
+        plumb::seat::resource!("assets/guard/atom.yml.in"),
     ),
     (
         "assets/guard/lane.yml.in",
@@ -91,7 +95,7 @@ fn carried() -> Result<bool, String> {
         .find(|(path, _)| *path == "assets/guard/lane.yml.in")
         .expect("the factory must carry its guard lane");
     let schema = seat.read(lane.0, lane.1)?;
-    Ok(schema.contains("depot-sync/v1"))
+    Ok(schema.contains("depot-sync/v2"))
 }
 
 pub fn text(path: &str) -> Result<String, String> {

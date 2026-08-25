@@ -151,7 +151,15 @@ impl Seat<'_> {
     }
 
     fn guard(&self, spec: &Spec) -> Result<Expected, String> {
-        let path = ".forgejo/workflows/guard.yml";
+        if spec.product != "plumb" {
+            let atom = if self.0.join(".forgejo/workflows/guard.atom.yml").is_file() {
+                "./.forgejo/workflows/guard.atom.yml"
+            } else {
+                "PerishLab/actions/.forgejo/workflows/guard.atom.yml@main"
+            };
+            let vars = BTreeMap::from([("atom", atom.to_string())]);
+            return self.seat("guard.yml", filled("assets/guard/atom.yml.in", &vars)?);
+        }
         let vars = BTreeMap::from([
             (
                 "forge",
@@ -161,10 +169,7 @@ impl Seat<'_> {
             ("steps", self.steps(spec)?),
         ]);
         let rendered = filled("assets/guard/lane.yml.in", &vars)?;
-        Ok(Expected {
-            path: path.to_string(),
-            rendered,
-        })
+        self.seat("guard.yml", rendered)
     }
 
     fn env(&self, spec: &Spec) -> String {

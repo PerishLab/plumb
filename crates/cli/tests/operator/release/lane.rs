@@ -36,29 +36,17 @@ fn derived() {
     let guard = rendered(&fixture);
 
     assert!(guard.contains("on:\n  pull_request:\n"), "{guard}");
-    assert!(guard.contains("forge@sha256:"), "{guard}");
+    assert!(
+        guard.contains("uses: PerishLab/actions/.forgejo/workflows/guard.atom.yml@main"),
+        "{guard}"
+    );
     assert!(!guard.contains("mirror.perish.lan"), "{guard}");
     assert!(!guard.contains("setup-binary"), "{guard}");
-    assert!(
-        guard.contains("curl -fsSL https://releases.ectropy.perish.uk/manage.sh | sh"),
-        "{guard}"
-    );
-    assert!(
-        guard.contains("curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh"),
-        "{guard}"
-    );
-    assert!(
-        guard.contains("printf '%s\\n' \"$HOME/.local/bin\" >> \"$GITHUB_PATH\""),
-        "a stable tool installs under the home seat, so the job path must carry it: {guard}"
-    );
-    assert!(guard.contains("cargo fmt --all --check"), "{guard}");
-    assert!(guard.contains("plumb doctor ."), "{guard}");
-    assert_eq!(guard.matches("plumb depot sync").count(), 1, "{guard}");
-    let install = guard.find("Install stable Plumb").expect("Plumb install");
-    let sync = guard.find("plumb depot sync").expect("depot sync");
-    let doctor = guard.find("plumb doctor .").expect("Doctor");
-    assert!(install < sync && sync < doctor, "{guard}");
-    assert!(guard.contains("ectropy ."), "{guard}");
+    assert!(!guard.contains("manage.sh"), "{guard}");
+    assert!(!guard.contains("cargo fmt --all --check"), "{guard}");
+    assert!(!guard.contains("plumb doctor ."), "{guard}");
+    assert!(!guard.contains("plumb depot sync"), "{guard}");
+    assert!(!guard.contains("ectropy ."), "{guard}");
     assert!(!guard.contains("pnpm"), "{guard}");
     assert!(!guard.contains("{@"), "{guard}");
 }
@@ -84,7 +72,11 @@ fn drifts() {
     rendered(&fixture);
     let path = temp.path().join(".forgejo/workflows/guard.yml");
     let held = fs::read_to_string(&path).expect("guard");
-    fs::write(&path, held.replace("Checkout", "Checkout the source")).expect("hand edit");
+    fs::write(
+        &path,
+        held.replace("PerishLab/actions", "PerishLab/other-actions"),
+    )
+    .expect("hand edit");
 
     let output = fixture
         .command()

@@ -81,7 +81,11 @@ impl Seat {
     }
 
     pub fn wrote(&self, path: &str, body: &str) {
-        fs::write(self.0.join(path), body).expect("leaf");
+        let path = self.0.join(path);
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).expect("leaf parent");
+        }
+        fs::write(path, body).expect("leaf");
         self.git(&["add", "-A"]);
     }
 }
