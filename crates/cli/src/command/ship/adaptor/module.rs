@@ -116,12 +116,8 @@ impl Module<'_> {
         let path = self.seat(package).join("package.json");
         let text = std::fs::read_to_string(&path)
             .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-        let mut held: serde_json::Value = serde_json::from_str(&text)
-            .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
-        held["version"] = serde_json::Value::String(version.to_string());
-        let mut body = serde_json::to_string_pretty(&held)
-            .map_err(|error| format!("cannot render {}: {error}", path.display()))?;
-        body.push('\n');
+        let body = super::projection::stamp(&text, version)
+            .map_err(|error| format!("cannot project {}: {error}", path.display()))?;
         std::fs::write(&path, body)
             .map_err(|error| format!("cannot write {}: {error}", path.display()))
     }
