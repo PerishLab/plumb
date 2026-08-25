@@ -188,7 +188,7 @@ fn versions() {
     assert!(cargo.contains("version = \"1.2.0\""), "{cargo}");
     assert!(library.contains("version = \"=1.2.0\""), "{library}");
     assert_eq!(lock.matches("version = \"1.2.0\"").count(), 2, "{lock}");
-    assert!(package.contains("\"version\": \"1.2.0\""), "{package}");
+    assert_eq!(package, PACKAGE.replace("1.1.0", "1.2.0"));
     assert!(chart.contains("version: 1.2.0"), "{chart}");
     assert!(chart.contains("appVersion: \"1.2.0\""), "{chart}");
     let touched = show(bare.path(), "--name-only --format= release/v1.2.0");
@@ -282,5 +282,5 @@ path = "lib.rs"
 probe-macro = { path = "../macro", version = "=1.1.0" }
 "#;
 
-const PACKAGE: &str = "{\"name\":\"@test/probe\",\"version\":\"1.1.0\"}\n";
+const PACKAGE: &str = "{\n\t\"name\": \"@test/probe\",\n\t\"version\": \"1.1.0\"\n}\n";
 const CHART: &str = "name: probe\nversion: 1.1.0\nappVersion: \"1.1.0\"\n";
