@@ -192,3 +192,31 @@ fn staged() {
     );
     assert!(plumb::depot::Rules::staged(root.path(), "v1.2.4").is_err());
 }
+
+#[test]
+fn takeover() {
+    let root = tempfile::tempdir().expect("depot");
+    stock(root.path(), "answer = 1\n");
+    let mut held = derivative();
+    held.release.product = "plumb".to_string();
+    let manifest = held.encode().expect("manifest");
+    let pointer = plumb::depot::v2::Pointer::new(&held, manifest.as_bytes()).expect("pointer");
+    let seat = plumb::depot::v2::local(root.path(), &held.release, &held.snapshot.timestamp)
+        .expect("seat");
+    std::fs::create_dir_all(seat.join("rules")).expect("rules");
+    std::fs::write(seat.join("rules/probe.toml"), "answer = 42\n").expect("rule");
+    std::fs::write(seat.join(plumb::depot::v2::LEAF), manifest).expect("manifest");
+    std::fs::write(
+        root.path().join(plumb::depot::v2::POINTER),
+        pointer.encode().expect("pointer"),
+    )
+    .expect("pointer");
+
+    let rules = plumb::depot::Rules::at(root.path(), "v1.2.3").expect("v2 rules");
+    assert_eq!(rules.mark(), "20260825T010203Z");
+    assert_eq!(rules.floor(), "v1.2.3");
+    assert_eq!(
+        rules.read("rules/probe.toml").expect("rule"),
+        "answer = 42\n"
+    );
+}

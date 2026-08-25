@@ -26,8 +26,25 @@ impl Rules {
         if let Some(root) = crate::config::value("PLUMB_DEPOT_SNAPSHOT") {
             return Self::staged(Path::new(&root), crate::version!("PLUMB"));
         }
-        let seat = Seat::open()?;
-        seat.supported(crate::version!("PLUMB"))?;
+        Self::at(&super::root(&PathBuf::new())?, crate::version!("PLUMB"))
+    }
+
+    pub fn at(root: &Path, running: &str) -> Result<Self, String> {
+        let marker = root.join(v2::POINTER);
+        if marker.is_file() {
+            let text = std::fs::read_to_string(&marker)
+                .map_err(|error| format!("cannot read {}: {error}", marker.display()))?;
+            let pointer = v2::Pointer::parse(&text)?;
+            let base = v2::local(root, &pointer.release, &pointer.snapshot.timestamp)?;
+            let path = base.join(v2::LEAF);
+            let body = std::fs::read_to_string(&path)
+                .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+            let manifest = v2::Manifest::parse(&body)?;
+            pointer.bind(&manifest, body.as_bytes())?;
+            return Self::staged(&base, running);
+        }
+        let seat = Seat::at(root)?;
+        seat.supported(running)?;
         Ok(Self {
             held: Source::V1(seat),
         })
@@ -70,6 +87,27 @@ impl Rules {
                 manifest.verify(path, &bytes)?;
                 String::from_utf8(bytes).map_err(|error| format!("{path} is not UTF-8: {error}"))
             }
+        }
+    }
+
+    pub fn mark(&self) -> &str {
+        match &self.held {
+            Source::V1(seat) => seat.mark(),
+            Source::V2 { manifest, .. } => &manifest.snapshot.timestamp,
+        }
+    }
+
+    pub fn floor(&self) -> &str {
+        match &self.held {
+            Source::V1(seat) => &seat.manifest().schema.version,
+            Source::V2 { manifest, .. } => &manifest.release.version,
+        }
+    }
+
+    pub fn objects(&self) -> &[super::Object] {
+        match &self.held {
+            Source::V1(seat) => &seat.manifest().objects,
+            Source::V2 { manifest, .. } => &manifest.objects,
         }
     }
 }

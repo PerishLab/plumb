@@ -4,10 +4,10 @@ use std::collections::BTreeSet;
 use super::{Object, sha};
 use value::Value;
 
+mod local;
 mod value;
 
-pub const FORMAT: u32 = 2;
-pub const LEAF: &str = "manifest.toml";
+pub use local::{FORMAT, LEAF, POINTER, local};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "lowercase")]

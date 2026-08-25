@@ -33,7 +33,11 @@ pub fn manifest() -> Result<Option<record::Manifest>, String> {
     match held() {
         Held::Absent => Ok(None),
         Held::Blind(error) => Err(error),
-        Held::Seat(seat) => Ok(Some(seat.manifest().clone())),
+        Held::Seat(seat) => Ok(Some(record::Manifest {
+            mark: seat.mark().to_string(),
+            floor: seat.floor().to_string(),
+            objects: seat.objects().to_vec(),
+        })),
     }
 }
 

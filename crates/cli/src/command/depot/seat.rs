@@ -1,5 +1,5 @@
 use super::notes::{Notes, changelog};
-use crate::shape::depot::{LEAF, Manifest, POINTER, Pointer, latest, versions};
+use crate::shape::depot::{LEAF, POINTER, Pointer, latest, versions};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -7,7 +7,7 @@ pub const KEY: &str = "plumb";
 
 pub enum Held {
     Absent,
-    Seat(plumb::depot::Seat),
+    Seat(Box<plumb::depot::Rules>),
     Blind(String),
 }
 
@@ -20,12 +20,11 @@ pub fn held(over: &Path) -> Held {
         Ok(base) => base,
         Err(error) => return Held::Blind(error),
     };
-    let marker = base.join(POINTER);
-    if !marker.is_file() {
+    if !base.join(plumb::depot::v2::POINTER).is_file() && !base.join(POINTER).is_file() {
         return Held::Absent;
     }
-    match plumb::depot::Seat::at(&base) {
-        Ok(seat) => Held::Seat(seat),
+    match plumb::depot::Rules::at(&base, plumb::version!("PLUMB")) {
+        Ok(seat) => Held::Seat(Box::new(seat)),
         Err(error) => Held::Blind(error),
     }
 }
@@ -50,27 +49,112 @@ impl Held {
 pub fn sync(source: &str, channel: &str, over: &Path) -> Result<String, String> {
     let base = root(over)?;
     let source = source.trim_end_matches('/');
-    let text = pull(&format!("{source}/{}", latest(channel)))?
-        .ok_or_else(|| format!("depot channel {channel} has no pointer at {source}"))?;
-    let pointer = Pointer::parse(&text)?;
-    let seat = base.join(&pointer.version);
-    let deed = format!("{source}/{}", versions(channel, &pointer.version));
-    let raw = pull(&format!("{deed}/{LEAF}"))?
-        .ok_or_else(|| format!("depot version {} has no manifest", pointer.version))?;
-    let manifest = Manifest::parse(&raw)?;
-    for object in &manifest.objects {
-        let body = pull(&format!("{deed}/{}", object.path))?
-            .ok_or_else(|| format!("depot object {} is absent", object.path))?;
-        manifest.verify(&object.path, body.as_bytes())?;
-        write(&seat.join(&object.path), &body)?;
+    Remote {
+        source,
+        channel,
+        base: &base,
     }
-    write(&seat.join(LEAF), &raw)?;
-    write(&base.join(POINTER), &text)?;
-    Ok(format!(
-        "synced depot {channel} {} into {}",
-        pointer.version,
-        base.display()
-    ))
+    .sync()
+}
+
+struct Remote<'a> {
+    source: &'a str,
+    channel: &'a str,
+    base: &'a Path,
+}
+
+impl Remote<'_> {
+    fn sync(&self) -> Result<String, String> {
+        if let Some(held) = self.modern()? {
+            return Ok(held);
+        }
+        self.legacy()
+    }
+
+    fn modern(&self) -> Result<Option<String>, String> {
+        let kind = plumb::depot::v2::Kind::Configuration;
+        let key = plumb::depot::v2::latest(KEY, kind, self.channel)?;
+        let Some(text) = pull(&format!("{}/{key}", self.source))? else {
+            return Ok(None);
+        };
+        let pointer = plumb::depot::v2::Pointer::parse(&text)?;
+        let standing = (
+            pointer.source.as_str(),
+            pointer.release.product.as_str(),
+            pointer.release.channel.as_str(),
+            pointer.derivative,
+        );
+        if standing != (self.source, KEY, self.channel, kind) {
+            return Err(format!(
+                "depot v2 pointer does not name {KEY} configuration channel {} at {}",
+                self.channel, self.source
+            ));
+        }
+        let route = plumb::depot::v2::snapshots(
+            &pointer.release,
+            pointer.derivative,
+            &pointer.snapshot.timestamp,
+        )?;
+        let deed = format!("{}/{route}", self.source);
+        let raw = pull(&format!("{deed}/{}", plumb::depot::v2::LEAF))?.ok_or_else(|| {
+            format!(
+                "depot snapshot {} has no manifest",
+                pointer.snapshot.timestamp
+            )
+        })?;
+        let manifest = plumb::depot::v2::Manifest::parse(&raw)?;
+        pointer.bind(&manifest, raw.as_bytes())?;
+        let seat =
+            plumb::depot::v2::local(self.base, &pointer.release, &pointer.snapshot.timestamp)?;
+        for object in &manifest.objects {
+            let body = pull(&format!("{deed}/{}", object.path))?
+                .ok_or_else(|| format!("depot object {} is absent", object.path))?;
+            manifest.verify(&object.path, body.as_bytes())?;
+            write(&seat.join(&object.path), &body)?;
+        }
+        write(&seat.join(plumb::depot::v2::LEAF), &raw)?;
+        write(&self.base.join(plumb::depot::v2::POINTER), &text)?;
+        Ok(Some(format!(
+            "synced depot {} {} into {}",
+            self.channel,
+            pointer.snapshot.timestamp,
+            self.base.display()
+        )))
+    }
+
+    fn legacy(&self) -> Result<String, String> {
+        let text =
+            pull(&format!("{}/{}", self.source, latest(self.channel)))?.ok_or_else(|| {
+                format!(
+                    "depot channel {} has no pointer at {}",
+                    self.channel, self.source
+                )
+            })?;
+        let pointer = Pointer::parse(&text)?;
+        let seat = self.base.join(&pointer.version);
+        let deed = format!(
+            "{}/{}",
+            self.source,
+            versions(self.channel, &pointer.version)
+        );
+        let raw = pull(&format!("{deed}/{LEAF}"))?
+            .ok_or_else(|| format!("depot version {} has no manifest", pointer.version))?;
+        let manifest = plumb::depot::Manifest::parse(&raw)?;
+        for object in &manifest.objects {
+            let body = pull(&format!("{deed}/{}", object.path))?
+                .ok_or_else(|| format!("depot object {} is absent", object.path))?;
+            manifest.verify(&object.path, body.as_bytes())?;
+            write(&seat.join(&object.path), &body)?;
+        }
+        write(&seat.join(LEAF), &raw)?;
+        write(&self.base.join(POINTER), &text)?;
+        Ok(format!(
+            "synced depot {} {} into {}",
+            self.channel,
+            pointer.version,
+            self.base.display()
+        ))
+    }
 }
 
 pub fn notes(source: &str, version: &str) -> Result<Option<Notes>, String> {

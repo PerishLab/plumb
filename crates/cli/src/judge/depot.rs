@@ -34,7 +34,7 @@ pub fn judge(evidence: &Evidence) -> Vec<Finding> {
 
 fn floor(manifest: &Manifest) -> Vec<Finding> {
     let running = plumb::version!("PLUMB");
-    let declared = &manifest.schema.version;
+    let declared = &manifest.floor;
     let (Some(held), Some(least)) = (parse(running), parse(declared)) else {
         return vec![Finding::new(Seed::blind(
             &DEPOT_SCHEMA,
@@ -48,7 +48,7 @@ fn floor(manifest: &Manifest) -> Vec<Finding> {
         &DEPOT_SCHEMA,
         format!(
             "the held depot {} declares a floor of {declared}, above the running {running}",
-            manifest.metadata.version
+            manifest.mark
         ),
     ))]
 }
@@ -64,12 +64,12 @@ fn compare(objects: &[Object], manifest: &Manifest) -> Vec<Finding> {
         let evidence = match carried.get(object.path.as_str()) {
             None => format!(
                 "the held depot {} carries no {}",
-                manifest.metadata.version, object.path
+                manifest.mark, object.path
             ),
             Some(sha256) if *sha256 == object.sha256 => continue,
             Some(_) => format!(
                 "the held depot {} carries a different {}",
-                manifest.metadata.version, object.path
+                manifest.mark, object.path
             ),
         };
         found.push(Finding::new(Seed::noted(&DEPOT_PUBLISHED, evidence)));
@@ -80,7 +80,7 @@ fn compare(objects: &[Object], manifest: &Manifest) -> Vec<Finding> {
                 &DEPOT_PUBLISHED,
                 format!(
                     "the held depot {} carries {path}, which this repository no longer records",
-                    manifest.metadata.version
+                    manifest.mark
                 ),
             )));
         }
