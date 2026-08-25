@@ -4,7 +4,10 @@
         run: |
           $ErrorActionPreference = 'Stop'
           $manager = Join-Path $env:RUNNER_TEMP 'manage-plumb.ps1'
+          $seat = Join-Path $env:RUNNER_TEMP 'plumb-bootstrap'
+          $versions = Join-Path $seat 'versions'
+          $bin = Join-Path $seat 'bin'
           Invoke-WebRequest -UseBasicParsing -Uri '{@plumb}/manage.ps1' -OutFile $manager
-          & $manager install
-          & (Join-Path $HOME '.local/bin/plumb.exe') depot sync
-          (Join-Path $HOME '.local/bin') | Out-File -FilePath $env:GITHUB_PATH -Append
+          & $manager install --install-root $versions --bin-dir $bin
+          & (Join-Path $bin 'plumb.exe') depot sync
+          $bin | Out-File -FilePath $env:GITHUB_PATH -Append
