@@ -84,10 +84,11 @@ pub(in crate::command) fn validate(
             &snapshot.path().join(plumb::depot::v2::LEAF),
             plan.manifest.encode()?.as_bytes(),
         )?;
+        let source = super::tree::Seat::open(&spec.root, &binding.release.commit)?;
 
         let output = Command::new(&executable)
             .args(depot.validator.iter().skip(1))
-            .current_dir(&spec.root)
+            .current_dir(source.path())
             .env(
                 format!("{}_DEPOT_SNAPSHOT", spec.environment()),
                 snapshot.path(),
