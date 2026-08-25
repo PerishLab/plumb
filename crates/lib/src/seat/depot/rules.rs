@@ -15,6 +15,11 @@ enum Source {
     },
 }
 
+enum Width {
+    Exact,
+    Floor,
+}
+
 static RULES: LazyLock<Result<Rules, String>> = LazyLock::new(Rules::open);
 
 pub(super) fn held() -> Result<&'static Rules, String> {
@@ -41,7 +46,7 @@ impl Rules {
                 .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
             let manifest = v2::Manifest::parse(&body)?;
             pointer.bind(&manifest, body.as_bytes())?;
-            return Self::staged(&base, running);
+            return Self::load(&base, running, Width::Floor);
         }
         let seat = Seat::at(root)?;
         seat.supported(running)?;
@@ -51,6 +56,10 @@ impl Rules {
     }
 
     pub fn staged(base: &Path, running: &str) -> Result<Self, String> {
+        Self::load(base, running, Width::Exact)
+    }
+
+    fn load(base: &Path, running: &str, width: Width) -> Result<Self, String> {
         let path = base.join(v2::LEAF);
         let text = std::fs::read_to_string(&path)
             .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
@@ -62,10 +71,18 @@ impl Rules {
             .map_err(|error| format!("cannot parse running Plumb version: {error}"))?;
         let released = semver::Version::parse(manifest.release.version.trim_start_matches('v'))
             .map_err(|error| format!("cannot parse depot release version: {error}"))?;
-        if running != released {
+        let supported = match width {
+            Width::Exact => running == released,
+            Width::Floor => super::supports(&running, &released),
+        };
+        if !supported {
+            let demand = match width {
+                Width::Exact => "that exact product binary",
+                Width::Floor => "that product version or a newer one",
+            };
             return Err(format!(
-                "depot configuration for {} requires that exact product binary, got {running}",
-                manifest.release.version
+                "depot configuration for {} requires {demand}, got {running}",
+                manifest.release.version,
             ));
         }
         Ok(Self {

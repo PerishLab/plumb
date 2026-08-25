@@ -219,4 +219,6 @@ fn takeover() {
         rules.read("rules/probe.toml").expect("rule"),
         "answer = 42\n"
     );
+    assert!(plumb::depot::Rules::at(root.path(), "v1.2.4").is_ok());
+    assert!(plumb::depot::Rules::at(root.path(), "v1.2.2").is_err());
 }
