@@ -60,9 +60,17 @@ impl Seat<'_> {
             ("plumb", manager("plumb")),
             ("after", if carried { ", seal" } else { "" }.to_string()),
         ]);
-        let held = filled("assets/ship/install.yml.in", &vars)?;
-        vars.insert("carry", matrixed(&held, &vars)?);
-        vars.insert("install", held);
+        let bootstrap = filled("assets/ship/install.yml.in", &vars)?;
+        let source = if spec.product == "plumb" {
+            source::text("assets/ship/source.yml.in")?
+        } else {
+            String::new()
+        };
+        vars.insert(
+            "carry",
+            format!("{}\n{source}", matrixed(&bootstrap, &vars)?),
+        );
+        vars.insert("install", format!("{bootstrap}\n{source}"));
         let binary = if carried {
             filled("assets/ship/binary.yml.in", &vars)?
         } else {
@@ -71,7 +79,7 @@ impl Seat<'_> {
         vars.insert(
             "capsule",
             if carried {
-                source::text("assets/ship/capsule.yml.in")?.to_string()
+                source::text("assets/ship/capsule.yml.in")?
             } else {
                 String::new()
             },
@@ -187,7 +195,7 @@ impl Seat<'_> {
             let vars = BTreeMap::from([("when", seat.when("web"))]);
             blocks.push(filled("assets/guard/packages.yml.in", &vars)?);
         }
-        blocks.push(seat.steps(listed, source::text("assets/guard/proof.yml.in")?)?);
+        blocks.push(seat.steps(listed, &source::text("assets/guard/proof.yml.in")?)?);
         Ok(blocks.join("\n"))
     }
 
