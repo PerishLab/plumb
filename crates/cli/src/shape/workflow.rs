@@ -68,6 +68,10 @@ pub fn read(root: &Path) -> Held {
     let Ok(text) = std::fs::read_to_string(&path) else {
         return Held::default();
     };
+    parse(&text)
+}
+
+pub fn parse(text: &str) -> Held {
     let doc: toml::Table = match text.parse() {
         Ok(doc) => doc,
         Err(error) => return refuse(format!("cannot parse plumb.toml: {error}")),
@@ -102,6 +106,43 @@ pub fn read(root: &Path) -> Held {
             }
         }
         Err(error) => refuse(error),
+    }
+}
+
+pub fn inferred(cargo: bool, pnpm: bool, plumb: bool, ectropy: bool) -> Held {
+    let mut keys = Vec::new();
+    if cargo {
+        keys.push(key("rust", "suite://cargo"));
+        keys.push(key("test", "suite://cargo"));
+    }
+    if pnpm {
+        keys.push(key("web", "suite://pnpm"));
+    }
+    if plumb {
+        keys.push(key("plumb", "*"));
+    }
+    if ectropy {
+        keys.push(key("ectropy", "*"));
+    }
+    match resolve(&keys) {
+        Ok(found) => {
+            for (key, paths) in keys.iter_mut().zip(found) {
+                key.paths = paths;
+            }
+            Held {
+                keys,
+                refusal: None,
+            }
+        }
+        Err(error) => refuse(error),
+    }
+}
+
+fn key(name: &str, root: &str) -> Key {
+    Key {
+        segments: vec!["guard".to_string(), name.to_string()],
+        roots: vec![root.to_string()],
+        paths: Vec::new(),
     }
 }
 

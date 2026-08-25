@@ -5,13 +5,15 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::Command;
 
+#[derive(Default)]
 pub struct Tree(BTreeMap<String, String>);
+pub struct Git<'a>(&'a Path);
 
 impl Tree {
     pub fn read(root: &Path, rev: Option<&str>) -> Result<Self, String> {
         let listed = match rev {
-            Some(rev) => listing(root, &["ls-tree", "-r", "-z", rev])?,
-            None => listing(root, &["ls-files", "--stage", "-z"])?,
+            Some(rev) => Git::new(root).listing(&["ls-tree", "-r", "-z", rev])?,
+            None => Git::new(root).listing(&["ls-files", "--stage", "-z"])?,
         };
         let mut held = BTreeMap::new();
         for record in listed.split('\0').filter(|record| !record.is_empty()) {
@@ -62,32 +64,69 @@ impl Tree {
     pub fn covered(&self, key: &Key) -> usize {
         self.under(&key.paths).len()
     }
+
+    pub fn has(&self, path: &str) -> bool {
+        self.0.contains_key(path)
+    }
 }
 
 fn covers(root: &str, path: &str) -> bool {
     root == "*" || path == root || path.starts_with(&format!("{root}/"))
 }
 
-pub fn history(root: &Path, rev: &str) -> Result<Vec<String>, String> {
-    let range = format!("{rev}..HEAD");
-    let listed = listing(root, &["rev-list", "--reverse", &range])?;
-    Ok(listed
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .map(str::to_string)
-        .collect())
-}
-
-fn listing(root: &Path, args: &[&str]) -> Result<String, String> {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(args)
-        .output()
-        .map_err(|error| format!("cannot execute git: {error}"))?;
-    if !output.status.success() {
-        return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+impl<'a> Git<'a> {
+    pub fn new(root: &'a Path) -> Self {
+        Self(root)
     }
-    String::from_utf8(output.stdout).map_err(|_| "git emitted non-UTF-8 output".to_string())
+
+    pub fn history(&self, rev: &str) -> Result<Vec<String>, String> {
+        let range = format!("{rev}..HEAD");
+        let listed = self.listing(&["rev-list", "--reverse", &range])?;
+        Ok(listed
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .map(str::to_string)
+            .collect())
+    }
+
+    pub fn revision(&self, rev: &str) -> Result<String, String> {
+        Ok(self
+            .listing(&["rev-parse", "--verify", rev])?
+            .trim()
+            .to_string())
+    }
+
+    pub fn file(&self, rev: &str, path: &str) -> Result<Option<String>, String> {
+        let object = format!("{rev}:{path}");
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(self.0)
+            .args(["show", &object])
+            .output()
+            .map_err(|error| format!("cannot execute git: {error}"))?;
+        if output.status.success() {
+            return String::from_utf8(output.stdout)
+                .map(Some)
+                .map_err(|_| "git emitted non-UTF-8 output".to_string());
+        }
+        let error = String::from_utf8_lossy(&output.stderr);
+        if error.contains("does not exist") || error.contains("exists on disk, but not in") {
+            return Ok(None);
+        }
+        Err(error.trim().to_string())
+    }
+
+    fn listing(&self, args: &[&str]) -> Result<String, String> {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(self.0)
+            .args(args)
+            .output()
+            .map_err(|error| format!("cannot execute git: {error}"))?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        String::from_utf8(output.stdout).map_err(|_| "git emitted non-UTF-8 output".to_string())
+    }
 }

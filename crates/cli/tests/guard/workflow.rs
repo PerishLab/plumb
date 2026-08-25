@@ -1,5 +1,7 @@
 #[path = "workflow/lane.rs"]
 mod lane;
+#[path = "workflow/plan.rs"]
+mod plan;
 
 use std::fs;
 use std::path::PathBuf;
@@ -39,6 +41,24 @@ impl Seat {
             held.env("PLUMB_WORKFLOW_FORCE", "true");
         }
         let out = held.output().expect("run");
+        (
+            String::from_utf8_lossy(&out.stdout).to_string(),
+            out.status.success(),
+        )
+    }
+
+    pub fn plan(&self, base: Option<&str>, world: &[&str]) -> (String, bool) {
+        let mut args = vec!["workflow", "plan"];
+        if let Some(base) = base {
+            args.push("--base");
+            args.push(base);
+        }
+        for entry in world {
+            args.push("--world");
+            args.push(entry);
+        }
+        args.push(self.0.to_str().expect("path"));
+        let out = plumb(&args).output().expect("run");
         (
             String::from_utf8_lossy(&out.stdout).to_string(),
             out.status.success(),

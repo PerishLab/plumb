@@ -1,5 +1,5 @@
+mod plan;
 mod remote;
-
 mod spread;
 mod tree;
 
@@ -26,6 +26,8 @@ pub enum Deed {
         #[command(flatten)]
         target: Root,
     },
+    #[command(about = "Plan which declared actions moved between one base and the current tree")]
+    Plan(plan::Input),
     #[command(about = "Print the input hash one declared key resolves to")]
     Hash {
         key: String,
@@ -44,6 +46,7 @@ pub fn run(deed: Deed) -> i32 {
     match deed {
         Deed::Status { target, since } => Seat::new(target).status(since.trim()),
         Deed::Ask { lane, target } => Seat::new(target).ask(&lane),
+        Deed::Plan(input) => plan::run(input),
         Deed::Hash { key, target } => Seat::new(target).compare(&key),
         Deed::Lock { key, target } => Seat::new(target).record(&key),
     }
@@ -109,7 +112,7 @@ impl Seat {
     }
 
     fn replay(&self, held: &shape::workflow::Held, since: &str) -> i32 {
-        let commits = match tree::history(self.root(), since) {
+        let commits = match tree::Git::new(self.root()).history(since) {
             Ok(commits) => commits,
             Err(error) => {
                 println!("  {error}");
