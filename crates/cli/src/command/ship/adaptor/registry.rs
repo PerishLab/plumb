@@ -32,7 +32,7 @@ impl Registry<'_> {
         if token.trim().is_empty() {
             return Err("PLUMB_RELEASE_REGISTRY_TOKEN is required".into());
         }
-        self.stamp(cargo, version)?;
+        self.stamp(version)?;
         let identity = release(version)?;
         let workspace = Workspace::read(&self.spec.root)?;
         for package in self.ordered(cargo)? {
@@ -71,7 +71,7 @@ impl Registry<'_> {
         if token.trim().is_empty() {
             return Err("PLUMB_RELEASE_REGISTRY_TOKEN is required".into());
         }
-        self.stamp(cargo, version)?;
+        self.stamp(version)?;
         let identity = release(version)?;
         for package in self.ordered(cargo)? {
             self.command(
@@ -140,16 +140,10 @@ impl Registry<'_> {
         Ok(&cargo.packages)
     }
 
-    fn stamp(&self, cargo: &Cargo, version: &str) -> Result<(), String> {
+    fn stamp(&self, version: &str) -> Result<(), String> {
         let identity = release(version)?;
-        let pins = cargo
-            .packages
-            .iter()
-            .map(|package| (package.clone(), identity.to_string()))
-            .collect::<BTreeMap<_, _>>();
-        let workspace = Workspace::read(&self.spec.root)?;
         let root = self.spec.root.join("Cargo.toml");
-        let mut document = manifest::read(&root)?;
+        let document = manifest::read(&root)?;
         let base = document["workspace"]["package"]["version"]
             .as_str()
             .or_else(|| document["package"]["version"].as_str())
@@ -162,27 +156,7 @@ impl Registry<'_> {
                 "workspace version {held} is not release base {identity}"
             ));
         }
-        if document["workspace"]["package"]["version"]
-            .as_str()
-            .is_some()
-        {
-            document["workspace"]["package"]["version"] = toml_edit::value(identity.to_string());
-        } else {
-            document["package"]["version"] = toml_edit::value(identity.to_string());
-        }
-        manifest::write(&root, &document)?;
-        for package in &cargo.packages {
-            let (seat, _) = workspace.package(package)?;
-            let mut document = manifest::read(seat)?;
-            if document["package"]["version"].as_str().is_some() {
-                document["package"]["version"] = toml_edit::value(identity.to_string());
-            }
-            manifest::dependencies(&mut document, &pins)?;
-            manifest::write(seat, &document)?;
-        }
-        let mut document = manifest::read(&root)?;
-        manifest::dependencies(&mut document, &pins)?;
-        manifest::write(&root, &document)
+        self.project(&identity)
     }
     fn project(&self, identity: &Version) -> Result<(), String> {
         let lock = self.spec.root.join("Cargo.lock");
