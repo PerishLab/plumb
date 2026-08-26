@@ -1,7 +1,7 @@
 pub(super) mod artifact;
+pub mod authority;
 pub(in crate::command) mod channel;
 mod deed;
-pub(super) mod manager;
 pub(in crate::command) mod output;
 mod plan;
 mod truth;
@@ -11,7 +11,7 @@ pub use deed::Deed;
 use plumb::rig::{Authority, Rig};
 use std::path::{Path, PathBuf};
 use truth::promotion;
-pub(super) use truth::{proof, record, storage, verify};
+pub(super) use truth::{manager, proof, record, storage, verify};
 
 use crate::shape::release::Spec;
 

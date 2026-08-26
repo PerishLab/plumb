@@ -15,7 +15,7 @@ pub fn template() -> Result<String, String> {
 
 pub fn write(spec: &Path, channel: &str, version: &str, out: &Path) -> Result<String, String> {
     let spec = Spec::read(spec)?;
-    super::channel::intent(channel, version)?;
+    super::super::channel::intent(channel, version)?;
     if out.exists() {
         return Err(format!("manager output already exists: {}", out.display()));
     }

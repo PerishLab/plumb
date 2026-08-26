@@ -1,10 +1,9 @@
-mod cloud;
 mod forge;
 mod store;
 mod target;
 
+use super::release::authority::cloudflare::{Bucket, Factory, Grant, Minted};
 use clap::Args;
-use cloud::{Bucket, Factory, Grant, Minted};
 use plumb::config::Cascade as _;
 use plumb::forgejo::Client;
 use plumb::rig::Mint;

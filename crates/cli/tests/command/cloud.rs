@@ -1,7 +1,7 @@
-#[path = "../../src/command/retire/cloud.rs"]
+#[path = "../../src/command/release/authority/cloudflare.rs"]
 mod adapter;
 
-use adapter::{Bucket, Factory, Grant};
+use adapter::{Bucket, Custom, Factory, Grant};
 use std::{
     io::{Read, Write},
     net::TcpListener,
@@ -10,13 +10,17 @@ use std::{
 
 #[test]
 fn lifecycle() {
+    let _: Option<Custom> = None;
     let answers = vec![
         r#"{"success":true,"result":{"status":"active"}}"#,
         r#"{"success":true,"result":[{"id":"old","name":"stale"}],"result_info":{"total_pages":1}}"#,
         r#"{"success":true,"result":[{"id":"permit","name":"write"}]}"#,
         r#"{"success":true,"result":{"id":"fresh","value":"value-from-api"}}"#,
         r#"{"success":true,"result":{"name":"bucket"}}"#,
-        r#"{"success":true,"result":{"domains":[{"domain":"site.test","zoneId":"zone"}]}}"#,
+        r#"{"success":true,"result":{"name":"bucket"}}"#,
+        r#"{"success":true,"result":{"domains":[{"domain":"site.test","zoneId":"zone","enabled":true,"minTLS":"1.2","status":{"ownership":"active","ssl":"active"}}]}}"#,
+        r#"{"success":true,"result":{"domains":[{"domain":"site.test","zoneId":"zone","enabled":true,"minTLS":"1.2","status":{"ownership":"active","ssl":"active"}}]}}"#,
+        r#"{"success":true,"result":{"domains":[{"domain":"site.test","zoneId":"zone","enabled":true,"minTLS":"1.2","status":{"ownership":"active","ssl":"active"}}]}}"#,
         r#"{"success":true,"result":{}}"#,
         r#"{"success":true,"result":{}}"#,
         r#"{"success":true,"result":{}}"#,
@@ -43,16 +47,20 @@ fn lifecycle() {
     assert_eq!(minted.value(), "value-from-api");
     let bucket = Bucket::new(&factory, &minted, "bucket");
     assert!(bucket.live().expect("live"));
+    bucket.create().expect("create bucket");
     let domains = bucket.custom().expect("domains");
     assert_eq!(domains[0].domain, "site.test");
     assert_eq!(domains[0].zone, "zone");
+    assert!(domains[0].ready());
+    assert!(bucket.find("site.test").expect("find domain").is_some());
+    bucket.bind("site.test", "zone").expect("bind domain");
     bucket.detach("site.test").expect("detach");
     bucket.erase().expect("erase");
     factory.revoke(&minted.id).expect("revoke");
     let seen = handle.join().expect("server");
-    assert_eq!(seen.len(), 9);
+    assert_eq!(seen.len(), 12);
     assert!(seen[2].contains("name=write&scope=scope"), "{:?}", seen);
-    assert!(seen[5].contains("/r2/buckets/bucket/domains/custom"));
+    assert!(seen[6].contains("/r2/buckets/bucket/domains/custom"));
     assert!(seen.iter().all(|line| !line.contains("factory-value")));
     assert!(seen.iter().all(|line| !line.contains("value-from-api")));
 }

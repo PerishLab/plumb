@@ -40,7 +40,7 @@ path = "tests/repository/main.rs"
 
 [dependencies]
 plumb = { path = "../lib", features = ["radius", "skill", "vendor"] }
-runseal = { version = "=0.17.0", registry = "perish", default-features = false }
+runseal = { version = "=0.18.1", registry = "perish", default-features = false }
 locus = { version = "0", registry = "perish" }
 base64 = "0.22"
 clap = { version = "4", features = ["derive", "env"] }

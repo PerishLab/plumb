@@ -18,6 +18,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    #[command(about = "Converge one closed public authority profile")]
+    Authority {
+        #[command(subcommand)]
+        deed: command::authority::Deed,
+    },
     #[command(about = "Judge this repository against the skeleton and report every finding")]
     Doctor {
         #[command(flatten)]
@@ -157,6 +162,7 @@ enum Command {
 impl Command {
     fn name(&self) -> &'static str {
         match self {
+            Self::Authority { .. } => "authority",
             Self::Doctor { .. } => "doctor",
             Self::Land { .. } => "land",
             Self::Precommit { .. } => "precommit",
@@ -180,6 +186,7 @@ impl Command {
 
 fn execute(command: Command) -> i32 {
     match command {
+        Command::Authority { deed } => command::authority::run(deed),
         Command::Doctor { target, json } => command::doctor::run(PathBuf::from(target.root), json),
         Command::Land {
             target,

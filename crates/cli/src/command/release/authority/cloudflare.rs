@@ -5,6 +5,11 @@ use runseal::tool::{
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 
+#[path = "bucket.rs"]
+mod bucket;
+
+pub use bucket::{Bucket, Custom};
+
 pub struct Held {
     pub id: String,
     pub name: String,
@@ -26,17 +31,6 @@ pub struct Factory {
     account: String,
     api: String,
     token: String,
-}
-
-pub struct Bucket<'a> {
-    factory: &'a Factory,
-    token: &'a Minted,
-    name: &'a str,
-}
-
-pub struct Custom {
-    pub domain: String,
-    pub zone: String,
 }
 
 struct Authority<'a> {
@@ -106,7 +100,7 @@ impl Factory {
     }
 
     pub fn create(&self, grant: &Grant) -> Result<Minted, String> {
-        let body = json!({
+        let mut body = json!({
             "name": grant.name,
             "expires_on": grant.expires,
             "policies": [{
@@ -115,6 +109,11 @@ impl Factory {
                 "permission_groups": [{ "id": grant.permission }],
             }],
         });
+        if grant.expires.is_empty() {
+            body.as_object_mut()
+                .expect("token body is an object")
+                .remove("expires_on");
+        }
         let reply = self
             .call(&["token", "account", "create"], Some(body))
             .map_err(detail)?;
@@ -142,6 +141,18 @@ impl Factory {
             body,
         )
     }
+
+    fn invoke(&self, token: &str, args: &[&str], body: Option<Value>) -> Result<Reply, Failure> {
+        call(
+            Authority {
+                account: &self.account,
+                api: &self.api,
+                token,
+            },
+            args,
+            body,
+        )
+    }
 }
 
 impl Minted {
@@ -150,68 +161,6 @@ impl Minted {
             .secret()
             .expect("minted token is guarded")
             .expose()
-    }
-}
-
-impl<'a> Bucket<'a> {
-    pub fn new(factory: &'a Factory, token: &'a Minted, name: &'a str) -> Self {
-        Self {
-            factory,
-            token,
-            name,
-        }
-    }
-
-    pub fn live(&self) -> Result<bool, String> {
-        match self.call(&["r2", "bucket", "show", self.name]) {
-            Ok(_) => Ok(true),
-            Err((Some(404), _)) => Ok(false),
-            Err(error) => Err(detail(error)),
-        }
-    }
-
-    pub fn custom(&self) -> Result<Vec<Custom>, String> {
-        let reply = self
-            .call(&["r2", "bucket", "domain", "list", self.name])
-            .map_err(detail)?;
-        let listed = reply
-            .value
-            .get("domains")
-            .and_then(Value::as_array)
-            .ok_or_else(|| "cloudflare returned no custom domain list".to_string())?;
-        listed
-            .iter()
-            .map(|entry| {
-                Ok(Custom {
-                    domain: field(entry, "domain")?,
-                    zone: field(entry, "zoneId")?,
-                })
-            })
-            .collect()
-    }
-
-    pub fn detach(&self, domain: &str) -> Result<(), String> {
-        self.call(&["r2", "bucket", "domain", "delete", self.name, domain])
-            .map(|_| ())
-            .map_err(detail)
-    }
-
-    pub fn erase(&self) -> Result<(), String> {
-        self.call(&["r2", "bucket", "delete", self.name])
-            .map(|_| ())
-            .map_err(detail)
-    }
-
-    fn call(&self, args: &[&str]) -> Result<Reply, Failure> {
-        call(
-            Authority {
-                account: &self.factory.account,
-                api: &self.factory.api,
-                token: self.token.value(),
-            },
-            args,
-            None,
-        )
     }
 }
 
@@ -242,7 +191,7 @@ fn array<'a>(value: &'a Value, name: &str) -> Result<&'a Vec<Value>, String> {
         .ok_or_else(|| format!("cloudflare returned no {name}"))
 }
 
-fn field(value: &Value, name: &str) -> Result<String, String> {
+pub(super) fn field(value: &Value, name: &str) -> Result<String, String> {
     value
         .get(name)
         .and_then(Value::as_str)
@@ -251,8 +200,18 @@ fn field(value: &Value, name: &str) -> Result<String, String> {
         .ok_or_else(|| format!("cloudflare record has no {name}"))
 }
 
-type Failure = (Option<u16>, String);
+pub(super) fn status(value: &Value, name: &str) -> String {
+    value
+        .get("status")
+        .and_then(Value::as_object)
+        .and_then(|held| held.get(name))
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string()
+}
 
-fn detail(failure: Failure) -> String {
+pub(super) type Failure = (Option<u16>, String);
+
+pub(super) fn detail(failure: Failure) -> String {
     failure.1
 }

@@ -91,17 +91,20 @@ product surface, the rendered lane, the seats a stable label may take, and the
 isolation every non-stable release owes. Why the contract has this shape, and
 every decision that put it there, is `perish.code/plumb-release-contract`.
 
-## Cold-start
+## Authority convergence
 
 Retirement is the mirror of release, not a foreign errand, and it lives here
 because everything it destroys is something Plumb declared, published, or
 protected.
 
-Plumb does not cold-start. It creates no repository, no bucket, and no domain
-that does not already exist, and it never infers or repairs missing external
-state. A missing authority blocks at its owning control plane. This is an
-implementation constraint, not a permission one: no provisioning call exists in
-this codebase, and adding one is the change that must be refused, because the
-authority Plumb already holds is sufficient to provision if such a call were
-ever written. An absence is the one thing the source cannot show you, which is
-why it is stated here and nowhere else.
+Plumb may cold-start and converge an external authority only through a closed,
+named profile whose model, order, verification, and retirement semantics are a
+mature convention. The profile derives every conventional name and exposes only
+irreducible operator choices. It reinspects before each mutation and reports the
+same ordered plan whether observing or applying.
+
+Runseal owns each authenticated provider atom. Plumb composes those atoms but
+owns no raw provider route, credential store, or private instance state. Generic
+provisioning remains refused: a new external resource kind first needs a closed
+profile with an explicit lifecycle, not another downstream schema or an open
+bag of provider arguments.
