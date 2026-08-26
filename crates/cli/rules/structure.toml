@@ -106,6 +106,10 @@ name = "guard"
 note = "The one canonical guard lane. All fifteen governed repositories carry it."
 
 [[lane.member]]
+name = "guard.atom"
+note = "The public guard implementation. Actions owns it; ordinary repositories consume it through their thin guard entrypoint."
+
+[[lane.member]]
 name = "plan.atom"
 note = "The public cold-start planner. Actions resolves its exact implementation and Plumb judges the caller's relevant work."
 

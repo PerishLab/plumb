@@ -1,5 +1,7 @@
 use std::process::Command;
 
+#[path = "doctor/atoms.rs"]
+mod atoms;
 #[path = "doctor/datum.rs"]
 mod datum;
 #[path = "doctor/dependency.rs"]
