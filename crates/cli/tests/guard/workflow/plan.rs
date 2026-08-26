@@ -1,4 +1,4 @@
-use super::{PAIR, seat};
+use super::{PAIR, Plan, seat};
 
 #[test]
 fn renders() {
@@ -65,7 +65,64 @@ fn cold() {
     let plan: serde_json::Value = serde_json::from_str(&text).expect("plan");
     assert_eq!(plan["base"], serde_json::Value::Null);
     assert_eq!(plan["actions"][0]["reason"], "action-added");
+    assert_eq!(plan["actions"][0]["decision"], "run");
     assert_eq!(plan["actions"][1]["reason"], "action-added");
+    assert_eq!(plan["actions"][1]["decision"], "run");
+}
+
+#[test]
+fn project() {
+    let root = seat("project");
+    root.declared(PAIR);
+    root.wrote(
+        "apps/web/package.json",
+        r#"{"name":"@perish/web","version":"1.0.0","source":"index.js"}"#,
+    );
+    root.git(&["commit", "-m", "source"]);
+    root.wrote(
+        "apps/web/package.json",
+        r#"{"name":"@perish/web","version":"2.0.0","source":"index.js"}"#,
+    );
+    let (held, ok) = root.planned(Plan {
+        base: Some("HEAD"),
+        world: &[],
+        identity: &["version=2.0.0"],
+        project: &["guard/web=apps/web/package.json#/version"],
+        inventory: None,
+    });
+    assert!(ok, "{held}");
+    let held: serde_json::Value = serde_json::from_str(&held).expect("held plan");
+    assert_eq!(held["actions"][1]["run"], false);
+    assert_eq!(held["actions"][1]["reason"], "input-held");
+    assert_eq!(
+        held["actions"][1]["project"][0]["path"],
+        "apps/web/package.json"
+    );
+    assert_eq!(held["actions"][1]["project"][0]["omit"][0], "/version");
+
+    root.wrote(
+        "apps/web/package.json",
+        r#"{"name":"@perish/web","version":"2.0.0","source":"next.js"}"#,
+    );
+    let (moved, ok) = root.planned(Plan {
+        base: Some("HEAD"),
+        world: &[],
+        identity: &["version=2.0.0"],
+        project: &["guard/web=apps/web/package.json#/version"],
+        inventory: None,
+    });
+    assert!(ok, "{moved}");
+    let moved: serde_json::Value = serde_json::from_str(&moved).expect("moved plan");
+    assert_eq!(moved["actions"][1]["run"], true);
+
+    let (text, ok) = root.planned(Plan {
+        base: Some("HEAD"),
+        world: &[],
+        identity: &[],
+        project: &["guard/web=apps/web/package.json#/gone"],
+        inventory: None,
+    });
+    assert!(!ok, "{text}");
 }
 
 #[test]

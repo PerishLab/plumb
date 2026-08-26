@@ -1,5 +1,6 @@
 mod plan;
 mod remote;
+mod reuse;
 mod spread;
 mod tree;
 
