@@ -13,9 +13,9 @@ const HELPER: &str = "[package]\nname = \"helper\"\nversion = \"9.9.9\"\nedition
 const CARGO: &str = r#"#!/bin/sh
 set -eu
 if [ "$1" = metadata ]; then printf '%s\n' "{\"packages\":[{\"name\":\"family-core\",\"version\":\"0.10.2\",\"manifest_path\":\"$PWD/crates/core/Cargo.toml\",\"targets\":[]},{\"name\":\"family-macro\",\"version\":\"0.10.2\",\"manifest_path\":\"$PWD/crates/macro/Cargo.toml\",\"targets\":[]},{\"name\":\"helper\",\"version\":\"9.9.9\",\"manifest_path\":\"$PWD/crates/helper/Cargo.toml\",\"targets\":[]}],\"target_directory\":\"$PWD/target\"}"; exit 0; fi
-[ "$(grep -c 'version = \"=0.10.2-beta.1\"' Cargo.toml)" -eq 2 ] && [ "$(grep -c 'version = \"=0.10.2-beta.1\"' crates/core/Cargo.toml)" -eq 3 ] && [ "$(grep -c 'version = \"=0.10.2-beta.1\"' crates/macro/Cargo.toml)" -eq 2 ] || { printf '%s\n' 'error: failed to select a version for requirement =0.10.2; candidate 0.10.2-beta.1 did not match' >&2; exit 101; }
+[ "$(grep -c 'version = \"=0.10.2-beta.1\"' Cargo.toml)" -eq 3 ] && [ "$(grep -c 'version = \"=0.10.2-beta.1\"' crates/core/Cargo.toml)" -eq 4 ] && [ "$(grep -c 'version = \"=0.10.2-beta.1\"' crates/macro/Cargo.toml)" -eq 3 ] || { printf '%s\n' 'error: failed to select a version for requirement =0.10.2; candidate 0.10.2-beta.1 did not match' >&2; exit 101; }
 grep -F 'version = "0.10.2-beta.1"' Cargo.toml >/dev/null && grep -F 'version = "0.10.2-beta.1"' crates/macro/Cargo.toml >/dev/null
-grep -F 'helper = { path = "crates/helper", version = "=9.9.9" }' Cargo.toml >/dev/null && grep -F 'registry-core = { package = "family-core", version = "=0.10.2", registry = "perish" }' Cargo.toml >/dev/null && grep -F 'helper = { path = "../helper", version = "=9.9.9" }' crates/core/Cargo.toml >/dev/null && grep -F 'version = "9.9.9"' crates/helper/Cargo.toml >/dev/null
+grep -F 'helper = { path = "crates/helper", version = "=0.10.2-beta.1" }' Cargo.toml >/dev/null && grep -F 'registry-core = { package = "family-core", version = "=0.10.2", registry = "perish" }' Cargo.toml >/dev/null && grep -F 'helper = { path = "../helper", version = "=0.10.2-beta.1" }' crates/core/Cargo.toml >/dev/null && grep -F 'version = "0.10.2-beta.1"' crates/helper/Cargo.toml >/dev/null
 printf '0.10.2-beta.1\n' > cargo-observed
 name=""
 prev=""
@@ -196,7 +196,10 @@ fn unsealed() {
     let reached = String::from_utf8_lossy(&out.stderr).to_string();
     assert!(!reached.contains("PLUMB_RELEASE_OUTPUT"), "{reached}");
     assert!(!reached.contains("capsule"), "{reached}");
-    assert!(reached.contains("cargo metadata failed"), "{reached}");
+    assert!(
+        reached.contains("cannot read") && reached.contains("Cargo.toml"),
+        "{reached}"
+    );
 }
 
 #[test]

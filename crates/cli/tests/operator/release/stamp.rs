@@ -2,9 +2,10 @@ use std::os::unix::fs::PermissionsExt;
 
 const STAMPED: &str = r#"#!/bin/sh
 set -eu
-if [ "$1" = metadata ]; then printf '%s\n' "{\"packages\":[{\"name\":\"family-core\",\"version\":\"1.2.0\",\"manifest_path\":\"$PWD/crates/core/Cargo.toml\",\"targets\":[]},{\"name\":\"family-macro\",\"version\":\"1.2.0\",\"manifest_path\":\"$PWD/crates/macro/Cargo.toml\",\"targets\":[]}],\"target_directory\":\"$PWD/target\"}"; exit 0; fi
+if [ "$1" = metadata ]; then printf '%s\n' "{\"packages\":[{\"name\":\"family-cli\",\"version\":\"1.2.0\",\"manifest_path\":\"$PWD/crates/cli/Cargo.toml\",\"targets\":[]},{\"name\":\"family-core\",\"version\":\"1.2.0\",\"manifest_path\":\"$PWD/crates/core/Cargo.toml\",\"targets\":[]},{\"name\":\"family-macro\",\"version\":\"1.2.0\",\"manifest_path\":\"$PWD/crates/macro/Cargo.toml\",\"targets\":[]}],\"target_directory\":\"$PWD/target\"}"; exit 0; fi
 grep -F 'version = "1.2.0-beta.8"' Cargo.toml >/dev/null
 grep -F 'version = "=1.2.0-beta.8"' crates/core/Cargo.toml >/dev/null
+grep -F 'version = "=1.2.0-beta.8"' crates/cli/Cargo.toml >/dev/null
 grep -F 'version.workspace = true' crates/macro/Cargo.toml >/dev/null
 name=""
 prev=""
@@ -26,6 +27,7 @@ fn stamped() {
     let artifacts = root.join("artifacts");
     std::fs::create_dir_all(&tools).expect("tool root");
     std::fs::create_dir_all(&artifacts).expect("artifact root");
+    std::fs::create_dir_all(root.join("crates/cli")).expect("crate root");
     std::fs::create_dir_all(root.join("crates/core")).expect("crate root");
     std::fs::create_dir_all(root.join("crates/macro")).expect("crate root");
     let fixture = super::world::Fixture {
@@ -46,7 +48,11 @@ fn stamped() {
         ),
         (
             "Cargo.toml",
-            &"[workspace]\nmembers = [\"crates/core\", \"crates/macro\"]\nresolver = \"3\"\n\n[workspace.package]\nversion = \"1.2.0\"\nedition = \"2024\"\n".to_string(),
+            &"[workspace]\nmembers = [\"crates/cli\", \"crates/core\", \"crates/macro\"]\nresolver = \"3\"\n\n[workspace.package]\nversion = \"1.2.0\"\nedition = \"2024\"\n".to_string(),
+        ),
+        (
+            "crates/cli/Cargo.toml",
+            &"[package]\nname = \"family-cli\"\nversion.workspace = true\n\n[dependencies.family-core]\npath = \"../core\"\nversion = \"=1.2.0\"\n".to_string(),
         ),
         (
             "crates/macro/Cargo.toml",
