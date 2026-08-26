@@ -214,6 +214,8 @@ fn versions() {
         second.trim(),
         "repeated prepare must not move the line"
     );
+
+    super::preparation::provenance(root, cut);
 }
 
 fn show(root: &Path, object: &str) -> String {
@@ -234,7 +236,7 @@ fn show(root: &Path, object: &str) -> String {
 
 const RELEASE: &str = r#"[release]
 product = "probe"
-authority = "https://releases.test"
+authority = "https://127.0.0.1:1"
 binaries = ["probe"]
 targets = ["x86_64-unknown-linux-gnu"]
 

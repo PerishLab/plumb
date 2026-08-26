@@ -9,14 +9,60 @@ pub fn plan(version: &str, line: &str) -> String {
 
 pub fn project(root: &Path, line: &str, version: &str, head: &str) -> Result<String, String> {
     let tree = Tree::open(root, head)?;
-    let spec = Spec::read(&tree.seat.join("plumb.toml"))?;
-    adaptor::registry::registry(&spec).prepare(version)?;
-    adaptor::module::module(&spec).prepare(version)?;
-    adaptor::chart::chart(&spec).prepare(version)?;
+    tree.prepare(version)?;
     if tree.clean()? {
         return Ok(head.to_string());
     }
     tree.commit(line, version)
+}
+
+pub struct Preparation<'a> {
+    pub root: &'a Path,
+    pub commit: &'a str,
+    pub base: &'a str,
+    pub version: &'a str,
+    pub body: &'a str,
+}
+
+pub fn prepared(cut: Preparation<'_>) -> bool {
+    if cut.body.trim() != format!("Prepare {}", cut.version) {
+        return false;
+    }
+    let parent = read(
+        "resolve release preparation parent",
+        Command::new("git")
+            .arg("-C")
+            .arg(cut.root)
+            .args(["rev-parse", &format!("{}^", cut.commit)])
+            .output(),
+    );
+    if parent.as_deref() != Ok(cut.base) {
+        return false;
+    }
+    let Ok(tree) = Tree::open(cut.root, cut.base) else {
+        return false;
+    };
+    if tree.prepare(cut.version).is_err() {
+        return false;
+    }
+    let expected = tree.tree();
+    let actual = read(
+        "resolve release preparation tree",
+        Command::new("git")
+            .arg("-C")
+            .arg(cut.root)
+            .args(["rev-parse", &format!("{}^{{tree}}", cut.commit)])
+            .output(),
+    );
+    let original = read(
+        "resolve release base tree",
+        Command::new("git")
+            .arg("-C")
+            .arg(cut.root)
+            .args(["rev-parse", &format!("{}^{{tree}}", cut.base)])
+            .output(),
+    );
+    expected.is_ok() && expected != original && expected == actual
 }
 
 struct Tree {
@@ -53,6 +99,18 @@ impl Tree {
             self.git(["status", "--porcelain"]),
         )
         .map(|held| held.is_empty())
+    }
+
+    fn prepare(&self, version: &str) -> Result<(), String> {
+        let spec = Spec::read(&self.seat.join("plumb.toml"))?;
+        adaptor::registry::registry(&spec).prepare(version)?;
+        adaptor::module::module(&spec).prepare(version)?;
+        adaptor::chart::chart(&spec).prepare(version)
+    }
+
+    fn tree(&self) -> Result<String, String> {
+        success("stage release version", self.git(["add", "-A"]))?;
+        read("write release version tree", self.git(["write-tree"]))
     }
 
     fn commit(&self, line: &str, version: &str) -> Result<String, String> {

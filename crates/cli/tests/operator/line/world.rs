@@ -11,6 +11,7 @@ pub enum Court {
     Nested(bool),
     Paged,
     Prepare(bool, PathBuf),
+    Freeze(PathBuf),
     Rejoin(PathBuf),
 }
 
@@ -115,6 +116,9 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
         ),
         Court::Prepare(..) | Court::Rejoin(_) if request.contains("GET /api/v1/user ") => {
             ("200 OK", json!({"login": "operator"}))
+        }
+        Court::Freeze(head) if request.contains("GET ") && request.contains("/branches/") => {
+            ("200 OK", cut(head))
         }
         Court::Prepare(..) | Court::Rejoin(_)
             if request.contains("GET ") && request.contains("branch_protections") =>

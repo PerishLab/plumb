@@ -3,6 +3,8 @@ mod command;
 #[cfg(unix)]
 mod datum;
 #[cfg(unix)]
+mod preparation;
+#[cfg(unix)]
 mod rejoined;
 #[cfg(unix)]
 mod retract;

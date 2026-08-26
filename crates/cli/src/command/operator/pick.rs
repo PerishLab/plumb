@@ -22,10 +22,15 @@ pub fn validate(root: &Path, name: &str) -> Result<(), String> {
         command(root, ["log", "--format=%H%x1f%B%x00", &range])?,
     )?;
     let version = name.strip_prefix("release/").unwrap_or(name);
+    let source = Source {
+        root,
+        version,
+        base: &base,
+    };
     let invalid = listed
         .split('\0')
         .filter_map(|record| record.trim_start().split_once('\u{1f}'))
-        .find(|(commit, body)| !sourced(root, commit, body, version));
+        .find(|(commit, body)| !sourced(&source, commit, body));
     if invalid.is_some() {
         return Err(format!(
             "{name} contains a commit without cherry-pick -x provenance"
@@ -34,12 +39,26 @@ pub fn validate(root: &Path, name: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn sourced(root: &Path, commit: &str, body: &str, version: &str) -> bool {
+struct Source<'a> {
+    root: &'a Path,
+    version: &'a str,
+    base: &'a str,
+}
+
+fn sourced(source: &Source<'_>, commit: &str, body: &str) -> bool {
     let body = body.trim();
     if body.is_empty() {
         return true;
     }
-    provenance(body) || super::datum::Seat(root).carried(commit, version)
+    provenance(body)
+        || super::datum::Seat(source.root).carried(commit, source.version)
+        || super::version::prepared(super::version::Preparation {
+            root: source.root,
+            commit,
+            base: source.base,
+            version: source.version,
+            body,
+        })
 }
 
 fn provenance(body: &str) -> bool {
