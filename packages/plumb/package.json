@@ -1,7 +1,7 @@
 {
 	"name": "@perish/plumb",
 	"description": "plumb carrier — the npm adaptor holds no export yet",
-	"version": "0.0.0",
+	"version": "0.35.0",
 	"type": "module",
 	"license": "MIT",
 	"main": "dist/index.js",
