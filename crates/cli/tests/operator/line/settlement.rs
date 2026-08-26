@@ -47,8 +47,14 @@ case "$*" in
   "rev-parse --show-toplevel") printf '%s\n' "$COURT_ROOT" ;;
   "remote get-url origin") printf '%s\n' "https://forge.test/test/probe.git" ;;
   "fetch --prune origin") ;;
+  "fetch origin refs/heads/rejoin/v1.2.0") ;;
+  "rev-parse FETCH_HEAD^{commit}") printf '%s\n' "dddddddddddddddddddddddddddddddddddddddd" ;;
   "rev-parse origin/main^{commit}") printf '%s\n' "cccccccccccccccccccccccccccccccccccccccc" ;;
   "rev-parse origin/main^{tree}") printf '%s\n' "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" ;;
+  "rev-parse dddddddddddddddddddddddddddddddddddddddd^{tree}") printf '%s\n' "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" ;;
+  "rev-list --parents --max-count=1 dddddddddddddddddddddddddddddddddddddddd")
+    printf '%s\n' "dddddddddddddddddddddddddddddddddddddddd cccccccccccccccccccccccccccccccccccccccc bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    ;;
   "commit-tree "*) printf '%s\n' "dddddddddddddddddddddddddddddddddddddddd" ;;
   "diff-tree --quiet "*) ;;
   "push --force-with-lease origin "*) ;;
@@ -160,4 +166,54 @@ fn retains() {
         .expect("merge");
     assert!(merge.contains(r#""delete_branch_after_merge":false"#));
     assert!(merge.contains(r#""Do":"fast-forward-only""#), "{merge}");
+}
+
+#[test]
+fn resumes() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let settled = fixture.path().join("settled");
+    let resume = fixture.path().join("resume");
+    std::fs::write(&resume, "open pull already proved\n").expect("resume marker");
+    let (forge, held) = serve(Court::Rejoin(settled.clone()), 10);
+    seed(fixture.path());
+    let calls = fixture.path().join("calls");
+    let path = format!(
+        "{}:{}",
+        fixture.path().join("bin").display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["release", "rejoin", "--version", "v1.2.0"])
+        .current_dir(fixture.path())
+        .env("PATH", path)
+        .env("FORGEJO_TOKEN", "test-token")
+        .env("FORGEJO_URL", forge)
+        .env("COURT_ROOT", fixture.path())
+        .env("COURT_CALLS", &calls)
+        .env("COURT_SETTLED", &settled)
+        .output()
+        .expect("plumb");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let calls = std::fs::read_to_string(calls).expect("calls");
+    assert!(
+        calls.contains("git fetch origin refs/heads/rejoin/v1.2.0"),
+        "{calls}"
+    );
+    assert!(!calls.contains("git commit-tree"), "{calls}");
+    assert!(!calls.contains("git push"), "{calls}");
+    let held = held.lock().expect("forge calls");
+    assert!(
+        !held
+            .iter()
+            .any(|call| call.starts_with("POST ") && call.contains("/pulls HTTP/1.1")),
+        "{held:?}"
+    );
+    assert!(
+        held.iter().any(|call| call.contains("/pulls/12/merge")),
+        "{held:?}"
+    );
 }

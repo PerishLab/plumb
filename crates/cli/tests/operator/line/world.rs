@@ -1,7 +1,7 @@
 use serde_json::{Value, json};
 use std::io::{Read, Write};
 use std::net::TcpListener;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 pub enum Court {
@@ -147,15 +147,9 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
             "200 OK",
             json!({"commit":{"id":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}),
         ),
-        Court::Rejoin(_) if request.contains("GET ") && request.contains("/pulls?") => (
-            "200 OK",
-            json!([{
-                "number": 9,
-                "state": "closed",
-                "head": {"ref": "release/v1.2.0"},
-                "base": {"ref": "main"}
-            }]),
-        ),
+        Court::Rejoin(settled) if request.contains("GET ") && request.contains("/pulls?") => {
+            ("200 OK", pulls(settled))
+        }
         Court::Rejoin(_) if request.contains("POST ") && request.ends_with("/pulls HTTP/1.1") => {
             ("201 Created", json!({"number": 12}))
         }
@@ -183,6 +177,24 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
             ("201 Created", cut(head))
         }
         _ => ("500 Internal Server Error", json!({"message": request})),
+    }
+}
+
+fn pulls(settled: &Path) -> Value {
+    if settled.with_file_name("resume").is_file() {
+        json!([{
+            "number": 12,
+            "state": "open",
+            "head": {"ref": "rejoin/v1.2.0"},
+            "base": {"ref": "main"}
+        }])
+    } else {
+        json!([{
+            "number": 9,
+            "state": "closed",
+            "head": {"ref": "release/v1.2.0"},
+            "base": {"ref": "main"}
+        }])
     }
 }
 

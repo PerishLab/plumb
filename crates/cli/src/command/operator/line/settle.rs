@@ -88,41 +88,59 @@ fn joined(course: &mut Course, client: &Client, held: Join<'_>) -> Result<(), St
     } = held;
     let remote = client.remote();
     let projection = format!("rejoin/{}", published.version);
-    let made =
-        format!("git commit-tree origin/main with {name} as second parent, then push {projection}");
-    let head = course.step(made, || topology(&held, &projection))?;
-    if course.dry() {
-        course.step(
-            format!(
+    let standing = client.find(&projection)?;
+    let (head, pull) = match standing {
+        Some(pull) => {
+            let head = super::recovery::head(held.root, &held.published.commit, &projection)?;
+            course.step(
+                format!("reuse open pull #{} at {head}", pull.number),
+                || Ok(()),
+            )?;
+            (head, Some(pull))
+        }
+        None => {
+            let made = format!(
+                "git commit-tree origin/main with {name} as second parent, then push {projection}"
+            );
+            let head = course.step(made, || topology(&held, &projection))?;
+            if course.dry() {
+                course.step(
+                    format!(
+                        "POST /repos/{}/{}/pulls ({projection} -> main, fast-forward-only)",
+                        remote.owner, remote.repo
+                    ),
+                    || Ok(()),
+                )?;
+                course.step(
+                    "await guard on the topology-only merge, then fast-forward that pull",
+                    || Ok(()),
+                )?;
+                return Ok(());
+            }
+            let head = head.ok_or_else(|| "the settlement made no topology commit".to_string())?;
+            let said = format!(
                 "POST /repos/{}/{}/pulls ({projection} -> main, fast-forward-only)",
                 remote.owner, remote.repo
-            ),
-            || Ok(()),
-        )?;
+            );
+            let body = format!("Topology-preserving settlement of {}.", published.url);
+            let pull = course.step(said, || {
+                client.raise(
+                    "main",
+                    &projection,
+                    &format!("Rejoin {}", published.version),
+                    &body,
+                )
+            })?;
+            (head, pull)
+        }
+    };
+    if course.dry() {
         course.step(
-            "await guard on the topology-only merge, then fast-forward that pull",
+            "await guard on the existing topology-only merge, then fast-forward that pull",
             || Ok(()),
         )?;
         return Ok(());
     }
-    let head = head.ok_or_else(|| "the settlement made no topology commit".to_string())?;
-    let standing = client.find(&projection)?;
-    let said = format!(
-        "POST /repos/{}/{}/pulls ({projection} -> main, fast-forward-only)",
-        remote.owner, remote.repo
-    );
-    let body = format!("Topology-preserving settlement of {}.", published.url);
-    let pull = match standing {
-        Some(pull) => Some(pull),
-        None => course.step(said, || {
-            client.raise(
-                "main",
-                &projection,
-                &format!("Rejoin {}", published.version),
-                &body,
-            )
-        })?,
-    };
     let said = match &pull {
         Some(pull) => format!(
             "await guard on {head}, then fast-forward pull #{}",

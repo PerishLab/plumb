@@ -1,4 +1,5 @@
 mod open;
+mod recovery;
 mod rejoined;
 mod settle;
 
