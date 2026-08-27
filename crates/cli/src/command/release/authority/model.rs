@@ -68,7 +68,7 @@ impl Model {
     }
 
     pub fn writer(&self) -> String {
-        format!("w:{}", self.bucket)
+        format!("publish:{}", self.bucket)
     }
 
     pub fn temporary(&self) -> String {

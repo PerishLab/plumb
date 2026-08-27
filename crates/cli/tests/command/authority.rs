@@ -20,7 +20,7 @@ struct Model {
 
 impl Model {
     fn writer(&self) -> String {
-        format!("w:{}", self.bucket)
+        format!("publish:{}", self.bucket)
     }
 }
 
@@ -71,4 +71,14 @@ fn ordered() {
 
     seen.secrets.extend(SECRETS.map(str::to_string));
     assert_eq!(plan::build(&model, &seen).1, None);
+}
+
+#[test]
+fn identity() {
+    let model = Model {
+        bucket: "perish-probe-releases".into(),
+        domain: "releases.probe.test".into(),
+        zone: "zone".into(),
+    };
+    assert_eq!(model.writer(), "publish:perish-probe-releases");
 }
