@@ -94,6 +94,29 @@ fn mapped() {
 
 #[test]
 #[cfg(any(feature = "vendor", feature = "skill"))]
+fn inventory() {
+    let get = |key: &str| match key {
+        "PLUMB_WORKFLOW_INVENTORY_ACCESS" => Some("access".to_string()),
+        "PLUMB_WORKFLOW_INVENTORY_SECRET" => Some("secret".to_string()),
+        "PLUMB_WORKFLOW_INVENTORY_BUCKET" => Some("bucket".to_string()),
+        "PLUMB_WORKFLOW_INVENTORY_ENDPOINT" => Some("https://s3.test".to_string()),
+        "PLUMB_WORKFLOW_INVENTORY_URL" => Some("https://inventory.test/inventory.json".to_string()),
+        _ => None,
+    };
+    let held =
+        plumb::rig::Rig::default().merge(plumb::rig::Rig::lookup("PLUMB", &get).expect("rig"));
+    assert_eq!(held.workflow.inventory.access, "access");
+    assert_eq!(held.workflow.inventory.secret, "secret");
+    assert_eq!(held.workflow.inventory.bucket, "bucket");
+    assert_eq!(held.workflow.inventory.endpoint, "https://s3.test");
+    assert_eq!(
+        held.workflow.inventory.url,
+        "https://inventory.test/inventory.json"
+    );
+}
+
+#[test]
+#[cfg(any(feature = "vendor", feature = "skill"))]
 fn authority() {
     let dir = tempfile::tempdir().expect("fixture");
     let file = dir.path().join("secret");

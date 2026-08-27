@@ -236,6 +236,8 @@ impl Default for Rules {
 pub struct Workflow {
     pub force: bool,
     pub seat: String,
+    #[cascade(section)]
+    pub inventory: Authority,
 }
 
 #[derive(Debug, Default, PartialEq, Cascade)]
@@ -247,6 +249,7 @@ pub struct Authority {
     pub file: PathBuf,
     pub bucket: String,
     pub endpoint: String,
+    pub url: String,
 }
 
 impl Authority {

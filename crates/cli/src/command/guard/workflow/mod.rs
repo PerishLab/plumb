@@ -1,4 +1,6 @@
+mod inventory;
 mod plan;
+mod record;
 mod remote;
 mod reuse;
 mod spread;
@@ -41,6 +43,8 @@ pub enum Deed {
         #[command(flatten)]
         target: Root,
     },
+    #[command(about = "Publish one reusable workload into the shared workflow inventory")]
+    Record(record::Input),
 }
 
 pub fn run(deed: Deed) -> i32 {
@@ -50,6 +54,7 @@ pub fn run(deed: Deed) -> i32 {
         Deed::Plan(input) => plan::run(input),
         Deed::Hash { key, target } => Seat::new(target).compare(&key),
         Deed::Lock { key, target } => Seat::new(target).record(&key),
+        Deed::Record(input) => record::run(input),
     }
 }
 

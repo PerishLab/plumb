@@ -54,9 +54,16 @@ impl Context {
         if let Some(domain) = &domain
             && domain.zone != self.model.zone
         {
-            return Err(format!("release domain belongs to zone {}", domain.zone));
+            return Err(format!(
+                "{} domain belongs to zone {}",
+                self.model.profile, domain.zone
+            ));
         }
-        let secrets = Client::new(self.model.remote.clone())?.secrets()?;
+        let forge = Client::new(self.model.remote.clone())?;
+        let secrets = match self.model.organization() {
+            Some(owner) => forge.held(owner)?,
+            None => forge.secrets()?,
+        };
         Ok(Observation {
             bucket,
             domain,

@@ -108,3 +108,9 @@ owns no raw provider route, credential store, or private instance state. Generic
 provisioning remains refused: a new external resource kind first needs a closed
 profile with an explicit lifecycle, not another downstream schema or an open
 bag of provider arguments.
+
+The closed workflow profile owns the shared inventory bucket, public domain,
+bucket-scoped writer escrow, and organization Actions-secret binding. The
+`workflow record` transaction owns immutable workload upload and conditional
+inventory merge. Reusable workflows transport that transaction; ordinary
+repositories own neither R2 configuration nor inventory JSON.

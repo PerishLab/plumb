@@ -20,24 +20,27 @@ pub struct Step {
 pub fn build(model: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
     let mut plan = Builder::default();
     if seen.bucket {
-        plan.ready("release.bucket", format!("{} exists", model.bucket));
+        plan.ready(
+            resource(model, "bucket"),
+            format!("{} exists", model.bucket),
+        );
     } else {
         plan.change(
-            "release.bucket",
+            resource(model, "bucket"),
             format!("create R2 bucket {}", model.bucket),
             Action::Bucket,
         );
     }
     if !seen.bucket {
-        plan.deferred("release.domain", "waiting for release.bucket");
+        plan.deferred(resource(model, "domain"), wait(model, "bucket"));
     } else if seen.domain.as_ref().is_some_and(|held| held.ready()) {
         plan.ready(
-            "release.domain",
+            resource(model, "domain"),
             format!("{} serves active TLS 1.2", model.domain),
         );
     } else {
         plan.change(
-            "release.domain",
+            resource(model, "domain"),
             format!(
                 "attach or normalize {} in zone {}",
                 model.domain, model.zone
@@ -46,22 +49,23 @@ pub fn build(model: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
         );
     }
     if !seen.bucket || !seen.domain.as_ref().is_some_and(|held| held.ready()) {
-        plan.deferred("release.capability", "waiting for release.domain");
+        plan.deferred(resource(model, "capability"), wait(model, "domain"));
     } else if seen.capability.is_some() && seen.escrow.is_some() {
         plan.ready(
-            "release.capability",
+            resource(model, "capability"),
             "bucket-scoped writer matches its local escrow",
         );
     } else {
         plan.change(
-            "release.capability",
+            resource(model, "capability"),
             format!("mint {} and retain its one-time secret", model.writer()),
             Action::Capability,
         );
     }
     if seen.escrow.is_none() {
         plan.deferred("repository.secrets", "waiting for release.capability");
-    } else if super::SECRETS
+    } else if model
+        .secrets()
         .iter()
         .all(|name| seen.secrets.contains(*name))
     {
@@ -77,6 +81,22 @@ pub fn build(model: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
         );
     }
     plan.finish()
+}
+
+fn resource(model: &Model, name: &'static str) -> &'static str {
+    match (model.profile, name) {
+        ("release", "bucket") => "release.bucket",
+        ("release", "domain") => "release.domain",
+        ("release", "capability") => "release.capability",
+        ("workflow", "bucket") => "workflow.bucket",
+        ("workflow", "domain") => "workflow.domain",
+        ("workflow", "capability") => "workflow.capability",
+        _ => "authority.resource",
+    }
+}
+
+fn wait(model: &Model, name: &str) -> String {
+    format!("waiting for {}.{name}", model.profile)
 }
 
 #[derive(Default)]

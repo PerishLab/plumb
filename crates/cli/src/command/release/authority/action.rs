@@ -2,7 +2,7 @@ use plumb::forgejo::Client;
 use std::{thread, time::Duration};
 
 use super::cloudflare::Grant;
-use super::{Action, ITEM, SECRETS, context::Context, escrow::Escrow};
+use super::{Action, ITEM, context::Context, escrow::Escrow};
 
 impl Context {
     pub fn apply(&self, action: Action) -> Result<(), String> {
@@ -92,16 +92,30 @@ impl Context {
             .ok_or_else(|| "release escrow disappeared after planning".to_string())?;
         held.exact(&self.model.bucket, self.factory.id())?;
         let client = Client::new(self.model.remote.clone())?;
-        for (name, value) in [
-            (SECRETS[0], held.access.as_str()),
-            (SECRETS[1], held.secret.as_str()),
-            (SECRETS[2], held.bucket.as_str()),
-            (SECRETS[3], held.endpoint.as_str()),
-        ] {
-            client.set(name, value)?;
+        let inventory = self.model.inventory();
+        let values = [
+            held.access.as_str(),
+            held.secret.as_str(),
+            held.bucket.as_str(),
+            held.endpoint.as_str(),
+            inventory.as_str(),
+        ];
+        for (name, value) in self.model.secrets().iter().zip(values) {
+            match self.model.organization() {
+                Some(owner) => client.store(owner, name, value)?,
+                None => client.set(name, value)?,
+            };
         }
-        let present = client.secrets()?;
-        if SECRETS.iter().all(|name| present.contains(*name)) {
+        let present = match self.model.organization() {
+            Some(owner) => client.held(owner)?,
+            None => client.secrets()?,
+        };
+        if self
+            .model
+            .secrets()
+            .iter()
+            .all(|name| present.contains(*name))
+        {
             Ok(())
         } else {
             Err("Forgejo publish-secret upsert did not verify".into())

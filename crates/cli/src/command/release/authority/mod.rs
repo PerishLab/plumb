@@ -8,7 +8,7 @@ mod registry;
 
 use clap::Subcommand;
 use context::Context;
-use model::{Model, Release};
+use model::{Model, Release, Workflow};
 use serde::Serialize;
 use std::collections::BTreeSet;
 
@@ -25,7 +25,6 @@ const SECRETS: [&str; 4] = [
     "RELEASE_PUBLISH_S3_BUCKET",
     "RELEASE_PUBLISH_S3_ENDPOINT",
 ];
-
 fn product(root: &std::path::Path) -> Result<String, String> {
     crate::shape::release::Spec::read(&root.join("plumb.toml")).map(|spec| spec.product)
 }
@@ -34,6 +33,8 @@ fn product(root: &std::path::Path) -> Result<String, String> {
 pub enum Deed {
     #[command(about = "Converge the closed release-delivery authority profile")]
     Release(Release),
+    #[command(about = "Converge the closed shared-workflow inventory authority profile")]
+    Workflow(Workflow),
     #[command(about = "Converge the closed package-registry authority profile")]
     Registry(registry::Input),
 }
@@ -65,7 +66,8 @@ struct Plan {
 
 #[derive(Serialize)]
 struct Report<'a> {
-    schema: &'static str,
+    schema: String,
+    profile: &'a str,
     product: &'a str,
     bucket: &'a str,
     domain: &'a str,
@@ -77,6 +79,7 @@ struct Report<'a> {
 pub fn run(deed: Deed) -> i32 {
     let result = match deed {
         Deed::Release(release) => execute(release),
+        Deed::Workflow(input) => workflow(input),
         Deed::Registry(registry) => registry::execute(registry),
     };
     match result {
@@ -105,6 +108,26 @@ fn execute(input: Release) -> Result<(), String> {
     }
 }
 
+fn workflow(input: Workflow) -> Result<(), String> {
+    let apply = input.apply;
+    let json = input.json;
+    converge(Model::workflow(input)?, apply, json)
+}
+
+fn converge(model: Model, apply: bool, json: bool) -> Result<(), String> {
+    let mut held = Plan::inspect(model)?;
+    if !apply {
+        return held.print(json);
+    }
+    loop {
+        if held.action.is_none() {
+            return held.print(json);
+        }
+        held.apply()?;
+        held = Plan::inspect(held.context.model.clone())?;
+    }
+}
+
 impl Plan {
     fn inspect(model: Model) -> Result<Self, String> {
         let context = Context::open(model)?;
@@ -120,7 +143,8 @@ impl Plan {
 
     fn print(&self, json: bool) -> Result<(), String> {
         let report = Report {
-            schema: "plumb.release-authority-plan/v1",
+            schema: format!("plumb.{}-authority-plan/v1", self.context.model.profile),
+            profile: self.context.model.profile,
             product: &self.context.model.product,
             bucket: &self.context.model.bucket,
             domain: &self.context.model.domain,
@@ -139,7 +163,10 @@ impl Plan {
                     .map_err(|error| format!("cannot encode authority plan: {error}"))?
             );
         } else {
-            println!("release authority {}: {}", report.product, report.state);
+            println!(
+                "{} authority {}: {}",
+                report.profile, report.product, report.state
+            );
             for step in report.steps {
                 let state = match step.status {
                     plan::Status::Ready => "observed",

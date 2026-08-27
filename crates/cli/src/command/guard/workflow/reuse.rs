@@ -5,7 +5,8 @@ use std::path::Path;
 
 const SCHEMA: &str = "plumb.workflow-inventory/v1";
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Keys {
     pub workload: String,
     pub proof: String,
@@ -32,25 +33,25 @@ pub struct Verdict {
     pub source: Source,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Inventory {
     #[serde(default)]
-    schema: String,
+    pub(super) schema: String,
     #[serde(default)]
-    records: Vec<Record>,
+    pub(super) records: Vec<Record>,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct Record {
-    action: String,
-    workload: String,
+pub(super) struct Record {
+    pub(super) action: String,
+    pub(super) workload: String,
     #[serde(default)]
-    proof: Option<String>,
+    pub(super) proof: Option<String>,
     #[serde(default)]
-    publication: Option<String>,
-    source: Source,
+    pub(super) publication: Option<String>,
+    pub(super) source: Source,
 }
 
 #[derive(PartialEq)]
@@ -82,9 +83,16 @@ impl<'a> Context<'a> {
 }
 
 impl Inventory {
+    pub fn empty() -> Self {
+        Self {
+            schema: SCHEMA.to_string(),
+            records: Vec::new(),
+        }
+    }
+
     pub fn read(path: Option<&Path>) -> Result<Self, String> {
         let Some(path) = path else {
-            return Ok(Self::default());
+            return Ok(Self::empty());
         };
         let text = std::fs::read_to_string(path).map_err(|error| {
             format!("cannot read workflow inventory {}: {error}", path.display())
@@ -179,24 +187,7 @@ impl Inventory {
             return Err(format!("workflow inventory schema must be {SCHEMA}"));
         }
         for record in &self.records {
-            if record.action.trim().is_empty() {
-                return Err("workflow inventory record names no action".to_string());
-            }
-            hash(&record.workload)?;
-            if let Some(proof) = &record.proof {
-                hash(proof)?;
-            }
-            if let Some(publication) = &record.publication {
-                hash(publication)?;
-            }
-            if !matches!(record.source.kind.as_str(), "url" | "workload")
-                || record.source.source.trim().is_empty()
-            {
-                return Err(format!(
-                    "workflow inventory record {} has an invalid source",
-                    record.action
-                ));
-            }
+            record.valid()?;
         }
         Ok(())
     }
@@ -248,7 +239,7 @@ fn digest(action: &str, input: &str, fields: &BTreeMap<String, String>) -> Strin
     format!("{:x}", sponge.finalize())
 }
 
-fn hash(value: &str) -> Result<(), String> {
+pub(super) fn hash(value: &str) -> Result<(), String> {
     if value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         Ok(())
     } else {

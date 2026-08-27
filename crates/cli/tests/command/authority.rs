@@ -13,6 +13,8 @@ enum Action {
 }
 
 struct Model {
+    profile: &'static str,
+    secrets: &'static [&'static str],
     bucket: String,
     domain: String,
     zone: String,
@@ -21,6 +23,10 @@ struct Model {
 impl Model {
     fn writer(&self) -> String {
         format!("publish:{}", self.bucket)
+    }
+
+    fn secrets(&self) -> &'static [&'static str] {
+        self.secrets
     }
 }
 
@@ -46,6 +52,8 @@ mod plan;
 #[test]
 fn ordered() {
     let model = Model {
+        profile: "release",
+        secrets: &SECRETS,
         bucket: "perish-probe-releases".into(),
         domain: "releases.probe.test".into(),
         zone: "zone".into(),
@@ -76,9 +84,33 @@ fn ordered() {
 #[test]
 fn identity() {
     let model = Model {
+        profile: "release",
+        secrets: &SECRETS,
         bucket: "perish-probe-releases".into(),
         domain: "releases.probe.test".into(),
         zone: "zone".into(),
     };
     assert_eq!(model.writer(), "publish:perish-probe-releases");
+}
+
+#[test]
+fn workflow() {
+    const HELD: [&str; 5] = ["access", "secret", "bucket", "endpoint", "url"];
+    let model = Model {
+        profile: "workflow",
+        secrets: &HELD,
+        bucket: "perish-workflow-inventory".into(),
+        domain: "inventory.plumb.test".into(),
+        zone: "zone".into(),
+    };
+    let mut seen = Observation {
+        bucket: true,
+        domain: Some(Custom(true)),
+        capability: Some("writer".into()),
+        escrow: Some(()),
+        secrets: SECRETS.map(str::to_string).into_iter().collect(),
+    };
+    assert_eq!(plan::build(&model, &seen).1, Some(Action::Repository));
+    seen.secrets.insert("url".into());
+    assert_eq!(plan::build(&model, &seen).1, None);
 }

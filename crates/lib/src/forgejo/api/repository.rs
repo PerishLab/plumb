@@ -3,6 +3,16 @@ use serde_json::Value;
 use std::collections::BTreeSet;
 
 impl Client {
+    pub fn held(&self, owner: &str) -> Result<BTreeSet<String>, String> {
+        let value = self.call(&["org", "secret", "list", owner])?;
+        names(&value, "organization")
+    }
+
+    pub fn store(&self, owner: &str, name: &str, value: &str) -> Result<u16, String> {
+        self.call(&["org", "secret", "set", owner, name, "--body", value])?;
+        Ok(204)
+    }
+
     pub fn patch(&self, route: &str, body: Value) -> Result<u16, String> {
         if !route.is_empty() {
             return Err("forgejo: repository patch route is not supported".into());
@@ -18,20 +28,7 @@ impl Client {
 
     pub fn secrets(&self) -> Result<BTreeSet<String>, String> {
         let value = self.call(&["secret", "list"])?;
-        let listed = value
-            .as_array()
-            .ok_or_else(|| "forgejo: repository secret list is not an array".to_string())?;
-        listed
-            .iter()
-            .map(|entry| {
-                entry
-                    .get("name")
-                    .and_then(Value::as_str)
-                    .filter(|name| !name.is_empty())
-                    .map(str::to_string)
-                    .ok_or_else(|| "forgejo: repository secret has no name".to_string())
-            })
-            .collect()
+        names(&value, "repository")
     }
 
     pub fn set(&self, name: &str, value: &str) -> Result<u16, String> {
@@ -43,4 +40,21 @@ impl Client {
         self.call(&["repo", "delete"])?;
         Ok(204)
     }
+}
+
+fn names(value: &Value, scope: &str) -> Result<BTreeSet<String>, String> {
+    let listed = value
+        .as_array()
+        .ok_or_else(|| format!("forgejo: {scope} secret list is not an array"))?;
+    listed
+        .iter()
+        .map(|entry| {
+            entry
+                .get("name")
+                .and_then(Value::as_str)
+                .filter(|name| !name.is_empty())
+                .map(str::to_string)
+                .ok_or_else(|| format!("forgejo: {scope} secret has no name"))
+        })
+        .collect()
 }
