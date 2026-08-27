@@ -1,5 +1,6 @@
 use serde::Serialize;
 use std::collections::BTreeSet;
+use std::process::Command;
 
 const SECRETS: [&str; 4] = ["access", "secret", "bucket", "endpoint"];
 
@@ -128,5 +129,50 @@ fn workflow() {
     assert_eq!(
         steps[3].detail,
         "all five opaque workflow inventory seats are present"
+    );
+    let root = std::env::temp_dir().join("plumb-workflow-organization");
+    if root.exists() {
+        std::fs::remove_dir_all(&root).expect("old fixture should be swept");
+    }
+    std::fs::create_dir_all(&root).expect("fixture should be made");
+    assert!(
+        Command::new("git")
+            .args(["init", "-q"])
+            .current_dir(&root)
+            .status()
+            .expect("git should run")
+            .success()
+    );
+    assert!(
+        Command::new("git")
+            .args([
+                "remote",
+                "add",
+                "origin",
+                "ssh://git@git.perish.top/PerishLab/actions.git"
+            ])
+            .current_dir(&root)
+            .status()
+            .expect("git should run")
+            .success()
+    );
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args([
+            "authority",
+            "workflow",
+            root.to_str().expect("fixture path should be utf8"),
+            "--domain",
+            "inventory.plumb.test",
+            "--zone-id",
+            "zone",
+            "--organization",
+            "PerishFire/escape",
+        ])
+        .output()
+        .expect("plumb should run");
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("--organization must name one Forgejo organization")
     );
 }

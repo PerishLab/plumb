@@ -29,6 +29,11 @@ pub struct Workflow {
     #[arg(long, help = "Public HTTPS hostname serving the shared inventory")]
     domain: String,
     #[arg(
+        long,
+        help = "Forgejo organization whose caller workflows consume the inventory"
+    )]
+    organization: Option<String>,
+    #[arg(
         long = "zone-id",
         help = "Exact Cloudflare zone ID that owns the inventory domain"
     )]
@@ -59,7 +64,7 @@ const WORKFLOW: [&str; 5] = [
 #[derive(Clone)]
 pub(super) enum Scope {
     Repository,
-    Organization,
+    Organization(String),
 }
 
 #[derive(Clone)]
@@ -127,6 +132,12 @@ impl Model {
         } else {
             root.join(escrow)
         };
+        let remote = git::remote(&root, "")?;
+        let organization = input.organization.unwrap_or_else(|| remote.owner.clone());
+        let organization = organization.trim();
+        if organization.is_empty() || organization.contains(['/', '\r', '\n']) {
+            return Err("--organization must name one Forgejo organization".into());
+        }
         Ok(Self {
             profile: "workflow",
             bucket: "perish-workflow-inventory".into(),
@@ -134,8 +145,8 @@ impl Model {
             domain,
             zone: input.zone,
             escrow,
-            remote: git::remote(&root, "")?,
-            scope: Scope::Organization,
+            remote,
+            scope: Scope::Organization(organization.to_string()),
         })
     }
 
@@ -148,9 +159,9 @@ impl Model {
     }
 
     pub fn secrets(&self) -> &'static [&'static str] {
-        match self.scope {
+        match &self.scope {
             Scope::Repository => &RELEASE,
-            Scope::Organization => &WORKFLOW,
+            Scope::Organization(_) => &WORKFLOW,
         }
     }
 
@@ -159,7 +170,10 @@ impl Model {
     }
 
     pub fn organization(&self) -> Option<&str> {
-        matches!(self.scope, Scope::Organization).then_some(self.remote.owner.as_str())
+        match &self.scope {
+            Scope::Repository => None,
+            Scope::Organization(owner) => Some(owner),
+        }
     }
 }
 
