@@ -7,15 +7,18 @@ repository.workspace = true
 publish = ["perish"]
 
 [features]
+depot = [
+  "dep:ureq",
+]
 radius = [
 ]
 vendor = [
   "dep:runseal",
 ]
 skill = [
+  "depot",
   "dep:flate2",
   "dep:tar",
-  "dep:ureq",
 ]
 
 [dependencies]

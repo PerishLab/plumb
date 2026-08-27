@@ -77,10 +77,13 @@ answers for.
 
 - `release` holds the truth cycle and `ship` holds every projection of it. No
   verb and no rule states that division for you, which is why it is here.
-- `depot` holds release-bound derivatives. Configuration and changelog snapshots
+- `depot` holds release-bound derivatives. Configuration, changelog, and skill snapshots
   iterate by timestamp, but their product, channel, version, commit, and seal
   remain bound to Release. Only the Release channel's current stable point may
   advance a derivative's latest pointer; historical points remain addressable.
+  Changelog and skill source trees are temporary media below `PLUMB_HOME`, never
+  repository seats. Products consume a skill through their own command surface
+  while delegating its exact generation and digest binding to `plumb` the library.
 - This repository renders and carries its own release lanes and reaches no
   shared caller, because the tool that renders a lane cannot depend on a copy of
   itself to render its own.

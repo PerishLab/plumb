@@ -85,6 +85,13 @@ impl Batch {
         Self::gather(plumb::depot::v2::Kind::Changelog, draft, bodies)
     }
 
+    pub fn skill(draft: Draft, bodies: BTreeMap<String, Vec<u8>>) -> Result<Self, String> {
+        if !bodies.contains_key("SKILL.md") {
+            return Err("skill derivative holds no SKILL.md".into());
+        }
+        Self::gather(plumb::depot::v2::Kind::Skill, draft, bodies)
+    }
+
     fn gather(
         derivative: plumb::depot::v2::Kind,
         draft: Draft,

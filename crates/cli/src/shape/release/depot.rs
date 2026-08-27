@@ -44,7 +44,7 @@ impl Depot {
                 return Err(format!("depot validator {binary} is not a released binary"));
             }
         } else if !self.validator.is_empty() {
-            return Err("a changelog-only depot cannot declare a validator command".into());
+            return Err("a knowledge-only depot cannot declare a validator command".into());
         }
         Ok(())
     }

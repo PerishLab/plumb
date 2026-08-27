@@ -1,3 +1,4 @@
+mod knowledge;
 pub mod notes;
 mod seat;
 mod store;
@@ -91,6 +92,19 @@ pub enum Deed {
         #[arg(long = "dry-run")]
         dry: bool,
     },
+    #[command(about = "Publish the skill generation one product version carries")]
+    Skill {
+        #[arg(default_value = ".")]
+        root: String,
+        #[arg(long)]
+        version: String,
+        #[arg(long, default_value = "")]
+        from: String,
+        #[arg(long)]
+        keep: bool,
+        #[arg(long = "dry-run")]
+        dry: bool,
+    },
     #[command(about = "Bring the local Plumb rules seat to the version its channel names")]
     Sync,
     #[command(about = "Report the Plumb rules source, local seat, and held version")]
@@ -121,12 +135,30 @@ fn execute(deed: Deed) -> Result<String, String> {
             from,
             keep,
             dry,
-        } => Tree(&PathBuf::from(root)).notes(Wanted {
-            version: &version,
-            from: &from,
+        } => knowledge::changelog(
+            &PathBuf::from(root),
+            knowledge::Wanted {
+                version: &version,
+                from: &from,
+                keep,
+                dry,
+            },
+        ),
+        Deed::Skill {
+            root,
+            version,
+            from,
             keep,
             dry,
-        }),
+        } => knowledge::skill(
+            &PathBuf::from(root),
+            knowledge::Wanted {
+                version: &version,
+                from: &from,
+                keep,
+                dry,
+            },
+        ),
         Deed::Sync => seat::sync(&rig.rules.source, &rig.rules.channel, &over),
         Deed::Show => show(&rig, &over),
     }
@@ -147,13 +179,6 @@ fn show(rig: &Rig, over: &Path) -> Result<String, String> {
         rig.rules.source,
         base.display()
     ))
-}
-
-struct Wanted<'a> {
-    version: &'a str,
-    from: &'a str,
-    keep: bool,
-    dry: bool,
 }
 
 struct Tree<'a>(&'a Path);
@@ -183,73 +208,6 @@ impl Tree<'_> {
         let advance = release.current(&binding.release)?;
         rig.depot.authority.load()?;
         store::Remote::new(&rig.depot.authority)?.derive(&plan, advance)
-    }
-
-    fn notes(&self, wanted: Wanted<'_>) -> Result<String, String> {
-        let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-        let staged = wanted.from.is_empty();
-        let source = if staged {
-            plumb::seat::tmp(self.0, seat::KEY)
-                .join("changelog")
-                .join(wanted.version)
-        } else {
-            PathBuf::from(wanted.from)
-        };
-        let proof = crate::command::changelog::prove(self.0, &source, wanted.version)?;
-        let spec = crate::shape::release::Spec::read(&self.0.join("plumb.toml"))?;
-        let depot = spec.derivative(plumb::depot::v2::Kind::Changelog)?;
-        let release = crate::command::release::depot(&spec);
-        let binding = release.binding(wanted.version, false)?;
-        if binding.release.channel != "stable" {
-            return Err(format!(
-                "the {} channel does not owe a changelog derivative",
-                binding.release.channel
-            ));
-        }
-        if binding.release.commit != proof.candidate {
-            return Err(format!(
-                "changelog proves commit {}, but release {} seals {}",
-                proof.candidate, binding.release.version, binding.release.commit
-            ));
-        }
-        let batch = notes::Batch::gather(&source)?;
-        let plan = record::Batch::changelog(
-            record::Draft {
-                source: depot.source.clone(),
-                release: binding.release.clone(),
-                timestamp: super::clock::mark()?,
-                commit: proof.candidate.clone(),
-            },
-            batch.bodies,
-        )?;
-        if wanted.dry {
-            return Ok(format!(
-                "{}\n{} lines within a budget of {} for {} units",
-                plan.manifest.encode()?,
-                proof
-                    .languages
-                    .values()
-                    .map(|held| held.lines)
-                    .max()
-                    .unwrap_or_default(),
-                proof
-                    .languages
-                    .values()
-                    .map(|held| held.budget)
-                    .max()
-                    .unwrap_or_default(),
-                proof.units
-            ));
-        }
-        let advance = release.current(&binding.release)?;
-        rig.depot.authority.load()?;
-        let held = store::Remote::new(&rig.depot.authority)?.derive(&plan, advance)?;
-        if staged && !wanted.keep {
-            std::fs::remove_dir_all(&source)
-                .map_err(|error| format!("cannot clear {}: {error}", source.display()))?;
-            return Ok(format!("{held}, and cleared {}", source.display()));
-        }
-        Ok(held)
     }
 
     fn clean(&self) -> Result<(), String> {

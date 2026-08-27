@@ -4,26 +4,15 @@ use std::collections::BTreeSet;
 use super::{Object, sha};
 use value::Value;
 
+mod kind;
 mod local;
 mod value;
 
+#[cfg(feature = "depot")]
+pub mod media;
+
+pub use kind::Kind;
 pub use local::{FORMAT, LEAF, POINTER, local};
-
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Kind {
-    Configuration,
-    Changelog,
-}
-
-impl Kind {
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Configuration => "configuration",
-            Self::Changelog => "changelog",
-        }
-    }
-}
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]

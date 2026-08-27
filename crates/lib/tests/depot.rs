@@ -161,6 +161,11 @@ fn routes() {
             .expect("latest path"),
         "v2/products/probe/derivatives/changelog/channels/stable/latest.json"
     );
+    assert_eq!(
+        plumb::depot::v2::latest("probe", plumb::depot::v2::Kind::Skill, "stable")
+            .expect("latest skill path"),
+        "v2/products/probe/derivatives/skill/channels/stable/latest.json"
+    );
 }
 
 #[test]

@@ -111,7 +111,7 @@ skill = true
 
 [release.depot]
 source = "https://depot.plumb.perish.uk"
-derivatives = ["configuration", "changelog"]
+derivatives = ["configuration", "changelog", "skill"]
 validator = ["plumb", "doctor"]
 
 [release.oci]
