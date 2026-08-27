@@ -63,20 +63,28 @@ pub fn build(model: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
         );
     }
     if seen.escrow.is_none() {
-        plan.deferred("repository.secrets", "waiting for release.capability");
+        plan.deferred(resource(model, "secrets"), wait(model, "capability"));
     } else if model
         .secrets()
         .iter()
         .all(|name| seen.secrets.contains(*name))
     {
         plan.ready(
-            "repository.secrets",
-            "all four opaque publish seats are present",
+            resource(model, "secrets"),
+            match model.profile {
+                "release" => "all four opaque release publish seats are present",
+                "workflow" => "all five opaque workflow inventory seats are present",
+                _ => "all authority secret seats are present",
+            },
         );
     } else {
         plan.change(
-            "repository.secrets",
-            "upsert exactly the four release publish secrets",
+            resource(model, "secrets"),
+            match model.profile {
+                "release" => "upsert exactly the four release publish secrets",
+                "workflow" => "upsert exactly the five workflow inventory secrets",
+                _ => "converge the authority secrets",
+            },
             Action::Repository,
         );
     }
@@ -88,9 +96,11 @@ fn resource(model: &Model, name: &'static str) -> &'static str {
         ("release", "bucket") => "release.bucket",
         ("release", "domain") => "release.domain",
         ("release", "capability") => "release.capability",
+        ("release", "secrets") => "repository.secrets",
         ("workflow", "bucket") => "workflow.bucket",
         ("workflow", "domain") => "workflow.domain",
         ("workflow", "capability") => "workflow.capability",
+        ("workflow", "secrets") => "organization.secrets",
         _ => "authority.resource",
     }
 }

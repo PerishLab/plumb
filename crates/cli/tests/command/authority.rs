@@ -107,10 +107,26 @@ fn workflow() {
         bucket: true,
         domain: Some(Custom(true)),
         capability: Some("writer".into()),
-        escrow: Some(()),
+        escrow: None,
         secrets: SECRETS.map(str::to_string).into_iter().collect(),
     };
-    assert_eq!(plan::build(&model, &seen).1, Some(Action::Repository));
+    let (steps, _) = plan::build(&model, &seen);
+    assert_eq!(steps[3].resource, "organization.secrets");
+    assert_eq!(steps[3].detail, "waiting for workflow.capability");
+    seen.escrow = Some(());
+    let (steps, action) = plan::build(&model, &seen);
+    assert_eq!(action, Some(Action::Repository));
+    assert_eq!(steps[3].resource, "organization.secrets");
+    assert_eq!(
+        steps[3].detail,
+        "upsert exactly the five workflow inventory secrets"
+    );
     seen.secrets.insert("url".into());
-    assert_eq!(plan::build(&model, &seen).1, None);
+    let (steps, action) = plan::build(&model, &seen);
+    assert_eq!(action, None);
+    assert_eq!(steps[3].resource, "organization.secrets");
+    assert_eq!(
+        steps[3].detail,
+        "all five opaque workflow inventory seats are present"
+    );
 }
