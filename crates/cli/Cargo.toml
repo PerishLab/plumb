@@ -39,7 +39,7 @@ name = "repository"
 path = "tests/repository/main.rs"
 
 [dependencies]
-plumb = { path = "../lib", features = ["radius", "skill", "vendor"] }
+plumb = { path = "../lib", features = ["radius", "skill", "vendor"] , version = "=0.36.0" }
 runseal = { version = "=0.18.3", registry = "perish", default-features = false }
 locus = { version = "0", registry = "perish" }
 base64 = "0.22"
