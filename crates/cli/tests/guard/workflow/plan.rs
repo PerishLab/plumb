@@ -123,6 +123,27 @@ fn project() {
         inventory: None,
     });
     assert!(!ok, "{text}");
+
+    let (dynamic, ok) = root.planned(Plan {
+        base: Some("HEAD"),
+        world: &[],
+        identity: &["version=2.0.0"],
+        project: &["ship/npm.web=apps/web/package.json#/version"],
+        inventory: None,
+    });
+    assert!(ok, "{dynamic}");
+    let dynamic: serde_json::Value = serde_json::from_str(&dynamic).expect("dynamic plan");
+    let package = dynamic["actions"]
+        .as_array()
+        .and_then(|actions| {
+            actions
+                .iter()
+                .find(|action| action["name"] == "ship/npm.web")
+        })
+        .expect("dynamic package action");
+    assert_eq!(package["run"], true);
+    assert_ne!(package["keys"]["workload"], "");
+    assert_eq!(package["project"][0]["omit"][0], "/version");
 }
 
 #[test]

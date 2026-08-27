@@ -19,6 +19,7 @@ struct Model {
     bucket: String,
     domain: String,
     zone: String,
+    organization: bool,
 }
 
 impl Model {
@@ -28,6 +29,10 @@ impl Model {
 
     fn secrets(&self) -> &'static [&'static str] {
         self.secrets
+    }
+
+    fn organization(&self) -> Option<&str> {
+        self.organization.then_some("PerishLab")
     }
 }
 
@@ -58,6 +63,7 @@ fn ordered() {
         bucket: "perish-probe-releases".into(),
         domain: "releases.probe.test".into(),
         zone: "zone".into(),
+        organization: false,
     };
     let mut seen = Observation {
         bucket: false,
@@ -90,6 +96,7 @@ fn identity() {
         bucket: "perish-probe-releases".into(),
         domain: "releases.probe.test".into(),
         zone: "zone".into(),
+        organization: false,
     };
     assert_eq!(model.writer(), "publish:perish-probe-releases");
 }
@@ -97,12 +104,13 @@ fn identity() {
 #[test]
 fn workflow() {
     const HELD: [&str; 5] = ["access", "secret", "bucket", "endpoint", "url"];
-    let model = Model {
+    let mut model = Model {
         profile: "workflow",
         secrets: &HELD,
         bucket: "perish-workflow-inventory".into(),
         domain: "inventory.plumb.test".into(),
         zone: "zone".into(),
+        organization: true,
     };
     let mut seen = Observation {
         bucket: true,
@@ -130,6 +138,9 @@ fn workflow() {
         steps[3].detail,
         "all five opaque workflow inventory seats are present"
     );
+    model.organization = false;
+    let (steps, _) = plan::build(&model, &seen);
+    assert_eq!(steps[3].resource, "repository.secrets");
     let root = std::env::temp_dir().join("plumb-workflow-organization");
     if root.exists() {
         std::fs::remove_dir_all(&root).expect("old fixture should be swept");

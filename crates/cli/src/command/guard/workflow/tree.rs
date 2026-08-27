@@ -202,6 +202,33 @@ impl Projects {
     pub fn action(&self, name: &str) -> Vec<Project> {
         self.0.get(name).cloned().unwrap_or_default()
     }
+
+    pub fn declare(&self, keys: &mut Vec<Key>) -> Result<(), String> {
+        for action in self.0.keys() {
+            if keys.iter().any(|key| key.name() == *action) {
+                continue;
+            }
+            let (lane, output) = action
+                .split_once('/')
+                .filter(|(lane, output)| !lane.is_empty() && !output.is_empty())
+                .ok_or_else(|| format!("project action {action:?} must be LANE/OUTPUT"))?;
+            let mut segments = vec![lane.to_string()];
+            segments.extend(output.split('.').map(str::to_string));
+            if !set::current().lanes.contains(lane)
+                || segments.iter().any(|segment| segment.is_empty())
+            {
+                return Err(format!(
+                    "project action {action:?} is not a declared lane output"
+                ));
+            }
+            keys.push(Key {
+                segments,
+                roots: vec!["*".to_string()],
+                paths: vec!["*".to_string()],
+            });
+        }
+        Ok(())
+    }
 }
 
 fn covers(root: &str, path: &str) -> bool {

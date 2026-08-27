@@ -100,7 +100,8 @@ fn resource(model: &Model, name: &'static str) -> &'static str {
         ("workflow", "bucket") => "workflow.bucket",
         ("workflow", "domain") => "workflow.domain",
         ("workflow", "capability") => "workflow.capability",
-        ("workflow", "secrets") => "organization.secrets",
+        ("workflow", "secrets") if model.organization().is_some() => "organization.secrets",
+        ("workflow", "secrets") => "repository.secrets",
         _ => "authority.resource",
     }
 }

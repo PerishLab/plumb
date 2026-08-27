@@ -34,6 +34,12 @@ pub struct Workflow {
     )]
     organization: Option<String>,
     #[arg(
+        long,
+        conflicts_with = "organization",
+        help = "Bind inventory seats to this repository instead of an organization"
+    )]
+    repository: bool,
+    #[arg(
         long = "zone-id",
         help = "Exact Cloudflare zone ID that owns the inventory domain"
     )]
@@ -133,11 +139,16 @@ impl Model {
             root.join(escrow)
         };
         let remote = git::remote(&root, "")?;
-        let organization = input.organization.unwrap_or_else(|| remote.owner.clone());
-        let organization = organization.trim();
-        if organization.is_empty() || organization.contains(['/', '\r', '\n']) {
-            return Err("--organization must name one Forgejo organization".into());
-        }
+        let scope = if input.repository {
+            Scope::Repository
+        } else {
+            let organization = input.organization.unwrap_or_else(|| remote.owner.clone());
+            let organization = organization.trim();
+            if organization.is_empty() || organization.contains(['/', '\r', '\n']) {
+                return Err("--organization must name one Forgejo organization".into());
+            }
+            Scope::Organization(organization.to_string())
+        };
         Ok(Self {
             profile: "workflow",
             bucket: "perish-workflow-inventory".into(),
@@ -146,7 +157,7 @@ impl Model {
             zone: input.zone,
             escrow,
             remote,
-            scope: Scope::Organization(organization.to_string()),
+            scope,
         })
     }
 
@@ -159,9 +170,10 @@ impl Model {
     }
 
     pub fn secrets(&self) -> &'static [&'static str] {
-        match &self.scope {
-            Scope::Repository => &RELEASE,
-            Scope::Organization(_) => &WORKFLOW,
+        match self.profile {
+            "release" => &RELEASE,
+            "workflow" => &WORKFLOW,
+            _ => &[],
         }
     }
 

@@ -69,6 +69,10 @@ fn render(root: &Path, input: &Input) -> Result<String, String> {
     if prior.keys.is_empty() {
         prior = defaults(&before);
     }
+    projects.declare(&mut current.keys)?;
+    if base.is_some() {
+        projects.declare(&mut prior.keys)?;
+    }
     if current.keys.is_empty() {
         return Err("the repository implies no workflow action".to_string());
     }
