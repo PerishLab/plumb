@@ -1,3 +1,4 @@
+mod authority;
 mod branch;
 mod protection;
 mod pull;
@@ -8,6 +9,7 @@ use super::model::Remote;
 use serde_json::Value;
 use std::collections::BTreeMap;
 
+pub use authority::{Minted, Token, scopes};
 pub use branch::settled;
 
 pub struct Client {
@@ -27,21 +29,27 @@ impl Client {
     }
 
     pub(super) fn call(&self, args: &[&str]) -> Result<Value, String> {
+        self.reply(args).map(|reply| reply.value)
+    }
+
+    pub(super) fn reply(&self, args: &[&str]) -> Result<runseal::tool::Reply, String> {
         let mut argv = vec![
             "--repo".to_string(),
             format!("{}/{}", self.remote.owner, self.remote.repo),
         ];
         argv.extend(args.iter().map(|arg| arg.to_string()));
-        runseal::tool::call("forgejo", &argv, &self.vars)
-            .map(|reply| reply.value)
-            .map_err(|error| {
-                format!(
-                    "forgejo refused {} on {}/{}: {error}",
-                    attempted(args),
-                    self.remote.owner,
-                    self.remote.repo
-                )
-            })
+        runseal::tool::call("forgejo", &argv, &self.vars).map_err(|error| {
+            format!(
+                "forgejo refused {} on {}/{}: {error}",
+                attempted(args),
+                self.remote.owner,
+                self.remote.repo
+            )
+        })
+    }
+
+    pub fn account(&self) -> Result<String, String> {
+        self.user()
     }
 
     fn user(&self) -> Result<String, String> {

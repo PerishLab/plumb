@@ -7,7 +7,17 @@ pub fn vars(url: String) -> Result<BTreeMap<String, String>, String> {
         "FORGEJO_URL".to_string(),
         std::env::var("FORGEJO_URL").unwrap_or(url),
     )]);
-    for key in ["FORGEJO_TOKEN", "FORGEJO_TOKEN_FILE"] {
+    for key in [
+        "FORGEJO_TOKEN",
+        "FORGEJO_TOKEN_FILE",
+        "RUNSEAL_FORGEJO_ISSUER_NAMESPACE",
+        "RUNSEAL_FORGEJO_ISSUER_WORKLOAD",
+        "RUNSEAL_FORGEJO_ISSUER_CONTAINER",
+        "RUNSEAL_FORGEJO_STORE_NAMESPACE",
+        "RUNSEAL_FORGEJO_STORE_POD",
+        "RUNSEAL_FORGEJO_STORE_DATABASE",
+        "RUNSEAL_FORGEJO_STORE_USER",
+    ] {
         if let Ok(value) = std::env::var(key)
             && !value.trim().is_empty()
         {

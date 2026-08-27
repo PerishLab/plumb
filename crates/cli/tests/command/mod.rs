@@ -1,6 +1,11 @@
 mod authority;
 mod cloud;
+mod registry;
 mod retire;
+
+fn product(_: &std::path::Path) -> Result<String, String> {
+    unreachable!("registry state tests do not inspect repository shape")
+}
 
 use std::path::{Path, PathBuf};
 use std::process::Command;

@@ -4,6 +4,7 @@ mod context;
 mod escrow;
 mod model;
 mod plan;
+mod registry;
 
 use clap::Subcommand;
 use context::Context;
@@ -25,10 +26,16 @@ const SECRETS: [&str; 4] = [
     "RELEASE_PUBLISH_S3_ENDPOINT",
 ];
 
+fn product(root: &std::path::Path) -> Result<String, String> {
+    crate::shape::release::Spec::read(&root.join("plumb.toml")).map(|spec| spec.product)
+}
+
 #[derive(Subcommand)]
 pub enum Deed {
     #[command(about = "Converge the closed release-delivery authority profile")]
     Release(Release),
+    #[command(about = "Converge the closed package-registry authority profile")]
+    Registry(registry::Input),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -70,6 +77,7 @@ struct Report<'a> {
 pub fn run(deed: Deed) -> i32 {
     let result = match deed {
         Deed::Release(release) => execute(release),
+        Deed::Registry(registry) => registry::execute(registry),
     };
     match result {
         Ok(()) => 0,
