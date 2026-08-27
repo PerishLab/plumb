@@ -15,7 +15,7 @@ fn digest(text: &str) -> String {
     format!("{:x}", Sha256::digest(text.as_bytes()))
 }
 
-fn seed(root: &Path) {
+pub(super) fn seed(root: &Path) {
     let bin = root.join("bin");
     std::fs::create_dir(&bin).expect("bin");
     std::fs::write(
@@ -51,13 +51,28 @@ case "$*" in
   "rev-parse FETCH_HEAD^{commit}") printf '%s\n' "dddddddddddddddddddddddddddddddddddddddd" ;;
   "rev-parse origin/main^{commit}") printf '%s\n' "cccccccccccccccccccccccccccccccccccccccc" ;;
   "rev-parse origin/main^{tree}") printf '%s\n' "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" ;;
-  "rev-parse dddddddddddddddddddddddddddddddddddddddd^{tree}") printf '%s\n' "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" ;;
+  "rev-parse cccccccccccccccccccccccccccccccccccccccc^{tree}") printf '%s\n' "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" ;;
+  "rev-parse aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa^{tree}") printf '%s\n' "ffffffffffffffffffffffffffffffffffffffff" ;;
+  "rev-parse dddddddddddddddddddddddddddddddddddddddd^{tree}")
+    if [ -f "${COURT_STALE:-}" ]; then
+      printf '%s\n' "ffffffffffffffffffffffffffffffffffffffff"
+    else
+      printf '%s\n' "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    fi
+    ;;
   "rev-list --parents --max-count=1 dddddddddddddddddddddddddddddddddddddddd")
-    printf '%s\n' "dddddddddddddddddddddddddddddddddddddddd cccccccccccccccccccccccccccccccccccccccc bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    if [ -f "${COURT_STALE:-}" ]; then
+      printf '%s\n' "dddddddddddddddddddddddddddddddddddddddd aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    else
+      printf '%s\n' "dddddddddddddddddddddddddddddddddddddddd cccccccccccccccccccccccccccccccccccccccc bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    fi
     ;;
   "commit-tree "*) printf '%s\n' "dddddddddddddddddddddddddddddddddddddddd" ;;
   "diff-tree --quiet "*) ;;
   "push --force-with-lease origin "*) ;;
+  "merge-base --is-ancestor aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa origin/main")
+    test ! -f "${COURT_DIVERGED:-}"
+    ;;
   "merge-base --is-ancestor "*) test -f "$COURT_SETTLED" ;;
   *) printf '%s\n' "unexpected git: $*" >&2; exit 1 ;;
 esac

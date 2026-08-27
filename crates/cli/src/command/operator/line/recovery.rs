@@ -2,7 +2,12 @@ use super::super::value;
 use std::path::Path;
 use std::process::{Command, Output};
 
-pub fn head(root: &Path, published: &str, projection: &str) -> Result<String, String> {
+pub enum Head {
+    Current(String),
+    Stale,
+}
+
+pub fn head(root: &Path, published: &str, projection: &str) -> Result<Head, String> {
     let reference = format!("refs/heads/{projection}");
     success(
         "fetch the standing rejoin projection",
@@ -17,29 +22,39 @@ pub fn head(root: &Path, published: &str, projection: &str) -> Result<String, St
         "resolve main for rejoin recovery",
         command(root, &["rev-parse", "origin/main^{commit}"])?,
     )?;
-    let parents = read(
+    let lineage = read(
         "inspect rejoin recovery parents",
         command(root, &["rev-list", "--parents", "--max-count=1", &head])?,
     )?;
-    if parents != format!("{head} {base} {published}") {
+    let parents = lineage.split_whitespace().collect::<Vec<_>>();
+    if parents.len() != 3 || parents[0] != head || parents[2] != published {
         return Err(format!(
-            "open rejoin projection {projection} does not preserve main and the published stable commit"
+            "open rejoin projection {projection} does not preserve a main commit and the published stable commit"
         ));
     }
-    let main = read(
-        "resolve main tree for rejoin recovery",
-        command(root, &["rev-parse", "origin/main^{tree}"])?,
+    let first = parents[1];
+    let expected = format!("{first}^{{tree}}");
+    let expected = read(
+        "resolve the projected main tree for rejoin recovery",
+        command(root, &["rev-parse", &expected])?,
     )?;
     let tree = read(
         "resolve projection tree for rejoin recovery",
         command(root, &["rev-parse", &format!("{head}^{{tree}}")])?,
     )?;
-    if tree != main {
+    if tree != expected {
         return Err(format!(
-            "open rejoin projection {projection} does not preserve main's tree"
+            "open rejoin projection {projection} does not preserve its main parent's tree"
         ));
     }
-    Ok(head)
+    if first == base {
+        return Ok(Head::Current(head));
+    }
+    success(
+        "prove the projected main remains in current main",
+        command(root, &["merge-base", "--is-ancestor", first, "origin/main"])?,
+    )?;
+    Ok(Head::Stale)
 }
 
 fn command(root: &Path, args: &[&str]) -> Result<Output, String> {
