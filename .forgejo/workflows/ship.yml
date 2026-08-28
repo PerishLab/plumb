@@ -40,12 +40,15 @@ jobs:
       commit: ${{ steps.plan.outputs.commit }}
       version: ${{ steps.plan.outputs.version }}
       targets: ${{ steps.plan.outputs.targets }}
+      binary_missing: ${{ steps.plan.outputs.binary_missing }}
+      binary_reuse: ${{ steps.plan.outputs.binary_reuse }}
       project: ${{ steps.plan.outputs.project }}
     env:
       PLUMB_RELEASE_ROOT: .
       PLUMB_RELEASE_COMMIT: ${{ github.sha }}
       PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
       PLUMB_RELEASE_SOURCE: ${{ github.ref }}
+      PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -127,11 +130,65 @@ jobs:
             test "$(printf '%s' "$marker" | jq -r '.channel')" = "$PLUMB_RELEASE_CHANNEL"
             test "$(printf '%s' "$marker" | jq -r '.commit')" = "$PLUMB_RELEASE_COMMIT"
           fi
+          targets=$(plumb ship binary matrix)
+          binary_reuse='[]'
+          binary_missing=false
+          if [ "$PLUMB_RELEASE_CHANNEL" != stable ]; then
+            inventory="$RUNNER_TEMP/plumb-workflow-inventory.json"
+            inventory_arg=
+            if [ -n "$PLUMB_WORKFLOW_INVENTORY_URL" ] && curl -fsSL --retry 3 \
+              -o "$inventory" "$PLUMB_WORKFLOW_INVENTORY_URL"; then
+              inventory_arg=$inventory
+            fi
+            pending="$RUNNER_TEMP/plumb-binary-pending.jsonl"
+            reused="$RUNNER_TEMP/plumb-binary-reused.jsonl"
+            : > "$pending"
+            : > "$reused"
+            plumb_version=$(plumb --version | awk '{print $2}')
+            depot=$(plumb depot show | sed -n '1s/^depot //p')
+            printf '%s' "$targets" | jq -c '.include[]' | while IFS= read -r target; do
+              triple=$(printf '%s' "$target" | jq -r '.target')
+              runner=$(printf '%s' "$target" | jq -r '.runner')
+              archive=$(printf '%s' "$target" | jq -r '.archive')
+              action="ship/binary.$triple"
+              set -- plumb workflow plan \
+                --world "atom=${{ github.sha }}" \
+                --world "depot=$depot" \
+                --world "plumb=$plumb_version" \
+                --world "release=$PLUMB_RELEASE_VERSION" \
+                --world "runner=$runner" \
+                --world "target=$triple" \
+                --identity "marker=$PLUMB_RELEASE_MARKER" \
+                --project "$action=Cargo.toml#/workspace/package/version"
+              if [ -n "$inventory_arg" ]; then
+                set -- "$@" --inventory "$inventory_arg"
+              fi
+              planned=$("$@" .)
+              node=$(printf '%s' "$planned" | jq -c --arg action "$action" \
+                '.actions[] | select(.name == $action)')
+              kind=$(printf '%s' "$node" | jq -r '.reuse.type')
+              if [ "$kind" = workload ]; then
+                printf '%s' "$target" | jq -c \
+                  --arg url "$(printf '%s' "$node" | jq -r '.reuse.source')" \
+                  '. + {url:$url}' >> "$reused"
+              else
+                printf '%s' "$target" | jq -c \
+                  --arg action "$action" \
+                  --argjson keys "$(printf '%s' "$node" | jq -c '.keys')" \
+                  '. + {action:$action,keys:$keys}' >> "$pending"
+              fi
+            done
+            targets=$(jq -sc '{include:.}' "$pending")
+            binary_reuse=$(jq -sc '.' "$reused")
+            binary_missing=$(printf '%s' "$targets" | jq -r '.include | length > 0')
+          fi
           {
             echo "channel=$PLUMB_RELEASE_CHANNEL"
             echo "commit=$PLUMB_RELEASE_COMMIT"
             echo "version=$PLUMB_RELEASE_VERSION"
-            echo "targets=$(plumb ship binary matrix)"
+            echo "targets=$targets"
+            echo "binary_missing=$binary_missing"
+            echo "binary_reuse=$binary_reuse"
             echo "project=$PLUMB_RELEASE_PROJECT"
           } >> "$GITHUB_OUTPUT"
 
@@ -221,11 +278,24 @@ jobs:
           name: release-${{ matrix.target }}
           path: dist/${{ needs.resolve.outputs.version }}/*
 
+      - name: Record the reusable binary workload
+        env:
+          PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
+          PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
+          PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
+          PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
+          PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
+        run: >-
+          plumb workflow record "${{ matrix.action }}"
+          --keys '${{ toJSON(matrix.keys) }}'
+          --workload "dist/${{ needs.resolve.outputs.version }}/${{ matrix.archive }}"
+
   seal:
     needs: [resolve, build]
     if: >-
       always() && needs.resolve.result == 'success' &&
-      (needs.resolve.outputs.channel == 'stable' || needs.build.result == 'success')
+      (needs.resolve.outputs.channel == 'stable' || needs.build.result == 'success' ||
+      (needs.build.result == 'skipped' && needs.resolve.outputs.binary_missing == 'false'))
     runs-on: docker
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
@@ -304,9 +374,25 @@ jobs:
         run: plumb release promote
 
       - uses: actions/download-artifact@v3
-        if: needs.resolve.outputs.channel != 'stable'
+        if: needs.resolve.outputs.channel != 'stable' && needs.resolve.outputs.binary_missing == 'true'
         with:
           path: dist/${{ needs.resolve.outputs.version }}
+
+      - name: Fetch reused binary workloads
+        if: needs.resolve.outputs.channel != 'stable'
+        env:
+          PLUMB_BINARY_REUSE: ${{ needs.resolve.outputs.binary_reuse }}
+        shell: bash
+        run: |
+          set -eu
+          printf '%s' "$PLUMB_BINARY_REUSE" | jq -c '.[]' | while IFS= read -r reused; do
+            target=$(printf '%s' "$reused" | jq -r '.target')
+            archive=$(printf '%s' "$reused" | jq -r '.archive')
+            url=$(printf '%s' "$reused" | jq -r '.url')
+            seat="dist/${{ needs.resolve.outputs.version }}/reuse-$target"
+            mkdir -p "$seat"
+            curl -fsSL --retry 3 -o "$seat/$archive" "$url"
+          done
 
       - name: Assemble the declared binary shape
         run: plumb ship binary assemble

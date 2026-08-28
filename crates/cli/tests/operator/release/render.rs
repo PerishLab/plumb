@@ -182,9 +182,9 @@ fn promotion() {
     );
     assert!(
         seal.contains(
-            "if: needs.resolve.outputs.channel != 'stable'\n        with:\n          path: dist/"
+            "if: needs.resolve.outputs.channel != 'stable' && needs.resolve.outputs.binary_missing == 'true'\n        with:\n          path: dist/"
         ),
-        "stable seal must not wait on run-local binary artifacts: {seal}"
+        "stable and fully reused seals must not wait on run-local binary artifacts: {seal}"
     );
 }
 

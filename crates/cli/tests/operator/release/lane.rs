@@ -122,6 +122,9 @@ fn carried() {
     assert!(held.contains("\n  build:\n"), "{held}");
     assert!(held.contains("\n  seal:\n"), "{held}");
     assert!(held.contains("\n  smoke:\n"), "{held}");
+    assert!(held.contains("plumb workflow record"), "{held}");
+    assert!(held.contains("binary_reuse"), "{held}");
+    assert!(held.contains("WORKFLOW_INVENTORY_URL"), "{held}");
     assert!(held.contains("needs: [resolve, seal]"), "{held}");
     assert!(
         held.match_indices("if:").all(|(at, _)| {
