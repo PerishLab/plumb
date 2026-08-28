@@ -162,6 +162,10 @@ impl Exact<'_, '_> {
 }
 
 fn repack(bytes: &[u8], output: &Path, package: &str, version: &Version) -> Result<(), String> {
+    if current(bytes, package, version)? {
+        return std::fs::write(output, bytes)
+            .map_err(|error| format!("cannot create {}: {error}", output.display()));
+    }
     let mut source = tar::Archive::new(GzDecoder::new(bytes));
     let file = std::fs::File::create(output)
         .map_err(|error| format!("cannot create {}: {error}", output.display()))?;
@@ -213,4 +217,36 @@ fn repack(bytes: &[u8], output: &Path, package: &str, version: &Version) -> Resu
         .and_then(flate2::write::GzEncoder::finish)
         .map_err(|error| format!("cannot finish {}: {error}", output.display()))?;
     Ok(())
+}
+
+fn current(bytes: &[u8], package: &str, version: &Version) -> Result<bool, String> {
+    let mut source = tar::Archive::new(GzDecoder::new(bytes));
+    for entry in source
+        .entries()
+        .map_err(|error| format!("cannot read reusable module workload: {error}"))?
+    {
+        let mut entry =
+            entry.map_err(|error| format!("cannot read reusable module workload: {error}"))?;
+        if entry
+            .path()
+            .map_err(|error| format!("cannot read reusable module path: {error}"))?
+            != Path::new("package/package.json")
+        {
+            continue;
+        }
+        let mut body = Vec::new();
+        entry
+            .read_to_end(&mut body)
+            .map_err(|error| format!("cannot read reusable module entry: {error}"))?;
+        let document: serde_json::Value = serde_json::from_slice(&body)
+            .map_err(|error| format!("cannot parse reusable package manifest: {error}"))?;
+        if document.get("name").and_then(serde_json::Value::as_str) != Some(package) {
+            return Err(format!(
+                "reusable workload does not carry package {package}"
+            ));
+        }
+        return Ok(document.get("version").and_then(serde_json::Value::as_str)
+            == Some(version.to_string().as_str()));
+    }
+    Ok(false)
 }

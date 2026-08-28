@@ -1,4 +1,6 @@
+use base64::Engine;
 use flate2::{Compression, GzBuilder};
+use sha2::{Digest, Sha512};
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 
@@ -73,6 +75,67 @@ fn direct() {
             .count(),
         1
     );
+}
+
+#[test]
+fn held() {
+    let fixture = tempfile::tempdir().expect("module fixture");
+    let root = fixture.path();
+    std::fs::create_dir_all(root.join("packages/held")).expect("module seat");
+    std::fs::create_dir_all(root.join("bin")).expect("binary seat");
+    std::fs::write(
+        root.join("plumb.toml"),
+        "[release.npm]\nregistry = \"https://registry.invalid\"\npackages = [\"held\"]\n",
+    )
+    .expect("release shape");
+    let workload = root.join("workload.tgz");
+    archive(&workload);
+    let curl = format!("#!/bin/sh\n/bin/cat '{}'\n", workload.display());
+    for (name, body) in [("npm", NPM), ("curl", curl.as_str())] {
+        let path = root.join("bin").join(name);
+        std::fs::write(&path, body).expect("fixture binary");
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755))
+            .expect("fixture mode");
+    }
+    let observed = root.join("observed");
+    let bytes = std::fs::read(&workload).expect("module workload");
+    let digest = base64::engine::general_purpose::STANDARD.encode(Sha512::digest(bytes));
+    std::fs::write(
+        observed.with_extension("integrity"),
+        format!("sha512-{digest}"),
+    )
+    .expect("registry integrity");
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args([
+            "ship",
+            "npm",
+            "exact",
+            "--package",
+            "held",
+            "--reuse",
+            r#"{"type":"workload","source":"https://inventory.invalid/held.tgz"}"#,
+        ])
+        .env("PATH", root.join("bin"))
+        .env("PLUMB_TEST_OBSERVED", &observed)
+        .env("PLUMB_RELEASE_ROOT", root)
+        .env("PLUMB_RELEASE_VERSION", "v1.0.0")
+        .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
+        .output()
+        .expect("plumb should run");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let calls = std::fs::read_to_string(observed).expect("npm calls");
+    assert_eq!(
+        calls
+            .lines()
+            .filter(|line| line.starts_with("view "))
+            .count(),
+        1
+    );
+    assert!(!calls.contains("publish "));
 }
 
 fn archive(path: &std::path::Path) {
