@@ -268,7 +268,7 @@ fn guarded(product: &str, marker: &str) -> bool {
         && marker
             .trim_start_matches('v')
             .parse::<semver::Version>()
-            .is_ok_and(|version| version >= semver::Version::new(0, 37, 8))
+            .is_ok_and(|version| (version.major, version.minor, version.patch) >= (0, 37, 8))
 }
 
 fn named(raw: &str) -> String {
