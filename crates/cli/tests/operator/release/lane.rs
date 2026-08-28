@@ -187,7 +187,7 @@ fn refused() {
     let absent = String::from_utf8_lossy(&bare.stderr);
     assert!(!bare.status.success());
     assert!(
-        absent.contains("has not rendered") && absent.contains("exact.release.yml"),
+        absent.contains("without its legacy workflow") && absent.contains("exact.release.yml"),
         "the lane a dispatch must reach cannot be missing: {absent}"
     );
 
@@ -229,24 +229,14 @@ fn anchored() {
     let fixture = seat(temp.path(), &tools);
     rendered(&fixture);
 
-    for name in ["exact.release.yml", "stable.release.yml"] {
-        let held = fs::read_to_string(temp.path().join(".forgejo/workflows").join(name))
-            .expect("release lane");
+    for name in ["exact.release.yml", "stable.release.yml", "depot.yml"] {
         assert!(
-            held.contains("on:\n  workflow_dispatch:\n"),
-            "{name} must wait for an operator: {held}"
-        );
-        assert!(
-            !held.contains("\n  push:\n"),
-            "a release never follows from a push: {name}: {held}"
-        );
-        assert!(
-            held.contains("guard_contexts: '[\"guard / guard (push)\"]'"),
-            "{name} must forward the canonical guard evidence: {held}"
-        );
-        assert!(
-            held.contains("site_token: ${{ secrets.PLUMB_SITE_TOKEN }}"),
-            "{name} must forward the credential a worker medium needs: {held}"
+            !temp.path().join(".forgejo/workflows").join(name).exists(),
+            "{name} is no longer an independent workflow"
         );
     }
+    let held = fs::read_to_string(temp.path().join(".forgejo/workflows/ship.yml")).expect("ship");
+    assert!(held.contains("workflow_dispatch:"), "{held}");
+    assert!(held.contains("marker:"), "{held}");
+    assert!(!held.contains("\n  push:\n"), "{held}");
 }

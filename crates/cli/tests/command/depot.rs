@@ -25,7 +25,7 @@ fn publish(root: &Path, depot: &Path) -> (bool, String) {
             "depot",
             "skill",
             root.to_str().expect("repository path should be utf8"),
-            "--version",
+            "--marker",
             "invalid",
             "--from",
             root.to_str().expect("source path should be utf8"),
@@ -45,10 +45,7 @@ fn mapped() {
     let ectropy = repository("ectropy");
     let (ok, held) = publish(ectropy.path(), depot.path());
     assert!(!ok, "{held}");
-    assert!(
-        held.contains("release version must begin with v: invalid"),
-        "{held}"
-    );
+    assert!(held.contains("invalid release marker vinvalid"), "{held}");
     assert!(!held.contains("plumb.toml"), "{held}");
 
     let unknown = repository("unknown");

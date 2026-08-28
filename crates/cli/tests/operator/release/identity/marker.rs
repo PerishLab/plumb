@@ -15,6 +15,7 @@ fn exact() {
     };
     let commit = seeded(&fixture, bare.path());
     stamp(temp.path(), "v1.2.0-beta.1", &commit, true);
+    assert!(fixture.root.join(".forgejo/workflows/ship.yml").is_file());
 
     let shown = marker(&fixture, "show", "v1.2.0-beta.1");
     assert!(
@@ -39,6 +40,63 @@ fn exact() {
     let verified = marker(&fixture, "verify", "1.2.0-beta.1");
     assert!(verified.status.success());
     assert!(String::from_utf8_lossy(&verified.stdout).contains("verified release marker"));
+    let shipped = fixture
+        .command()
+        .current_dir(fixture.root)
+        .env("FORGEJO_TOKEN", "fixture")
+        .args(["ship", "dispatch", "--marker", "v1.2.0-beta.1", "--dry-run"])
+        .output()
+        .expect("plumb should run");
+    assert!(
+        shipped.status.success(),
+        "{}",
+        String::from_utf8_lossy(&shipped.stderr)
+    );
+    let plan = String::from_utf8_lossy(&shipped.stdout);
+    assert!(plan.contains("ship.yml"), "{plan}");
+    assert!(plan.contains("/repos/PerishLab/plumb/"), "{plan}");
+    assert!(
+        plan.contains(&format!("refs/tags/v{}", env!("CARGO_PKG_VERSION"))),
+        "{plan}"
+    );
+    assert!(plan.contains(r#""marker":"v1.2.0-beta.1""#), "{plan}");
+    assert!(plan.contains(r#""repository":"tmp/"#), "{plan}");
+
+    let manifest = std::fs::read_to_string(fixture.root.join("plumb.toml")).expect("manifest");
+    std::fs::write(
+        fixture.root.join("plumb.toml"),
+        format!(
+            "{manifest}\n[release.depot]\nsource = \"https://depot.test\"\nderivatives = [\"skill\"]\n"
+        ),
+    )
+    .expect("depot manifest");
+    run(Command::new("git")
+        .arg("-C")
+        .arg(fixture.root)
+        .args(["add", "plumb.toml"]));
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "commit",
+        "-qm",
+        "move past marker",
+    ]));
+    let depot = fixture
+        .command()
+        .current_dir(fixture.root)
+        .args([
+            "depot",
+            "skill",
+            ".",
+            "--marker",
+            "v1.2.0-beta.1",
+            "--from",
+            ".",
+            "--dry-run",
+        ])
+        .output()
+        .expect("depot should run");
+    assert!(!depot.status.success());
+    let error = String::from_utf8_lossy(&depot.stderr);
+    assert!(error.contains("not HEAD"), "{error}");
 }
 
 #[test]
@@ -112,20 +170,6 @@ fn marker(fixture: &Fixture<'_>, deed: &str, name: &str) -> Output {
 
 fn seeded(fixture: &Fixture<'_>, bare: &Path) -> String {
     fixture.seed();
-    std::fs::create_dir_all(fixture.root.join(".plumb/releases/v1.2.0")).expect("datum root");
-    std::fs::write(
-        fixture.root.join(".plumb/releases/v1.2.0/datum.toml"),
-        "schema = 1\nversion = \"v1.2.0\"\n",
-    )
-    .expect("datum");
-    run(Command::new("git")
-        .arg("-C")
-        .arg(fixture.root)
-        .args(["add", "plumb.toml", ".plumb"]));
-    run(Command::new("git")
-        .arg("-C")
-        .arg(fixture.root)
-        .args(["commit", "-qm", "candidate"]));
     run(Command::new("git").args(["init", "-q", "--bare"]).arg(bare));
     run(Command::new("git").arg("-C").arg(fixture.root).args([
         "remote",
@@ -133,6 +177,28 @@ fn seeded(fixture: &Fixture<'_>, bare: &Path) -> String {
         "origin",
         &format!("file://{}", bare.display()),
     ]));
+    std::fs::create_dir_all(fixture.root.join(".plumb/releases/v1.2.0")).expect("datum root");
+    std::fs::write(
+        fixture.root.join(".plumb/releases/v1.2.0/datum.toml"),
+        "schema = 1\nversion = \"v1.2.0\"\n",
+    )
+    .expect("datum");
+    run(Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["lane", "--write"])
+        .current_dir(fixture.root));
+    run(Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["lane", "--write"])
+        .current_dir(fixture.root));
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "add",
+        "plumb.toml",
+        ".plumb",
+        ".forgejo",
+    ]));
+    run(Command::new("git")
+        .arg("-C")
+        .arg(fixture.root)
+        .args(["commit", "-qm", "candidate"]));
     run(Command::new("git").arg("-C").arg(fixture.root).args([
         "push",
         "-q",

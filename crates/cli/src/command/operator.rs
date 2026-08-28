@@ -14,6 +14,19 @@ use clap::Args;
 #[group(skip)]
 pub struct Dispatch {
     #[arg(long)]
+    marker: String,
+    #[arg(long, default_value = "")]
+    repo: String,
+    #[arg(long)]
+    watch: bool,
+    #[arg(long = "dry-run")]
+    dry: bool,
+}
+
+#[derive(Args)]
+#[group(skip)]
+pub struct Legacy {
+    #[arg(long)]
     version: String,
     #[arg(long, default_value = "")]
     repo: String,
@@ -25,6 +38,10 @@ pub struct Dispatch {
 
 pub fn dispatch(options: Dispatch) -> Result<String, String> {
     trigger::run(options)
+}
+
+pub fn legacy(options: Legacy) -> Result<String, String> {
+    trigger::legacy(options)
 }
 
 pub(super) fn line(deed: super::release::Deed) -> Result<String, String> {

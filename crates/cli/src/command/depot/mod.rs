@@ -76,7 +76,7 @@ pub enum Deed {
         #[arg(default_value = ".")]
         root: String,
         #[arg(long)]
-        version: String,
+        marker: String,
         #[arg(long = "dry-run")]
         dry: bool,
     },
@@ -85,7 +85,7 @@ pub enum Deed {
         #[arg(default_value = ".")]
         root: String,
         #[arg(long)]
-        version: String,
+        marker: String,
         #[arg(long, default_value = "")]
         from: String,
         #[arg(long)]
@@ -98,7 +98,7 @@ pub enum Deed {
         #[arg(default_value = ".")]
         root: String,
         #[arg(long)]
-        version: String,
+        marker: String,
         #[arg(long, default_value = "")]
         from: String,
         #[arg(long)]
@@ -129,17 +129,17 @@ fn execute(deed: Deed) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let over = PathBuf::from(&rig.rules.seat);
     match deed {
-        Deed::Publish { root, version, dry } => Tree(&PathBuf::from(root)).publish(&version, dry),
+        Deed::Publish { root, marker, dry } => Tree(&PathBuf::from(root)).publish(&marker, dry),
         Deed::Changelog {
             root,
-            version,
+            marker,
             from,
             keep,
             dry,
         } => knowledge::changelog(
             &PathBuf::from(root),
             knowledge::Wanted {
-                version: &version,
+                marker: &marker,
                 from: &from,
                 keep,
                 dry,
@@ -147,14 +147,14 @@ fn execute(deed: Deed) -> Result<String, String> {
         ),
         Deed::Skill {
             root,
-            version,
+            marker,
             from,
             keep,
             dry,
         } => knowledge::skill(
             &PathBuf::from(root),
             knowledge::Wanted {
-                version: &version,
+                marker: &marker,
                 from: &from,
                 keep,
                 dry,
@@ -185,12 +185,26 @@ fn show(rig: &Rig, over: &Path) -> Result<String, String> {
 struct Tree<'a>(&'a Path);
 
 impl Tree<'_> {
-    fn publish(&self, version: &str, dry: bool) -> Result<String, String> {
+    fn publish(&self, raw: &str, dry: bool) -> Result<String, String> {
         let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
         let spec = crate::shape::release::Spec::read(&self.0.join("plumb.toml"))?;
+        let marker = crate::command::release::ReleaseMarker::at(
+            self.0,
+            &spec.product,
+            &spec.authority,
+            raw,
+        )?;
+        let proof = marker.digest()?;
+        let commit = self.commit()?;
+        if marker.commit != commit {
+            return Err(format!(
+                "release marker {} seals {}, not HEAD at {commit}",
+                marker.marker, marker.commit
+            ));
+        }
         let depot = spec.derivative(plumb::depot::v2::Kind::Configuration)?;
         let release = crate::command::release::depot(&spec);
-        let binding = release.binding(version, true)?;
+        let binding = release.binding(&marker.marker, true)?;
         let snapshot = Snapshot::read(self.0).map_err(|error| error.to_string())?;
         self.clean()?;
         let plan = record::Batch::configuration(
@@ -199,16 +213,32 @@ impl Tree<'_> {
                 source: depot.source.clone(),
                 release: binding.release.clone(),
                 timestamp: super::clock::mark()?,
-                commit: self.commit()?,
+                commit,
             },
         )?;
         crate::command::release::validate_depot(&spec, &binding, &plan)?;
-        if dry {
-            return plan.manifest.encode();
+        let held = (|| {
+            if dry {
+                plan.manifest.encode()
+            } else {
+                let advance = release.current(&binding.release)?;
+                rig.depot.authority.load()?;
+                store::Remote::new(&rig.depot.authority)?.derive(&plan, advance)
+            }
+        })();
+        let after = crate::command::release::ReleaseMarker::at(
+            self.0,
+            &spec.product,
+            &spec.authority,
+            &marker.marker,
+        )?;
+        if after.digest()? != proof {
+            return Err(format!(
+                "release marker {} drifted while depot was deriving configuration",
+                marker.marker
+            ));
         }
-        let advance = release.current(&binding.release)?;
-        rig.depot.authority.load()?;
-        store::Remote::new(&rig.depot.authority)?.derive(&plan, advance)
+        held
     }
 
     fn clean(&self) -> Result<(), String> {

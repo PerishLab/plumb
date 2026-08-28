@@ -1,5 +1,5 @@
 use super::super::truth::{record, verify};
-use super::promotion::Promotion;
+use super::promotion;
 use crate::command::release::{Marker as Deed, channel};
 use crate::shape::release::Spec;
 use plumb::datum;
@@ -51,7 +51,8 @@ struct Seal {
 
 struct Seat {
     root: PathBuf,
-    spec: Spec,
+    product: String,
+    authority: String,
     repository: String,
 }
 
@@ -79,6 +80,20 @@ pub(in crate::command) fn resolve(raw: &str) -> Result<Descriptor, String> {
     Seat::open()?.resolve(raw)
 }
 
+pub(in crate::command) fn marked(
+    root: &Path,
+    product: &str,
+    authority: &str,
+    raw: &str,
+) -> Result<Descriptor, String> {
+    Seat::new(
+        root.to_path_buf(),
+        product.to_string(),
+        authority.to_string(),
+    )?
+    .resolve(raw)
+}
+
 impl Descriptor {
     pub(in crate::command) fn digest(&self) -> Result<String, String> {
         serde_json::to_vec(self)
@@ -91,17 +106,23 @@ impl Seat {
     fn open() -> Result<Self, String> {
         let root = git::root()?;
         let spec = Spec::read(&root.join("plumb.toml"))?;
+        Self::new(root, spec.product, spec.authority)
+    }
+
+    fn new(root: PathBuf, product: String, authority: String) -> Result<Self, String> {
         let remote = git::remote(&root, "")?;
         Ok(Self {
             root,
-            spec,
+            product,
+            authority,
             repository: format!("{}/{}", remote.owner, remote.repo),
         })
     }
 
     fn resolve(&self, raw: &str) -> Result<Descriptor, String> {
         let marker = named(raw);
-        let channel = channel::channel(&marker)?;
+        let channel = channel::channel(&marker)
+            .map_err(|error| format!("invalid release marker {marker}: {error}"))?;
         self.fetch()?;
         self.annotated(&marker)?;
         let commit = self.read(["rev-parse", &format!("{marker}^{{commit}}")])?;
@@ -116,9 +137,9 @@ impl Seat {
         };
         Ok(Descriptor {
             schema: SCHEMA,
-            product: self.spec.product.clone(),
+            product: self.product.clone(),
             repository: self.repository.clone(),
-            authority: self.spec.authority.clone(),
+            authority: self.authority.clone(),
             marker: marker.clone(),
             version: marker,
             channel,
@@ -149,7 +170,7 @@ impl Seat {
             return Err(format!("release marker {marker} is not an annotated tag"));
         }
         let message = self.read(["for-each-ref", "--format=%(contents)", &reference])?;
-        let wanted = format!("{} {marker}", self.spec.product);
+        let wanted = format!("{} {marker}", self.product);
         if message.trim() != wanted {
             return Err(format!(
                 "release marker {marker} annotation disagrees with {wanted:?}"
@@ -182,10 +203,10 @@ impl Seat {
     }
 
     fn promotion(&self, version: &str, commit: &str) -> Result<Exact, String> {
-        let exact = Promotion::new(&self.spec).derive(commit, version)?;
+        let exact = promotion::derive(&self.root, &self.authority, commit, version)?;
         let url = format!(
             "{}/v1/releases/{}/{}/seal.json",
-            self.spec.authority, exact.channel, exact.version
+            self.authority, exact.channel, exact.version
         );
         let (seal, digest) = verify::Surface(&url).sealed(false)?;
         let standing = (
@@ -194,7 +215,7 @@ impl Seat {
             &seal.channel,
             &seal.version,
         );
-        let wanted = (&self.spec.product, commit, &exact.channel, &exact.version);
+        let wanted = (&self.product, commit, &exact.channel, &exact.version);
         if standing != wanted {
             return Err(format!(
                 "promotion seal does not prove release marker {}",

@@ -1,8 +1,28 @@
 name: ship
 
 on:
+  workflow_dispatch:
+    inputs:
+      marker:
+        description: Immutable release marker shared by every distribution medium
+        required: true
+        type: string
+      repository:
+        description: Product repository identity selected by the dispatching Plumb
+        required: true
+        type: string
   workflow_call:
     inputs:
+      marker:
+        description: Immutable release marker shared by every distribution medium
+        required: false
+        default: ""
+        type: string
+      repository:
+        description: Product repository identity selected by the dispatching Plumb
+        required: false
+        default: ""
+        type: string
       guard_contexts:
         description: JSON commit-status contexts proving the canonical source guard
         required: false
@@ -13,7 +33,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.repository }}-ship-${{ startsWith(github.ref, 'refs/heads/release/') && 'consensus' || github.ref }}
+  group: ${{ inputs.repository || github.repository }}-ship-${{ inputs.marker || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -30,13 +50,15 @@ jobs:
     env:
       PLUMB_RELEASE_ROOT: .
       PLUMB_RELEASE_COMMIT: ${{ github.sha }}
+      PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
       PLUMB_RELEASE_SOURCE: ${{ github.ref }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
-          ref: ${{ github.sha }}
+          repository: ${{ inputs.repository || github.repository }}
+          ref: ${{ inputs.marker || github.sha }}
 
 {@install}
       - name: Plan this release
@@ -44,6 +66,13 @@ jobs:
         shell: bash
         run: |
           set -eu
+          if [ -n "$PLUMB_RELEASE_MARKER" ]; then
+            marker=$(plumb release marker show --marker "$PLUMB_RELEASE_MARKER")
+            PLUMB_RELEASE_COMMIT=$(printf '%s' "$marker" | jq -r '.commit')
+            PLUMB_RELEASE_SOURCE="refs/tags/$PLUMB_RELEASE_MARKER"
+            export PLUMB_RELEASE_COMMIT
+            export PLUMB_RELEASE_SOURCE
+          fi
           if plumb release plan --help >/dev/null 2>&1; then
             plan=$(plumb release plan)
             PLUMB_RELEASE_VERSION=$(printf '%s' "$plan" | jq -r '.version')
@@ -59,6 +88,12 @@ jobs:
           fi
           export PLUMB_RELEASE_VERSION
           export PLUMB_RELEASE_CHANNEL
+          if [ -n "$PLUMB_RELEASE_MARKER" ]; then
+            marker=$(plumb release marker show --marker "$PLUMB_RELEASE_MARKER")
+            test "$(printf '%s' "$marker" | jq -r '.marker')" = "$PLUMB_RELEASE_VERSION"
+            test "$(printf '%s' "$marker" | jq -r '.channel')" = "$PLUMB_RELEASE_CHANNEL"
+            test "$(printf '%s' "$marker" | jq -r '.commit')" = "$PLUMB_RELEASE_COMMIT"
+          fi
           {
             echo "channel=$PLUMB_RELEASE_CHANNEL"
             echo "commit=$PLUMB_RELEASE_COMMIT"

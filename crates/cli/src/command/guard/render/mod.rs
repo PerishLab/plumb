@@ -41,7 +41,7 @@ impl Seat {
                 println!("  the depot carries no release note for {stamped}");
                 println!();
                 println!(
-                    "  write one under $PLUMB_HOME/depot/stage/{product}/changelog/{stamped} and run plumb depot changelog"
+                    "  write one under $PLUMB_HOME/depot/stage/{product}/changelog/{stamped} and run plumb depot changelog --marker {stamped}"
                 );
                 1
             }

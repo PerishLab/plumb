@@ -4,7 +4,7 @@ use plumb::rig::Rig;
 use std::path::{Path, PathBuf};
 
 pub struct Wanted<'a> {
-    pub version: &'a str,
+    pub marker: &'a str,
     pub from: &'a str,
     pub keep: bool,
     pub dry: bool,
@@ -14,10 +14,17 @@ pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let staged = wanted.from.is_empty();
     let target = product::resolve(root, &rig, plumb::depot::v2::Kind::Changelog)?;
+    let marker = crate::command::release::ReleaseMarker::at(
+        root,
+        &target.product,
+        &target.authority,
+        wanted.marker,
+    )?;
+    let standing = marker.digest()?;
     let source = stage(&rig, &target.product, "changelog", &wanted)?;
-    let proof = crate::command::changelog::prove(root, &source, wanted.version)?;
+    let proof = crate::command::changelog::prove(root, &source, &marker.marker)?;
     let release = crate::command::release::knowledge(&target.product, &target.authority);
-    let binding = release.binding(wanted.version, false)?;
+    let binding = release.binding(&marker.marker, false)?;
     if binding.release.channel != "stable" {
         return Err(format!(
             "the {} channel does not owe a changelog derivative",
@@ -30,65 +37,115 @@ pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
             proof.candidate, binding.release.version, binding.release.commit
         ));
     }
+    if marker.commit != proof.candidate {
+        return Err(format!(
+            "release marker {} seals {}, but changelog proves {}",
+            marker.marker, marker.commit, proof.candidate
+        ));
+    }
     let batch = notes::Batch::gather(&source)?;
     let plan = record::Batch::changelog(
         record::Draft {
-            source: target.source,
+            source: target.source.clone(),
             release: binding.release.clone(),
             timestamp: super::super::clock::mark()?,
             commit: proof.candidate.clone(),
         },
         batch.bodies,
     )?;
-    if wanted.dry {
-        return Ok(format!(
-            "{}\n{} lines within a budget of {} for {} units",
-            plan.manifest.encode()?,
-            proof
-                .languages
-                .values()
-                .map(|held| held.lines)
-                .max()
-                .unwrap_or_default(),
-            proof
-                .languages
-                .values()
-                .map(|held| held.budget)
-                .max()
-                .unwrap_or_default(),
-            proof.units
-        ));
-    }
-    let advance = release.current(&binding.release)?;
-    rig.depot.authority.load()?;
-    let held = store::Remote::new(&rig.depot.authority)?.derive(&plan, advance)?;
-    cleared(held, staged, wanted.keep, &source)
+    let held = (|| {
+        if wanted.dry {
+            Ok(format!(
+                "{}\n{} lines within a budget of {} for {} units",
+                plan.manifest.encode()?,
+                proof
+                    .languages
+                    .values()
+                    .map(|held| held.lines)
+                    .max()
+                    .unwrap_or_default(),
+                proof
+                    .languages
+                    .values()
+                    .map(|held| held.budget)
+                    .max()
+                    .unwrap_or_default(),
+                proof.units
+            ))
+        } else {
+            let advance = release.current(&binding.release)?;
+            rig.depot.authority.load()?;
+            store::Remote::new(&rig.depot.authority)?.derive(&plan, advance)
+        }
+    })();
+    confirm(root, &target, &marker, &standing)?;
+    cleared(held?, staged, wanted.keep, &source)
 }
 
 pub fn skill(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let staged = wanted.from.is_empty();
     let target = product::resolve(root, &rig, plumb::depot::v2::Kind::Skill)?;
+    let marker = crate::command::release::ReleaseMarker::at(
+        root,
+        &target.product,
+        &target.authority,
+        wanted.marker,
+    )?;
+    let standing = marker.digest()?;
     let source = stage(&rig, &target.product, "skill", &wanted)?;
+    let commit = Tree(root).commit()?;
+    if marker.commit != commit {
+        return Err(format!(
+            "release marker {} seals {}, not HEAD at {commit}",
+            marker.marker, marker.commit
+        ));
+    }
     let release = crate::command::release::knowledge(&target.product, &target.authority);
-    let binding = release.binding(wanted.version, false)?;
+    let binding = release.binding(&marker.marker, false)?;
     let batch = notes::Batch::gather(&source)?;
     let plan = record::Batch::skill(
         record::Draft {
-            source: target.source,
+            source: target.source.clone(),
             release: binding.release.clone(),
             timestamp: super::super::clock::mark()?,
-            commit: Tree(root).commit()?,
+            commit,
         },
         batch.bodies,
     )?;
-    if wanted.dry {
-        return plan.manifest.encode();
+    let held = (|| {
+        if wanted.dry {
+            plan.manifest.encode()
+        } else {
+            let advance = release.current(&binding.release)?;
+            rig.depot.authority.load()?;
+            store::Remote::new(&rig.depot.authority)?.derive(&plan, advance)
+        }
+    })();
+    confirm(root, &target, &marker, &standing)?;
+    cleared(held?, staged, wanted.keep, &source)
+}
+
+fn confirm(
+    root: &Path,
+    target: &product::Target,
+    marker: &crate::command::release::ReleaseMarker,
+    proof: &str,
+) -> Result<(), String> {
+    let after = crate::command::release::ReleaseMarker::at(
+        root,
+        &target.product,
+        &target.authority,
+        &marker.marker,
+    )?;
+    if after.digest()? == proof {
+        Ok(())
+    } else {
+        Err(format!(
+            "release marker {} drifted while depot was deriving knowledge",
+            marker.marker
+        ))
     }
-    let advance = release.current(&binding.release)?;
-    rig.depot.authority.load()?;
-    let held = store::Remote::new(&rig.depot.authority)?.derive(&plan, advance)?;
-    cleared(held, staged, wanted.keep, &source)
 }
 
 fn cleared(held: String, staged: bool, keep: bool, source: &Path) -> Result<String, String> {
@@ -117,5 +174,5 @@ fn stage(
         .join("stage")
         .join(product)
         .join(derivative)
-        .join(wanted.version))
+        .join(wanted.marker))
 }

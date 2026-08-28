@@ -136,7 +136,7 @@ enum Command {
         deed: command::release::Deed,
     },
     #[command(
-        about = "Project one release onto one medium",
+        about = "Dispatch every declared medium for one immutable release marker",
         long_about = command::depot::carried("help/ship.txt", plumb::seat::resource!("help/ship.txt"))
     )]
     Ship {

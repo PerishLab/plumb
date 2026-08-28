@@ -33,14 +33,16 @@ impl Judge<'_> {
 
     fn anchors(&self, found: &mut Found) {
         let held = self.0;
-        if held.lanes.contains("exact.release") && held.lanes.contains("stable.release") {
+        if held.lanes.contains("ship")
+            || (held.lanes.contains("exact.release") && held.lanes.contains("stable.release"))
+        {
             return;
         }
         for lane in ["release-exact", "release-stable"] {
             if !held.lanes.contains(lane) {
                 found.push(Seed::wrong(
                     &rule::RELEASE_LANE_PRESENT,
-                    format!("binary release without a {lane} lane"),
+                    format!("binary release without the unified ship lane or legacy {lane} lane"),
                 ));
             } else if !held.release.sources.contains(lane) {
                 found.push(Seed::wrong(

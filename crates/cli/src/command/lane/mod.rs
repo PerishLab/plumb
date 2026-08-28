@@ -12,7 +12,7 @@ const TOOLS: [&str; 2] = ["ectropy", "plumb"];
 
 pub struct Seat<'a>(pub &'a Path);
 
-use source::{RELEASED, filled, plain};
+use source::filled;
 
 struct Expected {
     path: String,
@@ -23,19 +23,8 @@ impl Seat<'_> {
     fn render(&self) -> Result<Vec<Expected>, String> {
         let spec = Spec::read(&self.0.join("plumb.toml"))?;
         let mut lanes = vec![self.guard(&spec)?];
-        if self.stocked() {
-            let vars = BTreeMap::from([(
-                "forge",
-                crate::catalog::set::current().release.forge.clone(),
-            )]);
-            let rendered = filled("assets/depot/lane.yml.in", &vars)?;
-            lanes.push(self.seat("depot.yml", rendered)?);
-        }
         if !spec.surface().is_empty() {
             lanes.push(self.ship(&spec)?);
-            for (name, held) in RELEASED {
-                lanes.push(self.thin(name, held)?);
-            }
         }
         let refused = lanes
             .iter()
@@ -52,6 +41,11 @@ impl Seat<'_> {
         let media = spec.surface();
         let carried = media.contains(&"binary");
         let projected = media.iter().any(|medium| *medium != "binary");
+        let templates = if spec.product == "plumb" {
+            source::Store::Factory
+        } else {
+            source::Store::Depot
+        };
         let mut vars = BTreeMap::from([
             (
                 "forge",
@@ -60,47 +54,41 @@ impl Seat<'_> {
             ("plumb", manager("plumb")),
             ("after", if carried { ", seal" } else { "" }.to_string()),
         ]);
-        let bootstrap = filled("assets/ship/install.yml.in", &vars)?;
+        let bootstrap = templates.filled("assets/ship/install.yml.in", &vars)?;
         let source = if spec.product == "plumb" {
-            source::text("assets/ship/source.yml.in")?
+            templates.text("assets/ship/source.yml.in")?
         } else {
             String::new()
         };
         vars.insert(
             "carry",
-            format!("{}\n{source}", matrixed(&bootstrap, &vars)?),
+            format!("{}\n{source}", templates.matrixed(&bootstrap, &vars)?),
         );
         vars.insert("install", format!("{bootstrap}\n{source}"));
         let binary = if carried {
-            filled("assets/ship/binary.yml.in", &vars)?
+            templates.filled("assets/ship/binary.yml.in", &vars)?
         } else {
             String::new()
         };
         vars.insert(
             "capsule",
             if carried {
-                source::text("assets/ship/capsule.yml.in")?
+                templates.text("assets/ship/capsule.yml.in")?
             } else {
                 String::new()
             },
         );
         let project = if projected {
-            filled("assets/ship/project.yml.in", &vars)?
+            templates.filled("assets/ship/project.yml.in", &vars)?
         } else {
             String::new()
         };
         vars.insert("binary", binary);
         vars.insert("project", project);
-        self.seat("ship.yml", filled("assets/ship/lane.yml.in", &vars)?)
-    }
-
-    fn stocked(&self) -> bool {
-        crate::shape::depot::configuration(self.0)
-            .is_ok_and(|roots| roots.iter().all(|(root, _)| self.0.join(root).is_dir()))
-    }
-
-    fn thin(&self, name: &str, path: &str) -> Result<Expected, String> {
-        self.seat(name, plain(path)?)
+        self.seat(
+            "ship.yml",
+            templates.filled("assets/ship/lane.yml.in", &vars)?,
+        )
     }
 
     fn seat(&self, name: &str, rendered: String) -> Result<Expected, String> {
@@ -270,18 +258,6 @@ fn invocation(spec: &Spec, tool: &str) -> String {
     let binary = spec.binaries.first().map_or(tool, String::as_str);
     let deed = if tool == "plumb" { " doctor" } else { "" };
     format!("cargo run --quiet --locked --bin {binary} --{deed}")
-}
-
-fn matrixed(install: &str, vars: &BTreeMap<&str, String>) -> Result<String, String> {
-    let guarded = install.replacen(
-        "        run: |",
-        "        if: runner.os != 'Windows'\n        run: |",
-        1,
-    );
-    Ok(format!(
-        "{guarded}\n{}",
-        filled("assets/ship/windows.yml.in", vars)?
-    ))
 }
 
 fn manager(tool: &str) -> String {

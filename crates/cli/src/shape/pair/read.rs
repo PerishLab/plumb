@@ -45,11 +45,14 @@ impl Root<'_> {
 
     fn held(&self, spec: &Spec, lanes: &BTreeSet<String>) -> Release {
         let attachments = attachments(spec);
-        let callers = if attachments.is_empty() {
+        let mut callers = if attachments.is_empty() {
             BTreeSet::new()
         } else {
             self.callers()
         };
+        if lanes.contains("ship") {
+            callers.insert("ship".to_string());
+        }
         let sources = self.sources(lanes, &attachments);
         Release {
             attachments,
@@ -92,9 +95,9 @@ impl Root<'_> {
         lanes: &BTreeSet<String>,
         attachments: &BTreeSet<String>,
     ) -> BTreeSet<String> {
-        if !attachments.contains("binary")
-            || (lanes.contains("exact.release") && lanes.contains("stable.release"))
-        {
+        let unified = lanes.contains("ship");
+        let internal = lanes.contains("exact.release") && lanes.contains("stable.release");
+        if !attachments.contains("binary") || unified || internal {
             return BTreeSet::new();
         }
         ["release-exact", "release-stable"]

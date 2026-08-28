@@ -1,5 +1,5 @@
-use super::Dispatch;
 use super::course::Course;
+use super::{Dispatch, Legacy};
 use super::{line, value};
 use plumb::forgejo::{Client, Outcome, git};
 use serde_json::{Value, json};
@@ -8,7 +8,52 @@ use std::time::Instant;
 const JOBS: usize = 4;
 const LINES: usize = 12;
 
+struct Flight<'a> {
+    client: &'a Client,
+    workflow: &'a str,
+    reference: &'a str,
+    inputs: Value,
+    waiting: bool,
+}
+
 pub fn run(options: Dispatch) -> Result<String, String> {
+    let before = super::super::release::marker(&options.marker)?;
+    let digest = before.digest()?;
+    let root = git::root()?;
+    let product = git::remote(&root, &options.repo)?;
+    let remote = git::remote(&root, "PerishLab/plumb")?;
+    let workflow = "ship.yml";
+    let reference = if before.repository == "PerishLab/plumb" {
+        format!("refs/tags/{}", before.marker)
+    } else {
+        format!("refs/tags/v{}", env!("CARGO_PKG_VERSION"))
+    };
+    let client = Client::new(remote)?;
+    let mut course = Course::new(options.dry);
+    let message = launch(
+        Flight {
+            client: &client,
+            workflow,
+            reference: &reference,
+            inputs: json!({
+                "marker": before.marker,
+                "repository": format!("{}/{}", product.owner, product.repo),
+            }),
+            waiting: options.watch,
+        },
+        &mut course,
+    );
+    let after = super::super::release::marker(&options.marker)?;
+    if after.digest()? != digest {
+        return Err(format!(
+            "release marker {} drifted while ship was in flight",
+            after.marker
+        ));
+    }
+    message
+}
+
+pub fn legacy(options: Legacy) -> Result<String, String> {
     let root = git::root()?;
     current(&root)?;
     let remote = git::remote(&root, &options.repo)?;
@@ -30,12 +75,32 @@ pub fn run(options: Dispatch) -> Result<String, String> {
         line::freeze(&mut course, &client, &root, &reference)?;
         super::mark::stood(&root, &version, &reference)?;
     }
+    launch(
+        Flight {
+            client: &client,
+            workflow,
+            reference: &reference,
+            inputs,
+            waiting: options.watch,
+        },
+        &mut course,
+    )
+}
+
+fn launch(flight: Flight<'_>, course: &mut Course) -> Result<String, String> {
     let said = format!(
-        "POST /repos/{}/{}/actions/workflows/{workflow}/dispatches (ref={reference}, inputs={inputs})",
-        client.remote().owner,
-        client.remote().repo
+        "POST /repos/{}/{}/actions/workflows/{}/dispatches (ref={}, inputs={})",
+        flight.client.remote().owner,
+        flight.client.remote().repo,
+        flight.workflow,
+        flight.reference,
+        flight.inputs
     );
-    let run = course.step(said, || client.dispatch(workflow, &reference, inputs))?;
+    let run = course.step(said, || {
+        flight
+            .client
+            .dispatch(flight.workflow, flight.reference, flight.inputs)
+    })?;
     if course.dry() {
         return Ok(course.plan());
     }
@@ -44,16 +109,19 @@ pub fn run(options: Dispatch) -> Result<String, String> {
         .get("id")
         .and_then(Value::as_u64)
         .ok_or_else(|| "Forgejo did not expose the dispatched run ID".to_string())?;
-    let url = client.link(&run);
+    let url = flight.client.link(&run);
     if url.is_empty() {
         return Err(format!(
             "Forgejo did not expose a canonical URL for run {id}"
         ));
     }
-    let mut message = format!("triggered {workflow} run {id} for ref {reference}\n{url}");
-    if options.watch {
+    let mut message = format!(
+        "triggered {} run {id} for ref {}\n{url}",
+        flight.workflow, flight.reference
+    );
+    if flight.waiting {
         message.push('\n');
-        message.push_str(&watch(&client, id, &url)?);
+        message.push_str(&watch(flight.client, id, &url)?);
     }
     Ok(message)
 }
@@ -70,10 +138,15 @@ fn current(root: &std::path::Path) -> Result<(), String> {
 }
 
 fn present(root: &std::path::Path, workflow: &str) -> Result<(), String> {
+    let path = format!(".forgejo/workflows/{workflow}");
+    if !root.join(&path).is_file() {
+        return Err(format!(
+            "a release cannot start without its legacy workflow: {path}"
+        ));
+    }
     let Ok(evidence) = crate::command::lane::Seat(root).project() else {
         return Ok(());
     };
-    let path = format!(".forgejo/workflows/{workflow}");
     if evidence
         .projected()
         .iter()

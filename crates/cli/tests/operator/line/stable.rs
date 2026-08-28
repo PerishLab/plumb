@@ -20,6 +20,13 @@ targets = ["x86_64-unknown-linux-gnu"]
     run(Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["lane", "--write"])
         .current_dir(root));
+    for workflow in ["exact.release.yml", "stable.release.yml"] {
+        std::fs::write(
+            root.join(".forgejo/workflows").join(workflow),
+            "name: legacy\non: workflow_dispatch\n",
+        )
+        .expect("legacy workflow");
+    }
 }
 
 pub fn command(root: &Path, args: &[&str]) -> Output {

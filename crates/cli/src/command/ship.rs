@@ -12,32 +12,43 @@ use plumb::rig::Rig;
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(about = "Dispatch every declared distribution medium for one release marker")]
+    Dispatch {
+        #[command(flatten)]
+        options: super::operator::Dispatch,
+    },
     #[command(about = "Build, prove, and publish the product's own artifacts")]
+    #[command(hide = true)]
     Binary {
         #[command(subcommand)]
         deed: Binary,
     },
     #[command(about = "Carry the release to its Cargo registry")]
+    #[command(hide = true)]
     Cargo {
         #[command(subcommand)]
         deed: Cargo,
     },
     #[command(about = "Carry the release to its Helm chart registry")]
+    #[command(hide = true)]
     Chart {
         #[command(subcommand)]
         deed: Chart,
     },
     #[command(about = "Carry the release to its npm registry")]
+    #[command(hide = true)]
     Npm {
         #[command(subcommand)]
         deed: Npm,
     },
     #[command(about = "Carry the release to its image registry")]
+    #[command(hide = true)]
     Oci {
         #[command(subcommand)]
         deed: Oci,
     },
     #[command(about = "Put the site's version worker on its edge")]
+    #[command(hide = true)]
     Cfworker {
         #[command(subcommand)]
         deed: Cfworker,
@@ -46,6 +57,7 @@ pub enum Deed {
         about = "Project a declared site onto its edge",
         long_about = super::depot::carried("help/ship/site.txt", plumb::seat::resource!("help/ship/site.txt"))
     )]
+    #[command(hide = true)]
     Site {
         #[command(subcommand)]
         deed: Site,
@@ -125,9 +137,10 @@ pub enum Binary {
     #[command(about = "Compile the product for one target triple and archive it")]
     Build,
     #[command(about = "Dispatch the release workflow for one version on the forge")]
+    #[command(hide = true)]
     Dispatch {
         #[command(flatten)]
-        options: super::operator::Dispatch,
+        options: super::operator::Legacy,
     },
     #[command(about = "Read what the release surface publishes for this version")]
     Inspect,
@@ -145,6 +158,7 @@ pub enum Binary {
 
 pub fn run(deed: Deed) -> i32 {
     let result = match deed {
+        Deed::Dispatch { options } => super::operator::dispatch(options),
         Deed::Binary { deed } => binary(deed),
         Deed::Cargo { deed } => attachment::cargo(deed),
         Deed::Chart { deed } => attachment::chart(deed),
@@ -201,7 +215,7 @@ fn binary(deed: Binary) -> Result<String, String> {
             commit: required("PLUMB_RELEASE_COMMIT", &release.commit)?,
             artifacts: &artifacts(release)?,
         }),
-        Binary::Dispatch { options } => super::operator::dispatch(options),
+        Binary::Dispatch { options } => super::operator::legacy(options),
         Binary::Inspect => verify::binary(
             required("PLUMB_RELEASE_URL", &release.url)?,
             release.activated,

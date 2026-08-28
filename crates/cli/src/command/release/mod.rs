@@ -20,6 +20,17 @@ pub(in crate::command) fn marker(raw: &str) -> Result<ReleaseMarker, String> {
     markers::resolve(raw)
 }
 
+impl ReleaseMarker {
+    pub(in crate::command) fn at(
+        root: &Path,
+        product: &str,
+        authority: &str,
+        raw: &str,
+    ) -> Result<Self, String> {
+        markers::marked(root, product, authority, raw)
+    }
+}
+
 pub fn run(deed: Deed) -> i32 {
     let result = execute(deed);
     match result {

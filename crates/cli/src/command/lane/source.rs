@@ -2,11 +2,6 @@ use super::super::depot::held;
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
-pub const RELEASED: [(&str, &str); 2] = [
-    ("exact.release.yml", "assets/release/exact.yml.in"),
-    ("stable.release.yml", "assets/release/stable.yml.in"),
-];
-
 pub const FACTORY: [(&str, &str); 19] = [
     (
         "assets/depot/lane.yml.in",
@@ -88,6 +83,12 @@ pub const FACTORY: [(&str, &str); 19] = [
 
 static CARRIED: LazyLock<Result<bool, String>> = LazyLock::new(carried);
 
+#[derive(Clone, Copy)]
+pub enum Store {
+    Depot,
+    Factory,
+}
+
 fn carried() -> Result<bool, String> {
     let seat = held();
     let lane = FACTORY
@@ -99,21 +100,40 @@ fn carried() -> Result<bool, String> {
 }
 
 pub fn text(path: &str) -> Result<String, String> {
-    let (_, factory) = FACTORY
-        .iter()
-        .find(|(held, _)| *held == path)
-        .ok_or_else(|| format!("no template is carried at {path}"))?;
-    if *CARRIED.as_ref().map_err(Clone::clone)? {
-        held().read(path, factory)
-    } else {
-        Ok(factory.to_string())
-    }
+    Store::Depot.text(path)
 }
 
 pub fn filled(path: &str, vars: &BTreeMap<&str, String>) -> Result<String, String> {
-    plumb::fill::actions(&text(path)?, vars).map_err(|error| error.to_string())
+    Store::Depot.filled(path, vars)
 }
 
-pub fn plain(path: &str) -> Result<String, String> {
-    filled(path, &BTreeMap::new())
+impl Store {
+    pub fn text(self, path: &str) -> Result<String, String> {
+        let factory = FACTORY
+            .iter()
+            .find(|(held, _)| *held == path)
+            .map(|(_, factory)| *factory)
+            .ok_or_else(|| format!("no template is carried at {path}"))?;
+        if matches!(self, Self::Depot) && *CARRIED.as_ref().map_err(Clone::clone)? {
+            held().read(path, factory)
+        } else {
+            Ok(factory.to_string())
+        }
+    }
+
+    pub fn filled(self, path: &str, vars: &BTreeMap<&str, String>) -> Result<String, String> {
+        plumb::fill::actions(&self.text(path)?, vars).map_err(|error| error.to_string())
+    }
+
+    pub fn matrixed(self, install: &str, vars: &BTreeMap<&str, String>) -> Result<String, String> {
+        let guarded = install.replacen(
+            "        run: |",
+            "        if: runner.os != 'Windows'\n        run: |",
+            1,
+        );
+        Ok(format!(
+            "{guarded}\n{}",
+            self.filled("assets/ship/windows.yml.in", vars)?
+        ))
+    }
 }

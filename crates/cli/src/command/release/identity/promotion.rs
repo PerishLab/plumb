@@ -21,25 +21,7 @@ impl<'a> Promotion<'a> {
     }
 
     pub fn derive(&self, commit: &str, version: &str) -> Result<Exact, String> {
-        proof::commit(commit)?;
-        channel::intent("stable", version)?;
-        let wanted = trunk(version)?;
-        let mut found = Vec::new();
-        for tag in git::tags(&self.spec.root, commit)? {
-            let Ok(channel) = channel::channel(&tag) else {
-                continue;
-            };
-            if channel == "stable" || trunk(&tag)? != wanted {
-                continue;
-            }
-            if verify::optional(&self.url(&channel, &tag))?.is_some() {
-                found.push(Exact {
-                    channel,
-                    version: tag,
-                });
-            }
-        }
-        settle(found, commit, version)
+        derive(&self.spec.root, &self.spec.authority, commit, version)
     }
 
     pub fn fetch(
@@ -159,6 +141,34 @@ impl<'a> Promotion<'a> {
             self.spec.authority
         )
     }
+}
+
+pub(super) fn derive(
+    root: &Path,
+    authority: &str,
+    commit: &str,
+    version: &str,
+) -> Result<Exact, String> {
+    proof::commit(commit)?;
+    channel::intent("stable", version)?;
+    let wanted = trunk(version)?;
+    let mut found = Vec::new();
+    for tag in git::tags(root, commit)? {
+        let Ok(channel) = channel::channel(&tag) else {
+            continue;
+        };
+        if channel == "stable" || trunk(&tag)? != wanted {
+            continue;
+        }
+        let url = format!("{authority}/v1/releases/{channel}/{tag}/seal.json");
+        if verify::optional(&url)?.is_some() {
+            found.push(Exact {
+                channel,
+                version: tag,
+            });
+        }
+    }
+    settle(found, commit, version)
 }
 
 fn download(remote: &record::Remote, path: &Path) -> Result<(), String> {
