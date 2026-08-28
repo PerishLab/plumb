@@ -11,6 +11,9 @@ pub struct Remote {
 pub struct Pull {
     pub number: u64,
     pub url: String,
+    pub head: String,
+    pub title: String,
+    pub body: String,
 }
 
 #[derive(Debug, Eq, PartialEq)]

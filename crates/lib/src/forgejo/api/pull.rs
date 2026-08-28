@@ -97,5 +97,20 @@ fn number(value: &Value) -> Option<Pull> {
                 .and_then(Value::as_str)
                 .unwrap_or_default()
                 .to_string(),
+            head: value
+                .pointer("/head/sha")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string(),
+            title: value
+                .get("title")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string(),
+            body: value
+                .get("body")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string(),
         })
 }
