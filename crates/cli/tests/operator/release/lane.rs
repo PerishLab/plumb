@@ -126,6 +126,10 @@ fn carried() {
     assert!(held.contains("binary_reuse"), "{held}");
     assert!(held.contains("WORKFLOW_INVENTORY_URL"), "{held}");
     assert!(
+        held.contains("cancel-in-progress: true"),
+        "a repeated marker must take over an orphaned transaction: {held}"
+    );
+    assert!(
         held.contains("--connect-timeout 3 --max-time 10 --retry 1"),
         "{held}"
     );

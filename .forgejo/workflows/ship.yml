@@ -28,7 +28,7 @@ permissions:
 
 concurrency:
   group: ${{ inputs.repository || github.repository }}-ship-${{ inputs.marker || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   resolve:
