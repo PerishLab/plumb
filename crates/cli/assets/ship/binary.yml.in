@@ -1,7 +1,7 @@
 
   build:
     needs: resolve
-    if: needs.resolve.outputs.channel != 'stable'
+    if: needs.resolve.outputs.channel != 'stable' && needs.resolve.outputs.binary_missing == 'true'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.resolve.outputs.targets) }}

@@ -145,6 +145,10 @@ fn carried() {
     );
     assert!(held.contains("binary_reuse"), "{held}");
     assert!(held.contains("WORKFLOW_INVENTORY_URL"), "{held}");
+    assert!(
+        held.contains("needs.resolve.outputs.binary_missing == 'true'"),
+        "an empty binary plan skips the matrix before this forge expands it: {held}"
+    );
     assert_eq!(
         held.matches("- uses: actions/checkout@v6").count(),
         3,
