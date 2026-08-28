@@ -149,6 +149,14 @@ fn carried() {
         held.contains("needs.resolve.outputs.binary_missing == 'true'"),
         "an empty binary plan skips the matrix before this forge expands it: {held}"
     );
+    assert!(
+        held.contains(
+            "\n  build:\n    needs: resolve\n    if: needs.resolve.outputs.channel != 'stable' && needs.resolve.outputs.binary_missing == 'true'"
+        ) && held.contains(
+            "\n  smoke:\n    needs: [resolve, seal]\n    if: needs.resolve.outputs.channel != 'stable' && needs.resolve.outputs.binary_missing == 'true'"
+        ),
+        "fully reused binaries start neither build nor smoke matrices: {held}"
+    );
     assert_eq!(
         held.matches("- uses: actions/checkout@v6").count(),
         3,
