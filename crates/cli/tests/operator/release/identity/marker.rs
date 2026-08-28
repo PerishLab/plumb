@@ -157,6 +157,29 @@ fn refusal() {
         String::from_utf8_lossy(&stable.stderr)
             .contains("stable marker v1.2.0 is created by plumb release freeze")
     );
+
+    std::fs::write(
+        fixture.root.join("plumb.toml"),
+        super::super::world::SPEC.replace("product = \"probe\"", "product = \"plumb\""),
+    )
+    .expect("plumb manifest");
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "tag",
+        "-a",
+        "v0.37.8-beta.1",
+        &commit,
+        "-m",
+        "plumb v0.37.8-beta.1",
+    ]));
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "push",
+        "-q",
+        "origin",
+        "refs/tags/v0.37.8-beta.1",
+    ]));
+    let beta = marker(&fixture, "verify", "v0.37.8-beta.1");
+    assert!(!beta.status.success());
+    assert!(String::from_utf8_lossy(&beta.stderr).contains("has no valid guard proof"));
 }
 
 fn marker(fixture: &Fixture<'_>, deed: &str, name: &str) -> Output {
