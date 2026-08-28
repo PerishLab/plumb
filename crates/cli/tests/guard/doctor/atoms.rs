@@ -18,6 +18,6 @@ fn known() {
         .output()
         .expect("plumb should run");
     let out = String::from_utf8_lossy(&output.stdout);
-    assert!(!out.contains("workflow guard.atom has no shadow"), "{out}");
+    assert!(out.contains("workflow guard.atom has no shadow"), "{out}");
     assert!(!out.contains("workflow plan.atom has no shadow"), "{out}");
 }

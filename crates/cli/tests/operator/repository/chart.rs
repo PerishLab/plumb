@@ -3,8 +3,7 @@ use std::fs::{File, FileTimes};
 use std::process::Command;
 use std::time::{Duration, SystemTime};
 
-#[path = "../../support.rs"]
-mod support;
+use super::support;
 
 fn package(root: &std::path::Path, depot: &std::path::Path) -> Vec<u8> {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))

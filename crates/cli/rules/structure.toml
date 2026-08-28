@@ -103,11 +103,7 @@ note = "Rendered exact-release lane. crest, plumb, sidecar. Succeeds release-exa
 
 [[lane.member]]
 name = "guard"
-note = "The one canonical guard lane. All fifteen governed repositories carry it."
-
-[[lane.member]]
-name = "guard.atom"
-note = "The public guard implementation. Actions owns it; ordinary repositories consume it through their thin guard entrypoint."
+note = "The staged-tree precommit action namespace. It owns no repository workflow seat."
 
 [[lane.member]]
 name = "plan.atom"

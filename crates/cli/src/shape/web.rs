@@ -14,7 +14,6 @@ pub(crate) struct Plane {
     pub(crate) rendered: bool,
     pub(crate) typed: bool,
     pub(crate) build: bool,
-    pub(crate) guarded: bool,
 }
 
 pub(crate) enum Role {
@@ -48,8 +47,6 @@ impl Web<'_> {
         .find_map(|name| std::fs::read_to_string(self.0.join("apps/web").join(name)).ok())
         .unwrap_or_default();
         let source = self.sources(&self.0.join("apps/web/src"));
-        let guard = super::lane::Operator(self.0).guard().source;
-        let name = package.get("name").and_then(Json::as_str);
         let plane = Plane {
             design: has(&package, "@perish/design"),
             plugin: config.contains("design("),
@@ -62,7 +59,6 @@ impl Web<'_> {
                 .and_then(|scripts| scripts.get("build"))
                 .and_then(Json::as_str)
                 .is_some(),
-            guarded: guard.contains("build") && name.is_some_and(|name| guard.contains(name)),
         };
         let mut roles = Vec::new();
         self.roles(&mut roles);

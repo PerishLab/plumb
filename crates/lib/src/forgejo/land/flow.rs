@@ -105,7 +105,10 @@ impl Landing {
         } else {
             body.to_string()
         };
-        Ok(Story { title, body })
+        Ok(Story {
+            title,
+            body: narrative(&body),
+        })
     }
 
     pub fn derive(&self, story: &Story) -> Result<Candidate, Refusal> {
@@ -136,7 +139,19 @@ impl Landing {
                 format!("{} contributes no tree changes to {upstream}", self.branch),
             ));
         }
-        let message = self.message(story, &source);
+        let proof = crate::guard::current(&self.repo.root, &source)
+            .map_err(|error| refuse("guard", error))?;
+        if proof.tree != tree {
+            return Err(refuse(
+                "guard",
+                format!(
+                    "the guarded source tree {} does not equal the projected tree {tree}; update the source from {upstream} and run precommit again",
+                    proof.tree
+                ),
+            ));
+        }
+        let token = proof.encode().map_err(|error| refuse("guard", error))?;
+        let message = self.message(story, &source, &token);
         let identity = self.identity()?;
         let head = self.repo.record(&Seed {
             tree: &tree,
@@ -144,6 +159,7 @@ impl Landing {
             message: &message,
             identity: &identity,
         })?;
+        crate::guard::current(&self.repo.root, &head).map_err(|error| refuse("guard", error))?;
         Ok(Candidate {
             projection: self.projection(),
             head,
@@ -152,17 +168,19 @@ impl Landing {
         })
     }
 
-    fn message(&self, story: &Story, source: &str) -> String {
-        let body = story.body.trim();
+    fn message(&self, story: &Story, source: &str, proof: &str) -> String {
+        let body = narrative(&story.body);
+        let body = body.trim();
         let held = if body.is_empty() {
             String::new()
         } else {
             format!("\n\n{body}")
         };
         format!(
-            "{}{held}\n\nLand-Source: {}@{source}\n",
+            "{}{held}\n\nLand-Source: {}@{source}\n{} {proof}\n",
             story.title.trim(),
-            self.branch
+            self.branch,
+            crate::guard::TRAILER
         )
     }
 
@@ -245,4 +263,13 @@ fn below(body: &str, title: &str) -> String {
     body.strip_prefix(title)
         .map(|rest| rest.trim_start_matches('\n').to_string())
         .unwrap_or_else(|| body.to_string())
+}
+
+fn narrative(body: &str) -> String {
+    body.lines()
+        .filter(|line| {
+            !line.starts_with(crate::guard::TRAILER) && !line.starts_with("Land-Source:")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }

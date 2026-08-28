@@ -23,12 +23,6 @@ on:
         required: false
         default: ""
         type: string
-      guard_contexts:
-        description: JSON commit-status contexts proving the canonical source guard
-        required: false
-        default: ""
-        type: string
-
 permissions:
   contents: read
 

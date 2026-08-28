@@ -261,7 +261,6 @@ export default { server: { port, proxy: { "/api": api } } };
         "web does not load the virtual views manifest",
         "web does not render the views manifest",
         "web does not declare the virtual views module type",
-        "guard does not build the web app",
     ] {
         assert!(out.contains(&format!("{line} [web]")), "{out}");
     }

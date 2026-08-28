@@ -50,16 +50,20 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    #[command(about = "Prove one committed delta stays inside the declared write paths")]
+    #[command(about = "Prove the staged tree, or one committed task boundary")]
     Precommit {
         #[command(flatten)]
         target: Root,
+        #[arg(long, requires = "head", requires = "write")]
+        base: Option<String>,
+        #[arg(long, requires = "base", requires = "write")]
+        head: Option<String>,
         #[arg(long)]
-        base: String,
-        #[arg(long)]
-        head: String,
-        #[arg(long, required = true)]
         write: Vec<String>,
+        #[arg(long, conflicts_with_all = ["base", "head", "write", "attach"])]
+        install: bool,
+        #[arg(long, hide = true, conflicts_with_all = ["base", "head", "write", "install"])]
+        attach: Option<PathBuf>,
         #[arg(long)]
         json: bool,
     },
@@ -143,7 +147,6 @@ enum Command {
         #[command(subcommand)]
         deed: command::ship::Deed,
     },
-
     #[command(
         about = "Destroy one declared delivery chain in a fixed order",
         long_about = command::depot::carried("help/retire.txt", plumb::seat::resource!("help/retire.txt"))
@@ -158,7 +161,6 @@ enum Command {
         deed: command::workflow::Deed,
     },
 }
-
 impl Command {
     fn name(&self) -> &'static str {
         match self {
@@ -210,12 +212,16 @@ fn execute(command: Command) -> i32 {
             base,
             head,
             write,
+            install,
+            attach,
             json,
         } => command::precommit::run(command::precommit::Input {
             root: PathBuf::from(target.root),
             base,
             head,
             write,
+            install,
+            attach,
             json,
         }),
         Command::Radius {

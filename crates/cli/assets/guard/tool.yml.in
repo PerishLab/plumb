@@ -1,5 +1,0 @@
-      - name: Install stable {@title}
-        run: |
-          set -eu
-          curl -fsSL {@manager}/manage.sh | sh
-          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"

@@ -1,5 +1,0 @@
-      - name: Ask what this run must repeat
-        id: workflow
-        run: |
-          set -eu
-          plumb workflow ask guard >> "$GITHUB_OUTPUT" || true

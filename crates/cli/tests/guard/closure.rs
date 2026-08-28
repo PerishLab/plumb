@@ -98,7 +98,7 @@ fn command() {
     capture(Vec::new(), &mut held);
     assert_eq!(
         digest(&held),
-        "7b44f38ad5c0933a648a4af5b23ae838d392cfbfcab69caaae54f6b54a623597"
+        "75d723f8e8b780b75052e4d8c9e75d2d097a193b11f2298086685785320f0370"
     );
 }
 
@@ -107,10 +107,10 @@ fn rule() {
     let output = success(&["rule", "list", "--json"]);
     let report: Value = serde_json::from_slice(&output.stdout).expect("rule list json");
     assert_eq!(report["schema"], "plumb.rule-list/v1");
-    assert_eq!(report["rules"].as_array().map(Vec::len), Some(122));
+    assert_eq!(report["rules"].as_array().map(Vec::len), Some(114));
     assert_eq!(
         digest(&output.stdout),
-        "9949eb2a5626a71c6948c17043e620654695c1e4f0e231e2ca4b326bab8e2afd"
+        "b07b57f3caab1b7348d4319327cb9ab003e6d312baa3620adceb683627160d89"
     );
 }
 
@@ -128,7 +128,7 @@ fn doctor() {
         .iter()
         .map(|standing| coverage[standing].as_u64().expect("coverage count"))
         .sum::<u64>();
-    assert_eq!(total, 122);
+    assert_eq!(total, 114);
 }
 
 #[test]

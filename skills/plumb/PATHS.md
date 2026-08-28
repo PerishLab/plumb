@@ -7,7 +7,7 @@
 3. Run `plumb doctor .` before changing shape. If Plumb reports an absent or
    unreadable rule seat, run `plumb depot sync` and repeat Doctor.
 4. Inspect the relevant files and make the smallest coherent change.
-5. Run Doctor again, then the repository's complete guard.
+5. Run Doctor again, then prove the exact staged tree with `plumb precommit .`.
 
 Doctor's human report is for immediate work. Use JSON when another command
 needs stable fields:
@@ -44,10 +44,25 @@ Repeat `--write` for disjoint prefixes. Both sides of a rename or copy must be
 covered. A symbolic revision, moving head, dirty tree, non-ancestor base, or
 path outside the boundary refuses.
 
+## Prove a staged tree
+
+Install Plumb's untracked Git hooks once, then commit normally:
+
+```bash
+plumb precommit . --install
+git commit
+```
+
+The pre-commit hook checks out the index as an isolated exact tree and runs only
+actions whose input and tool world have no held proof. The commit-msg hook
+carries the resulting proof into the commit. Hooks refuse an occupied seat; they
+do not replace another tool's hook. Run `plumb precommit .` directly to inspect
+or refresh the staged proof before committing.
+
 ## Land a completed branch
 
-Run the repository guard first, then preview and land from the clean topic
-worktree:
+Prove and commit the staged tree first, then preview and land from the clean
+topic worktree:
 
 ```bash
 plumb land . --base main --dry-run
@@ -58,9 +73,9 @@ Forgejo operations use the published Runseal library dialect in-process.
 Provide `FORGEJO_URL` and either `FORGEJO_TOKEN_FILE` or `FORGEJO_TOKEN`.
 Plumb does not discover or parse `tea.yml`.
 
-Keep the source branch. Plumb creates the one-commit projection, waits for its
-guard, advances the base only if the observed revisions still match, and syncs
-the separate base worktree.
+Keep the source branch. Plumb creates the one-commit projection, requires its
+tree to equal the carried proof, advances the base only if the observed
+revisions still match, and syncs the separate base worktree.
 
 ## Inspect and affirm a document
 

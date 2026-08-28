@@ -8,7 +8,6 @@ rule!(VIEWS_MANIFEST_LOADED, "web.views-manifest-loaded");
 rule!(VIEWS_MANIFEST_RENDERED, "web.views-manifest-rendered");
 rule!(VIEWS_TYPES_DECLARED, "web.views-types-declared");
 rule!(BUILD_SCRIPT_PRESENT, "web.build-script-present");
-rule!(GUARD_BUILDS_WEB, "web.guard-builds-web");
 rule!(VIEW_PATH_SEGMENT, "web.view-path-segment");
 rule!(VIEW_FILE_KIND, "web.view-file-kind");
 rule!(SVELTE_UNDER_COMPONENTS, "web.svelte-under-components");
@@ -24,7 +23,6 @@ pub fn mechanisms() -> Vec<&'static Mechanism> {
         &CONVENTION_PATH_LOWERCASE,
         &DESIGN_PLUGIN_ACTIVE,
         &DESIGN_PLUGIN_DEPENDENCY,
-        &GUARD_BUILDS_WEB,
         &HOOK_FILE_KIND,
         &DESIGN_DEPENDENCY,
         &SVELTE_UNDER_COMPONENTS,

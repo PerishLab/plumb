@@ -1,5 +1,5 @@
 use super::finding::{Found, blind, unknown, wrong};
-use super::text::{COMPONENTS, CONCURRENCY};
+use super::text::COMPONENTS;
 use crate::catalog::rules::structure as rule;
 use crate::catalog::set;
 use crate::shape;
@@ -20,59 +20,8 @@ impl Structure<'_> {
     fn judge(&self) -> Found {
         let held = self.0;
         let mut found = Found::new();
-        if held.runseal {
-            let guarded = !held.guards.is_empty();
-            if held.guards.is_empty() {
-                found.push(wrong(&rule::GUARD_LANE_PRESENT, "no guard workflow"));
-            }
-            if held.guards.len() > 1 {
-                found.push(wrong(
-                    &rule::GUARD_LANE_PRESENT,
-                    format!(
-                        "multiple guard workflows: {}",
-                        held.guards
-                            .iter()
-                            .map(|(seat, _)| seat.as_str())
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    ),
-                ));
-            }
-            if !held.laws {
-                found.push(wrong(&rule::ECTROPY_POLICY_PRESENT, "no ectropy.toml"));
-            }
-            if guarded && !(held.guard.contains("plumb") && held.guard.contains("doctor")) {
-                found.push(wrong(
-                    &rule::GUARD_RUNS_DOCTOR,
-                    "guard does not run plumb doctor",
-                ));
-            }
-            if guarded && !held.guard.contains("ectropy") {
-                found.push(wrong(
-                    &rule::GUARD_RUNS_ECTROPY,
-                    "guard does not run ectropy explicitly",
-                ));
-            }
-            if held.rust && guarded && !held.guard.contains("--release") {
-                found.push(wrong(
-                    &rule::GUARD_CHECKS_RELEASE_PROFILE,
-                    "guard does not exercise the release profile",
-                ));
-            }
-            if guarded && (held.guard.contains("--strict") || held.guard.contains("--debt")) {
-                found.push(wrong(
-                    &rule::GUARD_USES_CURRENT_ECTROPY_MODE,
-                    "guard uses an obsolete ectropy mode",
-                ));
-            }
-            for (seat, workflow) in &held.guards {
-                if !workflow.contains(CONCURRENCY) {
-                    found.push(wrong(
-                        &rule::GUARD_CONCURRENCY,
-                        format!("{seat} lacks the concurrency block"),
-                    ));
-                }
-            }
+        if held.runseal && !held.laws {
+            found.push(wrong(&rule::ECTROPY_POLICY_PRESENT, "no ectropy.toml"));
         }
         if let Some(name) = &held.mint {
             found.push(wrong(

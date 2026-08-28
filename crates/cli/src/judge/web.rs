@@ -51,12 +51,6 @@ pub fn judge(evidence: Option<&Evidence>) -> Found {
         &rule::BUILD_SCRIPT_PRESENT,
         "web has no build script",
     );
-    check(
-        &mut found,
-        plane.guarded,
-        &rule::GUARD_BUILDS_WEB,
-        "guard does not build the web app",
-    );
     for role in &evidence.roles {
         let (rule, evidence) = match role {
             Role::Segment => (

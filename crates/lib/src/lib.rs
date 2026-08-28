@@ -20,7 +20,7 @@ pub use forgejo::land;
 #[cfg(feature = "radius")]
 pub use proof::radius;
 
-pub use proof::{boundary, changelog, datum, snapshot, vocabulary};
+pub use proof::{boundary, changelog, datum, guard, snapshot, vocabulary};
 #[cfg(any(feature = "vendor", feature = "skill"))]
 pub use runtime::rig;
 pub use runtime::{cancel, context, trace};

@@ -1,6 +1,8 @@
 use serde_json::Value;
 use std::process::{Command, Output};
 
+use super::support;
+
 struct Repo {
     fixture: tempfile::TempDir,
     base: String,
@@ -83,4 +85,110 @@ fn accepts() {
     let report: Value = serde_json::from_slice(&output.stdout).expect("report");
     assert_eq!(report["outside"], serde_json::json!([]));
     assert_eq!(report["ok"], true);
+}
+
+#[test]
+fn staged() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let home = tempfile::tempdir().expect("home");
+    let depot = support::depot(&[]);
+    let root = fixture.path();
+    Repo::git(root, &["init", "-q"]);
+    Repo::git(root, &["config", "user.name", "Plumb Test"]);
+    Repo::git(root, &["config", "user.email", "plumb@example.invalid"]);
+    Repo::git(
+        root,
+        &[
+            "remote",
+            "add",
+            "origin",
+            "https://git.example.invalid/Example/probe.git",
+        ],
+    );
+    std::fs::create_dir(root.join("src")).expect("src");
+    std::fs::write(
+        root.join("Cargo.toml"),
+        "[package]\nname = \"probe\"\nversion = \"0.1.0\"\nedition = \"2024\"\n",
+    )
+    .expect("manifest");
+    std::fs::write(
+        root.join("src/lib.rs"),
+        "pub fn answer() -> u8 {\n    42\n}\n",
+    )
+    .expect("source");
+    std::fs::write(
+        root.join("plumb.toml"),
+        "[workflow.hash.guard]\nrust = [\"Cargo.toml\", \"Cargo.lock\", \"src\"]\n",
+    )
+    .expect("shape");
+    Repo::git(root, &["add", "Cargo.toml", "src/lib.rs", "plumb.toml"]);
+    let lock = Command::new("cargo")
+        .args(["generate-lockfile", "--offline"])
+        .current_dir(root)
+        .output()
+        .expect("lock");
+    assert!(
+        lock.status.success(),
+        "{}",
+        String::from_utf8_lossy(&lock.stderr)
+    );
+    Repo::git(root, &["add", "Cargo.lock"]);
+
+    let run = || {
+        Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["precommit", ".", "--json"])
+            .current_dir(root)
+            .env("PLUMB_HOME", home.path())
+            .env("PLUMB_DEPOT_SEAT", depot.path())
+            .output()
+            .expect("precommit")
+    };
+    let first = run();
+    assert!(
+        first.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&first.stdout),
+        String::from_utf8_lossy(&first.stderr)
+    );
+    assert!(String::from_utf8_lossy(&first.stderr).contains("guard guard/rust"));
+    let message = root.join("message");
+    std::fs::write(&message, "candidate\n").expect("message");
+    let attached = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["precommit", ".", "--attach"])
+        .arg(&message)
+        .current_dir(root)
+        .env("PLUMB_HOME", home.path())
+        .env("PLUMB_DEPOT_SEAT", depot.path())
+        .output()
+        .expect("attach");
+    assert!(
+        attached.status.success(),
+        "{}",
+        String::from_utf8_lossy(&attached.stderr)
+    );
+    Repo::git(
+        root,
+        &[
+            "commit",
+            "-q",
+            "--no-verify",
+            "-F",
+            message.to_str().expect("message"),
+        ],
+    );
+    plumb::guard::commit(root, "HEAD").expect("committed proof");
+
+    std::fs::write(root.join("NOTES"), "unrelated\n").expect("unrelated");
+    Repo::git(root, &["add", "NOTES"]);
+    let second = run();
+    assert!(
+        second.status.success(),
+        "{}",
+        String::from_utf8_lossy(&second.stderr)
+    );
+    assert!(
+        !String::from_utf8_lossy(&second.stderr).contains("guard guard/rust"),
+        "unchanged action must not start: {}",
+        String::from_utf8_lossy(&second.stderr)
+    );
 }

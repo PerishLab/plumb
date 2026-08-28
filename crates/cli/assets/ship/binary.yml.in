@@ -68,14 +68,6 @@
           ref: ${{ needs.resolve.outputs.commit }}
 
 {@install}
-      - name: Require canonical guard evidence
-        env:
-          PLUMB_GUARD_API: ${{ github.api_url }}
-          PLUMB_GUARD_REPOSITORY: ${{ github.repository }}
-          PLUMB_GUARD_TOKEN: ${{ github.token }}
-          PLUMB_GUARD_CONTEXTS: ${{ inputs.guard_contexts }}
-        run: plumb release evidence
-
       - name: Fetch the derived promotion proof and its binary artifacts
         if: needs.resolve.outputs.channel == 'stable'
         env:

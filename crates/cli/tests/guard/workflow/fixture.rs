@@ -101,7 +101,7 @@ impl Seat {
             .output()
             .expect("run");
         let _ = out;
-        fs::read_to_string(self.0.join(".forgejo/workflows/guard.yml")).unwrap_or_default()
+        fs::read_to_string(self.0.join(".forgejo/workflows/ship.yml")).unwrap_or_default()
     }
 
     pub fn rendered(&self) -> String {

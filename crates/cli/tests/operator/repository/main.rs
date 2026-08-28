@@ -9,6 +9,9 @@ mod site;
 mod surface;
 mod world;
 
+#[path = "../../support.rs"]
+mod support;
+
 use world::{govern, run};
 
 #[test]
@@ -39,9 +42,9 @@ fn adoption() {
     )
     .expect("guard should be written");
     let bare = run(&dir);
-    assert!(bare.contains("guard does not run plumb doctor"), "{bare}");
+    assert!(!bare.contains("guard does not run plumb doctor"), "{bare}");
     assert!(
-        bare.contains("guard does not run ectropy explicitly"),
+        !bare.contains("guard does not run ectropy explicitly"),
         "{bare}"
     );
 
@@ -128,7 +131,7 @@ fn profile() {
     .expect("guard should be written");
     let bare = run(&dir);
     assert!(
-        bare.contains("guard does not exercise the release profile"),
+        !bare.contains("guard does not exercise the release profile"),
         "{bare}"
     );
 
@@ -159,7 +162,7 @@ fn obsolete() {
     let held = run(&dir);
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(
-        held.contains("guard uses an obsolete ectropy mode"),
+        !held.contains("guard uses an obsolete ectropy mode"),
         "{held}"
     );
 }

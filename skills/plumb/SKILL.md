@@ -28,7 +28,8 @@ says what none of those can. Ask the one that owns the question.
   a member carries to earn one, and the rules its members answer to. A
   repository declaring no layout is judged by the released name sets instead.
 - A **boundary** proves one committed delta stays inside declared write paths.
-- A **landing** projects a clean topic branch onto its base and waits for guard.
+- A **guard proof** binds checks to one staged tree and travels with its commit.
+- A **landing** projects that exact proved tree onto its base.
 - A **release** is version truth. **Ship** projects it through workflows;
   **depot** carries configuration or changelog derivatives. Snapshots iterate
   by timestamp while binding Release channel, version, commit, and seal; only
@@ -59,8 +60,8 @@ objects and points at authorities; it states no flag and no law.
 
 ## Laws it will not repeat
 
-Refuse missing or unread evidence; never infer or repair it silently. Run the
-repository's own guard before landing. Record nothing a source did not prove.
+Refuse unread evidence; never repair it silently. Prove before committing.
+Record nothing a source did not prove.
 
 Use [PATHS.md](PATHS.md) for routine flows and [SCENARIOS.md](SCENARIOS.md)
 only when one of its bounded cases applies.

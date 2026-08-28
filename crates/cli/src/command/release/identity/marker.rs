@@ -127,6 +127,21 @@ impl Seat {
         self.annotated(&marker)?;
         let commit = self.read(["rev-parse", &format!("{marker}^{{commit}}")])?;
         let tree = self.read(["rev-parse", &format!("{marker}^{{tree}}")])?;
+        match plumb::guard::commit(&self.root, &commit) {
+            Ok(proof) if proof.tree != tree => {
+                return Err(format!(
+                    "release marker {marker} tree {tree} disagrees with guard proof {}",
+                    proof.tree
+                ));
+            }
+            Ok(_) => {}
+            Err(error) if guarded(&self.product, &marker) => {
+                return Err(format!(
+                    "release marker {marker} has no valid guard proof: {error}"
+                ));
+            }
+            Err(_) => {}
+        }
         let version = marker.split('-').next().unwrap_or(&marker).to_string();
         self.stood(&marker, &version, &commit)?;
         let datum = self.datum(&version, &commit)?;
@@ -150,7 +165,6 @@ impl Seat {
             promotion,
         })
     }
-
     fn fetch(&self) -> Result<(), String> {
         git::fetch(&self.root)?;
         success(
@@ -162,7 +176,6 @@ impl Seat {
         )
         .map(|_| ())
     }
-
     fn annotated(&self, marker: &str) -> Result<(), String> {
         let reference = format!("refs/tags/{marker}");
         let kind = self.read(["cat-file", "-t", &reference])?;
@@ -249,6 +262,13 @@ impl Seat {
             Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
         }
     }
+}
+fn guarded(product: &str, marker: &str) -> bool {
+    product == "plumb"
+        && marker
+            .trim_start_matches('v')
+            .parse::<semver::Version>()
+            .is_ok_and(|version| version >= semver::Version::new(0, 37, 8))
 }
 
 fn named(raw: &str) -> String {

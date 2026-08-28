@@ -1,7 +1,3 @@
-mod guard;
-
-pub(super) use guard::Operator;
-
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 

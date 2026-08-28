@@ -135,10 +135,3 @@ packages = ["@perish/plumb"]
 [release.cfworker]
 account = "a6776d8a453d1b84d01576245a9c4f8d"
 domain = "plumb.perish.uk"
-
-[workflow.hash.guard]
-"rust" = ["suite://cargo"]
-"test" = ["*"]
-"web" = ["suite://pnpm"]
-"ectropy" = ["ectropy.toml", "apps", "crates", "packages", "skills"]
-"plumb" = ["*"]

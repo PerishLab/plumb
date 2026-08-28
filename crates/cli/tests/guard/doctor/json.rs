@@ -71,7 +71,7 @@ fn failing() {
     assert!(
         findings
             .iter()
-            .any(|finding| finding["code"] == "structure.guard-lane-present")
+            .any(|finding| finding["code"] == "structure.ectropy-policy-present")
     );
 }
 

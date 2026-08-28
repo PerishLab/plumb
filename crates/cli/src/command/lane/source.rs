@@ -2,38 +2,10 @@ use super::super::depot::held;
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
-pub const FACTORY: [(&str, &str); 19] = [
+pub const FACTORY: [(&str, &str); 12] = [
     (
         "assets/depot/lane.yml.in",
         plumb::seat::resource!("assets/depot/lane.yml.in"),
-    ),
-    (
-        "assets/guard/ask.yml.in",
-        plumb::seat::resource!("assets/guard/ask.yml.in"),
-    ),
-    (
-        "assets/guard/atom.yml.in",
-        plumb::seat::resource!("assets/guard/atom.yml.in"),
-    ),
-    (
-        "assets/guard/lane.yml.in",
-        plumb::seat::resource!("assets/guard/lane.yml.in"),
-    ),
-    (
-        "assets/guard/packages.yml.in",
-        plumb::seat::resource!("assets/guard/packages.yml.in"),
-    ),
-    (
-        "assets/guard/proof.yml.in",
-        plumb::seat::resource!("assets/guard/proof.yml.in"),
-    ),
-    (
-        "assets/guard/sync.yml.in",
-        plumb::seat::resource!("assets/guard/sync.yml.in"),
-    ),
-    (
-        "assets/guard/tool.yml.in",
-        plumb::seat::resource!("assets/guard/tool.yml.in"),
     ),
     (
         "assets/manager/unix.sh.in",
@@ -93,18 +65,14 @@ fn carried() -> Result<bool, String> {
     let seat = held();
     let lane = FACTORY
         .iter()
-        .find(|(path, _)| *path == "assets/guard/lane.yml.in")
-        .expect("the factory must carry its guard lane");
+        .find(|(path, _)| *path == "assets/ship/lane.yml.in")
+        .expect("the factory must carry its ship lane");
     let schema = seat.read(lane.0, lane.1)?;
     Ok(schema.contains("depot-sync/v2"))
 }
 
 pub fn text(path: &str) -> Result<String, String> {
     Store::Depot.text(path)
-}
-
-pub fn filled(path: &str, vars: &BTreeMap<&str, String>) -> Result<String, String> {
-    Store::Depot.filled(path, vars)
 }
 
 impl Store {

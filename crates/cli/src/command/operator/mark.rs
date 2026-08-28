@@ -83,6 +83,8 @@ impl Point<'_> {
 
     pub fn stamp(&self, product: &str, version: &str, name: &str) -> Result<String, String> {
         let head = self.head(name)?;
+        plumb::guard::current(self.root, &head)
+            .map_err(|error| format!("release marker refuses an unproved tree: {error}"))?;
         if let Some(seen) = self.seen(version)? {
             return if seen == head {
                 Ok(format!("{version} already stands at {head}"))

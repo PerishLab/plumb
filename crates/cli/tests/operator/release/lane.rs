@@ -24,7 +24,7 @@ pub fn rendered(fixture: &Fixture<'_>) -> String {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    fs::read_to_string(fixture.root.join(".forgejo/workflows/guard.yml")).expect("guard")
+    fs::read_to_string(fixture.root.join(".forgejo/workflows/ship.yml")).expect("ship")
 }
 
 #[test]
@@ -33,22 +33,14 @@ fn derived() {
     let tools = temp.path().join("tools");
     let fixture = seat(temp.path(), &tools);
     fs::write(temp.path().join("Cargo.toml"), CARGO).expect("cargo manifest");
-    let guard = rendered(&fixture);
+    let ship = rendered(&fixture);
 
-    assert!(guard.contains("on:\n  pull_request:\n"), "{guard}");
-    assert!(
-        guard.contains("uses: PerishLab/actions/.forgejo/workflows/guard.atom.yml@main"),
-        "{guard}"
-    );
-    assert!(!guard.contains("mirror.perish.lan"), "{guard}");
-    assert!(!guard.contains("setup-binary"), "{guard}");
-    assert!(!guard.contains("manage.sh"), "{guard}");
-    assert!(!guard.contains("cargo fmt --all --check"), "{guard}");
-    assert!(!guard.contains("plumb doctor ."), "{guard}");
-    assert!(!guard.contains("plumb depot sync"), "{guard}");
-    assert!(!guard.contains("ectropy ."), "{guard}");
-    assert!(!guard.contains("pnpm"), "{guard}");
-    assert!(!guard.contains("{@"), "{guard}");
+    assert!(ship.contains("on:\n  workflow_dispatch:"), "{ship}");
+    assert!(ship.contains("marker:"), "{ship}");
+    assert!(ship.contains("repository:"), "{ship}");
+    assert!(!ship.contains("guard_contexts"), "{ship}");
+    assert!(!ship.contains("release evidence"), "{ship}");
+    assert!(!ship.contains("{@"), "{ship}");
 }
 
 #[test]
@@ -56,12 +48,12 @@ fn expressions() {
     let temp = tempfile::tempdir().expect("temp root");
     let tools = temp.path().join("tools");
     let fixture = seat(temp.path(), &tools);
-    let guard = rendered(&fixture);
+    let ship = rendered(&fixture);
     assert!(
-        guard.contains("group: guard-${{ github.event.pull_request.number || github.ref }}"),
-        "{guard}"
+        ship.contains("-ship-${{ inputs.marker || github.ref }}"),
+        "{ship}"
     );
-    assert!(!guard.contains("cargo fmt"), "{guard}");
+    assert!(!ship.contains("cargo fmt"), "{ship}");
 }
 
 #[test]
@@ -70,13 +62,9 @@ fn drifts() {
     let tools = temp.path().join("tools");
     let fixture = seat(temp.path(), &tools);
     rendered(&fixture);
-    let path = temp.path().join(".forgejo/workflows/guard.yml");
-    let held = fs::read_to_string(&path).expect("guard");
-    fs::write(
-        &path,
-        held.replace("PerishLab/actions", "PerishLab/other-actions"),
-    )
-    .expect("hand edit");
+    let path = temp.path().join(".forgejo/workflows/ship.yml");
+    let held = fs::read_to_string(&path).expect("ship");
+    fs::write(&path, held.replacen("name: ship", "name: drifted", 1)).expect("hand edit");
 
     let output = fixture
         .command()
@@ -87,7 +75,7 @@ fn drifts() {
     assert!(!output.status.success());
     let text = String::from_utf8_lossy(&output.stdout);
     assert!(
-        text.contains("drifted .forgejo/workflows/guard.yml"),
+        text.contains("drifted .forgejo/workflows/ship.yml"),
         "{text}"
     );
 
@@ -100,7 +88,7 @@ fn drifts() {
         .expect("plumb should run");
     assert!(output.status.success());
     assert!(
-        String::from_utf8_lossy(&output.stdout).contains("true .forgejo/workflows/guard.yml"),
+        String::from_utf8_lossy(&output.stdout).contains("true .forgejo/workflows/ship.yml"),
         "rewriting a drifted lane must settle it"
     );
 }

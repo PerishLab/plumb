@@ -1,18 +1,12 @@
 mod forge;
-mod guard;
 pub(crate) mod source;
 
 use crate::shape::lane::{Evidence, Projection};
 use crate::shape::release::Spec;
-use serde_json::Value as Json;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-const TOOLS: [&str; 2] = ["ectropy", "plumb"];
-
 pub struct Seat<'a>(pub &'a Path);
-
-use source::filled;
 
 struct Expected {
     path: String,
@@ -22,7 +16,7 @@ struct Expected {
 impl Seat<'_> {
     fn render(&self) -> Result<Vec<Expected>, String> {
         let spec = Spec::read(&self.0.join("plumb.toml"))?;
-        let mut lanes = vec![self.guard(&spec)?];
+        let mut lanes = Vec::new();
         if !spec.surface().is_empty() {
             lanes.push(self.ship(&spec)?);
         }
@@ -137,137 +131,8 @@ impl Seat<'_> {
             .map(|lane| lane.path.clone())
             .collect()
     }
-
-    fn guard(&self, spec: &Spec) -> Result<Expected, String> {
-        if spec.product != "plumb" {
-            let atom = if self.0.join(".forgejo/workflows/guard.atom.yml").is_file() {
-                "./.forgejo/workflows/guard.atom.yml"
-            } else {
-                "PerishLab/actions/.forgejo/workflows/guard.atom.yml@main"
-            };
-            let vars = BTreeMap::from([("atom", atom.to_string())]);
-            return self.seat("guard.yml", filled("assets/guard/atom.yml.in", &vars)?);
-        }
-        let vars = BTreeMap::from([
-            (
-                "forge",
-                crate::catalog::set::current().release.forge.clone(),
-            ),
-            ("env", self.env(spec)),
-            ("steps", self.steps(spec)?),
-        ]);
-        let rendered = filled("assets/guard/lane.yml.in", &vars)?;
-        self.seat("guard.yml", rendered)
-    }
-
-    fn env(&self, spec: &Spec) -> String {
-        let seat = guard::Seat::read(self.0);
-        if seat.any(&self.proofs(spec)) {
-            return guard::LOCK.to_string();
-        }
-        String::new()
-    }
-
-    fn steps(&self, spec: &Spec) -> Result<String, String> {
-        let seat = guard::Seat::read(self.0);
-        let listed = self.proofs(spec);
-        let mut blocks = Vec::new();
-        let guarded = seat.any(&listed);
-        for tool in TOOLS {
-            if spec.product == tool && !guarded && tool != "plumb" {
-                continue;
-            }
-            let vars = BTreeMap::from([("title", title(tool)), ("manager", manager(tool))]);
-            blocks.push(filled("assets/guard/tool.yml.in", &vars)?);
-        }
-        blocks.push(source::text("assets/guard/sync.yml.in")?.to_string());
-        if guarded {
-            blocks.push(source::text("assets/guard/ask.yml.in")?.to_string());
-        }
-        if self.0.join("pnpm-lock.yaml").is_file() {
-            let vars = BTreeMap::from([("when", seat.when("web"))]);
-            blocks.push(filled("assets/guard/packages.yml.in", &vars)?);
-        }
-        blocks.push(seat.steps(listed, &source::text("assets/guard/proof.yml.in")?)?);
-        Ok(blocks.join("\n"))
-    }
-
-    fn proofs(&self, spec: &Spec) -> Vec<guard::Proof> {
-        let mut lines = Vec::new();
-        let mut push = |key, line: String| lines.push(guard::Proof { key, line });
-        if self.0.join("Cargo.toml").is_file() {
-            push("rust", "cargo fmt --all --check".to_string());
-            push(
-                "rust",
-                "cargo clippy --all-targets -- -D warnings".to_string(),
-            );
-            push(
-                "rust",
-                "cargo check --locked --workspace --all-targets --release".to_string(),
-            );
-            push("test", "cargo test --locked".to_string());
-        }
-        if self.0.join("pnpm-lock.yaml").is_file() {
-            if self.0.join("biome.json").is_file() {
-                push("web", "pnpm biome ci .".to_string());
-            }
-            push("web", "pnpm -r exec tsc --noEmit".to_string());
-            push("web", "pnpm -r test".to_string());
-        }
-        for name in self.sites() {
-            push("web", format!("pnpm --filter {name} build"));
-        }
-        for tool in TOOLS.iter().rev() {
-            push(tool, format!("{} .", invocation(spec, tool)));
-        }
-        lines
-    }
-
-    fn sites(&self) -> Vec<String> {
-        let Ok(entries) = std::fs::read_dir(self.0.join("apps")) else {
-            return Vec::new();
-        };
-        let mut found = Vec::new();
-        for entry in entries.flatten() {
-            let Ok(text) = std::fs::read_to_string(entry.path().join("package.json")) else {
-                continue;
-            };
-            let Ok(doc) = serde_json::from_str::<Json>(&text) else {
-                continue;
-            };
-            let built = doc.pointer("/scripts/build").is_some();
-            let Some(name) = doc.get("name").and_then(Json::as_str) else {
-                continue;
-            };
-            if built {
-                found.push(name.to_string());
-            }
-        }
-        found.sort();
-        found
-    }
-}
-
-fn invocation(spec: &Spec, tool: &str) -> String {
-    if spec.product != tool {
-        return match tool {
-            "plumb" => "plumb doctor".to_string(),
-            held => held.to_string(),
-        };
-    }
-    let binary = spec.binaries.first().map_or(tool, String::as_str);
-    let deed = if tool == "plumb" { " doctor" } else { "" };
-    format!("cargo run --quiet --locked --bin {binary} --{deed}")
 }
 
 fn manager(tool: &str) -> String {
     format!("https://releases.{tool}.perish.uk")
-}
-
-fn title(tool: &str) -> String {
-    let mut held = tool.chars();
-    match held.next() {
-        Some(first) => first.to_uppercase().collect::<String>() + held.as_str(),
-        None => String::new(),
-    }
 }

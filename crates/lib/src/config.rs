@@ -165,3 +165,7 @@ pub fn home() -> Option<PathBuf> {
 pub fn data(tool: &str) -> Option<PathBuf> {
     crate::seat::global(tool)
 }
+
+pub fn platform() -> String {
+    format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH)
+}

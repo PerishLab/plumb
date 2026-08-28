@@ -4,7 +4,7 @@ mod record;
 mod remote;
 mod reuse;
 mod spread;
-mod tree;
+pub(super) mod tree;
 
 use crate::shape;
 use clap::Subcommand;

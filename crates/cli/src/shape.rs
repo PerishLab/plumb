@@ -32,7 +32,6 @@ pub struct Shape {
     pub components: bool,
     pub rust: bool,
     pub runseal: bool,
-    pub guards: Vec<(String, String)>,
     pub edition: Option<String>,
     pub binary: bool,
     pub clap: bool,
@@ -48,7 +47,6 @@ pub struct Shape {
     pub dispatch: Option<dispatch::Evidence>,
     pub web: Option<web::Evidence>,
     pub(crate) policy: Option<policy::Evidence>,
-    pub guard: String,
     pub layout: layout::Read,
 }
 
@@ -173,8 +171,6 @@ pub fn capture(
     snapshot: &Result<plumb::snapshot::Snapshot, plumb::snapshot::Refusal>,
 ) -> Shape {
     let seat = Root(root);
-    let operator = lane::Operator(root);
-    let guarded = operator.guard();
     let laws = root.join("ectropy.toml");
     let text = std::fs::read_to_string(&laws).unwrap_or_default();
     let read = text.parse::<toml::Table>();
@@ -235,7 +231,6 @@ pub fn capture(
         components: root.join("packages/components").is_dir(),
         rust: root.join("Cargo.toml").exists(),
         runseal: root.join("runseal.toml").is_file() || root.join(".runseal").is_dir(),
-        guards: guarded.lanes,
         edition: seat.edition(),
         binary: seat.binary(),
         clap: seat.manifests().iter().any(|text| {
@@ -254,7 +249,6 @@ pub fn capture(
         dispatch: dispatch::read(root),
         web: web::read(root),
         policy,
-        guard: guarded.source,
         layout: held,
     }
 }

@@ -300,15 +300,6 @@ owner = "plumb"
 tags = ["cargo", "repository"]
 
 [[rule]]
-id = "env.rolling-ci-container"
-summary = "CI tracks the rolling workshop container"
-law = "The guard lane uses the workshop CI container without pinning a tag."
-evidence = "The container image reference in the guard workflow."
-standing = "mechanized"
-owner = "plumb"
-tags = ["repository"]
-
-[[rule]]
 id = "release.attachment-deliverable"
 summary = "Declared attachments resolve to a delivering lane"
 law = "Every declared release attachment resolves to a shared release lane that carries its projection and that this repository actually calls."
@@ -777,60 +768,6 @@ owner = "ectropy"
 tags = ["ectropy", "repository"]
 
 [[rule]]
-id = "structure.guard-checks-release-profile"
-summary = "Guard exercises the release profile"
-law = "A Rust repository guard type-checks the profile its consumers build, not only the one its tests run."
-evidence = "The canonical guard workflow source."
-standing = "mechanized"
-owner = "plumb"
-tags = ["adoption", "repository"]
-
-[[rule]]
-id = "structure.guard-concurrency"
-summary = "Guard cancels superseded runs"
-law = "The guard workflow shares the canonical concurrency group and cancels superseded work."
-evidence = "The guard workflow concurrency block."
-standing = "mechanized"
-owner = "plumb"
-tags = ["repository"]
-
-[[rule]]
-id = "structure.guard-lane-present"
-summary = "Guard has one authority workflow lane"
-law = "A governed repository carries one canonical guard workflow at its repository authority's seat without requiring a repository-local wrapper."
-evidence = "The Forgejo guard or GitHub quality workflow seat."
-standing = "mechanized"
-owner = "plumb"
-tags = ["adoption", "repository"]
-
-[[rule]]
-id = "structure.guard-runs-doctor"
-summary = "Guard runs plumb doctor"
-law = "The repository guard invokes the travelling shape check."
-evidence = "The canonical guard workflow source."
-standing = "mechanized"
-owner = "plumb"
-tags = ["adoption", "repository"]
-
-[[rule]]
-id = "structure.guard-runs-ectropy"
-summary = "Guard runs Ectropy explicitly"
-law = "The repository guard invokes Ectropy's errors-only checker directly."
-evidence = "The canonical guard workflow source."
-standing = "mechanized"
-owner = "ectropy"
-tags = ["adoption", "ectropy", "repository"]
-
-[[rule]]
-id = "structure.guard-uses-current-ectropy-mode"
-summary = "Guard uses the current Ectropy mode"
-law = "The repository guard carries neither the retired strict mode nor debt mode."
-evidence = "The canonical guard workflow Ectropy invocation."
-standing = "mechanized"
-owner = "ectropy"
-tags = ["adoption", "ectropy", "repository"]
-
-[[rule]]
 id = "structure.known-directory"
 summary = "Top-level directories have a known role"
 law = "Every top-level directory sits in a declared seat, or has a shadow in the skeleton where no layout is declared."
@@ -1036,15 +973,6 @@ evidence = "The web package dependency maps."
 standing = "mechanized"
 owner = "web"
 tags = ["dependency", "web"]
-
-[[rule]]
-id = "web.guard-builds-web"
-summary = "Guard builds the web app"
-law = "The repository guard builds the named web package."
-evidence = "The web package name and canonical guard workflow source."
-standing = "mechanized"
-owner = "web"
-tags = ["adoption", "web"]
 
 [[rule]]
 id = "web.hook-file-kind"
