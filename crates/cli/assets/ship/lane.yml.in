@@ -108,9 +108,12 @@ jobs:
             plumb_version=$(plumb --version | awk '{print $2}')
             depot=$(plumb depot show | sed -n '1s/^depot //p')
             projection=Cargo.toml#/workspace/package/version
-            if [ -f package.json ]; then
-              projection=package.json#/version
-            fi
+            for manifest in package.json packages/*/package.json; do
+              if [ -f "$manifest" ] && jq -e '.version | type == "string"' "$manifest" >/dev/null; then
+                projection=$manifest#/version
+                break
+              fi
+            done
             printf '%s' "$targets" | jq -c '.include[]' | while IFS= read -r target; do
               triple=$(printf '%s' "$target" | jq -r '.target')
               runner=$(printf '%s' "$target" | jq -r '.runner')

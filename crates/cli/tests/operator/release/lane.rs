@@ -125,7 +125,8 @@ fn carried() {
     assert!(held.contains("plumb workflow record"), "{held}");
     assert!(held.contains("binary_reuse"), "{held}");
     assert!(held.contains("WORKFLOW_INVENTORY_URL"), "{held}");
-    assert!(held.contains("projection=package.json#/version"), "{held}");
+    assert!(held.contains("packages/*/package.json"), "{held}");
+    assert!(held.contains(".version | type == \"string\""), "{held}");
     assert!(
         held.contains("projection=Cargo.toml#/workspace/package/version"),
         "{held}"
