@@ -157,7 +157,17 @@ pub(super) fn channel(version: &str) -> Result<String, String> {
 pub(in crate::command) use truth::depot::validate as validate_depot;
 
 pub(in crate::command) fn depot(spec: &Spec) -> truth::depot::Source<'_> {
-    truth::depot::Source(spec)
+    truth::depot::Source {
+        product: &spec.product,
+        authority: &spec.authority,
+    }
+}
+
+pub(in crate::command) fn knowledge<'a>(
+    product: &'a str,
+    authority: &'a str,
+) -> truth::depot::Source<'a> {
+    truth::depot::Source { product, authority }
 }
 
 pub(super) fn authority(root: &Path) -> Result<String, String> {

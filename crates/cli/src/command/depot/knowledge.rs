@@ -1,4 +1,4 @@
-use super::{Tree, notes, store};
+use super::{Tree, notes, product, store};
 use crate::shape::depot::{self as record};
 use plumb::rig::Rig;
 use std::path::{Path, PathBuf};
@@ -13,11 +13,10 @@ pub struct Wanted<'a> {
 pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let staged = wanted.from.is_empty();
-    let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
-    let source = stage(&rig, &spec.product, "changelog", &wanted)?;
+    let target = product::resolve(root, &rig, plumb::depot::v2::Kind::Changelog)?;
+    let source = stage(&rig, &target.product, "changelog", &wanted)?;
     let proof = crate::command::changelog::prove(root, &source, wanted.version)?;
-    let depot = spec.derivative(plumb::depot::v2::Kind::Changelog)?;
-    let release = crate::command::release::depot(&spec);
+    let release = crate::command::release::knowledge(&target.product, &target.authority);
     let binding = release.binding(wanted.version, false)?;
     if binding.release.channel != "stable" {
         return Err(format!(
@@ -34,7 +33,7 @@ pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     let batch = notes::Batch::gather(&source)?;
     let plan = record::Batch::changelog(
         record::Draft {
-            source: depot.source.clone(),
+            source: target.source,
             release: binding.release.clone(),
             timestamp: super::super::clock::mark()?,
             commit: proof.candidate.clone(),
@@ -69,15 +68,14 @@ pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
 pub fn skill(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let staged = wanted.from.is_empty();
-    let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
-    let source = stage(&rig, &spec.product, "skill", &wanted)?;
-    let depot = spec.derivative(plumb::depot::v2::Kind::Skill)?;
-    let release = crate::command::release::depot(&spec);
+    let target = product::resolve(root, &rig, plumb::depot::v2::Kind::Skill)?;
+    let source = stage(&rig, &target.product, "skill", &wanted)?;
+    let release = crate::command::release::knowledge(&target.product, &target.authority);
     let binding = release.binding(wanted.version, false)?;
     let batch = notes::Batch::gather(&source)?;
     let plan = record::Batch::skill(
         record::Draft {
-            source: depot.source.clone(),
+            source: target.source,
             release: binding.release.clone(),
             timestamp: super::super::clock::mark()?,
             commit: Tree(root).commit()?,

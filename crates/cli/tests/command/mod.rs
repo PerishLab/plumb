@@ -1,5 +1,6 @@
 mod authority;
 mod cloud;
+mod depot;
 mod registry;
 mod retire;
 

@@ -1,5 +1,6 @@
 mod knowledge;
 pub mod notes;
+mod product;
 mod seat;
 mod store;
 

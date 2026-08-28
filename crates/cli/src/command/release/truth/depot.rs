@@ -11,21 +11,23 @@ pub(in crate::command) struct Binding {
     pub seal: super::record::Seal,
 }
 
-pub(in crate::command) struct Source<'a>(pub &'a Spec);
+pub(in crate::command) struct Source<'a> {
+    pub product: &'a str,
+    pub authority: &'a str,
+}
 
 impl Source<'_> {
     pub fn binding(&self, version: &str, binary: bool) -> Result<Binding, String> {
-        let spec = self.0;
         let channel = super::super::channel(version)?;
         let url = format!(
             "{}/v1/releases/{channel}/{version}/seal.json",
-            spec.authority
+            self.authority
         );
         let (seal, digest) = super::verify::Surface(&url).sealed(binary)?;
-        if seal.product != spec.product || seal.channel != channel || seal.version != version {
+        if seal.product != self.product || seal.channel != channel || seal.version != version {
             return Err(format!(
                 "release seal names {} {} {}, expected {} {channel} {version}",
-                seal.product, seal.channel, seal.version, spec.product
+                seal.product, seal.channel, seal.version, self.product
             ));
         }
         Ok(Binding {
@@ -44,7 +46,7 @@ impl Source<'_> {
     }
 
     pub fn current(&self, release: &plumb::depot::v2::Release) -> Result<bool, String> {
-        super::verify::active(&self.0.authority, release)
+        super::verify::active(self.authority, release)
     }
 }
 
