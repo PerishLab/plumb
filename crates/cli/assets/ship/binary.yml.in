@@ -1,6 +1,7 @@
 
   build:
     needs: resolve
+    if: needs.resolve.outputs.channel != 'stable'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.resolve.outputs.targets) }}
@@ -32,6 +33,9 @@
 
   seal:
     needs: [resolve, build]
+    if: >-
+      always() && needs.resolve.result == 'success' &&
+      (needs.resolve.outputs.channel == 'stable' || needs.build.result == 'success')
     runs-on: docker
     container:
       image: {@forge}
@@ -72,18 +76,19 @@
           PLUMB_GUARD_CONTEXTS: ${{ inputs.guard_contexts }}
         run: plumb release evidence
 
+      - name: Fetch the derived promotion proof and its binary artifacts
+        if: needs.resolve.outputs.channel == 'stable'
+        env:
+          PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
+        run: plumb release promote
+
       - uses: actions/download-artifact@v3
+        if: needs.resolve.outputs.channel != 'stable'
         with:
           path: dist/${{ needs.resolve.outputs.version }}
 
       - name: Assemble the declared binary shape
         run: plumb ship binary assemble
-
-      - name: Fetch the derived promotion proof
-        if: needs.resolve.outputs.channel == 'stable'
-        env:
-          PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
-        run: plumb release promote
 
       - name: Compile the exact capsule
         if: needs.resolve.outputs.channel != 'stable'
@@ -138,6 +143,7 @@
 
   smoke:
     needs: [resolve, seal]
+    if: needs.resolve.outputs.channel != 'stable'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.resolve.outputs.targets) }}

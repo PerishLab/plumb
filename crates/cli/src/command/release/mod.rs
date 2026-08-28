@@ -75,14 +75,14 @@ fn carry(deed: Deed) -> Result<String, String> {
             required("PLUMB_RELEASE_COMMIT", &release.commit)?,
             required("PLUMB_RELEASE_BASE", &release.base)?,
         ),
-        Deed::Promote => promotion::fetch(
-            &spec,
+        Deed::Promote => promotion::Promotion::new(&spec).fetch(
             required("PLUMB_RELEASE_COMMIT", &release.commit)?,
             required("PLUMB_RELEASE_VERSION", &release.version)?,
             release
                 .promotion
                 .as_deref()
                 .ok_or_else(|| "PLUMB_RELEASE_PROMOTION is required".to_string())?,
+            &artifacts(release)?,
         ),
         Deed::Evidence => crate::command::operator::topology::evidence(
             crate::command::operator::topology::Guard {
@@ -183,7 +183,7 @@ pub(super) fn promotion(
     commit: &str,
     version: &str,
 ) -> Result<promotion::Exact, String> {
-    promotion::derive(spec, commit, version)
+    promotion::Promotion::new(spec).derive(commit, version)
 }
 
 pub(super) fn settled(root: &Path, version: &str, commit: &str) -> Result<String, String> {

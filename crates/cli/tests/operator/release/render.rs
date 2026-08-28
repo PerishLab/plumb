@@ -144,6 +144,51 @@ fn scoped() {
 }
 
 #[test]
+fn promotion() {
+    let temp = tempfile::tempdir().expect("temp root");
+    let tools = temp.path().join("tools");
+    let fixture = seat(temp.path(), &tools);
+    fs::write(temp.path().join("Cargo.toml"), CARGO).expect("cargo manifest");
+    fs::write(
+        temp.path().join("plumb.toml"),
+        SPEC.replace("probe", "plumb"),
+    )
+    .expect("release manifest");
+    rendered(&fixture);
+    let ship = fs::read_to_string(temp.path().join(".forgejo/workflows/ship.yml")).expect("ship");
+    let build = ship.split("\n  build:\n").nth(1).expect("build job");
+    let build = build.split("\n  seal:\n").next().expect("build body");
+    assert!(
+        build.contains("if: needs.resolve.outputs.channel != 'stable'"),
+        "stable promotion must not obtain a runner for binary build: {build}"
+    );
+    let smoke = ship.split("\n  smoke:\n").nth(1).expect("smoke job");
+    let smoke = smoke.split("\n  project:\n").next().expect("smoke body");
+    assert!(
+        smoke.contains("if: needs.resolve.outputs.channel != 'stable'"),
+        "a beta-smoked binary must not obtain stable smoke runners: {smoke}"
+    );
+    let seal = ship.split("\n  seal:\n").nth(1).expect("seal job");
+    let seal = seal.split("\n  smoke:\n").next().expect("seal body");
+    let promote = seal
+        .find("Fetch the derived promotion proof and its binary artifacts")
+        .expect("promotion materialization");
+    let assemble = seal
+        .find("Assemble the declared binary shape")
+        .expect("binary assembly");
+    assert!(
+        promote < assemble,
+        "promotion artifacts must exist before assembly: {seal}"
+    );
+    assert!(
+        seal.contains(
+            "if: needs.resolve.outputs.channel != 'stable'\n        with:\n          path: dist/"
+        ),
+        "stable seal must not wait on run-local binary artifacts: {seal}"
+    );
+}
+
+#[test]
 fn carried() {
     let temp = tempfile::tempdir().expect("temp root");
     let tools = temp.path().join("tools");

@@ -108,6 +108,7 @@ jobs:
 
   build:
     needs: resolve
+    if: needs.resolve.outputs.channel != 'stable'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.resolve.outputs.targets) }}
@@ -193,6 +194,9 @@ jobs:
 
   seal:
     needs: [resolve, build]
+    if: >-
+      always() && needs.resolve.result == 'success' &&
+      (needs.resolve.outputs.channel == 'stable' || needs.build.result == 'success')
     runs-on: docker
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
@@ -272,18 +276,19 @@ jobs:
           PLUMB_GUARD_CONTEXTS: ${{ inputs.guard_contexts }}
         run: plumb release evidence
 
+      - name: Fetch the derived promotion proof and its binary artifacts
+        if: needs.resolve.outputs.channel == 'stable'
+        env:
+          PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
+        run: plumb release promote
+
       - uses: actions/download-artifact@v3
+        if: needs.resolve.outputs.channel != 'stable'
         with:
           path: dist/${{ needs.resolve.outputs.version }}
 
       - name: Assemble the declared binary shape
         run: plumb ship binary assemble
-
-      - name: Fetch the derived promotion proof
-        if: needs.resolve.outputs.channel == 'stable'
-        env:
-          PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
-        run: plumb release promote
 
       - name: Compile the exact capsule
         if: needs.resolve.outputs.channel != 'stable'
@@ -338,6 +343,7 @@ jobs:
 
   smoke:
     needs: [resolve, seal]
+    if: needs.resolve.outputs.channel != 'stable'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.resolve.outputs.targets) }}
