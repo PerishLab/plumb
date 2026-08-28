@@ -103,17 +103,31 @@ pub fn run(request: Request<'_>) -> Result<Report, Refusal> {
     let landing = Landing::open(request.root, request.base)?;
     landing.landable(true)?;
     let remote = git::remote(&landing.repo.root, "").map_err(|error| refuse("remote", error))?;
-    let story = landing.describe(request.title, request.body)?;
+    let client = Client::new(remote).map_err(|error| refuse("forge", error))?;
+    let projection = landing.projection();
+    let standing = client
+        .opened(&landing.base, &projection)
+        .map_err(|error| refuse("forge", error))?;
+    let title = standing
+        .as_ref()
+        .filter(|_| request.title.is_empty())
+        .map_or(request.title, |pull| &pull.title);
+    let body = standing
+        .as_ref()
+        .filter(|_| request.body.is_empty())
+        .map_or(request.body, |pull| &pull.body);
+    let story = landing.describe(title, body)?;
     let candidate = landing.derive(&story)?;
 
     landing.push(&landing.branch, &landing.branch, true)?;
-    landing.push(&candidate.projection, &candidate.head, false)?;
-
-    let client = Client::new(remote).map_err(|error| refuse("forge", error))?;
-    let pull = match client
-        .opened(&landing.base, &candidate.projection)
-        .map_err(|error| refuse("forge", error))?
+    if standing
+        .as_ref()
+        .is_none_or(|pull| pull.head != candidate.head)
     {
+        landing.push(&candidate.projection, &candidate.head, false)?;
+    }
+
+    let pull = match standing {
         Some(held) => held,
         None => client
             .raise(

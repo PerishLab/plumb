@@ -1,5 +1,6 @@
 #[cfg(unix)]
 mod audit;
+mod chart;
 mod precommit;
 #[cfg(unix)]
 mod registry;

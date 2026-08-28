@@ -1,7 +1,9 @@
 use crate::shape::release::Spec;
+use flate2::{Compression, GzBuilder, read::GzDecoder};
 use semver::Version;
-use std::io::Write;
-use std::path::PathBuf;
+use std::fs::File;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 pub struct Chart<'a> {
@@ -39,6 +41,7 @@ impl Chart<'_> {
         if !archive.is_file() {
             return Err(format!("chart attachment left no {}", archive.display()));
         }
+        normalize(&archive)?;
         Ok(format!("packaged chart attachment for {version}"))
     }
 
@@ -185,6 +188,80 @@ impl Chart<'_> {
     fn archive(&self, held: &str, version: &Version) -> PathBuf {
         self.out().join(format!("{held}-{version}.tgz"))
     }
+}
+
+struct Entry {
+    path: PathBuf,
+    kind: tar::EntryType,
+    mode: u32,
+    body: Vec<u8>,
+}
+
+fn normalize(path: &Path) -> Result<(), String> {
+    let file =
+        File::open(path).map_err(|error| format!("cannot open {}: {error}", path.display()))?;
+    let mut archive = tar::Archive::new(GzDecoder::new(file));
+    let mut entries = Vec::new();
+    for held in archive
+        .entries()
+        .map_err(|error| format!("cannot read {}: {error}", path.display()))?
+    {
+        let mut held = held.map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+        let kind = held.header().entry_type();
+        if !kind.is_file() && !kind.is_dir() {
+            return Err(format!(
+                "chart archive {} carries unsupported entry {}",
+                path.display(),
+                held.path()
+                    .map_err(|error| format!("cannot read chart path: {error}"))?
+                    .display()
+            ));
+        }
+        let mode = held
+            .header()
+            .mode()
+            .map_err(|error| format!("cannot read chart entry mode: {error}"))?;
+        let entry = held
+            .path()
+            .map_err(|error| format!("cannot read chart path: {error}"))?
+            .into_owned();
+        let mut body = Vec::new();
+        held.read_to_end(&mut body)
+            .map_err(|error| format!("cannot read chart entry {}: {error}", entry.display()))?;
+        entries.push(Entry {
+            path: entry,
+            kind,
+            mode,
+            body,
+        });
+    }
+    drop(archive);
+
+    let file = File::create(path)
+        .map_err(|error| format!("cannot rewrite {}: {error}", path.display()))?;
+    let gzip = GzBuilder::new()
+        .mtime(0)
+        .write(file, Compression::default());
+    let mut archive = tar::Builder::new(gzip);
+    for entry in entries {
+        let mut header = tar::Header::new_gnu();
+        header.set_entry_type(entry.kind);
+        header.set_mode(entry.mode);
+        header.set_uid(0);
+        header.set_gid(0);
+        header.set_mtime(0);
+        header.set_size(entry.body.len() as u64);
+        header.set_cksum();
+        archive
+            .append_data(&mut header, &entry.path, entry.body.as_slice())
+            .map_err(|error| format!("cannot normalize {}: {error}", path.display()))?;
+    }
+    let gzip = archive
+        .into_inner()
+        .map_err(|error| format!("cannot finish {}: {error}", path.display()))?;
+    gzip.finish()
+        .map_err(|error| format!("cannot finish {}: {error}", path.display()))?;
+    Ok(())
 }
 
 fn owner(chart: &crate::shape::release::Chart) -> Result<String, String> {
