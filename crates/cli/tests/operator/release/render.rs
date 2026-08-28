@@ -21,7 +21,7 @@ fn planned() {
         "every Windows install must establish its rule seat: {ship}"
     );
     assert!(
-        !ship.contains("Build the Plumb this release carries"),
+        !ship.contains("Build the exact atom Plumb"),
         "a product release must use published Plumb rather than build a binary it does not carry: {ship}"
     );
     let plan = ship
@@ -68,18 +68,27 @@ fn selfhosted() {
     rendered(&fixture);
     let ship = fs::read_to_string(temp.path().join(".forgejo/workflows/ship.yml")).expect("ship");
     assert_eq!(
-        ship.matches("- name: Build the Plumb this release carries\n")
-            .count(),
+        ship.matches("- name: Build the exact atom Plumb\n").count(),
         ship.matches("Install bootstrap Plumb").count(),
         "every self-hosting bootstrap must hand execution to the source Plumb: {ship}"
     );
     let bootstrap = ship.find("Install bootstrap Plumb").expect("bootstrap");
     let sync = ship.find("\"$tool\" depot sync").expect("depot sync");
     let source = ship
-        .find("Build the Plumb this release carries")
+        .find("Build the exact atom Plumb")
         .expect("source build");
     let plan = ship.find("Plan this release").expect("release plan");
     assert!(bootstrap < sync && sync < source && source < plan, "{ship}");
+    assert!(
+        ship.contains("/${{ github.repository }}.git")
+            && ship.contains("origin \"${{ github.sha }}\"")
+            && ship.contains("--manifest-path \"$root/Cargo.toml\""),
+        "the control atom must supply its own exact executable: {ship}"
+    );
+    assert!(
+        !ship.contains("$GITHUB_WORKSPACE/target/debug/plumb"),
+        "{ship}"
+    );
 }
 
 #[test]

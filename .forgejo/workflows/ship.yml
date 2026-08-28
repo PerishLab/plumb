@@ -89,24 +89,46 @@ jobs:
           fi
           "$tool" depot sync
 
-      - name: Build the Plumb this release carries
+      - name: Build the exact atom Plumb
         if: runner.os != 'Windows'
         shell: bash
+        env:
+          PLUMB_ATOM_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          cargo build --quiet --locked --bin plumb
+          root="$RUNNER_TEMP/plumb-atom"
+          remote="${{ github.server_url }}/${{ github.repository }}.git"
+          git init "$root"
+          git -C "$root" remote add origin "$remote"
+          fetch=(git -C "$root")
+          if [ -n "$PLUMB_ATOM_TOKEN" ]; then
+            basic=$(printf 'x-access-token:%s' "$PLUMB_ATOM_TOKEN" | base64 | tr -d '\n')
+            fetch+=(-c "http.extraheader=AUTHORIZATION: basic $basic")
+          fi
+          "${fetch[@]}" fetch --no-tags --depth=1 origin "${{ github.sha }}"
+          git -C "$root" checkout --detach FETCH_HEAD
+          cargo build --quiet --locked --manifest-path "$root/Cargo.toml" --bin plumb
           tool=$(command -v plumb)
-          cp "$GITHUB_WORKSPACE/target/debug/plumb" "$tool"
+          cp "$root/target/debug/plumb" "$tool"
           "$tool" --version
 
-      - name: Build the Plumb this release carries on Windows
+      - name: Build the exact atom Plumb on Windows
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          PLUMB_ATOM_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          cargo build --quiet --locked --bin plumb
+          $root = Join-Path $env:RUNNER_TEMP 'plumb-atom'
+          $remote = '${{ github.server_url }}/${{ github.repository }}.git'
+          git init $root
+          git -C $root remote add origin $remote
+          $basic = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("x-access-token:$env:PLUMB_ATOM_TOKEN"))
+          git -C $root -c "http.extraheader=AUTHORIZATION: basic $basic" fetch --no-tags --depth=1 origin '${{ github.sha }}'
+          git -C $root checkout --detach FETCH_HEAD
+          cargo build --quiet --locked --manifest-path (Join-Path $root 'Cargo.toml') --bin plumb
           $tool = (Get-Command plumb.exe).Source
-          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'target/debug/plumb.exe') $tool -Force
+          Copy-Item (Join-Path $root 'target/debug/plumb.exe') $tool -Force
           & $tool --version
 
       - name: Plan this release
@@ -266,24 +288,46 @@ jobs:
           & (Join-Path $bin 'plumb.exe') depot sync
           $bin | Out-File -FilePath $env:GITHUB_PATH -Append
 
-      - name: Build the Plumb this release carries
+      - name: Build the exact atom Plumb
         if: runner.os != 'Windows'
         shell: bash
+        env:
+          PLUMB_ATOM_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          cargo build --quiet --locked --bin plumb
+          root="$RUNNER_TEMP/plumb-atom"
+          remote="${{ github.server_url }}/${{ github.repository }}.git"
+          git init "$root"
+          git -C "$root" remote add origin "$remote"
+          fetch=(git -C "$root")
+          if [ -n "$PLUMB_ATOM_TOKEN" ]; then
+            basic=$(printf 'x-access-token:%s' "$PLUMB_ATOM_TOKEN" | base64 | tr -d '\n')
+            fetch+=(-c "http.extraheader=AUTHORIZATION: basic $basic")
+          fi
+          "${fetch[@]}" fetch --no-tags --depth=1 origin "${{ github.sha }}"
+          git -C "$root" checkout --detach FETCH_HEAD
+          cargo build --quiet --locked --manifest-path "$root/Cargo.toml" --bin plumb
           tool=$(command -v plumb)
-          cp "$GITHUB_WORKSPACE/target/debug/plumb" "$tool"
+          cp "$root/target/debug/plumb" "$tool"
           "$tool" --version
 
-      - name: Build the Plumb this release carries on Windows
+      - name: Build the exact atom Plumb on Windows
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          PLUMB_ATOM_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          cargo build --quiet --locked --bin plumb
+          $root = Join-Path $env:RUNNER_TEMP 'plumb-atom'
+          $remote = '${{ github.server_url }}/${{ github.repository }}.git'
+          git init $root
+          git -C $root remote add origin $remote
+          $basic = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("x-access-token:$env:PLUMB_ATOM_TOKEN"))
+          git -C $root -c "http.extraheader=AUTHORIZATION: basic $basic" fetch --no-tags --depth=1 origin '${{ github.sha }}'
+          git -C $root checkout --detach FETCH_HEAD
+          cargo build --quiet --locked --manifest-path (Join-Path $root 'Cargo.toml') --bin plumb
           $tool = (Get-Command plumb.exe).Source
-          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'target/debug/plumb.exe') $tool -Force
+          Copy-Item (Join-Path $root 'target/debug/plumb.exe') $tool -Force
           & $tool --version
 
       - name: Add the declared Rust target
@@ -366,24 +410,46 @@ jobs:
           fi
           "$tool" depot sync
 
-      - name: Build the Plumb this release carries
+      - name: Build the exact atom Plumb
         if: runner.os != 'Windows'
         shell: bash
+        env:
+          PLUMB_ATOM_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          cargo build --quiet --locked --bin plumb
+          root="$RUNNER_TEMP/plumb-atom"
+          remote="${{ github.server_url }}/${{ github.repository }}.git"
+          git init "$root"
+          git -C "$root" remote add origin "$remote"
+          fetch=(git -C "$root")
+          if [ -n "$PLUMB_ATOM_TOKEN" ]; then
+            basic=$(printf 'x-access-token:%s' "$PLUMB_ATOM_TOKEN" | base64 | tr -d '\n')
+            fetch+=(-c "http.extraheader=AUTHORIZATION: basic $basic")
+          fi
+          "${fetch[@]}" fetch --no-tags --depth=1 origin "${{ github.sha }}"
+          git -C "$root" checkout --detach FETCH_HEAD
+          cargo build --quiet --locked --manifest-path "$root/Cargo.toml" --bin plumb
           tool=$(command -v plumb)
-          cp "$GITHUB_WORKSPACE/target/debug/plumb" "$tool"
+          cp "$root/target/debug/plumb" "$tool"
           "$tool" --version
 
-      - name: Build the Plumb this release carries on Windows
+      - name: Build the exact atom Plumb on Windows
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          PLUMB_ATOM_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          cargo build --quiet --locked --bin plumb
+          $root = Join-Path $env:RUNNER_TEMP 'plumb-atom'
+          $remote = '${{ github.server_url }}/${{ github.repository }}.git'
+          git init $root
+          git -C $root remote add origin $remote
+          $basic = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("x-access-token:$env:PLUMB_ATOM_TOKEN"))
+          git -C $root -c "http.extraheader=AUTHORIZATION: basic $basic" fetch --no-tags --depth=1 origin '${{ github.sha }}'
+          git -C $root checkout --detach FETCH_HEAD
+          cargo build --quiet --locked --manifest-path (Join-Path $root 'Cargo.toml') --bin plumb
           $tool = (Get-Command plumb.exe).Source
-          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'target/debug/plumb.exe') $tool -Force
+          Copy-Item (Join-Path $root 'target/debug/plumb.exe') $tool -Force
           & $tool --version
 
       - name: Fetch the derived promotion proof and its binary artifacts
@@ -518,24 +584,46 @@ jobs:
           & (Join-Path $bin 'plumb.exe') depot sync
           $bin | Out-File -FilePath $env:GITHUB_PATH -Append
 
-      - name: Build the Plumb this release carries
+      - name: Build the exact atom Plumb
         if: runner.os != 'Windows'
         shell: bash
+        env:
+          PLUMB_ATOM_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          cargo build --quiet --locked --bin plumb
+          root="$RUNNER_TEMP/plumb-atom"
+          remote="${{ github.server_url }}/${{ github.repository }}.git"
+          git init "$root"
+          git -C "$root" remote add origin "$remote"
+          fetch=(git -C "$root")
+          if [ -n "$PLUMB_ATOM_TOKEN" ]; then
+            basic=$(printf 'x-access-token:%s' "$PLUMB_ATOM_TOKEN" | base64 | tr -d '\n')
+            fetch+=(-c "http.extraheader=AUTHORIZATION: basic $basic")
+          fi
+          "${fetch[@]}" fetch --no-tags --depth=1 origin "${{ github.sha }}"
+          git -C "$root" checkout --detach FETCH_HEAD
+          cargo build --quiet --locked --manifest-path "$root/Cargo.toml" --bin plumb
           tool=$(command -v plumb)
-          cp "$GITHUB_WORKSPACE/target/debug/plumb" "$tool"
+          cp "$root/target/debug/plumb" "$tool"
           "$tool" --version
 
-      - name: Build the Plumb this release carries on Windows
+      - name: Build the exact atom Plumb on Windows
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          PLUMB_ATOM_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          cargo build --quiet --locked --bin plumb
+          $root = Join-Path $env:RUNNER_TEMP 'plumb-atom'
+          $remote = '${{ github.server_url }}/${{ github.repository }}.git'
+          git init $root
+          git -C $root remote add origin $remote
+          $basic = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("x-access-token:$env:PLUMB_ATOM_TOKEN"))
+          git -C $root -c "http.extraheader=AUTHORIZATION: basic $basic" fetch --no-tags --depth=1 origin '${{ github.sha }}'
+          git -C $root checkout --detach FETCH_HEAD
+          cargo build --quiet --locked --manifest-path (Join-Path $root 'Cargo.toml') --bin plumb
           $tool = (Get-Command plumb.exe).Source
-          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'target/debug/plumb.exe') $tool -Force
+          Copy-Item (Join-Path $root 'target/debug/plumb.exe') $tool -Force
           & $tool --version
 
       - name: Smoke the generated manager
@@ -595,24 +683,46 @@ jobs:
           fi
           "$tool" depot sync
 
-      - name: Build the Plumb this release carries
+      - name: Build the exact atom Plumb
         if: runner.os != 'Windows'
         shell: bash
+        env:
+          PLUMB_ATOM_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          cargo build --quiet --locked --bin plumb
+          root="$RUNNER_TEMP/plumb-atom"
+          remote="${{ github.server_url }}/${{ github.repository }}.git"
+          git init "$root"
+          git -C "$root" remote add origin "$remote"
+          fetch=(git -C "$root")
+          if [ -n "$PLUMB_ATOM_TOKEN" ]; then
+            basic=$(printf 'x-access-token:%s' "$PLUMB_ATOM_TOKEN" | base64 | tr -d '\n')
+            fetch+=(-c "http.extraheader=AUTHORIZATION: basic $basic")
+          fi
+          "${fetch[@]}" fetch --no-tags --depth=1 origin "${{ github.sha }}"
+          git -C "$root" checkout --detach FETCH_HEAD
+          cargo build --quiet --locked --manifest-path "$root/Cargo.toml" --bin plumb
           tool=$(command -v plumb)
-          cp "$GITHUB_WORKSPACE/target/debug/plumb" "$tool"
+          cp "$root/target/debug/plumb" "$tool"
           "$tool" --version
 
-      - name: Build the Plumb this release carries on Windows
+      - name: Build the exact atom Plumb on Windows
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          PLUMB_ATOM_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          cargo build --quiet --locked --bin plumb
+          $root = Join-Path $env:RUNNER_TEMP 'plumb-atom'
+          $remote = '${{ github.server_url }}/${{ github.repository }}.git'
+          git init $root
+          git -C $root remote add origin $remote
+          $basic = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("x-access-token:$env:PLUMB_ATOM_TOKEN"))
+          git -C $root -c "http.extraheader=AUTHORIZATION: basic $basic" fetch --no-tags --depth=1 origin '${{ github.sha }}'
+          git -C $root checkout --detach FETCH_HEAD
+          cargo build --quiet --locked --manifest-path (Join-Path $root 'Cargo.toml') --bin plumb
           $tool = (Get-Command plumb.exe).Source
-          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'target/debug/plumb.exe') $tool -Force
+          Copy-Item (Join-Path $root 'target/debug/plumb.exe') $tool -Force
           & $tool --version
 
       - uses: actions/download-artifact@v3
