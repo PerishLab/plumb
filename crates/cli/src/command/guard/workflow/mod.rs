@@ -1,5 +1,6 @@
 mod inventory;
 mod plan;
+mod projection;
 mod record;
 mod release;
 mod remote;
@@ -9,8 +10,7 @@ pub(super) mod tree;
 
 use crate::shape;
 use clap::Subcommand;
-use plumb::cli::Root;
-use plumb::rig::Rig;
+use plumb::{cli::Root, rig::Rig};
 use remote::{Remote, SEAT};
 use spread::spread;
 use std::path::{Path, PathBuf};
@@ -193,11 +193,11 @@ impl Seat {
         if listed.is_empty() {
             return 0;
         }
-        let rig = match Rig::resolve(None) {
+        let rig = match plumb::rig::Rig::resolve(None) {
             Ok(rig) => rig,
             Err(error) => {
                 eprintln!("plumb workflow ask {lane}: {error}");
-                Rig::default()
+                plumb::rig::Rig::default()
             }
         };
         let tree = tree::Tree::read(self.root(), None).ok();
@@ -225,7 +225,7 @@ impl Seat {
     }
 
     fn compare(&self, key: &str) -> i32 {
-        let rig = match Rig::resolve(None) {
+        let rig = match plumb::rig::Rig::resolve(None) {
             Ok(rig) => rig,
             Err(error) => {
                 eprintln!("plumb workflow hash {key}: {error}");
@@ -270,7 +270,7 @@ impl Seat {
     }
 
     fn record(&self, key: &str) -> i32 {
-        let rig = match Rig::resolve(None) {
+        let rig = match plumb::rig::Rig::resolve(None) {
             Ok(rig) => rig,
             Err(error) => {
                 eprintln!("plumb workflow lock {key}: {error}");

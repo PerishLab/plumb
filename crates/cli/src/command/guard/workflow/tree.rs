@@ -140,8 +140,7 @@ impl Tree {
         if !output.status.success() {
             return Err(format!("cannot read projected leaf {}", project.path));
         }
-        let mut value: serde_json::Value = serde_json::from_slice(&output.stdout)
-            .map_err(|error| format!("cannot project {} as JSON: {error}", project.path))?;
+        let mut value = super::projection::document(&project.path, &output.stdout)?;
         for pointer in &project.omit {
             let selected = value.pointer_mut(pointer).ok_or_else(|| {
                 format!("projected leaf {} has no pointer {pointer}", project.path)
@@ -171,7 +170,7 @@ impl Projects {
                 .ok_or_else(|| format!("project entry {entry:?} must be ACTION=PATH#POINTER"))?;
             if action.trim().is_empty() || !relative(path) || !pointer.starts_with('/') {
                 return Err(format!(
-                    "project entry {entry:?} must name an action, relative path, and JSON pointer"
+                    "project entry {entry:?} must name an action, relative path, and document pointer"
                 ));
             }
             let pointers = held

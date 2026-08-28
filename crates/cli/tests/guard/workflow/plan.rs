@@ -147,6 +147,65 @@ fn project() {
 }
 
 #[test]
+fn structured() {
+    let root = seat("toml-project");
+    root.wrote(
+        "Cargo.toml",
+        "[workspace.package]\nversion = \"1.0.0\"\nedition = \"2024\"\n",
+    );
+    root.git(&["commit", "-m", "source"]);
+    root.wrote(
+        "Cargo.toml",
+        "[workspace.package]\nversion = \"2.0.0\"\nedition = \"2024\"\n",
+    );
+    let projection = &["ship/binary.linux=Cargo.toml#/workspace/package/version"];
+    let (held, ok) = root.planned(Plan {
+        base: Some("HEAD"),
+        world: &["release=v2.0.0", "target=x86_64-unknown-linux-gnu"],
+        identity: &["marker=v2.0.0-beta.1"],
+        project: projection,
+        inventory: None,
+    });
+    assert!(ok, "{held}");
+    let held: serde_json::Value = serde_json::from_str(&held).expect("held plan");
+    let binary = held["actions"]
+        .as_array()
+        .and_then(|actions| {
+            actions
+                .iter()
+                .find(|action| action["name"] == "ship/binary.linux")
+        })
+        .expect("binary action");
+    assert_eq!(binary["name"], "ship/binary.linux");
+    assert_eq!(binary["reason"], "input-held");
+    assert_eq!(binary["run"], false);
+
+    root.wrote(
+        "Cargo.toml",
+        "[workspace.package]\nversion = \"2.0.0\"\nedition = \"2027\"\n",
+    );
+    let (moved, ok) = root.planned(Plan {
+        base: Some("HEAD"),
+        world: &["release=v2.0.0", "target=x86_64-unknown-linux-gnu"],
+        identity: &["marker=v2.0.0-beta.1"],
+        project: projection,
+        inventory: None,
+    });
+    assert!(ok, "{moved}");
+    let moved: serde_json::Value = serde_json::from_str(&moved).expect("moved plan");
+    let binary = moved["actions"]
+        .as_array()
+        .and_then(|actions| {
+            actions
+                .iter()
+                .find(|action| action["name"] == "ship/binary.linux")
+        })
+        .expect("binary action");
+    assert_eq!(binary["reason"], "input-moved");
+    assert_eq!(binary["run"], true);
+}
+
+#[test]
 fn infers() {
     let root = seat("infers");
     root.wrote("pnpm-lock.yaml", "lockfileVersion: 9\n");
