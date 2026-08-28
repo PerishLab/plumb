@@ -63,10 +63,13 @@ fn cycle() {
         commit: &candidate,
     });
     let manifest = beta.join("capsule.json");
-    for _ in 0..2 {
+    for attempt in 0..2 {
         let mut held = fixture.command();
         held.args(["ship", "binary", "publish"]);
         authority(&mut held, &manifest, "PUBLISH");
+        if attempt == 1 {
+            held.env("FAKE_S3_GET_FAILURE", "true");
+        }
         run(&mut held);
     }
     let proof = root.join("promotion/nested/seal.json");

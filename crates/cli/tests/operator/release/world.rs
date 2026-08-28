@@ -200,6 +200,11 @@ case "$operation" in
       echo "NoSuchKey 404" >&2
       exit 1
     }
+    if [ "${FAKE_S3_GET_FAILURE:-}" = true ] && [ ! -f "$FAKE_S3_ROOT/get-failed" ]; then
+      touch "$FAKE_S3_ROOT/get-failed"
+      echo "Connection broken: IncompleteRead" >&2
+      exit 1
+    fi
     cp "$path" "$destination"
     printf '{}\n'
     ;;

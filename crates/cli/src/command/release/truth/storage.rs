@@ -17,10 +17,8 @@ pub fn publish(path: &Path, authority: &impl Authority) -> Result<String, String
     }
     remote.create(&capsule.seal, &root, true)?;
     super::verify::published(&capsule)?;
-    Ok(format!(
-        "published exact {} {}",
-        capsule.channel, capsule.version
-    ))
+    let channel = capsule.channel;
+    Ok(format!("published exact {channel} {}", capsule.version))
 }
 
 pub fn activate(path: &Path, authority: &impl Authority) -> Result<String, String> {
@@ -237,22 +235,27 @@ impl<'a> Remote<'a> {
             std::process::id(),
             key.replace('/', "-")
         ));
-        let output = self
-            .command()
-            .args(["get-object", "--bucket", self.held.bucket(), "--key", key])
-            .arg(&path)
-            .arg("--no-cli-pager")
-            .output()
-            .map_err(|error| format!("cannot run aws get-object: {error}"))?;
-        if output.status.success() {
-            Ok(Some(path))
-        } else if absent(&output) {
-            let _ = std::fs::remove_file(path);
-            Ok(None)
-        } else {
-            let _ = std::fs::remove_file(path);
-            Err(failure("get object", key, &output))
+        let mut failed = None;
+        for _ in 0..3 {
+            let _ = std::fs::remove_file(&path);
+            let output = self
+                .command()
+                .args(["get-object", "--bucket", self.held.bucket(), "--key", key])
+                .arg(&path)
+                .arg("--no-cli-pager")
+                .output()
+                .map_err(|error| format!("cannot run aws get-object: {error}"))?;
+            if output.status.success() {
+                return Ok(Some(path));
+            }
+            if absent(&output) {
+                return Ok(None);
+            }
+            failed = Some(output);
         }
+        let _ = std::fs::remove_file(&path);
+        let output = failed.expect("a bounded object read always attempts once");
+        Err(failure("get object", key, &output))
     }
 
     fn command(&self) -> Command {
@@ -290,8 +293,6 @@ fn absent(output: &Output) -> bool {
 }
 
 fn failure(action: &str, key: &str, output: &Output) -> String {
-    format!(
-        "{action} {key}: {}",
-        String::from_utf8_lossy(&output.stderr).trim()
-    )
+    let error = String::from_utf8_lossy(&output.stderr);
+    format!("{action} {key}: {}", error.trim())
 }
