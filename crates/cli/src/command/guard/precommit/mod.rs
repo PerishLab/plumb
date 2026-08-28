@@ -44,6 +44,10 @@ pub fn run(input: Input) -> i32 {
     }
 }
 
+pub(crate) fn proof(root: &Path) -> Result<plumb::guard::Descriptor, String> {
+    action::prove(root)
+}
+
 fn boundary(input: &Input, base: &str, head: &str) -> i32 {
     let request = Request {
         root: &input.root,
