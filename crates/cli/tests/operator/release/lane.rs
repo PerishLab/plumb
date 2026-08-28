@@ -122,7 +122,19 @@ fn carried() {
     assert!(held.contains("\n  build:\n"), "{held}");
     assert!(held.contains("\n  seal:\n"), "{held}");
     assert!(held.contains("\n  smoke:\n"), "{held}");
-    assert!(held.contains("plumb workflow record"), "{held}");
+    assert_eq!(
+        held.matches("plumb workflow record").count(),
+        1,
+        "the seal job is the sole inventory writer: {held}"
+    );
+    assert!(
+        held.find("Record the fresh binary workloads") > held.find("actions/download-artifact@v3"),
+        "seal records only artifacts it has downloaded: {held}"
+    );
+    assert!(
+        held.contains("PLUMB_BINARY_TARGETS: ${{ needs.resolve.outputs.targets }}"),
+        "seal consumes the exact missing target plan: {held}"
+    );
     assert!(held.contains("binary_reuse"), "{held}");
     assert!(held.contains("WORKFLOW_INVENTORY_URL"), "{held}");
     assert_eq!(

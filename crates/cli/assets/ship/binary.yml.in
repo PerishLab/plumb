@@ -31,18 +31,6 @@
           name: release-${{ matrix.target }}
           path: dist/${{ needs.resolve.outputs.version }}/*
 
-      - name: Record the reusable binary workload
-        env:
-          PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
-          PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
-          PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
-          PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
-          PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
-        run: >-
-          plumb workflow record "${{ matrix.action }}"
-          --keys '${{ toJSON(matrix.keys) }}'
-          --workload "dist/${{ needs.resolve.outputs.version }}/${{ matrix.archive }}"
-
   seal:
     needs: [resolve, build]
     if: >-
@@ -106,6 +94,27 @@
             seat="dist/${{ needs.resolve.outputs.version }}/reuse-$target"
             mkdir -p "$seat"
             curl -fsSL --retry 3 -o "$seat/$archive" "$url"
+          done
+
+      - name: Record the fresh binary workloads
+        if: needs.resolve.outputs.channel != 'stable' && needs.resolve.outputs.binary_missing == 'true'
+        env:
+          PLUMB_BINARY_TARGETS: ${{ needs.resolve.outputs.targets }}
+          PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
+          PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
+          PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
+          PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
+          PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
+        shell: bash
+        run: |
+          set -eu
+          printf '%s' "$PLUMB_BINARY_TARGETS" | jq -c '.include[]' | while IFS= read -r target; do
+            action=$(printf '%s' "$target" | jq -r '.action')
+            archive=$(printf '%s' "$target" | jq -r '.archive')
+            keys=$(printf '%s' "$target" | jq -c '.keys')
+            workload=$(find "$PLUMB_RELEASE_ARTIFACTS" -type f -name "$archive" -print -quit)
+            test -n "$workload"
+            plumb workflow record "$action" --keys "$keys" --workload "$workload"
           done
 
       - name: Assemble the declared binary shape
