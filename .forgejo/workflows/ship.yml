@@ -225,6 +225,9 @@ jobs:
             targets=$(jq -sc '{include:.}' "$pending")
             binary_reuse=$(jq -sc '.' "$reused")
             binary_missing=$(printf '%s' "$targets" | jq -r '.include | length > 0')
+            if [ "$binary_missing" = false ]; then
+              targets='{"include":[{"runner":"docker","control":"reuse","target":"reuse","archive":"none"}]}'
+            fi
           fi
           {
             echo "channel=$PLUMB_RELEASE_CHANNEL"
@@ -236,9 +239,9 @@ jobs:
             echo "project=$PLUMB_RELEASE_PROJECT"
           } >> "$GITHUB_OUTPUT"
 
-  build:
+  materialize:
     needs: resolve
-    if: needs.resolve.outputs.channel != 'stable' && needs.resolve.outputs.binary_missing == 'true'
+    if: needs.resolve.outputs.channel != 'stable'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.resolve.outputs.targets) }}
@@ -252,13 +255,14 @@ jobs:
       PLUMB_RELEASE_ARTIFACTS: dist/${{ needs.resolve.outputs.version }}
     steps:
       - uses: actions/checkout@v6
+        if: matrix.control != 'reuse'
         with:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
       - name: Install bootstrap Plumb
         shell: bash
-        if: runner.os != 'Windows'
+        if: matrix.control != 'reuse' && runner.os != 'Windows'
         run: |
           set -eu
           fetch=(curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 --connect-timeout 5 --max-time 30)
@@ -281,7 +285,7 @@ jobs:
           "$tool" depot sync
 
       - name: Install stable Plumb on Windows
-        if: runner.os == 'Windows'
+        if: matrix.control != 'reuse' && runner.os == 'Windows'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -303,7 +307,7 @@ jobs:
           $bin | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Build the exact atom Plumb
-        if: runner.os != 'Windows'
+        if: matrix.control != 'reuse' && runner.os != 'Windows'
         shell: bash
         env:
           PLUMB_ATOM_TOKEN: ${{ github.token }}
@@ -326,7 +330,7 @@ jobs:
           "$tool" --version
 
       - name: Build the exact atom Plumb on Windows
-        if: runner.os == 'Windows'
+        if: matrix.control != 'reuse' && runner.os == 'Windows'
         shell: pwsh
         env:
           PLUMB_ATOM_TOKEN: ${{ github.token }}
@@ -345,22 +349,25 @@ jobs:
           & $tool --version
 
       - name: Add the declared Rust target
+        if: matrix.control != 'reuse'
         run: rustup target add ${{ matrix.target }}
 
       - name: Build one declared target
+        if: matrix.control != 'reuse'
         run: plumb ship binary build
 
       - uses: actions/upload-artifact@v3
+        if: matrix.control != 'reuse'
         with:
           name: release-${{ matrix.target }}
           path: dist/${{ needs.resolve.outputs.version }}/*
 
   seal:
-    needs: [resolve, build]
+    needs: [resolve, materialize]
     if: >-
       always() && needs.resolve.result == 'success' &&
-      (needs.resolve.outputs.channel == 'stable' || needs.build.result == 'success' ||
-      (needs.build.result == 'skipped' && needs.resolve.outputs.binary_missing == 'false'))
+      (needs.resolve.outputs.channel == 'stable' || needs.materialize.result == 'success' ||
+      (needs.materialize.result == 'skipped' && needs.resolve.outputs.binary_missing == 'false'))
     runs-on: docker
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
@@ -559,9 +566,9 @@ jobs:
           name: release-capsule
           path: .plumb-release/capsule
 
-  smoke:
+  verify:
     needs: [resolve, seal]
-    if: needs.resolve.outputs.channel != 'stable' && needs.resolve.outputs.binary_missing == 'true'
+    if: needs.resolve.outputs.channel != 'stable'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.resolve.outputs.targets) }}
@@ -571,13 +578,14 @@ jobs:
       PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
     steps:
       - uses: actions/checkout@v6
+        if: matrix.control != 'reuse'
         with:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
       - name: Install bootstrap Plumb
         shell: bash
-        if: runner.os != 'Windows'
+        if: matrix.control != 'reuse' && runner.os != 'Windows'
         run: |
           set -eu
           fetch=(curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 --connect-timeout 5 --max-time 30)
@@ -600,7 +608,7 @@ jobs:
           "$tool" depot sync
 
       - name: Install stable Plumb on Windows
-        if: runner.os == 'Windows'
+        if: matrix.control != 'reuse' && runner.os == 'Windows'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -622,7 +630,7 @@ jobs:
           $bin | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Build the exact atom Plumb
-        if: runner.os != 'Windows'
+        if: matrix.control != 'reuse' && runner.os != 'Windows'
         shell: bash
         env:
           PLUMB_ATOM_TOKEN: ${{ github.token }}
@@ -645,7 +653,7 @@ jobs:
           "$tool" --version
 
       - name: Build the exact atom Plumb on Windows
-        if: runner.os == 'Windows'
+        if: matrix.control != 'reuse' && runner.os == 'Windows'
         shell: pwsh
         env:
           PLUMB_ATOM_TOKEN: ${{ github.token }}
@@ -664,13 +672,13 @@ jobs:
           & $tool --version
 
       - name: Smoke the generated manager
-        if: runner.os != 'Windows'
+        if: matrix.control != 'reuse' && runner.os != 'Windows'
         env:
           PLUMB_RELEASE_URL: ${{ needs.seal.outputs.manager_unix }}
         run: plumb ship binary smoke
 
       - name: Smoke the generated manager on Windows
-        if: runner.os == 'Windows'
+        if: matrix.control != 'reuse' && runner.os == 'Windows'
         env:
           PLUMB_RELEASE_URL: ${{ needs.seal.outputs.manager_windows }}
         run: plumb ship binary smoke

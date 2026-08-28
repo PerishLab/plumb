@@ -1,7 +1,7 @@
 
-  build:
+  materialize:
     needs: resolve
-    if: needs.resolve.outputs.channel != 'stable' && needs.resolve.outputs.binary_missing == 'true'
+    if: needs.resolve.outputs.channel != 'stable'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.resolve.outputs.targets) }}
@@ -15,28 +15,32 @@
       PLUMB_RELEASE_ARTIFACTS: dist/${{ needs.resolve.outputs.version }}
     steps:
       - uses: actions/checkout@v6
+        if: matrix.control != 'reuse'
         with:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
 {@carry}
       - name: Add the declared Rust target
+        if: matrix.control != 'reuse'
         run: rustup target add ${{ matrix.target }}
 
       - name: Build one declared target
+        if: matrix.control != 'reuse'
         run: plumb ship binary build
 
       - uses: actions/upload-artifact@v3
+        if: matrix.control != 'reuse'
         with:
           name: release-${{ matrix.target }}
           path: dist/${{ needs.resolve.outputs.version }}/*
 
   seal:
-    needs: [resolve, build]
+    needs: [resolve, materialize]
     if: >-
       always() && needs.resolve.result == 'success' &&
-      (needs.resolve.outputs.channel == 'stable' || needs.build.result == 'success' ||
-      (needs.build.result == 'skipped' && needs.resolve.outputs.binary_missing == 'false'))
+      (needs.resolve.outputs.channel == 'stable' || needs.materialize.result == 'success' ||
+      (needs.materialize.result == 'skipped' && needs.resolve.outputs.binary_missing == 'false'))
     runs-on: docker
     container:
       image: {@forge}
@@ -171,9 +175,9 @@
           name: release-capsule
           path: .plumb-release/capsule
 
-  smoke:
+  verify:
     needs: [resolve, seal]
-    if: needs.resolve.outputs.channel != 'stable' && needs.resolve.outputs.binary_missing == 'true'
+    if: needs.resolve.outputs.channel != 'stable'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.resolve.outputs.targets) }}
@@ -183,19 +187,20 @@
       PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
     steps:
       - uses: actions/checkout@v6
+        if: matrix.control != 'reuse'
         with:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
 {@carry}
       - name: Smoke the generated manager
-        if: runner.os != 'Windows'
+        if: matrix.control != 'reuse' && runner.os != 'Windows'
         env:
           PLUMB_RELEASE_URL: ${{ needs.seal.outputs.manager_unix }}
         run: plumb ship binary smoke
 
       - name: Smoke the generated manager on Windows
-        if: runner.os == 'Windows'
+        if: matrix.control != 'reuse' && runner.os == 'Windows'
         env:
           PLUMB_RELEASE_URL: ${{ needs.seal.outputs.manager_windows }}
         run: plumb ship binary smoke

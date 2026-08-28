@@ -161,6 +161,9 @@ jobs:
             targets=$(jq -sc '{include:.}' "$pending")
             binary_reuse=$(jq -sc '.' "$reused")
             binary_missing=$(printf '%s' "$targets" | jq -r '.include | length > 0')
+            if [ "$binary_missing" = false ]; then
+              targets='{"include":[{"runner":"docker","control":"reuse","target":"reuse","archive":"none"}]}'
+            fi
           fi
           {
             echo "channel=$PLUMB_RELEASE_CHANNEL"

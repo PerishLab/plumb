@@ -54,10 +54,11 @@ impl Seat<'_> {
         } else {
             String::new()
         };
-        vars.insert(
-            "carry",
-            format!("{}\n{source}", templates.matrixed(&bootstrap, &vars)?),
+        let carry = format!("{}\n{source}", templates.matrixed(&bootstrap, &vars)?).replace(
+            "if: runner.os",
+            "if: matrix.control != 'reuse' && runner.os",
         );
+        vars.insert("carry", carry);
         vars.insert("install", format!("{bootstrap}\n{source}"));
         let binary = if carried {
             templates.filled("assets/ship/binary.yml.in", &vars)?

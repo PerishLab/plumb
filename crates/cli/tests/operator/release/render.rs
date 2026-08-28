@@ -165,14 +165,17 @@ fn promotion() {
     .expect("release manifest");
     rendered(&fixture);
     let ship = fs::read_to_string(temp.path().join(".forgejo/workflows/ship.yml")).expect("ship");
-    let build = ship.split("\n  build:\n").nth(1).expect("build job");
-    let build = build.split("\n  seal:\n").next().expect("build body");
+    let build = ship
+        .split("\n  materialize:\n")
+        .nth(1)
+        .expect("materialize job");
+    let build = build.split("\n  seal:\n").next().expect("materialize body");
     assert!(
         build.contains("if: needs.resolve.outputs.channel != 'stable'"),
         "stable promotion must not obtain a runner for binary build: {build}"
     );
-    let smoke = ship.split("\n  smoke:\n").nth(1).expect("smoke job");
-    let smoke = smoke.split("\n  project:\n").next().expect("smoke body");
+    let smoke = ship.split("\n  verify:\n").nth(1).expect("verify job");
+    let smoke = smoke.split("\n  project:\n").next().expect("verify body");
     assert!(
         smoke.contains("if: needs.resolve.outputs.channel != 'stable'"),
         "a beta-smoked binary must not obtain stable smoke runners: {smoke}"

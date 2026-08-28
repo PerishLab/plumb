@@ -127,9 +127,9 @@ fn carried() {
         held.contains("for ($attempt = 1; $attempt -le 5; $attempt++)"),
         "Windows bootstrap transport has the same bounded retry: {held}"
     );
-    assert!(held.contains("\n  build:\n"), "{held}");
+    assert!(held.contains("\n  materialize:\n"), "{held}");
     assert!(held.contains("\n  seal:\n"), "{held}");
-    assert!(held.contains("\n  smoke:\n"), "{held}");
+    assert!(held.contains("\n  verify:\n"), "{held}");
     assert_eq!(
         held.matches("plumb workflow record").count(),
         1,
@@ -146,16 +146,12 @@ fn carried() {
     assert!(held.contains("binary_reuse"), "{held}");
     assert!(held.contains("WORKFLOW_INVENTORY_URL"), "{held}");
     assert!(
-        held.contains("needs.resolve.outputs.binary_missing == 'true'"),
-        "an empty binary plan skips the matrix before this forge expands it: {held}"
+        held.contains("matrix.control != 'reuse'"),
+        "a reuse carrier starts no platform build, tool bootstrap, or smoke step: {held}"
     );
     assert!(
-        held.contains(
-            "\n  build:\n    needs: resolve\n    if: needs.resolve.outputs.channel != 'stable' && needs.resolve.outputs.binary_missing == 'true'"
-        ) && held.contains(
-            "\n  smoke:\n    needs: [resolve, seal]\n    if: needs.resolve.outputs.channel != 'stable' && needs.resolve.outputs.binary_missing == 'true'"
-        ),
-        "fully reused binaries start neither build nor smoke matrices: {held}"
+        held.contains("\"runner\":\"docker\",\"control\":\"reuse\""),
+        "a fully reused plan remains a resolvable Forgejo dependency: {held}"
     );
     assert_eq!(
         held.matches("- uses: actions/checkout@v6").count(),
@@ -190,12 +186,16 @@ fn carried() {
         "{held}"
     );
     assert!(held.contains("needs: [resolve, seal]"), "{held}");
+    let conditions = [
+        "if: runner.os",
+        "if: matrix.control",
+        "if: needs.resolve.outputs.channel",
+        "if: >-\n      always() && needs.resolve.result",
+    ];
     assert!(
-        held.match_indices("if:").all(|(at, _)| {
-            held[at..].starts_with("if: runner.os")
-                || held[at..].starts_with("if: needs.resolve.outputs.channel")
-                || held[at..].starts_with("if: >-\n      always() && needs.resolve.result")
-        }),
+        held.match_indices("if:").all(|(at, _)| conditions
+            .iter()
+            .any(|prefix| held[at..].starts_with(prefix))),
         "a rendered lane carries no condition render time could have decided: {held}"
     );
     assert!(!held.contains("{@"), "{held}");
