@@ -1,6 +1,5 @@
 
   project:
-    name: project (${{ matrix.medium }})
     needs: [resolve{@after}]
     strategy:
       fail-fast: false

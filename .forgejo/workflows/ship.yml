@@ -725,7 +725,6 @@ jobs:
         run: plumb ship binary smoke
 
   project:
-    name: project (${{ matrix.medium }})
     needs: [resolve, seal]
     strategy:
       fail-fast: false

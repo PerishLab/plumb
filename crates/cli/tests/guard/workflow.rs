@@ -4,6 +4,8 @@ mod fixture;
 mod lane;
 #[path = "workflow/plan.rs"]
 mod plan;
+#[path = "workflow/projection.rs"]
+mod projection;
 #[path = "workflow/record.rs"]
 mod record;
 #[path = "workflow/reuse.rs"]
