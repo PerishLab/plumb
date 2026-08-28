@@ -164,3 +164,47 @@ fn infers() {
     assert_eq!(actions[2]["name"], "guard/web");
     assert_eq!(actions[2]["run"], true);
 }
+
+#[test]
+fn identity() {
+    let root = seat("release-identity");
+    root.declared(
+        "[workflow.hash.guard]\nall = [\"Cargo.toml\", \"Cargo.lock\", \"package.json\", \"Chart.yaml\", \".plumb/releases\"]\n",
+    );
+    root.wrote(
+        "Cargo.toml",
+        "[workspace.package]\nversion = \"1.0.0\"\n[dependencies]\nlocal = { path = \"local\", version = \"1.0.0\" }\n",
+    );
+    root.wrote(
+        "Cargo.lock",
+        "version = 4\n[[package]]\nname = \"local\"\nversion = \"1.0.0\"\n",
+    );
+    root.wrote("package.json", r#"{"name":"probe","version":"1.0.0"}"#);
+    root.wrote(
+        "Chart.yaml",
+        "name: probe\nversion: 1.0.0\nappVersion: \"1.0.0\"\n",
+    );
+    root.git(&["commit", "-m", "base"]);
+    root.wrote(
+        "Cargo.toml",
+        "[workspace.package]\nversion = \"2.0.0\"\n[dependencies]\nlocal = { path = \"local\", version = \"2.0.0\" }\n",
+    );
+    root.wrote(
+        "Cargo.lock",
+        "version = 4\n[[package]]\nname = \"local\"\nversion = \"2.0.0\"\n",
+    );
+    root.wrote("package.json", r#"{"name":"probe","version":"2.0.0"}"#);
+    root.wrote(
+        "Chart.yaml",
+        "name: probe\nversion: 2.0.0\nappVersion: \"2.0.0\"\n",
+    );
+    root.wrote(
+        ".plumb/releases/v2.0.0/datum.toml",
+        "version = \"v2.0.0\"\n",
+    );
+    let (text, ok) = root.plan(Some("HEAD"), &[]);
+    assert!(ok, "{text}");
+    let plan: serde_json::Value = serde_json::from_str(&text).expect("plan");
+    assert_eq!(plan["actions"][0]["run"], false);
+    assert_eq!(plan["actions"][0]["reason"], "input-held");
+}

@@ -1,6 +1,7 @@
 mod inventory;
 mod plan;
 mod record;
+mod release;
 mod remote;
 mod reuse;
 mod spread;
