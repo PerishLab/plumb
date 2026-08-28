@@ -142,6 +142,7 @@ impl Module<'_> {
 
     pub(super) fn pnpm(&self, args: &[&str], package: &str) -> Result<(), String> {
         self.run(
+            "pnpm",
             Command::new("pnpm")
                 .args(args)
                 .current_dir(self.seat(package)),
@@ -160,12 +161,12 @@ impl Module<'_> {
             .split_once("://")
             .map(|(_, rest)| rest)
             .unwrap_or(&npm.registry);
-        let output = Command::new("pnpm")
+        let output = Command::new("npm")
             .args(["view", spec, "dist.integrity", "--registry", &npm.registry])
             .current_dir(cwd)
             .env(format!("npm_config_//{seat}:_authToken"), token)
             .output()
-            .map_err(|error| format!("cannot run pnpm: {error}"))?;
+            .map_err(|error| format!("cannot run npm: {error}"))?;
         if !output.status.success() {
             return Ok(None);
         }
@@ -185,18 +186,18 @@ impl Module<'_> {
             .split_once("://")
             .map(|(_, rest)| rest)
             .unwrap_or(&npm.registry);
-        let mut command = Command::new("pnpm");
+        let mut command = Command::new("npm");
         command
             .args(args)
             .current_dir(cwd)
             .env(format!("npm_config_//{seat}:_authToken"), token);
-        self.run(&mut command)
+        self.run("npm", &mut command)
     }
 
-    fn run(&self, command: &mut Command) -> Result<(), String> {
+    fn run(&self, program: &str, command: &mut Command) -> Result<(), String> {
         let status = command
             .status()
-            .map_err(|error| format!("cannot run pnpm: {error}"))?;
+            .map_err(|error| format!("cannot run {program}: {error}"))?;
         if status.success() {
             Ok(())
         } else {
