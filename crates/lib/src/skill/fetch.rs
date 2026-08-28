@@ -2,12 +2,19 @@ use super::Error;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
+use std::io::Write;
 
 #[derive(Clone, Debug)]
 pub struct Grant {
     pub version: String,
     pub url: String,
     pub sha: String,
+    pointer: Option<crate::depot::v2::Pointer>,
+}
+
+pub struct Wanted<'a> {
+    pub channel: &'a str,
+    pub version: Option<&'a str>,
 }
 
 #[derive(Deserialize)]
@@ -82,11 +89,76 @@ pub fn resolve(base: &str, channel: &str, version: Option<&str>) -> Result<Grant
         version: seal.version,
         url: piece.url.clone(),
         sha: piece.sha256.clone(),
+        pointer: None,
     })
 }
 
-pub fn take(grant: &Grant) -> Result<Vec<u8>, Error> {
-    exact(&grant.url, &grant.sha)
+pub fn depot(
+    source: &str,
+    product: &str,
+    running: &str,
+    wanted: Wanted<'_>,
+) -> Result<Grant, Error> {
+    let channel = wanted.channel.trim();
+    if !valid(channel) {
+        return Err(Error::Channel(channel.to_string()));
+    }
+    let selected = wanted.version.map(str::trim).unwrap_or(running);
+    if selected != running || !belongs(channel, selected) {
+        return Err(Error::Version(selected.to_string()));
+    }
+    let generation = crate::depot::v2::media::Generation::latest(crate::depot::v2::media::Query {
+        source,
+        product,
+        channel,
+        version: selected,
+        derivative: crate::depot::v2::Kind::Skill,
+    })
+    .map_err(|error| Error::Fetch(source.to_string(), error))?
+    .ok_or(Error::Absent)?;
+    let route = crate::depot::v2::snapshots(
+        &generation.pointer.release,
+        generation.pointer.derivative,
+        generation.mark(),
+    )
+    .map_err(|error| Error::Fetch(source.to_string(), error))?;
+    Ok(Grant {
+        version: generation.pointer.release.version.clone(),
+        url: format!("{}/{route}", source.trim_end_matches('/')),
+        sha: generation.digest().to_string(),
+        pointer: Some(generation.pointer),
+    })
+}
+
+pub fn take(grant: &Grant, name: &str) -> Result<Vec<u8>, Error> {
+    let Some(pointer) = &grant.pointer else {
+        return exact(&grant.url, &grant.sha);
+    };
+    let generation = crate::depot::v2::media::Generation::exact(&pointer.source, pointer.clone())
+        .map_err(|error| Error::Fetch(grant.url.clone(), error))?;
+    let mut zip = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+    {
+        let mut archive = tar::Builder::new(&mut zip);
+        for object in &generation.manifest.objects {
+            let bytes = generation
+                .read(&object.path)
+                .map_err(|error| Error::Fetch(grant.url.clone(), error))?;
+            let mut header = tar::Header::new_gnu();
+            header.set_size(bytes.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            archive
+                .append_data(&mut header, format!("{name}/{}", object.path), &bytes[..])
+                .map_err(|error| Error::Unpack(error.to_string()))?;
+        }
+        archive
+            .finish()
+            .map_err(|error| Error::Unpack(error.to_string()))?;
+    }
+    zip.flush()
+        .map_err(|error| Error::Unpack(error.to_string()))?;
+    zip.finish()
+        .map_err(|error| Error::Unpack(error.to_string()))
 }
 
 pub fn stamp(bytes: &[u8]) -> String {

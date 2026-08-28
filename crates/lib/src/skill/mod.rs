@@ -1,16 +1,17 @@
 mod agent;
 mod fetch;
 mod place;
+mod source;
 mod state;
 mod survey;
 
 pub use agent::Seat;
 pub use fetch::stamp;
-pub use state::Record;
-pub use survey::{Action, Report, Standing, Status, Target};
-
+pub use source::Depot;
 use state::Ledger;
+pub use state::Record;
 use std::path::PathBuf;
+pub use survey::{Action, Report, Standing, Status, Target};
 
 pub struct Kit {
     pub name: String,
@@ -71,7 +72,7 @@ impl std::fmt::Display for Error {
             Self::Fetch(url, why) => write!(f, "cannot fetch {url}: {why}"),
             Self::Digest(want, seen) => write!(f, "digest mismatch: want {want} got {seen}"),
             Self::Unpack(why) => write!(f, "cannot unpack: {why}"),
-            Self::Absent => write!(f, "release carries no skill artifact"),
+            Self::Absent => write!(f, "selected version carries no skill"),
             Self::Loose => write!(f, "release names no digest for the skill artifact"),
             Self::Shape(name) => write!(f, "unexpected artifact {name}"),
             Self::Channel(channel) => write!(f, "invalid release channel: {channel}"),
@@ -96,6 +97,10 @@ impl std::error::Error for Error {}
 
 impl Kit {
     pub fn install(&self, ask: &Ask) -> Result<Done, Error> {
+        self.installing(&source::Release(&self.url), ask)
+    }
+
+    fn installing(&self, source: &impl source::Source, ask: &Ask) -> Result<Done, Error> {
         managed(ask)?;
         let seats = match &ask.path {
             Some(path) => self.chosen(path)?,
@@ -104,12 +109,16 @@ impl Kit {
         if seats.is_empty() {
             return Err(Error::Bare);
         }
-        self.lay(ask, seats)
+        self.lay(source, ask, seats)
     }
 
     pub fn upgrade(&self, ask: &Ask) -> Result<Done, Error> {
+        self.upgrading(&source::Release(&self.url), ask)
+    }
+
+    fn upgrading(&self, source: &impl source::Source, ask: &Ask) -> Result<Done, Error> {
         managed(ask)?;
-        let grant = fetch::resolve(&self.url, &ask.channel, ask.version.as_deref())?;
+        let grant = source.resolve(ask)?;
         let ledger = state::read(&self.state)?;
         if ledger.records.is_empty() {
             return Err(Error::Bare);
@@ -121,7 +130,9 @@ impl Kit {
                 Action::Upgrade | Action::Rollback | Action::Restore
             )
         });
-        let bytes = changes.then(|| fetch::take(&grant)).transpose()?;
+        let bytes = changes
+            .then(|| fetch::take(&grant, &self.name))
+            .transpose()?;
         let mut ledger = ledger;
         let mut done = Done::default();
         for status in report.seats {
@@ -152,13 +163,21 @@ impl Kit {
     }
 
     pub fn status(&self, ask: &Ask) -> Result<Report, Error> {
+        self.inspecting(&source::Release(&self.url), ask)
+    }
+
+    fn inspecting(&self, source: &impl source::Source, ask: &Ask) -> Result<Report, Error> {
         managed(ask)?;
-        let grant = fetch::resolve(&self.url, &ask.channel, ask.version.as_deref())?;
+        let grant = source.resolve(ask)?;
         let ledger = state::read(&self.state)?;
         survey::inspect(self, ask, &grant, &ledger)
     }
 
     pub fn stage(&self, ask: &Ask) -> Result<Done, Error> {
+        self.staging(&source::Release(&self.url), ask)
+    }
+
+    fn staging(&self, source: &impl source::Source, ask: &Ask) -> Result<Done, Error> {
         if ask.channel.trim() == "stable" {
             return Err(Error::Stage);
         }
@@ -167,8 +186,8 @@ impl Kit {
         if path.exists() {
             return Err(Error::Occupied(path.clone()));
         }
-        let grant = fetch::resolve(&self.url, &ask.channel, ask.version.as_deref())?;
-        let bytes = fetch::take(&grant)?;
+        let grant = source.resolve(ask)?;
+        let bytes = fetch::take(&grant, &self.name)?;
         let seat = seats.into_iter().next().expect("a chosen path is one seat");
         place::stage(self, &seat, &bytes, &grant.version)?;
         Ok(Done {
@@ -197,9 +216,14 @@ impl Kit {
         Ok(done)
     }
 
-    fn lay(&self, ask: &Ask, seats: Vec<Seat>) -> Result<Done, Error> {
-        let grant = fetch::resolve(&self.url, &ask.channel, ask.version.as_deref())?;
-        let bytes = fetch::take(&grant)?;
+    fn lay(
+        &self,
+        source: &impl source::Source,
+        ask: &Ask,
+        seats: Vec<Seat>,
+    ) -> Result<Done, Error> {
+        let grant = source.resolve(ask)?;
+        let bytes = fetch::take(&grant, &self.name)?;
         let mut ledger = state::read(&self.state)?;
         let mut done = Done::default();
         for seat in seats {
