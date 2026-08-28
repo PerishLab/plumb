@@ -1,5 +1,8 @@
 use super::{archive, skill};
+pub mod chart;
 mod debian;
+pub mod project;
+pub mod projection;
 use crate::command::release::workspace::Workspace;
 use crate::command::release::{artifact, artifact::Asset};
 use crate::shape::release::{Format, Spec};

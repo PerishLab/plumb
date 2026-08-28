@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 pub struct Chart<'a> {
-    spec: &'a Spec,
+    pub(in crate::command::ship) spec: &'a Spec,
 }
 
 pub fn chart(spec: &Spec) -> Chart<'_> {
@@ -49,57 +49,39 @@ impl Chart<'_> {
         let Some(chart) = &self.spec.chart else {
             return Ok(format!("{} has no chart attachment", self.spec.product));
         };
-        let identity = crate::command::ship::attachment::Identity {
-            user: &chart.account,
-            token: crate::command::ship::attachment::credential(credential)?,
-        };
         self.package(version)?;
         let semver = release(version)?;
         let held = name(chart)?;
-        let owner = owner(chart)?;
-        self.login(&chart.registry, &identity)?;
         let archive = self.archive(&held, &semver);
-        let seat = format!("oci://{}/{owner}/{held}", chart.registry);
-        if let Some(carried) = self.carried(&seat, &semver)? {
-            let held = crate::command::release::record::digest(&archive)?.0;
-            if carried != held {
-                return Err(format!(
-                    "published chart drift: {seat} holds {carried} while this projection carries {held}"
-                ));
-            }
-            return Ok(format!("{seat} already carries {version}"));
-        }
-        self.helm([
-            "push",
-            &archive.to_string_lossy(),
-            &format!("oci://{}/{owner}", chart.registry),
-        ])?;
-        self.helm(["show", "chart", &seat, "--version", &semver.to_string()])?;
+        crate::command::ship::package::projection::run(
+            self,
+            crate::command::ship::package::projection::Request {
+                chart,
+                version: &semver,
+                credential,
+                archive: &archive,
+            },
+        )?;
         Ok(format!("published chart attachment for {version}"))
+    }
+
+    pub fn exact(&self, version: &str, credential: &str, reuse: &str) -> Result<String, String> {
+        crate::command::ship::package::chart::run(self, version, credential, reuse)
     }
 
     fn stamp(&self, held: &str, version: &Version) -> Result<(), String> {
         let path = self.seat(held).join("Chart.yaml");
         let text = std::fs::read_to_string(&path)
             .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-        let mut lines = Vec::new();
-        for line in text.lines() {
-            if let Some(rest) = line.strip_prefix("version:") {
-                let _ = rest;
-                lines.push(format!("version: {version}"));
-            } else if let Some(rest) = line.strip_prefix("appVersion:") {
-                let _ = rest;
-                lines.push(format!("appVersion: \"{version}\""));
-            } else {
-                lines.push(line.to_string());
-            }
-        }
-        lines.push(String::new());
-        std::fs::write(&path, lines.join("\n"))
+        std::fs::write(&path, stamped(&text, version))
             .map_err(|error| format!("cannot write {}: {error}", path.display()))
     }
 
-    fn carried(&self, seat: &str, version: &Version) -> Result<Option<String>, String> {
+    pub(in crate::command::ship) fn carried(
+        &self,
+        seat: &str,
+        version: &Version,
+    ) -> Result<Option<String>, String> {
         let out = tempfile::tempdir()
             .map_err(|error| format!("cannot open a chart readback seat: {error}"))?;
         let pulled = Command::new("helm")
@@ -130,7 +112,7 @@ impl Chart<'_> {
         Ok(Some(crate::command::release::record::digest(&path)?.0))
     }
 
-    fn login(
+    pub(in crate::command::ship) fn login(
         &self,
         registry: &str,
         identity: &crate::command::ship::attachment::Identity<'_>,
@@ -164,7 +146,10 @@ impl Chart<'_> {
         }
     }
 
-    fn helm<const N: usize>(&self, args: [&str; N]) -> Result<(), String> {
+    pub(in crate::command::ship) fn helm<const N: usize>(
+        &self,
+        args: [&str; N],
+    ) -> Result<(), String> {
         let status = Command::new("helm")
             .args(args)
             .current_dir(&self.spec.root)
@@ -177,7 +162,7 @@ impl Chart<'_> {
         }
     }
 
-    fn seat(&self, held: &str) -> PathBuf {
+    pub(in crate::command::ship) fn seat(&self, held: &str) -> PathBuf {
         self.spec.root.join("charts").join(held)
     }
 
@@ -185,9 +170,48 @@ impl Chart<'_> {
         self.spec.root.join("target/chart")
     }
 
-    fn archive(&self, held: &str, version: &Version) -> PathBuf {
+    pub(in crate::command::ship) fn archive(&self, held: &str, version: &Version) -> PathBuf {
         self.out().join(format!("{held}-{version}.tgz"))
     }
+}
+
+pub(in crate::command::ship) fn stamped(text: &str, version: &Version) -> String {
+    let mut lines = text
+        .lines()
+        .map(|line| {
+            if line.starts_with("version:") {
+                format!("version: {version}")
+            } else if line.starts_with("appVersion:") {
+                format!("appVersion: \"{version}\"")
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>();
+    lines.push(String::new());
+    lines.join("\n")
+}
+
+pub(in crate::command::ship) fn owner(
+    chart: &crate::shape::release::Chart,
+) -> Result<String, String> {
+    identity(chart, 0)
+}
+
+pub(in crate::command::ship) fn name(
+    chart: &crate::shape::release::Chart,
+) -> Result<String, String> {
+    identity(chart, 1)
+}
+
+fn identity(chart: &crate::shape::release::Chart, index: usize) -> Result<String, String> {
+    chart
+        .chart
+        .split('/')
+        .nth(index)
+        .filter(|held| !held.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| "chart attachment must name one owner and one chart".to_string())
 }
 
 struct Entry {
@@ -264,25 +288,7 @@ fn normalize(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn owner(chart: &crate::shape::release::Chart) -> Result<String, String> {
-    seat(chart, 0)
-}
-
-fn name(chart: &crate::shape::release::Chart) -> Result<String, String> {
-    seat(chart, 1)
-}
-
-fn seat(chart: &crate::shape::release::Chart, index: usize) -> Result<String, String> {
-    chart
-        .chart
-        .split('/')
-        .nth(index)
-        .filter(|held| !held.is_empty())
-        .map(str::to_string)
-        .ok_or_else(|| "chart attachment must name one owner and one chart".to_string())
-}
-
-fn release(version: &str) -> Result<Version, String> {
+pub(in crate::command::ship) fn release(version: &str) -> Result<Version, String> {
     Version::parse(version.trim_start_matches('v'))
         .map_err(|error| format!("release version is not semantic: {error}"))
 }

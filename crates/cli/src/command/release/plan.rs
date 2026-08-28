@@ -30,12 +30,35 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
     let include = held.iter().map(row).collect::<Vec<_>>();
     let mut project = held
         .iter()
-        .filter(|medium| **medium != "binary" && **medium != "npm")
+        .filter(|medium| **medium != "binary" && **medium != "npm" && **medium != "chart")
         .map(|medium| {
             prepared(medium)
                 .map(|prepare| serde_json::json!({ "medium": medium, "prepare": prepare }))
         })
         .collect::<Result<Vec<_>, _>>()?;
+    if let Some(chart) = &spec.chart {
+        let held = chart.chart.rsplit('/').next().unwrap_or(&chart.chart);
+        let mut roots = vec![format!("charts/{held}")];
+        if let Some(depends) = spec.depends.get("chart") {
+            roots.extend(
+                depends
+                    .iter()
+                    .map(|path| path.to_string_lossy().to_string()),
+            );
+        }
+        roots.sort();
+        roots.dedup();
+        project.push(serde_json::json!({
+            "medium": "chart",
+            "prepare": "exact",
+            "action": "ship/chart",
+            "projections": [
+                format!("charts/{held}/Chart.yaml#/version"),
+                format!("charts/{held}/Chart.yaml#/appVersion"),
+            ],
+            "roots": roots,
+        }));
+    }
     if let Some(npm) = &spec.npm {
         for package in &npm.packages {
             let bare = package.rsplit('/').next().unwrap_or(package);
@@ -57,7 +80,7 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
                 "prepare": "exact",
                 "package": package,
                 "action": format!("ship/npm.{bare}"),
-                "projection": format!("packages/{bare}/package.json#/version"),
+                "projections": [format!("packages/{bare}/package.json#/version")],
                 "roots": roots,
             }));
         }

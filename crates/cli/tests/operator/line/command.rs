@@ -15,7 +15,10 @@ fn forge(root: &Path) -> Option<String> {
 
 pub fn plumb(root: &Path, args: &[&str]) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
-    command.args(args).current_dir(root);
+    command
+        .args(args)
+        .current_dir(root)
+        .env_remove("FORGEJO_URL");
     for (name, value) in [
         ("FORGEJO_TOKEN", "test-token"),
         ("HARNESS_RUN_POLL_MS", "1"),

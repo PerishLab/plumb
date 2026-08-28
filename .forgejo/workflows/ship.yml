@@ -238,15 +238,15 @@ jobs:
               printf '%s\n' "$entry" >> "$project_pending"
               continue
             fi
-            projection=$(printf '%s' "$entry" | jq -r '.projection')
             command=(plumb workflow plan \
               --world "atom=${{ github.sha }}" \
               --world "depot=$depot" \
               --world "plumb=$plumb_version" \
-              --world "release=$PLUMB_RELEASE_VERSION" \
               --world "runner=docker" \
-              --identity "marker=$PLUMB_RELEASE_MARKER" \
-              --project "$action=$projection")
+              --identity "marker=$PLUMB_RELEASE_MARKER")
+            while IFS= read -r projection; do
+              command+=(--project "$action=$projection")
+            done < <(printf '%s' "$entry" | jq -r '(.projections // [.projection])[]')
             while IFS= read -r root; do
               command+=(--root "$action=$root")
             done < <(printf '%s' "$entry" | jq -r '.roots[]')
@@ -725,6 +725,7 @@ jobs:
         run: plumb ship binary smoke
 
   project:
+    name: project (${{ matrix.medium }})
     needs: [resolve, seal]
     strategy:
       fail-fast: false
@@ -845,7 +846,7 @@ jobs:
           path: .plumb-release/capsule
 
       - name: Install declared packages
-        if: matrix.control != 'reuse' && (matrix.medium != 'npm' || matrix.reuse.type == 'none')
+        if: matrix.control != 'reuse' && matrix.medium != 'chart' && (matrix.medium != 'npm' || matrix.reuse.type == 'none')
         shell: bash
         run: |
           set -eu
@@ -855,7 +856,7 @@ jobs:
           fi
 
       - name: Project one declared medium
-        if: matrix.control != 'reuse' && matrix.medium != 'npm'
+        if: matrix.control != 'reuse' && matrix.medium != 'npm' && matrix.medium != 'chart'
         shell: bash
         run: |
           set -eu
@@ -876,6 +877,28 @@ jobs:
           output="$RUNNER_TEMP/plumb-module.log"
           plumb ship npm exact \
             --package '${{ matrix.package }}' \
+            --reuse '${{ toJSON(matrix.reuse) }}' > "$output"
+          record=$(tail -n 1 "$output")
+          workload=$(printf '%s' "$record" | jq -r '.workload')
+          publication=$(printf '%s' "$record" | jq -r '.publication')
+          plumb workflow record '${{ matrix.action }}' \
+            --keys '${{ toJSON(matrix.keys) }}' \
+            --workload "$workload" \
+            --publication "$publication"
+
+      - name: Project one exact chart
+        if: matrix.control != 'reuse' && matrix.medium == 'chart'
+        shell: bash
+        env:
+          PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
+          PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
+          PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
+          PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
+          PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
+        run: |
+          set -eu
+          output="$RUNNER_TEMP/plumb-chart.log"
+          plumb ship chart exact \
             --reuse '${{ toJSON(matrix.reuse) }}' > "$output"
           record=$(tail -n 1 "$output")
           workload=$(printf '%s' "$record" | jq -r '.workload')

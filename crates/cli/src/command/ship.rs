@@ -92,6 +92,11 @@ pub enum Oci {
 
 #[derive(Subcommand)]
 pub enum Chart {
+    #[command(about = "Publish the exact chart from source or a reusable workload")]
+    Exact {
+        #[arg(long, default_value = "{\"type\":\"none\",\"source\":\"\"}")]
+        reuse: String,
+    },
     #[command(about = "Stamp the chart with this version and package it")]
     Package,
     #[command(about = "Package the chart and push it to its registry")]

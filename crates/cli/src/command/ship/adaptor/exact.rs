@@ -1,10 +1,9 @@
 use super::module::{Module, channel, drift, integrity, publication, release};
+use crate::command::ship::package::project::{Scope, Source, fetch};
 use flate2::{Compression, GzBuilder, read::GzDecoder};
 use semver::Version;
-use serde::Deserialize;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 pub struct Request<'a> {
     pub package: &'a str,
@@ -43,9 +42,7 @@ impl Exact<'_, '_> {
                 request.package
             ));
         }
-        let source: Source = serde_json::from_str(request.reuse)
-            .map_err(|error| format!("cannot parse --reuse: {error}"))?;
-        source.validate()?;
+        let source = Source::parse(request.reuse)?;
         let identity = release(request.version)?;
         let archive = match source.kind.as_str() {
             "none" => self.package(request.package, &identity)?,
@@ -74,9 +71,7 @@ impl Exact<'_, '_> {
 
     fn package(&self, package: &str, identity: &Version) -> Result<PathBuf, String> {
         let manifest = self.carrier.seat(package).join("package.json");
-        let original = std::fs::read(&manifest)
-            .map_err(|error| format!("cannot read {}: {error}", manifest.display()))?;
-        let restored = Scope::new(&manifest, &original);
+        let restored = Scope::read(&manifest)?;
         self.carrier.stamp(package, identity)?;
         let document: serde_json::Value = serde_json::from_slice(
             &std::fs::read(&manifest)
@@ -110,27 +105,13 @@ impl Exact<'_, '_> {
     }
 
     fn fetch(&self, package: &str, identity: &Version, source: &str) -> Result<PathBuf, String> {
-        let response = Command::new("curl")
-            .args([
-                "--fail-with-body",
-                "--silent",
-                "--show-error",
-                "--location",
-                "--retry",
-                "3",
-                source,
-            ])
-            .output()
-            .map_err(|error| format!("cannot fetch reusable module workload {source}: {error}"))?;
-        if !response.status.success() {
-            return Err(format!("cannot fetch reusable module workload {source}"));
-        }
+        let response = fetch("module", source)?;
         let archive = self.carrier.archive(package, identity);
         if let Some(parent) = archive.parent() {
             std::fs::create_dir_all(parent)
                 .map_err(|error| format!("cannot open {}: {error}", parent.display()))?;
         }
-        repack(&response.stdout, &archive, package, identity)?;
+        repack(&response, &archive, package, identity)?;
         Ok(archive)
     }
 
@@ -177,58 +158,6 @@ impl Exact<'_, '_> {
             .ok_or_else(|| format!("{spec} reports no integrity after publishing it"))?;
         drift(&spec, &carried, &held)?;
         Ok(publication(projection.npm, projection.package))
-    }
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Source {
-    #[serde(rename = "type")]
-    kind: String,
-    source: String,
-}
-
-impl Source {
-    fn validate(&self) -> Result<(), String> {
-        match (self.kind.as_str(), self.source.as_str()) {
-            ("none", "") => Ok(()),
-            ("workload" | "url", source) if source.starts_with("https://") => Ok(()),
-            ("none" | "workload" | "url", _) => {
-                Err("--reuse source does not match its type".into())
-            }
-            _ => Err("--reuse type must be none, workload, or url".into()),
-        }
-    }
-}
-
-struct Scope<'a> {
-    path: &'a Path,
-    original: &'a [u8],
-    restored: bool,
-}
-
-impl<'a> Scope<'a> {
-    fn new(path: &'a Path, original: &'a [u8]) -> Self {
-        Self {
-            path,
-            original,
-            restored: false,
-        }
-    }
-
-    fn restore(mut self) -> Result<(), String> {
-        std::fs::write(self.path, self.original)
-            .map_err(|error| format!("cannot restore {}: {error}", self.path.display()))?;
-        self.restored = true;
-        Ok(())
-    }
-}
-
-impl Drop for Scope<'_> {
-    fn drop(&mut self) {
-        if !self.restored {
-            let _ = std::fs::write(self.path, self.original);
-        }
     }
 }
 

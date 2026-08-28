@@ -30,6 +30,18 @@ fn workload() {
         held.contains("\"control\":\"reuse\""),
         "a fully published project plan remains a resolvable Forgejo carrier: {held}"
     );
+    let project = held
+        .split("project_pending=")
+        .nth(1)
+        .expect("project planner");
+    assert!(
+        !project.contains("--world \"release=$PLUMB_RELEASE_VERSION\""),
+        "a restampable workload must not bind the publication version: {project}"
+    );
+    assert!(
+        project.contains("(.projections // [.projection])[]"),
+        "one action may project every marker-owned field: {project}"
+    );
 }
 
 #[test]

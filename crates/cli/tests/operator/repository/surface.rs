@@ -153,8 +153,24 @@ fn prepared() {
         .find(|row| row["medium"] == "npm")
         .expect("npm project");
     assert_eq!(npm["action"], "ship/npm.probe");
-    assert_eq!(npm["projection"], "packages/probe/package.json#/version");
+    assert_eq!(
+        npm["projections"],
+        serde_json::json!(["packages/probe/package.json#/version"])
+    );
     assert_eq!(npm["roots"], serde_json::json!(["packages/probe"]));
+    let chart = rows
+        .iter()
+        .find(|row| row["medium"] == "chart")
+        .expect("chart project");
+    assert_eq!(chart["action"], "ship/chart");
+    assert_eq!(
+        chart["projections"],
+        serde_json::json!([
+            "charts/probe/Chart.yaml#/version",
+            "charts/probe/Chart.yaml#/appVersion"
+        ])
+    );
+    assert_eq!(chart["roots"], serde_json::json!(["charts/probe"]));
     for row in rows {
         let medium = row["medium"].as_str().expect("a row names its medium");
         let prepare = row["prepare"]

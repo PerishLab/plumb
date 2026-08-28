@@ -174,15 +174,15 @@ jobs:
               printf '%s\n' "$entry" >> "$project_pending"
               continue
             fi
-            projection=$(printf '%s' "$entry" | jq -r '.projection')
             command=(plumb workflow plan \
               --world "atom=${{ github.sha }}" \
               --world "depot=$depot" \
               --world "plumb=$plumb_version" \
-              --world "release=$PLUMB_RELEASE_VERSION" \
               --world "runner=docker" \
-              --identity "marker=$PLUMB_RELEASE_MARKER" \
-              --project "$action=$projection")
+              --identity "marker=$PLUMB_RELEASE_MARKER")
+            while IFS= read -r projection; do
+              command+=(--project "$action=$projection")
+            done < <(printf '%s' "$entry" | jq -r '(.projections // [.projection])[]')
             while IFS= read -r root; do
               command+=(--root "$action=$root")
             done < <(printf '%s' "$entry" | jq -r '.roots[]')

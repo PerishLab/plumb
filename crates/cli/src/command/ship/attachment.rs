@@ -39,6 +39,10 @@ pub(super) fn chart(deed: super::Chart) -> Result<String, String> {
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
     let carrier = adaptor::chart::chart(&spec);
     match deed {
+        super::Chart::Exact { reuse } => {
+            sealed(&spec, release, version, spec.chart.is_some())?;
+            carrier.exact(version, &release.credential, &reuse)
+        }
         super::Chart::Package => carrier.package(version),
         super::Chart::Publish => {
             sealed(&spec, release, version, spec.chart.is_some())?;
