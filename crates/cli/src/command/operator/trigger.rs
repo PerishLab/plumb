@@ -23,11 +23,10 @@ pub fn run(options: Dispatch) -> Result<String, String> {
     let product = git::remote(&root, &options.repo)?;
     let remote = git::remote(&root, "PerishLab/plumb")?;
     let workflow = "ship.yml";
-    let reference = if before.repository == "PerishLab/plumb" {
-        format!("refs/tags/{}", before.marker)
-    } else {
-        format!("refs/tags/v{}", env!("CARGO_PKG_VERSION"))
-    };
+    let reference = atom(
+        plumb::commit!("PLUMB"),
+        plumb::version!("PLUMB").trim_start_matches('v'),
+    );
     let client = Client::new(remote)?;
     let mut course = Course::new(options.dry);
     let message = launch(
@@ -51,6 +50,13 @@ pub fn run(options: Dispatch) -> Result<String, String> {
         ));
     }
     message
+}
+
+fn atom(commit: Option<&str>, version: &str) -> String {
+    commit.map_or_else(
+        || format!("refs/tags/v{version}"),
+        std::string::ToString::to_string,
+    )
 }
 
 pub fn legacy(options: Legacy) -> Result<String, String> {
