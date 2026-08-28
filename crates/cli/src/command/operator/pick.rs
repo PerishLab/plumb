@@ -99,11 +99,39 @@ pub fn pick(seat: &Path, name: &str, commit: &str) -> Result<String, String> {
         "cherry-pick candidate",
         command(seat, ["cherry-pick", "-x", commit])?,
     )?;
+    if let Err(error) = sealed(seat) {
+        let _ = command(seat, ["reset", "--hard", &head]);
+        return Err(error);
+    }
     success(
         "push release line",
         command(seat, ["push", "origin", &format!("HEAD:refs/heads/{name}")])?,
     )?;
     Ok(format!("picked {commit} onto {name}"))
+}
+
+fn sealed(seat: &Path) -> Result<(), String> {
+    let proof = crate::command::precommit::proof(seat)?;
+    let body = text(
+        "read picked commit message",
+        command(seat, ["show", "-s", "--format=%B", "HEAD"])?,
+    )?;
+    let mut message = body
+        .lines()
+        .filter(|line| !line.starts_with(plumb::guard::TRAILER))
+        .collect::<Vec<_>>()
+        .join("\n")
+        .trim_end()
+        .to_string();
+    message.push_str("\n\n");
+    message.push_str(plumb::guard::TRAILER);
+    message.push(' ');
+    message.push_str(&proof.encode()?);
+    success(
+        "seal picked commit",
+        command(seat, ["commit", "--amend", "--no-verify", "-m", &message])?,
+    )?;
+    plumb::guard::current(seat, "HEAD").map(|_| ())
 }
 
 fn command<const N: usize>(cwd: &Path, args: [&str; N]) -> Result<Output, String> {
