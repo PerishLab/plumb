@@ -62,6 +62,11 @@ pub fn run(
 }
 
 fn restamp(bytes: &[u8], output: &Path, chart: &str, version: &Version) -> Result<(), String> {
+    let manifest = PathBuf::from(chart).join("Chart.yaml");
+    if current(bytes, &manifest, version)? {
+        return std::fs::write(output, bytes)
+            .map_err(|error| format!("cannot create {}: {error}", output.display()));
+    }
     let mut source = tar::Archive::new(GzDecoder::new(bytes));
     let file = File::create(output)
         .map_err(|error| format!("cannot create {}: {error}", output.display()))?;
@@ -69,7 +74,6 @@ fn restamp(bytes: &[u8], output: &Path, chart: &str, version: &Version) -> Resul
         .mtime(0)
         .write(file, Compression::default());
     let mut target = tar::Builder::new(gzip);
-    let manifest = PathBuf::from(chart).join("Chart.yaml");
     let mut found = false;
     for entry in source
         .entries()
@@ -110,4 +114,41 @@ fn restamp(bytes: &[u8], output: &Path, chart: &str, version: &Version) -> Resul
     gzip.finish()
         .map_err(|error| format!("cannot finish {}: {error}", output.display()))?;
     Ok(())
+}
+
+fn current(bytes: &[u8], manifest: &Path, version: &Version) -> Result<bool, String> {
+    let mut source = tar::Archive::new(GzDecoder::new(bytes));
+    for entry in source
+        .entries()
+        .map_err(|error| format!("cannot read reusable chart workload: {error}"))?
+    {
+        let mut entry =
+            entry.map_err(|error| format!("cannot read reusable chart workload: {error}"))?;
+        if entry
+            .path()
+            .map_err(|error| format!("cannot read reusable chart path: {error}"))?
+            != manifest
+        {
+            continue;
+        }
+        let mut text = String::new();
+        entry
+            .read_to_string(&mut text)
+            .map_err(|error| format!("cannot parse reusable Chart.yaml: {error}"))?;
+        let expected = version.to_string();
+        let chart = text
+            .lines()
+            .any(|line| value(line, "version:") == Some(expected.as_str()));
+        let app = text
+            .lines()
+            .any(|line| value(line, "appVersion:") == Some(expected.as_str()));
+        return Ok(chart && app);
+    }
+    Ok(false)
+}
+
+fn value<'a>(line: &'a str, key: &str) -> Option<&'a str> {
+    line.strip_prefix(key)
+        .map(str::trim)
+        .map(|held| held.trim_matches('"'))
 }
