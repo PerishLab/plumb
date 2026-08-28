@@ -20,6 +20,11 @@ fn snapshot() {
         "origin",
         "file:///missing/PerishLab/probe.git",
     ]));
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "update-ref",
+        "-d",
+        "refs/remotes/origin/release/v1.2.0",
+    ]));
 
     let held = fixture
         .command()

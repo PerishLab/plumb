@@ -126,6 +126,15 @@ fn carried() {
     assert!(held.contains("binary_reuse"), "{held}");
     assert!(held.contains("WORKFLOW_INVENTORY_URL"), "{held}");
     assert_eq!(
+        held.matches("- uses: actions/checkout@v6").count(),
+        3,
+        "resolve owns its checkout while distribution jobs retain their platform checkout: {held}"
+    );
+    assert!(
+        held.contains("fetch --no-tags --depth=1 origin"),
+        "the public atom fetches only its exact marker: {held}"
+    );
+    assert_eq!(
         held.matches("release marker show").count(),
         1,
         "the workflow resolves its held marker snapshot once: {held}"

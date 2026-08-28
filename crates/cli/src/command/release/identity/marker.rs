@@ -8,8 +8,6 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-const SCHEMA: &str = "plumb.release-marker/v1";
-
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(in crate::command) struct Descriptor {
@@ -63,9 +61,8 @@ pub fn run(deed: Deed) -> Result<String, String> {
     };
     let marker = resolve(&name, !held)?;
     if show {
-        let mut text = serde_json::to_string_pretty(&marker).map_err(|error| error.to_string())?;
-        text.push('\n');
-        Ok(text)
+        let text = serde_json::to_string_pretty(&marker).map_err(|error| error.to_string())?;
+        Ok(format!("{text}\n"))
     } else {
         Ok(format!(
             "verified release marker {} at {} ({})",
@@ -143,7 +140,8 @@ impl Seat {
             Err(_) => {}
         }
         let version = marker.split('-').next().unwrap_or(&marker).to_string();
-        self.stood(&marker, &version, &commit)?;
+        let line = super::standing::line(&version, refresh);
+        self.stood(&marker, &line, &commit)?;
         let datum = self.datum(&version, &commit)?;
         let promotion = if channel == "stable" {
             Some(self.promotion(&version, &commit)?)
@@ -151,7 +149,7 @@ impl Seat {
             None
         };
         Ok(Descriptor {
-            schema: SCHEMA,
+            schema: "plumb.release-marker/v1",
             product: self.product.clone(),
             repository: self.repository.clone(),
             authority: self.authority.clone(),
@@ -192,9 +190,8 @@ impl Seat {
         Ok(())
     }
 
-    fn stood(&self, marker: &str, version: &str, commit: &str) -> Result<(), String> {
-        let line = format!("origin/release/{version}");
-        let head = self.read(["rev-parse", &line])?;
+    fn stood(&self, marker: &str, line: &str, commit: &str) -> Result<(), String> {
+        let head = self.read(["rev-parse", line])?;
         if head == commit {
             Ok(())
         } else {

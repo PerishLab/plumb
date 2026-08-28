@@ -50,12 +50,24 @@ jobs:
       PLUMB_RELEASE_SOURCE: ${{ github.ref }}
       PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
     steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          repository: ${{ inputs.repository || github.repository }}
-          ref: ${{ inputs.marker || github.sha }}
+      - name: Check out the release marker
+        shell: bash
+        env:
+          PLUMB_CHECKOUT_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          test -n "$PLUMB_RELEASE_MARKER"
+          remote="${{ github.server_url }}/${{ inputs.repository || github.repository }}.git"
+          reference="refs/tags/$PLUMB_RELEASE_MARKER"
+          git init .
+          git remote add origin "$remote"
+          fetch=(git)
+          if [ -n "$PLUMB_CHECKOUT_TOKEN" ]; then
+            basic=$(printf 'x-access-token:%s' "$PLUMB_CHECKOUT_TOKEN" | base64 | tr -d '\n')
+            fetch+=(-c "http.extraheader=AUTHORIZATION: basic $basic")
+          fi
+          "${fetch[@]}" fetch --no-tags --depth=1 origin "+$reference:$reference"
+          git checkout --detach "$reference^{commit}"
 
 {@install}
       - name: Plan this release
