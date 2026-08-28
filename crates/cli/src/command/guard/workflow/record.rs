@@ -177,8 +177,8 @@ impl Authority {
             return Err(failure("read workflow inventory", &output));
         }
         #[derive(Deserialize)]
-        #[serde(rename_all = "PascalCase")]
         struct Get {
+            #[serde(rename = "ETag")]
             etag: String,
         }
         let response: Get = serde_json::from_slice(&output.stdout)

@@ -64,37 +64,46 @@ esac
     })
     .to_string();
     let path = format!("{}:{}", bin.display(), std::env::var("PATH").expect("PATH"));
-    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args([
-            "workflow",
-            "record",
-            "ship/npm.cli",
-            "--keys",
-            &keys,
-            "--workload",
-            workload.to_str().expect("workload path"),
-            "--publication",
-            "https://registry.example/cli-1.0.0.tgz",
-        ])
-        .env("PATH", path)
-        .env("PLUMB_TEST_STORE", &store)
-        .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
-        .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
-        .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", "workflow")
-        .env(
-            "PLUMB_WORKFLOW_INVENTORY_ENDPOINT",
-            "https://account.r2.cloudflarestorage.com",
-        )
-        .env(
-            "PLUMB_WORKFLOW_INVENTORY_URL",
-            "https://workflow.example/inventory.json",
-        )
-        .output()
-        .expect("record");
+    let record = || {
+        Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args([
+                "workflow",
+                "record",
+                "ship/npm.cli",
+                "--keys",
+                &keys,
+                "--workload",
+                workload.to_str().expect("workload path"),
+                "--publication",
+                "https://registry.example/cli-1.0.0.tgz",
+            ])
+            .env("PATH", &path)
+            .env("PLUMB_TEST_STORE", &store)
+            .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
+            .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
+            .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", "workflow")
+            .env(
+                "PLUMB_WORKFLOW_INVENTORY_ENDPOINT",
+                "https://account.r2.cloudflarestorage.com",
+            )
+            .env(
+                "PLUMB_WORKFLOW_INVENTORY_URL",
+                "https://workflow.example/inventory.json",
+            )
+            .output()
+            .expect("record")
+    };
+    let output = record();
     assert!(
         output.status.success(),
         "{}",
         String::from_utf8_lossy(&output.stderr)
+    );
+    let repeated = record();
+    assert!(
+        repeated.status.success(),
+        "an existing inventory reads the AWS ETag dialect: {}",
+        String::from_utf8_lossy(&repeated.stderr)
     );
     let inventory: serde_json::Value =
         serde_json::from_slice(&fs::read(store.join("inventory.json")).expect("inventory"))
