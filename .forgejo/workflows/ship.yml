@@ -242,14 +242,14 @@ jobs:
       PLUMB_RELEASE_TOOLCHAIN: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
       PLUMB_RELEASE_OUTPUT: .plumb-release/capsule
       PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
-      PLUMB_PUBLISH_ACCESS: ${{ secrets.publish_access }}
-      PLUMB_PUBLISH_SECRET: ${{ secrets.publish_secret }}
-      PLUMB_PUBLISH_BUCKET: ${{ secrets.publish_bucket }}
-      PLUMB_PUBLISH_ENDPOINT: ${{ secrets.publish_endpoint }}
-      PLUMB_ACTIVATE_ACCESS: ${{ secrets.activate_access }}
-      PLUMB_ACTIVATE_SECRET: ${{ secrets.activate_secret }}
-      PLUMB_ACTIVATE_BUCKET: ${{ secrets.activate_bucket }}
-      PLUMB_ACTIVATE_ENDPOINT: ${{ secrets.activate_endpoint }}
+      PLUMB_PUBLISH_ACCESS: ${{ secrets.RELEASE_PUBLISH_S3_ACCESS_KEY }}
+      PLUMB_PUBLISH_SECRET: ${{ secrets.RELEASE_PUBLISH_S3_SECRET_KEY }}
+      PLUMB_PUBLISH_BUCKET: ${{ secrets.RELEASE_PUBLISH_S3_BUCKET }}
+      PLUMB_PUBLISH_ENDPOINT: ${{ secrets.RELEASE_PUBLISH_S3_ENDPOINT }}
+      PLUMB_ACTIVATE_ACCESS: ${{ secrets.RELEASE_ACTIVATE_S3_ACCESS_KEY }}
+      PLUMB_ACTIVATE_SECRET: ${{ secrets.RELEASE_ACTIVATE_S3_SECRET_KEY }}
+      PLUMB_ACTIVATE_BUCKET: ${{ secrets.RELEASE_ACTIVATE_S3_BUCKET }}
+      PLUMB_ACTIVATE_ENDPOINT: ${{ secrets.RELEASE_ACTIVATE_S3_ENDPOINT }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -461,8 +461,8 @@ jobs:
       PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
       PLUMB_RELEASE_OUTPUT: .plumb-release/capsule
       PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
-      PLUMB_RELEASE_REGISTRY_TOKEN: ${{ secrets.registry_token }}
-      PLUMB_SITE_TOKEN: ${{ secrets.site_token }}
+      PLUMB_RELEASE_REGISTRY_TOKEN: ${{ secrets.RELEASE_REGISTRY_TOKEN }}
+      PLUMB_SITE_TOKEN: ${{ secrets.PLUMB_SITE_TOKEN }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -530,4 +530,3 @@ jobs:
           set -eu
           plumb ship ${{ matrix.medium }} ${{ matrix.prepare }}
           plumb ship ${{ matrix.medium }} publish
-

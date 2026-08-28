@@ -15,8 +15,8 @@
       PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
       PLUMB_RELEASE_OUTPUT: .plumb-release/capsule
       PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
-      PLUMB_RELEASE_REGISTRY_TOKEN: ${{ secrets.registry_token }}
-      PLUMB_SITE_TOKEN: ${{ secrets.site_token }}
+      PLUMB_RELEASE_REGISTRY_TOKEN: ${{ secrets.RELEASE_REGISTRY_TOKEN }}
+      PLUMB_SITE_TOKEN: ${{ secrets.PLUMB_SITE_TOKEN }}
     steps:
       - uses: actions/checkout@v6
         with:

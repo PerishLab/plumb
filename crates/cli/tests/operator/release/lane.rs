@@ -112,7 +112,7 @@ fn carried() {
         "this forge parses workflow_call inputs and outputs only, so a callee declares no secrets: {held}"
     );
     assert!(
-        held.contains("${{ secrets.publish_access }}"),
+        held.contains("${{ secrets.RELEASE_PUBLISH_S3_ACCESS_KEY }}"),
         "a callee still reads what its caller passes: {held}"
     );
     assert!(
@@ -149,7 +149,7 @@ fn attached() {
     assert!(held.contains("\n  project:\n"), "{held}");
     assert!(held.contains("needs: [resolve]"), "{held}");
     assert!(
-        held.contains("PLUMB_SITE_TOKEN: ${{ secrets.site_token }}"),
+        held.contains("PLUMB_SITE_TOKEN: ${{ secrets.PLUMB_SITE_TOKEN }}"),
         "a projected medium may be a worker: {held}"
     );
     assert!(

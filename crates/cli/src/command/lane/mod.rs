@@ -87,7 +87,10 @@ impl Seat<'_> {
 
     fn seat(&self, name: &str, rendered: String) -> Result<Expected, String> {
         let path = format!(".forgejo/workflows/{name}");
-        Ok(Expected { path, rendered })
+        Ok(Expected {
+            path,
+            rendered: format!("{}\n", rendered.trim_end()),
+        })
     }
 
     pub fn write(&self, lanes: &[Projection]) -> Result<Vec<String>, String> {
