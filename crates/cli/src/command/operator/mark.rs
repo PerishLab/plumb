@@ -7,6 +7,11 @@ use std::process::{Command, Output};
 pub(super) fn stamp(raw: &str, dry: bool) -> Result<String, String> {
     let held = named(raw);
     let channel = super::super::release::channel(&held)?;
+    if channel == "stable" {
+        return Err(format!(
+            "stable marker {held} is created by plumb release freeze"
+        ));
+    }
     let version = value::version(&held, &channel)?;
     let name = value::branch(&line(&version));
     let root = plumb::forgejo::git::root()?;

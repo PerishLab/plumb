@@ -1,6 +1,20 @@
 use clap::Subcommand;
 
 #[derive(Subcommand)]
+pub enum Marker {
+    #[command(about = "Resolve and report one immutable release marker as JSON")]
+    Show {
+        #[arg(long)]
+        marker: String,
+    },
+    #[command(about = "Verify one immutable release marker")]
+    Verify {
+        #[arg(long)]
+        marker: String,
+    },
+}
+
+#[derive(Subcommand)]
 pub enum Deed {
     #[command(about = "Adopt a tagged legacy release after external package readback")]
     Adopt {
@@ -52,6 +66,11 @@ pub enum Deed {
     Evidence,
     #[command(about = "Read a published release back and verify it against its seal")]
     Inspect,
+    #[command(about = "Inspect or verify an immutable release marker")]
+    Marker {
+        #[command(subcommand)]
+        deed: Marker,
+    },
     #[command(about = "Merge a published stable line back so main holds its commit")]
     Rejoin {
         #[arg(long, default_value = "")]

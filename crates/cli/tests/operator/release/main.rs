@@ -1,11 +1,12 @@
 #[cfg(unix)]
 mod digest;
 #[cfg(unix)]
+#[path = "identity/mod.rs"]
+mod identity;
+#[cfg(unix)]
 mod image;
 #[cfg(unix)]
 mod lane;
-#[cfg(unix)]
-mod promotion;
 #[cfg(unix)]
 mod release;
 #[cfg(unix)]

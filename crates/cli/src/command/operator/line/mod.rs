@@ -100,12 +100,17 @@ fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
     let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
     let commit = head(&client, &name)?;
     let exact = super::super::release::promotion(&spec, &commit, &version)?;
+    let marker = course.step(
+        format!("git tag -a {version} at {commit} on {name}, then push"),
+        || super::mark::point(&root).stamp(&spec.product, &version, &name),
+    )?;
     if course.dry() {
         return Ok(course.plan());
     }
     Ok(format!(
-        "froze {name} at {commit}; promoting {}",
-        exact.version
+        "froze {name} at {commit}; promoting {}; {}",
+        exact.version,
+        marker.ok_or_else(|| "the stable marker left no report".to_string())?
     ))
 }
 

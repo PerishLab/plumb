@@ -1,19 +1,24 @@
 pub(super) mod artifact;
 pub mod authority;
 pub(in crate::command) mod channel;
-mod deed;
+mod identity;
 pub(in crate::command) mod output;
 mod plan;
 mod truth;
 pub(in crate::command) mod workspace;
 
-pub use deed::Deed;
+pub use identity::deed::{Deed, Marker};
+pub(in crate::command) use identity::marker::Descriptor as ReleaseMarker;
+use identity::{marker as markers, promotion};
 use plumb::rig::{Authority, Rig};
 use std::path::{Path, PathBuf};
-use truth::promotion;
 pub(super) use truth::{manager, proof, record, storage, verify};
 
 use crate::shape::release::Spec;
+
+pub(in crate::command) fn marker(raw: &str) -> Result<ReleaseMarker, String> {
+    markers::resolve(raw)
+}
 
 pub fn run(deed: Deed) -> i32 {
     let result = execute(deed);
@@ -36,6 +41,7 @@ fn execute(deed: Deed) -> Result<String, String> {
         }
         Deed::Stamp { version, dry } => super::operator::stamp(&version, dry),
         Deed::Retract { version, dry } => super::operator::retract(&version, dry),
+        Deed::Marker { deed } => markers::run(deed),
         Deed::Rejoin { ref version, .. } if !version.is_empty() => super::operator::line(deed),
         Deed::Prepare { .. } | Deed::Pick { .. } | Deed::Freeze { .. } => {
             super::operator::line(deed)
@@ -51,6 +57,7 @@ fn carry(deed: Deed) -> Result<String, String> {
     let release = &rig.release;
     match deed {
         Deed::Adopt { .. } => Err("adoption does not read the release environment".into()),
+        Deed::Marker { .. } => Err("a marker verb does not read the release environment".into()),
         Deed::Plan => plan::plan(
             &spec,
             required("PLUMB_RELEASE_SOURCE", &release.source)?,
