@@ -3,7 +3,7 @@ use crate::shape::workflow::Key;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component::Normal, Path, PathBuf};
 use std::process::Command;
 
 #[derive(Default)]
@@ -22,6 +22,7 @@ pub struct Project {
 
 #[derive(Default)]
 pub struct Projects(BTreeMap<String, Vec<Project>>);
+type Roots = BTreeMap<String, Vec<String>>;
 
 impl Tree {
     pub fn read(root: &Path, rev: Option<&str>) -> Result<Self, String> {
@@ -202,7 +203,7 @@ impl Projects {
         self.0.get(name).cloned().unwrap_or_default()
     }
 
-    pub fn declare(&self, keys: &mut Vec<Key>) -> Result<(), String> {
+    pub fn declare(&self, keys: &mut Vec<Key>, roots: &Roots) -> Result<(), String> {
         for action in self.0.keys() {
             if keys.iter().any(|key| key.name() == *action) {
                 continue;
@@ -220,10 +221,14 @@ impl Projects {
                     "project action {action:?} is not a declared lane output"
                 ));
             }
+            let roots = roots
+                .get(action)
+                .cloned()
+                .unwrap_or_else(|| vec!["*".into()]);
             keys.push(Key {
                 segments,
-                roots: vec!["*".to_string()],
-                paths: vec!["*".to_string()],
+                paths: roots.clone(),
+                roots,
             });
         }
         Ok(())
@@ -234,11 +239,8 @@ fn covers(root: &str, path: &str) -> bool {
     root == "*" || path == root || path.starts_with(&format!("{root}/"))
 }
 
-fn relative(path: &str) -> bool {
-    !path.is_empty()
-        && Path::new(path)
-            .components()
-            .all(|part| matches!(part, Component::Normal(_)))
+pub(super) fn relative(path: &str) -> bool {
+    !path.is_empty() && Path::new(path).components().all(|p| matches!(p, Normal(_)))
 }
 
 impl<'a> Git<'a> {
@@ -247,9 +249,8 @@ impl<'a> Git<'a> {
     }
 
     pub fn history(&self, rev: &str) -> Result<Vec<String>, String> {
-        let range = format!("{rev}..HEAD");
-        let listed = self.listing(&["rev-list", "--reverse", &range])?;
-        Ok(listed
+        Ok(self
+            .listing(&["rev-list", "--reverse", &format!("{rev}..HEAD")])?
             .lines()
             .map(str::trim)
             .filter(|line| !line.is_empty())
@@ -258,10 +259,8 @@ impl<'a> Git<'a> {
     }
 
     pub fn revision(&self, rev: &str) -> Result<String, String> {
-        Ok(self
-            .listing(&["rev-parse", "--verify", rev])?
-            .trim()
-            .to_string())
+        self.listing(&["rev-parse", "--verify", rev])
+            .map(|held| held.trim().to_string())
     }
 
     pub fn file(&self, rev: &str, path: &str) -> Result<Option<String>, String> {

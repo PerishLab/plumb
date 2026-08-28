@@ -148,6 +148,13 @@ fn prepared() {
         .as_array()
         .expect("a plan names the projected media");
     assert_eq!(rows.len(), 5, "{rows:?}");
+    let npm = rows
+        .iter()
+        .find(|row| row["medium"] == "npm")
+        .expect("npm project");
+    assert_eq!(npm["action"], "ship/npm.probe");
+    assert_eq!(npm["projection"], "packages/probe/package.json#/version");
+    assert_eq!(npm["roots"], serde_json::json!(["packages/probe"]));
     for row in rows {
         let medium = row["medium"].as_str().expect("a row names its medium");
         let prepare = row["prepare"]

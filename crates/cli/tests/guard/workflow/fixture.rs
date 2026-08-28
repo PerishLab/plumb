@@ -9,6 +9,7 @@ pub struct Plan<'a> {
     pub world: &'a [&'a str],
     pub identity: &'a [&'a str],
     pub project: &'a [&'a str],
+    pub roots: &'a [&'a str],
     pub inventory: Option<&'a str>,
 }
 
@@ -56,6 +57,7 @@ impl Seat {
             world,
             identity: &[],
             project: &[],
+            roots: &[],
             inventory: None,
         })
     }
@@ -76,6 +78,10 @@ impl Seat {
         }
         for entry in input.project {
             args.push("--project");
+            args.push(entry);
+        }
+        for entry in input.roots {
+            args.push("--root");
             args.push(entry);
         }
         if let Some(inventory) = input.inventory {

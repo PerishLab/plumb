@@ -3,6 +3,36 @@ use super::world::SPEC;
 use std::fs;
 
 #[test]
+fn workload() {
+    let temp = tempfile::tempdir().expect("temp root");
+    let tools = temp.path().join("tools");
+    let fixture = seat(temp.path(), &tools);
+    fs::create_dir_all(temp.path().join("packages/probe")).expect("module root");
+    fs::write(
+        temp.path().join("plumb.toml"),
+        "[release.npm]\nregistry = \"https://registry.example\"\npackages = [\"probe\"]\n",
+    )
+    .expect("manifest");
+    let held = rendered(&fixture);
+
+    assert!(held.contains("plumb ship npm exact"), "{held}");
+    assert!(held.contains("--root \"$action=$root\""), "{held}");
+    assert!(held.contains("kind\" != url"), "{held}");
+    assert!(
+        held.contains("plumb workflow record '${{ matrix.action }}'"),
+        "{held}"
+    );
+    assert!(
+        held.contains("matrix.medium != 'npm' || matrix.reuse.type == 'none'"),
+        "a held module workload must not install or build the source: {held}"
+    );
+    assert!(
+        held.contains("\"control\":\"reuse\""),
+        "a fully published project plan remains a resolvable Forgejo carrier: {held}"
+    );
+}
+
+#[test]
 fn planned() {
     let temp = tempfile::tempdir().expect("temp root");
     let tools = temp.path().join("tools");

@@ -19,13 +19,15 @@
       PLUMB_SITE_TOKEN: ${{ secrets.PLUMB_SITE_TOKEN }}
     steps:
       - uses: actions/checkout@v6
+        if: matrix.control != 'reuse'
         with:
           fetch-depth: 0
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.commit }}
 
-{@install}
+{@project_install}
 {@capsule}      - name: Install declared packages
+        if: matrix.control != 'reuse' && (matrix.medium != 'npm' || matrix.reuse.type == 'none')
         shell: bash
         run: |
           set -eu
@@ -35,8 +37,32 @@
           fi
 
       - name: Project one declared medium
+        if: matrix.control != 'reuse' && matrix.medium != 'npm'
         shell: bash
         run: |
           set -eu
           plumb ship ${{ matrix.medium }} ${{ matrix.prepare }}
           plumb ship ${{ matrix.medium }} publish
+
+      - name: Project one exact module
+        if: matrix.control != 'reuse' && matrix.medium == 'npm'
+        shell: bash
+        env:
+          PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
+          PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
+          PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
+          PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
+          PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
+        run: |
+          set -eu
+          output="$RUNNER_TEMP/plumb-module.log"
+          plumb ship npm exact \
+            --package '${{ matrix.package }}' \
+            --reuse '${{ toJSON(matrix.reuse) }}' > "$output"
+          record=$(tail -n 1 "$output")
+          workload=$(printf '%s' "$record" | jq -r '.workload')
+          publication=$(printf '%s' "$record" | jq -r '.publication')
+          plumb workflow record '${{ matrix.action }}' \
+            --keys '${{ toJSON(matrix.keys) }}' \
+            --workload "$workload" \
+            --publication "$publication"

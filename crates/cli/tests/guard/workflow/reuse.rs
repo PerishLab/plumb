@@ -35,6 +35,7 @@ fn reuse() {
         world: &["runner=linux"],
         identity: &[],
         project: &[],
+        roots: &[],
         inventory: Some(&path),
     });
     assert!(ok, "{text}");
@@ -49,6 +50,7 @@ fn reuse() {
         world: &["runner=macos"],
         identity: &[],
         project: &[],
+        roots: &[],
         inventory: Some(&path),
     });
     assert!(ok, "{moved}");
@@ -85,6 +87,7 @@ fn publication() {
         world: &["runner=linux"],
         identity: &["version=2.0.0"],
         project: &[],
+        roots: &[],
         inventory: Some(&path),
     };
     let (publish, ok) = root.planned(request);
@@ -114,6 +117,7 @@ fn publication() {
         world: &["runner=linux"],
         identity: &["version=2.0.0"],
         project: &[],
+        roots: &[],
         inventory: Some(&path),
     });
     assert!(ok, "{held}");
@@ -135,6 +139,7 @@ fn refusal() {
         world: &[],
         identity: &[],
         project: &[],
+        roots: &[],
         inventory: Some(&path),
     });
     assert!(!ok, "{text}");
@@ -163,6 +168,7 @@ fn refusal() {
         world: &[],
         identity: &[],
         project: &[],
+        roots: &[],
         inventory: Some(&path),
     });
     assert!(!ok, "{text}");

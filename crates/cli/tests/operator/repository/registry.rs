@@ -243,4 +243,36 @@ fn settled() {
         !text.contains("unchanged since"),
         "a product with no authority holds no baseline, so nothing is settled: {text}"
     );
+    let exact = |package: &str, reuse: &str| {
+        std::process::Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args([
+                "ship",
+                "npm",
+                "exact",
+                "--package",
+                package,
+                "--reuse",
+                reuse,
+            ])
+            .env("PLUMB_RELEASE_ROOT", root)
+            .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1")
+            .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
+            .output()
+            .expect("plumb should run")
+    };
+    let unknown = exact("other", r#"{"type":"none","source":""}"#);
+    assert!(
+        !unknown.status.success()
+            && String::from_utf8_lossy(&unknown.stderr)
+                .contains("other is not a declared module attachment")
+    );
+    let published = exact(
+        "held",
+        r#"{"type":"url","source":"https://registry.invalid/held"}"#,
+    );
+    assert!(
+        !published.status.success()
+            && String::from_utf8_lossy(&published.stderr)
+                .contains("held publication URL must skip the module action")
+    );
 }

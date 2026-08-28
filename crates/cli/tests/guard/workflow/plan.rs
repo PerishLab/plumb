@@ -88,6 +88,7 @@ fn project() {
         world: &[],
         identity: &["version=2.0.0"],
         project: &["guard/web=apps/web/package.json#/version"],
+        roots: &[],
         inventory: None,
     });
     assert!(ok, "{held}");
@@ -109,6 +110,7 @@ fn project() {
         world: &[],
         identity: &["version=2.0.0"],
         project: &["guard/web=apps/web/package.json#/version"],
+        roots: &[],
         inventory: None,
     });
     assert!(ok, "{moved}");
@@ -120,6 +122,7 @@ fn project() {
         world: &[],
         identity: &[],
         project: &["guard/web=apps/web/package.json#/gone"],
+        roots: &[],
         inventory: None,
     });
     assert!(!ok, "{text}");
@@ -129,6 +132,7 @@ fn project() {
         world: &[],
         identity: &["version=2.0.0"],
         project: &["ship/npm.web=apps/web/package.json#/version"],
+        roots: &["ship/npm.web=apps/web"],
         inventory: None,
     });
     assert!(ok, "{dynamic}");
@@ -144,6 +148,27 @@ fn project() {
     assert_eq!(package["run"], true);
     assert_ne!(package["keys"]["workload"], "");
     assert_eq!(package["project"][0]["omit"][0], "/version");
+    let workload = package["keys"]["workload"].clone();
+    root.wrote("Cargo.toml", "[workspace.package]\nversion = \"9.9.9\"\n");
+    let (scoped, ok) = root.planned(Plan {
+        base: Some("HEAD"),
+        world: &[],
+        identity: &["version=2.0.0"],
+        project: &["ship/npm.web=apps/web/package.json#/version"],
+        roots: &["ship/npm.web=apps/web"],
+        inventory: None,
+    });
+    assert!(ok, "{scoped}");
+    let scoped: serde_json::Value = serde_json::from_str(&scoped).expect("scoped plan");
+    let package = scoped["actions"]
+        .as_array()
+        .and_then(|actions| {
+            actions
+                .iter()
+                .find(|action| action["name"] == "ship/npm.web")
+        })
+        .expect("scoped package action");
+    assert_eq!(package["keys"]["workload"], workload);
 }
 
 #[test]
@@ -164,6 +189,7 @@ fn structured() {
         world: &["release=v2.0.0", "target=x86_64-unknown-linux-gnu"],
         identity: &["marker=v2.0.0-beta.1"],
         project: projection,
+        roots: &[],
         inventory: None,
     });
     assert!(ok, "{held}");
@@ -189,6 +215,7 @@ fn structured() {
         world: &["release=v2.0.0", "target=x86_64-unknown-linux-gnu"],
         identity: &["marker=v2.0.0-beta.1"],
         project: projection,
+        roots: &[],
         inventory: None,
     });
     assert!(ok, "{moved}");

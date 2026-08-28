@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 pub struct Module<'a> {
-    spec: &'a Spec,
+    pub(super) spec: &'a Spec,
 }
 
 pub fn module(spec: &Spec) -> Module<'_> {
@@ -14,6 +14,24 @@ pub fn module(spec: &Spec) -> Module<'_> {
 }
 
 impl Module<'_> {
+    pub fn exact(
+        &self,
+        package: &str,
+        version: &str,
+        credential: &str,
+        reuse: &str,
+    ) -> Result<String, String> {
+        super::exact::run(
+            self,
+            super::exact::Request {
+                package,
+                version,
+                credential,
+                reuse,
+            },
+        )
+    }
+
     pub(in crate::command) fn prepare(&self, version: &str) -> Result<(), String> {
         let Some(npm) = &self.spec.npm else {
             return Ok(());
@@ -112,7 +130,7 @@ impl Module<'_> {
         Ok(format!("published module attachment for {version}"))
     }
 
-    fn stamp(&self, package: &str, version: &Version) -> Result<(), String> {
+    pub(super) fn stamp(&self, package: &str, version: &Version) -> Result<(), String> {
         let path = self.seat(package).join("package.json");
         let text = std::fs::read_to_string(&path)
             .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
@@ -122,7 +140,7 @@ impl Module<'_> {
             .map_err(|error| format!("cannot write {}: {error}", path.display()))
     }
 
-    fn pnpm(&self, args: &[&str], package: &str) -> Result<(), String> {
+    pub(super) fn pnpm(&self, args: &[&str], package: &str) -> Result<(), String> {
         self.run(
             Command::new("pnpm")
                 .args(args)
@@ -130,7 +148,7 @@ impl Module<'_> {
         )
     }
 
-    fn carried(
+    pub(super) fn carried(
         &self,
         npm: &crate::shape::release::Npm,
         spec: &str,
@@ -155,7 +173,7 @@ impl Module<'_> {
         Ok(Some(held).filter(|held| !held.is_empty()))
     }
 
-    fn authenticated(
+    pub(super) fn authenticated(
         &self,
         args: &[&str],
         npm: &crate::shape::release::Npm,
@@ -186,11 +204,11 @@ impl Module<'_> {
         }
     }
 
-    fn seat(&self, package: &str) -> PathBuf {
+    pub(super) fn seat(&self, package: &str) -> PathBuf {
         self.spec.root.join("packages").join(bare(package))
     }
 
-    fn archive(&self, package: &str, version: &Version) -> PathBuf {
+    pub(super) fn archive(&self, package: &str, version: &Version) -> PathBuf {
         let held = package.replace('@', "").replace('/', "-");
         self.spec
             .root
@@ -199,7 +217,7 @@ impl Module<'_> {
     }
 }
 
-fn channel(version: &Version) -> Option<String> {
+pub(super) fn channel(version: &Version) -> Option<String> {
     version
         .pre
         .split('.')
@@ -212,19 +230,27 @@ fn bare(package: &str) -> &str {
     package.rsplit('/').next().unwrap_or(package)
 }
 
-fn release(version: &str) -> Result<Version, String> {
+pub(super) fn release(version: &str) -> Result<Version, String> {
     Version::parse(version.trim_start_matches('v'))
         .map_err(|error| format!("release version is not semantic: {error}"))
 }
 
-fn integrity(archive: &std::path::Path) -> Result<String, String> {
+pub(super) fn integrity(archive: &std::path::Path) -> Result<String, String> {
     let bytes = std::fs::read(archive)
         .map_err(|error| format!("cannot read {}: {error}", archive.display()))?;
     let held = base64::engine::general_purpose::STANDARD.encode(Sha512::digest(&bytes));
     Ok(format!("sha512-{held}"))
 }
 
-fn drift(spec: &str, carried: &str, held: &str) -> Result<(), String> {
+pub(super) fn publication(npm: &crate::shape::release::Npm, package: &str) -> String {
+    format!(
+        "{}/{}",
+        npm.registry.trim_end_matches('/'),
+        package.replace('/', "%2f")
+    )
+}
+
+pub(super) fn drift(spec: &str, carried: &str, held: &str) -> Result<(), String> {
     if carried == held {
         return Ok(());
     }

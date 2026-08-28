@@ -17,6 +17,8 @@ pub struct Input {
     identity: Vec<String>,
     #[arg(long = "project")]
     project: Vec<String>,
+    #[arg(long = "root")]
+    roots: Vec<String>,
     #[arg(long)]
     inventory: Option<PathBuf>,
     #[command(flatten)]
@@ -57,6 +59,7 @@ fn render(root: &Path, input: &Input) -> Result<String, String> {
     let world = fields("world", &input.world)?;
     let publication = fields("identity", &input.identity)?;
     let projects = tree::Projects::parse(&input.project)?;
+    let roots = roots(&input.roots)?;
     let inventory = reuse::Inventory::read(input.inventory.as_deref())?;
     let before = match base {
         Some(base) => tree::Tree::read(root, Some(base))?,
@@ -69,9 +72,9 @@ fn render(root: &Path, input: &Input) -> Result<String, String> {
     if prior.keys.is_empty() {
         prior = defaults(&before);
     }
-    projects.declare(&mut current.keys)?;
+    projects.declare(&mut current.keys, &roots)?;
     if base.is_some() {
-        projects.declare(&mut prior.keys)?;
+        projects.declare(&mut prior.keys, &roots)?;
     }
     if current.keys.is_empty() {
         return Err("the repository implies no workflow action".to_string());
@@ -178,6 +181,27 @@ fn fields(kind: &str, entries: &[String]) -> Result<BTreeMap<String, String>, St
         }
     }
     Ok(world)
+}
+
+fn roots(entries: &[String]) -> Result<BTreeMap<String, Vec<String>>, String> {
+    let mut roots: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for entry in entries {
+        let (action, path) = entry
+            .split_once('=')
+            .ok_or_else(|| format!("root entry {entry:?} must be ACTION=PATH"))?;
+        if action.trim().is_empty() || !tree::relative(path) {
+            return Err(format!(
+                "root entry {entry:?} must name an action and relative path"
+            ));
+        }
+        let held = roots.entry(action.to_string()).or_default();
+        if held.iter().any(|root| root == path) {
+            return Err(format!("root entry {entry:?} is declared more than once"));
+        }
+        held.push(path.to_string());
+        held.sort();
+    }
+    Ok(roots)
 }
 
 fn digest(

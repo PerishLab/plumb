@@ -58,7 +58,8 @@ impl Seat<'_> {
             "if: runner.os",
             "if: matrix.control != 'reuse' && runner.os",
         );
-        vars.insert("carry", carry);
+        vars.insert("carry", carry.clone());
+        vars.insert("project_install", carry);
         vars.insert("install", format!("{bootstrap}\n{source}"));
         let binary = if carried {
             templates.filled("assets/ship/binary.yml.in", &vars)?
@@ -68,7 +69,12 @@ impl Seat<'_> {
         vars.insert(
             "capsule",
             if carried {
-                templates.text("assets/ship/capsule.yml.in")?
+                templates
+                    .text("assets/ship/capsule.yml.in")?
+                    .replace(
+                        "      - uses: actions/download-artifact@v3",
+                        "      - uses: actions/download-artifact@v3\n        if: matrix.control != 'reuse'",
+                    )
             } else {
                 String::new()
             },

@@ -100,6 +100,13 @@ pub enum Chart {
 
 #[derive(Subcommand)]
 pub enum Npm {
+    #[command(about = "Publish one exact package from source or a reusable workload")]
+    Exact {
+        #[arg(long)]
+        package: String,
+        #[arg(long, default_value = "{\"type\":\"none\",\"source\":\"\"}")]
+        reuse: String,
+    },
     #[command(about = "Stamp and pack every declared package")]
     Pack,
     #[command(about = "Pack every declared package and publish it")]

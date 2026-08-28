@@ -54,6 +54,10 @@ pub(super) fn npm(deed: super::Npm) -> Result<String, String> {
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
     let carrier = adaptor::module::module(&spec);
     match deed {
+        super::Npm::Exact { package, reuse } => {
+            sealed(&spec, release, version, spec.npm.is_some())?;
+            carrier.exact(&package, version, &release.credential, &reuse)
+        }
         super::Npm::Pack => carrier.pack(version),
         super::Npm::Publish => {
             sealed(&spec, release, version, spec.npm.is_some())?;

@@ -28,14 +28,40 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
     let held = spec.surface();
     let row = |medium: &&str| serde_json::json!({ "medium": medium });
     let include = held.iter().map(row).collect::<Vec<_>>();
-    let project = held
+    let mut project = held
         .iter()
-        .filter(|medium| **medium != "binary")
+        .filter(|medium| **medium != "binary" && **medium != "npm")
         .map(|medium| {
             prepared(medium)
                 .map(|prepare| serde_json::json!({ "medium": medium, "prepare": prepare }))
         })
         .collect::<Result<Vec<_>, _>>()?;
+    if let Some(npm) = &spec.npm {
+        for package in &npm.packages {
+            let bare = package.rsplit('/').next().unwrap_or(package);
+            let mut roots = vec![format!("packages/{bare}")];
+            if spec.root.join("pnpm-lock.yaml").is_file() {
+                roots.push("pnpm-lock.yaml".to_string());
+            }
+            if let Some(depends) = spec.depends.get("npm") {
+                roots.extend(
+                    depends
+                        .iter()
+                        .map(|path| path.to_string_lossy().to_string()),
+                );
+            }
+            roots.sort();
+            roots.dedup();
+            project.push(serde_json::json!({
+                "medium": "npm",
+                "prepare": "exact",
+                "package": package,
+                "action": format!("ship/npm.{bare}"),
+                "projection": format!("packages/{bare}/package.json#/version"),
+                "roots": roots,
+            }));
+        }
+    }
     let seal = held
         .iter()
         .filter(|medium| **medium == "binary")
