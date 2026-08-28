@@ -6,11 +6,15 @@ pub enum Marker {
     Show {
         #[arg(long)]
         marker: String,
+        #[arg(long, help = "Verify the already-held Git snapshot without fetching")]
+        held: bool,
     },
     #[command(about = "Verify one immutable release marker")]
     Verify {
         #[arg(long)]
         marker: String,
+        #[arg(long, help = "Verify the already-held Git snapshot without fetching")]
+        held: bool,
     },
 }
 

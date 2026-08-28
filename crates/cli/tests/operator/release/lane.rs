@@ -125,6 +125,15 @@ fn carried() {
     assert!(held.contains("plumb workflow record"), "{held}");
     assert!(held.contains("binary_reuse"), "{held}");
     assert!(held.contains("WORKFLOW_INVENTORY_URL"), "{held}");
+    assert_eq!(
+        held.matches("release marker show").count(),
+        1,
+        "the workflow resolves its held marker snapshot once: {held}"
+    );
+    assert!(
+        held.contains("release marker show --marker \"$PLUMB_RELEASE_MARKER\" --held"),
+        "the freshly checked out marker needs no second remote fetch: {held}"
+    );
     assert!(
         held.contains("cancel-in-progress: true"),
         "a repeated marker must take over an orphaned transaction: {held}"

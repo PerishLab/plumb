@@ -17,7 +17,7 @@ pub(super) use truth::{manager, proof, record, storage, verify};
 use crate::shape::release::Spec;
 
 pub(in crate::command) fn marker(raw: &str) -> Result<ReleaseMarker, String> {
-    markers::resolve(raw)
+    markers::resolve(raw, true)
 }
 
 impl ReleaseMarker {

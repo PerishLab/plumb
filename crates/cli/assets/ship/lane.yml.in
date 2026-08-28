@@ -64,7 +64,7 @@ jobs:
         run: |
           set -eu
           if [ -n "$PLUMB_RELEASE_MARKER" ]; then
-            marker=$(plumb release marker show --marker "$PLUMB_RELEASE_MARKER")
+            marker=$(plumb release marker show --marker "$PLUMB_RELEASE_MARKER" --held)
             PLUMB_RELEASE_COMMIT=$(printf '%s' "$marker" | jq -r '.commit')
             PLUMB_RELEASE_SOURCE="refs/tags/$PLUMB_RELEASE_MARKER"
             export PLUMB_RELEASE_COMMIT
@@ -86,7 +86,6 @@ jobs:
           export PLUMB_RELEASE_VERSION
           export PLUMB_RELEASE_CHANNEL
           if [ -n "$PLUMB_RELEASE_MARKER" ]; then
-            marker=$(plumb release marker show --marker "$PLUMB_RELEASE_MARKER")
             test "$(printf '%s' "$marker" | jq -r '.marker')" = "$PLUMB_RELEASE_VERSION"
             test "$(printf '%s' "$marker" | jq -r '.channel')" = "$PLUMB_RELEASE_CHANNEL"
             test "$(printf '%s' "$marker" | jq -r '.commit')" = "$PLUMB_RELEASE_COMMIT"

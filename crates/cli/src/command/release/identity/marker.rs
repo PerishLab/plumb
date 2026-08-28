@@ -57,11 +57,11 @@ struct Seat {
 }
 
 pub fn run(deed: Deed) -> Result<String, String> {
-    let (name, show) = match deed {
-        Deed::Show { marker } => (marker, true),
-        Deed::Verify { marker } => (marker, false),
+    let (name, show, held) = match deed {
+        Deed::Show { marker, held } => (marker, true, held),
+        Deed::Verify { marker, held } => (marker, false, held),
     };
-    let marker = super::super::marker(&name)?;
+    let marker = resolve(&name, !held)?;
     if show {
         let mut text = serde_json::to_string_pretty(&marker).map_err(|error| error.to_string())?;
         text.push('\n');
@@ -76,8 +76,8 @@ pub fn run(deed: Deed) -> Result<String, String> {
     }
 }
 
-pub(in crate::command) fn resolve(raw: &str) -> Result<Descriptor, String> {
-    Seat::open()?.resolve(raw)
+pub(in crate::command) fn resolve(raw: &str, refresh: bool) -> Result<Descriptor, String> {
+    Seat::open()?.resolve(raw, refresh)
 }
 
 pub(in crate::command) fn marked(
@@ -91,7 +91,7 @@ pub(in crate::command) fn marked(
         product.to_string(),
         authority.to_string(),
     )?
-    .resolve(raw)
+    .resolve(raw, true)
 }
 
 impl Descriptor {
@@ -119,11 +119,11 @@ impl Seat {
         })
     }
 
-    fn resolve(&self, raw: &str) -> Result<Descriptor, String> {
+    fn resolve(&self, raw: &str, refresh: bool) -> Result<Descriptor, String> {
         let marker = named(raw);
         let channel = channel::channel(&marker)
             .map_err(|error| format!("invalid release marker {marker}: {error}"))?;
-        self.fetch()?;
+        refresh.then(|| self.fetch()).transpose()?;
         self.annotated(&marker)?;
         let commit = self.read(["rev-parse", &format!("{marker}^{{commit}}")])?;
         let tree = self.read(["rev-parse", &format!("{marker}^{{tree}}")])?;

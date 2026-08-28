@@ -191,7 +191,7 @@ fn marker(fixture: &Fixture<'_>, deed: &str, name: &str) -> Output {
         .expect("plumb should run")
 }
 
-fn seeded(fixture: &Fixture<'_>, bare: &Path) -> String {
+pub(super) fn seeded(fixture: &Fixture<'_>, bare: &Path) -> String {
     fixture.seed();
     run(Command::new("git").args(["init", "-q", "--bare"]).arg(bare));
     run(Command::new("git").arg("-C").arg(fixture.root).args([
@@ -246,7 +246,7 @@ fn seeded(fixture: &Fixture<'_>, bare: &Path) -> String {
     .to_string()
 }
 
-fn stamp(root: &Path, version: &str, commit: &str, annotated: bool) {
+pub(super) fn stamp(root: &Path, version: &str, commit: &str, annotated: bool) {
     let mut command = Command::new("git");
     command.arg("-C").arg(root).arg("tag");
     if annotated {
