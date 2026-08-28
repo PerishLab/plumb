@@ -1,6 +1,8 @@
 use serde::de::DeserializeOwned;
+use std::ffi::OsStr;
 use std::fmt;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 pub use plumb_macro::Cascade;
 
@@ -168,4 +170,28 @@ pub fn data(tool: &str) -> Option<PathBuf> {
 
 pub fn platform() -> String {
     format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH)
+}
+
+pub fn detached(program: impl AsRef<OsStr>) -> Command {
+    let mut command = Command::new(program);
+    for key in [
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_CONFIG",
+        "GIT_CONFIG_PARAMETERS",
+        "GIT_CONFIG_COUNT",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_IMPLICIT_WORK_TREE",
+        "GIT_GRAFT_FILE",
+        "GIT_INDEX_FILE",
+        "GIT_NO_REPLACE_OBJECTS",
+        "GIT_REPLACE_REF_BASE",
+        "GIT_PREFIX",
+        "GIT_SHALLOW_FILE",
+        "GIT_COMMON_DIR",
+    ] {
+        command.env_remove(key);
+    }
+    command
 }

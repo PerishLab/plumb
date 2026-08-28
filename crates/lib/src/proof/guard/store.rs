@@ -1,7 +1,7 @@
 use super::{Descriptor, TRAILER, hash, home};
 use sha2::{Digest as _, Sha256};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Output;
 
 pub(super) struct Seat {
     root: PathBuf,
@@ -106,7 +106,7 @@ impl Seat {
 }
 
 pub(super) fn git(root: &Path, args: &[&str], action: &str) -> Result<String, String> {
-    let output = Command::new("git")
+    let output = crate::config::detached("git")
         .arg("-C")
         .arg(root)
         .args(args)

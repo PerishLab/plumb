@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Output;
 
 pub(super) struct Index {
     pub root: PathBuf,
@@ -8,13 +8,13 @@ pub(super) struct Index {
 
 impl Index {
     pub(super) fn new(source: &Path, tree: &str) -> Result<Self, String> {
-        let parent = Command::new("git")
+        let parent = plumb::config::detached("git")
             .arg("-C")
             .arg(source)
             .args(["rev-parse", "--verify", "HEAD"])
             .output()
             .map_err(|error| format!("cannot run git to read HEAD: {error}"))?;
-        let mut record = Command::new("git");
+        let mut record = plumb::config::detached("git");
         record.arg("-C").arg(source).args(["commit-tree", tree]);
         if parent.status.success() {
             record
@@ -41,7 +41,7 @@ impl Index {
         temporary
             .close()
             .map_err(|error| format!("cannot prepare guard worktree: {error}"))?;
-        let output = Command::new("git")
+        let output = plumb::config::detached("git")
             .arg("-C")
             .arg(source)
             .args(["worktree", "add", "--detach", "--quiet"])
@@ -64,7 +64,7 @@ impl Index {
 
 impl Drop for Index {
     fn drop(&mut self) {
-        let _ = Command::new("git")
+        let _ = plumb::config::detached("git")
             .arg("-C")
             .arg(&self.source)
             .args(["worktree", "remove", "--force"])
@@ -77,7 +77,7 @@ pub(super) fn execute(root: &Path, argv: &[String]) -> Result<(), String> {
     let (program, args) = argv
         .split_first()
         .ok_or_else(|| "guard action has no command".to_string())?;
-    let status = Command::new(program)
+    let status = plumb::config::detached(program)
         .args(args)
         .current_dir(root)
         .status()
@@ -90,7 +90,7 @@ pub(super) fn execute(root: &Path, argv: &[String]) -> Result<(), String> {
 }
 
 pub(super) fn git(root: &Path, args: &[&str], action: &str) -> Result<String, String> {
-    let output = Command::new("git")
+    let output = plumb::config::detached("git")
         .arg("-C")
         .arg(root)
         .args(args)

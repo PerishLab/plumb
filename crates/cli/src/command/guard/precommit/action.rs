@@ -1,7 +1,6 @@
 use plumb::guard::{Action, Descriptor};
 use sha2::{Digest as _, Sha256};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use super::super::workflow::tree::Tree;
 use super::tree::{self, Index};
@@ -204,7 +203,7 @@ fn tools(name: &str) -> &'static [&'static str] {
 }
 
 fn version(tool: &str) -> Result<String, String> {
-    let output = Command::new(tool)
+    let output = plumb::config::detached(tool)
         .arg("--version")
         .output()
         .map_err(|error| format!("cannot run {tool} --version: {error}"))?;

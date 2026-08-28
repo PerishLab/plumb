@@ -77,3 +77,13 @@ fn rebases() {
         PathBuf::from("/abs/x")
     );
 }
+
+#[test]
+fn detached() {
+    let command = config::detached("git");
+    let held = command
+        .get_envs()
+        .find(|(key, _)| *key == "GIT_DIR")
+        .expect("Git directory is explicitly cleared");
+    assert!(held.1.is_none());
+}

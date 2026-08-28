@@ -140,6 +140,8 @@ fn staged() {
             .current_dir(root)
             .env("PLUMB_HOME", home.path())
             .env("PLUMB_DEPOT_SEAT", depot.path())
+            .env("GIT_DIR", root.join(".git"))
+            .env("GIT_WORK_TREE", root)
             .output()
             .expect("precommit")
     };
