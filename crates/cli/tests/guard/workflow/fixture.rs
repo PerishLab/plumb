@@ -85,7 +85,11 @@ impl Seat {
         args.push(self.0.to_str().expect("path"));
         let out = plumb(&args).output().expect("run");
         (
-            String::from_utf8_lossy(&out.stdout).to_string(),
+            format!(
+                "{}{}",
+                String::from_utf8_lossy(&out.stdout),
+                String::from_utf8_lossy(&out.stderr)
+            ),
             out.status.success(),
         )
     }

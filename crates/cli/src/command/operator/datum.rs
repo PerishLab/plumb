@@ -151,7 +151,22 @@ impl Seat<'_> {
     }
 
     fn sealed(&self, tree: &str, head: &str, version: &str) -> Result<String, String> {
-        let message = format!("Record the datum {version} judges against");
+        let mut message = format!("Record the datum {version} judges against");
+        let parent = read(
+            "read the release parent message",
+            self.command(["show", "-s", "--format=%B", head]),
+        )?;
+        if parent
+            .lines()
+            .any(|line| line.starts_with(plumb::guard::TRAILER))
+        {
+            let held = plumb::guard::current(self.0, head)?;
+            let proof = plumb::guard::Descriptor::new(self.0, tree.to_string(), held.actions)?;
+            message.push_str("\n\n");
+            message.push_str(plumb::guard::TRAILER);
+            message.push(' ');
+            message.push_str(&proof.encode()?);
+        }
         read(
             "commit the datum",
             self.command(["commit-tree", tree, "-p", head, "-m", &message]),

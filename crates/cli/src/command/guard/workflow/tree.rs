@@ -51,19 +51,16 @@ impl Tree {
             leaves: held,
         })
     }
-
     fn under(&self, roots: &[String]) -> Vec<(&String, &String)> {
         self.leaves
             .iter()
             .filter(|(path, _)| roots.iter().any(|root| covers(root, path)))
             .collect()
     }
-
     pub fn digest(&self, key: &Key) -> String {
         self.projected(key, &[])
             .expect("an unprojected tree digest cannot fail")
     }
-
     pub fn projected(&self, key: &Key, projects: &[Project]) -> Result<String, String> {
         for project in projects {
             if !key.paths.iter().any(|root| covers(root, &project.path)) {
@@ -104,26 +101,31 @@ impl Tree {
             }
         }
         for (path, meta) in self.under(&key.paths) {
-            sponge.update(path.as_bytes());
-            sponge.update([0]);
-            if let Some(project) = projects.iter().find(|project| project.path == *path) {
-                sponge.update(self.project(project)?.as_bytes());
-            } else {
-                sponge.update(meta.as_bytes());
+            let project = projects.iter().find(|project| project.path == *path);
+            let held = match project {
+                Some(project) => self.project(project)?,
+                None => meta.to_string(),
+            };
+            if let Some(held) = super::release::fingerprint(
+                key.lane() == "guard",
+                (&self.root, self.revision.as_deref(), project.is_some()),
+                path,
+                &held,
+            )? {
+                sponge.update(path.as_bytes());
+                sponge.update([0]);
+                sponge.update(held.as_bytes());
+                sponge.update([0]);
             }
-            sponge.update([0]);
         }
         Ok(format!("{:x}", sponge.finalize()))
     }
-
     pub fn covered(&self, key: &Key) -> usize {
         self.under(&key.paths).len()
     }
-
     pub fn has(&self, path: &str) -> bool {
         self.leaves.contains_key(path)
     }
-
     fn project(&self, project: &Project) -> Result<String, String> {
         let object = match &self.revision {
             Some(revision) => format!("{revision}:{}", project.path),
@@ -157,7 +159,6 @@ impl Tree {
             .map_err(|error| format!("cannot encode projected leaf {}: {error}", project.path))
     }
 }
-
 impl Projects {
     pub fn parse(entries: &[String]) -> Result<Self, String> {
         let mut held: BTreeMap<String, BTreeMap<String, Vec<String>>> = BTreeMap::new();
@@ -198,7 +199,6 @@ impl Projects {
                 .collect(),
         ))
     }
-
     pub fn action(&self, name: &str) -> Vec<Project> {
         self.0.get(name).cloned().unwrap_or_default()
     }
