@@ -73,17 +73,20 @@ jobs:
         shell: bash
         run: |
           set -eu
-          held=$(curl -fsSL "https://releases.plumb.perish.uk/v1/channels/beta.json" 2>/dev/null \
+          fetch=(curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 --connect-timeout 5 --max-time 30)
+          manager="$RUNNER_TEMP/manage-plumb.sh"
+          "${fetch[@]}" -o "$manager" "https://releases.plumb.perish.uk/manage.sh"
+          held=$("${fetch[@]}" "https://releases.plumb.perish.uk/v1/channels/beta.json" 2>/dev/null \
             | sed -n 's/.*"releaseVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p') || held=""
           if [ -n "$held" ]; then
             seat="$RUNNER_TEMP/plumb-$held"
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
+            sh "$manager" install \
               --channel beta --version "$held" \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
             tool="$seat/bin/plumb"
           else
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+            sh "$manager"
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
             tool="$HOME/.local/bin/plumb"
           fi
@@ -258,17 +261,20 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           set -eu
-          held=$(curl -fsSL "https://releases.plumb.perish.uk/v1/channels/beta.json" 2>/dev/null \
+          fetch=(curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 --connect-timeout 5 --max-time 30)
+          manager="$RUNNER_TEMP/manage-plumb.sh"
+          "${fetch[@]}" -o "$manager" "https://releases.plumb.perish.uk/manage.sh"
+          held=$("${fetch[@]}" "https://releases.plumb.perish.uk/v1/channels/beta.json" 2>/dev/null \
             | sed -n 's/.*"releaseVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p') || held=""
           if [ -n "$held" ]; then
             seat="$RUNNER_TEMP/plumb-$held"
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
+            sh "$manager" install \
               --channel beta --version "$held" \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
             tool="$seat/bin/plumb"
           else
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+            sh "$manager"
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
             tool="$HOME/.local/bin/plumb"
           fi
@@ -283,7 +289,15 @@ jobs:
           $seat = Join-Path $env:RUNNER_TEMP 'plumb-bootstrap'
           $versions = Join-Path $seat 'versions'
           $bin = Join-Path $seat 'bin'
-          Invoke-WebRequest -UseBasicParsing -Uri 'https://releases.plumb.perish.uk/manage.ps1' -OutFile $manager
+          for ($attempt = 1; $attempt -le 5; $attempt++) {
+            try {
+              Invoke-WebRequest -UseBasicParsing -Uri 'https://releases.plumb.perish.uk/manage.ps1' -OutFile $manager
+              break
+            } catch {
+              if ($attempt -eq 5) { throw }
+              Start-Sleep -Seconds $attempt
+            }
+          }
           & $manager install --install-root $versions --bin-dir $bin
           & (Join-Path $bin 'plumb.exe') depot sync
           $bin | Out-File -FilePath $env:GITHUB_PATH -Append
@@ -382,17 +396,20 @@ jobs:
         shell: bash
         run: |
           set -eu
-          held=$(curl -fsSL "https://releases.plumb.perish.uk/v1/channels/beta.json" 2>/dev/null \
+          fetch=(curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 --connect-timeout 5 --max-time 30)
+          manager="$RUNNER_TEMP/manage-plumb.sh"
+          "${fetch[@]}" -o "$manager" "https://releases.plumb.perish.uk/manage.sh"
+          held=$("${fetch[@]}" "https://releases.plumb.perish.uk/v1/channels/beta.json" 2>/dev/null \
             | sed -n 's/.*"releaseVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p') || held=""
           if [ -n "$held" ]; then
             seat="$RUNNER_TEMP/plumb-$held"
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
+            sh "$manager" install \
               --channel beta --version "$held" \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
             tool="$seat/bin/plumb"
           else
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+            sh "$manager"
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
             tool="$HOME/.local/bin/plumb"
           fi
@@ -563,17 +580,20 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           set -eu
-          held=$(curl -fsSL "https://releases.plumb.perish.uk/v1/channels/beta.json" 2>/dev/null \
+          fetch=(curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 --connect-timeout 5 --max-time 30)
+          manager="$RUNNER_TEMP/manage-plumb.sh"
+          "${fetch[@]}" -o "$manager" "https://releases.plumb.perish.uk/manage.sh"
+          held=$("${fetch[@]}" "https://releases.plumb.perish.uk/v1/channels/beta.json" 2>/dev/null \
             | sed -n 's/.*"releaseVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p') || held=""
           if [ -n "$held" ]; then
             seat="$RUNNER_TEMP/plumb-$held"
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
+            sh "$manager" install \
               --channel beta --version "$held" \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
             tool="$seat/bin/plumb"
           else
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+            sh "$manager"
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
             tool="$HOME/.local/bin/plumb"
           fi
@@ -588,7 +608,15 @@ jobs:
           $seat = Join-Path $env:RUNNER_TEMP 'plumb-bootstrap'
           $versions = Join-Path $seat 'versions'
           $bin = Join-Path $seat 'bin'
-          Invoke-WebRequest -UseBasicParsing -Uri 'https://releases.plumb.perish.uk/manage.ps1' -OutFile $manager
+          for ($attempt = 1; $attempt -le 5; $attempt++) {
+            try {
+              Invoke-WebRequest -UseBasicParsing -Uri 'https://releases.plumb.perish.uk/manage.ps1' -OutFile $manager
+              break
+            } catch {
+              if ($attempt -eq 5) { throw }
+              Start-Sleep -Seconds $attempt
+            }
+          }
           & $manager install --install-root $versions --bin-dir $bin
           & (Join-Path $bin 'plumb.exe') depot sync
           $bin | Out-File -FilePath $env:GITHUB_PATH -Append
@@ -676,17 +704,20 @@ jobs:
         shell: bash
         run: |
           set -eu
-          held=$(curl -fsSL "https://releases.plumb.perish.uk/v1/channels/beta.json" 2>/dev/null \
+          fetch=(curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 --connect-timeout 5 --max-time 30)
+          manager="$RUNNER_TEMP/manage-plumb.sh"
+          "${fetch[@]}" -o "$manager" "https://releases.plumb.perish.uk/manage.sh"
+          held=$("${fetch[@]}" "https://releases.plumb.perish.uk/v1/channels/beta.json" 2>/dev/null \
             | sed -n 's/.*"releaseVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p') || held=""
           if [ -n "$held" ]; then
             seat="$RUNNER_TEMP/plumb-$held"
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh -s -- install \
+            sh "$manager" install \
               --channel beta --version "$held" \
               --install-root "$seat/versions" --bin-dir "$seat/bin"
             printf '%s\n' "$seat/bin" >> "$GITHUB_PATH"
             tool="$seat/bin/plumb"
           else
-            curl -fsSL https://releases.plumb.perish.uk/manage.sh | sh
+            sh "$manager"
             printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
             tool="$HOME/.local/bin/plumb"
           fi

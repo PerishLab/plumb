@@ -116,8 +116,16 @@ fn carried() {
         "a callee still reads what its caller passes: {held}"
     );
     assert!(
-        held.matches("/manage.sh | sh").count() == held.matches(">> \"$GITHUB_PATH\"").count(),
-        "every install seats the home bin on the job path: {held}"
+        held.matches("sh \"$manager\"").count() == held.matches(">> \"$GITHUB_PATH\"").count(),
+        "every manager install seats its bin: {held}"
+    );
+    assert!(
+        held.contains("--retry 5 --retry-all-errors --retry-delay 1"),
+        "Unix bootstrap transport retries transient TLS failures: {held}"
+    );
+    assert!(
+        held.contains("for ($attempt = 1; $attempt -le 5; $attempt++)"),
+        "Windows bootstrap transport has the same bounded retry: {held}"
     );
     assert!(held.contains("\n  build:\n"), "{held}");
     assert!(held.contains("\n  seal:\n"), "{held}");

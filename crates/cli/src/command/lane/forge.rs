@@ -1,5 +1,5 @@
 const SEAT: &str = ">> \"$GITHUB_PATH\"";
-const MANAGER: &str = "/manage.sh | sh";
+const MANAGER: &str = "sh \"$manager\"";
 const EMPTY: &str = "include\":[]";
 
 pub fn refusals(path: &str, text: &str) -> Vec<String> {
