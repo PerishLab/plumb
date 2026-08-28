@@ -125,6 +125,11 @@ fn carried() {
     assert!(held.contains("plumb workflow record"), "{held}");
     assert!(held.contains("binary_reuse"), "{held}");
     assert!(held.contains("WORKFLOW_INVENTORY_URL"), "{held}");
+    assert!(held.contains("projection=package.json#/version"), "{held}");
+    assert!(
+        held.contains("projection=Cargo.toml#/workspace/package/version"),
+        "{held}"
+    );
     assert!(held.contains("needs: [resolve, seal]"), "{held}");
     assert!(
         held.match_indices("if:").all(|(at, _)| {

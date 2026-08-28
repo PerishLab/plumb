@@ -107,6 +107,10 @@ jobs:
             : > "$reused"
             plumb_version=$(plumb --version | awk '{print $2}')
             depot=$(plumb depot show | sed -n '1s/^depot //p')
+            projection=Cargo.toml#/workspace/package/version
+            if [ -f package.json ]; then
+              projection=package.json#/version
+            fi
             printf '%s' "$targets" | jq -c '.include[]' | while IFS= read -r target; do
               triple=$(printf '%s' "$target" | jq -r '.target')
               runner=$(printf '%s' "$target" | jq -r '.runner')
@@ -120,7 +124,7 @@ jobs:
                 --world "runner=$runner" \
                 --world "target=$triple" \
                 --identity "marker=$PLUMB_RELEASE_MARKER" \
-                --project "$action=Cargo.toml#/workspace/package/version"
+                --project "$action=$projection"
               if [ -n "$inventory_arg" ]; then
                 set -- "$@" --inventory "$inventory_arg"
               fi
