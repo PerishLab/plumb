@@ -125,6 +125,10 @@ fn carried() {
     assert!(held.contains("plumb workflow record"), "{held}");
     assert!(held.contains("binary_reuse"), "{held}");
     assert!(held.contains("WORKFLOW_INVENTORY_URL"), "{held}");
+    assert!(
+        held.contains("--connect-timeout 3 --max-time 10 --retry 1"),
+        "{held}"
+    );
     assert!(held.contains("packages/*/package.json"), "{held}");
     assert!(held.contains(".version | type == \"string\""), "{held}");
     assert!(

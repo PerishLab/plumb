@@ -97,7 +97,8 @@ jobs:
           if [ "$PLUMB_RELEASE_CHANNEL" != stable ]; then
             inventory="$RUNNER_TEMP/plumb-workflow-inventory.json"
             inventory_arg=
-            if [ -n "$PLUMB_WORKFLOW_INVENTORY_URL" ] && curl -fsSL --retry 3 \
+            if [ -n "$PLUMB_WORKFLOW_INVENTORY_URL" ] && curl -fsSL \
+              --connect-timeout 3 --max-time 10 --retry 1 \
               -o "$inventory" "$PLUMB_WORKFLOW_INVENTORY_URL"; then
               inventory_arg=$inventory
             fi
