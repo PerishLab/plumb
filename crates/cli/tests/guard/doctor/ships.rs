@@ -1,6 +1,7 @@
 #[test]
 fn cargo() {
     let dir = std::env::temp_dir().join("plumb-crate-seat");
+    let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("fixture should be made");
     crate::govern(&dir);
     let path = dir.to_str().expect("path should be utf8");
@@ -14,41 +15,7 @@ fn cargo() {
     assert!(binary.contains("publishes binary"), "{binary}");
     assert!(!binary.contains("cargo"), "{binary}");
 
-    std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("lanes should be made");
-    for lane in ["release-exact", "release-stable"] {
-        std::fs::write(
-            dir.join(format!(".forgejo/workflows/{lane}.yml")),
-            "jobs:\n  release:\n    with:\n      ref: ${{ inputs.ref }}\n",
-        )
-        .expect("lane should be written");
-    }
-    let stale = crate::run(&["doctor", path]);
-    assert!(
-        stale.contains("exposes or forwards a second source binding"),
-        "{stale}"
-    );
-    for lane in ["release-exact", "release-stable"] {
-        std::fs::write(
-            dir.join(format!(".forgejo/workflows/{lane}.yml")),
-            "jobs:\n  release:\n    with:\n      channel: beta\n      version: v1.2.3-beta.1\n",
-        )
-        .expect("lane should be written");
-    }
-    let bound = crate::run(&["doctor", path]);
-    assert!(
-        !bound.contains("exposes or forwards a second source binding"),
-        "{bound}"
-    );
-    std::fs::write(
-        dir.join(".forgejo/workflows/release-exact.yml"),
-        "jobs:\n  release:\n    with:\n      source_ref: ${{ github.ref }}\n      source_commit: ${{ github.sha }}\n",
-    )
-    .expect("lane should be written");
-    let forwarded = crate::run(&["doctor", path]);
-    assert!(
-        forwarded.contains("exposes or forwards a second source binding"),
-        "{forwarded}"
-    );
+    assert!(!dir.join(".forgejo").exists());
 
     std::fs::write(
         dir.join("plumb.toml"),

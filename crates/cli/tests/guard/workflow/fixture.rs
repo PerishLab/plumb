@@ -106,21 +106,6 @@ impl Seat {
         path.to_string_lossy().to_string()
     }
 
-    pub fn lane(&self) -> String {
-        let out = plumb(&["lane", self.0.to_str().expect("path")])
-            .output()
-            .expect("run");
-        let _ = out;
-        fs::read_to_string(self.0.join(".forgejo/workflows/ship.yml")).unwrap_or_default()
-    }
-
-    pub fn rendered(&self) -> String {
-        plumb(&["lane", self.0.to_str().expect("path"), "--write"])
-            .output()
-            .expect("run");
-        self.lane()
-    }
-
     pub fn wrote(&self, path: &str, body: &str) {
         let path = self.0.join(path);
         if let Some(parent) = path.parent() {

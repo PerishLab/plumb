@@ -74,6 +74,20 @@ fn execute(input: Input) -> Result<(), String> {
     authority.merge(workload, publication)
 }
 
+pub(in crate::command) fn project(
+    action: &str,
+    keys: &str,
+    workload: PathBuf,
+    publication: Option<String>,
+) -> Result<(), String> {
+    execute(Input {
+        action: action.to_string(),
+        keys: keys.to_string(),
+        workload,
+        publication,
+    })
+}
+
 struct Authority {
     access: String,
     secret: String,

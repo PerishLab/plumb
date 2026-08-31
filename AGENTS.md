@@ -90,14 +90,14 @@ answers for.
   Changelog and skill source trees are temporary media below `PLUMB_HOME`, never
   repository seats. Products consume a skill through their own command surface
   while delegating its exact generation and digest binding to `plumb` the library.
-- This repository renders and carries its own release lanes and reaches no
-  shared caller, because the tool that renders a lane cannot depend on a copy of
-  itself to render its own.
+- This repository carries the one canonical `ship.yml` atom. Product
+  repositories dispatch its exact Plumb-owned revision and carry neither a
+  workflow copy nor a rendered derivative.
 
 The verbs are `plumb release --help` and `plumb ship --help`. The laws are
-`plumb rule list --namespace release`, twenty four of them, and they state the
-product surface, the rendered lane, the seats a stable label may take, and the
-isolation every non-stable release owes. Why the contract has this shape, and
+`plumb rule list --namespace release`; they state the product surface, marker
+and ship boundary, the seats a stable label may take, and the isolation every
+non-stable release owes. Why the contract has this shape, and
 every decision that put it there, is `perish.code/plumb-release-contract`.
 
 ## Authority convergence

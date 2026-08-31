@@ -23,7 +23,6 @@ pub struct Shape {
     pub laws: bool,
     pub unread: Option<String>,
     pub lanes: BTreeSet<String>,
-    pub lane: lane::Evidence,
     pub release: pair::Release,
     pub ships: BTreeSet<String>,
     pub sites: BTreeSet<String>,
@@ -201,10 +200,9 @@ pub fn capture(
         }
     }
     let held = layout::read(root, snapshot.as_ref());
-    let lane = lane::read(root);
-    let lanes = lane.names();
+    let lanes = lane::read(root).names();
     let paired = pair::Root(root);
-    let release = paired.release(&lanes);
+    let release = paired.release();
     let ships = release.attachments.clone();
     let bounds = policy::bounds(doc.as_ref())
         .into_iter()
@@ -222,7 +220,6 @@ pub fn capture(
         laws: laws.exists(),
         unread,
         lanes,
-        lane,
         release,
         ships,
         sites: paired.sites(),

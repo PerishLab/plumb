@@ -5,7 +5,6 @@ use crate::catalog::set;
 use crate::shape;
 use std::collections::BTreeSet;
 
-pub(crate) mod lane;
 pub(crate) mod layout;
 mod policy;
 mod release;

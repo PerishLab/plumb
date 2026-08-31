@@ -25,20 +25,21 @@ fn declared() {
         "[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n",
     )
     .expect("manifest");
+    let cargo: serde_json::Value = serde_json::from_str(&surface(&root)).expect("cargo surface");
     assert_eq!(
-        surface(&root),
-        r#"{"include":[{"medium":"cargo"}],"project":{"include":[{"medium":"cargo","prepare":"rehearse"}]},"seal":{"include":[]}}"#
+        cargo["project"]["include"][0]["schema"],
+        "plumb.ship-request/v1"
     );
+    assert_eq!(cargo["project"]["include"][0]["operation"]["type"], "cargo");
 
     std::fs::write(
         root.join("plumb.toml"),
         "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\nskill = true\n[release.oci]\nregistry = \"example.invalid\"\nimage = \"owner/foo\"\naccount = \"Example\"\n",
     )
     .expect("manifest");
-    assert_eq!(
-        surface(&root),
-        r#"{"include":[{"medium":"binary"},{"medium":"oci"}],"project":{"include":[{"medium":"oci","prepare":"build"}]},"seal":{"include":[{"held":"seal"}]}}"#
-    );
+    let oci: serde_json::Value = serde_json::from_str(&surface(&root)).expect("image surface");
+    assert_eq!(oci["project"]["include"][0]["action"], "ship/oci");
+    assert_eq!(oci["project"]["include"][0]["operation"]["type"], "oci");
 
     std::fs::remove_dir_all(&root).expect("fixture should be swept");
 }
@@ -65,9 +66,11 @@ fn worker() {
         "[release.cfworker]\naccount = \"held\"\ndomain = \"probe.example.uk\"\n",
     )
     .expect("manifest");
+    let worker: serde_json::Value = serde_json::from_str(&surface(&root)).expect("worker surface");
+    assert_eq!(worker["project"]["include"][0]["action"], "ship/cfworker");
     assert_eq!(
-        surface(&root),
-        r#"{"include":[{"medium":"cfworker"}],"project":{"include":[{"medium":"cfworker","prepare":"rehearse"}]},"seal":{"include":[]}}"#
+        worker["project"]["include"][0]["operation"]["type"],
+        "cfworker"
     );
 
     std::fs::write(
@@ -150,7 +153,7 @@ fn prepared() {
     assert_eq!(rows.len(), 5, "{rows:?}");
     let npm = rows
         .iter()
-        .find(|row| row["medium"] == "npm")
+        .find(|row| row["operation"]["type"] == "npm")
         .expect("npm project");
     assert_eq!(npm["action"], "ship/npm.probe");
     assert_eq!(
@@ -160,7 +163,7 @@ fn prepared() {
     assert_eq!(npm["roots"], serde_json::json!(["packages/probe"]));
     let chart = rows
         .iter()
-        .find(|row| row["medium"] == "chart")
+        .find(|row| row["operation"]["type"] == "chart")
         .expect("chart project");
     assert_eq!(chart["action"], "ship/chart");
     assert_eq!(
@@ -172,19 +175,14 @@ fn prepared() {
     );
     assert_eq!(chart["roots"], serde_json::json!(["charts/probe"]));
     for row in rows {
-        let medium = row["medium"].as_str().expect("a row names its medium");
-        let prepare = row["prepare"]
-            .as_str()
-            .expect("a row names its prepare deed");
-        let held = Command::new(env!("CARGO_BIN_EXE_plumb"))
-            .args(["ship", medium, prepare, "--help"])
-            .output()
-            .expect("plumb should run");
-        assert!(
-            held.status.success(),
-            "the plan names {medium} {prepare}, which this binary does not hold: {}",
-            String::from_utf8_lossy(&held.stderr)
-        );
+        assert_eq!(row["schema"], "plumb.ship-request/v1");
+        assert!(row["action"].as_str().is_some_and(|held| !held.is_empty()));
+        assert!(row["roots"].as_array().is_some_and(|held| !held.is_empty()));
     }
+    let held = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["ship", "execute", "--help"])
+        .output()
+        .expect("plumb should run");
+    assert!(held.status.success(), "the common executor must exist");
     std::fs::remove_dir_all(&root).expect("fixture should be swept");
 }

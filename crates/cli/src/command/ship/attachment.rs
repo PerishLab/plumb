@@ -24,6 +24,19 @@ pub(super) fn oci(deed: super::Oci) -> Result<String, String> {
     let carrier = adaptor::image::image(&spec);
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
     match deed {
+        super::Oci::Exact { reuse } => {
+            sealed(&spec, release, version, spec.oci.is_some())?;
+            adaptor::container::run(
+                &carrier,
+                adaptor::container::Request {
+                    version,
+                    commit: &release.commit,
+                    artifacts: &artifacts(release)?,
+                    credential: &release.credential,
+                    reuse: &reuse,
+                },
+            )
+        }
         super::Oci::Build => carrier.build(version, &release.commit, &artifacts(release)?),
         super::Oci::Publish => {
             sealed(&spec, release, version, spec.oci.is_some())?;
@@ -84,7 +97,7 @@ pub(in crate::command::ship) struct Identity<'a> {
     pub token: &'a str,
 }
 
-fn sealed(
+pub(super) fn sealed(
     spec: &crate::shape::release::Spec,
     release: &plumb::rig::Release,
     version: &str,

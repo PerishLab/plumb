@@ -1,3 +1,4 @@
+use super::container::{fetch, reference};
 use crate::shape::release::Spec;
 
 const LINUX: &str = "x86_64-unknown-linux-gnu";
@@ -7,7 +8,7 @@ use std::io::Write;
 use std::process::{Command, Stdio};
 
 pub struct Image<'a> {
-    spec: &'a Spec,
+    pub(super) spec: &'a Spec,
 }
 
 pub fn image(spec: &Spec) -> Image<'_> {
@@ -144,6 +145,17 @@ impl Image<'_> {
         let Some(oci) = &self.spec.oci else {
             return Ok(format!("{} has no image attachment", self.spec.product));
         };
+        let reference = reference(oci, version);
+        let publication = self.project(version, credential)?;
+        Ok(format!("published {reference} as {publication}"))
+    }
+
+    pub(super) fn project(&self, version: &str, credential: &str) -> Result<String, String> {
+        let oci = self
+            .spec
+            .oci
+            .as_ref()
+            .ok_or_else(|| format!("{} has no image attachment", self.spec.product))?;
         let identity = crate::command::ship::attachment::Identity {
             user: &oci.account,
             token: crate::command::ship::attachment::credential(credential)?,
@@ -158,13 +170,17 @@ impl Image<'_> {
                     "published image drift: {reference} carries {held} while this projection carries {built}"
                 ));
             }
-            return Ok(format!("{reference} already carries {held}"));
+        } else {
+            self.command(["push", &reference])?;
         }
-        self.command(["push", &reference])?;
         let digest = self.digest(&reference)?;
         let published = format!("{}/{}@{digest}", oci.registry, oci.image);
         self.command(["manifest", "inspect", &published])?;
-        Ok(format!("published {reference} as {digest}"))
+        Ok(format!(
+            "https://{}/v2/{}/manifests/{digest}",
+            oci.registry.trim_end_matches('/'),
+            oci.image
+        ))
     }
 
     fn login(
@@ -209,7 +225,7 @@ impl Image<'_> {
         Ok(output.status.success())
     }
 
-    fn carried(&self, reference: &str) -> Result<String, String> {
+    pub(super) fn carried(&self, reference: &str) -> Result<String, String> {
         let output = Command::new("docker")
             .args([
                 "image",
@@ -252,7 +268,7 @@ impl Image<'_> {
             .ok_or_else(|| format!("image digest is not addressable: {text}"))
     }
 
-    fn command<const N: usize>(&self, args: [&str; N]) -> Result<(), String> {
+    pub(super) fn command<const N: usize>(&self, args: [&str; N]) -> Result<(), String> {
         let status = Command::new("docker")
             .args(args)
             .current_dir(&self.spec.root)
@@ -263,29 +279,5 @@ impl Image<'_> {
         } else {
             Err("image attachment command failed".into())
         }
-    }
-}
-
-fn reference(oci: &crate::shape::release::Oci, version: &str) -> String {
-    format!("{}/{}:{version}", oci.registry, oci.image)
-}
-
-fn fetch(url: &str, path: &std::path::Path) -> Result<(), String> {
-    let status = Command::new("curl")
-        .args([
-            "--fail",
-            "--silent",
-            "--show-error",
-            "--location",
-            "--output",
-        ])
-        .arg(path)
-        .arg(url)
-        .status()
-        .map_err(|error| format!("cannot run curl: {error}"))?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(format!("cannot read the published payload {url}"))
     }
 }

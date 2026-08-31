@@ -1,7 +1,6 @@
 use crate::catalog::rules::release as release_rule;
 use crate::catalog::rules::structure as rule;
 use crate::judge::finding::{Found, Seed};
-use crate::judge::show;
 use crate::shape;
 use crate::shape::pair::Release;
 
@@ -23,51 +22,7 @@ impl Judge<'_> {
         }
         spec(&held.release, &mut found);
         measured(&held.release, &mut found);
-        deliverable(&held.release, &mut found);
-        if held.ships.contains("binary") {
-            self.anchors(&mut found);
-        }
-        self.site(&mut found);
         found
-    }
-
-    fn anchors(&self, found: &mut Found) {
-        let held = self.0;
-        if held.lanes.contains("ship")
-            || (held.lanes.contains("exact.release") && held.lanes.contains("stable.release"))
-        {
-            return;
-        }
-        for lane in ["release-exact", "release-stable"] {
-            if !held.lanes.contains(lane) {
-                found.push(Seed::wrong(
-                    &rule::RELEASE_LANE_PRESENT,
-                    format!("binary release without the unified ship lane or legacy {lane} lane"),
-                ));
-            } else if !held.release.sources.contains(lane) {
-                found.push(Seed::wrong(
-                    &rule::RELEASE_SOURCE_BOUND,
-                    format!("{lane} exposes or forwards a second source binding"),
-                ));
-            }
-        }
-    }
-
-    fn site(&self, found: &mut Found) {
-        let held = self.0;
-        if held.sites.is_empty() || held.lanes.contains("deploy") {
-            return;
-        }
-        if held.ships.contains("cfworker") && held.lanes.contains("ship") {
-            return;
-        }
-        found.push(Seed::wrong(
-            &rule::SITE_DEPLOY_LANE,
-            format!(
-                "{} declares a site that no lane delivers",
-                show(&held.sites)
-            ),
-        ));
     }
 }
 
@@ -109,41 +64,5 @@ fn measured(release: &Release, found: &mut Found) {
                 ),
             ));
         }
-    }
-}
-
-fn deliverable(release: &Release, found: &mut Found) {
-    if release.attachments.is_empty() {
-        return;
-    }
-    if release.callers.contains("ship") {
-        return;
-    }
-    for attachment in &release.attachments {
-        let carriers = carriers(attachment);
-        if carriers.is_empty() {
-            found.push(Seed::wrong(
-                &release_rule::ATTACHMENT_DELIVERABLE,
-                format!(
-                    "{attachment} attachment is declared and no shared release lane delivers it"
-                ),
-            ));
-        } else if !carriers.iter().any(|lane| release.callers.contains(*lane)) {
-            found.push(Seed::wrong(
-                &release_rule::ATTACHMENT_DELIVERABLE,
-                format!(
-                    "{attachment} attachment is declared and this repository calls none of {}",
-                    carriers.join(", ")
-                ),
-            ));
-        }
-    }
-}
-
-fn carriers(attachment: &str) -> &'static [&'static str] {
-    match attachment {
-        "binary" | "skill" | "deb" | "npm" | "oci" | "chart" => &["release-binary", "ship"],
-        "cargo" => &["release-binary", "release-cargo", "ship"],
-        _ => &[],
     }
 }

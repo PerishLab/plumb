@@ -5,6 +5,7 @@ mod package;
 mod site;
 mod skill;
 mod smoke;
+mod transport;
 
 use super::release::{artifacts, capsule, manager, output, required, storage, verify};
 use clap::Subcommand;
@@ -16,6 +17,20 @@ pub enum Deed {
     Dispatch {
         #[command(flatten)]
         options: super::operator::Dispatch,
+    },
+    #[command(about = "Execute one closed request emitted by the ship plan")]
+    #[command(hide = true)]
+    Execute {
+        #[arg(long)]
+        request: String,
+    },
+    #[command(about = "Resolve one marker into the exact ship execution graph")]
+    #[command(hide = true)]
+    Resolve {
+        #[arg(long)]
+        marker: String,
+        #[arg(long)]
+        atom: String,
     },
     #[command(about = "Build, prove, and publish the product's own artifacts")]
     #[command(hide = true)]
@@ -82,6 +97,11 @@ pub enum Cargo {
 
 #[derive(Subcommand)]
 pub enum Oci {
+    #[command(about = "Publish the exact image from source or a reusable workload")]
+    Exact {
+        #[arg(long, default_value = "{\"type\":\"none\",\"source\":\"\"}")]
+        reuse: String,
+    },
     #[command(
         about = "Build the declared image from the Containerfile with this release's payload"
     )]
@@ -171,6 +191,8 @@ pub enum Binary {
 pub fn run(deed: Deed) -> i32 {
     let result = match deed {
         Deed::Dispatch { options } => super::operator::dispatch(options),
+        Deed::Execute { request } => transport::execute(&request),
+        Deed::Resolve { marker, atom } => transport::resolve(&marker, &atom),
         Deed::Binary { deed } => binary(deed),
         Deed::Cargo { deed } => attachment::cargo(deed),
         Deed::Chart { deed } => attachment::chart(deed),

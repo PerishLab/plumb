@@ -102,13 +102,6 @@ enum Command {
         #[arg(long)]
         version: Option<String>,
     },
-    #[command(about = "Render the workflows this repository declares")]
-    Lane {
-        #[command(flatten)]
-        target: Root,
-        #[arg(long)]
-        write: bool,
-    },
     #[command(
         about = "Render the seats and file groups this repository declares",
         long_about = command::depot::carried("help/layout.txt", plumb::seat::resource!("help/layout.txt"))
@@ -155,7 +148,7 @@ enum Command {
         #[command(flatten)]
         deed: command::retire::Deed,
     },
-    #[command(about = "Ask and record what a rendered lane may skip")]
+    #[command(about = "Ask and record what the canonical workflow may skip")]
     Workflow {
         #[command(subcommand)]
         deed: command::workflow::Deed,
@@ -173,7 +166,6 @@ impl Command {
             Self::Skill { .. } => "skill",
             Self::Rule { .. } => "rule",
             Self::Changelog { .. } => "changelog",
-            Self::Lane { .. } => "lane",
             Self::Layout { .. } => "layout",
             Self::Cookbook { .. } => "cookbook",
             Self::Affirm { .. } => "affirm",
@@ -242,9 +234,6 @@ fn execute(command: Command) -> i32 {
         Command::Rule { deed } => catalog::query::run(deed),
         Command::Changelog { target, version } => {
             command::render::Seat::new(PathBuf::from(target.root)).changelog(version)
-        }
-        Command::Lane { target, write } => {
-            command::render::Seat::new(PathBuf::from(target.root)).lane(write)
         }
         Command::Layout { target } => {
             command::render::Seat::new(PathBuf::from(target.root)).layout()

@@ -61,7 +61,6 @@ fn atom(commit: Option<&str>, version: &str) -> String {
 
 pub fn legacy(options: Legacy) -> Result<String, String> {
     let root = git::root()?;
-    current(&root)?;
     let remote = git::remote(&root, &options.repo)?;
     let channel = super::super::release::channel(&options.version)?;
     let version = value::version(&options.version, &channel)?;
@@ -132,34 +131,11 @@ fn launch(flight: Flight<'_>, course: &mut Course) -> Result<String, String> {
     Ok(message)
 }
 
-fn current(root: &std::path::Path) -> Result<(), String> {
-    let stale = crate::command::lane::Seat(root).stale();
-    if stale.is_empty() {
-        return Ok(());
-    }
-    Err(format!(
-        "a release cannot start on a lane this Plumb did not render: {}; run plumb lane --write",
-        stale.join(", ")
-    ))
-}
-
 fn present(root: &std::path::Path, workflow: &str) -> Result<(), String> {
     let path = format!(".forgejo/workflows/{workflow}");
     if !root.join(&path).is_file() {
         return Err(format!(
             "a release cannot start without its legacy workflow: {path}"
-        ));
-    }
-    let Ok(evidence) = crate::command::lane::Seat(root).project() else {
-        return Ok(());
-    };
-    if evidence
-        .projected()
-        .iter()
-        .any(|lane| lane.path == path && lane.absent())
-    {
-        return Err(format!(
-            "a release cannot start on a lane this repository has not rendered: {path}; run plumb lane --write"
         ));
     }
     Ok(())

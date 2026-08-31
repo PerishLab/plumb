@@ -10,19 +10,23 @@ use std::path::{Path, PathBuf};
 #[derive(Args)]
 pub struct Input {
     #[arg(long)]
-    base: Option<String>,
+    pub(in crate::command) base: Option<String>,
     #[arg(long = "world")]
-    world: Vec<String>,
+    pub(in crate::command) world: Vec<String>,
     #[arg(long = "identity")]
-    identity: Vec<String>,
+    pub(in crate::command) identity: Vec<String>,
     #[arg(long = "project")]
-    project: Vec<String>,
+    pub(in crate::command) project: Vec<String>,
     #[arg(long = "root")]
-    roots: Vec<String>,
+    pub(in crate::command) roots: Vec<String>,
     #[arg(long)]
-    inventory: Option<PathBuf>,
+    pub(in crate::command) inventory: Option<PathBuf>,
     #[command(flatten)]
-    target: Root,
+    pub(in crate::command) target: Root,
+}
+
+pub(in crate::command) fn derive(input: Input) -> Result<String, String> {
+    render(Path::new(&input.target.root), &input)
 }
 
 pub fn run(input: Input) -> i32 {

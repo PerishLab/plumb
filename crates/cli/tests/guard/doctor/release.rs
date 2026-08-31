@@ -8,17 +8,6 @@ fn seat(name: &str) -> std::path::PathBuf {
     dir
 }
 
-fn caller(dir: &std::path::Path, lane: &str, shared: &str) {
-    std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("lanes should be made");
-    std::fs::write(
-        dir.join(format!(".forgejo/workflows/{lane}.yml")),
-        format!(
-            "jobs:\n  release:\n    uses: PerishLab/actions/.forgejo/workflows/{shared}.yml@main\n"
-        ),
-    )
-    .expect("lane should be written");
-}
-
 #[test]
 fn refused() {
     let dir = seat("plumb-release-declaration");
@@ -60,18 +49,9 @@ fn deliverable() {
 
     std::fs::write(dir.join("plumb.toml"), BINARY).expect("manifest should be written");
     let uncalled = crate::run(&["doctor", path]);
-    assert!(
-        uncalled.contains("binary attachment is declared and this repository calls none of"),
-        "{uncalled}"
-    );
-
-    caller(&dir, "release-exact", "release-binary");
-    caller(&dir, "release-stable", "release-binary");
-    let called = crate::run(&["doctor", path]);
-    assert!(
-        !called.contains("binary attachment is declared"),
-        "{called}"
-    );
+    assert!(uncalled.contains("publishes binary"), "{uncalled}");
+    assert!(!uncalled.contains("attachment is declared"), "{uncalled}");
+    assert!(!dir.join(".forgejo").exists());
 
     std::fs::write(
         dir.join("plumb.toml"),
@@ -83,15 +63,6 @@ fn deliverable() {
     let held = crate::run(&["doctor", path]);
     assert!(held.contains("publishes binary oci"), "{held}");
     assert!(!held.contains("attachment is declared"), "{held}");
-
-    for lane in ["release-exact", "release-stable"] {
-        caller(&dir, lane, "release-cargo");
-    }
-    let wrong = crate::run(&["doctor", path]);
-    assert!(
-        wrong.contains("oci attachment is declared and this repository calls none of"),
-        "{wrong}"
-    );
 
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
@@ -106,7 +77,6 @@ fn carried() {
         "[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n",
     )
     .expect("manifest should be written");
-    caller(&dir, "release-exact", "release-cargo");
     let held = crate::run(&["doctor", path]);
     assert!(held.contains("publishes cargo"), "{held}");
     assert!(!held.contains("the current Plumb refuses"), "{held}");
@@ -164,7 +134,6 @@ fn attached() {
         "[release.oci]\nregistry = \"git.perish.top\"\nimage = \"owner/name\"\naccount = \"PerishFire\"\n",
     )
     .expect("manifest should be written");
-    caller(&dir, "release-exact", "release-binary");
     let image = crate::run(&["doctor", path]);
     assert!(image.contains("publishes oci"), "{image}");
     assert!(!image.contains("the current Plumb refuses"), "{image}");

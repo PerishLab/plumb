@@ -3,7 +3,7 @@ use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-const COMMANDS: [&str; 18] = [
+const COMMANDS: [&str; 17] = [
     "authority",
     "doctor",
     "land",
@@ -13,7 +13,6 @@ const COMMANDS: [&str; 18] = [
     "skill",
     "rule",
     "changelog",
-    "lane",
     "layout",
     "cookbook",
     "affirm",
@@ -98,7 +97,7 @@ fn command() {
     capture(Vec::new(), &mut held);
     assert_eq!(
         digest(&held),
-        "401e796efeb4554b29d40284d43782e324a60750b32169b46d448539508646ac"
+        "2ca5572125d1cdac6dae1d31cdf6f3a40a4779f5f5b8ba46cb888feb8d394c0e"
     );
 }
 
@@ -107,10 +106,10 @@ fn rule() {
     let output = success(&["rule", "list", "--json"]);
     let report: Value = serde_json::from_slice(&output.stdout).expect("rule list json");
     assert_eq!(report["schema"], "plumb.rule-list/v1");
-    assert_eq!(report["rules"].as_array().map(Vec::len), Some(114));
+    assert_eq!(report["rules"].as_array().map(Vec::len), Some(108));
     assert_eq!(
         digest(&output.stdout),
-        "b07b57f3caab1b7348d4319327cb9ab003e6d312baa3620adceb683627160d89"
+        "4432fb8f5b392a87aeaf4f760b3753085d191cf4b0e5e08f056a6a8b4381cdfb"
     );
 }
 
@@ -128,7 +127,7 @@ fn doctor() {
         .iter()
         .map(|standing| coverage[standing].as_u64().expect("coverage count"))
         .sum::<u64>();
-    assert_eq!(total, 114);
+    assert_eq!(total, 108);
 }
 
 #[test]

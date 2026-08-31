@@ -21,7 +21,6 @@ pub fn judge(held: &shape::Shape) -> Vec<Finding> {
         deps::check(held),
         web::judge(held.web.as_ref()),
         dispatch::judge(held.dispatch.as_ref()),
-        structure::lane::judge(&held.lane),
     ] {
         for seed in found {
             notes.push(Finding::new(seed));

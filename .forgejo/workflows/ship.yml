@@ -140,144 +140,18 @@ jobs:
         shell: bash
         run: |
           set -eu
-          if [ -n "$PLUMB_RELEASE_MARKER" ]; then
-            marker=$(plumb release marker show --marker "$PLUMB_RELEASE_MARKER" --held)
-            PLUMB_RELEASE_COMMIT=$(printf '%s' "$marker" | jq -r '.commit')
-            PLUMB_RELEASE_SOURCE="refs/tags/$PLUMB_RELEASE_MARKER"
-            export PLUMB_RELEASE_COMMIT
-            export PLUMB_RELEASE_SOURCE
-          fi
-          if plumb release plan --help >/dev/null 2>&1; then
-            plan=$(plumb release plan)
-            PLUMB_RELEASE_VERSION=$(printf '%s' "$plan" | jq -r '.version')
-            PLUMB_RELEASE_CHANNEL=$(printf '%s' "$plan" | jq -r '.channel')
-            PLUMB_RELEASE_PROJECT=$(printf '%s' "$plan" | jq -c '.project')
-          else
-            PLUMB_RELEASE_VERSION=$(plumb release reference)
-            export PLUMB_RELEASE_VERSION
-            PLUMB_RELEASE_CHANNEL=$(plumb release channel)
-            export PLUMB_RELEASE_CHANNEL
-            plumb release source
-            PLUMB_RELEASE_PROJECT=$(plumb release surface | jq -c '.project')
-          fi
-          export PLUMB_RELEASE_VERSION
-          export PLUMB_RELEASE_CHANNEL
-          if [ -n "$PLUMB_RELEASE_MARKER" ]; then
-            test "$(printf '%s' "$marker" | jq -r '.marker')" = "$PLUMB_RELEASE_VERSION"
-            test "$(printf '%s' "$marker" | jq -r '.channel')" = "$PLUMB_RELEASE_CHANNEL"
-            test "$(printf '%s' "$marker" | jq -r '.commit')" = "$PLUMB_RELEASE_COMMIT"
-          fi
-          targets=$(plumb ship binary matrix)
-          binary_reuse='[]'
-          binary_missing=false
-          inventory="$RUNNER_TEMP/plumb-workflow-inventory.json"
-          inventory_arg=
-          if [ -n "$PLUMB_WORKFLOW_INVENTORY_URL" ] && curl -fsSL \
-            --connect-timeout 3 --max-time 10 --retry 1 \
-            -o "$inventory" "$PLUMB_WORKFLOW_INVENTORY_URL"; then
-            inventory_arg=$inventory
-          fi
-          plumb_version=$(plumb --version | awk '{print $2}')
-          depot=$(plumb depot show | sed -n '1s/^depot //p')
-          if [ "$PLUMB_RELEASE_CHANNEL" != stable ]; then
-            pending="$RUNNER_TEMP/plumb-binary-pending.jsonl"
-            reused="$RUNNER_TEMP/plumb-binary-reused.jsonl"
-            : > "$pending"
-            : > "$reused"
-            projection=Cargo.toml#/workspace/package/version
-            for manifest in package.json packages/*/package.json; do
-              if [ -f "$manifest" ] && jq -e '.version | type == "string"' "$manifest" >/dev/null; then
-                projection=$manifest#/version
-                break
-              fi
-            done
-            printf '%s' "$targets" | jq -c '.include[]' | while IFS= read -r target; do
-              triple=$(printf '%s' "$target" | jq -r '.target')
-              runner=$(printf '%s' "$target" | jq -r '.runner')
-              archive=$(printf '%s' "$target" | jq -r '.archive')
-              action="ship/binary.$triple"
-              set -- plumb workflow plan \
-                --world "atom=${{ github.sha }}" \
-                --world "depot=$depot" \
-                --world "plumb=$plumb_version" \
-                --world "release=$PLUMB_RELEASE_VERSION" \
-                --world "runner=$runner" \
-                --world "target=$triple" \
-                --identity "marker=$PLUMB_RELEASE_MARKER" \
-                --project "$action=$projection"
-              if [ -n "$inventory_arg" ]; then
-                set -- "$@" --inventory "$inventory_arg"
-              fi
-              planned=$("$@" .)
-              node=$(printf '%s' "$planned" | jq -c --arg action "$action" \
-                '.actions[] | select(.name == $action)')
-              kind=$(printf '%s' "$node" | jq -r '.reuse.type')
-              if [ "$kind" = workload ]; then
-                printf '%s' "$target" | jq -c \
-                  --arg url "$(printf '%s' "$node" | jq -r '.reuse.source')" \
-                  '. + {url:$url}' >> "$reused"
-              else
-                printf '%s' "$target" | jq -c \
-                  --arg action "$action" \
-                  --argjson keys "$(printf '%s' "$node" | jq -c '.keys')" \
-                  '. + {action:$action,keys:$keys}' >> "$pending"
-              fi
-            done
-            targets=$(jq -sc '{include:.}' "$pending")
-            binary_reuse=$(jq -sc '.' "$reused")
-            binary_missing=$(printf '%s' "$targets" | jq -r '.include | length > 0')
-            if [ "$binary_missing" = false ]; then
-              targets='{"include":[{"runner":"docker","control":"reuse","target":"reuse","archive":"none"}]}'
-            fi
-          fi
-          project_pending="$RUNNER_TEMP/plumb-project-pending.jsonl"
-          : > "$project_pending"
-          printf '%s' "$PLUMB_RELEASE_PROJECT" | jq -c '.include[]' | while IFS= read -r entry; do
-            action=$(printf '%s' "$entry" | jq -r '.action // empty')
-            if [ -z "$action" ]; then
-              printf '%s\n' "$entry" >> "$project_pending"
-              continue
-            fi
-            command=(plumb workflow plan \
-              --world "atom=${{ github.sha }}" \
-              --world "depot=$depot" \
-              --world "plumb=$plumb_version" \
-              --world "runner=docker" \
-              --identity "marker=$PLUMB_RELEASE_MARKER")
-            while IFS= read -r projection; do
-              command+=(--project "$action=$projection")
-            done < <(printf '%s' "$entry" | jq -r '(.projections // [.projection])[]')
-            while IFS= read -r root; do
-              command+=(--root "$action=$root")
-            done < <(printf '%s' "$entry" | jq -r '.roots[]')
-            if [ -n "$inventory_arg" ]; then
-              command+=(--inventory "$inventory_arg")
-            fi
-            planned=$("${command[@]}" .)
-            node=$(printf '%s' "$planned" | jq -c --arg action "$action" \
-              '.actions[] | select(.name == $action)')
-            kind=$(printf '%s' "$node" | jq -r '.reuse.type')
-            if [ "$kind" != url ]; then
-              printf '%s' "$entry" | jq -c \
-                --argjson reuse "$(printf '%s' "$node" | jq -c '.reuse')" \
-                --argjson keys "$(printf '%s' "$node" | jq -c '.keys')" \
-                '. + {reuse:$reuse,keys:$keys}' >> "$project_pending"
-            fi
-          done
-          PLUMB_RELEASE_PROJECT=$(jq -sc '{include:.}' "$project_pending")
-          project_missing=$(printf '%s' "$PLUMB_RELEASE_PROJECT" | jq -r '.include | length > 0')
-          if [ "$project_missing" = false ]; then
-            PLUMB_RELEASE_PROJECT='{"include":[{"medium":"none","prepare":"none","control":"reuse"}]}'
-          fi
+          graph=$(plumb ship resolve \
+            --marker "$PLUMB_RELEASE_MARKER" \
+            --atom '${{ github.sha }}')
           {
-            echo "channel=$PLUMB_RELEASE_CHANNEL"
-            echo "commit=$PLUMB_RELEASE_COMMIT"
-            echo "version=$PLUMB_RELEASE_VERSION"
-            echo "targets=$targets"
-            echo "binary_missing=$binary_missing"
-            echo "binary_reuse=$binary_reuse"
-            echo "project=$PLUMB_RELEASE_PROJECT"
-            echo "project_missing=$project_missing"
+            echo "channel=$(printf '%s' "$graph" | jq -r '.channel')"
+            echo "commit=$(printf '%s' "$graph" | jq -r '.commit')"
+            echo "version=$(printf '%s' "$graph" | jq -r '.version')"
+            echo "targets=$(printf '%s' "$graph" | jq -c '.targets')"
+            echo "binary_missing=$(printf '%s' "$graph" | jq -r '.binary_missing')"
+            echo "binary_reuse=$(printf '%s' "$graph" | jq -c '.binary_reuse')"
+            echo "project=$(printf '%s' "$graph" | jq -c '.project')"
+            echo "project_missing=$(printf '%s' "$graph" | jq -r '.project_missing')"
           } >> "$GITHUB_OUTPUT"
 
   materialize:
@@ -844,28 +718,11 @@ jobs:
           name: release-capsule
           path: .plumb-release/capsule
 
-      - name: Install declared packages
-        if: matrix.control != 'reuse' && matrix.medium != 'chart' && (matrix.medium != 'npm' || matrix.reuse.type == 'none')
-        shell: bash
-        run: |
-          set -eu
-          if test -f pnpm-lock.yaml; then
-            corepack enable
-            pnpm install --frozen-lockfile --store-dir "$RUNNER_TEMP/pnpm-store"
-          fi
-
-      - name: Project one declared medium
-        if: matrix.control != 'reuse' && matrix.medium != 'npm' && matrix.medium != 'chart'
-        shell: bash
-        run: |
-          set -eu
-          plumb ship ${{ matrix.medium }} ${{ matrix.prepare }}
-          plumb ship ${{ matrix.medium }} publish
-
-      - name: Project one exact module
-        if: matrix.control != 'reuse' && matrix.medium == 'npm'
+      - name: Execute one resolved ship request
+        if: matrix.control != 'reuse'
         shell: bash
         env:
+          PLUMB_SHIP_REQUEST: ${{ toJSON(matrix) }}
           PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
           PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
           PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
@@ -873,36 +730,4 @@ jobs:
           PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
         run: |
           set -eu
-          output="$RUNNER_TEMP/plumb-module.log"
-          plumb ship npm exact \
-            --package '${{ matrix.package }}' \
-            --reuse '${{ toJSON(matrix.reuse) }}' > "$output"
-          record=$(tail -n 1 "$output")
-          workload=$(printf '%s' "$record" | jq -r '.workload')
-          publication=$(printf '%s' "$record" | jq -r '.publication')
-          plumb workflow record '${{ matrix.action }}' \
-            --keys '${{ toJSON(matrix.keys) }}' \
-            --workload "$workload" \
-            --publication "$publication"
-
-      - name: Project one exact chart
-        if: matrix.control != 'reuse' && matrix.medium == 'chart'
-        shell: bash
-        env:
-          PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
-          PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
-          PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
-          PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
-          PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
-        run: |
-          set -eu
-          output="$RUNNER_TEMP/plumb-chart.log"
-          plumb ship chart exact \
-            --reuse '${{ toJSON(matrix.reuse) }}' > "$output"
-          record=$(tail -n 1 "$output")
-          workload=$(printf '%s' "$record" | jq -r '.workload')
-          publication=$(printf '%s' "$record" | jq -r '.publication')
-          plumb workflow record '${{ matrix.action }}' \
-            --keys '${{ toJSON(matrix.keys) }}' \
-            --workload "$workload" \
-            --publication "$publication"
+          plumb ship execute --request "$PLUMB_SHIP_REQUEST"

@@ -141,7 +141,7 @@ note = "Legacy stable-release lane. Eight governed repositories. Superseded by s
 
 [[lane.member]]
 name = "ship"
-note = "Rendered ship lane carrying every declared medium. crest, plumb, sidecar."
+note = "Canonical ship atom owned only by Plumb; product repositories dispatch it and carry no lane."
 
 [[lane.member]]
 name = "stable.release"

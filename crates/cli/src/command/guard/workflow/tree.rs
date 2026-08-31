@@ -2,7 +2,7 @@ use crate::catalog::set;
 use crate::shape::workflow::Key;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Component::Normal, Path, PathBuf};
 use std::process::Command;
 
@@ -204,7 +204,8 @@ impl Projects {
     }
 
     pub fn declare(&self, keys: &mut Vec<Key>, roots: &Roots) -> Result<(), String> {
-        for action in self.0.keys() {
+        let actions = self.0.keys().chain(roots.keys()).collect::<BTreeSet<_>>();
+        for action in actions {
             if keys.iter().any(|key| key.name() == *action) {
                 continue;
             }

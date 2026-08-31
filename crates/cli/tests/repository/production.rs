@@ -55,17 +55,9 @@ fn sites() {
 
     std::fs::write(root.join("apps/web/wrangler.jsonc"), "{}").expect("config should be written");
     let held = doctor(&root);
-    assert!(
-        held.contains("web declares a site that no lane delivers"),
-        "{held}"
-    );
-
-    std::fs::create_dir_all(root.join(".forgejo/workflows")).expect("fixture should be made");
-    std::fs::write(root.join(".forgejo/workflows/deploy.yml"), "").expect("lane should be written");
-    let paired = doctor(&root);
     std::fs::remove_dir_all(&root).expect("fixture should be swept");
-    assert!(!paired.contains("declares a site"), "{paired}");
-    assert!(paired.contains("sites     web"), "{paired}");
+    assert!(!held.contains("declares a site"), "{held}");
+    assert!(held.contains("sites     web"), "{held}");
 }
 
 fn doctor(root: &Path) -> String {

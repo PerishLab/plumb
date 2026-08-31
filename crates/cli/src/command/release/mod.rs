@@ -3,7 +3,7 @@ pub mod authority;
 pub(in crate::command) mod channel;
 mod identity;
 pub(in crate::command) mod output;
-mod plan;
+pub(in crate::command) mod plan;
 mod truth;
 pub(in crate::command) mod workspace;
 
@@ -18,6 +18,10 @@ use crate::shape::release::Spec;
 
 pub(in crate::command) fn marker(raw: &str) -> Result<ReleaseMarker, String> {
     markers::resolve(raw, true)
+}
+
+pub(in crate::command) fn snapshot(raw: &str) -> Result<ReleaseMarker, String> {
+    markers::resolve(raw, false)
 }
 
 impl ReleaseMarker {

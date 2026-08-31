@@ -15,7 +15,7 @@ fn exact() {
     };
     let commit = seeded(&fixture, bare.path());
     stamp(temp.path(), "v1.2.0-beta.1", &commit, true);
-    assert!(fixture.root.join(".forgejo/workflows/ship.yml").is_file());
+    assert!(!fixture.root.join(".forgejo").exists());
 
     let shown = marker(&fixture, "show", "v1.2.0-beta.1");
     assert!(
@@ -206,18 +206,10 @@ pub(super) fn seeded(fixture: &Fixture<'_>, bare: &Path) -> String {
         "schema = 1\nversion = \"v1.2.0\"\n",
     )
     .expect("datum");
-    run(Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["lane", "--write"])
-        .current_dir(fixture.root));
-    run(Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["lane", "--write"])
-        .current_dir(fixture.root));
-    run(Command::new("git").arg("-C").arg(fixture.root).args([
-        "add",
-        "plumb.toml",
-        ".plumb",
-        ".forgejo",
-    ]));
+    run(Command::new("git")
+        .arg("-C")
+        .arg(fixture.root)
+        .args(["add", "plumb.toml", ".plumb"]));
     run(Command::new("git")
         .arg("-C")
         .arg(fixture.root)

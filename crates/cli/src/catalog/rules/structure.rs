@@ -1,8 +1,5 @@
 use super::{Mechanism, rule};
 
-mod site;
-pub use site::SITE_DEPLOY_LANE;
-
 rule!(ECTROPY_POLICY_PRESENT, "structure.ectropy-policy-present");
 rule!(PACKAGE_UNDER_PACKAGES, "structure.package-under-packages");
 rule!(PACKAGE_DIRECTORY_NAME, "structure.package-directory-name");
@@ -28,8 +25,6 @@ rule!(
     "structure.cascade-derives-in-anchor"
 );
 rule!(CARGO_TARGET_IGNORED, "structure.cargo-target-ignored");
-rule!(RELEASE_LANE_PRESENT, "structure.release-lane-present");
-rule!(RELEASE_SOURCE_BOUND, "structure.release-source-bound");
 #[rustfmt::skip]
 pub fn mechanisms() -> Vec<&'static Mechanism> {
     vec![
@@ -39,8 +34,7 @@ pub fn mechanisms() -> Vec<&'static Mechanism> {
         &KNOWN_DIRECTORY, &KNOWN_FILE, &KNOWN_WORKFLOW,
         &SEAT_AFFIRMED, &SEAT_ANCHORED, &SEAT_MEMBER,
         &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
-        &RELEASE_LANE_PRESENT, &RELEASE_SOURCE_BOUND, &RESERVED_COMPONENTS_SEAT,
+        &RESERVED_COMPONENTS_SEAT,
         &RETIRED_SEAT_ABSENT,
-        &SITE_DEPLOY_LANE,
     ]
 }

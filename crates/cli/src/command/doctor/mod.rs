@@ -76,7 +76,6 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
     let snapshot = plumb::snapshot::Snapshot::read(&root);
     let mut held = shape::capture(&root, &snapshot);
     dependency::observe(&mut held.dependencies, &root, line(&root).as_deref());
-    let _ = crate::command::lane::Seat(&root).observe(&mut held.lane);
     let vocabulary = match &snapshot {
         Ok(snapshot) => plumb::vocabulary::observe(snapshot),
         Err(error) => Err(error.clone()),

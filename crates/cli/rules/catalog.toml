@@ -300,15 +300,6 @@ owner = "plumb"
 tags = ["cargo", "repository"]
 
 [[rule]]
-id = "release.attachment-deliverable"
-summary = "Declared attachments resolve to a delivering lane"
-law = "Every declared release attachment resolves to a shared release lane that carries its projection and that this repository actually calls."
-evidence = "The release attachment tables in plumb.toml and the shared workflows named by the repository's release callers."
-standing = "mechanized"
-owner = "release"
-tags = ["release", "repository"]
-
-[[rule]]
 id = "release.attachment-exercised"
 summary = "Unexercised width stays visible"
 law = "The width a product declares is reported against the width this skeleton has actually released, so a path no release has ever run says so instead of passing as proven."
@@ -383,7 +374,7 @@ tags = ["adoption", "ownership", "release"]
 [[rule]]
 id = "release.dry-run-asserted"
 summary = "Dry run proves the intended version"
-law = "Before publishing, the lane requires the publisher dry run to name the intended version."
+law = "Before publishing, each ship node requires the publisher dry run to name the intended version."
 evidence = "Dry-run output before the first irreversible action."
 standing = "prose-only"
 owner = "release"
@@ -409,30 +400,12 @@ tags = ["ownership", "release"]
 
 [[rule]]
 id = "release.generator-stable"
-summary = "Release compilation uses current stable Plumb"
-law = "A permanent release lane resolves canonical stable Plumb once and records its version and template digest."
-evidence = "Generator installation, capsule provenance, and retry boundaries."
+summary = "Ship uses one exact Plumb atom"
+law = "A release marker records the exact Plumb atom, and ship resolves that atom once without rendering or copying a downstream workflow."
+evidence = "Marker identity, dispatched workflow revision, capsule provenance, and retry boundaries."
 standing = "prose-only"
 owner = "release"
 tags = ["release"]
-
-[[rule]]
-id = "release.guard-fresh"
-summary = "Release guard runs fresh"
-law = "A release runs the full guard without inheriting stale incremental artifacts."
-evidence = "The release lane's guard invocation and cache posture."
-standing = "prose-only"
-owner = "release"
-tags = ["release"]
-
-[[rule]]
-id = "release.lane-rendered"
-summary = "Release lanes stand as this Plumb renders them"
-law = "Every governed lane in a repository is the exact text the current Plumb renders from that repository's declaration, so no lane is hand-written or left behind by an older Plumb."
-evidence = "The lane templates carried by the running Plumb, the release table in plumb.toml, and the tracked workflow bytes."
-standing = "mechanized"
-owner = "release"
-tags = ["release", "repository"]
 
 [[rule]]
 id = "release.manifest-stamped"
@@ -536,8 +509,8 @@ tags = ["site"]
 [[rule]]
 id = "site.dispatch-only"
 summary = "Site deployment is deliberate"
-law = "The deploy lane runs on explicit dispatch rather than every landing."
-evidence = "The site deployment workflow triggers."
+law = "The canonical ship graph admits site deployment only for an explicit marker dispatch rather than every landing."
+evidence = "The ship request and resolved site node."
 standing = "prose-only"
 owner = "release"
 tags = ["release", "site"]
@@ -813,24 +786,6 @@ owner = "plumb"
 tags = ["repository"]
 
 [[rule]]
-id = "structure.release-lane-present"
-summary = "Release surfaces have canonical lanes"
-law = "A binary release declaration is paired with exact-candidate and stable-consensus workflows."
-evidence = "The release table in plumb.toml and workflow names."
-standing = "mechanized"
-owner = "release"
-tags = ["release", "repository"]
-
-[[rule]]
-id = "structure.release-source-bound"
-summary = "Release callers leave one event source"
-law = "Exact and stable product workflows expose and forward no source or second ref input; the called shared workflow binds its direct event ref and commit."
-evidence = "The release-exact.yml and release-stable.yml caller inputs and workflow_call bindings, plus the called workflow event context."
-standing = "mechanized"
-owner = "release"
-tags = ["release", "repository"]
-
-[[rule]]
 id = "structure.reserved-components-seat"
 summary = "Reusable components stay in the design system"
 law = "packages/components is reserved; reusable components belong to the design system."
@@ -874,15 +829,6 @@ evidence = "Declared seat rules compared with the members each seat records."
 standing = "mechanized"
 owner = "plumb"
 tags = ["repository"]
-
-[[rule]]
-id = "structure.site-deploy-lane"
-summary = "Sites have a deploy lane"
-law = "A repository declaring a site carries a deploy workflow."
-evidence = "Site applications and workflow names."
-standing = "mechanized"
-owner = "release"
-tags = ["release", "site", "web"]
 
 [[rule]]
 id = "structure.transitional-wrappers-observed"

@@ -1,7 +1,6 @@
 pub mod depot;
 pub mod doctor;
 mod guard;
-pub(crate) mod lane;
 pub mod operator;
 pub use release::authority;
 pub mod release;

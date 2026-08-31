@@ -1,7 +1,7 @@
 mod inventory;
-mod plan;
+pub(in crate::command) mod plan;
 mod projection;
-mod record;
+pub(in crate::command) mod record;
 mod release;
 mod remote;
 mod reuse;
@@ -24,7 +24,7 @@ pub enum Deed {
         #[arg(long, default_value = "")]
         since: String,
     },
-    #[command(about = "Ask, per key, whether a lane may skip the step that key owns")]
+    #[command(about = "Ask, per key, whether the canonical workflow may skip its step")]
     Ask {
         lane: String,
         #[command(flatten)]

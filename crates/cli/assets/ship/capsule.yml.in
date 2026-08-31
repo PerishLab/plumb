@@ -1,5 +1,0 @@
-      - uses: actions/download-artifact@v3
-        with:
-          name: release-capsule
-          path: .plumb-release/capsule
-

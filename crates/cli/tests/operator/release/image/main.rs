@@ -5,10 +5,13 @@ use std::io::Read;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
+#[path = "container.rs"]
+mod container;
+
 const DOCKER: &str = "#!/bin/sh\nexit 0\n";
 const ARCHIVE: &str = "probe-x86_64-unknown-linux-gnu.tar.gz";
 
-fn seat<'a>(root: &'a std::path::Path, tools: &'a std::path::Path) -> Fixture<'a> {
+pub(super) fn seat<'a>(root: &'a std::path::Path, tools: &'a std::path::Path) -> Fixture<'a> {
     Fixture { root, tools }
 }
 
@@ -98,7 +101,12 @@ fn payload() {
 fn chart() {
     let temp = tempfile::tempdir().expect("temp root");
     let tools = temp.path().join("tools");
-    let fixture = super::lane::seat(temp.path(), &tools);
+    std::fs::create_dir_all(&tools).expect("tool root");
+    let fixture = Fixture {
+        root: temp.path(),
+        tools: &tools,
+    };
+    fixture.seed();
     std::fs::write(
         temp.path().join("plumb.toml"),
         "[release.chart]\nregistry = \"registry.example\"\nchart = \"owner/probe\"\naccount = \"Example\"\n",
@@ -117,7 +125,7 @@ fn chart() {
         .as_array()
         .expect("project rows")
         .iter()
-        .find(|row| row["medium"] == "chart")
+        .find(|row| row["operation"]["type"] == "chart")
         .expect("chart row");
     assert_eq!(row["action"], "ship/chart");
     assert_eq!(
@@ -127,13 +135,6 @@ fn chart() {
             "charts/probe/Chart.yaml#/appVersion"
         ])
     );
-    let held = super::lane::rendered(&fixture);
-    assert!(held.contains("plumb ship chart exact"), "{held}");
-    assert!(
-        held.contains("matrix.medium != 'npm' && matrix.medium != 'chart'"),
-        "the legacy carrier must not also publish the exact chart: {held}"
-    );
-
     let source = temp.path().join("source.tgz");
     packed(&source, "1.0.0");
     executable(
@@ -194,6 +195,55 @@ esac
     let chart = manifest(Path::new(workload));
     assert!(chart.contains("version: 2.0.0"), "{chart}");
     assert!(chart.contains("appVersion: \"2.0.0\""), "{chart}");
+
+    executable(
+        &tools.join("aws"),
+        "#!/bin/sh\ncase \"$*\" in *get-object*) echo NoSuchKey >&2; exit 1;; *) exit 0;; esac\n",
+    );
+    let request = serde_json::json!({
+        "schema": "plumb.ship-request/v1",
+        "action": "ship/chart",
+        "projections": [
+            "charts/probe/Chart.yaml#/version",
+            "charts/probe/Chart.yaml#/appVersion"
+        ],
+        "roots": ["charts/probe"],
+        "operation": { "type": "chart" },
+        "reuse": {
+            "type": "workload",
+            "source": "https://inventory.example/chart.tgz"
+        },
+        "keys": {
+            "workload": "1".repeat(64),
+            "proof": "2".repeat(64),
+            "publication": "3".repeat(64)
+        }
+    })
+    .to_string();
+    let executed = super::world::run(
+        fixture
+            .command()
+            .env("FAKE_CHART_WORKLOAD", &source)
+            .env("FAKE_CHART_REGISTRY", &registry)
+            .env("PLUMB_RELEASE_VERSION", "v2.0.0")
+            .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
+            .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
+            .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
+            .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", "workflow")
+            .env(
+                "PLUMB_WORKFLOW_INVENTORY_ENDPOINT",
+                "https://account.r2.cloudflarestorage.com",
+            )
+            .env(
+                "PLUMB_WORKFLOW_INVENTORY_URL",
+                "https://workflow.example/inventory.json",
+            )
+            .args(["ship", "execute", "--request", &request]),
+    );
+    let result: serde_json::Value =
+        serde_json::from_slice(&executed.stdout).expect("generic ship result");
+    assert_eq!(result["schema"], "plumb.ship-result/v1");
+    assert_eq!(result["result"]["type"], "url");
 }
 
 fn packed(path: &Path, version: &str) {
@@ -227,7 +277,7 @@ fn manifest(path: &Path) -> String {
     panic!("chart archive carries no manifest")
 }
 
-fn executable(path: &Path, body: &str) {
+pub(super) fn executable(path: &Path, body: &str) {
     std::fs::write(path, body).expect("fake tool");
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).expect("tool mode");
 }

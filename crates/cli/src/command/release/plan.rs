@@ -30,12 +30,26 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
     let include = held.iter().map(row).collect::<Vec<_>>();
     let mut project = held
         .iter()
-        .filter(|medium| **medium != "binary" && **medium != "npm" && **medium != "chart")
+        .filter(|medium| matches!(**medium, "cargo" | "cfworker"))
         .map(|medium| {
-            prepared(medium)
-                .map(|prepare| serde_json::json!({ "medium": medium, "prepare": prepare }))
+            request(Project {
+                action: format!("ship/{medium}"),
+                projections: Vec::new(),
+                roots: vec!["*".into()],
+                kind: medium,
+                package: None,
+            })
         })
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Vec<_>>();
+    if spec.oci.is_some() {
+        project.push(request(Project {
+            action: "ship/oci".into(),
+            projections: Vec::new(),
+            roots: vec!["*".into()],
+            kind: "oci",
+            package: None,
+        }));
+    }
     if let Some(chart) = &spec.chart {
         let held = chart.chart.rsplit('/').next().unwrap_or(&chart.chart);
         let mut roots = vec![format!("charts/{held}")];
@@ -48,15 +62,15 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
         }
         roots.sort();
         roots.dedup();
-        project.push(serde_json::json!({
-            "medium": "chart",
-            "prepare": "exact",
-            "action": "ship/chart",
-            "projections": [
+        project.push(request(Project {
+            action: "ship/chart".into(),
+            projections: vec![
                 format!("charts/{held}/Chart.yaml#/version"),
                 format!("charts/{held}/Chart.yaml#/appVersion"),
             ],
-            "roots": roots,
+            roots,
+            kind: "chart",
+            package: None,
         }));
     }
     if let Some(npm) = &spec.npm {
@@ -75,13 +89,12 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
             }
             roots.sort();
             roots.dedup();
-            project.push(serde_json::json!({
-                "medium": "npm",
-                "prepare": "exact",
-                "package": package,
-                "action": format!("ship/npm.{bare}"),
-                "projections": [format!("packages/{bare}/package.json#/version")],
-                "roots": roots,
+            project.push(request(Project {
+                action: format!("ship/npm.{bare}"),
+                projections: vec![format!("packages/{bare}/package.json#/version")],
+                roots,
+                kind: "npm",
+                package: Some(package),
             }));
         }
     }
@@ -97,12 +110,24 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
     }))
 }
 
-fn prepared(medium: &str) -> Result<&'static str, String> {
-    match medium {
-        "cargo" | "cfworker" => Ok("rehearse"),
-        "chart" => Ok("package"),
-        "npm" => Ok("pack"),
-        "oci" => Ok("build"),
-        _ => Err(format!("{medium} names no deed that prepares it")),
+struct Project<'a> {
+    action: String,
+    projections: Vec<String>,
+    roots: Vec<String>,
+    kind: &'a str,
+    package: Option<&'a str>,
+}
+
+fn request(project: Project<'_>) -> serde_json::Value {
+    let mut operation = serde_json::json!({ "type": project.kind });
+    if let Some(package) = project.package {
+        operation["package"] = serde_json::json!(package);
     }
+    serde_json::json!({
+        "schema": "plumb.ship-request/v1",
+        "action": project.action,
+        "projections": project.projections,
+        "roots": project.roots,
+        "operation": operation,
+    })
 }
