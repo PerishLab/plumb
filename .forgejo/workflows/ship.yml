@@ -60,7 +60,16 @@ jobs:
             basic=$(printf 'x-access-token:%s' "$PLUMB_CHECKOUT_TOKEN" | base64 | tr -d '\n')
             fetch+=(-c "http.extraheader=AUTHORIZATION: basic $basic")
           fi
-          "${fetch[@]}" fetch --no-tags --depth=1 origin "+$reference:$reference"
+          fetched=
+          for attempt in 1 2 3; do
+            if timeout --kill-after=5s 45s \
+              "${fetch[@]}" fetch --no-tags --depth=1 origin "+$reference:$reference"; then
+              fetched=true
+              break
+            fi
+            sleep "$attempt"
+          done
+          test "$fetched" = true
           git checkout --detach "$reference^{commit}"
 
       - name: Install bootstrap Plumb
