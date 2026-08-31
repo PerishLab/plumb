@@ -12,6 +12,10 @@ fn matrix() {
     assert!(held.contains("workflow_dispatch:"), "{held}");
     assert!(held.contains("graph=$(plumb ship resolve"), "{held}");
     assert!(
+        held.contains("timeout --kill-after=5s 45s"),
+        "marker checkout must not inherit an unbounded transport wait"
+    );
+    assert!(
         held.contains("fromJSON(needs.resolve.outputs.targets)"),
         "{held}"
     );
