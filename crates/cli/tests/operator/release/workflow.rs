@@ -56,12 +56,7 @@ fn matrix() {
     );
     assert!(!held.contains("${{ runner.temp }}"), "{held}");
     assert_eq!(held.matches("PLUMB_HOME: /tmp/plumb-home").count(), 2);
-    assert!(
-        held.contains("matrix.operation.type == 'cfworker'"),
-        "{held}"
-    );
-    assert!(held.contains("matrix.operation.type == 'npm'"), "{held}");
-    assert!(held.contains("run: corepack enable"), "{held}");
+    assert_eq!(held.matches("run: corepack enable").count(), 1, "{held}");
 }
 
 #[test]

@@ -763,10 +763,8 @@ jobs:
           name: release-capsule
           path: .plumb-release/capsule
 
-      - name: Enable the declared Node package manager
-        if: >-
-          matrix.control != 'reuse' &&
-          (matrix.operation.type == 'cfworker' || matrix.operation.type == 'npm')
+      - name: Enable the domain package manager
+        if: matrix.control != 'reuse'
         shell: bash
         run: corepack enable
 
