@@ -103,7 +103,13 @@ fn publication() {
         "workload": action["keys"]["workload"],
         "proof": action["keys"]["proof"],
         "publication": action["keys"]["publication"],
-        "source": {"type": "url", "source": "https://registry.example/artifact-2.0.0.tgz"}
+        "source": {"type": "url", "source": "https://registry.example/artifact-2.0.0.tgz"},
+        "depot": {
+            "schema": "plumb.depot-worker/v1",
+            "marker": "v2.0.0",
+            "worker": "probe",
+            "version": "worker-version"
+        }
     });
     let path = root.inventory(
         &serde_json::json!({
@@ -126,6 +132,10 @@ fn publication() {
     assert_eq!(held["actions"][0]["decision"], "skip");
     assert_eq!(held["actions"][0]["reason"], "publication-held");
     assert_eq!(held["actions"][0]["reuse"]["type"], "url");
+    assert_eq!(
+        held["actions"][0]["depot"]["schema"],
+        "plumb.depot-worker/v1"
+    );
 }
 
 #[test]

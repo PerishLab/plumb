@@ -64,6 +64,13 @@ esac
     })
     .to_string();
     let path = format!("{}:{}", bin.display(), std::env::var("PATH").expect("PATH"));
+    let depot = serde_json::json!({
+        "schema": "plumb.depot-worker/v1",
+        "marker": "v1.0.0",
+        "worker": "probe",
+        "version": "worker-version"
+    })
+    .to_string();
     let record = || {
         Command::new(env!("CARGO_BIN_EXE_plumb"))
             .args([
@@ -76,6 +83,8 @@ esac
                 workload.to_str().expect("workload path"),
                 "--publication",
                 "https://registry.example/cli-1.0.0.tgz",
+                "--depot",
+                &depot,
             ])
             .env("PATH", &path)
             .env("PLUMB_TEST_STORE", &store)
@@ -120,6 +129,13 @@ esac
     assert!(source.starts_with("https://workflow.example/workloads/"));
     assert!(source.ends_with(".tgz"));
     assert!(exists(&store, source));
+    let publication = inventory["records"]
+        .as_array()
+        .expect("records")
+        .iter()
+        .find(|record| record["source"]["type"] == "url")
+        .expect("publication record");
+    assert_eq!(publication["depot"]["marker"], "v1.0.0");
 }
 
 fn exists(store: &Path, source: &str) -> bool {

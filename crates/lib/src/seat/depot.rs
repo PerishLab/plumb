@@ -216,10 +216,8 @@ pub fn root(over: &Path) -> Result<PathBuf, String> {
     if !over.as_os_str().is_empty() {
         return Ok(over.to_path_buf());
     }
-    if let Some(path) = crate::config::value("PLUMB_RULES_SEAT")
-        .or_else(|| crate::config::value("PLUMB_DEPOT_SEAT"))
-    {
-        return Ok(PathBuf::from(path));
+    if let Some(path) = crate::config::value("PLUMB_HOME") {
+        return Ok(PathBuf::from(path).join("depot"));
     }
     crate::seat::global("plumb")
         .map(|base| base.join("depot"))

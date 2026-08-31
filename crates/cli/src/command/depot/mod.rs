@@ -1,6 +1,8 @@
+mod configuration;
 mod knowledge;
 pub mod notes;
 mod product;
+mod projection;
 mod seat;
 mod store;
 
@@ -8,7 +10,6 @@ use clap::Subcommand;
 use plumb::rig::Rig;
 use plumb::snapshot::{Refusal, Snapshot};
 use std::path::{Path, PathBuf};
-use std::process::Output;
 
 use crate::shape::depot::{self as record, Evidence};
 
@@ -38,6 +39,7 @@ pub fn manifest() -> Result<Option<record::Manifest>, String> {
         Held::Seat(seat) => Ok(Some(record::Manifest {
             mark: seat.mark().to_string(),
             floor: seat.floor().to_string(),
+            version: seat.version().map(str::to_string),
             objects: seat.objects().to_vec(),
         })),
     }
@@ -66,19 +68,37 @@ pub fn carried(path: &str, factory: &'static str) -> String {
 }
 
 pub fn held() -> Held {
-    seat::held(&Rig::resolve(None).unwrap_or_default().rules.seat)
+    seat::held(Path::new(""))
 }
 
 #[derive(Subcommand)]
 pub enum Deed {
     #[command(about = "Publish a Release-bound configuration snapshot after exact validation")]
-    Publish {
+    Configuration {
         #[arg(default_value = ".")]
         root: String,
         #[arg(long)]
         marker: String,
         #[arg(long = "dry-run")]
         dry: bool,
+    },
+    #[command(about = "Move one channel pointer onto the immutable release named by a marker")]
+    Channel {
+        #[arg(long)]
+        marker: String,
+    },
+    #[command(about = "Move the stable manager roots onto the immutable release named by a marker")]
+    Managers {
+        #[arg(long)]
+        marker: String,
+    },
+    #[command(about = "Deploy one immutable worker version bound to a release marker")]
+    #[command(hide = true)]
+    Worker {
+        #[arg(long)]
+        marker: String,
+        #[arg(long)]
+        request: String,
     },
     #[command(about = "Publish the changelog derivative one stable Release owes")]
     Changelog {
@@ -107,7 +127,10 @@ pub enum Deed {
         dry: bool,
     },
     #[command(about = "Bring the local Plumb rules seat to the version its channel names")]
-    Sync,
+    Sync {
+        #[arg(default_value = ".")]
+        root: String,
+    },
     #[command(about = "Report the Plumb rules source, local seat, and held version")]
     Show,
 }
@@ -127,9 +150,14 @@ pub fn run(deed: Deed) -> i32 {
 
 fn execute(deed: Deed) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let over = PathBuf::from(&rig.rules.seat);
+    let over = PathBuf::new();
     match deed {
-        Deed::Publish { root, marker, dry } => Tree(&PathBuf::from(root)).publish(&marker, dry),
+        Deed::Configuration { root, marker, dry } => {
+            configuration::Tree(&PathBuf::from(root)).publish(&marker, dry)
+        }
+        Deed::Channel { marker } => projection::project(&marker, projection::Kind::Channel),
+        Deed::Managers { marker } => projection::project(&marker, projection::Kind::Managers),
+        Deed::Worker { marker, request } => projection::worker(&marker, &request),
         Deed::Changelog {
             root,
             marker,
@@ -160,8 +188,21 @@ fn execute(deed: Deed) -> Result<String, String> {
                 dry,
             },
         ),
-        Deed::Sync => seat::sync(&rig.rules.source, &rig.rules.channel, &over),
+        Deed::Sync { root } => sync(
+            &rig.rules.source,
+            &rig.rules.channel,
+            &over,
+            &PathBuf::from(root),
+        ),
         Deed::Show => show(&rig, &over),
+    }
+}
+
+fn sync(source: &str, channel: &str, over: &Path, root: &Path) -> Result<String, String> {
+    let synced = seat::sync(source, channel, over)?;
+    match crate::command::precommit::project(root)? {
+        Some(projected) => Ok(format!("{synced}\n{projected}")),
+        None => Ok(synced),
     }
 }
 
@@ -180,104 +221,4 @@ fn show(rig: &Rig, over: &Path) -> Result<String, String> {
         rig.rules.source,
         base.display()
     ))
-}
-
-struct Tree<'a>(&'a Path);
-
-impl Tree<'_> {
-    fn publish(&self, raw: &str, dry: bool) -> Result<String, String> {
-        let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-        let spec = crate::shape::release::Spec::read(&self.0.join("plumb.toml"))?;
-        let marker = crate::command::release::ReleaseMarker::at(
-            self.0,
-            &spec.product,
-            &spec.authority,
-            raw,
-        )?;
-        let proof = marker.digest()?;
-        let commit = self.commit()?;
-        if marker.commit != commit {
-            return Err(format!(
-                "release marker {} seals {}, not HEAD at {commit}",
-                marker.marker, marker.commit
-            ));
-        }
-        let depot = spec.derivative(plumb::depot::v2::Kind::Configuration)?;
-        let release = crate::command::release::depot(&spec);
-        let binding = release.binding(&marker.marker, true)?;
-        let snapshot = Snapshot::read(self.0).map_err(|error| error.to_string())?;
-        self.clean()?;
-        let plan = record::Batch::configuration(
-            &snapshot,
-            record::Draft {
-                source: depot.source.clone(),
-                release: binding.release.clone(),
-                timestamp: super::clock::mark()?,
-                commit,
-            },
-        )?;
-        crate::command::release::validate_depot(&spec, &binding, &plan)?;
-        let held = (|| {
-            if dry {
-                plan.manifest.encode()
-            } else {
-                let advance = release.current(&binding.release)?;
-                rig.depot.authority.load()?;
-                store::Remote::new(&rig.depot.authority)?.derive(&plan, advance)
-            }
-        })();
-        let after = crate::command::release::ReleaseMarker::at(
-            self.0,
-            &spec.product,
-            &spec.authority,
-            &marker.marker,
-        )?;
-        if after.digest()? != proof {
-            return Err(format!(
-                "release marker {} drifted while depot was deriving configuration",
-                marker.marker
-            ));
-        }
-        held
-    }
-
-    fn clean(&self) -> Result<(), String> {
-        let mut args = vec!["status", "--porcelain", "--"];
-        let roots = record::configuration(self.0)?;
-        for (root, _) in &roots {
-            args.push(root);
-        }
-        let output = self.git(&args)?;
-        if !output.status.success() {
-            return Err(format!(
-                "cannot read the working tree: {}",
-                String::from_utf8_lossy(&output.stderr).trim()
-            ));
-        }
-        let dirty = String::from_utf8_lossy(&output.stdout);
-        if dirty.trim().is_empty() {
-            Ok(())
-        } else {
-            Err(format!(
-                "depot roots carry uncommitted change:\n{}",
-                dirty.trim()
-            ))
-        }
-    }
-
-    fn commit(&self) -> Result<String, String> {
-        let output = self.git(&["rev-parse", "HEAD"])?;
-        if !output.status.success() {
-            return Err("cannot read HEAD".to_string());
-        }
-        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-    }
-
-    fn git(&self, args: &[&str]) -> Result<Output, String> {
-        std::process::Command::new("git")
-            .current_dir(self.0)
-            .args(args)
-            .output()
-            .map_err(|error| format!("cannot run git: {error}"))
-    }
 }

@@ -1,4 +1,5 @@
 mod face;
+mod private;
 mod retired;
 pub(crate) mod rule;
 
@@ -45,6 +46,7 @@ impl Tree<'_> {
     fn judge(&self, declared: &Declared) -> Vec<Seed> {
         let mut found = retired::judge(self.0, declared);
         found.extend(self.covered(declared));
+        found.extend(private::judge(self.0, self.1));
         found.extend(self.anchored(declared));
         found.extend(self.ruled(declared));
         found

@@ -14,10 +14,14 @@ fn known() {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", seat.path().to_str().expect("path should be utf8")])
         .env_remove("PLUMB_RELEASE_VERSION")
-        .env("PLUMB_DEPOT_SEAT", depot.path())
+        .env("PLUMB_HOME", depot.path())
         .output()
         .expect("plumb should run");
     let out = String::from_utf8_lossy(&output.stdout);
-    assert!(out.contains("workflow guard.atom has no shadow"), "{out}");
-    assert!(!out.contains("workflow plan.atom has no shadow"), "{out}");
+    for atom in ["guard.atom", "plan.atom"] {
+        assert!(
+            out.contains(&format!("workflow {atom} has no shadow")),
+            "{out}"
+        );
+    }
 }

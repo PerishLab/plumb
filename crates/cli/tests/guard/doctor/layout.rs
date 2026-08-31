@@ -95,6 +95,28 @@ fn stray() {
 }
 
 #[test]
+fn private() {
+    let declared = format!(
+        "{DECLARED}\n[[layout.seat]]\npath = \".forgejo\"\nnote = \"attempted local workflow authority\"\n"
+    );
+    let seat = seated(&declared);
+    std::fs::create_dir_all(seat.path().join(".forgejo/workflows")).expect("workflow seat");
+    std::fs::write(
+        seat.path().join(".forgejo/workflows/ship.yml"),
+        "name: copied\n",
+    )
+    .expect("workflow");
+    track(seat.path());
+    let held = report(seat.path());
+    assert!(
+        held.contains(
+            ".forgejo belongs to Plumb; product repositories dispatch the canonical ship atom"
+        ),
+        "{held}"
+    );
+}
+
+#[test]
 fn retired() {
     let declared = format!(
         "{DECLARED}\n[[layout.seat]]\npath = \"docs/CHANGELOG/*\"\nkind = \"retired\"\nnote = \"history moved to the depot\"\n"

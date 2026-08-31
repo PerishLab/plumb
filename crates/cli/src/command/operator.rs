@@ -23,28 +23,11 @@ pub struct Dispatch {
     dry: bool,
 }
 
-#[derive(Args)]
-#[group(skip)]
-pub struct Legacy {
-    #[arg(long)]
-    version: String,
-    #[arg(long, default_value = "")]
-    repo: String,
-    #[arg(long)]
-    watch: bool,
-    #[arg(long = "dry-run")]
-    dry: bool,
-}
-
 pub fn dispatch(options: Dispatch) -> Result<String, String> {
     trigger::run(options)
 }
 
-pub fn legacy(options: Legacy) -> Result<String, String> {
-    trigger::legacy(options)
-}
-
-pub(super) fn line(deed: super::release::Deed) -> Result<String, String> {
+pub(super) fn line(deed: super::version::Deed) -> Result<String, String> {
     line::run(deed)
 }
 

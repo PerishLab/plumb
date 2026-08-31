@@ -4,11 +4,10 @@ mod recovery;
 mod rejoined;
 mod settle;
 
-use super::super::release::Deed;
+use super::super::version::Deed;
 use super::course::Course;
 use super::value;
-pub use open::freeze;
-use open::opened;
+use open::{freeze, opened};
 use plumb::forgejo::{Client, Remote, git};
 use serde_json::Value;
 use settle::{Settle, settle};
@@ -28,7 +27,6 @@ pub fn run(deed: Deed) -> Result<String, String> {
         } => pick(&version, &commit, dry),
         Deed::Freeze { version, repo, dry } => wall(&version, &repo, dry),
         Deed::Rejoin { version, repo, dry } => rejoin(&version, &repo, dry),
-        _ => Err("a release verb reached the line seat".into()),
     }
 }
 
@@ -99,18 +97,13 @@ fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
     freeze(&mut course, &client, &root, &name)?;
     let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
     let commit = head(&client, &name)?;
-    let exact = super::super::release::promotion(&spec, &commit, &version)?;
-    let marker = course.step(
-        format!("git tag -a {version} at {commit} on {name}, then push"),
-        || super::mark::point(&root).stamp(&spec.product, &version, &name),
-    )?;
+    let exact = super::super::release::Product::new(&spec).promotion(&commit, &version)?;
     if course.dry() {
         return Ok(course.plan());
     }
     Ok(format!(
-        "froze {name} at {commit}; promoting {}; {}",
-        exact.version,
-        marker.ok_or_else(|| "the stable marker left no report".to_string())?
+        "froze {name} at {commit}; promotion source is {}",
+        exact.version
     ))
 }
 

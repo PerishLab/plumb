@@ -218,7 +218,6 @@ pub struct Depot {
 pub struct Rules {
     pub source: String,
     pub channel: String,
-    pub seat: PathBuf,
 }
 
 impl Default for Rules {
@@ -226,7 +225,6 @@ impl Default for Rules {
         Self {
             source: DEPOT.to_string(),
             channel: "stable".to_string(),
-            seat: PathBuf::new(),
         }
     }
 }

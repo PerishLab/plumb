@@ -9,9 +9,11 @@ substitute a cached assumption.
 
 ## A release is being prepared
 
-Use `plumb release <command> --help` for the exact command contract. One run
+Use `plumb version --help`, `plumb release --help`, and `plumb ship --help` for
+the exact command contracts. One ship run
 binds its source revision and release identity, builds only declared artifacts,
-publishes immutable objects and an exact seal, then reads the public bytes back.
+publishes immutable objects and an exact seal, reads the public bytes back, then
+projects declared depot generations before moving channel consensus.
 Non-stable releases remain exact and have no moving pointer or activation.
 An exact release binds `refs/tags/<exact-version>`, so push that tag before
 dispatching one; its channel is read from the version, never named beside it.
@@ -19,17 +21,18 @@ dispatching one; its channel is read from the version, never named beside it.
 Stable starts from an explicit release line:
 
 ```bash
-plumb stable prepare
-plumb stable pick
-plumb stable freeze
-plumb ship binary dispatch
-plumb stable rejoin
+plumb version prepare --version VERSION
+plumb version pick --version VERSION --commit COMMIT
+plumb version freeze --version VERSION
+plumb release stamp --version VERSION
+plumb ship dispatch --marker VERSION
+plumb version rejoin --version VERSION
 ```
 
 Inspect each subcommand before use. `prepare` also records the line's datum,
 so the frozen candidate is judged against the registry answers that stood when
 the line was cut; a line carrying no datum is out of true. Stable publication
-requires the frozen line and release-local changelog. `freeze` also derives the promotion source
+requires the frozen line. `freeze` also derives the promotion source
 and refuses unless exactly one published exact seal stands at the frozen
 commit, so recover a failed exact release by rerunning it rather than by
 tagging the next candidate. Rejoin settles ancestry after publication;
@@ -54,12 +57,12 @@ isolated root, run the intended session against that path, and remove the
 surrounding isolated root only after the caller has preserved any evidence it
 needs. Promotion later uses the same source revision as the validated candidate.
 
-## A site reports partial success
+## A worker reaches its stable domain
 
-Keep `deployed`, `bound`, and `reachable` separate. Deployment proves upload;
-binding proves the declared route state; reachability proves the public edge
-serves the built fingerprint. An authority unable to inspect binding yields
-`unknown`, not `no`, and a status code without the fingerprint is not proof.
+Keep the immutable Worker Version separate from its mutable Deployment. Ship
+uploads and reads back the version while carrying its full version id. Depot
+revalidates the same release marker before assigning that id 100% of traffic.
+Never recover by rebuilding or by running a direct deploy from source.
 
 ## Observation is configured
 

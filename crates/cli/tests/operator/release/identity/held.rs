@@ -29,14 +29,7 @@ fn snapshot() {
     let held = fixture
         .command()
         .current_dir(fixture.root)
-        .args([
-            "release",
-            "marker",
-            "show",
-            "--marker",
-            "v1.2.0-beta.1",
-            "--held",
-        ])
+        .args(["release", "show", "--marker", "v1.2.0-beta.1", "--held"])
         .output()
         .expect("plumb should run");
     assert!(
@@ -47,7 +40,7 @@ fn snapshot() {
     let refreshed = fixture
         .command()
         .current_dir(fixture.root)
-        .args(["release", "marker", "show", "--marker", "v1.2.0-beta.1"])
+        .args(["release", "show", "--marker", "v1.2.0-beta.1"])
         .output()
         .expect("plumb should run");
     assert!(!refreshed.status.success());

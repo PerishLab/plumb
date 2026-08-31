@@ -1,5 +1,7 @@
 use crate::catalog::model::Coverage;
+use crate::catalog::rules::depot::DEPOT_SCHEMA;
 use crate::command::depot;
+use crate::command::precommit;
 use crate::judge::{self, finding};
 use crate::shape;
 use serde::Serialize;
@@ -82,8 +84,19 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
     };
     let depot = depot::observe(&snapshot);
     let mut findings = judge::judge(&held);
+    if root.join("plumb.toml").is_file() {
+        findings.extend(precommit::hooks(&root).into_iter().map(|held| match held {
+            precommit::hook::Finding::Wrong(evidence) => {
+                finding::Finding::new(finding::Seed::wrong(&DEPOT_SCHEMA, evidence))
+            }
+            precommit::hook::Finding::Blind(evidence) => {
+                finding::Finding::new(finding::Seed::blind(&DEPOT_SCHEMA, evidence))
+            }
+        }));
+    }
     findings.extend(judge::vocabulary::judge(&vocabulary));
     findings.extend(judge::depot::judge(&depot));
+    findings.extend(judge::depot::runtime());
     let summary = Summary::new(&findings);
     let ok = summary.wrong == 0 && summary.blind == 0;
     if json {

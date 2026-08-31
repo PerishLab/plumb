@@ -40,6 +40,20 @@ pub(crate) fn govern(root: &std::path::Path) {
         .status()
         .expect("git should run");
     assert!(status.success(), "fixture should become a repository");
+    let hooks = root.join(".git/hooks");
+    for name in ["pre-commit", "commit-msg"] {
+        let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("assets/git/hooks")
+            .join(name);
+        let target = hooks.join(name);
+        std::fs::copy(source, &target).expect("fixture should carry depot-projected guard hooks");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o755))
+                .expect("fixture hook should be executable");
+        }
+    }
 }
 
 pub(crate) fn fixture() -> tempfile::TempDir {
@@ -49,9 +63,11 @@ pub(crate) fn fixture() -> tempfile::TempDir {
 }
 
 pub(crate) fn run(args: &[&str]) -> String {
+    let home = super::support::depot(&[]);
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(args)
         .env_remove("PLUMB_RELEASE_VERSION")
+        .env("PLUMB_HOME", home.path())
         .output()
         .expect("plumb should run");
     String::from_utf8_lossy(&output.stdout).to_string()
@@ -65,20 +81,26 @@ fn version() {
 #[test]
 fn adaptors() {
     let listed = run(&["ship", "--help"]);
-    for adaptor in ["binary", "cargo", "chart", "npm", "oci", "site"] {
-        assert!(listed.contains(adaptor), "{listed}");
+    let commands = listed
+        .split_once("Commands:\n")
+        .map(|(_, commands)| commands)
+        .unwrap_or_default();
+    assert!(commands.contains("dispatch"), "{listed}");
+    for retired in ["site", "cfworker"] {
+        let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["ship", retired, "--help"])
+            .output()
+            .expect("plumb should run");
+        assert!(!output.status.success(), "ship {retired} must be retired");
     }
-    for (adaptor, deed) in [
-        ("binary", "publish"),
-        ("cargo", "publish"),
-        ("chart", "publish"),
-        ("npm", "publish"),
-        ("oci", "publish"),
-        ("site", "deploy"),
-    ] {
-        let deeds = run(&["ship", adaptor, "--help"]);
-        assert!(deeds.contains(deed), "{deeds}");
-    }
+    let precommit = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["precommit", "--help"])
+        .output()
+        .expect("plumb should run");
+    assert!(
+        !precommit.status.success(),
+        "precommit is a depot projection, not a public command"
+    );
 }
 
 #[test]
@@ -264,18 +286,11 @@ fn substrate() {
 
 #[test]
 fn hookless() {
-    let dir = std::env::temp_dir().join("plumb-hookless");
-    std::fs::create_dir_all(dir.join(".runseal")).expect("fixture should be made");
-    std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
-    govern(&dir);
-    std::fs::write(
-        dir.join(".forgejo/workflows/guard.yml"),
-        "name: guard\nconcurrency:\n  group: guard-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true\njobs:\n  guard:\n    steps:\n      - run: plumb doctor . && ectropy .\n",
-    )
-    .expect("workflow should be written");
-    let policy = run(&["policy", dir.to_str().expect("path should be utf8")]);
-    std::fs::write(dir.join("ectropy.toml"), policy).expect("policy should be written");
-    let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(held.contains("true to the skeleton"), "{held}");
+    let fixture = fixture();
+    let root = fixture.path();
+    std::fs::write(root.join("plumb.toml"), "[layout]\n").expect("governance");
+    std::fs::remove_file(root.join(".git/hooks/pre-commit")).expect("remove projected hook");
+    let held = run(&["doctor", root.to_str().expect("path should be utf8")]);
+    assert!(held.contains("pre-commit is absent"), "{held}");
+    assert!(held.contains("run plumb depot sync"), "{held}");
 }

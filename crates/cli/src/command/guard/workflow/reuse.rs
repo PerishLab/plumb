@@ -31,6 +31,7 @@ pub struct Verdict {
     pub decision: &'static str,
     pub reason: &'static str,
     pub source: Source,
+    pub depot: Option<serde_json::Value>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -52,6 +53,8 @@ pub(super) struct Record {
     #[serde(default)]
     pub(super) publication: Option<String>,
     pub(super) source: Source,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) depot: Option<serde_json::Value>,
 }
 
 #[derive(PartialEq)]
@@ -116,6 +119,7 @@ impl Inventory {
                 decision: "skip",
                 reason: "publication-held",
                 source: record.source.clone(),
+                depot: record.depot.clone(),
             });
         }
         if keys.publication.is_none()
@@ -126,6 +130,7 @@ impl Inventory {
                 decision: "reuse",
                 reason: "proof-held",
                 source: record.source.clone(),
+                depot: None,
             });
         }
         if let Some(record) = self.source(
@@ -144,6 +149,7 @@ impl Inventory {
                     "proof-held"
                 },
                 source: record.source.clone(),
+                depot: None,
             });
         }
         if let Some(record) = self.source(Match::new(action, keys, None, "workload"), None)? {
@@ -151,12 +157,14 @@ impl Inventory {
                 decision: "run",
                 reason: "proof-moved",
                 source: record.source.clone(),
+                depot: None,
             });
         }
         Ok(Verdict {
             decision: "run",
             reason: "record-absent",
             source: Source::none(),
+            depot: None,
         })
     }
 
@@ -172,7 +180,7 @@ impl Inventory {
             .filter(|record| proof.is_none() || record.proof.as_deref() == proof);
         let first = found.next();
         if let Some(first) = first
-            && found.any(|record| record.source != first.source)
+            && found.any(|record| record.source != first.source || record.depot != first.depot)
         {
             return Err(format!(
                 "workflow inventory ambiguously records {} {}",

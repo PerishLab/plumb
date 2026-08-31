@@ -121,6 +121,13 @@ impl Rules {
         }
     }
 
+    pub fn version(&self) -> Option<&str> {
+        match &self.held {
+            Source::V1(_) => None,
+            Source::V2 { manifest, .. } => Some(&manifest.release.version),
+        }
+    }
+
     pub fn objects(&self) -> &[super::Object] {
         match &self.held {
             Source::V1(seat) => &seat.manifest().objects,

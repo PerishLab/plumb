@@ -14,7 +14,7 @@ pub struct Compile<'a> {
 
 pub fn compile(input: Compile<'_>) {
     let mut held = input.fixture.command();
-    held.args(["release", "compile"])
+    held.args(["ship", "compile"])
         .env("PLUMB_RELEASE_CHANNEL", input.channel)
         .env("PLUMB_RELEASE_VERSION", input.version)
         .env("PLUMB_RELEASE_COMMIT", input.commit)
@@ -38,6 +38,7 @@ fn authority(command: &mut Command, capsule: &Path, operation: &str) {
 #[test]
 fn cycle() {
     let temp = tempfile::tempdir().expect("temp root");
+    let bare = tempfile::tempdir().expect("bare root");
     let root = temp.path();
     let tools = root.join("tools");
     let artifacts = root.join("artifacts");
@@ -48,8 +49,10 @@ fn cycle() {
         tools: &tools,
     };
     fixture.seed();
+    fixture.origin(bare.path());
     let candidate = fixture.candidate();
-    fixture.tag("v1.2.0-beta.7");
+    fixture.line(&candidate);
+    fixture.marker("v1.2.0-beta.7");
     fixture.archive(&artifacts, "v1.2.0-beta.7");
 
     let beta = root.join("beta");
@@ -75,7 +78,7 @@ fn cycle() {
     let proof = root.join("promotion/nested/seal.json");
     run(fixture
         .command()
-        .args(["release", "promote"])
+        .args(["ship", "promote"])
         .env("PLUMB_RELEASE_COMMIT", &candidate)
         .env("PLUMB_RELEASE_VERSION", "v1.2.0")
         .env("PLUMB_RELEASE_PROMOTION", &proof));
@@ -93,6 +96,7 @@ fn cycle() {
         .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.7"));
 
     fixture.archive(&artifacts, "v1.2.0");
+    fixture.marker("v1.2.0");
     let stable = root.join("stable");
     compile(Compile {
         fixture: &fixture,
@@ -109,14 +113,14 @@ fn cycle() {
     authority(&mut publish, &record, "PUBLISH");
     run(&mut publish);
     for _ in 0..2 {
-        let mut project = fixture.command();
-        project.args(["ship", "binary", "activate"]);
-        authority(&mut project, &record, "ACTIVATE");
-        run(&mut project);
         let mut activate = fixture.command();
-        activate.args(["release", "activate"]);
+        activate.args(["depot", "channel", "--marker", "v1.2.0"]);
         authority(&mut activate, &record, "ACTIVATE");
         run(&mut activate);
+        let mut project = fixture.command();
+        project.args(["depot", "managers", "--marker", "v1.2.0"]);
+        authority(&mut project, &record, "ACTIVATE");
+        run(&mut project);
     }
 
     let mut verify = fixture.command();
@@ -125,7 +129,7 @@ fn cycle() {
         .env("PLUMB_RELEASE_CAPSULE", &record)
         .env("PLUMB_RELEASE_ACTIVATED", "true");
     run(&mut verify);
-    run(fixture.command().args(["release", "inspect"]).env(
+    run(fixture.command().args(["ship", "inspect"]).env(
         "PLUMB_RELEASE_URL",
         "https://releases.test/v1/releases/beta/v1.2.0-beta.7/seal.json",
     ));
@@ -135,7 +139,7 @@ fn cycle() {
     ));
     run(fixture
         .command()
-        .args(["release", "inspect"])
+        .args(["ship", "inspect"])
         .env(
             "PLUMB_RELEASE_URL",
             "https://releases.test/v1/channels/stable.json",

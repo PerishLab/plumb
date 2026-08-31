@@ -19,7 +19,7 @@ note = "Library rules projected into the configuration derivative."
 [[layout.seat]]
 path = "crates/cli/assets"
 depot = "assets"
-note = "CLI templates projected into the configuration derivative."
+note = "Runtime manager sources and Git guard hooks projected into the configuration derivative. Workflow templates are retired."
 
 [[layout.seat]]
 path = "crates/cli/cookbook"
@@ -62,7 +62,7 @@ note = "Release notes live in the depot; this tombstone keeps the retired source
 
 [[layout.seat]]
 path = ".forgejo"
-note = "The forge namespace. Unavoidable, and carried by all twenty one repositories."
+note = "Plumb's private canonical ship atom. Product repositories dispatch it and are forbidden from carrying this namespace."
 
 [[layout.seat]]
 path = ".cargo"

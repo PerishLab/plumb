@@ -37,8 +37,14 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
     };
     let binary = binary(&spec, &marker, &world)?;
     let project = projects(&plan["project"], &marker, &world)?;
+    let derivatives = spec
+        .depot
+        .as_ref()
+        .map(|depot| depot.derivatives.as_slice())
+        .unwrap_or_default();
     serde_json::to_string(&json!({
         "schema": SCHEMA,
+        "product": spec.product,
         "channel": marker.channel,
         "commit": marker.commit,
         "version": marker.version,
@@ -47,6 +53,10 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
         "binary_reuse": binary.reuse,
         "project": project.matrix,
         "project_missing": project.missing,
+        "worker_depot": marker.channel == "stable" && project.worker,
+        "worker_request": project.request,
+        "depot_configuration": derivatives.contains(&plumb::depot::v2::Kind::Configuration),
+        "depot_skill": derivatives.contains(&plumb::depot::v2::Kind::Skill),
     }))
     .map_err(|error| format!("cannot encode ship graph: {error}"))
 }
@@ -137,6 +147,8 @@ fn binary(
 struct Projects {
     matrix: Value,
     missing: bool,
+    worker: bool,
+    request: Option<Value>,
 }
 
 fn projects(
@@ -145,11 +157,14 @@ fn projects(
     world: &World<'_>,
 ) -> Result<Projects, String> {
     let mut pending = Vec::new();
+    let mut worker = false;
+    let mut request = None;
     for entry in input["include"]
         .as_array()
         .ok_or("project plan has no include array")?
     {
         let action = text(entry, "action")?;
+        worker |= action == "ship/cfworker";
         let versioned = action == "ship/cfworker";
         let projections = strings(entry, "projections")?;
         let roots = strings(entry, "roots")?;
@@ -165,6 +180,9 @@ fn projects(
             },
         )?;
         if node["reuse"]["type"] == "url" {
+            if action == "ship/cfworker" && marker.channel == "stable" {
+                request = Some(binding(&node)?);
+            }
             continue;
         }
         let mut entry = object(entry)?;
@@ -178,7 +196,19 @@ fn projects(
     } else {
         json!({ "include": [{ "control": "reuse" }] })
     };
-    Ok(Projects { matrix, missing })
+    Ok(Projects {
+        matrix,
+        missing,
+        worker,
+        request,
+    })
+}
+
+fn binding(node: &Value) -> Result<Value, String> {
+    node.get("depot")
+        .filter(|depot| depot.is_object())
+        .cloned()
+        .ok_or_else(|| "held stable worker publication carries no depot binding".to_string())
 }
 
 struct Plan<'a> {

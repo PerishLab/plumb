@@ -43,6 +43,8 @@ struct Reuse {
 struct Projection {
     workload: PathBuf,
     publication: String,
+    #[serde(default)]
+    depot: Option<serde_json::Value>,
 }
 
 impl Reuse {
@@ -100,7 +102,6 @@ impl Request {
                 Some(
                     super::super::site::Worker {
                         root: &spec.root,
-                        channel: required("PLUMB_RELEASE_CHANNEL", &release.channel)?,
                         version,
                     }
                     .exact(&reuse)?,
@@ -132,20 +133,21 @@ impl Request {
             )?),
         };
         let Some(projection) = projection else {
-            return result("none", "");
+            return result("none", "", None);
         };
         let projection: Projection = serde_json::from_str(&projection)
             .map_err(|error| format!("cannot read adaptor result: {error}"))?;
         let keys = self
             .keys
             .ok_or_else(|| "an exact ship request carries no inventory keys".to_string())?;
-        crate::command::workflow::record::project(
-            &self.action,
-            &keys.to_string(),
-            projection.workload,
-            Some(projection.publication.clone()),
-        )?;
-        result("url", &projection.publication)
+        crate::command::workflow::record::project(crate::command::workflow::record::Project {
+            action: &self.action,
+            keys: &keys.to_string(),
+            workload: projection.workload,
+            publication: Some(projection.publication.clone()),
+            depot: projection.depot.clone(),
+        })?;
+        result("url", &projection.publication, projection.depot)
     }
 }
 
@@ -182,10 +184,11 @@ fn command(root: &std::path::Path, program: &str, args: &[&str]) -> Result<(), S
     }
 }
 
-fn result(kind: &str, source: &str) -> Result<String, String> {
+fn result(kind: &str, source: &str, depot: Option<serde_json::Value>) -> Result<String, String> {
     serde_json::to_string(&serde_json::json!({
         "schema": "plumb.ship-result/v1",
         "result": { "type": kind, "source": source },
+        "depot": depot,
     }))
     .map_err(|error| format!("cannot encode ship result: {error}"))
 }

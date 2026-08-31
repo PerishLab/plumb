@@ -1,12 +1,12 @@
+use super::inventory::{absent, digest, failure, field, stale};
+use super::reuse::hash;
 use super::reuse::{Inventory, Keys, Record};
 use clap::Args;
 use serde::Deserialize;
-use sha2::{Digest, Sha256};
 use std::{
     fs,
-    io::Read as _,
     path::{Path, PathBuf},
-    process::{Command, Output},
+    process::Command,
 };
 
 const INVENTORY: &str = "inventory.json";
@@ -27,6 +27,12 @@ pub struct Input {
         help = "Verified public publication URL, when the action published"
     )]
     publication: Option<String>,
+    #[arg(
+        long,
+        hide = true,
+        help = "Marker-bound mutable projection carried by a publication"
+    )]
+    depot: Option<String>,
 }
 
 pub fn run(input: Input) -> i32 {
@@ -50,13 +56,25 @@ fn execute(input: Input) -> Result<(), String> {
     if let Some(publication) = &keys.publication {
         hash(publication)?;
     }
+    let depot = input
+        .depot
+        .map(|depot| {
+            let held: serde_json::Value = serde_json::from_str(&depot)
+                .map_err(|error| format!("cannot parse --depot: {error}"))?;
+            if held.is_object() {
+                Ok(held)
+            } else {
+                Err("--depot must be one JSON object".to_string())
+            }
+        })
+        .transpose()?;
     let publication = input
         .publication
         .map(|source| {
             if !source.starts_with("https://") {
                 return Err("--publication must be an HTTPS URL".to_string());
             }
-            Record::publication(input.action.clone(), &keys, source)
+            Record::publication(input.action.clone(), &keys, source, depot)
                 .ok_or_else(|| "--publication requires a publication key".to_string())
         })
         .transpose()?;
@@ -74,17 +92,21 @@ fn execute(input: Input) -> Result<(), String> {
     authority.merge(workload, publication)
 }
 
-pub(in crate::command) fn project(
-    action: &str,
-    keys: &str,
-    workload: PathBuf,
-    publication: Option<String>,
-) -> Result<(), String> {
+pub(in crate::command) struct Project<'a> {
+    pub action: &'a str,
+    pub keys: &'a str,
+    pub workload: PathBuf,
+    pub publication: Option<String>,
+    pub depot: Option<serde_json::Value>,
+}
+
+pub(in crate::command) fn project(input: Project<'_>) -> Result<(), String> {
     execute(Input {
-        action: action.to_string(),
-        keys: keys.to_string(),
-        workload,
-        publication,
+        action: input.action.to_string(),
+        keys: input.keys.to_string(),
+        workload: input.workload,
+        publication: input.publication,
+        depot: input.depot.map(|held| held.to_string()),
     })
 }
 
@@ -237,56 +259,4 @@ impl Authority {
             .arg("s3api");
         command
     }
-}
-
-fn field(name: &str, value: String) -> Result<String, String> {
-    if value.trim().is_empty() || value.contains(['\r', '\n']) {
-        Err(format!("missing or invalid {name}"))
-    } else {
-        Ok(value)
-    }
-}
-
-fn hash(value: &str) -> Result<(), String> {
-    if value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        Ok(())
-    } else {
-        Err(format!(
-            "workflow inventory carries an invalid hash {value:?}"
-        ))
-    }
-}
-
-fn digest(path: &Path) -> Result<String, String> {
-    let mut file = fs::File::open(path)
-        .map_err(|error| format!("cannot read workload {}: {error}", path.display()))?;
-    let mut sponge = Sha256::new();
-    let mut block = [0u8; 64 * 1024];
-    loop {
-        let read = file
-            .read(&mut block)
-            .map_err(|error| format!("cannot read workload {}: {error}", path.display()))?;
-        if read == 0 {
-            break;
-        }
-        sponge.update(&block[..read]);
-    }
-    Ok(format!("{:x}", sponge.finalize()))
-}
-
-fn absent(output: &Output) -> bool {
-    let text = String::from_utf8_lossy(&output.stderr);
-    text.contains("NoSuchKey") || text.contains("Not Found") || text.contains("404")
-}
-
-fn stale(output: &Output) -> bool {
-    let text = String::from_utf8_lossy(&output.stderr);
-    text.contains("PreconditionFailed") || text.contains("412")
-}
-
-fn failure(action: &str, output: &Output) -> String {
-    format!(
-        "{action}: {}",
-        String::from_utf8_lossy(&output.stderr).trim()
-    )
 }

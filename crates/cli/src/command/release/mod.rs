@@ -7,14 +7,61 @@ pub(in crate::command) mod plan;
 mod truth;
 pub(in crate::command) mod workspace;
 
-pub use identity::deed::{Deed, Marker};
+pub use identity::deed::Deed;
 pub(in crate::command) use identity::marker::Descriptor as ReleaseMarker;
 use identity::{marker as markers, promotion};
-use plumb::rig::{Authority, Rig};
+use plumb::rig::Authority;
 use std::path::{Path, PathBuf};
 pub(super) use truth::{manager, proof, record, storage, verify};
 
 use crate::shape::release::Spec;
+
+pub(in crate::command) struct Product<'a>(&'a Spec);
+
+impl<'a> Product<'a> {
+    pub fn new(spec: &'a Spec) -> Self {
+        Self(spec)
+    }
+
+    pub fn compile(&self, release: &plumb::rig::Release) -> Result<String, String> {
+        let channel = required("PLUMB_RELEASE_CHANNEL", &release.channel)?;
+        let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
+        let commit = required("PLUMB_RELEASE_COMMIT", &release.commit)?;
+        output::capsule::compile(output::capsule::Compile {
+            spec: &self.0.manifest(),
+            channel,
+            version,
+            commit,
+            artifacts: &artifacts(release)?,
+            out: &output(release)?,
+            promotion: release.promotion.as_deref(),
+            toolchain: &release.toolchain,
+        })
+    }
+
+    pub fn promote(&self, release: &plumb::rig::Release) -> Result<String, String> {
+        promotion::Promotion::new(self.0).fetch(
+            required("PLUMB_RELEASE_COMMIT", &release.commit)?,
+            required("PLUMB_RELEASE_VERSION", &release.version)?,
+            release
+                .promotion
+                .as_deref()
+                .ok_or_else(|| "PLUMB_RELEASE_PROMOTION is required".to_string())?,
+            &artifacts(release)?,
+        )
+    }
+
+    pub fn depot(&self) -> truth::depot::Source<'_> {
+        truth::depot::Source {
+            product: &self.0.product,
+            authority: &self.0.authority,
+        }
+    }
+
+    pub fn promotion(&self, commit: &str, version: &str) -> Result<promotion::Exact, String> {
+        promotion::Promotion::new(self.0).derive(commit, version)
+    }
+}
 
 pub(in crate::command) fn marker(raw: &str) -> Result<ReleaseMarker, String> {
     markers::resolve(raw, true)
@@ -51,87 +98,10 @@ pub fn run(deed: Deed) -> i32 {
 
 fn execute(deed: Deed) -> Result<String, String> {
     match deed {
-        Deed::Adopt { root, version, dry } => {
-            truth::adopt::run(&PathBuf::from(root), &version, dry)
-        }
         Deed::Stamp { version, dry } => super::operator::stamp(&version, dry),
         Deed::Retract { version, dry } => super::operator::retract(&version, dry),
-        Deed::Marker { deed } => markers::run(deed),
-        Deed::Rejoin { ref version, .. } if !version.is_empty() => super::operator::line(deed),
-        Deed::Prepare { .. } | Deed::Pick { .. } | Deed::Freeze { .. } => {
-            super::operator::line(deed)
-        }
-        deed => carry(deed),
+        deed => markers::run(deed),
     }
-}
-
-fn carry(deed: Deed) -> Result<String, String> {
-    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let manifest = rig.release.root.join("plumb.toml");
-    let spec = Spec::read(&manifest)?;
-    let release = &rig.release;
-    match deed {
-        Deed::Adopt { .. } => Err("adoption does not read the release environment".into()),
-        Deed::Marker { .. } => Err("a marker verb does not read the release environment".into()),
-        Deed::Plan => plan::plan(
-            &spec,
-            required("PLUMB_RELEASE_SOURCE", &release.source)?,
-            required("PLUMB_RELEASE_COMMIT", &release.commit)?,
-        ),
-        Deed::Surface => plan::surface(&spec),
-        Deed::Activate => storage::activate(&capsule(release)?, &rig.activate),
-        Deed::Compile => compile(&spec, release),
-        Deed::Inspect => verify::inspect(
-            required("PLUMB_RELEASE_URL", &release.url)?,
-            release.activated,
-        ),
-        Deed::Stamp { .. } | Deed::Retract { .. } => {
-            Err("a point verb does not read the release environment".into())
-        }
-        Deed::Prepare { .. } | Deed::Pick { .. } | Deed::Freeze { .. } => {
-            Err("a line verb does not read the release environment".into())
-        }
-        Deed::Rejoin { .. } => crate::command::operator::topology::rejoin(
-            &spec.root,
-            required("PLUMB_RELEASE_VERSION", &release.version)?,
-            required("PLUMB_RELEASE_COMMIT", &release.commit)?,
-            required("PLUMB_RELEASE_BASE", &release.base)?,
-        ),
-        Deed::Promote => promotion::Promotion::new(&spec).fetch(
-            required("PLUMB_RELEASE_COMMIT", &release.commit)?,
-            required("PLUMB_RELEASE_VERSION", &release.version)?,
-            release
-                .promotion
-                .as_deref()
-                .ok_or_else(|| "PLUMB_RELEASE_PROMOTION is required".to_string())?,
-            &artifacts(release)?,
-        ),
-        Deed::Evidence => crate::command::operator::topology::evidence(
-            crate::command::operator::topology::Guard {
-                api: required("PLUMB_GUARD_API", &rig.guard.api)?,
-                repository: required("PLUMB_GUARD_REPOSITORY", &rig.guard.repository)?,
-                token: required("PLUMB_GUARD_TOKEN", &rig.guard.token)?,
-                commit: required("PLUMB_RELEASE_COMMIT", &release.commit)?,
-            },
-            &rig.guard.contexts,
-        ),
-    }
-}
-
-fn compile(spec: &Spec, release: &plumb::rig::Release) -> Result<String, String> {
-    let channel = required("PLUMB_RELEASE_CHANNEL", &release.channel)?;
-    let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
-    let commit = required("PLUMB_RELEASE_COMMIT", &release.commit)?;
-    output::capsule::compile(output::capsule::Compile {
-        spec: &spec.manifest(),
-        channel,
-        version,
-        commit,
-        artifacts: &artifacts(release)?,
-        out: &output(release)?,
-        promotion: release.promotion.as_deref(),
-        toolchain: &release.toolchain,
-    })
 }
 
 pub(super) fn artifacts(release: &plumb::rig::Release) -> Result<PathBuf, String> {
@@ -178,13 +148,6 @@ pub(super) fn channel(version: &str) -> Result<String, String> {
 
 pub(in crate::command) use truth::depot::validate as validate_depot;
 
-pub(in crate::command) fn depot(spec: &Spec) -> truth::depot::Source<'_> {
-    truth::depot::Source {
-        product: &spec.product,
-        authority: &spec.authority,
-    }
-}
-
 pub(in crate::command) fn knowledge<'a>(
     product: &'a str,
     authority: &'a str,
@@ -198,14 +161,6 @@ pub(super) fn authority(root: &Path) -> Result<String, String> {
 
 pub(super) fn inspect(url: &str) -> Result<String, String> {
     verify::inspect(url, true)
-}
-
-pub(super) fn promotion(
-    spec: &Spec,
-    commit: &str,
-    version: &str,
-) -> Result<promotion::Exact, String> {
-    promotion::Promotion::new(spec).derive(commit, version)
 }
 
 pub(super) fn settled(root: &Path, version: &str, commit: &str) -> Result<String, String> {

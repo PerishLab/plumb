@@ -1,6 +1,6 @@
 use super::super::truth::{record, verify};
 use super::promotion;
-use crate::command::release::{Marker as Deed, channel};
+use crate::command::release::{Deed, channel};
 use crate::shape::release::Spec;
 use plumb::datum;
 use plumb::forgejo::git;
@@ -58,6 +58,9 @@ pub fn run(deed: Deed) -> Result<String, String> {
     let (name, show, held) = match deed {
         Deed::Show { marker, held } => (marker, true, held),
         Deed::Verify { marker, held } => (marker, false, held),
+        Deed::Retract { .. } | Deed::Stamp { .. } => {
+            return Err("a marker mutation reached marker inspection".into());
+        }
     };
     let marker = resolve(&name, !held)?;
     if show {

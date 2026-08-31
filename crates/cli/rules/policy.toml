@@ -6,7 +6,7 @@
 # apart. Before this file existed the numbers were written twice inside the
 # binary and nothing compared them.
 #
-# Carried, so changing any of it is one depot publish, scoped to a channel and
+# Carried, so changing any of it is one depot configuration projection, scoped to a channel and
 # reversible, instead of a release and an estate upgrade. A repository that
 # cannot meet a limit does not raise it: it states a [[boundary]] naming the
 # paths and the reason, and the note says which task retires the row. A limit

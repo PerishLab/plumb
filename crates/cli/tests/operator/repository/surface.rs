@@ -2,7 +2,7 @@ use std::process::Command;
 
 fn surface(root: &std::path::Path) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["release", "surface"])
+        .args(["ship", "surface"])
         .env("PLUMB_RELEASE_ROOT", root)
         .output()
         .expect("plumb should run");
@@ -51,7 +51,7 @@ fn declared() {
 
 fn refusal(root: &std::path::Path) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["release", "surface"])
+        .args(["ship", "surface"])
         .env("PLUMB_RELEASE_ROOT", root)
         .output()
         .expect("plumb should run");

@@ -2,42 +2,16 @@ use super::model::App;
 use super::process::Call;
 use crate::shape::release::{Cfworker, Spec};
 use plumb::rig::Site;
-use serde_json::{Value, json};
+use serde_json::Value;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 pub struct Seat<'a> {
     pub root: &'a Path,
-    pub channel: &'a str,
     pub version: &'a str,
 }
 
 impl Seat<'_> {
-    pub fn rehearse(&self) -> Result<String, String> {
-        let (spec, held) = self.declared()?;
-        let app = App::read(self.root)?;
-        let site = self.vantage(&spec, &held)?;
-        previews(&site, &app.worker)?;
-        Ok(format!(
-            "worker {} shows versions at {}",
-            app.worker,
-            root(&site)?
-        ))
-    }
-
-    pub fn publish(&self) -> Result<String, String> {
-        let (spec, held) = self.declared()?;
-        let app = App::read(self.root)?;
-        let site = self.vantage(&spec, &held)?;
-        previews(&site, &app.worker)?;
-        self.build(&app)?;
-        let publication = self.project(&app, &site, &held)?;
-        Ok(format!(
-            "projected {} {} at {publication}",
-            app.worker, self.version
-        ))
-    }
-
     pub fn exact(&self, reuse: &str) -> Result<String, String> {
         let (spec, held) = self.declared()?;
         let app = App::read(self.root)?;
@@ -60,29 +34,34 @@ impl Seat<'_> {
             ));
         }
         let workload = bundle(&app)?;
-        let publication = self.project(&app, &site, &held)?;
+        let publication = self.stage(&app, &site)?;
         serde_json::to_string(&serde_json::json!({
             "format": "plumb.worker-project/v1",
             "worker": app.worker,
             "version": self.version,
             "workload": workload,
-            "publication": publication,
+            "publication": publication.url,
+            "depot": {
+                "schema": "plumb.depot-worker/v1",
+                "marker": self.version,
+                "worker": app.worker,
+                "version": publication.id,
+            },
         }))
         .map_err(|error| format!("cannot encode worker project: {error}"))
     }
 
-    fn project(&self, app: &App, site: &Site, held: &Cfworker) -> Result<String, String> {
-        if self.channel == "stable" {
-            self.settle(app, site, held)
-        } else {
-            self.stage(app, site)
-        }
-    }
-
-    fn stage(&self, app: &App, site: &Site) -> Result<String, String> {
+    fn stage(&self, app: &App, site: &Site) -> Result<Publication, String> {
         let raw = super::process::held(Call {
             bin: "pnpm",
-            args: &["exec", "wrangler", "versions", "upload"],
+            args: &[
+                "exec",
+                "wrangler",
+                "versions",
+                "upload",
+                "--tag",
+                self.version,
+            ],
             cwd: &app.seat,
             env: &[
                 ("CLOUDFLARE_ACCOUNT_ID", &site.account),
@@ -92,22 +71,8 @@ impl Seat<'_> {
         .map_err(|error| format!("cannot upload a worker version: {error}"))?;
         let version = stamped(&raw)?;
         let url = format!("https://{}-{}.{}", &version[..8], app.worker, root(site)?);
-        reachable(&url, site)?;
-        Ok(url)
-    }
-
-    fn settle(&self, app: &App, site: &Site, held: &Cfworker) -> Result<String, String> {
-        super::process::run(Call {
-            bin: "pnpm",
-            args: &["exec", "wrangler", "deploy", "--domain", &held.domain],
-            cwd: &app.seat,
-            env: &[
-                ("CLOUDFLARE_ACCOUNT_ID", &held.account),
-                ("CLOUDFLARE_API_TOKEN", &site.token),
-            ],
-        })?;
-        reachable(&format!("https://{}/", held.domain), site)?;
-        Ok(format!("https://{}/", held.domain))
+        super::reach::prove(&url, site)?;
+        Ok(Publication { id: version, url })
     }
 
     fn build(&self, app: &App) -> Result<(), String> {
@@ -147,6 +112,57 @@ impl Seat<'_> {
         }
         Ok(site)
     }
+}
+
+struct Publication {
+    id: String,
+    url: String,
+}
+
+pub(in crate::command) fn deploy(
+    root: &Path,
+    expected: &str,
+    version: &str,
+) -> Result<String, String> {
+    let spec = Spec::read(&root.join("plumb.toml"))?;
+    let held = spec
+        .cfworker
+        .ok_or_else(|| "this repository declares no worker attachment".to_string())?;
+    let app = App::read(root)?;
+    if app.worker != expected {
+        return Err(format!(
+            "worker projection names {expected}, not declared {}",
+            app.worker
+        ));
+    }
+    let mut site = super::settings::read()?;
+    site.account = held.account;
+    site.domain = held.domain;
+    super::settings::require(&site)?;
+    let target = format!("{version}@100%");
+    super::process::run(Call {
+        bin: "pnpm",
+        args: &[
+            "exec",
+            "wrangler",
+            "versions",
+            "deploy",
+            &target,
+            "--name",
+            &app.worker,
+            "-y",
+        ],
+        cwd: &app.seat,
+        env: &[
+            ("CLOUDFLARE_ACCOUNT_ID", &site.account),
+            ("CLOUDFLARE_API_TOKEN", &site.token),
+        ],
+    })?;
+    super::reach::prove(&format!("https://{}/", site.domain), &site)?;
+    Ok(format!(
+        "deployed worker version {version} at https://{}/",
+        site.domain
+    ))
 }
 
 fn bundle(app: &App) -> Result<PathBuf, String> {
@@ -225,13 +241,7 @@ fn restore(app: &App, bytes: &[u8]) -> Result<(), String> {
 
 fn previews(site: &Site, worker: &str) -> Result<(), String> {
     let seat = format!("workers/scripts/{worker}/subdomain");
-    let held = super::cloud::Vantage::new(site).post(
-        &seat,
-        &json!({
-            "enabled": false,
-            "previews_enabled": true
-        }),
-    )?;
+    let held = super::cloud::Vantage::new(site).get(&seat)?;
     if held.get("previews_enabled").and_then(Value::as_bool) == Some(true) {
         return Ok(());
     }
@@ -253,45 +263,4 @@ fn stamped(raw: &str) -> Result<String, String> {
         .map(|(_, held)| held.trim().to_string())
         .filter(|held| held.len() >= 8)
         .ok_or_else(|| "wrangler named no worker version".to_string())
-}
-
-fn reachable(url: &str, site: &Site) -> Result<(), String> {
-    let mut why = String::new();
-    for turn in 0..site.turns.max(1) {
-        why = match answered(url) {
-            Ok(true) => {
-                println!("  200 {url}");
-                return Ok(());
-            }
-            Ok(false) => format!("{url} did not answer 200"),
-            Err(error) => error,
-        };
-        println!("  retry {url} ({why})");
-        if turn + 1 < site.turns && site.delay > 0 {
-            std::thread::sleep(std::time::Duration::from_millis(site.delay));
-        }
-    }
-    Err(format!("{url} never answered: {why}"))
-}
-
-fn answered(url: &str) -> Result<bool, String> {
-    let code = super::process::text(
-        "curl",
-        &[
-            "--silent",
-            "--show-error",
-            "--location",
-            "--connect-timeout",
-            "10",
-            "--max-time",
-            "30",
-            "--output",
-            "/dev/null",
-            "--write-out",
-            "%{http_code}",
-            url,
-        ],
-        Path::new("."),
-    )?;
-    Ok(code == "200")
 }

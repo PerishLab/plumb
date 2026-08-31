@@ -6,10 +6,10 @@ use std::time::{Duration, SystemTime};
 
 use super::support;
 
-fn package(root: &std::path::Path, depot: &std::path::Path) -> Vec<u8> {
+fn package(root: &std::path::Path, home: &std::path::Path) -> Vec<u8> {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["ship", "chart", "package"])
-        .env("PLUMB_DEPOT_SEAT", depot)
+        .env("PLUMB_HOME", home)
         .env("PLUMB_RELEASE_ROOT", root)
         .env("PLUMB_RELEASE_VERSION", "v1.2.3")
         .output()

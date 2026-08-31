@@ -13,7 +13,7 @@ const SOURCES: [(&str, &str); 5] = [
 #[allow(dead_code)]
 pub fn depot(overrides: &[(&str, &str)]) -> tempfile::TempDir {
     let fixture = tempfile::tempdir().expect("depot fixture");
-    stock(fixture.path(), overrides);
+    stock(&fixture.path().join("depot"), overrides);
     fixture
 }
 

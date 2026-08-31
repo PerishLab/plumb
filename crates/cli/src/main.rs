@@ -51,7 +51,7 @@ enum Command {
         json: bool,
     },
     #[command(about = "Prove the staged tree, or one committed task boundary")]
-    Precommit {
+    Guard {
         #[command(flatten)]
         target: Root,
         #[arg(long, requires = "head", requires = "write")]
@@ -60,9 +60,7 @@ enum Command {
         head: Option<String>,
         #[arg(long)]
         write: Vec<String>,
-        #[arg(long, conflicts_with_all = ["base", "head", "write", "attach"])]
-        install: bool,
-        #[arg(long, hide = true, conflicts_with_all = ["base", "head", "write", "install"])]
+        #[arg(long, hide = true, conflicts_with_all = ["base", "head", "write"])]
         attach: Option<PathBuf>,
         #[arg(long)]
         json: bool,
@@ -125,7 +123,7 @@ enum Command {
         deed: command::depot::Deed,
     },
     #[command(
-        about = "Hold the truth cycle of a product release",
+        about = "Define and verify one immutable distribution marker",
         long_about = command::depot::carried("help/release.txt", plumb::seat::resource!("help/release.txt"))
     )]
     Release {
@@ -139,6 +137,14 @@ enum Command {
     Ship {
         #[command(subcommand)]
         deed: command::ship::Deed,
+    },
+    #[command(
+        about = "Project and govern the repository's version line",
+        long_about = command::depot::carried("help/version.txt", plumb::seat::resource!("help/version.txt"))
+    )]
+    Version {
+        #[command(subcommand)]
+        deed: command::version::Deed,
     },
     #[command(
         about = "Destroy one declared delivery chain in a fixed order",
@@ -160,7 +166,7 @@ impl Command {
             Self::Authority { .. } => "authority",
             Self::Doctor { .. } => "doctor",
             Self::Land { .. } => "land",
-            Self::Precommit { .. } => "precommit",
+            Self::Guard { .. } => "guard",
             Self::Radius { .. } => "radius",
             Self::Policy { .. } => "policy",
             Self::Skill { .. } => "skill",
@@ -172,6 +178,7 @@ impl Command {
             Self::Depot { .. } => "depot",
             Self::Release { .. } => "release",
             Self::Ship { .. } => "ship",
+            Self::Version { .. } => "version",
             Self::Retire { .. } => "retire",
             Self::Workflow { .. } => "workflow",
         }
@@ -199,12 +206,11 @@ fn execute(command: Command) -> i32 {
             dry,
             json,
         }),
-        Command::Precommit {
+        Command::Guard {
             target,
             base,
             head,
             write,
-            install,
             attach,
             json,
         } => command::precommit::run(command::precommit::Input {
@@ -212,7 +218,6 @@ fn execute(command: Command) -> i32 {
             base,
             head,
             write,
-            install,
             attach,
             json,
         }),
@@ -245,6 +250,7 @@ fn execute(command: Command) -> i32 {
         Command::Depot { deed } => command::depot::run(deed),
         Command::Release { deed } => command::release::run(deed),
         Command::Ship { deed } => command::ship::run(deed),
+        Command::Version { deed } => command::version::run(deed),
         Command::Retire { deed } => command::retire::run(deed),
         Command::Workflow { deed } => command::workflow::run(deed),
     }

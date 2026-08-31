@@ -1,4 +1,4 @@
-use super::{Tree, notes, product, store};
+use super::{configuration::Tree, notes, product, store};
 use crate::shape::depot::{self as record};
 use plumb::rig::Rig;
 use std::path::{Path, PathBuf};
@@ -73,9 +73,8 @@ pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
                 proof.units
             ))
         } else {
-            let advance = release.current(&binding.release)?;
             rig.depot.authority.load()?;
-            store::Remote::new(&rig.depot.authority)?.derive(&plan, advance)
+            store::Remote::new(&rig.depot.authority)?.derive(&plan, true)
         }
     })();
     confirm(root, &target, &marker, &standing)?;
@@ -117,9 +116,8 @@ pub fn skill(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
         if wanted.dry {
             plan.manifest.encode()
         } else {
-            let advance = release.current(&binding.release)?;
             rig.depot.authority.load()?;
-            store::Remote::new(&rig.depot.authority)?.derive(&plan, advance)
+            store::Remote::new(&rig.depot.authority)?.derive(&plan, true)
         }
     })();
     confirm(root, &target, &marker, &standing)?;

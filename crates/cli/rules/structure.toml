@@ -91,28 +91,33 @@ rule = "structure.known-workflow"
 
 [[lane.member]]
 name = "deploy"
+kind = "retired"
 note = "Site deployment on explicit dispatch. Carried by design, which is not governed yet; no governed repository holds this lane as of 2026-08-20."
 
 [[lane.member]]
 name = "depot"
-note = "Rendered configuration-distribution lane. Only a repository recording the depot roots renders it; plumb alone as of 2026-08-20."
+kind = "retired"
+note = "Depot projection is one phase of Plumb's canonical ship transaction, never a repository workflow."
 
 [[lane.member]]
 name = "exact.release"
-note = "Rendered exact-release lane. crest, plumb, sidecar. Succeeds release-exact."
+kind = "retired"
+note = "Exact distribution moved into Plumb's canonical ship atom."
 
 [[lane.member]]
 name = "guard"
-note = "The staged-tree precommit action namespace. It owns no repository workflow seat."
+kind = "retired"
+note = "Guard is a Plumb-managed precommit proof and owns no repository workflow seat."
 
 [[lane.member]]
 name = "plan.atom"
-note = "The public cold-start planner. Actions resolves its exact implementation and Plumb judges the caller's relevant work."
+kind = "retired"
+note = "Plan is a Plumb engine invoked inside the canonical ship atom, not a repository workflow."
 
 [[lane.member]]
 name = "platform"
-kind = "machine"
-note = "Manual cross-platform test lane on macOS and Windows runners, dispatch only. sidecar. Added 2026-08-20 to repay a live unknown-shape finding."
+kind = "retired"
+note = "Platform variation is a ship matrix concern and no longer owns a repository workflow."
 
 [[lane.member]]
 name = "probe"
@@ -121,23 +126,28 @@ note = "Zero occurrences across all twenty-one repositories. Nothing in the skel
 
 [[lane.member]]
 name = "release-binary"
-note = "Shared called workflow for binary releases. Lives in actions, which is not governed yet."
+kind = "retired"
+note = "Binary release projection moved into Plumb's canonical ship atom."
 
 [[lane.member]]
 name = "release-cargo"
-note = "Shared called workflow for Cargo-only releases. Lives in actions, which is not governed yet."
+kind = "retired"
+note = "Cargo release projection moved into Plumb's canonical ship atom."
 
 [[lane.member]]
 name = "release-exact"
-note = "Legacy exact-release lane. Eleven governed repositories. Superseded by exact.release; both stand while adoption is incremental."
+kind = "retired"
+note = "Legacy exact release workflow retired after canonical ship absorbed it."
 
 [[lane.member]]
 name = "release-runner"
-note = "Shared called workflow for runner releases. Lives in actions, which is not governed yet."
+kind = "retired"
+note = "Runner release projection moved into Plumb's canonical ship atom."
 
 [[lane.member]]
 name = "release-stable"
-note = "Legacy stable-release lane. Eight governed repositories. Superseded by stable.release."
+kind = "retired"
+note = "Legacy stable release workflow retired after canonical ship absorbed it."
 
 [[lane.member]]
 name = "ship"
@@ -145,4 +155,5 @@ note = "Canonical ship atom owned only by Plumb; product repositories dispatch i
 
 [[lane.member]]
 name = "stable.release"
-note = "Rendered stable-release lane. crest, plumb, sidecar. Succeeds release-stable."
+kind = "retired"
+note = "Stable distribution moved into Plumb's canonical ship atom."

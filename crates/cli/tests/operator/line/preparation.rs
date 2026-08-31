@@ -10,7 +10,7 @@ pub fn provenance(root: &Path, cut: PathBuf) {
         .current_dir(root));
     let valid = command(
         root,
-        &["release", "freeze", "--version", "1.2.0", "--dry-run"],
+        &["version", "freeze", "--version", "1.2.0", "--dry-run"],
     );
     let valid = String::from_utf8_lossy(&valid.stderr);
     assert!(
@@ -45,7 +45,7 @@ pub fn provenance(root: &Path, cut: PathBuf) {
         .current_dir(root));
     let refused = command(
         root,
-        &["release", "freeze", "--version", "1.2.0", "--dry-run"],
+        &["version", "freeze", "--version", "1.2.0", "--dry-run"],
     );
     assert!(String::from_utf8_lossy(&refused.stderr).contains("without cherry-pick -x provenance"));
 }

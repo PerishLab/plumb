@@ -23,6 +23,32 @@ fn matrix() {
     assert!(held.contains("\n  materialize:\n"), "{held}");
     assert!(held.contains("\n  seal:\n"), "{held}");
     assert!(held.contains("\n  verify:\n"), "{held}");
+    assert!(held.contains("\n  depot:\n"), "{held}");
+    let immutable = held
+        .rfind("plumb ship execute --request")
+        .expect("ship project");
+    let consensus = held
+        .rfind("plumb depot channel --marker")
+        .expect("depot consensus");
+    let configuration = held
+        .rfind("plumb depot configuration --marker")
+        .expect("configuration derivative");
+    let skill = held
+        .rfind("plumb depot skill --marker")
+        .expect("skill derivative");
+    assert!(
+        immutable < configuration && configuration < consensus && skill < consensus,
+        "derivatives must follow immutable projects and precede channel consensus"
+    );
+    assert_eq!(
+        held.matches("plumb depot channel --marker").count(),
+        1,
+        "only the final depot job may move the channel"
+    );
+    assert!(
+        held.contains(".forgejo/scripts/bootstrap-plumb.sh"),
+        "the canonical workflow should consume its Plumb-owned bootstrap script"
+    );
 }
 
 #[test]
