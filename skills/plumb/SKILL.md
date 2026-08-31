@@ -7,9 +7,8 @@ metadata:
 
 # Plumb
 
-Plumb governs a repository carrying `plumb.toml` at its root. Outside that
-boundary this brief is silent. Read the repository's own `AGENTS.md`, then run
-Doctor before changing its shape and again after.
+Plumb governs a repository carrying root `plumb.toml`. Read its `AGENTS.md`,
+then run Doctor before changing its shape and again after.
 
 Four surfaces answer: the source says what a thing does, `--help` says how to
 use it, `plumb cookbook` says what to do when something fired, and this brief
@@ -28,20 +27,22 @@ says what none of those can. Ask the one that owns the question.
   a member carries to earn one, and the rules its members answer to. A
   repository declaring no layout is judged by the released name sets instead.
 - A **boundary** proves one committed delta stays inside declared write paths.
-- A **guard proof** binds checks to one staged tree and travels with its commit.
+- A **guard proof** binds checks to one staged tree. Depot projects its Git
+  hooks; Doctor requires them.
 - A **landing** projects that exact proved tree onto its base.
-- A **release** is version truth. **Ship** projects it through workflows;
-  **depot** carries configuration or changelog derivatives. Snapshots iterate
-  by timestamp while binding Release channel, version, commit, and seal; only
-  current stable advances latest. `[release.depot]` declares public capability;
-  a product's Runseal profile holds write authority.
+- A **version** is repository identity projected through every package carrier.
+  A **release** is its immutable distribution marker. **Ship** publishes every
+  immutable medium bound to that marker; **depot** moves its mutable projections.
+  Generations remain immutable while latest pointers advance conditionally.
+  `[release.depot]` declares public capability; a product's Runseal profile
+  holds write authority.
 - Plumb's **rules seat** consumes configuration. Rules are never compiled or
   fetched while reading; an invalid seat names `plumb depot sync`. Publishing
   validates with the exact released product binary.
 
 ## Authorities
 
-Ask, never recall:
+Ask:
 
 ```bash
 plumb <command> --help     # every flag and contract

@@ -5,7 +5,7 @@ use std::process::Output;
 fn promote(fixture: &Fixture<'_>, commit: &str, proof: &Path, artifacts: &Path) -> Output {
     fixture
         .command()
-        .args(["release", "promote"])
+        .args(["ship", "promote"])
         .env("PLUMB_RELEASE_COMMIT", commit)
         .env("PLUMB_RELEASE_VERSION", "v1.2.0")
         .env("PLUMB_RELEASE_PROMOTION", proof)

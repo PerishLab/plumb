@@ -52,7 +52,7 @@ fn protection() {
     std::fs::write(&cut, &head).expect("cut");
     let output = command(
         fixture.path(),
-        &["release", "prepare", "--version", "1.2.0"],
+        &["version", "prepare", "--version", "1.2.0"],
     );
     assert!(
         output.status.success(),
@@ -100,7 +100,7 @@ fn sweeps() {
     let head = lined(root, &origin, bare.path(), "release/v1.2.0");
     std::fs::write(&cut, &head).expect("cut");
 
-    let output = command(root, &["release", "prepare", "--version", "1.2.0"]);
+    let output = command(root, &["version", "prepare", "--version", "1.2.0"]);
     assert!(
         output.status.success(),
         "{}",
@@ -174,7 +174,7 @@ fn versions() {
         .current_dir(root));
     std::fs::write(&cut, &head).expect("cut");
 
-    let output = command(root, &["release", "prepare", "--version", "1.2.0"]);
+    let output = command(root, &["version", "prepare", "--version", "1.2.0"]);
     assert!(
         output.status.success(),
         "{}",
@@ -202,7 +202,7 @@ fn versions() {
         .trim()
         .to_string();
     std::fs::write(&cut, &first).expect("current cut");
-    let repeated = command(root, &["release", "prepare", "--version", "1.2.0"]);
+    let repeated = command(root, &["version", "prepare", "--version", "1.2.0"]);
     assert!(
         repeated.status.success(),
         "{}",

@@ -8,6 +8,8 @@ pub struct Key {
     pub paths: Vec<String>,
 }
 
+const PLANES: [&str; 2] = ["guard", "ship"];
+
 impl Key {
     pub fn lane(&self) -> String {
         self.segments.first().cloned().unwrap_or_default()
@@ -87,9 +89,11 @@ pub fn parse(text: &str) -> Held {
         return refuse(error);
     }
     for key in &keys {
-        let lane = key.segments.first().cloned().unwrap_or_default();
-        if !set::current().lanes.contains(&lane) {
-            return refuse(format!("workflow.hash names no lane called {lane}"));
+        let plane = key.segments.first().cloned().unwrap_or_default();
+        if !PLANES.contains(&plane.as_str()) {
+            return refuse(format!(
+                "workflow.hash names no action plane called {plane}"
+            ));
         }
         if key.roots.is_empty() {
             return refuse(format!("{} declares no path", key.name()));

@@ -84,39 +84,6 @@ pub fn binary(url: &str, stable: bool) -> Result<String, String> {
     Surface(url).binary(stable)
 }
 
-pub(in crate::command) fn active(
-    authority: &str,
-    release: &plumb::depot::v2::Release,
-) -> Result<bool, String> {
-    if release.channel != "stable" {
-        return Ok(false);
-    }
-    let url = format!("{authority}/v1/channels/stable.json");
-    let pointer: Pointer = Surface(&url).read()?;
-    let standing = (
-        pointer.schema,
-        &pointer.product,
-        &pointer.channel,
-        &pointer.version,
-        &pointer.commit,
-        &pointer.seal.url,
-        &pointer.seal.sha256,
-    );
-    let wanted = (
-        1,
-        &release.product,
-        &release.channel,
-        &release.version,
-        &release.commit,
-        &release.seal.url,
-        &release.seal.sha256,
-    );
-    if standing != wanted {
-        return Ok(false);
-    }
-    Ok(true)
-}
-
 pub(in crate::command::release) struct Surface<'a>(pub(in crate::command::release) &'a str);
 
 impl Surface<'_> {

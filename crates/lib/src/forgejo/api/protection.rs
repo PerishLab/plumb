@@ -13,6 +13,13 @@ impl Client {
         };
         verify(name, &policy, &actual)
     }
+
+    pub fn protected(&self, name: &str, mode: &str) -> Result<(), String> {
+        let username = self.user()?;
+        let expected = policy(name, mode, &username);
+        let actual = self.call(&["protection", "show", name])?;
+        verify(name, &expected, &actual)
+    }
 }
 
 pub fn policy(name: &str, mode: &str, username: &str) -> Value {

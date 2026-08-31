@@ -15,28 +15,30 @@ fn govern(root: &Path) {
 }
 
 fn run(root: &Path) -> String {
-    super::support::stock(&root.join(".plumb-test-depot"), &[]);
+    let home = root.join(".plumb-test-home");
+    super::support::stock(&home.join("depot"), &[]);
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("path should be utf8")])
-        .env("PLUMB_DEPOT_SEAT", root.join(".plumb-test-depot"))
+        .env("PLUMB_HOME", home)
         .output()
         .expect("plumb should run");
     String::from_utf8_lossy(&output.stdout).to_string()
 }
 
 fn policy(root: &Path, write: bool) -> std::process::Output {
-    super::support::stock(&root.join(".plumb-test-depot"), &[]);
+    let home = root.join(".plumb-test-home");
+    super::support::stock(&home.join("depot"), &[]);
     let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
     command.args(["policy", root.to_str().expect("path should be utf8")]);
-    command.env("PLUMB_DEPOT_SEAT", root.join(".plumb-test-depot"));
+    command.env("PLUMB_HOME", home);
     if write {
         command.arg("--write");
     }
     command.output().expect("plumb should run")
 }
 
-fn stock(seat: &Path, policy: &str) {
-    super::support::stock(seat, &[("rules/policy.toml", policy)]);
+fn stock(home: &Path, policy: &str) {
+    super::support::stock(&home.join("depot"), &[("rules/policy.toml", policy)]);
 }
 
 fn source() -> String {
@@ -209,7 +211,7 @@ fn carriage() {
             root.path().to_str().expect("path should be utf8"),
             "--write",
         ])
-        .env("PLUMB_DEPOT_SEAT", seat.path())
+        .env("PLUMB_HOME", seat.path())
         .output()
         .expect("plumb should run");
     assert!(output.status.success(), "{output:?}");
@@ -234,7 +236,7 @@ fn transition() {
     stock(seat.path(), &carried);
     let judged = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.path().to_str().expect("path should be utf8")])
-        .env("PLUMB_DEPOT_SEAT", seat.path())
+        .env("PLUMB_HOME", seat.path())
         .output()
         .expect("plumb should run");
     assert!(
@@ -261,7 +263,7 @@ fn refusal() {
             root.path().to_str().expect("path should be utf8"),
             "--write",
         ])
-        .env("PLUMB_DEPOT_SEAT", seat.path())
+        .env("PLUMB_HOME", seat.path())
         .output()
         .expect("plumb should run");
     assert!(!output.status.success(), "{output:?}");

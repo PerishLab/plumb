@@ -119,7 +119,7 @@ fn chart() {
     )
     .expect("chart manifest");
 
-    let surface = super::world::run(fixture.command().args(["release", "surface"]));
+    let surface = super::world::run(fixture.command().args(["ship", "surface"]));
     let surface: serde_json::Value = serde_json::from_slice(&surface.stdout).expect("surface json");
     let row = surface["project"]["include"]
         .as_array()

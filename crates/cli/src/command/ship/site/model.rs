@@ -38,10 +38,6 @@ impl App {
     pub fn index(&self) -> PathBuf {
         self.dist.join("index.html")
     }
-
-    pub fn atlas(&self) -> PathBuf {
-        self.dist.join("sitemap.xml")
-    }
 }
 
 fn seats(root: &Path) -> Result<Vec<PathBuf>, String> {

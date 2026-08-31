@@ -149,13 +149,15 @@ fn refusal() {
     let stable = fixture
         .command()
         .current_dir(fixture.root)
+        .env("FORGEJO_TOKEN", "fixture")
         .args(["release", "stamp", "--version", "v1.2.0", "--dry-run"])
         .output()
         .expect("plumb should run");
     assert!(!stable.status.success());
+    let error = String::from_utf8_lossy(&stable.stderr);
     assert!(
-        String::from_utf8_lossy(&stable.stderr)
-            .contains("stable marker v1.2.0 is created by plumb release freeze")
+        error.contains("stable marker v1.2.0 requires a frozen release/v1.2.0"),
+        "{error}"
     );
 
     std::fs::write(
@@ -186,7 +188,7 @@ fn marker(fixture: &Fixture<'_>, deed: &str, name: &str) -> Output {
     fixture
         .command()
         .current_dir(fixture.root)
-        .args(["release", "marker", deed, "--marker", name])
+        .args(["release", deed, "--marker", name])
         .output()
         .expect("plumb should run")
 }

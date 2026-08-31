@@ -44,10 +44,6 @@ impl Source<'_> {
             seal,
         })
     }
-
-    pub fn current(&self, release: &plumb::depot::v2::Release) -> Result<bool, String> {
-        super::verify::active(self.authority, release)
-    }
 }
 
 pub(in crate::command) fn validate(

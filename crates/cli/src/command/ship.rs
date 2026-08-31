@@ -2,7 +2,7 @@ pub(in crate::command) mod adaptor;
 mod archive;
 mod attachment;
 mod package;
-mod site;
+pub(in crate::command) mod site;
 mod skill;
 mod smoke;
 mod transport;
@@ -32,6 +32,21 @@ pub enum Deed {
         #[arg(long)]
         atom: String,
     },
+    #[command(about = "Compile the immutable capsule carried by this ship run")]
+    #[command(hide = true)]
+    Compile,
+    #[command(about = "Derive and prove this marker's ship plan as JSON")]
+    #[command(hide = true)]
+    Plan,
+    #[command(about = "Fetch the exact immutable release a stable ship promotes")]
+    #[command(hide = true)]
+    Promote,
+    #[command(about = "Report the immutable and mutable media this ship transaction carries")]
+    #[command(hide = true)]
+    Surface,
+    #[command(about = "Read a shipped release back and verify it against its seal")]
+    #[command(hide = true)]
+    Inspect,
     #[command(about = "Build, prove, and publish the product's own artifacts")]
     #[command(hide = true)]
     Binary {
@@ -62,29 +77,6 @@ pub enum Deed {
         #[command(subcommand)]
         deed: Oci,
     },
-    #[command(about = "Put the site's version worker on its edge")]
-    #[command(hide = true)]
-    Cfworker {
-        #[command(subcommand)]
-        deed: Cfworker,
-    },
-    #[command(
-        about = "Project a declared site onto its edge",
-        long_about = super::depot::carried("help/ship/site.txt", plumb::seat::resource!("help/ship/site.txt"))
-    )]
-    #[command(hide = true)]
-    Site {
-        #[command(subcommand)]
-        deed: Site,
-    },
-}
-
-#[derive(Subcommand)]
-pub enum Cfworker {
-    #[command(about = "Build the version worker and put it on its edge")]
-    Publish,
-    #[command(about = "Prove the previews the worker needs are reachable, and build nothing")]
-    Rehearse,
 }
 
 #[derive(Subcommand)]
@@ -139,41 +131,11 @@ pub enum Npm {
 }
 
 #[derive(Subcommand)]
-pub enum Site {
-    #[command(
-        about = "Build, upload, and prove the edge serves what was built",
-        long_about = super::depot::carried("help/ship/site/deploy.txt", plumb::seat::resource!("help/ship/site/deploy.txt"))
-    )]
-    Deploy {
-        #[arg(long, default_value = ".")]
-        root: std::path::PathBuf,
-    },
-    #[command(about = "Read what Cloudflare currently holds for this site")]
-    Inspect {
-        #[arg(long, default_value = ".")]
-        root: std::path::PathBuf,
-    },
-    #[command(about = "Derive the site from the build without reaching any credential")]
-    Plan {
-        #[arg(long, default_value = ".")]
-        root: std::path::PathBuf,
-    },
-}
-
-#[derive(Subcommand)]
 pub enum Binary {
-    #[command(about = "Shift the stable manager roots onto this published version")]
-    Activate,
     #[command(about = "Gather the declared assets, and the skill archive, into the artifact seat")]
     Assemble,
     #[command(about = "Compile the product for one target triple and archive it")]
     Build,
-    #[command(about = "Dispatch the release workflow for one version on the forge")]
-    #[command(hide = true)]
-    Dispatch {
-        #[command(flatten)]
-        options: super::operator::Legacy,
-    },
     #[command(about = "Read what the release surface publishes for this version")]
     Inspect,
     #[command(about = "Render the manager scripts this channel and version owe")]
@@ -193,13 +155,16 @@ pub fn run(deed: Deed) -> i32 {
         Deed::Dispatch { options } => super::operator::dispatch(options),
         Deed::Execute { request } => transport::execute(&request),
         Deed::Resolve { marker, atom } => transport::resolve(&marker, &atom),
+        Deed::Compile => carry(Carry::Compile),
+        Deed::Plan => carry(Carry::Plan),
+        Deed::Promote => carry(Carry::Promote),
+        Deed::Surface => carry(Carry::Surface),
+        Deed::Inspect => carry(Carry::Inspect),
         Deed::Binary { deed } => binary(deed),
         Deed::Cargo { deed } => attachment::cargo(deed),
         Deed::Chart { deed } => attachment::chart(deed),
         Deed::Npm { deed } => attachment::npm(deed),
         Deed::Oci { deed } => attachment::oci(deed),
-        Deed::Cfworker { deed } => cfworker(deed),
-        Deed::Site { deed } => site(deed),
     };
     match result {
         Ok(message) => {
@@ -213,21 +178,30 @@ pub fn run(deed: Deed) -> i32 {
     }
 }
 
-fn cfworker(deed: Cfworker) -> Result<String, String> {
-    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let seat = site::Worker {
-        root: &rig.release.root,
-        channel: required("PLUMB_RELEASE_CHANNEL", &rig.release.channel)?,
-        version: required("PLUMB_RELEASE_VERSION", &rig.release.version)?,
-    };
-    site::worker(seat, matches!(deed, Cfworker::Publish))
+enum Carry {
+    Compile,
+    Inspect,
+    Plan,
+    Promote,
+    Surface,
 }
 
-fn site(deed: Site) -> Result<String, String> {
+fn carry(deed: Carry) -> Result<String, String> {
+    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
+    let spec = crate::shape::release::Spec::read(&rig.release.root.join("plumb.toml"))?;
     match deed {
-        Site::Deploy { root } => site::deploy(&root),
-        Site::Inspect { root } => site::inspect(&root),
-        Site::Plan { root } => site::plan(&root),
+        Carry::Compile => super::release::Product::new(&spec).compile(&rig.release),
+        Carry::Inspect => verify::inspect(
+            required("PLUMB_RELEASE_URL", &rig.release.url)?,
+            rig.release.activated,
+        ),
+        Carry::Plan => super::release::plan::plan(
+            &spec,
+            required("PLUMB_RELEASE_SOURCE", &rig.release.source)?,
+            required("PLUMB_RELEASE_COMMIT", &rig.release.commit)?,
+        ),
+        Carry::Promote => super::release::Product::new(&spec).promote(&rig.release),
+        Carry::Surface => super::release::plan::surface(&spec),
     }
 }
 
@@ -237,7 +211,6 @@ fn binary(deed: Binary) -> Result<String, String> {
     let spec = crate::shape::release::Spec::read(&manifest)?;
     let release = &rig.release;
     match deed {
-        Binary::Activate => storage::shift(&capsule(release)?, &rig.activate),
         Binary::Assemble => package::product(&spec).assemble(
             required("PLUMB_RELEASE_VERSION", &release.version)?,
             &artifacts(release)?,
@@ -249,7 +222,6 @@ fn binary(deed: Binary) -> Result<String, String> {
             commit: required("PLUMB_RELEASE_COMMIT", &release.commit)?,
             artifacts: &artifacts(release)?,
         }),
-        Binary::Dispatch { options } => super::operator::legacy(options),
         Binary::Inspect => verify::binary(
             required("PLUMB_RELEASE_URL", &release.url)?,
             release.activated,

@@ -3,7 +3,7 @@
 #
 # Nothing here judges anything. It is the vocabulary the catalogue is written
 # in, and it is carried beside the catalogue so that adding an owner, renaming a
-# scope, or writing a better summary is one depot publish rather than a release.
+# scope, or writing a better summary is one depot configuration projection rather than a release.
 #
 # Every id is a canonical token: lowercase letters, digits, and single hyphens.
 # A rule names one `owner` and one or more `tags` from this file, and its own id

@@ -20,10 +20,11 @@ If a repository in this ecosystem has no shadow here, plumb owes the shape:
 divergence is an error in the skeleton, never an exception in the repository.
 
 Guard is a staged-tree proof, not a repository workflow. Plumb owns the
-pre-commit and commit-message hooks, stages proof state below `PLUMB_HOME`, and
-carries the compact proof in Git history. Land and release marker creation
-refuse a tree without that exact proof; an unchanged action world is reused and
-never starts a process.
+pre-commit and commit-message hooks through its configuration depot; `depot
+sync` projects them and Doctor requires their presence. Guard stages proof state
+below `PLUMB_HOME` and carries the compact proof in Git history. Land and
+release marker creation refuse a tree without that exact proof; an unchanged
+action world is reused and never starts a process.
 
 Downstream repositories do not get scanned by plumb, and plumb does not know
 they exist. The CLI travels to them: install it, run it in a repository, read
@@ -38,15 +39,16 @@ answers for.
 
 - `crates/lib/src/forgejo` — Plumb orchestration and Git adaptors over Runseal's
   structured Forgejo operations. It owns no HTTP sender and reads no `tea.yml`.
-- `crates/cli/src/dispatch/site` and `retire` — Cloudflare interpretation and
-  orchestration over Runseal's structured Cloudflare operations. Plumb owns no
-  authenticated Cloudflare HTTP sender and no raw route dialect.
+- `crates/cli/src/command/ship/site` and `retire` — Cloudflare interpretation
+  and orchestration over Runseal's structured Cloudflare operations. Ship owns
+  immutable Worker Versions; marker-bound depot projection owns Deployments.
+  Plumb owns no authenticated Cloudflare HTTP sender and no raw route dialect.
 - `crates/cli/{rules,assets,cookbook,help}` — Plumb's governed resources. Their
   exact source-to-seat projections are declared on `[layout]` seats and form
   the configuration derivative; no second inventory owns them. Each is one
   file per addressable thing, and the address is the path: a rule set is its
   name, a cookbook entry is the finding that sends you there, and long help is
-  the command path, so `plumb ship site deploy` reads `help/ship/site/deploy.txt`.
+  the command path, so `plumb version` reads `help/version.txt`.
   Prose an agent reads as contract is carried, never inlined in a literal.
   Rules exist only in a verified synced seat and never fall back to compiled
   bytes. Assets read seat-first; cookbook and help retain compiled copies, and
@@ -79,14 +81,15 @@ answers for.
   the Concord task that owns the work. A document nobody must read and no
   mechanism keeps true is the worst of the four.
 
-## Release
+## Distribution
 
-- `release` holds the truth cycle and `ship` holds every projection of it. No
-  verb and no rule states that division for you, which is why it is here.
-- `depot` holds release-bound derivatives. Configuration, changelog, and skill snapshots
-  iterate by timestamp, but their product, channel, version, commit, and seal
-  remain bound to Release. Only the Release channel's current stable point may
-  advance a derivative's latest pointer; historical points remain addressable.
+- `version` projects repository identity and governs the stable line. `release`
+  only defines and verifies its immutable marker. `ship` consumes that marker
+  and publishes every immutable medium in one transaction. `depot` moves the
+  same marker's mutable projections only after immutable readback.
+- Depot generations remain immutable and addressable. Configuration, changelog,
+  skill, channel, manager, and provider bindings may move their latest pointer,
+  but every movement names the release marker and uses conditional readback.
   Changelog and skill source trees are temporary media below `PLUMB_HOME`, never
   repository seats. Products consume a skill through their own command surface
   while delegating its exact generation and digest binding to `plumb` the library.
@@ -94,7 +97,8 @@ answers for.
   repositories dispatch its exact Plumb-owned revision and carry neither a
   workflow copy nor a rendered derivative.
 
-The verbs are `plumb release --help` and `plumb ship --help`. The laws are
+The verbs are `plumb version --help`, `plumb release --help`, `plumb ship --help`,
+and `plumb depot --help`. The laws are
 `plumb rule list --namespace release`; they state the product surface, marker
 and ship boundary, the seats a stable label may take, and the isolation every
 non-stable release owes. Why the contract has this shape, and

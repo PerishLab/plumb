@@ -1,5 +1,5 @@
 mod action;
-mod hook;
+pub(crate) mod hook;
 mod tree;
 
 use plumb::boundary::{Refusal, Report, Request};
@@ -19,15 +19,11 @@ pub struct Input {
     pub base: Option<String>,
     pub head: Option<String>,
     pub write: Vec<String>,
-    pub install: bool,
     pub attach: Option<PathBuf>,
     pub json: bool,
 }
 
 pub fn run(input: Input) -> i32 {
-    if input.install {
-        return plain(hook::install(&input.root));
-    }
     if let Some(message) = &input.attach {
         return plain(
             plumb::guard::attach(&input.root, message)
@@ -36,9 +32,9 @@ pub fn run(input: Input) -> i32 {
     }
     match (&input.base, &input.head) {
         (Some(base), Some(head)) => boundary(&input, base, head),
-        (None, None) if input.write.is_empty() => staged(&input.root, input.json),
+        (None, None) if input.write.is_empty() => Staged(&input.root).run(input.json),
         _ => {
-            eprintln!("plumb precommit: --base, --head, and --write form one task boundary");
+            eprintln!("plumb guard: --base, --head, and --write form one task boundary");
             1
         }
     }
@@ -46,6 +42,14 @@ pub fn run(input: Input) -> i32 {
 
 pub(crate) fn proof(root: &Path) -> Result<plumb::guard::Descriptor, String> {
     action::prove(root)
+}
+
+pub(crate) fn hooks(root: &Path) -> Vec<hook::Finding> {
+    hook::audit(root)
+}
+
+pub(crate) fn project(root: &Path) -> Result<Option<String>, String> {
+    hook::project(root)
 }
 
 fn boundary(input: &Input, base: &str, head: &str) -> i32 {
@@ -61,36 +65,40 @@ fn boundary(input: &Input, base: &str, head: &str) -> i32 {
     }
 }
 
-fn staged(root: &Path, json: bool) -> i32 {
-    match action::prove(root) {
-        Ok(proof) => {
-            if json {
-                println!(
-                    "{}",
-                    serde_json::to_string_pretty(&proof).expect("guard proof should encode")
-                );
-            } else {
-                println!("plumb precommit {}", root.display());
-                println!();
-                println!("  tree    {}", proof.tree);
-                println!("  proof   {}", proof.digest);
-                println!(
-                    "  actions {}",
-                    proof
-                        .actions
-                        .iter()
-                        .map(|action| action.name.as_str())
-                        .collect::<Vec<_>>()
-                        .join(" ")
-                );
-                println!();
-                println!("  staged tree proved; commit-msg will carry the proof");
+struct Staged<'a>(&'a Path);
+
+impl Staged<'_> {
+    fn run(&self, json: bool) -> i32 {
+        match action::prove(self.0) {
+            Ok(proof) => {
+                if json {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&proof).expect("guard proof should encode")
+                    );
+                } else {
+                    println!("plumb guard {}", self.0.display());
+                    println!();
+                    println!("  tree    {}", proof.tree);
+                    println!("  proof   {}", proof.digest);
+                    println!(
+                        "  actions {}",
+                        proof
+                            .actions
+                            .iter()
+                            .map(|action| action.name.as_str())
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    );
+                    println!();
+                    println!("  staged tree proved; commit-msg will carry the proof");
+                }
+                0
             }
-            0
-        }
-        Err(error) => {
-            eprintln!("plumb precommit: {error}");
-            1
+            Err(error) => {
+                eprintln!("plumb guard: {error}");
+                1
+            }
         }
     }
 }
@@ -102,7 +110,7 @@ fn plain(result: Result<String, String>) -> i32 {
             0
         }
         Err(error) => {
-            eprintln!("plumb precommit: {error}");
+            eprintln!("plumb guard: {error}");
             1
         }
     }
@@ -115,7 +123,7 @@ fn render(report: Report, json: bool) -> i32 {
             serde_json::to_string_pretty(&report).expect("precommit report should encode")
         );
     } else {
-        println!("plumb precommit {}", report.root.display());
+        println!("plumb guard {}", report.root.display());
         println!();
         println!("  base    {}", report.base);
         println!("  head    {}", report.head);
@@ -148,7 +156,7 @@ fn rejected(root: &PathBuf, refusal: Refusal, json: bool) -> i32 {
             serde_json::to_string_pretty(&report).expect("precommit refusal should encode")
         );
     } else {
-        eprintln!("plumb precommit {}: {refusal}", root.display());
+        eprintln!("plumb guard {}: {refusal}", root.display());
     }
     1
 }

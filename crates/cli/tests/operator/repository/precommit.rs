@@ -50,10 +50,12 @@ impl Repo {
     }
 
     fn plumb(&self, write: &str) -> Output {
+        let depot = support::depot(&[]);
         Command::new(env!("CARGO_BIN_EXE_plumb"))
-            .args(["precommit", "--json"])
+            .args(["guard", "--json"])
             .arg(self.fixture.path())
             .args(["--base", &self.base, "--head", &self.head, "--write", write])
+            .env("PLUMB_HOME", depot.path())
             .output()
             .expect("plumb")
     }
@@ -136,10 +138,10 @@ fn staged() {
 
     let run = || {
         Command::new(env!("CARGO_BIN_EXE_plumb"))
-            .args(["precommit", ".", "--json"])
+            .args(["guard", ".", "--json"])
             .current_dir(root)
             .env("PLUMB_HOME", home.path())
-            .env("PLUMB_DEPOT_SEAT", depot.path())
+            .env("PLUMB_HOME", depot.path())
             .env("GIT_DIR", root.join(".git"))
             .env("GIT_WORK_TREE", root)
             .output()
@@ -156,11 +158,11 @@ fn staged() {
     let message = root.join("message");
     std::fs::write(&message, "candidate\n").expect("message");
     let attached = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["precommit", ".", "--attach"])
+        .args(["guard", ".", "--attach"])
         .arg(&message)
         .current_dir(root)
         .env("PLUMB_HOME", home.path())
-        .env("PLUMB_DEPOT_SEAT", depot.path())
+        .env("PLUMB_HOME", depot.path())
         .output()
         .expect("attach");
     assert!(

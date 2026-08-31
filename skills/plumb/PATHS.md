@@ -7,7 +7,7 @@
 3. Run `plumb doctor .` before changing shape. If Plumb reports an absent or
    unreadable rule seat, run `plumb depot sync` and repeat Doctor.
 4. Inspect the relevant files and make the smallest coherent change.
-5. Run Doctor again, then prove the exact staged tree with `plumb precommit .`.
+5. Run Doctor again; the depot-projected pre-commit hook proves the exact staged tree.
 
 Doctor's human report is for immediate work. Use JSON when another command
 needs stable fields:
@@ -37,7 +37,7 @@ Commit the member, keep its worktree clean, and supply exact revisions plus
 each declared write prefix:
 
 ```bash
-plumb precommit . --base BASE --head HEAD --write PATH
+plumb guard . --base BASE --head HEAD --write PATH
 ```
 
 Repeat `--write` for disjoint prefixes. Both sides of a rename or copy must be
@@ -46,18 +46,18 @@ path outside the boundary refuses.
 
 ## Prove a staged tree
 
-Install Plumb's untracked Git hooks once, then commit normally:
+Project the active depot's untracked Git hooks, then commit normally:
 
 ```bash
-plumb precommit . --install
+plumb depot sync
 git commit
 ```
 
 The pre-commit hook checks out the index as an isolated exact tree and runs only
 actions whose input and tool world have no held proof. The commit-msg hook
-carries the resulting proof into the commit. Hooks refuse an occupied seat; they
-do not replace another tool's hook. Run `plumb precommit .` directly to inspect
-or refresh the staged proof before committing.
+carries the resulting proof into the commit. The depot owns and replaces both
+guard hooks. Run `plumb guard .` directly to inspect or refresh the staged proof
+before committing.
 
 ## Land a completed branch
 
@@ -100,19 +100,6 @@ plumb radius --product PRODUCT --candidate VERSION \
 
 The result reads locks only. An unread or non-version resolution is blind and
 is never counted as current.
-
-## Operate a site
-
-```bash
-plumb ship site plan .
-plumb ship site inspect .
-plumb ship site deploy .
-```
-
-Plan is credential-free. Inspect reads current state. Deploy builds, uploads,
-reads binding, and proves the public fingerprint. Cloudflare reads use
-Runseal's structured in-process dialect; Plumb retains deployment and outcome
-interpretation.
 
 ## Operate a skill seat
 

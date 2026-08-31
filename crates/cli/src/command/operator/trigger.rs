@@ -1,6 +1,5 @@
+use super::Dispatch;
 use super::course::Course;
-use super::{Dispatch, Legacy};
-use super::{line, value};
 use plumb::forgejo::{Client, Outcome, git};
 use serde_json::{Value, json};
 use std::time::Instant;
@@ -59,39 +58,6 @@ fn atom(commit: Option<&str>, version: &str) -> String {
     )
 }
 
-pub fn legacy(options: Legacy) -> Result<String, String> {
-    let root = git::root()?;
-    let remote = git::remote(&root, &options.repo)?;
-    let channel = super::super::release::channel(&options.version)?;
-    let version = value::version(&options.version, &channel)?;
-    let (workflow, reference, inputs) = if channel == "stable" {
-        ("stable.release.yml", value::branch(&version), json!({}))
-    } else {
-        (
-            "exact.release.yml",
-            format!("refs/tags/{version}"),
-            json!({}),
-        )
-    };
-    present(&root, workflow)?;
-    let mut course = Course::new(options.dry);
-    let client = Client::new(remote)?;
-    if channel == "stable" {
-        line::freeze(&mut course, &client, &root, &reference)?;
-        super::mark::stood(&root, &version, &reference)?;
-    }
-    launch(
-        Flight {
-            client: &client,
-            workflow,
-            reference: &reference,
-            inputs,
-            waiting: options.watch,
-        },
-        &mut course,
-    )
-}
-
 fn launch(flight: Flight<'_>, course: &mut Course) -> Result<String, String> {
     let said = format!(
         "POST /repos/{}/{}/actions/workflows/{}/dispatches (ref={}, inputs={})",
@@ -129,16 +95,6 @@ fn launch(flight: Flight<'_>, course: &mut Course) -> Result<String, String> {
         message.push_str(&watch(flight.client, id, &url)?);
     }
     Ok(message)
-}
-
-fn present(root: &std::path::Path, workflow: &str) -> Result<(), String> {
-    let path = format!(".forgejo/workflows/{workflow}");
-    if !root.join(&path).is_file() {
-        return Err(format!(
-            "a release cannot start without its legacy workflow: {path}"
-        ));
-    }
-    Ok(())
 }
 
 fn watch(client: &Client, id: u64, url: &str) -> Result<String, String> {

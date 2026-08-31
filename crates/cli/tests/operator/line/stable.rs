@@ -17,14 +17,42 @@ targets = ["x86_64-unknown-linux-gnu"]
     run(Command::new("git")
         .args(["remote", "add", "origin", origin])
         .current_dir(root));
-    std::fs::create_dir_all(root.join(".forgejo/workflows")).expect("legacy workflow root");
-    for workflow in ["exact.release.yml", "stable.release.yml"] {
-        std::fs::write(
-            root.join(".forgejo/workflows").join(workflow),
-            "name: legacy\non: workflow_dispatch\n",
-        )
-        .expect("legacy workflow");
-    }
+}
+
+pub(super) fn marked(root: &Path, bare: &Path, forge: &str, version: &str) {
+    run(Command::new("git").args(["init", "-q", "--bare"]).arg(bare));
+    repo(root, &format!("file://{}", bare.display()));
+    run(Command::new("git")
+        .args(["config", "user.name", "Plumb Test"])
+        .current_dir(root));
+    run(Command::new("git")
+        .args(["config", "user.email", "plumb@example.test"])
+        .current_dir(root));
+    run(Command::new("git")
+        .args(["config", "plumb.test-forgejo-url", forge])
+        .current_dir(root));
+    std::fs::create_dir_all(root.join(".plumb/releases/v1.2.0")).expect("datum root");
+    std::fs::write(
+        root.join(".plumb/releases/v1.2.0/datum.toml"),
+        "schema = 1\nversion = \"v1.2.0\"\n",
+    )
+    .expect("datum");
+    run(Command::new("git").args(["add", "."]).current_dir(root));
+    run(Command::new("git")
+        .args(["commit", "-qm", "candidate"])
+        .current_dir(root));
+    run(Command::new("git")
+        .args(["tag", "-a", version, "-m", &format!("probe {version}")])
+        .current_dir(root));
+    run(Command::new("git")
+        .args(["push", "-q", "origin", "HEAD:refs/heads/main"])
+        .current_dir(root));
+    run(Command::new("git")
+        .args(["push", "-q", "origin", "HEAD:refs/heads/release/v1.2.0"])
+        .current_dir(root));
+    run(Command::new("git")
+        .args(["push", "-q", "origin", &format!("refs/tags/{version}")])
+        .current_dir(root));
 }
 
 pub fn command(root: &Path, args: &[&str]) -> Output {
@@ -43,15 +71,15 @@ pub fn run(command: &mut Command) {
 #[test]
 fn flight() {
     let fixture = tempfile::tempdir().expect("fixture");
+    let bare = tempfile::tempdir().expect("bare");
     let (url, _calls) = serve(Court::Flight, 400);
-    repo(fixture.path(), &format!("{url}/test/probe.git"));
+    marked(fixture.path(), bare.path(), &url, "v1.2.0-nightly.1");
     let output = command(
         fixture.path(),
         &[
             "ship",
-            "binary",
             "dispatch",
-            "--version",
+            "--marker",
             "v1.2.0-nightly.1",
             "--watch",
         ],
@@ -67,15 +95,15 @@ fn flight() {
 #[test]
 fn dispatch() {
     let fixture = tempfile::tempdir().expect("fixture");
+    let bare = tempfile::tempdir().expect("bare");
     let (url, calls) = serve(Court::Dispatch, 3);
-    repo(fixture.path(), &format!("{url}/test/probe.git"));
+    marked(fixture.path(), bare.path(), &url, "v1.2.0-nightly.1");
     let output = command(
         fixture.path(),
         &[
             "ship",
-            "binary",
             "dispatch",
-            "--version",
+            "--marker",
             "v1.2.0-nightly.1",
             "--watch",
         ],
@@ -86,10 +114,7 @@ fn dispatch() {
         String::from_utf8_lossy(&output.stderr)
     );
     let text = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        text.contains("triggered exact.release.yml run 88"),
-        "{text}"
-    );
+    assert!(text.contains("triggered ship.yml run 88"), "{text}");
     assert!(text.contains("run 88: success"), "{text}");
     let calls = calls.lock().expect("calls");
     assert!(calls.iter().any(|call| call.contains("/dispatches ")));
@@ -99,15 +124,15 @@ fn dispatch() {
 #[test]
 fn nested() {
     let fixture = tempfile::tempdir().expect("fixture");
+    let bare = tempfile::tempdir().expect("bare");
     let (url, calls) = serve(Court::Nested(true), 3);
-    repo(fixture.path(), &format!("{url}/test/probe.git"));
+    marked(fixture.path(), bare.path(), &url, "v1.2.0-nightly.2");
     let output = command(
         fixture.path(),
         &[
             "ship",
-            "binary",
             "dispatch",
-            "--version",
+            "--marker",
             "v1.2.0-nightly.2",
             "--watch",
         ],
@@ -130,15 +155,15 @@ fn nested() {
 #[test]
 fn failure() {
     let fixture = tempfile::tempdir().expect("fixture");
+    let bare = tempfile::tempdir().expect("bare");
     let (url, _) = serve(Court::Failed, 3);
-    repo(fixture.path(), &format!("{url}/test/probe.git"));
+    marked(fixture.path(), bare.path(), &url, "v1.2.0-nightly.3");
     let output = command(
         fixture.path(),
         &[
             "ship",
-            "binary",
             "dispatch",
-            "--version",
+            "--marker",
             "v1.2.0-nightly.3",
             "--watch",
         ],
@@ -150,51 +175,21 @@ fn failure() {
 #[test]
 fn blocked() {
     let fixture = tempfile::tempdir().expect("fixture");
+    let bare = tempfile::tempdir().expect("bare");
     let (url, _) = serve(Court::Nested(false), 3);
-    repo(fixture.path(), &format!("{url}/test/probe.git"));
+    marked(fixture.path(), bare.path(), &url, "v1.2.0-nightly.5");
     let output = command(
         fixture.path(),
         &[
             "ship",
-            "binary",
             "dispatch",
-            "--version",
+            "--marker",
             "v1.2.0-nightly.5",
             "--watch",
         ],
     );
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("failed tasks: build"));
-}
-
-#[test]
-fn pagination() {
-    let fixture = tempfile::tempdir().expect("fixture");
-    let (url, calls) = serve(Court::Paged, 4);
-    repo(fixture.path(), &format!("{url}/test/probe.git"));
-    let output = command(
-        fixture.path(),
-        &[
-            "ship",
-            "binary",
-            "dispatch",
-            "--version",
-            "v1.2.0-nightly.4",
-            "--watch",
-        ],
-    );
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        calls
-            .lock()
-            .expect("calls")
-            .iter()
-            .any(|call| call.contains("page=2"))
-    );
 }
 
 #[test]
@@ -208,7 +203,7 @@ fn drift() {
     std::fs::write(&cut, &head).expect("cut");
     let output = command(
         fixture.path(),
-        &["release", "prepare", "--version", "1.2.0"],
+        &["version", "prepare", "--version", "1.2.0"],
     );
     assert!(!output.status.success());
     assert!(
@@ -220,26 +215,27 @@ fn drift() {
 #[test]
 fn freedom() {
     let fixture = tempfile::tempdir().expect("fixture");
-    repo(
+    let bare = tempfile::tempdir().expect("bare");
+    marked(
         fixture.path(),
-        "ssh://git@git.perish.top/PerishLab/probe.git",
+        bare.path(),
+        "https://git.perish.top",
+        "v1.2.0-nightly.9",
     );
     let output = command(
         fixture.path(),
         &[
             "ship",
-            "binary",
             "dispatch",
-            "--version",
+            "--marker",
             "v1.2.0-nightly.9",
             "--dry-run",
         ],
     );
     assert!(output.status.success());
     let text = String::from_utf8_lossy(&output.stdout);
-    assert!(text.contains("ref=refs/tags/v1.2.0-nightly.9"), "{text}");
-    assert!(text.contains("inputs={}"), "{text}");
-    assert!(!text.contains(r#""version""#), "{text}");
+    assert!(text.contains("ship.yml"), "{text}");
+    assert!(text.contains(r#""marker":"v1.2.0-nightly.9""#), "{text}");
 }
 
 #[test]

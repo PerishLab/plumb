@@ -31,3 +31,33 @@ pub fn plumb(root: &Path, args: &[&str]) -> Command {
     }
     command
 }
+
+#[test]
+fn pagination() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let bare = tempfile::tempdir().expect("bare");
+    let (url, calls) = super::world::serve(super::world::Court::Paged, 4);
+    super::stable::marked(fixture.path(), bare.path(), &url, "v1.2.0-nightly.4");
+    let output = super::stable::command(
+        fixture.path(),
+        &[
+            "ship",
+            "dispatch",
+            "--marker",
+            "v1.2.0-nightly.4",
+            "--watch",
+        ],
+    );
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        calls
+            .lock()
+            .expect("calls")
+            .iter()
+            .any(|call| call.contains("page=2"))
+    );
+}

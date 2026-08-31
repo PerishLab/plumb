@@ -21,14 +21,6 @@ pub struct Readback<'a> {
     pub token: &'a str,
 }
 
-pub struct Presence<'a> {
-    pub spec: &'a Spec,
-    pub cargo: &'a Cargo,
-    pub package: &'a str,
-    pub version: &'a Version,
-    pub token: &'a str,
-}
-
 pub fn entries(
     spec: &Spec,
     cargo: &Cargo,
@@ -113,20 +105,6 @@ pub fn readback(input: Readback<'_>) -> Result<(), String> {
         "registry did not expose {} {}",
         input.package, input.version
     ))
-}
-
-pub(in crate::command) fn present(input: Presence<'_>) -> Result<(), String> {
-    let found = entries(input.spec, input.cargo, input.package, input.token)?
-        .into_iter()
-        .any(|entry| !entry.yanked && entry.vers == input.version.to_string());
-    if found {
-        Ok(())
-    } else {
-        Err(format!(
-            "Cargo registry carries no {} {}",
-            input.package, input.version
-        ))
-    }
 }
 
 fn index(spec: &Spec, registry: &str) -> Result<String, String> {

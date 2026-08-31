@@ -40,9 +40,9 @@ tags = ["configuration", "repository"]
 
 [[rule]]
 id = "depot.schema-supported"
-summary = "The running binary meets the depot floor"
-law = "The running plumb is at or above the version the held depot manifest declares as its schema floor."
-evidence = "The running version compared with the schema floor of the held depot manifest."
+summary = "Plumb and its depot are stable-current"
+law = "A manager-installed Plumb is stable latest, a v2 configuration depot belongs to that exact product version, and governed worktrees carry its Git guard projections; legacy manifests retain only their schema-floor check during migration."
+evidence = "The managed binary identity and stable channel pointer, the running version and held depot release identity, plus effective pre-commit and commit-msg hooks."
 standing = "mechanized"
 owner = "plumb"
 tags = ["configuration", "adoption"]
@@ -760,12 +760,12 @@ tags = ["repository"]
 
 [[rule]]
 id = "structure.known-workflow"
-summary = "Workflows have known roles"
-law = "Every workflow has a shadow in the skeleton."
-evidence = "Workflow names under the repository's CI directory."
+summary = "The workflow namespace belongs to Plumb"
+law = "Only the Plumb source repository carries .forgejo; product repositories dispatch the exact canonical ship atom and carry no workflow files."
+evidence = "Tracked .forgejo paths, workflow names, and repository identity."
 standing = "mechanized"
 owner = "plumb"
-tags = ["repository"]
+tags = ["ownership", "repository", "release"]
 
 [[rule]]
 id = "structure.package-directory-name"

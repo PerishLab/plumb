@@ -172,6 +172,10 @@ pub fn platform() -> String {
     format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH)
 }
 
+pub fn binary() -> Option<PathBuf> {
+    std::env::current_exe().ok()
+}
+
 pub fn detached(program: impl AsRef<OsStr>) -> Command {
     let mut command = Command::new(program);
     for key in [

@@ -6,6 +6,7 @@ pub use plumb::depot::{FORMAT, LEAF, Object, POINTER, Pointer, latest, sha, vers
 pub struct Manifest {
     pub mark: String,
     pub floor: String,
+    pub version: Option<String>,
     pub objects: Vec<Object>,
 }
 

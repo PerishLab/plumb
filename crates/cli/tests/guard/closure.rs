@@ -3,11 +3,11 @@ use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-const COMMANDS: [&str; 17] = [
+const COMMANDS: [&str; 18] = [
     "authority",
     "doctor",
     "land",
-    "precommit",
+    "guard",
     "radius",
     "policy",
     "skill",
@@ -19,6 +19,7 @@ const COMMANDS: [&str; 17] = [
     "depot",
     "release",
     "ship",
+    "version",
     "retire",
     "workflow",
 ];
@@ -36,7 +37,7 @@ fn plumb(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(args)
         .env("PLUMB_LOCUS_ENABLED", "false")
-        .env("PLUMB_DEPOT_SEAT", seat.path())
+        .env("PLUMB_HOME", seat.path())
         .output()
         .expect("plumb should run")
 }
@@ -97,7 +98,7 @@ fn command() {
     capture(Vec::new(), &mut held);
     assert_eq!(
         digest(&held),
-        "2ca5572125d1cdac6dae1d31cdf6f3a40a4779f5f5b8ba46cb888feb8d394c0e"
+        "788bf9e5354222c6deeb6a4f41d71b78b140f69e81c34f3f218aef0aa9cdac04"
     );
 }
 
@@ -109,7 +110,7 @@ fn rule() {
     assert_eq!(report["rules"].as_array().map(Vec::len), Some(108));
     assert_eq!(
         digest(&output.stdout),
-        "4432fb8f5b392a87aeaf4f760b3753085d191cf4b0e5e08f056a6a8b4381cdfb"
+        "b7c03d7634cb4a840de1a32281688fc6c095b731f968960a8183394f61d41b3b"
     );
 }
 

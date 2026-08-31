@@ -1,9 +1,10 @@
 Dispatch one release marker as one distribution transaction.
 
 Ship accepts an immutable marker created by release and dispatches the single
-ship workflow carried by Plumb. Binary, Cargo, npm, OCI, chart, site, skill and
-other declared media are plan nodes inside that transaction; they are not
-separate release lifecycles and cannot select different versions.
+ship workflow carried by Plumb. Binary, Cargo, npm, OCI, chart and worker
+versions are immutable plan nodes inside that transaction; mutable channel,
+manager, worker-deployment, skill and configuration projections are marker-bound
+depot phases of the same transaction. None can select another version.
 
 The marker is verified before dispatch and again after the run is submitted or
 watched. It binds product identity, repository, release-line commit and tree,
@@ -14,6 +15,6 @@ Recovery repeats the same marker. The workflow plan may reuse a verified
 workload or URL, run missing work, or omit irrelevant work; a successful node
 does not receive another runner merely because a sibling medium is retried.
 
-The remaining medium-shaped verbs are internal workflow compatibility
-surfaces. They are intentionally hidden from command help and do not establish
-independent public ship intent.
+The remaining medium-shaped verbs are private execution surfaces of the
+canonical transaction. They are hidden from command help and cannot establish
+independent ship intent or select another marker.

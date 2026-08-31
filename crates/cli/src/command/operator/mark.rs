@@ -1,5 +1,6 @@
 use super::course::Course;
 use super::value;
+use plumb::forgejo::Client;
 use plumb::forgejo::git::fetch;
 use std::path::Path;
 use std::process::{Command, Output};
@@ -7,14 +8,15 @@ use std::process::{Command, Output};
 pub(super) fn stamp(raw: &str, dry: bool) -> Result<String, String> {
     let held = named(raw);
     let channel = super::super::release::channel(&held)?;
-    if channel == "stable" {
-        return Err(format!(
-            "stable marker {held} is created by plumb release freeze"
-        ));
-    }
     let version = value::version(&held, &channel)?;
     let name = value::branch(&line(&version));
     let root = plumb::forgejo::git::root()?;
+    if channel == "stable" {
+        let remote = plumb::forgejo::git::remote(&root, "")?;
+        Client::new(remote)?
+            .protected(&name, "frozen")
+            .map_err(|error| format!("stable marker {held} requires a frozen {name}: {error}"))?;
+    }
     let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
     let seat = point(&root);
     let head = seat.head(&name)?;
@@ -36,20 +38,6 @@ pub(super) fn retract(raw: &str, dry: bool) -> Result<String, String> {
     let root = plumb::forgejo::git::root()?;
     let authority = super::super::release::authority(&root)?;
     point(&root).retract(&authority, &channel, &version, dry)
-}
-
-pub(super) fn stood(root: &Path, version: &str, name: &str) -> Result<(), String> {
-    let seat = point(root);
-    let head = seat.head(name)?;
-    match seat.seen(version)? {
-        Some(seen) if seen == head => Ok(()),
-        Some(seen) => Err(format!(
-            "{version} stands at {seen}, not {name} at {head}; a stamped point never moves"
-        )),
-        None => Err(format!(
-            "{version} has no release point; run plumb release stamp --version {version}"
-        )),
-    }
 }
 
 fn named(raw: &str) -> String {

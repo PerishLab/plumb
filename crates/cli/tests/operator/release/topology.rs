@@ -66,7 +66,7 @@ fn topology() {
 
     git(root, &["tag", "v1.2.0-beta.1"]);
     let held = plumb(root)
-        .args(["release", "plan"])
+        .args(["ship", "plan"])
         .env("PLUMB_RELEASE_COMMIT", &main)
         .env("PLUMB_RELEASE_SOURCE", "refs/tags/v1.2.0-beta.1")
         .output()
@@ -81,7 +81,7 @@ fn topology() {
     assert!(said.contains(r#""channel":"beta""#), "{said}");
 
     let branched = plumb(root)
-        .args(["release", "plan"])
+        .args(["ship", "plan"])
         .env("PLUMB_RELEASE_COMMIT", &main)
         .env("PLUMB_RELEASE_SOURCE", "refs/heads/main")
         .output()
@@ -95,7 +95,7 @@ fn topology() {
 
     git(root, &["tag", "v1.2.0"]);
     let loose = plumb(root)
-        .args(["release", "plan"])
+        .args(["ship", "plan"])
         .env("PLUMB_RELEASE_COMMIT", &main)
         .env("PLUMB_RELEASE_SOURCE", "refs/tags/v1.2.0")
         .output()
@@ -111,28 +111,7 @@ fn topology() {
     git(root, &["commit", "--allow-empty", "-m", "stable"]);
     let stable = git(root, &["rev-parse", "HEAD"]);
     run(plumb(root)
-        .args(["release", "plan"])
+        .args(["ship", "plan"])
         .env("PLUMB_RELEASE_COMMIT", &stable)
         .env("PLUMB_RELEASE_SOURCE", "refs/heads/release/v1.2.0"));
-
-    git(root, &["checkout", "main"]);
-    let unsettled = plumb(root)
-        .args(["release", "rejoin"])
-        .env("PLUMB_RELEASE_VERSION", "v1.2.0")
-        .env("PLUMB_RELEASE_COMMIT", &stable)
-        .env("PLUMB_RELEASE_BASE", "main")
-        .output()
-        .expect("plumb should run");
-    assert!(!unsettled.status.success());
-    assert!(String::from_utf8_lossy(&unsettled.stderr).contains("is not an ancestor"));
-
-    git(
-        root,
-        &["merge", "--no-ff", "release/v1.2.0", "-m", "Rejoin v1.2.0"],
-    );
-    run(plumb(root)
-        .args(["release", "rejoin"])
-        .env("PLUMB_RELEASE_VERSION", "v1.2.0")
-        .env("PLUMB_RELEASE_COMMIT", &stable)
-        .env("PLUMB_RELEASE_BASE", "main"));
 }

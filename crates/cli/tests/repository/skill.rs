@@ -60,6 +60,7 @@ fn managed(root: &Path, version: &str) -> (PathBuf, PathBuf) {
 }
 
 fn plumb(home: &Path, releases: &str, arguments: &[&str]) -> Output {
+    super::support::stock(&home.join("depot"), &[]);
     Command::new(env!("CARGO_BIN_EXE_plumb"))
         .env("PLUMB_HOME", home)
         .env("PLUMB_RELEASES", releases)

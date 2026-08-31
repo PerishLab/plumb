@@ -74,7 +74,7 @@ fn stamped() {
     super::world::run(
         fixture
             .command()
-            .args(["release", "compile"])
+            .args(["ship", "compile"])
             .env("PLUMB_RELEASE_CHANNEL", "beta")
             .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.7")
             .env("PLUMB_RELEASE_COMMIT", &candidate)
@@ -136,7 +136,7 @@ fn stamped() {
         fixture
             .command()
             .current_dir(root)
-            .args(["release", "compile"])
+            .args(["ship", "compile"])
             .env("PLUMB_RELEASE_ROOT", ".")
             .env("PLUMB_RELEASE_CHANNEL", "beta")
             .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.9")

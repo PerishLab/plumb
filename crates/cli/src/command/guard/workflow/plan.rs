@@ -120,6 +120,7 @@ fn render(root: &Path, input: &Input) -> Result<String, String> {
                 } else {
                     reuse::Source::none()
                 },
+                depot: if cold { verdict.depot } else { None },
             })
         })
         .collect::<Result<_, _>>()?;
@@ -167,6 +168,8 @@ struct Action {
     project: Vec<tree::Project>,
     keys: reuse::Keys,
     reuse: reuse::Source,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    depot: Option<serde_json::Value>,
 }
 
 fn fields(kind: &str, entries: &[String]) -> Result<BTreeMap<String, String>, String> {

@@ -65,12 +65,15 @@ fn cycles() {
 }
 
 #[test]
-fn lanes() {
-    let root = seat("lanes");
+fn planes() {
+    let root = seat("planes");
     root.declared("[workflow.hash.nowhere]\n\"rust\" = [\"crates\"]\n");
     let (text, ok) = root.shown();
     assert!(!ok, "{text}");
-    assert!(text.contains("names no lane called nowhere"), "{text}");
+    assert!(
+        text.contains("names no action plane called nowhere"),
+        "{text}"
+    );
 }
 
 #[test]
