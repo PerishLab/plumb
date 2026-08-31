@@ -2,6 +2,7 @@ use super::Dispatch;
 use super::course::Course;
 use plumb::forgejo::{Client, Outcome, git};
 use serde_json::{Value, json};
+use std::io::Write as _;
 use std::time::Instant;
 
 const JOBS: usize = 4;
@@ -86,13 +87,16 @@ fn launch(flight: Flight<'_>, course: &mut Course) -> Result<String, String> {
             "Forgejo did not expose a canonical URL for run {id}"
         ));
     }
-    let mut message = format!(
+    let message = format!(
         "triggered {} run {id} for ref {}\n{url}",
         flight.workflow, flight.reference
     );
     if flight.waiting {
-        message.push('\n');
-        message.push_str(&watch(flight.client, id, &url)?);
+        println!("{message}");
+        std::io::stdout()
+            .flush()
+            .map_err(|error| format!("cannot report dispatched run {id}: {error}"))?;
+        return watch(flight.client, id, &url);
     }
     Ok(message)
 }

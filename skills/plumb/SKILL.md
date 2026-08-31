@@ -18,14 +18,12 @@ says what none of those can. Ask the one that owns the question.
 
 - A **repository** is the root selected by `plumb.toml`.
 - A **shape** is the evidence Doctor reads from that repository.
-- A **finding** is one verdict: `out of true`, `unknown shape`, or `blind`.
-  The first and the last make Doctor nonzero; the middle one is visible and
-  claims no law was broken.
+- A **finding** is `out of true`, `unknown shape`, or `blind`. The first and
+  last make Doctor nonzero; the middle claims no law was broken.
 - A **rule** is one catalogued law. Its **standing** is `mechanized`,
   `observed`, or `prose-only`; only the first carries a verdict.
-- A **seat** is where something may sit. `[layout]` declares seats, the anchors
-  a member carries to earn one, and the rules its members answer to. A
-  repository declaring no layout is judged by the released name sets instead.
+- A **seat** is where something may sit. `[layout]` declares its anchors and
+  rules. Without a layout, released name sets apply.
 - A **boundary** proves one committed delta stays inside declared write paths.
 - A **guard proof** binds checks to one staged tree. Depot projects its Git
   hooks; Doctor requires them.
@@ -33,7 +31,8 @@ says what none of those can. Ask the one that owns the question.
 - A **version** is repository identity projected through every package carrier.
   A **release** is its immutable distribution marker. **Ship** publishes every
   immutable medium bound to that marker; **depot** moves its mutable projections.
-  Generations remain immutable while latest pointers advance conditionally.
+  Generations stay immutable. Marker-exact configuration precedes manager
+  smoke; its channel pointer advances only with final depot consensus.
   `[release.depot]` declares public capability; a product's Runseal profile
   holds write authority.
 - Plumb's **rules seat** consumes configuration. Rules are never compiled or

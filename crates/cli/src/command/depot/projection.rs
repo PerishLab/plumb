@@ -72,7 +72,22 @@ pub fn project(raw: &str, projection: Kind) -> Result<String, String> {
     bound(&capsule, &marker)?;
     rig.activate.load()?;
     let result = match projection {
-        Kind::Channel => crate::command::release::storage::activate(&capsule, &rig.activate),
+        Kind::Channel => {
+            let configuration = spec
+                .depot
+                .as_ref()
+                .is_some_and(|depot| {
+                    depot
+                        .derivatives
+                        .contains(&plumb::depot::v2::Kind::Configuration)
+                })
+                .then(|| Tree(&rig.release.root).advance(raw))
+                .transpose()?;
+            let release = crate::command::release::storage::activate(&capsule, &rig.activate)?;
+            Ok(configuration.map_or(release.clone(), |configuration| {
+                format!("{configuration}\n{release}")
+            }))
+        }
         Kind::Managers => crate::command::release::storage::shift(&capsule, &rig.activate),
     }?;
     let after = crate::command::release::ReleaseMarker::at(

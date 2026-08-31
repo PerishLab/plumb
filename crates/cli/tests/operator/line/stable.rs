@@ -169,6 +169,10 @@ fn failure() {
         ],
     );
     assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("triggered ship.yml run 88"),
+        "dispatch identity should be visible before a watched failure"
+    );
     assert!(String::from_utf8_lossy(&output.stderr).contains("failed tasks: build"));
 }
 

@@ -12,8 +12,9 @@ substitute a cached assumption.
 Use `plumb version --help`, `plumb release --help`, and `plumb ship --help` for
 the exact command contracts. One ship run
 binds its source revision and release identity, builds only declared artifacts,
-publishes immutable objects and an exact seal, reads the public bytes back, then
-projects declared depot generations before moving channel consensus.
+publishes immutable objects and an exact seal, publishes the marker-exact
+configuration needed by manager smoke, reads the public bytes back, then moves
+declared depot and release channel consensus last.
 Non-stable releases remain exact and have no moving pointer or activation.
 An exact release binds `refs/tags/<exact-version>`, so push that tag before
 dispatching one; its channel is read from the version, never named beside it.

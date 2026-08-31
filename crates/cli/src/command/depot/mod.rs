@@ -199,7 +199,12 @@ fn execute(deed: Deed) -> Result<String, String> {
 }
 
 fn sync(source: &str, channel: &str, over: &Path, root: &Path) -> Result<String, String> {
-    let synced = seat::sync(source, channel, over)?;
+    let version = plumb::version!("PLUMB");
+    let identity = seat::Identity {
+        channel: &crate::command::release::channel(version)?,
+        version,
+    };
+    let synced = seat::sync(source, channel, identity, over)?;
     match crate::command::precommit::project(root)? {
         Some(projected) => Ok(format!("{synced}\n{projected}")),
         None => Ok(synced),

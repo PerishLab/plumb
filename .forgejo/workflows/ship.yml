@@ -310,7 +310,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
           repository: ${{ inputs.repository }}
           ref: ${{ needs.resolve.outputs.commit }}
@@ -469,9 +469,62 @@ jobs:
           name: release-capsule
           path: .plumb-release/capsule
 
-  verify:
+  configuration:
     needs: [resolve, seal]
-    if: needs.resolve.outputs.channel != 'stable'
+    if: >-
+      needs.resolve.result == 'success' && needs.seal.result == 'success' &&
+      needs.resolve.outputs.depot_configuration == 'true'
+    runs-on: docker
+    container:
+      image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
+    env:
+      PLUMB_RELEASE_ROOT: .
+      PLUMB_RELEASE_CHANNEL: ${{ needs.resolve.outputs.channel }}
+      PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
+      PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
+      PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
+      PLUMB_HOME: ${{ runner.temp }}/plumb-home
+      PLUMB_DEPOT_AUTHORITY_ACCESS: ${{ secrets.DEPOT_PUBLISH_S3_ACCESS_KEY }}
+      PLUMB_DEPOT_AUTHORITY_SECRET: ${{ secrets.DEPOT_PUBLISH_S3_SECRET_KEY }}
+      PLUMB_DEPOT_AUTHORITY_BUCKET: ${{ secrets.DEPOT_PUBLISH_S3_BUCKET }}
+      PLUMB_DEPOT_AUTHORITY_ENDPOINT: ${{ secrets.DEPOT_PUBLISH_S3_ENDPOINT }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          repository: ${{ inputs.repository }}
+          ref: ${{ needs.resolve.outputs.commit }}
+          token: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          path: .plumb-atom
+          token: ${{ github.token }}
+
+      - name: Install the exact atom Plumb
+        shell: bash
+        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: release-capsule
+          path: .plumb-release/capsule
+
+      - name: Publish the marker-exact configuration generation
+        shell: bash
+        run: plumb depot configuration --marker "${{ inputs.marker }}"
+
+  verify:
+    needs: [resolve, seal, configuration]
+    if: >-
+      always() && needs.resolve.result == 'success' && needs.seal.result == 'success' &&
+      needs.resolve.outputs.channel != 'stable' &&
+      (needs.configuration.result == 'success' || needs.configuration.result == 'skipped')
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.resolve.outputs.targets) }}
@@ -610,7 +663,7 @@ jobs:
       - uses: actions/checkout@v6
         if: matrix.control != 'reuse'
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
           repository: ${{ inputs.repository }}
           ref: ${{ needs.resolve.outputs.commit }}
@@ -744,9 +797,10 @@ jobs:
           path: .plumb-depot/worker.json
 
   depot:
-    needs: [resolve, seal, verify, project]
+    needs: [resolve, seal, configuration, verify, project]
     if: >-
       always() && needs.resolve.result == 'success' && needs.seal.result == 'success' &&
+      (needs.configuration.result == 'success' || needs.configuration.result == 'skipped') &&
       needs.project.result == 'success' &&
       (needs.verify.result == 'success' || needs.verify.result == 'skipped')
     runs-on: docker
@@ -772,7 +826,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
           repository: ${{ inputs.repository }}
           ref: ${{ needs.resolve.outputs.commit }}
@@ -780,6 +834,7 @@ jobs:
 
       - uses: actions/checkout@v6
         with:
+          fetch-depth: 1
           persist-credentials: false
           repository: ${{ github.repository }}
           ref: ${{ github.sha }}
@@ -817,11 +872,6 @@ jobs:
           plumb depot worker \
             --marker "${{ inputs.marker }}" \
             --request "$request"
-
-      - name: Publish the marker-bound configuration
-        if: needs.resolve.outputs.depot_configuration == 'true'
-        shell: bash
-        run: plumb depot configuration --marker "${{ inputs.marker }}"
 
       - name: Publish the marker-bound skill
         if: needs.resolve.outputs.depot_skill == 'true'

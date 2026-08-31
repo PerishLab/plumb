@@ -166,6 +166,16 @@ fn routes() {
             .expect("latest skill path"),
         "v2/products/probe/derivatives/skill/channels/stable/latest.json"
     );
+    assert_eq!(
+        plumb::depot::v2::exact(
+            "probe",
+            plumb::depot::v2::Kind::Configuration,
+            "beta",
+            "v1.2.3-beta.2"
+        )
+        .expect("exact configuration path"),
+        "v2/products/probe/derivatives/configuration/releases/beta/v1.2.3-beta.2/latest.json"
+    );
 }
 
 #[test]

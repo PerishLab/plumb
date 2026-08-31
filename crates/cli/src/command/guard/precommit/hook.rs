@@ -113,12 +113,15 @@ fn inspect(path: &Path) -> Option<Finding> {
     None
 }
 
+#[cfg(unix)]
 fn executable(path: &Path) -> Result<(), String> {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt as _;
-        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755))
-            .map_err(|error| format!("cannot make {} executable: {error}", path.display()))?;
-    }
+    use std::os::unix::fs::PermissionsExt as _;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755))
+        .map_err(|error| format!("cannot make {} executable: {error}", path.display()))?;
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn executable(_: &Path) -> Result<(), String> {
     Ok(())
 }

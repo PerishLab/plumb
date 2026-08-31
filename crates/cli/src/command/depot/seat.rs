@@ -3,6 +3,8 @@ use crate::shape::depot::{LEAF, POINTER, Pointer, latest, versions};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod exact;
+
 pub const KEY: &str = "plumb";
 
 pub enum Held {
@@ -46,12 +48,20 @@ impl Held {
     }
 }
 
-pub fn sync(source: &str, channel: &str, over: &Path) -> Result<String, String> {
+pub use exact::Identity;
+
+pub fn sync(
+    source: &str,
+    channel: &str,
+    identity: Identity<'_>,
+    over: &Path,
+) -> Result<String, String> {
     let base = root(over)?;
     let source = source.trim_end_matches('/');
     Remote {
         source,
         channel,
+        identity,
         base: &base,
     }
     .sync()
@@ -60,6 +70,7 @@ pub fn sync(source: &str, channel: &str, over: &Path) -> Result<String, String> 
 struct Remote<'a> {
     source: &'a str,
     channel: &'a str,
+    identity: Identity<'a>,
     base: &'a Path,
 }
 
@@ -73,21 +84,40 @@ impl Remote<'_> {
 
     fn modern(&self) -> Result<Option<String>, String> {
         let kind = plumb::depot::v2::Kind::Configuration;
+        let exact =
+            plumb::depot::v2::exact(KEY, kind, self.identity.channel, self.identity.version)?;
+        if let Some(text) = pull(&format!("{}/{exact}", self.source))? {
+            return self.install(&text, Some(self.identity.version)).map(Some);
+        }
         let key = plumb::depot::v2::latest(KEY, kind, self.channel)?;
         let Some(text) = pull(&format!("{}/{key}", self.source))? else {
             return Ok(None);
         };
-        let pointer = plumb::depot::v2::Pointer::parse(&text)?;
+        self.install(&text, None).map(Some)
+    }
+
+    fn install(&self, text: &str, version: Option<&str>) -> Result<String, String> {
+        let kind = plumb::depot::v2::Kind::Configuration;
+        let pointer = plumb::depot::v2::Pointer::parse(text)?;
+        let channel = version.map_or(self.channel, |_| self.identity.channel);
         let standing = (
             pointer.source.as_str(),
             pointer.release.product.as_str(),
             pointer.release.channel.as_str(),
             pointer.derivative,
         );
-        if standing != (self.source, KEY, self.channel, kind) {
+        if standing != (self.source, KEY, channel, kind) {
             return Err(format!(
                 "depot v2 pointer does not name {KEY} configuration channel {} at {}",
-                self.channel, self.source
+                channel, self.source
+            ));
+        }
+        if let Some(wanted) = version
+            && pointer.release.version != wanted
+        {
+            return Err(format!(
+                "exact depot pointer names {}, not {wanted}",
+                pointer.release.version
             ));
         }
         let route = plumb::depot::v2::snapshots(
@@ -113,13 +143,13 @@ impl Remote<'_> {
             write(&seat.join(&object.path), &body)?;
         }
         write(&seat.join(plumb::depot::v2::LEAF), &raw)?;
-        write(&self.base.join(plumb::depot::v2::POINTER), &text)?;
-        Ok(Some(format!(
+        write(&self.base.join(plumb::depot::v2::POINTER), text)?;
+        Ok(format!(
             "synced depot {} {} into {}",
-            self.channel,
+            pointer.release.channel,
             pointer.snapshot.timestamp,
             self.base.display()
-        )))
+        ))
     }
 
     fn legacy(&self) -> Result<String, String> {
@@ -169,13 +199,7 @@ pub fn notes(source: &str, version: &str) -> Result<Option<Notes>, String> {
     }
 }
 
-pub struct Query<'a> {
-    pub source: &'a str,
-    pub product: &'a str,
-    pub channel: &'a str,
-    pub version: &'a str,
-    pub derivative: plumb::depot::v2::Kind,
-}
+pub use exact::Query;
 
 pub fn derivative(query: Query<'_>) -> Result<Option<plumb::depot::v2::Manifest>, String> {
     let source = query.source.trim_end_matches('/');
@@ -219,6 +243,8 @@ pub fn derivative(query: Query<'_>) -> Result<Option<plumb::depot::v2::Manifest>
     Ok(Some(manifest))
 }
 
+pub use exact::read as exact;
+
 fn write(path: &Path, text: &str) -> Result<(), String> {
     let parent = path
         .parent()
@@ -228,7 +254,7 @@ fn write(path: &Path, text: &str) -> Result<(), String> {
     std::fs::write(path, text).map_err(|error| format!("cannot write {}: {error}", path.display()))
 }
 
-fn pull(url: &str) -> Result<Option<String>, String> {
+pub(super) fn pull(url: &str) -> Result<Option<String>, String> {
     let body = tempfile::NamedTempFile::new()
         .map_err(|error| format!("cannot stage a depot fetch: {error}"))?;
     let output = Command::new("curl")
