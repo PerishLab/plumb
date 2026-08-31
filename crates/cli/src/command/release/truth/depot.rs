@@ -84,9 +84,26 @@ pub(in crate::command) fn validate(
         )?;
         let source = super::tree::Seat::open(&spec.root, &binding.release.commit)?;
 
-        let output = Command::new(&executable)
+        let mut validator = Command::new(&executable);
+        validator
             .args(depot.validator.iter().skip(1))
-            .current_dir(source.path())
+            .current_dir(source.path());
+        for name in [
+            "ROOT",
+            "CHANNEL",
+            "VERSION",
+            "COMMIT",
+            "TARGET",
+            "ARTIFACTS",
+            "OUTPUT",
+            "CAPSULE",
+            "PROMOTION",
+            "ACTIVATED",
+            "URL",
+        ] {
+            validator.env_remove(format!("{}_RELEASE_{name}", spec.environment()));
+        }
+        let output = validator
             .env(
                 format!("{}_DEPOT_SNAPSHOT", spec.environment()),
                 snapshot.path(),

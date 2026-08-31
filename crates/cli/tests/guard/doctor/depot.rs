@@ -67,16 +67,13 @@ fn drift() {
     );
 }
 
-#[test]
-fn exact() {
-    let fixture = super::fixture();
-    let home = super::super::support::depot(&[]);
+fn stage(home: &tempfile::TempDir, version: &str) -> std::path::PathBuf {
     let root = home.path().join("depot");
     let legacy = plumb::depot::Seat::at(&root).expect("legacy fixture");
     let release = plumb::depot::v2::Release {
         product: "plumb".into(),
         channel: "stable".into(),
-        version: "v0.0.1".into(),
+        version: version.into(),
         commit: "1".repeat(40),
         seal: plumb::depot::v2::Seal {
             url: "https://releases.plumb.perish.uk/v1/releases/stable/v0.0.1/seal.json".into(),
@@ -114,6 +111,14 @@ fn exact() {
         pointer.encode().expect("pointer body"),
     )
     .expect("pointer seat");
+    seat
+}
+
+#[test]
+fn exact() {
+    let fixture = super::fixture();
+    let home = super::super::support::depot(&[]);
+    stage(&home, "v0.0.1");
     let out = run(fixture.path(), home.path());
     assert!(
         out.contains(&format!(
@@ -122,6 +127,32 @@ fn exact() {
         )),
         "{out}"
     );
+}
+
+#[test]
+fn staged() {
+    let fixture = super::fixture();
+    let root = fixture.path();
+    std::fs::write(root.join("plumb.toml"), "[layout]\n").expect("governance");
+    for name in ["pre-commit", "commit-msg"] {
+        std::fs::remove_file(root.join(".git/hooks").join(name)).expect("remove projected hook");
+    }
+    let home = super::super::support::depot(&[]);
+    let snapshot = stage(&home, &format!("v{}", env!("CARGO_PKG_VERSION")));
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["doctor", root.to_str().expect("fixture")])
+        .env_remove("PLUMB_RELEASE_VERSION")
+        .env("PLUMB_HOME", home.path())
+        .env("PLUMB_DEPOT_SNAPSHOT", snapshot)
+        .output()
+        .expect("staged doctor");
+    let out = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(!out.contains("hook is absent"), "{out}");
+    assert!(!out.contains("hooks/pre-commit is absent"), "{out}");
 }
 
 #[test]

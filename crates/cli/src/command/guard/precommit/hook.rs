@@ -51,6 +51,18 @@ impl Hooks<'_> {
     }
 
     fn audit(&self) -> Vec<Finding> {
+        if plumb::config::value("PLUMB_DEPOT_SNAPSHOT").is_some() {
+            return HOOKS
+                .into_iter()
+                .filter_map(|(_, source)| match carried(source) {
+                    Ok(body) if !body.is_empty() => None,
+                    Ok(_) => Some(Finding::Wrong(format!(
+                        "the staged depot snapshot carries empty {source}"
+                    ))),
+                    Err(error) => Some(Finding::Wrong(error)),
+                })
+                .collect();
+        }
         let hooks = match self.locate() {
             Ok(hooks) => hooks,
             Err(error) => return vec![Finding::Blind(error)],
