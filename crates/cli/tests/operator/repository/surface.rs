@@ -25,6 +25,11 @@ fn declared() {
         "[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n",
     )
     .expect("manifest");
+    std::fs::write(
+        root.join("Cargo.toml"),
+        "[package]\nname = \"foo\"\nversion = \"1.0.0\"\n",
+    )
+    .expect("Cargo manifest");
     let cargo: serde_json::Value = serde_json::from_str(&surface(&root)).expect("cargo surface");
     assert_eq!(
         cargo["project"]["include"][0]["schema"],
@@ -135,6 +140,11 @@ fn prepared() {
         std::fs::create_dir_all(root.join(seat)).expect("fixture");
     }
     std::fs::write(
+        root.join("Cargo.toml"),
+        "[workspace]\n[workspace.package]\nversion = \"1.0.0\"\n",
+    )
+    .expect("Cargo manifest");
+    std::fs::write(
         root.join("plumb.toml"),
         concat!(
             "[release.cargo]\nregistry = \"perish\"\npackages = [\"probe\"]\n",
@@ -174,6 +184,20 @@ fn prepared() {
         ])
     );
     assert_eq!(chart["roots"], serde_json::json!(["charts/probe"]));
+    let cargo = rows
+        .iter()
+        .find(|row| row["operation"]["type"] == "cargo")
+        .expect("Cargo row");
+    assert_eq!(cargo["projections"], serde_json::json!([]));
+    assert_eq!(cargo["roots"], serde_json::json!(["Cargo.toml", "crates"]));
+    let worker = rows
+        .iter()
+        .find(|row| row["operation"]["type"] == "cfworker")
+        .expect("worker row");
+    assert_eq!(
+        worker["roots"],
+        serde_json::json!(["Cargo.toml", "apps", "packages"])
+    );
     for row in rows {
         assert_eq!(row["schema"], "plumb.ship-request/v1");
         assert!(row["action"].as_str().is_some_and(|held| !held.is_empty()));

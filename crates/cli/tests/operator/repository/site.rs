@@ -1,4 +1,5 @@
 mod server;
+mod worker;
 
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
@@ -47,6 +48,9 @@ fn seed(root: &Path) {
         r#"#!/bin/sh
 set -eu
 printf '%s %s\n' "$PWD" "$*" >> "$SITE_CALLS"
+case "$*" in
+  *"wrangler versions upload"*) printf '%s\n' 'Worker Version ID: abcdefgh12345678' ;;
+esac
 "#,
     );
     file(
@@ -74,6 +78,10 @@ case "$url" in
     ;;
   */tokens/verify) printf '{"success":true,"result":{"status":"active"}}\n200' ;;
   */workers/services/*) printf '{"success":true,"result":{"id":"probe"}}\n200' ;;
+  */workers/scripts/probe/subdomain) printf '{"success":true,"result":{"previews_enabled":true}}' ;;
+  */workers/subdomain) printf '{"success":true,"result":{"subdomain":"probeaccount"}}' ;;
+  https://abcdefgh-probe.probeaccount.workers.dev) printf '200' ;;
+  https://workflow.example/worker.tgz) cat "$FAKE_WORKER_WORKLOAD" ;;
   https://site.test/*)
     case "$SITE_CASE" in
       live) printf '<script src="/assets/index-mark.js"></script>\n200' ;;
@@ -84,6 +92,10 @@ case "$url" in
   *) printf '{"message":"unexpected"}\n500' ;;
 esac
 "#,
+    );
+    file(
+        &root.join("bin/aws"),
+        "#!/bin/sh\ncase \"$*\" in *get-object*) echo NoSuchKey >&2; exit 1;; *) echo '{}';; esac\n",
     );
 }
 

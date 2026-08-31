@@ -144,6 +144,18 @@ fn index(spec: &Spec, registry: &str) -> Result<String, String> {
         .ok_or_else(|| format!("missing sparse registry {registry} in {}", path.display()))
 }
 
+pub(in crate::command::ship) fn publication(
+    spec: &Spec,
+    cargo: &Cargo,
+    package: &str,
+) -> Result<String, String> {
+    Ok(format!(
+        "{}/{}",
+        index(spec, &cargo.registry)?,
+        route(package)
+    ))
+}
+
 fn route(name: &str) -> String {
     let name = name.to_ascii_lowercase();
     match name.len() {

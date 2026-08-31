@@ -3,7 +3,8 @@ use super::process::Call;
 use crate::shape::release::{Cfworker, Spec};
 use plumb::rig::Site;
 use serde_json::{Value, json};
-use std::path::Path;
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 
 pub struct Seat<'a> {
     pub root: &'a Path,
@@ -30,10 +31,52 @@ impl Seat<'_> {
         let site = self.vantage(&spec, &held)?;
         previews(&site, &app.worker)?;
         self.build(&app)?;
-        if self.channel == "stable" {
-            return self.settle(&app, &site, &held);
+        let publication = self.project(&app, &site, &held)?;
+        Ok(format!(
+            "projected {} {} at {publication}",
+            app.worker, self.version
+        ))
+    }
+
+    pub fn exact(&self, reuse: &str) -> Result<String, String> {
+        let (spec, held) = self.declared()?;
+        let app = App::read(self.root)?;
+        let site = self.vantage(&spec, &held)?;
+        previews(&site, &app.worker)?;
+        let source = crate::command::ship::package::project::Source::parse(reuse)?;
+        match source.kind.as_str() {
+            "none" => self.build(&app)?,
+            "workload" => restore(
+                &app,
+                &crate::command::ship::package::project::fetch("worker", &source.source)?,
+            )?,
+            "url" => return Err("a held publication URL must skip the worker action".into()),
+            _ => unreachable!(),
         }
-        self.stage(&app, &site)
+        if !app.index().is_file() {
+            return Err(format!(
+                "worker workload produced no {}",
+                app.index().display()
+            ));
+        }
+        let workload = bundle(&app)?;
+        let publication = self.project(&app, &site, &held)?;
+        serde_json::to_string(&serde_json::json!({
+            "format": "plumb.worker-project/v1",
+            "worker": app.worker,
+            "version": self.version,
+            "workload": workload,
+            "publication": publication,
+        }))
+        .map_err(|error| format!("cannot encode worker project: {error}"))
+    }
+
+    fn project(&self, app: &App, site: &Site, held: &Cfworker) -> Result<String, String> {
+        if self.channel == "stable" {
+            self.settle(app, site, held)
+        } else {
+            self.stage(app, site)
+        }
     }
 
     fn stage(&self, app: &App, site: &Site) -> Result<String, String> {
@@ -50,7 +93,7 @@ impl Seat<'_> {
         let version = stamped(&raw)?;
         let url = format!("https://{}-{}.{}", &version[..8], app.worker, root(site)?);
         reachable(&url, site)?;
-        Ok(format!("staged {} {} at {url}", app.worker, self.version))
+        Ok(url)
     }
 
     fn settle(&self, app: &App, site: &Site, held: &Cfworker) -> Result<String, String> {
@@ -64,10 +107,7 @@ impl Seat<'_> {
             ],
         })?;
         reachable(&format!("https://{}/", held.domain), site)?;
-        Ok(format!(
-            "settled {} {} on {}",
-            app.worker, self.version, held.domain
-        ))
+        Ok(format!("https://{}/", held.domain))
     }
 
     fn build(&self, app: &App) -> Result<(), String> {
@@ -107,6 +147,80 @@ impl Seat<'_> {
         }
         Ok(site)
     }
+}
+
+fn bundle(app: &App) -> Result<PathBuf, String> {
+    let mut members = BTreeMap::new();
+    collect(&app.dist, &app.dist, &mut members)?;
+    if members.is_empty() {
+        return Err(format!("worker workload is empty: {}", app.dist.display()));
+    }
+    let seat = app.root.join("target/cfworker");
+    std::fs::create_dir_all(&seat)
+        .map_err(|error| format!("cannot open {}: {error}", seat.display()))?;
+    let path = seat.join(format!("{}-worker.tar.gz", app.worker));
+    crate::command::ship::archive::bundle(&path, &members)?;
+    Ok(path)
+}
+
+fn collect(
+    root: &Path,
+    seat: &Path,
+    members: &mut BTreeMap<PathBuf, crate::command::ship::archive::Member>,
+) -> Result<(), String> {
+    let mut entries = std::fs::read_dir(seat)
+        .map_err(|error| format!("cannot read {}: {error}", seat.display()))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| format!("cannot read {}: {error}", seat.display()))?;
+    entries.sort_by_key(std::fs::DirEntry::file_name);
+    for entry in entries {
+        let path = entry.path();
+        let kind = entry
+            .file_type()
+            .map_err(|error| format!("cannot inspect {}: {error}", path.display()))?;
+        if kind.is_dir() {
+            collect(root, &path, members)?;
+        } else if kind.is_file() {
+            let name = path
+                .strip_prefix(root)
+                .map_err(|error| format!("cannot name {}: {error}", path.display()))?
+                .to_path_buf();
+            members.insert(
+                name,
+                crate::command::ship::archive::Member {
+                    bytes: std::fs::read(&path)
+                        .map_err(|error| format!("cannot read {}: {error}", path.display()))?,
+                    mode: 0o644,
+                },
+            );
+        } else {
+            return Err(format!(
+                "worker workload carries unsupported {}",
+                path.display()
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn restore(app: &App, bytes: &[u8]) -> Result<(), String> {
+    let mut inspected = tar::Archive::new(flate2::read::GzDecoder::new(bytes));
+    for entry in inspected
+        .entries()
+        .map_err(|error| format!("cannot read reusable worker workload: {error}"))?
+    {
+        let entry =
+            entry.map_err(|error| format!("cannot read reusable worker workload: {error}"))?;
+        if !entry.header().entry_type().is_file() {
+            return Err("reusable worker workload carries a non-file entry".into());
+        }
+    }
+    std::fs::create_dir_all(&app.dist)
+        .map_err(|error| format!("cannot open {}: {error}", app.dist.display()))?;
+    let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(bytes));
+    archive
+        .unpack(&app.dist)
+        .map_err(|error| format!("cannot restore reusable worker workload: {error}"))
 }
 
 fn previews(site: &Site, worker: &str) -> Result<(), String> {

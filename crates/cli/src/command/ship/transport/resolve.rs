@@ -36,7 +36,7 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
         root,
     };
     let binary = binary(&spec, &marker, &world)?;
-    let project = projects(&plan["project"], &world)?;
+    let project = projects(&plan["project"], &marker, &world)?;
     serde_json::to_string(&json!({
         "schema": SCHEMA,
         "channel": marker.channel,
@@ -139,13 +139,18 @@ struct Projects {
     missing: bool,
 }
 
-fn projects(input: &Value, world: &World<'_>) -> Result<Projects, String> {
+fn projects(
+    input: &Value,
+    marker: &release::ReleaseMarker,
+    world: &World<'_>,
+) -> Result<Projects, String> {
     let mut pending = Vec::new();
     for entry in input["include"]
         .as_array()
         .ok_or("project plan has no include array")?
     {
         let action = text(entry, "action")?;
+        let versioned = action == "ship/cfworker";
         let projections = strings(entry, "projections")?;
         let roots = strings(entry, "roots")?;
         let node = planned(
@@ -155,8 +160,8 @@ fn projects(input: &Value, world: &World<'_>) -> Result<Projects, String> {
                 projections: &projections,
                 roots: &roots,
                 runner: "docker",
-                release: None,
-                target: None,
+                release: versioned.then_some(marker.version.as_str()),
+                target: versioned.then_some(marker.commit.as_str()),
             },
         )?;
         if node["reuse"]["type"] == "url" {

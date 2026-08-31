@@ -82,21 +82,29 @@ impl Request {
         let reuse = self.reuse.encode()?;
         if matches!(
             &self.operation,
-            Operation::Chart | Operation::Npm { .. } | Operation::Oci
+            Operation::Cargo | Operation::Chart | Operation::Npm { .. } | Operation::Oci
         ) {
             super::super::attachment::sealed(&spec, release, version, true)?;
         }
         let projection = match self.operation {
-            Operation::Cargo => {
-                super::super::attachment::cargo(super::super::Cargo::Rehearse)?;
-                super::super::attachment::cargo(super::super::Cargo::Publish)?;
-                None
-            }
+            Operation::Cargo => Some(super::super::package::project::cargo(
+                &adaptor::registry::registry(&spec),
+                version,
+                &release.credential,
+                &reuse,
+            )?),
             Operation::Cfworker => {
-                install(&spec.root)?;
-                super::super::cfworker(super::super::Cfworker::Rehearse)?;
-                super::super::cfworker(super::super::Cfworker::Publish)?;
-                None
+                if self.reuse.kind == "none" {
+                    install(&spec.root)?;
+                }
+                Some(
+                    super::super::site::Worker {
+                        root: &spec.root,
+                        channel: required("PLUMB_RELEASE_CHANNEL", &release.channel)?,
+                        version,
+                    }
+                    .exact(&reuse)?,
+                )
             }
             Operation::Chart => {
                 Some(adaptor::chart::chart(&spec).exact(version, &release.credential, &reuse)?)

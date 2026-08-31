@@ -28,19 +28,59 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
     let held = spec.surface();
     let row = |medium: &&str| serde_json::json!({ "medium": medium });
     let include = held.iter().map(row).collect::<Vec<_>>();
-    let mut project = held
-        .iter()
-        .filter(|medium| matches!(**medium, "cargo" | "cfworker"))
-        .map(|medium| {
-            request(Project {
-                action: format!("ship/{medium}"),
-                projections: Vec::new(),
-                roots: vec!["*".into()],
-                kind: medium,
-                package: None,
-            })
-        })
+    let mut project = Vec::new();
+    if spec.cargo.is_some() {
+        let mut roots = vec!["Cargo.toml".into(), "crates".into()];
+        if spec.root.join("Cargo.lock").is_file() {
+            roots.push("Cargo.lock".into());
+        }
+        if let Some(depends) = spec.depends.get("cargo") {
+            roots.extend(
+                depends
+                    .iter()
+                    .map(|path| path.to_string_lossy().to_string()),
+            );
+        }
+        roots.sort();
+        roots.dedup();
+        project.push(request(Project {
+            action: "ship/cargo".into(),
+            projections: Vec::new(),
+            roots,
+            kind: "cargo",
+            package: None,
+        }));
+    }
+    if spec.cfworker.is_some() {
+        let mut roots = [
+            "Cargo.toml",
+            "apps",
+            "package.json",
+            "packages",
+            "pnpm-lock.yaml",
+            "pnpm-workspace.yaml",
+        ]
+        .into_iter()
+        .filter(|path| spec.root.join(path).exists())
+        .map(str::to_string)
         .collect::<Vec<_>>();
+        if let Some(depends) = spec.depends.get("cfworker") {
+            roots.extend(
+                depends
+                    .iter()
+                    .map(|path| path.to_string_lossy().to_string()),
+            );
+        }
+        roots.sort();
+        roots.dedup();
+        project.push(request(Project {
+            action: "ship/cfworker".into(),
+            projections: Vec::new(),
+            roots,
+            kind: "cfworker",
+            package: None,
+        }));
+    }
     if spec.oci.is_some() {
         project.push(request(Project {
             action: "ship/oci".into(),

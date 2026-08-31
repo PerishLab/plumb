@@ -5,6 +5,7 @@ mod chart;
 mod module;
 mod precommit;
 #[cfg(unix)]
+#[path = "registry/main.rs"]
 mod registry;
 #[cfg(unix)]
 mod site;

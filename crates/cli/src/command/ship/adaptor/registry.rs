@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub struct Registry<'a> {
-    spec: &'a Spec,
+    pub(in crate::command::ship) spec: &'a Spec,
 }
 
 pub fn registry(spec: &Spec) -> Registry<'_> {
@@ -133,14 +133,17 @@ impl Registry<'_> {
         Ok(format!("published Cargo attachment for {version}"))
     }
 
-    fn ordered<'a>(&self, cargo: &'a Cargo) -> Result<&'a [String], String> {
+    pub(in crate::command::ship) fn ordered<'a>(
+        &self,
+        cargo: &'a Cargo,
+    ) -> Result<&'a [String], String> {
         if cargo.packages.is_empty() {
             return Err("Cargo attachment must declare ordered packages".into());
         }
         Ok(&cargo.packages)
     }
 
-    fn stamp(&self, version: &str) -> Result<(), String> {
+    pub(in crate::command::ship) fn stamp(&self, version: &str) -> Result<(), String> {
         let identity = release(version)?;
         let root = self.spec.root.join("Cargo.toml");
         let document = manifest::read(&root)?;
@@ -220,7 +223,11 @@ impl Registry<'_> {
         manifest::write(&path, &document)
     }
 
-    fn command<const N: usize>(&self, args: [&str; N], token: &str) -> Result<(), String> {
+    pub(in crate::command::ship) fn command<const N: usize>(
+        &self,
+        args: [&str; N],
+        token: &str,
+    ) -> Result<(), String> {
         let mut command = Command::new("cargo");
         command.args(args).current_dir(&self.spec.root);
         if let Some(cargo) = &self.spec.cargo
@@ -244,7 +251,7 @@ impl Registry<'_> {
         }
     }
 
-    fn archive(&self, package: &str, version: &Version) -> PathBuf {
+    pub(in crate::command::ship) fn archive(&self, package: &str, version: &Version) -> PathBuf {
         self.spec
             .root
             .join("target/package")
@@ -252,7 +259,11 @@ impl Registry<'_> {
     }
 }
 
-fn inspect(path: &Path, package: &str, version: &Version) -> Result<(), String> {
+pub(in crate::command::ship) fn inspect(
+    path: &Path,
+    package: &str,
+    version: &Version,
+) -> Result<(), String> {
     let file = std::fs::File::open(path)
         .map_err(|error| format!("cannot open {}: {error}", path.display()))?;
     let mut archive = tar::Archive::new(GzDecoder::new(file));
