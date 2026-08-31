@@ -763,6 +763,13 @@ jobs:
           name: release-capsule
           path: .plumb-release/capsule
 
+      - name: Enable the declared Node package manager
+        if: >-
+          matrix.control != 'reuse' &&
+          (matrix.operation.type == 'cfworker' || matrix.operation.type == 'npm')
+        shell: bash
+        run: corepack enable
+
       - name: Execute one resolved ship request
         id: execute
         if: matrix.control != 'reuse'
