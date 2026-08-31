@@ -57,6 +57,23 @@ fn matrix() {
     assert!(!held.contains("${{ runner.temp }}"), "{held}");
     assert_eq!(held.matches("PLUMB_HOME: /tmp/plumb-home").count(), 2);
     assert_eq!(held.matches("run: corepack enable").count(), 1, "{held}");
+    assert!(
+        !held.contains("name: release-${{ matrix.target }}"),
+        "binary workloads must not cross Forgejo artifact storage"
+    );
+    assert_eq!(
+        held.matches("plumb workflow record $env:PLUMB_BINARY_ACTION")
+            .count()
+            + held
+                .matches("plumb workflow record \"$PLUMB_BINARY_ACTION\"")
+                .count(),
+        2,
+        "each native runner dialect must record its workload directly"
+    );
+    assert!(
+        held.contains("- name: Resolve and fetch every binary workload"),
+        "seal must consume the recorded workload URLs"
+    );
 }
 
 #[test]

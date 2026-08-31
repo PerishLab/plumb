@@ -38,7 +38,7 @@ fn pagination() {
     let bare = tempfile::tempdir().expect("bare");
     let (url, calls) = super::world::serve(super::world::Court::Paged, 10);
     super::stable::marked(fixture.path(), bare.path(), &url, "v1.2.0-nightly.4");
-    let output = super::stable::command(
+    let output = plumb(
         fixture.path(),
         &[
             "ship",
@@ -47,7 +47,10 @@ fn pagination() {
             "v1.2.0-nightly.4",
             "--watch",
         ],
-    );
+    )
+    .env("HARNESS_RUN_TIMEOUT_MS", "1000")
+    .output()
+    .expect("plumb");
     assert!(
         output.status.success(),
         "{}",
