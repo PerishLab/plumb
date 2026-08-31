@@ -54,6 +54,8 @@ fn matrix() {
         held.contains(".forgejo/scripts/bootstrap-plumb.sh"),
         "the canonical workflow should consume its Plumb-owned bootstrap script"
     );
+    assert!(!held.contains("${{ runner.temp }}"), "{held}");
+    assert_eq!(held.matches("PLUMB_HOME: /tmp/plumb-home").count(), 2);
 }
 
 #[test]
