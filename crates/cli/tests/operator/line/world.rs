@@ -2,10 +2,12 @@ use serde_json::{Value, json};
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 pub enum Court {
     Dispatch,
+    Expanding(AtomicUsize),
     Flight,
     Failed,
     Nested(bool),
@@ -70,7 +72,12 @@ fn request(stream: &mut impl Read) -> (String, Value) {
 
 fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
     match court {
-        Court::Dispatch | Court::Failed | Court::Flight | Court::Nested(_) | Court::Paged
+        Court::Dispatch
+        | Court::Expanding(_)
+        | Court::Failed
+        | Court::Flight
+        | Court::Nested(_)
+        | Court::Paged
             if request.contains("/dispatches ") =>
         {
             ("201 Created", json!({"id": 88, "run_number": 7}))
@@ -80,6 +87,18 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
             json!({"id": 88, "index_in_repo": 7, "status": "success"}),
         ),
         Court::Dispatch if request.contains("/actions/tasks?") => ("200 OK", tasks("success")),
+        Court::Expanding(turn) if request.contains("/actions/runs/88 ") => {
+            let status = if turn.fetch_add(1, Ordering::SeqCst) == 1 {
+                "running"
+            } else {
+                "success"
+            };
+            (
+                "200 OK",
+                json!({"id": 88, "index_in_repo": 7, "status": status}),
+            )
+        }
+        Court::Expanding(_) if request.contains("/actions/tasks?") => ("200 OK", tasks("success")),
         Court::Flight if request.contains("/actions/tasks?") => ("200 OK", tasks("running")),
         Court::Failed if request.contains("/actions/runs/88 ") => (
             "200 OK",

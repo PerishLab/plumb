@@ -1,3 +1,5 @@
+mod expanding;
+
 use super::world::{Court, serve};
 use std::path::Path;
 use std::process::{Command, Output};
@@ -96,7 +98,7 @@ fn flight() {
 fn dispatch() {
     let fixture = tempfile::tempdir().expect("fixture");
     let bare = tempfile::tempdir().expect("bare");
-    let (url, calls) = serve(Court::Dispatch, 3);
+    let (url, calls) = serve(Court::Dispatch, 7);
     marked(fixture.path(), bare.path(), &url, "v1.2.0-nightly.1");
     let output = command(
         fixture.path(),
@@ -125,7 +127,7 @@ fn dispatch() {
 fn nested() {
     let fixture = tempfile::tempdir().expect("fixture");
     let bare = tempfile::tempdir().expect("bare");
-    let (url, calls) = serve(Court::Nested(true), 3);
+    let (url, calls) = serve(Court::Nested(true), 7);
     marked(fixture.path(), bare.path(), &url, "v1.2.0-nightly.2");
     let output = command(
         fixture.path(),
