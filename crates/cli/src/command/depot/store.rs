@@ -42,25 +42,44 @@ impl<'a> Remote<'a> {
             &format!("{base}/{}", plumb::depot::v2::LEAF),
             body.as_bytes(),
         )?;
-        let pointer = if advance {
-            let pointer = plumb::depot::v2::Pointer::new(manifest, body.as_bytes())?;
+        let pointer = plumb::depot::v2::Pointer::new(manifest, body.as_bytes())?;
+        let exact = plumb::depot::v2::exact(
+            &manifest.release.product,
+            manifest.derivative,
+            &manifest.release.channel,
+            &manifest.release.version,
+        )?;
+        self.advance(&exact, &pointer, true)?;
+        if advance {
             let latest = plumb::depot::v2::latest(
                 &manifest.release.product,
                 manifest.derivative,
                 &manifest.release.channel,
             )?;
-            self.advance(&latest, &pointer)?;
-            Some(pointer.encode()?)
-        } else {
-            None
-        };
-        readback::prove(plan, &base, &body, pointer.as_deref())?;
+            self.advance(&latest, &pointer, false)?;
+        }
+        readback::prove(plan, &base, &body, advance)?;
         Ok(format!(
             "published {} depot snapshot {} {}{}",
             manifest.derivative.label(),
             manifest.release.version,
             manifest.snapshot.timestamp,
             if advance { " and advanced latest" } else { "" }
+        ))
+    }
+
+    pub fn promote(&self, pointer: &plumb::depot::v2::Pointer) -> Result<String, String> {
+        let latest = plumb::depot::v2::latest(
+            &pointer.release.product,
+            pointer.derivative,
+            &pointer.release.channel,
+        )?;
+        self.advance(&latest, pointer, false)?;
+        readback::projection(&pointer.source, &latest, pointer)?;
+        Ok(format!(
+            "advanced {} depot latest to {}",
+            pointer.derivative.label(),
+            pointer.release.version
         ))
     }
 
@@ -90,7 +109,12 @@ impl<'a> Remote<'a> {
         }
     }
 
-    fn advance(&self, key: &str, next: &plumb::depot::v2::Pointer) -> Result<(), String> {
+    fn advance(
+        &self,
+        key: &str,
+        next: &plumb::depot::v2::Pointer,
+        exact: bool,
+    ) -> Result<(), String> {
         let text = next.encode()?;
         let bytes = text.as_bytes();
         let rule = Rule {
@@ -112,6 +136,9 @@ impl<'a> Remote<'a> {
         let standing = String::from_utf8(standing)
             .map_err(|error| format!("depot pointer at {key} is not UTF-8: {error}"))?;
         let current = plumb::depot::v2::Pointer::parse(&standing)?;
+        if exact && current.release != next.release {
+            return Err("exact depot pointer names another release".into());
+        }
         if !current.advance(next)? {
             return Ok(());
         }

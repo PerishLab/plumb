@@ -2,9 +2,11 @@ Dispatch one release marker as one distribution transaction.
 
 Ship accepts an immutable marker created by release and dispatches the single
 ship workflow carried by Plumb. Binary, Cargo, npm, OCI, chart and worker
-versions are immutable plan nodes inside that transaction; mutable channel,
-manager, worker-deployment, skill and configuration projections are marker-bound
-depot phases of the same transaction. None can select another version.
+versions are immutable plan nodes inside that transaction. A marker-exact
+configuration generation precedes manager smoke without moving latest; mutable
+channel, manager, worker-deployment, skill and configuration-latest projections
+are marker-bound depot phases of the same transaction. None can select another
+version.
 
 The marker is verified before dispatch and again after the run is submitted or
 watched. It binds product identity, repository, release-line commit and tree,

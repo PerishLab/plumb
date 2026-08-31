@@ -6,6 +6,7 @@ use value::Value;
 
 mod kind;
 mod local;
+mod route;
 mod value;
 
 #[cfg(feature = "depot")]
@@ -13,6 +14,7 @@ pub mod media;
 
 pub use kind::Kind;
 pub use local::{FORMAT, LEAF, POINTER, local};
+pub use route::{exact, latest, snapshots};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -265,25 +267,4 @@ impl Snapshot {
         }
         Value(&self.commit).commit("snapshot commit")
     }
-}
-
-pub fn snapshots(release: &Release, derivative: Kind, timestamp: &str) -> Result<String, String> {
-    release.validate()?;
-    Value(timestamp).component("snapshot timestamp")?;
-    Ok(format!(
-        "v2/products/{}/derivatives/{}/releases/{}/{}/snapshots/{timestamp}",
-        release.product,
-        derivative.label(),
-        release.channel,
-        release.version
-    ))
-}
-
-pub fn latest(product: &str, derivative: Kind, channel: &str) -> Result<String, String> {
-    Value(product).component("release product")?;
-    Value(channel).component("release channel")?;
-    Ok(format!(
-        "v2/products/{product}/derivatives/{}/channels/{channel}/latest.json",
-        derivative.label()
-    ))
 }

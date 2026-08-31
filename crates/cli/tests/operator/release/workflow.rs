@@ -22,6 +22,7 @@ fn matrix() {
     assert!(held.contains("plumb ship execute --request"), "{held}");
     assert!(held.contains("\n  materialize:\n"), "{held}");
     assert!(held.contains("\n  seal:\n"), "{held}");
+    assert!(held.contains("\n  configuration:\n"), "{held}");
     assert!(held.contains("\n  verify:\n"), "{held}");
     assert!(held.contains("\n  depot:\n"), "{held}");
     let immutable = held
@@ -37,8 +38,12 @@ fn matrix() {
         .rfind("plumb depot skill --marker")
         .expect("skill derivative");
     assert!(
-        immutable < configuration && configuration < consensus && skill < consensus,
-        "derivatives must follow immutable projects and precede channel consensus"
+        configuration < immutable && immutable < consensus && skill < consensus,
+        "exact configuration must precede manager readback while every latest pointer stays last"
+    );
+    assert!(
+        held.contains("needs: [resolve, seal, configuration]"),
+        "manager verification must wait for marker-exact configuration"
     );
     assert_eq!(
         held.matches("plumb depot channel --marker").count(),
