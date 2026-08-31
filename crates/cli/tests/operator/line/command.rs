@@ -36,7 +36,7 @@ pub fn plumb(root: &Path, args: &[&str]) -> Command {
 fn pagination() {
     let fixture = tempfile::tempdir().expect("fixture");
     let bare = tempfile::tempdir().expect("bare");
-    let (url, calls) = super::world::serve(super::world::Court::Paged, 4);
+    let (url, calls) = super::world::serve(super::world::Court::Paged, 10);
     super::stable::marked(fixture.path(), bare.path(), &url, "v1.2.0-nightly.4");
     let output = super::stable::command(
         fixture.path(),

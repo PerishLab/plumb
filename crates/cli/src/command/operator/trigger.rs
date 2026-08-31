@@ -104,19 +104,26 @@ fn launch(flight: Flight<'_>, course: &mut Course) -> Result<String, String> {
 fn watch(client: &Client, id: u64, url: &str) -> Result<String, String> {
     let harness = plumb::forgejo::harness()?;
     let deadline = Instant::now() + harness.run.timeout.duration();
+    let mut settled = 0;
     while Instant::now() < deadline {
         match client.outcome(id)? {
-            Outcome::Success => return Ok(format!("run {id}: success")),
+            Outcome::Success if settle(&mut settled) => return Ok(format!("run {id}: success")),
+            Outcome::Success => {}
             Outcome::Failed { status, tasks } => {
                 return Err(report(client, id, &brief(id, url, &status, &tasks)));
             }
-            Outcome::Waiting => {}
+            Outcome::Waiting => settled = 0,
         }
         std::thread::sleep(harness.run.poll.duration());
     }
     Err(format!(
         "run {id}: still running past the watch timeout\n{url}"
     ))
+}
+
+fn settle(held: &mut usize) -> bool {
+    *held += 1;
+    *held == 3
 }
 
 fn brief(id: u64, url: &str, status: &str, tasks: &[String]) -> String {
