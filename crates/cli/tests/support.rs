@@ -142,10 +142,23 @@ fn bucket(mut stream: TcpStream, objects: &Mutex<BTreeMap<String, Vec<u8>>>) {
     let method = line.next().expect("method");
     let path = line.next().expect("path");
     let key = path.strip_prefix("/workflow/").expect("key");
+    if let Some(name) = ["if-match", "if-none-match"]
+        .into_iter()
+        .find(|name| header(&headers, name).is_some())
+    {
+        let authorization = header(&headers, "authorization").expect("authorization");
+        assert!(authorization.contains(name), "{authorization}");
+    }
     let mut held = objects.lock().expect("objects");
+    let stale = header(&headers, "if-match").is_some_and(|wanted| {
+        held.get(key)
+            .map(|body| format!("\"{}\"", sha(body)) != wanted)
+            .unwrap_or(true)
+    });
     let status = match method {
         "GET" if held.contains_key(key) => 200,
         "GET" => 404,
+        "PUT" if stale => 412,
         "PUT" if header(&headers, "if-none-match") == Some("*") && held.contains_key(key) => 412,
         "PUT" => {
             held.insert(key.to_string(), request[seat..seat + length].to_vec());
@@ -158,7 +171,16 @@ fn bucket(mut stream: TcpStream, objects: &Mutex<BTreeMap<String, Vec<u8>>>) {
     } else {
         &[]
     };
-    write!(stream, "HTTP/1.1 {status} held\r\nContent-Length: {}\r\nETag: \"held\"\r\nConnection: close\r\n\r\n", body.len()).expect("headers");
+    let etag = held
+        .get(key)
+        .map(|body| format!("\"{}\"", sha(body)))
+        .unwrap_or_else(|| "\"missing\"".to_string());
+    write!(
+        stream,
+        "HTTP/1.1 {status} held\r\nContent-Length: {}\r\nETag: {etag}\r\nConnection: close\r\n\r\n",
+        body.len()
+    )
+    .expect("headers");
     stream.write_all(body).expect("body");
 }
 
