@@ -1,4 +1,5 @@
 mod expanding;
+mod flight;
 
 use super::world::{Court, serve};
 use std::path::Path;
@@ -58,7 +59,11 @@ pub(super) fn marked(root: &Path, bare: &Path, forge: &str, version: &str) {
 }
 
 pub fn command(root: &Path, args: &[&str]) -> Output {
-    super::command::plumb(root, args).output().expect("plumb")
+    let mut command = super::command::plumb(root, args);
+    command
+        .env("HARNESS_RUN_TIMEOUT_MS", "1000")
+        .output()
+        .expect("plumb")
 }
 
 pub fn run(command: &mut Command) {
@@ -67,30 +72,6 @@ pub fn run(command: &mut Command) {
         output.status.success(),
         "{}",
         String::from_utf8_lossy(&output.stderr)
-    );
-}
-
-#[test]
-fn flight() {
-    let fixture = tempfile::tempdir().expect("fixture");
-    let bare = tempfile::tempdir().expect("bare");
-    let (url, _calls) = serve(Court::Flight, 400);
-    marked(fixture.path(), bare.path(), &url, "v1.2.0-nightly.1");
-    let output = command(
-        fixture.path(),
-        &[
-            "ship",
-            "dispatch",
-            "--marker",
-            "v1.2.0-nightly.1",
-            "--watch",
-        ],
-    );
-    assert!(!output.status.success());
-    let text = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        text.contains("still running past the watch timeout"),
-        "{text}"
     );
 }
 
