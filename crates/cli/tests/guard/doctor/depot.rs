@@ -158,6 +158,28 @@ fn staged() {
 }
 
 #[test]
+fn guarded() {
+    let fixture = super::fixture();
+    let root = fixture.path();
+    std::fs::write(root.join("plumb.toml"), "[layout]\n").expect("governance");
+    let seat = super::super::support::guard(&[], &format!("v{}", env!("CARGO_PKG_VERSION")));
+    let home = tempfile::tempdir().expect("unrelated active depot home");
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["doctor", root.to_str().expect("fixture")])
+        .env("PLUMB_HOME", home.path())
+        .env("PLUMB_GUARD_CONFIGURATION", seat.path())
+        .output()
+        .expect("guarded doctor");
+    let out = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(!out.contains("cannot read installed rules"), "{out}");
+    assert!(!out.contains("belongs to Plumb"), "{out}");
+}
+
+#[test]
 fn legacy() {
     let fixture = super::fixture();
     let home = tempfile::tempdir().expect("empty home");

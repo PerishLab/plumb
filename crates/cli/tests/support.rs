@@ -22,6 +22,42 @@ pub fn depot(overrides: &[(&str, &str)]) -> tempfile::TempDir {
     fixture
 }
 
+#[allow(dead_code)]
+pub fn guard(overrides: &[(&str, &str)], target: &str) -> tempfile::TempDir {
+    let fixture = depot(overrides);
+    let base = fixture.path().join("configurations").join(MARK);
+    let mut bodies = BTreeMap::new();
+    let mut objects = Vec::new();
+    for file in walk(&base) {
+        let path = file.strip_prefix(&base).expect("guard object");
+        if path == Path::new(plumb::depot::LEAF) {
+            continue;
+        }
+        let path = path.to_string_lossy().replace('\\', "/");
+        let bytes = std::fs::read(&file).expect("guard body");
+        objects.push(Object {
+            path: path.clone(),
+            sha256: sha(&bytes),
+            size: bytes.len() as u64,
+        });
+        bodies.insert(path, bytes);
+    }
+    let manifest = plumb::guard::Configuration::new(
+        target.into(),
+        plumb::guard::Validator {
+            version: "v0.0.1".into(),
+            marker: "a".repeat(64),
+            artifact: "b".repeat(64),
+        },
+        objects,
+    )
+    .expect("guard configuration");
+    manifest
+        .install(fixture.path(), &bodies)
+        .expect("guard installation");
+    fixture
+}
+
 pub fn stock(root: &Path, overrides: &[(&str, &str)]) {
     let base = root.join(MARK);
     let mut objects = Vec::new();

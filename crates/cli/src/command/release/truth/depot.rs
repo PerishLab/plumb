@@ -17,6 +17,18 @@ pub(in crate::command) struct Source<'a> {
 }
 
 impl Source<'_> {
+    pub fn stable(&self, binary: bool) -> Result<Binding, String> {
+        let url = format!("{}/v1/channels/stable.json", self.authority);
+        let pointer = super::verify::Surface(&url).stable()?;
+        if pointer.product != self.product {
+            return Err(format!(
+                "stable pointer names {}, expected {}",
+                pointer.product, self.product
+            ));
+        }
+        self.binding(&pointer.version, binary)
+    }
+
     pub fn binding(&self, version: &str, binary: bool) -> Result<Binding, String> {
         let channel = super::super::channel(version)?;
         let url = format!(
@@ -46,11 +58,16 @@ impl Source<'_> {
     }
 }
 
+pub(in crate::command) struct Validated {
+    pub version: String,
+    pub artifact: String,
+}
+
 pub(in crate::command) fn validate(
     spec: &Spec,
     binding: &Binding,
     plan: &Batch,
-) -> Result<(), String> {
+) -> Result<Validated, String> {
     let depot = spec
         .depot
         .as_ref()
@@ -116,7 +133,10 @@ pub(in crate::command) fn validate(
                 )
             })?;
         if output.status.success() {
-            return Ok(());
+            return Ok(Validated {
+                version: binding.release.version.clone(),
+                artifact: artifact.sha256.clone(),
+            });
         }
         Err(format!(
             "released {} validator refused the configuration:\n{}{}",

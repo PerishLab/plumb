@@ -3,9 +3,11 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use std::path::{Path, PathBuf};
 
+mod configuration;
 mod store;
 mod transit;
 
+pub use configuration::{Configuration, Validator};
 pub use transit::{attach, stage, staged};
 
 pub const SCHEMA: &str = "plumb.guard-proof/v1";

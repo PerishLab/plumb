@@ -2,6 +2,8 @@ use plumb::depot::{FORMAT, Manifest, Metadata, Object, Pointer, Schema, Seat, sh
 use semver::Version;
 use std::path::Path;
 
+#[path = "support/configuration.rs"]
+mod configuration;
 #[path = "support/generation.rs"]
 mod generation;
 
