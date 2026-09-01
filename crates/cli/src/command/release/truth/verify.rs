@@ -79,10 +79,10 @@ pub fn binary(url: &str, stable: bool) -> Result<String, String> {
 pub(in crate::command::release) struct Surface<'a>(pub(in crate::command::release) &'a str);
 
 impl Surface<'_> {
-    pub(in crate::command::release) fn stable(&self) -> Result<Pointer, String> {
+    pub(in crate::command::release) fn pointer(&self, channel: &str) -> Result<Pointer, String> {
         let pointer: Pointer = self.read()?;
-        if pointer.schema != 1 || pointer.channel != "stable" {
-            return Err("stable pointer is not current".into());
+        if pointer.schema != 1 || pointer.channel != channel {
+            return Err(format!("{channel} pointer is not current"));
         }
         Ok(pointer)
     }

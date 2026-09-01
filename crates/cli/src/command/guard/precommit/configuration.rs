@@ -18,13 +18,8 @@ impl Seat {
         let depot = spec.derivative(plumb::depot::v3::Kind::Configuration)?;
         let binding = crate::command::release::Product::new(&spec)
             .depot()
-            .stable(true)?;
-        let marker = crate::command::release::ReleaseMarker::at(
-            staged,
-            &spec.product,
-            &spec.authority,
-            &binding.release.version,
-        )?;
+            .latest("beta", true)?;
+        related(target, &binding.release.version)?;
         let snapshot = Snapshot::read(staged).map_err(|error| error.to_string())?;
         let held = crate::shape::depot::inventory(&snapshot)?;
         let plan = Batch::validation(
@@ -41,7 +36,7 @@ impl Seat {
             target.to_string(),
             plumb::guard::Validator {
                 version: validated.version,
-                marker: marker.digest()?,
+                release: binding.release.seal.sha256,
                 artifact: validated.artifact,
             },
             plan.manifest.objects.clone(),
@@ -64,6 +59,22 @@ impl Seat {
     pub fn path(&self) -> &Path {
         self.temporary.path()
     }
+}
+
+fn related(target: &str, validator: &str) -> Result<(), String> {
+    let target = semver::Version::parse(target.trim_start_matches('v'))
+        .map_err(|error| format!("cannot parse guard target {target}: {error}"))?;
+    let validator = semver::Version::parse(validator.trim_start_matches('v'))
+        .map_err(|error| format!("cannot parse released validator {validator}: {error}"))?;
+    if (validator.major, validator.minor, validator.patch)
+        != (target.major, target.minor, target.patch)
+        || validator.pre.is_empty()
+    {
+        return Err(format!(
+            "released validator v{validator} does not belong to v{target}"
+        ));
+    }
+    Ok(())
 }
 
 pub(super) fn target(root: &Path) -> Result<Option<String>, String> {

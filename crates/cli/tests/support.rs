@@ -46,7 +46,7 @@ pub fn guard(overrides: &[(&str, &str)], target: &str) -> tempfile::TempDir {
         target.into(),
         plumb::guard::Validator {
             version: "v0.0.1".into(),
-            marker: "a".repeat(64),
+            release: "a".repeat(64),
             artifact: "b".repeat(64),
         },
         objects,

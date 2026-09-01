@@ -7,7 +7,7 @@ fn temporary() {
         "v1.2.3".into(),
         plumb::guard::Validator {
             version: "v1.2.2".into(),
-            marker: "a".repeat(64),
+            release: "a".repeat(64),
             artifact: "b".repeat(64),
         },
         vec![plumb::depot::Object {

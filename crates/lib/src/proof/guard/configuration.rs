@@ -10,7 +10,7 @@ const LEAF: &str = "guard-configuration.json";
 #[serde(deny_unknown_fields)]
 pub struct Validator {
     pub version: String,
-    pub marker: String,
+    pub release: String,
     pub artifact: String,
 }
 
@@ -125,7 +125,7 @@ impl Configuration {
         }
         version(&self.target, "guard configuration target")?;
         version(&self.validator.version, "guard configuration validator")?;
-        digest(&self.validator.marker, "validator marker")?;
+        digest(&self.validator.release, "validator release seal")?;
         digest(&self.validator.artifact, "validator artifact")?;
         digest(&self.digest, "guard configuration")?;
         if self.objects.is_empty() {
