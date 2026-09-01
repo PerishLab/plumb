@@ -23,6 +23,7 @@ esac
 "#;
 
 pub fn prove(path: &Path) {
+    let inventory = crate::support::Bucket::open(3);
     let request = serde_json::json!({
         "schema": "plumb.ship-request/v1",
         "action": "ship/cargo",
@@ -54,10 +55,7 @@ pub fn prove(path: &Path) {
         .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
         .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
         .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", "workflow")
-        .env(
-            "PLUMB_WORKFLOW_INVENTORY_ENDPOINT",
-            "https://account.r2.cloudflarestorage.com",
-        )
+        .env("PLUMB_WORKFLOW_INVENTORY_ENDPOINT", inventory.endpoint())
         .env(
             "PLUMB_WORKFLOW_INVENTORY_URL",
             "https://workflow.example/inventory.json",
@@ -76,4 +74,5 @@ pub fn prove(path: &Path) {
     assert!(calls.contains("publish --registry perish"), "{calls}");
     assert!(!calls.contains("--dry-run"), "{calls}");
     assert!(path.join("target/cargo/family-cargo.tar.gz").is_file());
+    inventory.finish();
 }

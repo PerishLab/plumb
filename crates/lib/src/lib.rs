@@ -8,6 +8,8 @@ pub mod forgejo;
 mod proof;
 mod runtime;
 pub mod seat;
+#[cfg(feature = "depot")]
+pub use seat::bucket;
 pub use seat::depot;
 #[cfg(feature = "skill")]
 pub mod skill;

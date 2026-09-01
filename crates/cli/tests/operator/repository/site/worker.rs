@@ -4,6 +4,7 @@ use std::process::Command;
 #[test]
 fn exact() {
     let fixture = tempfile::tempdir().expect("worker fixture");
+    let inventory = crate::support::Bucket::open(6);
     let root = fixture.path();
     super::seed(root);
     std::fs::write(
@@ -31,6 +32,7 @@ fn exact() {
         root,
         &request(serde_json::json!({"type": "none", "source": ""})),
         None,
+        &inventory.endpoint(),
     );
     assert!(
         first.status.success(),
@@ -65,6 +67,7 @@ fn exact() {
             "source": "https://workflow.example/worker.tgz"
         })),
         Some(&workload),
+        &inventory.endpoint(),
     );
     assert!(
         held.status.success(),
@@ -77,9 +80,15 @@ fn exact() {
         "a held worker workload must not rebuild"
     );
     assert!(root.join("apps/web/dist/index.html").is_file());
+    inventory.finish();
 }
 
-fn run(root: &Path, request: &str, workload: Option<&Path>) -> std::process::Output {
+fn run(
+    root: &Path,
+    request: &str,
+    workload: Option<&Path>,
+    inventory: &str,
+) -> std::process::Output {
     let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
     command
         .args(["ship", "execute", "--request", request])
@@ -103,10 +112,7 @@ fn run(root: &Path, request: &str, workload: Option<&Path>) -> std::process::Out
         .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
         .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
         .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", "workflow")
-        .env(
-            "PLUMB_WORKFLOW_INVENTORY_ENDPOINT",
-            "https://account.r2.cloudflarestorage.com",
-        )
+        .env("PLUMB_WORKFLOW_INVENTORY_ENDPOINT", inventory)
         .env(
             "PLUMB_WORKFLOW_INVENTORY_URL",
             "https://workflow.example/inventory.json",

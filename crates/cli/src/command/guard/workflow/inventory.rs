@@ -3,7 +3,6 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Read as _;
 use std::path::Path;
-use std::process::Output;
 
 #[derive(PartialEq)]
 struct Key<'a> {
@@ -145,21 +144,4 @@ pub(super) fn digest(path: &Path) -> Result<String, String> {
         sponge.update(&block[..read]);
     }
     Ok(format!("{:x}", sponge.finalize()))
-}
-
-pub(super) fn absent(output: &Output) -> bool {
-    let text = String::from_utf8_lossy(&output.stderr);
-    text.contains("NoSuchKey") || text.contains("Not Found") || text.contains("404")
-}
-
-pub(super) fn stale(output: &Output) -> bool {
-    let text = String::from_utf8_lossy(&output.stderr);
-    text.contains("PreconditionFailed") || text.contains("412")
-}
-
-pub(super) fn failure(action: &str, output: &Output) -> String {
-    format!(
-        "{action}: {}",
-        String::from_utf8_lossy(&output.stderr).trim()
-    )
 }

@@ -110,6 +110,13 @@ impl Inventory {
         Ok(held)
     }
 
+    pub(super) fn decode(body: &[u8]) -> Result<Self, String> {
+        let held: Self = serde_json::from_slice(body)
+            .map_err(|error| format!("cannot parse workflow inventory: {error}"))?;
+        held.validate()?;
+        Ok(held)
+    }
+
     pub fn resolve(&self, action: &str, keys: &Keys) -> Result<Verdict, String> {
         if let Some(publication) = &keys.publication
             && let Some(record) =

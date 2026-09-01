@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "depot")]
+pub mod bucket;
 pub mod depot;
 
 pub use plumb_macro::resource;
