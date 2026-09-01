@@ -1,4 +1,3 @@
-use plumb::rig::Rig;
 use serde_json::{Map, Value};
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -39,16 +38,6 @@ impl Inventory {
     pub(super) fn path(&self) -> Option<&Path> {
         self.0.as_ref().map(tempfile::NamedTempFile::path)
     }
-}
-
-pub(super) fn depot(root: &Path) -> Result<String, String> {
-    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let held = crate::command::depot::held();
-    let mark = held
-        .mark()
-        .filter(|mark| !mark.is_empty())
-        .ok_or_else(|| format!("{} has no active depot identity", root.display()))?;
-    Ok(format!("{} {mark}", rig.rules.channel))
 }
 
 pub(super) fn projection(root: &Path) -> String {

@@ -18,6 +18,12 @@ fn windows() -> String {
         .expect("Plumb owns one canonical Windows bootstrap")
 }
 
+fn executor() -> String {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    std::fs::read_to_string(root.join(".forgejo/scripts/execute-ship.sh"))
+        .expect("Plumb owns one canonical ship executor")
+}
+
 fn transport() -> String {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     std::fs::read_to_string(root.join("crates/cli/src/command/ship/transport/support.rs"))
@@ -28,49 +34,37 @@ fn transport() -> String {
 fn matrix() {
     let held = canonical();
     assert!(held.contains("workflow_dispatch:"), "{held}");
-    assert!(held.contains("graph=$(plumb ship resolve"), "{held}");
+    assert!(held.contains(".forgejo/scripts/resolve-ship.sh"), "{held}");
     assert!(
         held.contains("timeout --kill-after=5s 45s"),
         "marker checkout must not inherit an unbounded transport wait"
     );
     assert!(
-        held.contains("fromJSON(needs.resolve.outputs.targets)"),
+        held.contains("fromJSON(needs.resolve.outputs.workload)"),
         "{held}"
     );
     assert!(
-        held.contains("fromJSON(needs.resolve.outputs.project)"),
+        held.contains("fromJSON(needs.publish_plan.outputs.publication)"),
         "{held}"
     );
-    assert!(held.contains("plumb ship execute --request"), "{held}");
-    assert!(held.contains("\n  materialize:\n"), "{held}");
-    assert!(held.contains("\n  seal:\n"), "{held}");
-    assert!(held.contains("\n  configuration:\n"), "{held}");
-    assert!(held.contains("\n  verify:\n"), "{held}");
-    assert!(held.contains("\n  depot:\n"), "{held}");
-    let immutable = held
-        .rfind("plumb ship execute --request")
-        .expect("ship project");
-    let consensus = held
-        .rfind("plumb depot channel --marker")
-        .expect("depot consensus");
-    let configuration = held
-        .rfind("plumb depot configuration --marker")
-        .expect("configuration derivative");
-    let skill = held
-        .rfind("plumb depot skill --marker")
-        .expect("skill derivative");
+    assert!(executor().contains("plumb ship execute --request"));
+    assert!(held.contains("\n  workload:\n"), "{held}");
+    assert!(held.contains("\n  publish_plan:\n"), "{held}");
+    assert!(held.contains("\n  publication:\n"), "{held}");
+    for foreign in [
+        "\n  seal:\n",
+        "\n  configuration:\n",
+        "\n  verify:\n",
+        "\n  depot:\n",
+    ] {
+        assert!(
+            !held.contains(foreign),
+            "ship retains foreign phase {foreign}"
+        );
+    }
     assert!(
-        configuration < immutable && immutable < consensus && skill < consensus,
-        "exact configuration must precede manager readback while every latest pointer stays last"
-    );
-    assert!(
-        held.contains("needs: [resolve, seal, configuration]"),
-        "manager verification must wait for marker-exact configuration"
-    );
-    assert_eq!(
-        held.matches("plumb depot channel --marker").count(),
-        1,
-        "only the final depot job may move the channel"
+        !held.contains("plumb depot "),
+        "ship must not operate depot"
     );
     assert!(
         held.contains(".forgejo/scripts/bootstrap-plumb.sh"),
@@ -85,24 +79,22 @@ fn matrix() {
         "workflow orchestration must not duplicate atom bootstrap implementation"
     );
     assert!(!held.contains("${{ runner.temp }}"), "{held}");
-    assert_eq!(held.matches("PLUMB_HOME: /tmp/plumb-home").count(), 2);
-    assert_eq!(held.matches("run: corepack enable").count(), 1, "{held}");
+    assert!(
+        !held.contains("PLUMB_HOME:"),
+        "ship does not own a depot seat"
+    );
+    assert!(
+        !held.contains("corepack enable"),
+        "request owns preparation"
+    );
     assert!(
         !held.contains("name: release-${{ matrix.target }}"),
         "binary workloads must not cross Forgejo artifact storage"
     );
-    assert_eq!(
-        held.matches("plumb workflow record $env:PLUMB_BINARY_ACTION")
-            .count()
-            + held
-                .matches("plumb workflow record \"$PLUMB_BINARY_ACTION\"")
-                .count(),
-        2,
-        "each native runner dialect must record its workload directly"
-    );
+    assert_eq!(held.matches(".forgejo/scripts/execute-ship").count(), 3);
     assert!(
-        held.contains("- name: Resolve and fetch every binary workload"),
-        "seal must consume the recorded workload URLs"
+        held.contains("resolve-ship.sh '${{ github.sha }}' ready"),
+        "publication planning must observe the recorded workloads"
     );
 }
 
@@ -139,10 +131,6 @@ fn depot() {
     assert!(
         bootstrap < installed && installed < exact,
         "bootstrap rules must precede the build while exact rules follow installation"
-    );
-    assert!(
-        canonical().contains("bootstrap-plumb.sh .plumb-atom exact"),
-        "the depot consumer must select exact configuration"
     );
     for binding in [
         "PLUMB_BUILD_VERSION=\"$PLUMB_RELEASE_VERSION\"",

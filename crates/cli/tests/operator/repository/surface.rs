@@ -32,10 +32,13 @@ fn declared() {
     .expect("Cargo manifest");
     let cargo: serde_json::Value = serde_json::from_str(&surface(&root)).expect("cargo surface");
     assert_eq!(
-        cargo["project"]["include"][0]["schema"],
-        "plumb.ship-request/v1"
+        cargo["publication"]["include"][0]["schema"],
+        "plumb.ship-request/v2"
     );
-    assert_eq!(cargo["project"]["include"][0]["operation"]["type"], "cargo");
+    assert_eq!(
+        cargo["publication"]["include"][0]["operation"]["type"],
+        "cargo"
+    );
 
     std::fs::write(
         root.join("plumb.toml"),
@@ -43,8 +46,8 @@ fn declared() {
     )
     .expect("manifest");
     let oci: serde_json::Value = serde_json::from_str(&surface(&root)).expect("image surface");
-    assert_eq!(oci["project"]["include"][0]["action"], "ship/oci");
-    assert_eq!(oci["project"]["include"][0]["operation"]["type"], "oci");
+    assert_eq!(oci["publication"]["include"][0]["action"], "ship/oci");
+    assert_eq!(oci["publication"]["include"][0]["operation"]["type"], "oci");
 
     std::fs::remove_dir_all(&root).expect("fixture should be swept");
 }
@@ -72,9 +75,12 @@ fn worker() {
     )
     .expect("manifest");
     let worker: serde_json::Value = serde_json::from_str(&surface(&root)).expect("worker surface");
-    assert_eq!(worker["project"]["include"][0]["action"], "ship/cfworker");
     assert_eq!(
-        worker["project"]["include"][0]["operation"]["type"],
+        worker["publication"]["include"][0]["action"],
+        "ship/cfworker"
+    );
+    assert_eq!(
+        worker["publication"]["include"][0]["operation"]["type"],
         "cfworker"
     );
 
@@ -157,7 +163,7 @@ fn prepared() {
     .expect("manifest");
     let plan: serde_json::Value =
         serde_json::from_str(&surface(&root)).expect("the surface is one plan");
-    let rows = plan["project"]["include"]
+    let rows = plan["publication"]["include"]
         .as_array()
         .expect("a plan names the projected media");
     assert_eq!(rows.len(), 5, "{rows:?}");
@@ -199,7 +205,7 @@ fn prepared() {
         serde_json::json!(["Cargo.toml", "apps", "packages"])
     );
     for row in rows {
-        assert_eq!(row["schema"], "plumb.ship-request/v1");
+        assert_eq!(row["schema"], "plumb.ship-request/v2");
         assert!(row["action"].as_str().is_some_and(|held| !held.is_empty()));
         assert!(row["roots"].as_array().is_some_and(|held| !held.is_empty()));
     }

@@ -1,11 +1,11 @@
 use super::super::adaptor;
-use crate::command::release::{artifacts, required};
+use crate::command::release::{artifacts, capsule, output, required, storage, verify};
 use plumb::rig::Rig;
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::process::Command;
 
-const SCHEMA: &str = "plumb.ship-request/v1";
+const SCHEMA: &str = "plumb.ship-request/v2";
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -24,11 +24,21 @@ struct Request {
 #[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase", deny_unknown_fields)]
 enum Operation {
+    Workload { target: String, archive: String },
+    Publication { workloads: Vec<Workload> },
     Cargo,
     Cfworker,
     Chart,
     Npm { package: String },
     Oci,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Workload {
+    target: String,
+    archive: String,
+    url: String,
 }
 
 #[derive(Deserialize, serde::Serialize)]
@@ -82,13 +92,57 @@ impl Request {
         let release = &rig.release;
         let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
         let reuse = self.reuse.encode()?;
-        if matches!(
-            &self.operation,
-            Operation::Cargo | Operation::Chart | Operation::Npm { .. } | Operation::Oci
-        ) {
-            super::super::attachment::sealed(&spec, release, version, true)?;
-        }
         let projection = match self.operation {
+            Operation::Workload { target, archive } => {
+                super::super::package::product(&spec).build(super::super::package::Build {
+                    target: &target,
+                    version,
+                    channel: required("PLUMB_RELEASE_CHANNEL", &release.channel)?,
+                    commit: required("PLUMB_RELEASE_COMMIT", &release.commit)?,
+                    artifacts: &artifacts(release)?,
+                })?;
+                let keys = self
+                    .keys
+                    .ok_or_else(|| "an exact ship request carries no inventory keys".to_string())?;
+                crate::command::workflow::record::project(
+                    crate::command::workflow::record::Project {
+                        action: &self.action,
+                        keys: &keys.to_string(),
+                        workload: artifacts(release)?.join(archive),
+                        publication: None,
+                        depot: None,
+                    },
+                )?;
+                return result("workload", "", None);
+            }
+            Operation::Publication { workloads } => {
+                let artifacts = artifacts(release)?;
+                if release.channel == "stable" {
+                    crate::command::release::Product::new(&spec).promote(release)?;
+                } else {
+                    materialize(&artifacts, &workloads)?;
+                }
+                super::super::package::product(&spec).assemble(version, &artifacts)?;
+                crate::command::release::Product::new(&spec).compile(release)?;
+                let capsule = capsule(release)?;
+                storage::publish(&capsule, &rig.publish)?;
+                verify::run(&capsule, false)?;
+                let (compiled, _) = crate::command::release::record::Capsule::read(&capsule)?;
+                let publication = compiled.seal.remote.url;
+                let keys = self
+                    .keys
+                    .ok_or_else(|| "an exact ship request carries no inventory keys".to_string())?;
+                crate::command::workflow::record::project(
+                    crate::command::workflow::record::Project {
+                        action: &self.action,
+                        keys: &keys.to_string(),
+                        workload: output(release)?.join("capsule.json"),
+                        publication: Some(publication.clone()),
+                        depot: None,
+                    },
+                )?;
+                return result("url", &publication, None);
+            }
             Operation::Cargo => Some(super::super::package::project::cargo(
                 &adaptor::registry::registry(&spec),
                 version,
@@ -149,6 +203,38 @@ impl Request {
         })?;
         result("url", &projection.publication, projection.depot)
     }
+}
+
+fn materialize(root: &std::path::Path, workloads: &[Workload]) -> Result<(), String> {
+    std::fs::create_dir_all(root)
+        .map_err(|error| format!("cannot create {}: {error}", root.display()))?;
+    for workload in workloads {
+        if workload.target.is_empty() || workload.archive.is_empty() || workload.url.is_empty() {
+            return Err("binary publication carries an incomplete workload".into());
+        }
+        let target = root.join(&workload.archive);
+        let status = Command::new("curl")
+            .args([
+                "--fail",
+                "--silent",
+                "--show-error",
+                "--location",
+                "--retry",
+                "3",
+                "--output",
+            ])
+            .arg(&target)
+            .arg(&workload.url)
+            .status()
+            .map_err(|error| format!("cannot fetch {}: {error}", workload.url))?;
+        if !status.success() {
+            return Err(format!(
+                "cannot fetch binary workload for {}",
+                workload.target
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn install(root: &std::path::Path) -> Result<(), String> {

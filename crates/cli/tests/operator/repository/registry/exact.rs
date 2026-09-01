@@ -25,7 +25,7 @@ esac
 pub fn prove(path: &Path) {
     let inventory = crate::support::Bucket::open(4);
     let request = serde_json::json!({
-        "schema": "plumb.ship-request/v1",
+        "schema": "plumb.ship-request/v2",
         "action": "ship/cargo",
         "projections": [],
         "roots": ["Cargo.toml", "Cargo.lock", "crates"],

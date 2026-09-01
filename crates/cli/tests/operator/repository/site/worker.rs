@@ -14,7 +14,7 @@ fn exact() {
     .expect("release manifest");
     let request = |reuse: serde_json::Value| {
         serde_json::json!({
-            "schema": "plumb.ship-request/v1",
+            "schema": "plumb.ship-request/v2",
             "action": "ship/cfworker",
             "projections": [],
             "roots": ["Cargo.toml", "apps"],
