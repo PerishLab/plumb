@@ -1,12 +1,10 @@
-use super::inventory::{absent, digest, failure, field, stale};
+use super::inventory::{digest, field};
 use super::reuse::hash;
 use super::reuse::{Inventory, Keys, Record};
 use clap::Args;
-use serde::Deserialize;
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Command,
 };
 
 const INVENTORY: &str = "inventory.json";
@@ -111,10 +109,7 @@ pub(in crate::command) fn project(input: Project<'_>) -> Result<(), String> {
 }
 
 struct Authority {
-    access: String,
-    secret: String,
-    bucket: String,
-    endpoint: String,
+    control: plumb::bucket::Control,
     public: String,
 }
 
@@ -124,20 +119,21 @@ impl Authority {
             .map_err(|error| error.to_string())?
             .workflow
             .inventory;
-        let held = Self {
-            access: field("PLUMB_WORKFLOW_INVENTORY_ACCESS", held.access)?,
-            secret: field("PLUMB_WORKFLOW_INVENTORY_SECRET", held.secret)?,
-            bucket: field("PLUMB_WORKFLOW_INVENTORY_BUCKET", held.bucket)?,
-            endpoint: field("PLUMB_WORKFLOW_INVENTORY_ENDPOINT", held.endpoint)?,
-            public: field("PLUMB_WORKFLOW_INVENTORY_URL", held.url)?,
-        };
-        if !held.endpoint.starts_with("https://") {
+        let access = field("PLUMB_WORKFLOW_INVENTORY_ACCESS", held.access)?;
+        let secret = field("PLUMB_WORKFLOW_INVENTORY_SECRET", held.secret)?;
+        let bucket = field("PLUMB_WORKFLOW_INVENTORY_BUCKET", held.bucket)?;
+        let endpoint = field("PLUMB_WORKFLOW_INVENTORY_ENDPOINT", held.endpoint)?;
+        let public = field("PLUMB_WORKFLOW_INVENTORY_URL", held.url)?;
+        if !endpoint.starts_with("https://") && !endpoint.starts_with("http://127.0.0.1:") {
             return Err("PLUMB_WORKFLOW_INVENTORY_ENDPOINT must be HTTPS".into());
         }
-        if !held.public.starts_with("https://") {
+        if !public.starts_with("https://") {
             return Err("PLUMB_WORKFLOW_INVENTORY_URL must be HTTPS".into());
         }
-        Ok(held)
+        Ok(Self {
+            control: plumb::bucket::Control::new(access, secret, bucket, endpoint)?,
+            public,
+        })
     }
 
     fn public(&self, key: &str) -> Result<String, String> {
@@ -156,107 +152,59 @@ impl Authority {
             if let Some(publication) = &publication {
                 inventory.record(publication.clone())?;
             }
-            let seat = tempfile::NamedTempFile::new()
-                .map_err(|error| format!("cannot stage workflow inventory: {error}"))?;
-            fs::write(seat.path(), inventory.encode()?)
-                .map_err(|error| format!("cannot stage workflow inventory: {error}"))?;
-            let mut command = self.command();
-            command
-                .args(["put-object", "--bucket", &self.bucket, "--key", INVENTORY])
-                .arg("--body")
-                .arg(seat.path())
-                .args([
-                    "--content-type",
-                    "application/json",
-                    "--cache-control",
-                    "no-store",
-                ]);
-            match etag {
-                Some(etag) => {
-                    command.args(["--if-match", &etag]);
-                }
-                None => {
-                    command.args(["--if-none-match", "*"]);
+            let body = inventory.encode()?;
+            let condition = etag.as_deref().map_or(
+                plumb::bucket::Condition::Absent,
+                plumb::bucket::Condition::Match,
+            );
+            match self.control.write(
+                INVENTORY,
+                &body,
+                plumb::bucket::Policy {
+                    media: "application/json",
+                    cache: "no-store",
+                },
+                condition,
+            )? {
+                plumb::bucket::Outcome::Held(()) => return Ok(()),
+                plumb::bucket::Outcome::Stale => continue,
+                plumb::bucket::Outcome::Missing => {
+                    return Err("publishing workflow inventory returned missing".into());
                 }
             }
-            let output = command.arg("--no-cli-pager").output().map_err(|error| {
-                format!("cannot run aws put-object for workflow inventory: {error}")
-            })?;
-            if output.status.success() {
-                return Ok(());
-            }
-            if stale(&output) {
-                continue;
-            }
-            return Err(failure("publish workflow inventory", &output));
         }
         Err("workflow inventory remained busy after 8 attempts".into())
     }
 
     fn inventory(&self) -> Result<(Inventory, Option<String>), String> {
-        let seat = tempfile::tempdir()
-            .map_err(|error| format!("cannot stage workflow inventory: {error}"))?;
-        let path = seat.path().join(INVENTORY);
-        let output = self
-            .command()
-            .args(["get-object", "--bucket", &self.bucket, "--key", INVENTORY])
-            .arg(&path)
-            .arg("--no-cli-pager")
-            .output()
-            .map_err(|error| {
-                format!("cannot run aws get-object for workflow inventory: {error}")
-            })?;
-        if absent(&output) {
-            return Ok((Inventory::empty(), None));
+        match self.control.read(INVENTORY)? {
+            plumb::bucket::Outcome::Missing => Ok((Inventory::empty(), None)),
+            plumb::bucket::Outcome::Held(object) => {
+                let inventory = Inventory::decode(&object.body)?;
+                Ok((inventory, object.etag))
+            }
+            plumb::bucket::Outcome::Stale => {
+                Err("reading workflow inventory returned stale".into())
+            }
         }
-        if !output.status.success() {
-            return Err(failure("read workflow inventory", &output));
-        }
-        #[derive(Deserialize)]
-        struct Get {
-            #[serde(rename = "ETag")]
-            etag: String,
-        }
-        let response: Get = serde_json::from_slice(&output.stdout)
-            .map_err(|error| format!("cannot read workflow inventory ETag: {error}"))?;
-        let inventory = Inventory::read(Some(&path))?;
-        Ok((inventory, Some(response.etag)))
     }
 
     fn publish(&self, key: &str, path: &Path, content_type: &str) -> Result<(), String> {
-        let output = self
-            .command()
-            .args(["put-object", "--bucket", &self.bucket, "--key", key])
-            .arg("--body")
-            .arg(path)
-            .args([
-                "--content-type",
-                content_type,
-                "--cache-control",
-                "public, max-age=31536000, immutable",
-                "--if-none-match",
-                "*",
-                "--no-cli-pager",
-            ])
-            .output()
-            .map_err(|error| format!("cannot run aws put-object for workflow workload: {error}"))?;
-        if output.status.success() || stale(&output) {
-            Ok(())
-        } else {
-            Err(failure("publish workflow workload", &output))
+        let body = fs::read(path)
+            .map_err(|error| format!("cannot read workload {}: {error}", path.display()))?;
+        match self.control.write(
+            key,
+            &body,
+            plumb::bucket::Policy {
+                media: content_type,
+                cache: "public, max-age=31536000, immutable",
+            },
+            plumb::bucket::Condition::Absent,
+        )? {
+            plumb::bucket::Outcome::Held(()) | plumb::bucket::Outcome::Stale => Ok(()),
+            plumb::bucket::Outcome::Missing => {
+                Err("publishing workflow workload returned missing".into())
+            }
         }
-    }
-
-    fn command(&self) -> Command {
-        let mut command = Command::new("aws");
-        command
-            .env("AWS_ACCESS_KEY_ID", &self.access)
-            .env("AWS_SECRET_ACCESS_KEY", &self.secret)
-            .env("AWS_DEFAULT_REGION", "auto")
-            .env("AWS_EC2_METADATA_DISABLED", "true")
-            .arg("--endpoint-url")
-            .arg(self.endpoint.trim_end_matches('/'))
-            .arg("s3api");
-        command
     }
 }

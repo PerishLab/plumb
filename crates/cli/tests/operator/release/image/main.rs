@@ -196,10 +196,7 @@ esac
     assert!(chart.contains("version: 2.0.0"), "{chart}");
     assert!(chart.contains("appVersion: \"2.0.0\""), "{chart}");
 
-    executable(
-        &tools.join("aws"),
-        "#!/bin/sh\ncase \"$*\" in *get-object*) echo NoSuchKey >&2; exit 1;; *) exit 0;; esac\n",
-    );
+    let inventory = crate::support::Bucket::open(3);
     let request = serde_json::json!({
         "schema": "plumb.ship-request/v1",
         "action": "ship/chart",
@@ -230,10 +227,7 @@ esac
             .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
             .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
             .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", "workflow")
-            .env(
-                "PLUMB_WORKFLOW_INVENTORY_ENDPOINT",
-                "https://account.r2.cloudflarestorage.com",
-            )
+            .env("PLUMB_WORKFLOW_INVENTORY_ENDPOINT", inventory.endpoint())
             .env(
                 "PLUMB_WORKFLOW_INVENTORY_URL",
                 "https://workflow.example/inventory.json",
@@ -244,6 +238,7 @@ esac
         serde_json::from_slice(&executed.stdout).expect("generic ship result");
     assert_eq!(result["schema"], "plumb.ship-result/v1");
     assert_eq!(result["result"]["type"], "url");
+    inventory.finish();
 }
 
 fn packed(path: &Path, version: &str) {
