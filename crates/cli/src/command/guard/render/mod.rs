@@ -29,9 +29,6 @@ impl Seat {
                 return 1;
             }
         };
-        let product = crate::shape::release::Spec::read(&self.0.join("plumb.toml"))
-            .map(|spec| spec.product)
-            .unwrap_or_else(|_| "<product>".to_string());
         match super::depot::occupied(&self.0, &stamped) {
             Err(error) => {
                 println!("  {error}");
@@ -41,7 +38,7 @@ impl Seat {
                 println!("  the depot carries no release note for {stamped}");
                 println!();
                 println!(
-                    "  write one under $PLUMB_HOME/depot/stage/{product}/changelog/{stamped} and run plumb depot changelog --marker {stamped}"
+                    "  prepare one in a temporary directory and run plumb depot changelog --marker {stamped} --from <path>"
                 );
                 1
             }

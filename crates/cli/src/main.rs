@@ -1,9 +1,9 @@
 mod anchor;
 mod catalog;
 mod command;
+mod consumption;
 mod judge;
 mod shape;
-mod skill;
 
 use clap::{Parser, Subcommand};
 use plumb::cli::Root;
@@ -86,7 +86,7 @@ enum Command {
     #[command(about = "Install, inspect, and upgrade the briefs a release carries")]
     Skill {
         #[command(subcommand)]
-        deed: skill::Deed,
+        deed: consumption::skill::Deed,
     },
     #[command(about = "Query the catalogued law by namespace, tag, standing, or owner")]
     Rule {
@@ -99,6 +99,11 @@ enum Command {
         target: Root,
         #[arg(long)]
         version: Option<String>,
+    },
+    #[command(about = "Install the marker-exact configuration Plumb carries")]
+    Configuration {
+        #[command(subcommand)]
+        deed: consumption::configuration::Deed,
     },
     #[command(
         about = "Render the seats and file groups this repository declares",
@@ -117,7 +122,7 @@ enum Command {
         #[arg(long)]
         write: bool,
     },
-    #[command(about = "Publish, sync, and show the configuration Plumb carries")]
+    #[command(about = "Publish and project marker-bound mutable resources")]
     Depot {
         #[command(subcommand)]
         deed: command::depot::Deed,
@@ -172,6 +177,7 @@ impl Command {
             Self::Skill { .. } => "skill",
             Self::Rule { .. } => "rule",
             Self::Changelog { .. } => "changelog",
+            Self::Configuration { .. } => "configuration",
             Self::Layout { .. } => "layout",
             Self::Cookbook { .. } => "cookbook",
             Self::Affirm { .. } => "affirm",
@@ -235,11 +241,12 @@ fn execute(command: Command) -> i32 {
         Command::Policy { target, write } => {
             command::render::Seat::new(PathBuf::from(target.root)).policy(write)
         }
-        Command::Skill { deed } => skill::run(deed),
+        Command::Skill { deed } => consumption::skill::run(deed),
         Command::Rule { deed } => catalog::query::run(deed),
         Command::Changelog { target, version } => {
             command::render::Seat::new(PathBuf::from(target.root)).changelog(version)
         }
+        Command::Configuration { deed } => consumption::configuration::run(deed),
         Command::Layout { target } => {
             command::render::Seat::new(PathBuf::from(target.root)).layout()
         }
@@ -256,17 +263,6 @@ fn execute(command: Command) -> i32 {
     }
 }
 
-fn prepare(command: &Command) -> Result<(), String> {
-    if matches!(command, Command::Depot { .. }) {
-        return Ok(());
-    }
-    plumb::depot::rules()?;
-    catalog::prepare()?;
-    catalog::set::prepare()?;
-    plumb::vocabulary::Dictionary::synced().map_err(|error| error.to_string())?;
-    Ok(())
-}
-
 fn main() {
     let command = match Cli::try_parse() {
         Ok(cli) => cli.command,
@@ -281,10 +277,12 @@ fn main() {
         }
     };
     let run = command::audit::Run::start(command.name());
-    let code = match prepare(&command) {
+    let code = match consumption::prepare(&command) {
         Ok(()) => execute(command),
         Err(error) => {
-            eprintln!("plumb: cannot read synced rules: {error}\nrun plumb depot sync");
+            eprintln!(
+                "plumb: cannot read installed rules: {error}\nrun plumb configuration install"
+            );
             1
         }
     };

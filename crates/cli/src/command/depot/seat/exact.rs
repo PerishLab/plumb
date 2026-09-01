@@ -1,8 +1,3 @@
-pub struct Identity<'a> {
-    pub channel: &'a str,
-    pub version: &'a str,
-}
-
 pub struct Query<'a> {
     pub source: &'a str,
     pub product: &'a str,

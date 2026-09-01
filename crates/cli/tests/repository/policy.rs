@@ -16,7 +16,7 @@ fn govern(root: &Path) {
 
 fn run(root: &Path) -> String {
     let home = root.join(".plumb-test-home");
-    super::support::stock(&home.join("depot"), &[]);
+    super::support::stock(&home.join("configurations"), &[]);
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("path should be utf8")])
         .env("PLUMB_HOME", home)
@@ -27,7 +27,7 @@ fn run(root: &Path) -> String {
 
 fn policy(root: &Path, write: bool) -> std::process::Output {
     let home = root.join(".plumb-test-home");
-    super::support::stock(&home.join("depot"), &[]);
+    super::support::stock(&home.join("configurations"), &[]);
     let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
     command.args(["policy", root.to_str().expect("path should be utf8")]);
     command.env("PLUMB_HOME", home);
@@ -38,7 +38,10 @@ fn policy(root: &Path, write: bool) -> std::process::Output {
 }
 
 fn stock(home: &Path, policy: &str) {
-    super::support::stock(&home.join("depot"), &[("rules/policy.toml", policy)]);
+    super::support::stock(
+        &home.join("configurations"),
+        &[("rules/policy.toml", policy)],
+    );
 }
 
 fn source() -> String {

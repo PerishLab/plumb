@@ -164,7 +164,7 @@ fn intent() {
     let temp = tempfile::tempdir().expect("temp root");
     let root = temp.path();
     let out = root.join("managers");
-    super::support::stock(&root.join("depot"), &[]);
+    super::support::stock(&root.join("configurations"), &[]);
     std::fs::write(root.join("plumb.toml"), SPEC).expect("release manifest");
     let fixture = Fixture { root, tools: root };
     run(fixture
@@ -181,11 +181,11 @@ fn intent() {
 }
 
 #[test]
-fn syncs() {
+fn configures() {
     let temp = tempfile::tempdir().expect("temp root");
     let root = temp.path();
     let out = root.join("managers");
-    super::support::stock(&root.join("depot"), &[]);
+    super::support::stock(&root.join("configurations"), &[]);
     std::fs::write(
         root.join("plumb.toml"),
         SPEC.replace("product = \"probe\"", "product = \"plumb\""),
@@ -200,5 +200,5 @@ fn syncs() {
         .env("PLUMB_RELEASE_OUTPUT", &out));
     let manager = std::fs::read_to_string(out.join("manage.sh")).expect("manager");
     assert!(manager.contains("if [ \"plumb\" = plumb ]; then"));
-    assert!(manager.contains("\"$LOCAL_BIN_DIR/plumb\" depot sync"));
+    assert!(manager.contains("\"$LOCAL_BIN_DIR/plumb\" configuration install"));
 }

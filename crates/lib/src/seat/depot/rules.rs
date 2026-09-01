@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
-use super::{Seat, anchored, v2};
+use super::{Object, Seat, anchored, v2, v3};
 
 pub struct Rules {
     held: Source,
@@ -16,6 +16,12 @@ enum Source {
     V2 {
         base: PathBuf,
         manifest: v2::Manifest,
+    },
+    V3 {
+        base: PathBuf,
+        manifest: v3::Manifest,
+        generation: String,
+        objects: Vec<Object>,
     },
 }
 
@@ -54,8 +60,16 @@ impl Rules {
     pub fn at(root: &Path, running: &str) -> Result<Self, String> {
         let marker = root.join(v2::POINTER);
         if marker.is_file() {
-            let text = std::fs::read_to_string(&marker)
+            let bytes = std::fs::read(&marker)
                 .map_err(|error| format!("cannot read {}: {error}", marker.display()))?;
+            let format = serde_json::from_slice::<serde_json::Value>(&bytes)
+                .ok()
+                .and_then(|held| held.get("format").and_then(serde_json::Value::as_u64));
+            if format == Some(v3::FORMAT.into()) {
+                return Self::modern(root, running, &bytes);
+            }
+            let text = String::from_utf8(bytes)
+                .map_err(|error| format!("{} is not UTF-8: {error}", marker.display()))?;
             let pointer = v2::Pointer::parse(&text)?;
             let base = v2::local(root, &pointer.release, &pointer.snapshot.timestamp)?;
             let path = base.join(v2::LEAF);
@@ -69,6 +83,42 @@ impl Rules {
         seat.supported(running)?;
         Ok(Self {
             held: Source::V1(seat),
+        })
+    }
+
+    fn modern(root: &Path, running: &str, bytes: &[u8]) -> Result<Self, String> {
+        let pointer = v3::Pointer::parse(bytes)?;
+        if pointer.product != "plumb" || pointer.kind != v3::Kind::Configuration {
+            return Err("the installed depot generation is not plumb configuration".into());
+        }
+        if pointer.version != running {
+            return Err(format!(
+                "depot configuration for {} requires that exact product binary, got {running}",
+                pointer.version
+            ));
+        }
+        let base = v3::local_generation(root, &pointer.generation)?;
+        let path = base.join(v3::LEAF);
+        let body = std::fs::read(&path)
+            .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+        let manifest = v3::Manifest::parse(&body)?;
+        pointer.bind(&manifest, &body)?;
+        let objects = manifest
+            .objects
+            .iter()
+            .map(|held| Object {
+                path: held.path.clone(),
+                sha256: held.sha256.clone(),
+                size: held.size,
+            })
+            .collect();
+        Ok(Self {
+            held: Source::V3 {
+                base,
+                manifest,
+                generation: pointer.generation,
+                objects,
+            },
         })
     }
 
@@ -122,6 +172,15 @@ impl Rules {
                 manifest.verify(path, &bytes)?;
                 String::from_utf8(bytes).map_err(|error| format!("{path} is not UTF-8: {error}"))
             }
+            Source::V3 { base, manifest, .. } => {
+                anchored(path)?;
+                let file = base.join(path);
+                let bytes = std::fs::read(&file)
+                    .map_err(|error| format!("cannot read {}: {error}", file.display()))?;
+                let executable = executable(&file)?;
+                manifest.verify(path, &bytes, executable)?;
+                String::from_utf8(bytes).map_err(|error| format!("{path} is not UTF-8: {error}"))
+            }
         }
     }
 
@@ -130,6 +189,7 @@ impl Rules {
             Source::Guard { manifest, .. } => manifest.digest(),
             Source::V1(seat) => seat.mark(),
             Source::V2 { manifest, .. } => &manifest.snapshot.timestamp,
+            Source::V3 { generation, .. } => generation,
         }
     }
 
@@ -138,6 +198,7 @@ impl Rules {
             Source::Guard { manifest, .. } => manifest.target(),
             Source::V1(seat) => &seat.manifest().schema.version,
             Source::V2 { manifest, .. } => &manifest.release.version,
+            Source::V3 { manifest, .. } => &manifest.version,
         }
     }
 
@@ -146,6 +207,7 @@ impl Rules {
             Source::Guard { manifest, .. } => Some(manifest.target()),
             Source::V1(_) => None,
             Source::V2 { manifest, .. } => Some(&manifest.release.version),
+            Source::V3 { manifest, .. } => Some(&manifest.version),
         }
     }
 
@@ -154,6 +216,22 @@ impl Rules {
             Source::Guard { manifest, .. } => manifest.objects(),
             Source::V1(seat) => &seat.manifest().objects,
             Source::V2 { manifest, .. } => &manifest.objects,
+            Source::V3 { objects, .. } => objects,
         }
     }
+}
+
+#[cfg(unix)]
+fn executable(path: &Path) -> Result<bool, String> {
+    use std::os::unix::fs::PermissionsExt as _;
+    path.metadata()
+        .map(|held| held.permissions().mode() & 0o111 != 0)
+        .map_err(|error| format!("cannot inspect {}: {error}", path.display()))
+}
+
+#[cfg(not(unix))]
+fn executable(path: &Path) -> Result<bool, String> {
+    path.metadata()
+        .map(|_| false)
+        .map_err(|error| format!("cannot inspect {}: {error}", path.display()))
 }

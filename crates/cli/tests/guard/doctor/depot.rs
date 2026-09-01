@@ -16,7 +16,7 @@ fn run(root: &Path, seat: &Path) -> String {
 }
 
 fn stock(seat: &Path, mark: &str, manifest: &str) {
-    let seat = seat.join("depot");
+    let seat = seat.join("configurations");
     std::fs::create_dir_all(seat.join(mark)).expect("seat should be made");
     std::fs::write(seat.join(mark).join("plumb.toml"), manifest).expect("manifest");
     std::fs::write(
@@ -33,8 +33,8 @@ fn absent() {
     let fixture = super::fixture();
     let empty = tempfile::tempdir().expect("seat");
     let out = run(fixture.path(), empty.path());
-    assert!(out.contains("cannot read synced rules"), "{out}");
-    assert!(out.contains("run plumb depot sync"), "{out}");
+    assert!(out.contains("cannot read installed rules"), "{out}");
+    assert!(out.contains("run plumb configuration install"), "{out}");
 }
 
 #[test]
@@ -56,7 +56,7 @@ fn drift() {
     let seat = super::super::support::depot(&[]);
     std::fs::write(
         seat.path()
-            .join("depot/29990101T000000Z/rules/structure.toml"),
+            .join("configurations/29990101T000000Z/rules/structure.toml"),
         "drift",
     )
     .expect("drift rule");
@@ -68,7 +68,7 @@ fn drift() {
 }
 
 fn stage(home: &tempfile::TempDir, version: &str) -> std::path::PathBuf {
-    let root = home.path().join("depot");
+    let root = home.path().join("configurations");
     let legacy = plumb::depot::Seat::at(&root).expect("legacy fixture");
     let release = plumb::depot::v2::Release {
         product: "plumb".into(),
@@ -187,7 +187,7 @@ fn legacy() {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", fixture.path().to_str().expect("fixture")])
         .env("PLUMB_HOME", home.path())
-        .env("PLUMB_DEPOT_SEAT", legacy.path().join("depot"))
+        .env("PLUMB_DEPOT_SEAT", legacy.path().join("configurations"))
         .output()
         .expect("plumb should run");
     let out = format!(
@@ -195,7 +195,7 @@ fn legacy() {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    assert!(out.contains("cannot read synced rules"), "{out}");
+    assert!(out.contains("cannot read installed rules"), "{out}");
 }
 
 #[test]

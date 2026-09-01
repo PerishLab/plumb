@@ -124,11 +124,6 @@ pub enum Deed {
         #[arg(long = "dry-run")]
         dry: bool,
     },
-    #[command(about = "Bring the local Plumb rules seat to the version its channel names")]
-    Sync {
-        #[arg(default_value = ".")]
-        root: String,
-    },
     #[command(about = "Report the Plumb rules source, local seat, and held version")]
     Show,
 }
@@ -185,26 +180,7 @@ fn execute(deed: Deed) -> Result<String, String> {
                 dry,
             },
         ),
-        Deed::Sync { root } => sync(
-            &rig.rules.source,
-            &rig.rules.channel,
-            &over,
-            &PathBuf::from(root),
-        ),
         Deed::Show => show(&rig, &over),
-    }
-}
-
-fn sync(source: &str, channel: &str, over: &Path, root: &Path) -> Result<String, String> {
-    let version = plumb::version!("PLUMB");
-    let identity = seat::Identity {
-        channel: &crate::command::release::channel(version)?,
-        version,
-    };
-    let synced = seat::sync(source, channel, identity, over)?;
-    match crate::command::precommit::project(root)? {
-        Some(projected) => Ok(format!("{synced}\n{projected}")),
-        None => Ok(synced),
     }
 }
 

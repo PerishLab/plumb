@@ -18,14 +18,14 @@ const SOURCES: [(&str, &str); 5] = [
 #[allow(dead_code)]
 pub fn depot(overrides: &[(&str, &str)]) -> tempfile::TempDir {
     let fixture = tempfile::tempdir().expect("depot fixture");
-    stock(&fixture.path().join("depot"), overrides);
+    stock(&fixture.path().join("configurations"), overrides);
     fixture
 }
 
 #[allow(dead_code)]
 pub fn guard(overrides: &[(&str, &str)], target: &str) -> tempfile::TempDir {
     let fixture = depot(overrides);
-    let base = fixture.path().join("depot").join(MARK);
+    let base = fixture.path().join("configurations").join(MARK);
     let mut bodies = BTreeMap::new();
     let mut objects = Vec::new();
     for file in walk(&base) {

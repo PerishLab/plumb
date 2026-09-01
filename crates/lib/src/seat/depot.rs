@@ -105,7 +105,7 @@ impl Seat {
             .map_err(|error| format!("cannot parse depot floor {floor}: {error}"))?;
         if !supports(&held, &least) {
             return Err(format!(
-                "the synced depot declares a floor of {floor}, above the running {running}"
+                "the installed configuration declares a floor of {floor}, above the running {running}"
             ));
         }
         Ok(())
@@ -218,11 +218,13 @@ pub fn root(over: &Path) -> Result<PathBuf, String> {
         return Ok(over.to_path_buf());
     }
     if let Some(path) = crate::config::value("PLUMB_HOME") {
-        return Ok(PathBuf::from(path).join("depot"));
+        return Ok(PathBuf::from(path).join("configurations"));
     }
     crate::seat::global("plumb")
-        .map(|base| base.join("depot"))
-        .ok_or_else(|| "cannot anchor the plumb depot seat: no home is declared".to_string())
+        .map(|base| base.join("configurations"))
+        .ok_or_else(|| {
+            "cannot anchor the plumb configuration seat: no home is declared".to_string()
+        })
 }
 
 pub fn sha(bytes: &[u8]) -> String {

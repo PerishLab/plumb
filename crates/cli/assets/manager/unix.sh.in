@@ -639,7 +639,7 @@ install_{product}() {{
     "$entry" --version
   done
   if [ "{product}" = plumb ]; then
-    "$LOCAL_BIN_DIR/plumb" depot sync
+    "$LOCAL_BIN_DIR/plumb" configuration install
   fi
 
   old_versions "$VERSION" | while IFS= read -r old; do
