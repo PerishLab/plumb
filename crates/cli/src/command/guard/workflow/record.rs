@@ -150,8 +150,8 @@ impl Authority {
     }
 
     fn record(&self, record: &Record) -> Result<(), String> {
-        let body = record.encode()?;
-        for route in record.routes() {
+        for (route, record) in record.routes() {
+            let body = record.encode()?;
             match self.control.write(
                 &route,
                 &body,
@@ -162,7 +162,7 @@ impl Authority {
                 plumb::bucket::Condition::Absent,
             )? {
                 plumb::bucket::Outcome::Held(()) => {}
-                plumb::bucket::Outcome::Stale => self.held(&route, record)?,
+                plumb::bucket::Outcome::Stale => self.held(&route, &record)?,
                 plumb::bucket::Outcome::Missing => {
                     return Err(format!("workflow record {route} returned missing"));
                 }
