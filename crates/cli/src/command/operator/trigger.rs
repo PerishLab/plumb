@@ -36,6 +36,7 @@ pub fn run(options: Dispatch) -> Result<String, String> {
             reference: &reference,
             inputs: json!({
                 "marker": before.marker,
+                "plumb": plumb::version!("PLUMB"),
                 "repository": format!("{}/{}", product.owner, product.repo),
             }),
             waiting: options.watch,

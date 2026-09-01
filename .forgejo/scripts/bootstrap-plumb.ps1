@@ -6,19 +6,16 @@ if ($mode -notin @('bootstrap', 'exact')) {
   throw "unknown Plumb bootstrap mode: $mode"
 }
 
-if ([string]::IsNullOrWhiteSpace($env:PLUMB_RELEASE_VERSION)) {
-  $env:PLUMB_RELEASE_VERSION = $env:PLUMB_RELEASE_MARKER
+foreach ($name in @('PLUMB_BUILD_VERSION', 'PLUMB_BUILD_COMMIT')) {
+  if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) { throw "$name is required" }
 }
-if ([string]::IsNullOrWhiteSpace($env:PLUMB_RELEASE_CHANNEL)) {
-  $env:PLUMB_RELEASE_CHANNEL = switch -Regex ($env:PLUMB_RELEASE_MARKER) {
+if ([string]::IsNullOrWhiteSpace($env:PLUMB_BUILD_CHANNEL)) {
+  $env:PLUMB_BUILD_CHANNEL = switch -Regex ($env:PLUMB_BUILD_VERSION) {
     '-alpha\.' { 'alpha'; break }
     '-beta\.' { 'beta'; break }
     '-rc\.' { 'rc'; break }
     default { 'stable' }
   }
-}
-foreach ($name in @('PLUMB_RELEASE_VERSION', 'PLUMB_RELEASE_COMMIT')) {
-  if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) { throw "$name is required" }
 }
 
 $manager = Join-Path $env:RUNNER_TEMP 'manage-plumb.ps1'
@@ -64,9 +61,6 @@ if ($mode -eq 'bootstrap') {
   Install-Configuration
 }
 
-$env:PLUMB_BUILD_VERSION = $env:PLUMB_RELEASE_VERSION
-$env:PLUMB_BUILD_CHANNEL = $env:PLUMB_RELEASE_CHANNEL
-$env:PLUMB_BUILD_COMMIT = $env:PLUMB_RELEASE_COMMIT
 cargo build --quiet --locked --manifest-path (Join-Path $atom 'Cargo.toml') --bin plumb
 Copy-Item (Join-Path $atom 'target/debug/plumb.exe') $tool -Force
 $bin | Out-File -FilePath $env:GITHUB_PATH -Append

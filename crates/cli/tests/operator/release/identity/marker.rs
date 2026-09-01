@@ -60,6 +60,10 @@ fn exact() {
         "{plan}"
     );
     assert!(plan.contains(r#""marker":"v1.2.0-beta.1""#), "{plan}");
+    assert!(
+        plan.contains(&format!(r#""plumb":"v{}""#, env!("CARGO_PKG_VERSION"))),
+        "{plan}"
+    );
     assert!(plan.contains(r#""repository":"tmp/"#), "{plan}");
 
     let manifest = std::fs::read_to_string(fixture.root.join("plumb.toml")).expect("manifest");

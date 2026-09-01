@@ -7,12 +7,20 @@ on:
         description: Immutable release marker shared by every publication
         required: true
         type: string
+      plumb:
+        description: Exact Plumb atom version selected by the dispatcher
+        required: true
+        type: string
       repository:
         description: Product repository identity selected by the dispatching Plumb
         required: true
         type: string
 permissions:
   contents: read
+
+env:
+  PLUMB_BUILD_VERSION: ${{ inputs.plumb }}
+  PLUMB_BUILD_COMMIT: ${{ github.sha }}
 
 concurrency:
   group: ${{ inputs.repository }}-ship-${{ inputs.marker }}
