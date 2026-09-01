@@ -29,7 +29,7 @@ impl Seat {
                 return 1;
             }
         };
-        match super::depot::occupied(&self.0, &stamped) {
+        match super::depot::changelog(&self.0, &stamped) {
             Err(error) => {
                 println!("  {error}");
                 1
@@ -42,10 +42,10 @@ impl Seat {
                 );
                 1
             }
-            Ok(Some(objects)) => {
-                println!("  {stamped} is documented in {} objects", objects.len());
-                for object in &objects {
-                    println!("    {}", object.path);
+            Ok(Some(generation)) => {
+                if let Err(error) = show(&stamped, &generation) {
+                    println!("  {error}");
+                    return 1;
                 }
                 0
             }
@@ -152,4 +152,20 @@ impl Seat {
             }
         }
     }
+}
+
+fn show(stamped: &str, generation: &plumb::depot::v3::Generation) -> Result<(), String> {
+    println!("  {stamped} {}", generation.pointer.generation);
+    for object in &generation.manifest.objects {
+        let bytes = generation.read(&object.path)?;
+        let text = String::from_utf8(bytes)
+            .map_err(|error| format!("changelog object {} is not UTF-8: {error}", object.path))?;
+        println!();
+        println!("  {}", object.path);
+        print!("{text}");
+        if !text.ends_with('\n') {
+            println!();
+        }
+    }
+    Ok(())
 }

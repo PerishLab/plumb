@@ -2,6 +2,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use plumb::depot::v3::{Bundle, Identity, Kind, Marker, Pointer, Publication, Route};
+
 fn seat(name: &str, version: Option<&str>) -> PathBuf {
     let path = std::env::temp_dir().join(format!("plumb-changelog-{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&path);
@@ -43,4 +45,78 @@ fn invalid() {
     let _ = fs::remove_dir_all(&root);
     assert!(!held, "{shown}");
     assert!(shown.contains("invalid version"), "{shown}");
+}
+
+#[test]
+fn generation() {
+    let bucket = super::support::Bucket::open(3);
+    let authority = format!("{}/workflow", bucket.endpoint());
+    let root = seat("generation", None);
+    fs::write(
+        root.join("plumb.toml"),
+        format!(
+            r#"[release]
+product = "probe"
+authority = "https://releases.probe.test"
+binaries = ["probe"]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[release.depot]
+source = "{authority}"
+derivatives = ["changelog"]
+"#
+        ),
+    )
+    .expect("governance");
+    let source = tempfile::tempdir().expect("source");
+    fs::write(
+        source.path().join("CHANGELOG.md"),
+        "# v1.2.3\n\nGeneration-backed notes.\n",
+    )
+    .expect("changelog");
+    let version = "v1.2.3";
+    let bundle = Bundle::read(
+        source.path(),
+        Identity {
+            product: "probe".into(),
+            channel: "stable".into(),
+            version: version.into(),
+            marker: Marker {
+                name: version.into(),
+                sha256: "a".repeat(64),
+            },
+            kind: Kind::Changelog,
+        },
+    )
+    .expect("bundle");
+    let pointer = Pointer::new(
+        &bundle.manifest,
+        Publication {
+            source: &authority,
+            prior: None,
+            created: "2026-09-01T01:02:03Z".into(),
+        },
+    )
+    .expect("pointer");
+    let route = Route::new("stable", Kind::Changelog, version);
+    let generation = plumb::depot::v3::generation(route, &pointer.generation).expect("generation");
+    bucket.seed(
+        &plumb::depot::v3::latest(route).expect("latest"),
+        &pointer.encode().expect("pointer"),
+    );
+    bucket.seed(
+        &format!("{generation}/{}", plumb::depot::v3::LEAF),
+        &bundle.manifest.encode().expect("manifest"),
+    );
+    for (path, body) in &bundle.bodies {
+        bucket.seed(&format!("{generation}/objects/{path}"), body);
+    }
+
+    let (shown, held) = marked(&root, &["--version", version]);
+    let _ = fs::remove_dir_all(&root);
+    bucket.finish();
+    assert!(held, "{shown}");
+    assert!(shown.contains(&pointer.generation), "{shown}");
+    assert!(shown.contains("CHANGELOG.md"), "{shown}");
+    assert!(shown.contains("Generation-backed notes."), "{shown}");
 }

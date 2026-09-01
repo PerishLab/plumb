@@ -1,6 +1,5 @@
 mod configuration;
 mod knowledge;
-pub mod notes;
 mod product;
 mod projection;
 mod seat;
@@ -45,20 +44,20 @@ pub fn manifest() -> Result<Option<record::Manifest>, String> {
     }
 }
 
-pub fn occupied(root: &Path, version: &str) -> Result<Option<Vec<record::Object>>, String> {
+pub fn changelog(
+    root: &Path,
+    version: &str,
+) -> Result<Option<plumb::depot::v3::Generation>, String> {
     let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
     let depot = spec.derivative(plumb::depot::v2::Kind::Changelog)?;
     let channel = crate::command::release::channel(version)?;
-    if let Some(manifest) = seat::derivative(seat::Query {
+    plumb::depot::v3::Generation::latest(plumb::depot::v3::Query {
         source: &depot.source,
         product: &spec.product,
         channel: &channel,
         version,
-        derivative: plumb::depot::v2::Kind::Changelog,
-    })? {
-        return Ok(Some(manifest.objects));
-    }
-    seat::notes(&depot.source, version).map(|held| held.map(|notes| notes.objects))
+        kind: plumb::depot::v3::Kind::Changelog,
+    })
 }
 
 pub fn carried(path: &str, factory: &'static str) -> String {

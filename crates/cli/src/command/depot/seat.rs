@@ -1,5 +1,4 @@
-use super::notes::{Notes, changelog};
-use crate::shape::depot::{LEAF, POINTER};
+use crate::shape::depot::POINTER;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -46,61 +45,7 @@ impl Held {
     }
 }
 
-pub fn notes(source: &str, version: &str) -> Result<Option<Notes>, String> {
-    let url = format!(
-        "{}/{}/{LEAF}",
-        source.trim_end_matches('/'),
-        changelog(version)
-    );
-    match pull(&url)? {
-        Some(text) => Notes::parse(&text).map(Some),
-        None => Ok(None),
-    }
-}
-
 pub use exact::Query;
-
-pub fn derivative(query: Query<'_>) -> Result<Option<plumb::depot::v2::Manifest>, String> {
-    let source = query.source.trim_end_matches('/');
-    let key = plumb::depot::v2::latest(query.product, query.derivative, query.channel)?;
-    let url = format!("{source}/{key}");
-    let Some(text) = pull(&url)? else {
-        return Ok(None);
-    };
-    let pointer = plumb::depot::v2::Pointer::parse(&text)?;
-    let standing = (
-        pointer.source.as_str(),
-        pointer.release.product.as_str(),
-        pointer.release.channel.as_str(),
-        pointer.release.version.as_str(),
-        pointer.derivative,
-    );
-    let wanted = (
-        source,
-        query.product,
-        query.channel,
-        query.version,
-        query.derivative,
-    );
-    if standing != wanted {
-        return Ok(None);
-    }
-    let base = plumb::depot::v2::snapshots(
-        &pointer.release,
-        pointer.derivative,
-        &pointer.snapshot.timestamp,
-    )?;
-    let route = format!("{}/{}/{}", source, base, plumb::depot::v2::LEAF);
-    let body = pull(&route)?.ok_or_else(|| {
-        format!(
-            "depot pointer {} names an absent manifest",
-            pointer.snapshot.timestamp
-        )
-    })?;
-    let manifest = plumb::depot::v2::Manifest::parse(&body)?;
-    pointer.bind(&manifest, body.as_bytes())?;
-    Ok(Some(manifest))
-}
 
 pub use exact::read as exact;
 

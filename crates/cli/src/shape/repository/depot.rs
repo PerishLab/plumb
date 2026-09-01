@@ -1,7 +1,7 @@
 use plumb::snapshot::Snapshot;
 use std::collections::BTreeMap;
 
-pub use plumb::depot::{FORMAT, LEAF, Object, POINTER, sha};
+pub use plumb::depot::{Object, POINTER, sha};
 
 pub struct Manifest {
     pub mark: String,

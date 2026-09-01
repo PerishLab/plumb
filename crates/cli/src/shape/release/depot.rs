@@ -12,12 +12,7 @@ pub struct Depot {
 
 impl Depot {
     pub(super) fn validate(&self, binaries: &[String]) -> Result<(), String> {
-        if !self.source.starts_with("https://")
-            || self.source.ends_with('/')
-            || self.source.chars().any(char::is_whitespace)
-        {
-            return Err("depot source must be one normalized https URL".into());
-        }
+        plumb::depot::v3::check(&self.source)?;
         if self.derivatives.is_empty() {
             return Err("depot must declare at least one derivative".into());
         }
