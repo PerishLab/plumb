@@ -1,5 +1,4 @@
 use crate::command::release::storage::Authority;
-use crate::shape::depot::Batch;
 use std::io::Write;
 use std::process::{Command, Output};
 
@@ -26,47 +25,6 @@ impl<'a> Remote<'a> {
             return Err("incomplete S3 depot authority".into());
         }
         Ok(Self { held })
-    }
-
-    pub fn derive(&self, plan: &Batch, advance: bool) -> Result<String, String> {
-        let manifest = &plan.manifest;
-        let base = plumb::depot::v2::snapshots(
-            &manifest.release,
-            manifest.derivative,
-            &manifest.snapshot.timestamp,
-        )?;
-        for (path, bytes) in &plan.bodies {
-            self.create(&format!("{base}/{path}"), bytes)?;
-        }
-        let body = manifest.encode()?;
-        self.create(
-            &format!("{base}/{}", plumb::depot::v2::LEAF),
-            body.as_bytes(),
-        )?;
-        let pointer = plumb::depot::v2::Pointer::new(manifest, body.as_bytes())?;
-        let exact = plumb::depot::v2::exact(
-            &manifest.release.product,
-            manifest.derivative,
-            &manifest.release.channel,
-            &manifest.release.version,
-        )?;
-        self.advance(&exact, &pointer, true)?;
-        if advance {
-            let latest = plumb::depot::v2::latest(
-                &manifest.release.product,
-                manifest.derivative,
-                &manifest.release.channel,
-            )?;
-            self.advance(&latest, &pointer, false)?;
-        }
-        readback::prove(plan, &base, &body, advance)?;
-        Ok(format!(
-            "published {} depot snapshot {} {}{}",
-            manifest.derivative.label(),
-            manifest.release.version,
-            manifest.snapshot.timestamp,
-            if advance { " and advanced latest" } else { "" }
-        ))
     }
 
     pub fn promote(&self, pointer: &plumb::depot::v2::Pointer) -> Result<String, String> {
