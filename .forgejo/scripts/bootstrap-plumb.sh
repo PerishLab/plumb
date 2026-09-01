@@ -23,8 +23,15 @@ else
   bin="$HOME/.local/bin"
 fi
 tool="$bin/plumb"
+install_configuration() {
+  if "$tool" configuration --help >/dev/null 2>&1; then
+    "$tool" configuration install
+  else
+    printf 'installed Plumb has no configuration command; retaining its managed depot seat\n'
+  fi
+}
 if [ "$mode" = bootstrap ]; then
-  "$tool" configuration install
+  install_configuration
 fi
 : "${PLUMB_RELEASE_MARKER:=${PLUMB_RELEASE_VERSION:-}}"
 : "${PLUMB_RELEASE_VERSION:=$PLUMB_RELEASE_MARKER}"
@@ -46,5 +53,5 @@ cp "$atom/target/debug/plumb" "$tool"
 printf '%s\n' "$bin" >> "$GITHUB_PATH"
 "$tool" --version
 if [ "$mode" = exact ]; then
-  "$tool" configuration install
+  install_configuration
 fi

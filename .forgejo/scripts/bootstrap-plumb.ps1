@@ -52,8 +52,16 @@ if ($held) {
   & $manager install --install-root $versions --bin-dir $bin
 }
 $tool = Join-Path $bin 'plumb.exe'
+function Install-Configuration {
+  & $tool configuration --help *> $null
+  if ($LASTEXITCODE -eq 0) {
+    & $tool configuration install
+  } else {
+    Write-Output 'installed Plumb has no configuration command; retaining its managed depot seat'
+  }
+}
 if ($mode -eq 'bootstrap') {
-  & $tool configuration install
+  Install-Configuration
 }
 
 $env:PLUMB_BUILD_VERSION = $env:PLUMB_RELEASE_VERSION
@@ -64,5 +72,5 @@ Copy-Item (Join-Path $atom 'target/debug/plumb.exe') $tool -Force
 $bin | Out-File -FilePath $env:GITHUB_PATH -Append
 & $tool --version
 if ($mode -eq 'exact') {
-  & $tool configuration install
+  Install-Configuration
 }
