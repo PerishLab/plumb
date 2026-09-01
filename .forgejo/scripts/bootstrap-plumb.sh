@@ -33,22 +33,17 @@ install_configuration() {
 if [ "$mode" = bootstrap ]; then
   install_configuration
 fi
-: "${PLUMB_RELEASE_MARKER:=${PLUMB_RELEASE_VERSION:-}}"
-: "${PLUMB_RELEASE_VERSION:=$PLUMB_RELEASE_MARKER}"
-if [ -z "${PLUMB_RELEASE_CHANNEL:-}" ]; then
-  case "$PLUMB_RELEASE_MARKER" in
-    *-alpha.*) PLUMB_RELEASE_CHANNEL=alpha ;;
-    *-beta.*) PLUMB_RELEASE_CHANNEL=beta ;;
-    *-rc.*) PLUMB_RELEASE_CHANNEL=rc ;;
-    *) PLUMB_RELEASE_CHANNEL=stable ;;
+: "${PLUMB_BUILD_VERSION:?PLUMB_BUILD_VERSION is required}"
+: "${PLUMB_BUILD_COMMIT:?PLUMB_BUILD_COMMIT is required}"
+if [ -z "${PLUMB_BUILD_CHANNEL:-}" ]; then
+  case "$PLUMB_BUILD_VERSION" in
+    *-alpha.*) PLUMB_BUILD_CHANNEL=alpha ;;
+    *-beta.*) PLUMB_BUILD_CHANNEL=beta ;;
+    *-rc.*) PLUMB_BUILD_CHANNEL=rc ;;
+    *) PLUMB_BUILD_CHANNEL=stable ;;
   esac
 fi
-: "${PLUMB_RELEASE_VERSION:?PLUMB_RELEASE_VERSION or PLUMB_RELEASE_MARKER is required}"
-: "${PLUMB_RELEASE_COMMIT:?PLUMB_RELEASE_COMMIT is required}"
-PLUMB_BUILD_VERSION="$PLUMB_RELEASE_VERSION" \
-PLUMB_BUILD_CHANNEL="$PLUMB_RELEASE_CHANNEL" \
-PLUMB_BUILD_COMMIT="$PLUMB_RELEASE_COMMIT" \
-  cargo build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
+cargo build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
 cp "$atom/target/debug/plumb" "$tool"
 printf '%s\n' "$bin" >> "$GITHUB_PATH"
 "$tool" --version

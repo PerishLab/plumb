@@ -34,6 +34,14 @@ fn transport() -> String {
 fn matrix() {
     let held = canonical();
     assert!(held.contains("workflow_dispatch:"), "{held}");
+    assert!(
+        held.contains("PLUMB_BUILD_VERSION: ${{ inputs.plumb }}"),
+        "{held}"
+    );
+    assert!(
+        held.contains("PLUMB_BUILD_COMMIT: ${{ github.sha }}"),
+        "{held}"
+    );
     assert!(held.contains(".forgejo/scripts/resolve-ship.sh"), "{held}");
     assert!(
         held.contains("timeout --kill-after=5s 45s"),
@@ -145,22 +153,25 @@ fn depot() {
         "Windows bootstrap must probe the installed predecessor's capability"
     );
     for binding in [
-        "PLUMB_BUILD_VERSION=\"$PLUMB_RELEASE_VERSION\"",
-        "PLUMB_BUILD_CHANNEL=\"$PLUMB_RELEASE_CHANNEL\"",
-        "PLUMB_BUILD_COMMIT=\"$PLUMB_RELEASE_COMMIT\"",
+        "PLUMB_BUILD_VERSION is required",
+        "PLUMB_BUILD_COMMIT is required",
     ] {
         assert!(held.contains(binding), "atom build omits {binding}");
     }
-    for binding in [
-        "$env:PLUMB_BUILD_VERSION = $env:PLUMB_RELEASE_VERSION",
-        "$env:PLUMB_BUILD_CHANNEL = $env:PLUMB_RELEASE_CHANNEL",
-        "$env:PLUMB_BUILD_COMMIT = $env:PLUMB_RELEASE_COMMIT",
-    ] {
+    assert!(
+        !held.contains("PLUMB_RELEASE_"),
+        "atom bootstrap must not consume the product release identity"
+    );
+    for binding in ["PLUMB_BUILD_VERSION", "PLUMB_BUILD_COMMIT"] {
         assert!(
             windows.contains(binding),
             "Windows atom build omits {binding}"
         );
     }
+    assert!(
+        !windows.contains("PLUMB_RELEASE_"),
+        "Windows atom bootstrap must not consume the product release identity"
+    );
 }
 
 #[test]
