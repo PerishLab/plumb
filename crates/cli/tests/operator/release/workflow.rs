@@ -121,10 +121,14 @@ fn depot() {
     let installed = held
         .find("cp \"$atom/target/debug/plumb\" \"$tool\"")
         .expect("exact Plumb install");
-    let bootstrap = held.find("\"$tool\" depot sync").expect("bootstrap sync");
-    let exact = held.rfind("\"$tool\" depot sync").expect("exact sync");
+    let bootstrap = held
+        .find("\"$tool\" configuration install")
+        .expect("bootstrap configuration");
+    let exact = held
+        .rfind("\"$tool\" configuration install")
+        .expect("exact configuration");
     assert_eq!(
-        held.matches("\"$tool\" depot sync").count(),
+        held.matches("\"$tool\" configuration install").count(),
         2,
         "each bootstrap phase should own one sync branch"
     );

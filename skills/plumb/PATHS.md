@@ -5,7 +5,7 @@
 1. Resolve the repository root by its `plumb.toml`.
 2. Read the repository's own instructions.
 3. Run `plumb doctor .` before changing shape. If Plumb reports an absent or
-   unreadable rule seat, run `plumb depot sync` and repeat Doctor.
+   unreadable rule seat, run `plumb configuration install` and repeat Doctor.
 4. Inspect the relevant files and make the smallest coherent change.
 5. Run Doctor again; the depot-projected pre-commit hook proves the exact staged tree.
 
@@ -49,7 +49,7 @@ path outside the boundary refuses.
 Project the active depot's untracked Git hooks, then commit normally:
 
 ```bash
-plumb depot sync
+plumb configuration install
 git commit
 ```
 

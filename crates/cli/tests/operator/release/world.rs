@@ -57,7 +57,7 @@ impl Fixture<'_> {
     pub fn seed(&self) {
         use std::os::unix::fs::PermissionsExt;
 
-        super::support::stock(&self.root.join("depot"), &[]);
+        super::support::stock(&self.root.join("configurations"), &[]);
         std::fs::write(self.root.join("plumb.toml"), SPEC).expect("release manifest");
         run(Command::new("git")
             .arg("-C")

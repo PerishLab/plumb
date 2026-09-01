@@ -292,5 +292,5 @@ fn hookless() {
     std::fs::remove_file(root.join(".git/hooks/pre-commit")).expect("remove projected hook");
     let held = run(&["doctor", root.to_str().expect("path should be utf8")]);
     assert!(held.contains("pre-commit is absent"), "{held}");
-    assert!(held.contains("run plumb depot sync"), "{held}");
+    assert!(held.contains("run plumb configuration install"), "{held}");
 }

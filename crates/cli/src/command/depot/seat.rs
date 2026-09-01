@@ -1,11 +1,9 @@
 use super::notes::{Notes, changelog};
-use crate::shape::depot::{LEAF, POINTER, Pointer, latest, versions};
+use crate::shape::depot::{LEAF, POINTER};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 mod exact;
-
-pub const KEY: &str = "plumb";
 
 pub enum Held {
     Absent,
@@ -45,145 +43,6 @@ impl Held {
             Self::Seat(seat) => Some(seat.mark().to_string()),
             _ => None,
         }
-    }
-}
-
-pub use exact::Identity;
-
-pub fn sync(
-    source: &str,
-    channel: &str,
-    identity: Identity<'_>,
-    over: &Path,
-) -> Result<String, String> {
-    let base = root(over)?;
-    let source = source.trim_end_matches('/');
-    Remote {
-        source,
-        channel,
-        identity,
-        base: &base,
-    }
-    .sync()
-}
-
-struct Remote<'a> {
-    source: &'a str,
-    channel: &'a str,
-    identity: Identity<'a>,
-    base: &'a Path,
-}
-
-impl Remote<'_> {
-    fn sync(&self) -> Result<String, String> {
-        if let Some(held) = self.modern()? {
-            return Ok(held);
-        }
-        self.legacy()
-    }
-
-    fn modern(&self) -> Result<Option<String>, String> {
-        let kind = plumb::depot::v2::Kind::Configuration;
-        let exact =
-            plumb::depot::v2::exact(KEY, kind, self.identity.channel, self.identity.version)?;
-        if let Some(text) = pull(&format!("{}/{exact}", self.source))? {
-            return self.install(&text, Some(self.identity.version)).map(Some);
-        }
-        let key = plumb::depot::v2::latest(KEY, kind, self.channel)?;
-        let Some(text) = pull(&format!("{}/{key}", self.source))? else {
-            return Ok(None);
-        };
-        self.install(&text, None).map(Some)
-    }
-
-    fn install(&self, text: &str, version: Option<&str>) -> Result<String, String> {
-        let kind = plumb::depot::v2::Kind::Configuration;
-        let pointer = plumb::depot::v2::Pointer::parse(text)?;
-        let channel = version.map_or(self.channel, |_| self.identity.channel);
-        let standing = (
-            pointer.source.as_str(),
-            pointer.release.product.as_str(),
-            pointer.release.channel.as_str(),
-            pointer.derivative,
-        );
-        if standing != (self.source, KEY, channel, kind) {
-            return Err(format!(
-                "depot v2 pointer does not name {KEY} configuration channel {} at {}",
-                channel, self.source
-            ));
-        }
-        if let Some(wanted) = version
-            && pointer.release.version != wanted
-        {
-            return Err(format!(
-                "exact depot pointer names {}, not {wanted}",
-                pointer.release.version
-            ));
-        }
-        let route = plumb::depot::v2::snapshots(
-            &pointer.release,
-            pointer.derivative,
-            &pointer.snapshot.timestamp,
-        )?;
-        let deed = format!("{}/{route}", self.source);
-        let raw = pull(&format!("{deed}/{}", plumb::depot::v2::LEAF))?.ok_or_else(|| {
-            format!(
-                "depot snapshot {} has no manifest",
-                pointer.snapshot.timestamp
-            )
-        })?;
-        let manifest = plumb::depot::v2::Manifest::parse(&raw)?;
-        pointer.bind(&manifest, raw.as_bytes())?;
-        let seat =
-            plumb::depot::v2::local(self.base, &pointer.release, &pointer.snapshot.timestamp)?;
-        for object in &manifest.objects {
-            let body = pull(&format!("{deed}/{}", object.path))?
-                .ok_or_else(|| format!("depot object {} is absent", object.path))?;
-            manifest.verify(&object.path, body.as_bytes())?;
-            write(&seat.join(&object.path), &body)?;
-        }
-        write(&seat.join(plumb::depot::v2::LEAF), &raw)?;
-        write(&self.base.join(plumb::depot::v2::POINTER), text)?;
-        Ok(format!(
-            "synced depot {} {} into {}",
-            pointer.release.channel,
-            pointer.snapshot.timestamp,
-            self.base.display()
-        ))
-    }
-
-    fn legacy(&self) -> Result<String, String> {
-        let text =
-            pull(&format!("{}/{}", self.source, latest(self.channel)))?.ok_or_else(|| {
-                format!(
-                    "depot channel {} has no pointer at {}",
-                    self.channel, self.source
-                )
-            })?;
-        let pointer = Pointer::parse(&text)?;
-        let seat = self.base.join(&pointer.version);
-        let deed = format!(
-            "{}/{}",
-            self.source,
-            versions(self.channel, &pointer.version)
-        );
-        let raw = pull(&format!("{deed}/{LEAF}"))?
-            .ok_or_else(|| format!("depot version {} has no manifest", pointer.version))?;
-        let manifest = plumb::depot::Manifest::parse(&raw)?;
-        for object in &manifest.objects {
-            let body = pull(&format!("{deed}/{}", object.path))?
-                .ok_or_else(|| format!("depot object {} is absent", object.path))?;
-            manifest.verify(&object.path, body.as_bytes())?;
-            write(&seat.join(&object.path), &body)?;
-        }
-        write(&seat.join(LEAF), &raw)?;
-        write(&self.base.join(POINTER), &text)?;
-        Ok(format!(
-            "synced depot {} {} into {}",
-            self.channel,
-            pointer.version,
-            self.base.display()
-        ))
     }
 }
 
@@ -244,15 +103,6 @@ pub fn derivative(query: Query<'_>) -> Result<Option<plumb::depot::v2::Manifest>
 }
 
 pub use exact::read as exact;
-
-fn write(path: &Path, text: &str) -> Result<(), String> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| format!("{} has no parent", path.display()))?;
-    std::fs::create_dir_all(parent)
-        .map_err(|error| format!("cannot make {}: {error}", parent.display()))?;
-    std::fs::write(path, text).map_err(|error| format!("cannot write {}: {error}", path.display()))
-}
 
 pub(super) fn pull(url: &str) -> Result<Option<String>, String> {
     let body = tempfile::NamedTempFile::new()

@@ -145,7 +145,7 @@ fn floor(manifest: &Manifest) -> Vec<Finding> {
         return vec![Finding::new(Seed::wrong(
             &DEPOT_SCHEMA,
             format!(
-                "the held depot {} belongs to Plumb {exact}, not the running {running}; install stable latest and run plumb depot sync",
+                "the held configuration {} belongs to Plumb {exact}, not the running {running}; install stable latest and run plumb configuration install",
                 manifest.mark
             ),
         ))];

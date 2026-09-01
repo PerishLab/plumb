@@ -3,7 +3,7 @@ use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-const COMMANDS: [&str; 18] = [
+const COMMANDS: [&str; 19] = [
     "authority",
     "doctor",
     "land",
@@ -13,6 +13,7 @@ const COMMANDS: [&str; 18] = [
     "skill",
     "rule",
     "changelog",
+    "configuration",
     "layout",
     "cookbook",
     "affirm",
@@ -98,7 +99,7 @@ fn command() {
     capture(Vec::new(), &mut held);
     assert_eq!(
         digest(&held),
-        "13c62988e81deef77254c0f3714fb247e3c105679721e8e73494e5fcdf318eb8"
+        "e522fd403635d13b4af420d2ddc142264df99996415195298e15d53014a52fad"
     );
 }
 

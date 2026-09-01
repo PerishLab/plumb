@@ -101,7 +101,7 @@ fn inspect(path: &Path) -> Option<Finding> {
         Ok(_) => {}
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             return Some(Finding::Wrong(format!(
-                "{} is absent; run plumb depot sync",
+                "{} is absent; run plumb configuration install",
                 path.display()
             )));
         }
@@ -117,7 +117,7 @@ fn inspect(path: &Path) -> Option<Finding> {
         use std::os::unix::fs::PermissionsExt as _;
         if metadata.permissions().mode() & 0o111 == 0 {
             return Some(Finding::Wrong(format!(
-                "{} is not executable; run plumb depot sync",
+                "{} is not executable; run plumb configuration install",
                 path.display()
             )));
         }

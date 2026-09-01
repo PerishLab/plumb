@@ -124,6 +124,44 @@ fn source() {
 }
 
 #[test]
+fn installation() {
+    let source = tempfile::tempdir().expect("source");
+    std::fs::create_dir(source.path().join("rules")).expect("rules");
+    std::fs::write(source.path().join("rules/probe.toml"), "answer = 42\n").expect("rule");
+    let mut identity = manifest().identity();
+    identity.product = "plumb".to_string();
+    let bundle = v3::Bundle::read(source.path(), identity).expect("bundle");
+    let pointer = v3::Pointer::new(
+        &bundle.manifest,
+        v3::Publication {
+            source: "https://depot.example.test",
+            prior: None,
+            created: "2026-09-01T01:02:03Z".to_string(),
+        },
+    )
+    .expect("pointer");
+    let root = tempfile::tempdir().expect("installation");
+    let placed = v3::install(root.path(), &pointer, &bundle).expect("install");
+    assert_eq!(
+        std::fs::read_to_string(placed.join("rules/probe.toml")).expect("installed rule"),
+        "answer = 42\n"
+    );
+    assert_eq!(
+        v3::Pointer::parse(&std::fs::read(root.path().join(v3::POINTER)).expect("local pointer"))
+            .expect("pointer"),
+        pointer
+    );
+    let rules = plumb::depot::Rules::at(root.path(), "v1.2.3").expect("installed rules");
+    assert_eq!(rules.mark(), pointer.generation);
+    assert_eq!(rules.version(), Some("v1.2.3"));
+    assert_eq!(
+        rules.read("rules/probe.toml").expect("verified rule"),
+        "answer = 42\n"
+    );
+    assert!(plumb::depot::Rules::at(root.path(), "v1.2.4").is_err());
+}
+
+#[test]
 #[cfg(unix)]
 fn symbolic() {
     use std::os::unix::fs::symlink;

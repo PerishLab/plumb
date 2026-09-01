@@ -24,7 +24,7 @@ else
 fi
 tool="$bin/plumb"
 if [ "$mode" = bootstrap ]; then
-  "$tool" depot sync
+  "$tool" configuration install
 fi
 : "${PLUMB_RELEASE_MARKER:=${PLUMB_RELEASE_VERSION:-}}"
 : "${PLUMB_RELEASE_VERSION:=$PLUMB_RELEASE_MARKER}"
@@ -46,5 +46,5 @@ cp "$atom/target/debug/plumb" "$tool"
 printf '%s\n' "$bin" >> "$GITHUB_PATH"
 "$tool" --version
 if [ "$mode" = exact ]; then
-  "$tool" depot sync
+  "$tool" configuration install
 fi

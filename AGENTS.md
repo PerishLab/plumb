@@ -20,9 +20,9 @@ If a repository in this ecosystem has no shadow here, plumb owes the shape:
 divergence is an error in the skeleton, never an exception in the repository.
 
 Guard is a staged-tree proof, not a repository workflow. Plumb owns the
-pre-commit and commit-message hooks through its configuration depot; `depot
-sync` projects them and Doctor requires their presence. Guard stages proof state
-below `PLUMB_HOME` and carries the compact proof in Git history. Land and
+pre-commit and commit-message hooks through its configuration depot;
+`configuration install` projects them and Doctor requires their presence.
+Guard stages proof state below `PLUMB_HOME` and carries the compact proof in Git history. Land and
 release marker creation refuse a tree without that exact proof; an unchanged
 action world is reused and never starts a process.
 

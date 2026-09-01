@@ -53,7 +53,7 @@ if ($held) {
 }
 $tool = Join-Path $bin 'plumb.exe'
 if ($mode -eq 'bootstrap') {
-  & $tool depot sync
+  & $tool configuration install
 }
 
 $env:PLUMB_BUILD_VERSION = $env:PLUMB_RELEASE_VERSION
@@ -64,5 +64,5 @@ Copy-Item (Join-Path $atom 'target/debug/plumb.exe') $tool -Force
 $bin | Out-File -FilePath $env:GITHUB_PATH -Append
 & $tool --version
 if ($mode -eq 'exact') {
-  & $tool depot sync
+  & $tool configuration install
 }

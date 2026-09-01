@@ -142,7 +142,7 @@ fn rebase(root: &Path, path: &Path) -> PathBuf {
     }
 }
 
-pub(super) fn channel(version: &str) -> Result<String, String> {
+pub(crate) fn channel(version: &str) -> Result<String, String> {
     channel::channel(version)
 }
 

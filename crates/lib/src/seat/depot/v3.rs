@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 mod kind;
+mod local;
 mod manifest;
 mod pointer;
 mod route;
@@ -8,6 +9,7 @@ mod source;
 mod value;
 
 pub use kind::Kind;
+pub use local::{generation as local_generation, install};
 pub use manifest::Manifest;
 pub use pointer::Pointer;
 pub use route::{Route, generation, latest, manifest};
