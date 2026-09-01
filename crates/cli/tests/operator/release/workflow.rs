@@ -123,6 +123,13 @@ fn depot() {
         canonical().contains("bootstrap-plumb.sh .plumb-atom exact"),
         "the depot consumer must select exact configuration"
     );
+    for binding in [
+        "PLUMB_BUILD_VERSION=\"$PLUMB_RELEASE_VERSION\"",
+        "PLUMB_BUILD_CHANNEL=\"$PLUMB_RELEASE_CHANNEL\"",
+        "PLUMB_BUILD_COMMIT=\"$PLUMB_RELEASE_COMMIT\"",
+    ] {
+        assert!(held.contains(binding), "atom build omits {binding}");
+    }
 }
 
 #[test]
