@@ -9,9 +9,6 @@ mod local;
 mod route;
 mod value;
 
-#[cfg(feature = "depot")]
-pub mod media;
-
 pub use kind::Kind;
 pub use local::{FORMAT, LEAF, POINTER, local};
 pub use route::{exact, latest, snapshots};

@@ -36,8 +36,9 @@ says what none of those can. Ask the one that owns the question.
   `[release.depot]` declares public capability; a product's Runseal profile
   holds write authority.
 - Plumb's **rules seat** consumes configuration. Rules are never compiled or
-  fetched while reading; an invalid seat names `plumb configuration install`. Publishing
-  validates with the exact released product binary.
+  fetched while reading; an invalid seat names `plumb configuration install`.
+  Publishing validates with the released binary. Skill consumes its Depot
+  generation, not a release artifact.
 
 ## Authorities
 

@@ -4,6 +4,8 @@ mod kind;
 mod local;
 mod manifest;
 mod pointer;
+#[cfg(feature = "depot")]
+mod remote;
 mod route;
 mod source;
 mod value;
@@ -12,6 +14,8 @@ pub use kind::Kind;
 pub use local::{generation as local_generation, install};
 pub use manifest::Manifest;
 pub use pointer::Pointer;
+#[cfg(feature = "depot")]
+pub use remote::{Generation, Query};
 pub use route::{Route, generation, latest, manifest};
 pub use source::Bundle;
 

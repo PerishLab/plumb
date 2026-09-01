@@ -9,7 +9,7 @@ pub struct Grant {
     pub version: String,
     pub url: String,
     pub sha: String,
-    pointer: Option<crate::depot::v2::Pointer>,
+    generation: Option<crate::depot::v3::Generation>,
 }
 
 pub struct Wanted<'a> {
@@ -89,7 +89,7 @@ pub fn resolve(base: &str, channel: &str, version: Option<&str>) -> Result<Grant
         version: seal.version,
         url: piece.url.clone(),
         sha: piece.sha256.clone(),
-        pointer: None,
+        generation: None,
     })
 }
 
@@ -107,35 +107,27 @@ pub fn depot(
     if selected != running || !belongs(channel, selected) {
         return Err(Error::Version(selected.to_string()));
     }
-    let generation = crate::depot::v2::media::Generation::latest(crate::depot::v2::media::Query {
+    let generation = crate::depot::v3::Generation::latest(crate::depot::v3::Query {
         source,
         product,
         channel,
         version: selected,
-        derivative: crate::depot::v2::Kind::Skill,
+        kind: crate::depot::v3::Kind::Skill,
     })
     .map_err(|error| Error::Fetch(source.to_string(), error))?
     .ok_or(Error::Absent)?;
-    let route = crate::depot::v2::snapshots(
-        &generation.pointer.release,
-        generation.pointer.derivative,
-        generation.mark(),
-    )
-    .map_err(|error| Error::Fetch(source.to_string(), error))?;
     Ok(Grant {
-        version: generation.pointer.release.version.clone(),
-        url: format!("{}/{route}", source.trim_end_matches('/')),
-        sha: generation.digest().to_string(),
-        pointer: Some(generation.pointer),
+        version: generation.pointer.version.clone(),
+        url: generation.url().to_string(),
+        sha: generation.pointer.generation.clone(),
+        generation: Some(generation),
     })
 }
 
 pub fn take(grant: &Grant, name: &str) -> Result<Vec<u8>, Error> {
-    let Some(pointer) = &grant.pointer else {
+    let Some(generation) = &grant.generation else {
         return exact(&grant.url, &grant.sha);
     };
-    let generation = crate::depot::v2::media::Generation::exact(&pointer.source, pointer.clone())
-        .map_err(|error| Error::Fetch(grant.url.clone(), error))?;
     let mut zip = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
     {
         let mut archive = tar::Builder::new(&mut zip);
@@ -145,7 +137,7 @@ pub fn take(grant: &Grant, name: &str) -> Result<Vec<u8>, Error> {
                 .map_err(|error| Error::Fetch(grant.url.clone(), error))?;
             let mut header = tar::Header::new_gnu();
             header.set_size(bytes.len() as u64);
-            header.set_mode(0o644);
+            header.set_mode(if object.executable { 0o755 } else { 0o644 });
             header.set_cksum();
             archive
                 .append_data(&mut header, format!("{name}/{}", object.path), &bytes[..])

@@ -125,13 +125,11 @@ fn explicit() {
 #[test]
 #[cfg(unix)]
 fn install() {
-    use std::os::unix::fs::PermissionsExt as _;
-
-    let remote = tempfile::tempdir().expect("remote");
+    let remote = support::Bucket::open(4);
+    let authority = format!("{}/workflow", remote.endpoint());
     let source = tempfile::tempdir().expect("source");
     let home = tempfile::tempdir().expect("home");
     let repo = tempfile::tempdir().expect("repository");
-    let tools = tempfile::tempdir().expect("tools");
     let status = Command::new("git")
         .args(["-C", repo.path().to_str().expect("repo"), "init", "-q"])
         .status()
@@ -171,7 +169,7 @@ fn install() {
     let pointer = plumb::depot::v3::Pointer::new(
         &bundle.manifest,
         plumb::depot::v3::Publication {
-            source: "https://depot.test",
+            source: &authority,
             prior: None,
             created: "2026-09-01T01:02:03Z".into(),
         },
@@ -181,27 +179,14 @@ fn install() {
         plumb::depot::v3::Route::new("stable", plumb::depot::v3::Kind::Configuration, &version);
     let generation = plumb::depot::v3::generation(route, &pointer.generation).expect("route");
     for (path, body) in &bundle.bodies {
-        let target = remote.path().join(&generation).join("objects").join(path);
-        std::fs::create_dir_all(target.parent().expect("object parent")).expect("object root");
-        std::fs::write(target, body).expect("object");
+        remote.seed(&format!("{generation}/objects/{path}"), body);
     }
-    std::fs::create_dir_all(remote.path().join(&generation)).expect("generation root");
-    std::fs::write(
-        remote.path().join(&generation).join(plumb::depot::v3::LEAF),
-        bundle.manifest.encode().expect("manifest"),
-    )
-    .expect("manifest");
+    remote.seed(
+        &format!("{generation}/{}", plumb::depot::v3::LEAF),
+        &bundle.manifest.encode().expect("manifest"),
+    );
     let latest = plumb::depot::v3::latest(route).expect("latest");
-    let target = remote.path().join(latest);
-    std::fs::create_dir_all(target.parent().expect("pointer parent")).expect("pointer root");
-    std::fs::write(target, pointer.encode().expect("pointer")).expect("pointer");
-    let curl = tools.path().join("curl");
-    std::fs::write(
-        &curl,
-        "#!/bin/sh\nout=\nurl=\nwhile [ \"$#\" -gt 0 ]; do\n  if [ \"$1\" = --output ]; then out=$2; shift 2; else url=$1; shift; fi\ndone\nsource=$FIXTURE_DEPOT/${url#https://depot.test/}\n[ -f \"$source\" ] && cp \"$source\" \"$out\"\n",
-    )
-    .expect("curl");
-    std::fs::set_permissions(&curl, std::fs::Permissions::from_mode(0o755)).expect("curl mode");
+    remote.seed(&latest, &pointer.encode().expect("pointer"));
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args([
             "configuration",
@@ -209,16 +194,7 @@ fn install() {
             repo.path().to_str().expect("repo"),
         ])
         .env("PLUMB_HOME", home.path())
-        .env("PLUMB_RULES_SOURCE", "https://depot.test")
-        .env("FIXTURE_DEPOT", remote.path())
-        .env(
-            "PATH",
-            format!(
-                "{}:{}",
-                tools.path().display(),
-                std::env::var("PATH").unwrap_or_default()
-            ),
-        )
+        .env("PLUMB_RULES_SOURCE", &authority)
         .output()
         .expect("install");
     assert!(
@@ -233,4 +209,5 @@ fn install() {
     assert!(String::from_utf8_lossy(&output.stdout).contains("projected Plumb guard hooks"));
     assert!(home.path().join("configurations/latest.json").is_file());
     assert!(!home.path().join("depot").exists());
+    remote.finish();
 }

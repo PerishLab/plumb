@@ -1,13 +1,14 @@
-use super::{Kind, Manifest, Pointer, latest, snapshots};
+use super::{Kind, Manifest, Pointer, Route};
 
 pub struct Query<'a> {
     pub source: &'a str,
     pub product: &'a str,
     pub channel: &'a str,
     pub version: &'a str,
-    pub derivative: Kind,
+    pub kind: Kind,
 }
 
+#[derive(Clone, Debug)]
 pub struct Generation {
     pub pointer: Pointer,
     pub manifest: Manifest,
@@ -17,27 +18,19 @@ pub struct Generation {
 impl Generation {
     pub fn latest(query: Query<'_>) -> Result<Option<Self>, String> {
         let source = query.source.trim_end_matches('/');
-        let key = latest(query.product, query.derivative, query.channel)?;
+        let route = Route::new(query.channel, query.kind, query.version);
+        let key = super::latest(route)?;
         let Some(bytes) = pull(&format!("{source}/{key}"))? else {
             return Ok(None);
         };
-        let text = String::from_utf8(bytes)
-            .map_err(|error| format!("depot pointer is not UTF-8: {error}"))?;
-        let pointer = Pointer::parse(&text)?;
+        let pointer = Pointer::parse(&bytes)?;
         let standing = (
-            pointer.source.trim_end_matches('/'),
-            pointer.release.product.as_str(),
-            pointer.release.channel.as_str(),
-            pointer.release.version.as_str(),
-            pointer.derivative,
+            pointer.product.as_str(),
+            pointer.channel.as_str(),
+            pointer.version.as_str(),
+            pointer.kind,
         );
-        let wanted = (
-            source,
-            query.product,
-            query.channel,
-            query.version,
-            query.derivative,
-        );
+        let wanted = (query.product, query.channel, query.version, query.kind);
         if standing != wanted {
             return Ok(None);
         }
@@ -46,25 +39,21 @@ impl Generation {
 
     pub fn exact(source: &str, pointer: Pointer) -> Result<Self, String> {
         let source = source.trim_end_matches('/');
-        if pointer.source.trim_end_matches('/') != source {
+        let route = Route::new(&pointer.channel, pointer.kind, &pointer.version);
+        let expected = super::manifest(source, route, &pointer.generation)?;
+        if pointer.manifest.url != expected {
             return Err("depot pointer names another source".into());
         }
-        let route = snapshots(
-            &pointer.release,
-            pointer.derivative,
-            &pointer.snapshot.timestamp,
-        )?;
-        let base = format!("{source}/{route}");
-        let bytes = pull(&format!("{base}/{}", super::LEAF))?.ok_or_else(|| {
-            format!(
-                "depot generation {} has no manifest",
-                pointer.snapshot.timestamp
-            )
-        })?;
-        let text = String::from_utf8(bytes.clone())
-            .map_err(|error| format!("depot manifest is not UTF-8: {error}"))?;
-        let manifest = Manifest::parse(&text)?;
+        let bytes = pull(&pointer.manifest.url)?
+            .ok_or_else(|| format!("depot generation {} has no manifest", pointer.generation))?;
+        let manifest = Manifest::parse(&bytes)?;
         pointer.bind(&manifest, &bytes)?;
+        let base = pointer
+            .manifest
+            .url
+            .strip_suffix(super::LEAF)
+            .expect("a valid depot manifest URL ends in its leaf")
+            .to_string();
         Ok(Self {
             pointer,
             manifest,
@@ -73,18 +62,21 @@ impl Generation {
     }
 
     pub fn read(&self, path: &str) -> Result<Vec<u8>, String> {
-        let bytes = pull(&format!("{}/{path}", self.base))?
+        let bytes = pull(&format!("{}objects/{path}", self.base))?
             .ok_or_else(|| format!("depot object {path} is absent"))?;
-        self.manifest.verify(path, &bytes)?;
+        let executable = self
+            .manifest
+            .objects
+            .iter()
+            .find(|held| held.path == path)
+            .map(|held| held.executable)
+            .ok_or_else(|| format!("depot manifest names no object at {path}"))?;
+        self.manifest.verify(path, &bytes, executable)?;
         Ok(bytes)
     }
 
-    pub fn digest(&self) -> &str {
-        &self.pointer.manifest.sha256
-    }
-
-    pub fn mark(&self) -> &str {
-        &self.pointer.snapshot.timestamp
+    pub fn url(&self) -> &str {
+        &self.base
     }
 }
 
