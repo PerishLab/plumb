@@ -1,4 +1,5 @@
 use super::{PAIR, Plan, seat};
+use sha2::{Digest, Sha256};
 
 #[test]
 fn reuse() {
@@ -58,6 +59,58 @@ fn reuse() {
     assert_eq!(moved["actions"][0]["run"], true);
     assert_eq!(moved["actions"][0]["reason"], "proof-moved");
     assert_eq!(moved["actions"][0]["reuse"]["type"], "workload");
+}
+
+#[test]
+fn direct() {
+    let root = seat("reuse-direct");
+    root.declared(PAIR);
+    root.git(&["commit", "-m", "source"]);
+    let (cold, ok) = root.plan(None, &["runner=linux"]);
+    assert!(ok, "{cold}");
+    let cold: serde_json::Value = serde_json::from_str(&cold).expect("cold plan");
+    let held = &cold["actions"][0];
+    let action = held["name"].as_str().expect("action");
+    let workload = held["keys"]["workload"].as_str().expect("workload");
+    let proof = held["keys"]["proof"].as_str().expect("proof");
+    let record = serde_json::json!({
+        "action": action,
+        "workload": workload,
+        "proof": proof,
+        "source": {"type": "workload", "source": "https://workflow.example/workloads/held.tgz"}
+    });
+    let store = crate::support::Bucket::open(4);
+    let route = format!(
+        "records/workload-proof/{}.json",
+        route(&[action, workload, proof])
+    );
+    store.seed(&route, record.to_string().as_bytes());
+    let inventory = format!("{}/workflow/inventory.json", store.endpoint());
+    let (text, ok) = root.remote(
+        Plan {
+            base: None,
+            world: &["runner=linux"],
+            identity: &[],
+            project: &[],
+            roots: &[],
+            inventory: None,
+        },
+        Some(&inventory),
+    );
+    assert!(ok, "{text}");
+    let plan: serde_json::Value = serde_json::from_str(&text).expect("plan");
+    assert_eq!(plan["actions"][0]["decision"], "reuse");
+    assert_eq!(plan["actions"][0]["reason"], "proof-held");
+    store.finish();
+}
+
+fn route(values: &[&str]) -> String {
+    let mut sponge = Sha256::new();
+    for value in values {
+        sponge.update(value.as_bytes());
+        sponge.update([0]);
+    }
+    format!("{:x}", sponge.finalize())
 }
 
 #[test]

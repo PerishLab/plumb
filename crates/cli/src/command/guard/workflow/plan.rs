@@ -21,6 +21,8 @@ pub struct Input {
     pub(in crate::command) roots: Vec<String>,
     #[arg(long)]
     pub(in crate::command) inventory: Option<PathBuf>,
+    #[arg(long = "inventory-url", value_name = "INVENTORY_URL")]
+    pub(in crate::command) source: Option<String>,
     #[command(flatten)]
     pub(in crate::command) target: Root,
 }
@@ -64,7 +66,8 @@ fn render(root: &Path, input: &Input) -> Result<String, String> {
     let publication = fields("identity", &input.identity)?;
     let projects = tree::Projects::parse(&input.project)?;
     let roots = roots(&input.roots)?;
-    let inventory = reuse::Inventory::read(input.inventory.as_deref())?;
+    let inventory =
+        reuse::Inventory::read(input.inventory.as_deref())?.at(input.source.as_deref())?;
     let before = match base {
         Some(base) => tree::Tree::read(root, Some(base))?,
         None => tree::Tree::default(),

@@ -110,6 +110,22 @@ impl Bucket {
         self.objects.lock().expect("objects").contains_key(key)
     }
 
+    pub fn keys(&self) -> Vec<String> {
+        self.objects
+            .lock()
+            .expect("objects")
+            .keys()
+            .cloned()
+            .collect()
+    }
+
+    pub fn seed(&self, key: &str, body: &[u8]) {
+        self.objects
+            .lock()
+            .expect("objects")
+            .insert(key.to_string(), body.to_vec());
+    }
+
     pub fn finish(self) {
         self.server.join().expect("server");
     }
@@ -127,11 +143,13 @@ fn bucket(mut stream: TcpStream, objects: &Mutex<BTreeMap<String, Vec<u8>>>) {
         }
     };
     let headers = String::from_utf8_lossy(&request[..seat]).to_string();
-    assert!(
-        headers
-            .to_ascii_lowercase()
-            .contains("authorization: aws4-hmac-sha256")
-    );
+    if header(&headers, "x-amz-date").is_some() {
+        assert!(
+            headers
+                .to_ascii_lowercase()
+                .contains("authorization: aws4-hmac-sha256")
+        );
+    }
     let length = header(&headers, "content-length").map_or(0, |held| held.parse().expect("length"));
     while request.len() < seat + length {
         let read = stream.read(&mut block).expect("body");

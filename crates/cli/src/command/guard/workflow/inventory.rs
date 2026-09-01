@@ -1,56 +1,22 @@
-use super::reuse::{Inventory, Keys, Record, Source, hash};
+use super::reuse::{Keys, Record, Source, hash};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Read as _;
 use std::path::Path;
 
-#[derive(PartialEq)]
-struct Key<'a> {
-    action: &'a str,
-    workload: &'a str,
-    publication: Option<&'a str>,
-    kind: &'a str,
-}
-
-impl Inventory {
-    pub(super) fn record(&mut self, record: Record) -> Result<(), String> {
-        record.valid()?;
-        self.records
-            .retain(|held| held.identity() != record.identity());
-        self.records.push(record);
-        self.records.sort_by(|left, right| {
-            (
-                left.action.as_str(),
-                left.workload.as_str(),
-                left.publication.as_deref(),
-                left.source.kind.as_str(),
-            )
-                .cmp(&(
-                    right.action.as_str(),
-                    right.workload.as_str(),
-                    right.publication.as_deref(),
-                    right.source.kind.as_str(),
-                ))
-        });
-        Ok(())
-    }
-
+impl Record {
     pub(super) fn encode(&self) -> Result<Vec<u8>, String> {
         let mut body = serde_json::to_vec_pretty(self)
-            .map_err(|error| format!("cannot encode workflow inventory: {error}"))?;
+            .map_err(|error| format!("cannot encode workflow record: {error}"))?;
         body.push(b'\n');
         Ok(body)
     }
-}
 
-impl Record {
-    fn identity(&self) -> Key<'_> {
-        Key {
-            action: &self.action,
-            workload: &self.workload,
-            publication: self.publication.as_deref(),
-            kind: &self.source.kind,
-        }
+    pub(super) fn decode(body: &[u8]) -> Result<Self, String> {
+        let held: Self = serde_json::from_slice(body)
+            .map_err(|error| format!("cannot parse workflow record: {error}"))?;
+        held.valid()?;
+        Ok(held)
     }
 
     pub(super) fn workload(action: String, keys: &Keys, source: String) -> Self {

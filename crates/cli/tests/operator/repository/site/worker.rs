@@ -4,7 +4,7 @@ use std::process::Command;
 #[test]
 fn exact() {
     let fixture = tempfile::tempdir().expect("worker fixture");
-    let inventory = crate::support::Bucket::open(6);
+    let inventory = crate::support::Bucket::open(11);
     let root = fixture.path();
     super::seed(root);
     std::fs::write(

@@ -1,6 +1,6 @@
 use super::inventory::{digest, field};
 use super::reuse::hash;
-use super::reuse::{Inventory, Keys, Record};
+use super::reuse::{Keys, Record};
 use clap::Args;
 use std::{
     fs,
@@ -87,7 +87,11 @@ fn execute(input: Input) -> Result<(), String> {
     let source = authority.public(&object)?;
     authority.publish(&object, &input.workload, "application/gzip")?;
     let workload = Record::workload(input.action.clone(), &keys, source);
-    authority.merge(workload, publication)
+    authority.record(&workload)?;
+    if let Some(publication) = &publication {
+        authority.record(publication)?;
+    }
+    Ok(())
 }
 
 pub(in crate::command) struct Project<'a> {
@@ -145,51 +149,35 @@ impl Authority {
         Ok(format!("{base}/{key}"))
     }
 
-    fn merge(&self, workload: Record, publication: Option<Record>) -> Result<(), String> {
-        for attempt in 0..12 {
-            let (mut inventory, etag) = self.inventory()?;
-            inventory.record(workload.clone())?;
-            if let Some(publication) = &publication {
-                inventory.record(publication.clone())?;
-            }
-            let body = inventory.encode()?;
-            let condition = etag.as_deref().map_or(
-                plumb::bucket::Condition::Absent,
-                plumb::bucket::Condition::Match,
-            );
+    fn record(&self, record: &Record) -> Result<(), String> {
+        let body = record.encode()?;
+        for route in record.routes() {
             match self.control.write(
-                INVENTORY,
+                &route,
                 &body,
                 plumb::bucket::Policy {
                     media: "application/json",
-                    cache: "no-store",
+                    cache: "public, max-age=31536000, immutable",
                 },
-                condition,
+                plumb::bucket::Condition::Absent,
             )? {
-                plumb::bucket::Outcome::Held(()) => return Ok(()),
-                plumb::bucket::Outcome::Stale => {
-                    let delay = 40 * (attempt + 1).min(10);
-                    std::thread::sleep(std::time::Duration::from_millis(delay));
-                    continue;
-                }
+                plumb::bucket::Outcome::Held(()) => {}
+                plumb::bucket::Outcome::Stale => self.held(&route, record)?,
                 plumb::bucket::Outcome::Missing => {
-                    return Err("publishing workflow inventory returned missing".into());
+                    return Err(format!("workflow record {route} returned missing"));
                 }
             }
         }
-        Err("workflow inventory remained busy after 12 attempts".into())
+        Ok(())
     }
 
-    fn inventory(&self) -> Result<(Inventory, Option<String>), String> {
-        match self.control.read(INVENTORY)? {
-            plumb::bucket::Outcome::Missing => Ok((Inventory::empty(), None)),
-            plumb::bucket::Outcome::Held(object) => {
-                let inventory = Inventory::decode(&object.body)?;
-                Ok((inventory, object.etag))
+    fn held(&self, route: &str, record: &Record) -> Result<(), String> {
+        match self.control.read(route)? {
+            plumb::bucket::Outcome::Held(object) if Record::decode(&object.body)? == *record => {
+                Ok(())
             }
-            plumb::bucket::Outcome::Stale => {
-                Err("reading workflow inventory returned stale".into())
-            }
+            plumb::bucket::Outcome::Held(_) => Err(format!("workflow record {route} drifted")),
+            _ => Err(format!("workflow record {route} vanished")),
         }
     }
 

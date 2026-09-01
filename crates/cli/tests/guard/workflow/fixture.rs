@@ -63,6 +63,10 @@ impl Seat {
     }
 
     pub fn planned(&self, input: Plan<'_>) -> (String, bool) {
+        self.remote(input, None)
+    }
+
+    pub fn remote(&self, input: Plan<'_>, inventory: Option<&str>) -> (String, bool) {
         let mut args = vec!["workflow", "plan"];
         if let Some(base) = input.base {
             args.push("--base");
@@ -86,6 +90,10 @@ impl Seat {
         }
         if let Some(inventory) = input.inventory {
             args.push("--inventory");
+            args.push(inventory);
+        }
+        if let Some(inventory) = inventory {
+            args.push("--inventory-url");
             args.push(inventory);
         }
         args.push(self.0.to_str().expect("path"));
