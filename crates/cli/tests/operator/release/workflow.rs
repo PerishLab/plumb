@@ -122,19 +122,27 @@ fn depot() {
         .find("cp \"$atom/target/debug/plumb\" \"$tool\"")
         .expect("exact Plumb install");
     let bootstrap = held
-        .find("\"$tool\" configuration install")
+        .find("  install_configuration")
         .expect("bootstrap configuration");
     let exact = held
-        .rfind("\"$tool\" configuration install")
+        .rfind("  install_configuration")
         .expect("exact configuration");
     assert_eq!(
-        held.matches("\"$tool\" configuration install").count(),
+        held.matches("  install_configuration").count(),
         2,
         "each bootstrap phase should own one sync branch"
     );
     assert!(
         bootstrap < installed && installed < exact,
         "bootstrap rules must precede the build while exact rules follow installation"
+    );
+    assert!(
+        held.contains("if \"$tool\" configuration --help >/dev/null 2>&1"),
+        "bootstrap must tolerate the predecessor that predates configuration install"
+    );
+    assert!(
+        windows.contains("& $tool configuration --help *> $null"),
+        "Windows bootstrap must probe the installed predecessor's capability"
     );
     for binding in [
         "PLUMB_BUILD_VERSION=\"$PLUMB_RELEASE_VERSION\"",
