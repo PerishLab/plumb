@@ -12,6 +12,12 @@ fn bootstrap() -> String {
         .expect("Plumb owns one canonical bootstrap")
 }
 
+fn windows() -> String {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    std::fs::read_to_string(root.join(".forgejo/scripts/bootstrap-plumb.ps1"))
+        .expect("Plumb owns one canonical Windows bootstrap")
+}
+
 #[test]
 fn matrix() {
     let held = canonical();
@@ -64,6 +70,14 @@ fn matrix() {
         held.contains(".forgejo/scripts/bootstrap-plumb.sh"),
         "the canonical workflow should consume its Plumb-owned bootstrap script"
     );
+    assert!(
+        held.contains(".forgejo/scripts/bootstrap-plumb.ps1"),
+        "the canonical workflow should consume its Plumb-owned Windows bootstrap script"
+    );
+    assert!(
+        !held.contains("cargo build --quiet --locked --manifest-path"),
+        "workflow orchestration must not duplicate atom bootstrap implementation"
+    );
     assert!(!held.contains("${{ runner.temp }}"), "{held}");
     assert_eq!(held.matches("PLUMB_HOME: /tmp/plumb-home").count(), 2);
     assert_eq!(held.matches("run: corepack enable").count(), 1, "{held}");
@@ -105,6 +119,7 @@ fn opaque() {
 #[test]
 fn depot() {
     let held = bootstrap();
+    let windows = windows();
     let installed = held
         .find("cp \"$atom/target/debug/plumb\" \"$tool\"")
         .expect("exact Plumb install");
@@ -129,6 +144,16 @@ fn depot() {
         "PLUMB_BUILD_COMMIT=\"$PLUMB_RELEASE_COMMIT\"",
     ] {
         assert!(held.contains(binding), "atom build omits {binding}");
+    }
+    for binding in [
+        "$env:PLUMB_BUILD_VERSION = $env:PLUMB_RELEASE_VERSION",
+        "$env:PLUMB_BUILD_CHANNEL = $env:PLUMB_RELEASE_CHANNEL",
+        "$env:PLUMB_BUILD_COMMIT = $env:PLUMB_RELEASE_COMMIT",
+    ] {
+        assert!(
+            windows.contains(binding),
+            "Windows atom build omits {binding}"
+        );
     }
 }
 
