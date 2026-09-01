@@ -1,4 +1,5 @@
 use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const REGION: &str = "auto";
@@ -62,7 +63,7 @@ impl Control {
 
     pub fn read(&self, key: &str) -> Result<Outcome<Object>, String> {
         let body = [];
-        let signed = self.sign("GET", key, &body)?;
+        let signed = self.sign("GET", key, &body, &[])?;
         match ureq::get(&signed.url)
             .header("host", &self.host)
             .header("x-amz-content-sha256", signed.payload)
@@ -94,7 +95,16 @@ impl Control {
         policy: Policy<'_>,
         condition: Condition<'_>,
     ) -> Result<Outcome<()>, String> {
-        let signed = self.sign("PUT", key, body)?;
+        let (name, value) = match condition {
+            Condition::Absent => ("if-none-match", "*"),
+            Condition::Match(etag) => ("if-match", etag),
+        };
+        let fields = [
+            ("cache-control", policy.cache),
+            ("content-type", policy.media),
+            (name, value),
+        ];
+        let signed = self.sign("PUT", key, body, &fields)?;
         let mut request = ureq::put(&signed.url)
             .header("host", &self.host)
             .header("x-amz-content-sha256", signed.payload)
@@ -102,10 +112,7 @@ impl Control {
             .header("authorization", signed.authorization)
             .header("content-type", policy.media)
             .header("cache-control", policy.cache);
-        request = match condition {
-            Condition::Absent => request.header("if-none-match", "*"),
-            Condition::Match(etag) => request.header("if-match", etag),
-        };
+        request = request.header(name, value);
         match request.send(body) {
             Ok(_) => Ok(Outcome::Held(())),
             Err(ureq::Error::StatusCode(412)) => Ok(Outcome::Stale),
@@ -113,15 +120,30 @@ impl Control {
         }
     }
 
-    fn sign(&self, method: &str, key: &str, body: &[u8]) -> Result<Signed, String> {
+    fn sign(
+        &self,
+        method: &str,
+        key: &str,
+        body: &[u8],
+        extra: &[(&str, &str)],
+    ) -> Result<Signed, String> {
         let path = format!("/{}/{}", encode(&self.bucket), encode(key));
         let url = format!("{}{}", self.endpoint, path);
         let stamp = Stamp::now()?;
         let payload = hex(&Sha256::digest(body));
-        let canonical = format!(
-            "{method}\n{path}\n\nhost:{}\nx-amz-content-sha256:{payload}\nx-amz-date:{}\n\nhost;x-amz-content-sha256;x-amz-date\n{payload}",
-            self.host, stamp.time
-        );
+        let mut fields = BTreeMap::new();
+        for (name, value) in extra {
+            fields.insert(*name, value.trim());
+        }
+        fields.insert("host", &self.host);
+        fields.insert("x-amz-content-sha256", &payload);
+        fields.insert("x-amz-date", &stamp.time);
+        let headers = fields
+            .iter()
+            .map(|(name, value)| format!("{name}:{value}\n"))
+            .collect::<String>();
+        let names = fields.keys().copied().collect::<Vec<_>>().join(";");
+        let canonical = format!("{method}\n{path}\n\n{headers}\n{names}\n{payload}");
         let scope = format!("{}/{REGION}/{SERVICE}/aws4_request", stamp.date);
         let wanted = format!(
             "AWS4-HMAC-SHA256\n{}\n{scope}\n{}",
@@ -137,7 +159,7 @@ impl Control {
         let signing = hmac(&service, b"aws4_request");
         let signature = hex(&hmac(&signing, wanted.as_bytes()));
         let authorization = format!(
-            "AWS4-HMAC-SHA256 Credential={}/{scope}, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature={signature}",
+            "AWS4-HMAC-SHA256 Credential={}/{scope}, SignedHeaders={names}, Signature={signature}",
             self.access
         );
         Ok(Signed {
