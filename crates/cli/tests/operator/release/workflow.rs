@@ -18,6 +18,12 @@ fn windows() -> String {
         .expect("Plumb owns one canonical Windows bootstrap")
 }
 
+fn transport() -> String {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    std::fs::read_to_string(root.join("crates/cli/src/command/ship/transport/support.rs"))
+        .expect("Plumb owns binary source discovery")
+}
+
 #[test]
 fn matrix() {
     let held = canonical();
@@ -178,4 +184,13 @@ fn singular() {
             .any(|line| line.trim_start().starts_with("lane ")),
         "downstream workflow rendering must not remain public"
     );
+}
+
+#[test]
+fn inputs() {
+    let held = transport();
+    assert!(held.contains(":(glob)**/Cargo.toml"), "{held}");
+    assert!(held.contains("seat.join(\"src\")"), "{held}");
+    assert!(held.contains("spec.depends.get(\"binary\")"), "{held}");
+    assert!(!held.contains("seat.join(\"tests\")"), "{held}");
 }

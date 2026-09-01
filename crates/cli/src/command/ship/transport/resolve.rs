@@ -3,7 +3,7 @@ use plumb::rig::Rig;
 use serde_json::{Value, json};
 use std::path::Path;
 
-use super::support::{Inventory, depot, object, projection, strings, text};
+use super::support::{Inventory, depot, object, projection, sources, strings, text};
 
 const SCHEMA: &str = "plumb.ship-graph/v1";
 
@@ -93,6 +93,8 @@ fn binary(
         });
     }
     let projection = projection(world.root);
+    let roots = sources(spec)?;
+    let roots = roots.iter().map(String::as_str).collect::<Vec<_>>();
     let mut pending = Vec::new();
     let mut reuse = Vec::new();
     for target in targets["include"]
@@ -108,7 +110,7 @@ fn binary(
             Plan {
                 action: &action,
                 projections: &[projection.as_str()],
-                roots: &[],
+                roots: &roots,
                 runner,
                 release: Some(&marker.version),
                 target: Some(triple),
