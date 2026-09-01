@@ -21,36 +21,7 @@ pub fn publish(path: &Path, authority: &impl Authority) -> Result<String, String
     Ok(format!("published exact {channel} {}", capsule.version))
 }
 
-pub fn activate(path: &Path, authority: &impl Authority) -> Result<String, String> {
-    let (capsule, root) = Capsule::read(path)?;
-    super::verify::published(&capsule)?;
-    let pointer = capsule
-        .pointer
-        .as_ref()
-        .ok_or_else(|| format!("{} capsule has no channel pointer", capsule.channel))?;
-    let remote = Remote::new(authority)?;
-    remote.activate(pointer, &root)?;
-    if capsule.channel == "stable" {
-        super::verify::consensus(&capsule)?;
-    }
-    Ok(format!("activated {} {}", capsule.channel, capsule.version))
-}
-
-pub fn shift(path: &Path, authority: &impl Authority) -> Result<String, String> {
-    let (capsule, root) = Capsule::read(path)?;
-    if capsule.channel != "stable" {
-        return Err("only stable may activate managers".into());
-    }
-    super::verify::published(&capsule)?;
-    let remote = Remote::new(authority)?;
-    for manager in &capsule.roots {
-        remote.shift(manager, &root)?;
-    }
-    super::verify::projection(&capsule)?;
-    Ok(format!("activated stable binary {}", capsule.version))
-}
-
-struct Remote<'a> {
+pub(super) struct Remote<'a> {
     held: &'a dyn Authority,
 }
 
@@ -61,7 +32,7 @@ struct Rule<'a> {
 }
 
 impl<'a> Remote<'a> {
-    fn new(held: &'a dyn Authority) -> Result<Self, String> {
+    pub(super) fn new(held: &'a dyn Authority) -> Result<Self, String> {
         let secrets = [held.access(), held.secret(), held.bucket()];
         if secrets.iter().any(|value| value.is_empty()) {
             return Err("incomplete S3 release authority".into());
@@ -112,7 +83,7 @@ impl<'a> Remote<'a> {
         result
     }
 
-    fn shift(&self, object: &Local, root: &Path) -> Result<(), String> {
+    pub(super) fn shift(&self, object: &Local, root: &Path) -> Result<(), String> {
         let source = root.join(&object.source);
         match self.head(&object.key)? {
             None => self.create(object, root, false),
@@ -135,7 +106,7 @@ impl<'a> Remote<'a> {
         }
     }
 
-    fn activate(&self, object: &Local, root: &Path) -> Result<(), String> {
+    pub(super) fn activate(&self, object: &Local, root: &Path) -> Result<(), String> {
         let source = root.join(&object.source);
         let prior = self.head(&object.key)?;
         let Some(etag) = prior else {

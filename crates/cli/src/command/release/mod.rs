@@ -12,7 +12,7 @@ pub(in crate::command) use identity::marker::Descriptor as ReleaseMarker;
 use identity::{marker as markers, promotion};
 use plumb::rig::Authority;
 use std::path::{Path, PathBuf};
-pub(super) use truth::{manager, proof, record, storage, verify};
+pub(super) use truth::{manager, projection, proof, record, storage, verify};
 
 use crate::shape::release::Spec;
 
