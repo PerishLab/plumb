@@ -62,6 +62,7 @@ fn recorded() {
     let moved = keys
         .replace(&"2".repeat(64), &"4".repeat(64))
         .replace(&"3".repeat(64), &"5".repeat(64));
+    std::fs::write(&workload, "moved workload").expect("moved workload");
     let compatible = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args([
             "workflow",
@@ -88,7 +89,7 @@ fn recorded() {
         .expect("compatible record");
     assert!(
         compatible.status.success(),
-        "proof movement keeps one content record: {}",
+        "proof and source movement keep one content record: {}",
         String::from_utf8_lossy(&compatible.stderr)
     );
     let keys = store.keys();
