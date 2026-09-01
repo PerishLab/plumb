@@ -85,19 +85,20 @@ answers for.
 
 - `version` projects repository identity and governs the stable line. `release`
   only defines and verifies its immutable marker. `ship` consumes that marker
-  and publishes every immutable medium in one transaction. `depot` moves the
-  same marker's mutable projections only after immutable readback.
+  and publishes every immutable medium through one request graph. `depot`
+  independently consumes the same marker and moves its mutable projections;
+  neither command is a phase inside the other.
 - Depot generations remain immutable and addressable. Configuration, changelog,
   skill, channel, manager, and provider bindings may move their latest pointer,
   but every movement names the release marker and uses conditional readback.
-  A marker-exact configuration generation is published after the capsule and
-  before manager smoke so the installed binary can consume its own hooks. It
-  moves no channel pointer; `depot channel` advances configuration consensus
-  and release consensus only after every immutable project reads back.
+  A marker-exact configuration generation validates against the marker's
+  published binary. It moves no channel pointer; depot consensus advances only
+  after the immutable publication it consumes reads back.
   Changelog and skill source trees are temporary media below `PLUMB_HOME`, never
   repository seats. Products consume a skill through their own command surface
   while delegating its exact generation and digest binding to `plumb` the library.
-- This repository carries the one canonical `ship.yml` atom. Product
+- This repository carries the one canonical `ship.yml` atom. Its only execution
+  classes are reusable workload and marker-bound publication requests. Product
   repositories dispatch its exact Plumb-owned revision and carry neither a
   workflow copy nor a rendered derivative.
 

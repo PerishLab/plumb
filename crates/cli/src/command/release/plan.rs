@@ -28,7 +28,7 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
     let held = spec.surface();
     let row = |medium: &&str| serde_json::json!({ "medium": medium });
     let include = held.iter().map(row).collect::<Vec<_>>();
-    let mut project = Vec::new();
+    let mut publication = Vec::new();
     if spec.cargo.is_some() {
         let mut roots = vec!["Cargo.toml".into(), "crates".into()];
         if spec.root.join("Cargo.lock").is_file() {
@@ -43,7 +43,7 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
         }
         roots.sort();
         roots.dedup();
-        project.push(request(Project {
+        publication.push(request(Project {
             action: "ship/cargo".into(),
             projections: Vec::new(),
             roots,
@@ -73,7 +73,7 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
         }
         roots.sort();
         roots.dedup();
-        project.push(request(Project {
+        publication.push(request(Project {
             action: "ship/cfworker".into(),
             projections: Vec::new(),
             roots,
@@ -82,7 +82,7 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
         }));
     }
     if spec.oci.is_some() {
-        project.push(request(Project {
+        publication.push(request(Project {
             action: "ship/oci".into(),
             projections: Vec::new(),
             roots: vec!["*".into()],
@@ -102,7 +102,7 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
         }
         roots.sort();
         roots.dedup();
-        project.push(request(Project {
+        publication.push(request(Project {
             action: "ship/chart".into(),
             projections: vec![
                 format!("charts/{held}/Chart.yaml#/version"),
@@ -129,7 +129,7 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
             }
             roots.sort();
             roots.dedup();
-            project.push(request(Project {
+            publication.push(request(Project {
                 action: format!("ship/npm.{bare}"),
                 projections: vec![format!("packages/{bare}/package.json#/version")],
                 roots,
@@ -138,15 +138,9 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
             }));
         }
     }
-    let seal = held
-        .iter()
-        .filter(|medium| **medium == "binary")
-        .map(|_| serde_json::json!({ "held": "seal" }))
-        .collect::<Vec<_>>();
     Ok(serde_json::json!({
         "include": include,
-        "project": { "include": project },
-        "seal": { "include": seal },
+        "publication": { "include": publication },
     }))
 }
 
@@ -164,7 +158,7 @@ fn request(project: Project<'_>) -> serde_json::Value {
         operation["package"] = serde_json::json!(package);
     }
     serde_json::json!({
-        "schema": "plumb.ship-request/v1",
+        "schema": "plumb.ship-request/v2",
         "action": project.action,
         "projections": project.projections,
         "roots": project.roots,

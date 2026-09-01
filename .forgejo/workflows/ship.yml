@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       marker:
-        description: Immutable release marker shared by every distribution medium
+        description: Immutable release marker shared by every publication
         required: true
         type: string
       repository:
@@ -24,24 +24,14 @@ jobs:
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
     outputs:
-      product: ${{ steps.plan.outputs.product }}
       channel: ${{ steps.plan.outputs.channel }}
       commit: ${{ steps.plan.outputs.commit }}
       version: ${{ steps.plan.outputs.version }}
-      targets: ${{ steps.plan.outputs.targets }}
-      binary_missing: ${{ steps.plan.outputs.binary_missing }}
-      binary_reuse: ${{ steps.plan.outputs.binary_reuse }}
-      project: ${{ steps.plan.outputs.project }}
-      project_missing: ${{ steps.plan.outputs.project_missing }}
-      worker_depot: ${{ steps.plan.outputs.worker_depot }}
-      worker_request: ${{ steps.plan.outputs.worker_request }}
-      depot_configuration: ${{ steps.plan.outputs.depot_configuration }}
-      depot_skill: ${{ steps.plan.outputs.depot_skill }}
+      workload: ${{ steps.plan.outputs.workload }}
+      workload_missing: ${{ steps.plan.outputs.workload_missing }}
     env:
       PLUMB_RELEASE_ROOT: .
-      PLUMB_RELEASE_COMMIT: ${{ github.sha }}
       PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
-      PLUMB_RELEASE_SOURCE: ${{ github.ref }}
       PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
     steps:
       - name: Check out the release marker
@@ -85,44 +75,28 @@ jobs:
         shell: bash
         run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom
 
-      - name: Plan this release
+      - name: Resolve missing workloads
         id: plan
         shell: bash
-        run: |
-          set -eu
-          graph=$(plumb ship resolve \
-            --marker "$PLUMB_RELEASE_MARKER" \
-            --atom '${{ github.sha }}')
-          {
-            echo "product=$(printf '%s' "$graph" | jq -r '.product')"
-            echo "channel=$(printf '%s' "$graph" | jq -r '.channel')"
-            echo "commit=$(printf '%s' "$graph" | jq -r '.commit')"
-            echo "version=$(printf '%s' "$graph" | jq -r '.version')"
-            echo "targets=$(printf '%s' "$graph" | jq -c '.targets')"
-            echo "binary_missing=$(printf '%s' "$graph" | jq -r '.binary_missing')"
-            echo "binary_reuse=$(printf '%s' "$graph" | jq -c '.binary_reuse')"
-            echo "project=$(printf '%s' "$graph" | jq -c '.project')"
-            echo "project_missing=$(printf '%s' "$graph" | jq -r '.project_missing')"
-            echo "worker_depot=$(printf '%s' "$graph" | jq -r '.worker_depot')"
-            echo "worker_request=$(printf '%s' "$graph" | jq -c '.worker_request')"
-            echo "depot_configuration=$(printf '%s' "$graph" | jq -r '.depot_configuration')"
-            echo "depot_skill=$(printf '%s' "$graph" | jq -r '.depot_skill')"
-          } >> "$GITHUB_OUTPUT"
+        run: bash .plumb-atom/.forgejo/scripts/resolve-ship.sh '${{ github.sha }}'
 
-  materialize:
+  workload:
     needs: resolve
-    if: needs.resolve.outputs.channel != 'stable'
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.resolve.outputs.targets) }}
+      matrix: ${{ fromJSON(needs.resolve.outputs.workload) }}
     runs-on: ${{ matrix.runner }}
     env:
       PLUMB_RELEASE_ROOT: .
       PLUMB_RELEASE_CHANNEL: ${{ needs.resolve.outputs.channel }}
       PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
       PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
-      PLUMB_RELEASE_TARGET: ${{ matrix.target }}
       PLUMB_RELEASE_ARTIFACTS: dist/${{ needs.resolve.outputs.version }}
+      PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
+      PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
+      PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
+      PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
+      PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
     steps:
       - uses: actions/checkout@v6
         if: matrix.control != 'reuse'
@@ -152,80 +126,39 @@ jobs:
         shell: pwsh
         run: .plumb-atom/.forgejo/scripts/bootstrap-plumb.ps1 .plumb-atom
 
-      - name: Add the declared Rust target
+      - name: Add the requested Rust target
         if: matrix.control != 'reuse'
-        run: rustup target add ${{ matrix.target }}
+        run: rustup target add ${{ matrix.request.operation.target }}
 
-      - name: Build one declared target
-        if: matrix.control != 'reuse'
-        run: plumb ship binary build
-
-      - name: Record one binary workload
+      - name: Execute one workload request
         if: matrix.control != 'reuse' && runner.os != 'Windows'
         shell: bash
         env:
-          PLUMB_BINARY_ACTION: ${{ matrix.action }}
-          PLUMB_BINARY_KEYS: ${{ toJSON(matrix.keys) }}
-          PLUMB_BINARY_WORKLOAD: dist/${{ needs.resolve.outputs.version }}/${{ matrix.archive }}
-          PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
-          PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
-          PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
-          PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
-          PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
-        run: >-
-          plumb workflow record "$PLUMB_BINARY_ACTION"
-          --keys "$PLUMB_BINARY_KEYS"
-          --workload "$PLUMB_BINARY_WORKLOAD"
+          PLUMB_SHIP_REQUEST: ${{ toJSON(matrix.request) }}
+        run: bash .plumb-atom/.forgejo/scripts/execute-ship.sh
 
-      - name: Record one binary workload on Windows
+      - name: Execute one workload request on Windows
         if: matrix.control != 'reuse' && runner.os == 'Windows'
         shell: pwsh
         env:
-          PLUMB_BINARY_ACTION: ${{ matrix.action }}
-          PLUMB_BINARY_KEYS: ${{ toJSON(matrix.keys) }}
-          PLUMB_BINARY_WORKLOAD: dist/${{ needs.resolve.outputs.version }}/${{ matrix.archive }}
-          PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
-          PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
-          PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
-          PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
-          PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
-        run: |
-          & plumb workflow record $env:PLUMB_BINARY_ACTION `
-            --keys $env:PLUMB_BINARY_KEYS `
-            --workload $env:PLUMB_BINARY_WORKLOAD
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          PLUMB_SHIP_REQUEST: ${{ toJSON(matrix.request) }}
+        run: .plumb-atom/.forgejo/scripts/execute-ship.ps1
 
-  seal:
-    needs: [resolve, materialize]
-    if: >-
-      always() && needs.resolve.result == 'success' &&
-      (needs.resolve.outputs.channel == 'stable' || needs.materialize.result == 'success' ||
-      (needs.materialize.result == 'skipped' && needs.resolve.outputs.binary_missing == 'false'))
+  publish_plan:
+    needs: [resolve, workload]
+    if: always() && needs.resolve.result == 'success' && needs.workload.result == 'success'
     runs-on: docker
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
     outputs:
-      manager_unix: ${{ steps.surface.outputs.manager_unix }}
-      manager_windows: ${{ steps.surface.outputs.manager_windows }}
+      channel: ${{ steps.plan.outputs.channel }}
+      commit: ${{ steps.plan.outputs.commit }}
+      version: ${{ steps.plan.outputs.version }}
+      publication: ${{ steps.plan.outputs.publication }}
+      publication_missing: ${{ steps.plan.outputs.publication_missing }}
     env:
-      DOCKER_HOST: tcp://172.17.0.1:2375
       PLUMB_RELEASE_ROOT: .
       PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
-      PLUMB_RELEASE_CHANNEL: ${{ needs.resolve.outputs.channel }}
-      PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
-      PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
-      PLUMB_RELEASE_ARTIFACTS: dist/${{ needs.resolve.outputs.version }}
-      PLUMB_RELEASE_TOOLCHAIN: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
-      PLUMB_RELEASE_OUTPUT: .plumb-release/capsule
-      PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
-      PLUMB_PUBLISH_ACCESS: ${{ secrets.RELEASE_PUBLISH_S3_ACCESS_KEY }}
-      PLUMB_PUBLISH_SECRET: ${{ secrets.RELEASE_PUBLISH_S3_SECRET_KEY }}
-      PLUMB_PUBLISH_BUCKET: ${{ secrets.RELEASE_PUBLISH_S3_BUCKET }}
-      PLUMB_PUBLISH_ENDPOINT: ${{ secrets.RELEASE_PUBLISH_S3_ENDPOINT }}
-      PLUMB_ACTIVATE_ACCESS: ${{ secrets.RELEASE_ACTIVATE_S3_ACCESS_KEY }}
-      PLUMB_ACTIVATE_SECRET: ${{ secrets.RELEASE_ACTIVATE_S3_SECRET_KEY }}
-      PLUMB_ACTIVATE_BUCKET: ${{ secrets.RELEASE_ACTIVATE_S3_BUCKET }}
-      PLUMB_ACTIVATE_ENDPOINT: ${{ secrets.RELEASE_ACTIVATE_S3_ENDPOINT }}
       PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
     steps:
       - uses: actions/checkout@v6
@@ -249,213 +182,42 @@ jobs:
         shell: bash
         run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom
 
-      - name: Fetch the exact release marker
+      - name: Resolve missing publications
+        id: plan
         shell: bash
-        env:
-          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
-        run: bash "$RUNNER_TEMP/plumb-atom/.forgejo/scripts/fetch-marker.sh" "$PLUMB_RELEASE_MARKER"
+        run: bash .plumb-atom/.forgejo/scripts/resolve-ship.sh '${{ github.sha }}' ready
 
-      - name: Fetch the derived promotion proof and its binary artifacts
-        if: needs.resolve.outputs.channel == 'stable'
-        env:
-          PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
-        run: plumb ship promote
-
-      - name: Resolve and fetch every binary workload
-        if: needs.resolve.outputs.channel != 'stable'
-        shell: bash
-        run: |
-          set -eu
-          graph=
-          for attempt in 1 2 3 4 5; do
-            graph=$(plumb ship resolve \
-              --marker "$PLUMB_RELEASE_MARKER" \
-              --atom '${{ github.sha }}')
-            if [ "$(printf '%s' "$graph" | jq -r '.binary_missing')" = false ]; then
-              break
-            fi
-            sleep "$attempt"
-          done
-          test "$(printf '%s' "$graph" | jq -r '.binary_missing')" = false
-          printf '%s' "$graph" | jq -c '.binary_reuse[]' | while IFS= read -r reused; do
-            target=$(printf '%s' "$reused" | jq -r '.target')
-            archive=$(printf '%s' "$reused" | jq -r '.archive')
-            url=$(printf '%s' "$reused" | jq -r '.url')
-            seat="dist/${{ needs.resolve.outputs.version }}/reuse-$target"
-            mkdir -p "$seat"
-            curl -fsSL --retry 3 -o "$seat/$archive" "$url"
-          done
-
-      - name: Assemble the declared binary shape
-        run: plumb ship binary assemble
-
-      - name: Compile the exact capsule
-        if: needs.resolve.outputs.channel != 'stable'
-        run: plumb ship compile
-
-      - name: Compile the stable capsule
-        if: needs.resolve.outputs.channel == 'stable'
-        env:
-          PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
-        run: plumb ship compile
-
-      - name: Publish and read back the exact release
-        shell: bash
-        run: |
-          set -eu
-          plumb ship binary publish
-          plumb ship binary verify
-
-      - name: Name the generated managers
-        id: surface
-        shell: bash
-        run: |
-          set -eu
-          if [ "$PLUMB_RELEASE_CHANNEL" = stable ]; then
-            seat="$PLUMB_RELEASE_OUTPUT/stable.json"
-          else
-            seat="$PLUMB_RELEASE_OUTPUT/seal.json"
-          fi
-          {
-            echo "manager_unix=$(jq -r '.managers.unix.url' "$seat")"
-            echo "manager_windows=$(jq -r '.managers.windows.url // ""' "$seat")"
-          } >> "$GITHUB_OUTPUT"
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: release-capsule
-          path: .plumb-release/capsule
-
-  configuration:
-    needs: [resolve, seal]
-    if: >-
-      needs.resolve.result == 'success' && needs.seal.result == 'success' &&
-      needs.resolve.outputs.depot_configuration == 'true'
-    runs-on: docker
-    container:
-      image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
-    env:
-      PLUMB_RELEASE_ROOT: .
-      PLUMB_RELEASE_CHANNEL: ${{ needs.resolve.outputs.channel }}
-      PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
-      PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
-      PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
-      PLUMB_HOME: /tmp/plumb-home
-      PLUMB_DEPOT_AUTHORITY_ACCESS: ${{ secrets.DEPOT_PUBLISH_S3_ACCESS_KEY }}
-      PLUMB_DEPOT_AUTHORITY_SECRET: ${{ secrets.DEPOT_PUBLISH_S3_SECRET_KEY }}
-      PLUMB_DEPOT_AUTHORITY_BUCKET: ${{ secrets.DEPOT_PUBLISH_S3_BUCKET }}
-      PLUMB_DEPOT_AUTHORITY_ENDPOINT: ${{ secrets.DEPOT_PUBLISH_S3_ENDPOINT }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-          repository: ${{ inputs.repository }}
-          ref: ${{ needs.resolve.outputs.commit }}
-          token: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
-
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-          repository: ${{ github.repository }}
-          ref: ${{ github.sha }}
-          path: .plumb-atom
-          token: ${{ github.token }}
-
-      - name: Install the exact atom Plumb
-        shell: bash
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom
-
-      - name: Fetch the exact release marker
-        shell: bash
-        env:
-          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
-        run: bash .plumb-atom/.forgejo/scripts/fetch-marker.sh "${{ inputs.marker }}"
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: release-capsule
-          path: .plumb-release/capsule
-
-      - name: Publish the marker-exact configuration generation
-        shell: bash
-        run: plumb depot configuration --marker "${{ inputs.marker }}"
-
-  verify:
-    needs: [resolve, seal, configuration]
-    if: >-
-      always() && needs.resolve.result == 'success' && needs.seal.result == 'success' &&
-      needs.resolve.outputs.channel != 'stable' &&
-      (needs.configuration.result == 'success' || needs.configuration.result == 'skipped')
+  publication:
+    needs: publish_plan
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.resolve.outputs.targets) }}
+      matrix: ${{ fromJSON(needs.publish_plan.outputs.publication) }}
     runs-on: ${{ matrix.runner }}
-    env:
-      PLUMB_RELEASE_ROOT: .
-      PLUMB_RELEASE_CHANNEL: ${{ needs.resolve.outputs.channel }}
-      PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
-      PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
-    steps:
-      - uses: actions/checkout@v6
-        if: matrix.control != 'reuse'
-        with:
-          persist-credentials: false
-          repository: ${{ inputs.repository }}
-          ref: ${{ needs.resolve.outputs.commit }}
-          token: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
-
-      - uses: actions/checkout@v6
-        if: matrix.control != 'reuse'
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-          repository: ${{ github.repository }}
-          ref: ${{ github.sha }}
-          path: .plumb-atom
-          token: ${{ github.token }}
-
-      - name: Install the exact atom Plumb
-        if: matrix.control != 'reuse' && runner.os != 'Windows'
-        shell: bash
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom
-
-      - name: Install the exact atom Plumb on Windows
-        if: matrix.control != 'reuse' && runner.os == 'Windows'
-        shell: pwsh
-        run: .plumb-atom/.forgejo/scripts/bootstrap-plumb.ps1 .plumb-atom
-
-      - name: Smoke the generated manager
-        if: matrix.control != 'reuse' && runner.os != 'Windows'
-        env:
-          PLUMB_RELEASE_URL: ${{ needs.seal.outputs.manager_unix }}
-        run: plumb ship binary smoke
-
-      - name: Smoke the generated manager on Windows
-        if: matrix.control != 'reuse' && runner.os == 'Windows'
-        env:
-          PLUMB_RELEASE_URL: ${{ needs.seal.outputs.manager_windows }}
-        run: plumb ship binary smoke
-
-  project:
-    needs: [resolve, seal]
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.resolve.outputs.project) }}
-    runs-on: docker
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
     env:
       DOCKER_HOST: tcp://172.17.0.1:2375
       PLUMB_RELEASE_ROOT: .
-      PLUMB_RELEASE_CHANNEL: ${{ needs.resolve.outputs.channel }}
-      PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
-      PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
+      PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
+      PLUMB_RELEASE_CHANNEL: ${{ needs.publish_plan.outputs.channel }}
+      PLUMB_RELEASE_VERSION: ${{ needs.publish_plan.outputs.version }}
+      PLUMB_RELEASE_COMMIT: ${{ needs.publish_plan.outputs.commit }}
+      PLUMB_RELEASE_ARTIFACTS: dist/${{ needs.publish_plan.outputs.version }}
       PLUMB_RELEASE_OUTPUT: .plumb-release/capsule
       PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
+      PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
+      PLUMB_RELEASE_TOOLCHAIN: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
       PLUMB_RELEASE_REGISTRY_TOKEN: ${{ secrets.RELEASE_REGISTRY_TOKEN }}
       PLUMB_SITE_TOKEN: ${{ secrets.PLUMB_SITE_TOKEN }}
+      PLUMB_PUBLISH_ACCESS: ${{ secrets.RELEASE_PUBLISH_S3_ACCESS_KEY }}
+      PLUMB_PUBLISH_SECRET: ${{ secrets.RELEASE_PUBLISH_S3_SECRET_KEY }}
+      PLUMB_PUBLISH_BUCKET: ${{ secrets.RELEASE_PUBLISH_S3_BUCKET }}
+      PLUMB_PUBLISH_ENDPOINT: ${{ secrets.RELEASE_PUBLISH_S3_ENDPOINT }}
+      PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
+      PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
+      PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
+      PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
+      PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
     steps:
       - uses: actions/checkout@v6
         if: matrix.control != 'reuse'
@@ -463,7 +225,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
           repository: ${{ inputs.repository }}
-          ref: ${{ needs.resolve.outputs.commit }}
+          ref: ${{ needs.publish_plan.outputs.commit }}
           token: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
 
       - uses: actions/checkout@v6
@@ -477,160 +239,20 @@ jobs:
           token: ${{ github.token }}
 
       - name: Install the exact atom Plumb
-        if: matrix.control != 'reuse' && runner.os != 'Windows'
+        if: matrix.control != 'reuse'
         shell: bash
         run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom
 
-      - name: Install the exact atom Plumb on Windows
-        if: matrix.control != 'reuse' && runner.os == 'Windows'
-        shell: pwsh
-        run: .plumb-atom/.forgejo/scripts/bootstrap-plumb.ps1 .plumb-atom
-
-      - uses: actions/download-artifact@v3
-        if: matrix.control != 'reuse'
-        with:
-          name: release-capsule
-          path: .plumb-release/capsule
-
-      - name: Enable the domain package manager
-        if: matrix.control != 'reuse'
-        shell: bash
-        run: corepack enable
-
-      - name: Execute one resolved ship request
-        id: execute
-        if: matrix.control != 'reuse'
-        shell: bash
-        env:
-          PLUMB_SHIP_REQUEST: ${{ toJSON(matrix) }}
-          PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
-          PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
-          PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
-          PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
-          PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
-        run: |
-          set -eu
-          seat="$RUNNER_TEMP/ship-result.jsonl"
-          plumb ship execute --request "$PLUMB_SHIP_REQUEST" | tee "$seat"
-          result=$(tail -n 1 "$seat")
-          printf '%s' "$result" | jq -e '.schema == "plumb.ship-result/v1"' >/dev/null
-          depot=$(printf '%s' "$result" | jq -c '.depot // null')
-          echo "depot=$depot" >> "$GITHUB_OUTPUT"
-          if [ "$depot" != null ]; then
-            mkdir -p .plumb-depot
-            printf '%s' "$depot" > .plumb-depot/worker.json
-          fi
-
-      - name: Carry the marker-bound worker projection
-        if: >-
-          matrix.control != 'reuse' && needs.resolve.outputs.channel == 'stable' &&
-          matrix.operation.type == 'cfworker'
-        uses: actions/upload-artifact@v3
-        with:
-          name: depot-worker
-          path: .plumb-depot/worker.json
-
-  depot:
-    needs: [resolve, seal, configuration, verify, project]
-    if: >-
-      always() && needs.resolve.result == 'success' && needs.seal.result == 'success' &&
-      (needs.configuration.result == 'success' || needs.configuration.result == 'skipped') &&
-      needs.project.result == 'success' &&
-      (needs.verify.result == 'success' || needs.verify.result == 'skipped')
-    runs-on: docker
-    container:
-      image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
-    env:
-      PLUMB_RELEASE_ROOT: .
-      PLUMB_RELEASE_CHANNEL: ${{ needs.resolve.outputs.channel }}
-      PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
-      PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
-      PLUMB_RELEASE_OUTPUT: .plumb-release/capsule
-      PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
-      PLUMB_ACTIVATE_ACCESS: ${{ secrets.RELEASE_ACTIVATE_S3_ACCESS_KEY }}
-      PLUMB_ACTIVATE_SECRET: ${{ secrets.RELEASE_ACTIVATE_S3_SECRET_KEY }}
-      PLUMB_ACTIVATE_BUCKET: ${{ secrets.RELEASE_ACTIVATE_S3_BUCKET }}
-      PLUMB_ACTIVATE_ENDPOINT: ${{ secrets.RELEASE_ACTIVATE_S3_ENDPOINT }}
-      PLUMB_SITE_TOKEN: ${{ secrets.PLUMB_SITE_TOKEN }}
-      PLUMB_HOME: /tmp/plumb-home
-      PLUMB_DEPOT_AUTHORITY_ACCESS: ${{ secrets.DEPOT_PUBLISH_S3_ACCESS_KEY }}
-      PLUMB_DEPOT_AUTHORITY_SECRET: ${{ secrets.DEPOT_PUBLISH_S3_SECRET_KEY }}
-      PLUMB_DEPOT_AUTHORITY_BUCKET: ${{ secrets.DEPOT_PUBLISH_S3_BUCKET }}
-      PLUMB_DEPOT_AUTHORITY_ENDPOINT: ${{ secrets.DEPOT_PUBLISH_S3_ENDPOINT }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-          repository: ${{ inputs.repository }}
-          ref: ${{ needs.resolve.outputs.commit }}
-          token: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
-
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-          repository: ${{ github.repository }}
-          ref: ${{ github.sha }}
-          path: .plumb-atom
-          token: ${{ github.token }}
-
-      - name: Install the exact atom Plumb
-        shell: bash
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact
-
       - name: Fetch the exact release marker
+        if: matrix.control != 'reuse'
         shell: bash
         env:
           PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
-        run: bash .plumb-atom/.forgejo/scripts/fetch-marker.sh "${{ inputs.marker }}"
+        run: bash .plumb-atom/.forgejo/scripts/fetch-marker.sh "$PLUMB_RELEASE_MARKER"
 
-      - uses: actions/download-artifact@v3
-        with:
-          name: release-capsule
-          path: .plumb-release/capsule
-
-      - uses: actions/download-artifact@v3
-        if: >-
-          needs.resolve.outputs.worker_depot == 'true' &&
-          needs.resolve.outputs.worker_request == 'null'
-        with:
-          name: depot-worker
-          path: .plumb-depot
-
-      - name: Deploy the marker-bound worker version
-        if: needs.resolve.outputs.worker_depot == 'true'
+      - name: Execute one publication request
+        if: matrix.control != 'reuse'
         shell: bash
         env:
-          PLUMB_HELD_WORKER_REQUEST: ${{ needs.resolve.outputs.worker_request }}
-        run: |
-          set -eu
-          request="$PLUMB_HELD_WORKER_REQUEST"
-          if [ "$request" = null ]; then
-            request=$(cat .plumb-depot/worker.json)
-          fi
-          plumb depot worker \
-            --marker "${{ inputs.marker }}" \
-            --request "$request"
-
-      - name: Publish the marker-bound skill
-        if: needs.resolve.outputs.depot_skill == 'true'
-        shell: bash
-        run: |
-          set -eu
-          stage="$PLUMB_HOME/depot/stage/${{ needs.resolve.outputs.product }}/skill/${{ inputs.marker }}"
-          mkdir -p "$stage"
-          cp -R "skills/${{ needs.resolve.outputs.product }}/." "$stage/"
-          plumb depot skill --marker "${{ inputs.marker }}"
-
-      - name: Move stable manager roots
-        if: needs.resolve.outputs.channel == 'stable'
-        shell: bash
-        run: |
-          set -eu
-          plumb depot managers --marker "${{ inputs.marker }}"
-          PLUMB_RELEASE_ACTIVATED=true plumb ship binary verify
-
-      - name: Commit the channel pointer last
-        shell: bash
-        run: plumb depot channel --marker "${{ inputs.marker }}"
+          PLUMB_SHIP_REQUEST: ${{ toJSON(matrix.request) }}
+        run: bash .plumb-atom/.forgejo/scripts/execute-ship.sh

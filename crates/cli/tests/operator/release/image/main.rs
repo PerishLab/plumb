@@ -121,7 +121,7 @@ fn chart() {
 
     let surface = super::world::run(fixture.command().args(["ship", "surface"]));
     let surface: serde_json::Value = serde_json::from_slice(&surface.stdout).expect("surface json");
-    let row = surface["project"]["include"]
+    let row = surface["publication"]["include"]
         .as_array()
         .expect("project rows")
         .iter()
@@ -198,7 +198,7 @@ esac
 
     let inventory = crate::support::Bucket::open(4);
     let request = serde_json::json!({
-        "schema": "plumb.ship-request/v1",
+        "schema": "plumb.ship-request/v2",
         "action": "ship/chart",
         "projections": [
             "charts/probe/Chart.yaml#/version",

@@ -3,9 +3,9 @@ use plumb::rig::Rig;
 use serde_json::{Value, json};
 use std::path::Path;
 
-use super::support::{Inventory, depot, object, projection, sources, strings, text};
+use super::support::{Inventory, object, projection, sources, strings, text};
 
-const SCHEMA: &str = "plumb.ship-graph/v1";
+const SCHEMA: &str = "plumb.ship-graph/v2";
 
 pub fn run(raw: &str, atom: &str) -> Result<String, String> {
     if atom.len() != 40 || !atom.bytes().all(|held| held.is_ascii_hexdigit()) {
@@ -29,42 +29,38 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
     let inventory = Inventory::fetch(&rig.workflow.inventory.url)?;
     let world = World {
         atom,
-        depot: &depot(root)?,
         plumb: env!("CARGO_PKG_VERSION"),
         marker: &marker.marker,
         inventory: inventory.path(),
         source: Some(&rig.workflow.inventory.url),
         root,
     };
-    let binary = binary(&spec, &marker, &world)?;
-    let project = projects(&plan["project"], &marker, &world)?;
-    let derivatives = spec
-        .depot
-        .as_ref()
-        .map(|depot| depot.derivatives.as_slice())
-        .unwrap_or_default();
+    let workload = workloads(&spec, &marker, &world)?;
+    let publication = Publish {
+        spec: &spec,
+        input: &plan["publication"],
+        marker: &marker,
+        world: &world,
+        workload: &workload,
+    }
+    .run()?;
     serde_json::to_string(&json!({
         "schema": SCHEMA,
         "product": spec.product,
         "channel": marker.channel,
         "commit": marker.commit,
         "version": marker.version,
-        "targets": binary.targets,
-        "binary_missing": binary.missing,
-        "binary_reuse": binary.reuse,
-        "project": project.matrix,
-        "project_missing": project.missing,
-        "worker_depot": marker.channel == "stable" && project.worker,
-        "worker_request": project.request,
-        "depot_configuration": derivatives.contains(&plumb::depot::v2::Kind::Configuration),
-        "depot_skill": derivatives.contains(&plumb::depot::v2::Kind::Skill),
+        "workload": workload.matrix,
+        "workload_missing": workload.missing,
+        "publication": publication.matrix,
+        "publication_missing": publication.missing,
+        "publication_ready": !workload.missing,
     }))
     .map_err(|error| format!("cannot encode ship graph: {error}"))
 }
 
 struct World<'a> {
     atom: &'a str,
-    depot: &'a str,
     plumb: &'a str,
     marker: &'a str,
     inventory: Option<&'a Path>,
@@ -72,29 +68,29 @@ struct World<'a> {
     root: &'a Path,
 }
 
-struct Binary {
-    targets: Value,
+struct Workloads {
+    matrix: Value,
     missing: bool,
     reuse: Vec<Value>,
 }
 
-fn binary(
+fn workloads(
     spec: &crate::shape::release::Spec,
     marker: &release::ReleaseMarker,
     world: &World<'_>,
-) -> Result<Binary, String> {
-    let mut targets: Value = serde_json::from_str(&super::super::package::product(spec).matrix()?)
-        .map_err(|error| format!("cannot decode binary matrix: {error}"))?;
-    if marker.channel == "stable" {
-        return Ok(Binary {
-            targets,
+) -> Result<Workloads, String> {
+    if marker.channel == "stable" || !spec.binary() {
+        return Ok(Workloads {
+            matrix: idle(),
             missing: false,
             reuse: Vec::new(),
         });
     }
+    let targets: Value = serde_json::from_str(&super::super::package::product(spec).matrix()?)
+        .map_err(|error| format!("cannot decode binary matrix: {error}"))?;
     let projection = projection(world.root);
     let roots = sources(spec)?;
-    let roots = roots.iter().map(String::as_str).collect::<Vec<_>>();
+    let listed = roots.iter().map(String::as_str).collect::<Vec<_>>();
     let mut pending = Vec::new();
     let mut reuse = Vec::new();
     for target in targets["include"]
@@ -110,7 +106,7 @@ fn binary(
             Plan {
                 action: &action,
                 projections: &[projection.as_str()],
-                roots: &roots,
+                roots: &listed,
                 runner,
                 release: Some(&marker.version),
                 target: Some(triple),
@@ -118,101 +114,138 @@ fn binary(
         )?;
         if node["reuse"]["type"] == "workload" {
             reuse.push(json!({
-                "runner": runner,
                 "target": triple,
                 "archive": archive,
                 "url": node["reuse"]["source"],
             }));
-        } else {
-            let mut target = object(target)?;
-            target.insert("action".into(), json!(action));
-            target.insert("keys".into(), node["keys"].clone());
-            pending.push(Value::Object(target));
+            continue;
         }
+        let request = json!({
+            "schema": "plumb.ship-request/v2",
+            "action": action,
+            "projections": [projection],
+            "roots": roots,
+            "operation": {
+                "type": "workload",
+                "target": triple,
+                "archive": archive,
+            },
+            "reuse": node["reuse"],
+            "keys": node["keys"],
+        });
+        pending.push(json!({ "runner": runner, "request": request }));
     }
     let missing = !pending.is_empty();
-    targets = if missing {
-        json!({ "include": pending })
-    } else {
-        json!({ "include": [{
-            "runner": "docker",
-            "control": "reuse",
-            "target": "reuse",
-            "archive": "none"
-        }] })
-    };
-    Ok(Binary {
-        targets,
+    Ok(Workloads {
+        matrix: matrix(pending),
         missing,
         reuse,
     })
 }
 
-struct Projects {
+struct Publications {
     matrix: Value,
     missing: bool,
-    worker: bool,
-    request: Option<Value>,
 }
 
-fn projects(
-    input: &Value,
-    marker: &release::ReleaseMarker,
-    world: &World<'_>,
-) -> Result<Projects, String> {
-    let mut pending = Vec::new();
-    let mut worker = false;
-    let mut request = None;
-    for entry in input["include"]
-        .as_array()
-        .ok_or("project plan has no include array")?
-    {
-        let action = text(entry, "action")?;
-        worker |= action == "ship/cfworker";
-        let versioned = action == "ship/cfworker";
-        let projections = strings(entry, "projections")?;
-        let roots = strings(entry, "roots")?;
+struct Publish<'a> {
+    spec: &'a crate::shape::release::Spec,
+    input: &'a Value,
+    marker: &'a release::ReleaseMarker,
+    world: &'a World<'a>,
+    workload: &'a Workloads,
+}
+
+impl Publish<'_> {
+    fn run(&self) -> Result<Publications, String> {
+        let mut pending = Vec::new();
+        self.binary(&mut pending)?;
+        self.projects(&mut pending)?;
+        let missing = !pending.is_empty();
+        Ok(Publications {
+            matrix: matrix(pending),
+            missing,
+        })
+    }
+
+    fn binary(&self, pending: &mut Vec<Value>) -> Result<(), String> {
+        if !self.spec.binary() || self.workload.missing {
+            return Ok(());
+        }
+        let projection = projection(self.world.root);
+        let roots = sources(self.spec)?;
+        let listed = roots.iter().map(String::as_str).collect::<Vec<_>>();
         let node = planned(
-            world,
+            self.world,
             Plan {
-                action,
-                projections: &projections,
-                roots: &roots,
+                action: "ship/binary",
+                projections: &[projection.as_str()],
+                roots: &listed,
                 runner: "docker",
-                release: versioned.then_some(marker.version.as_str()),
-                target: versioned.then_some(marker.commit.as_str()),
+                release: Some(&self.marker.version),
+                target: Some(&self.marker.commit),
             },
         )?;
         if node["reuse"]["type"] == "url" {
-            if action == "ship/cfworker" && marker.channel == "stable" {
-                request = Some(binding(&node)?);
-            }
-            continue;
+            return Ok(());
         }
-        let mut entry = object(entry)?;
-        entry.insert("reuse".into(), node["reuse"].clone());
-        entry.insert("keys".into(), node["keys"].clone());
-        pending.push(Value::Object(entry));
+        let operation = json!({ "type": "publication", "workloads": self.workload.reuse });
+        let request = json!({
+            "schema": "plumb.ship-request/v2",
+            "action": "ship/binary",
+            "projections": [projection],
+            "roots": roots,
+            "operation": operation,
+            "reuse": node["reuse"],
+            "keys": node["keys"],
+        });
+        pending.push(json!({ "runner": "docker", "request": request }));
+        Ok(())
     }
-    let missing = !pending.is_empty();
-    let matrix = if missing {
-        json!({ "include": pending })
-    } else {
-        json!({ "include": [{ "control": "reuse" }] })
-    };
-    Ok(Projects {
-        matrix,
-        missing,
-        worker,
-        request,
-    })
+
+    fn projects(&self, pending: &mut Vec<Value>) -> Result<(), String> {
+        let rows = self.input["include"]
+            .as_array()
+            .ok_or("publication plan has no include array")?;
+        for entry in rows {
+            let action = text(entry, "action")?;
+            let versioned = action == "ship/cfworker";
+            let projections = strings(entry, "projections")?;
+            let roots = strings(entry, "roots")?;
+            let node = planned(
+                self.world,
+                Plan {
+                    action,
+                    projections: &projections,
+                    roots: &roots,
+                    runner: "docker",
+                    release: versioned.then_some(self.marker.version.as_str()),
+                    target: versioned.then_some(self.marker.commit.as_str()),
+                },
+            )?;
+            if node["reuse"]["type"] == "url" {
+                continue;
+            }
+            let mut request = object(entry)?;
+            request.insert("schema".into(), json!("plumb.ship-request/v2"));
+            request.insert("reuse".into(), node["reuse"].clone());
+            request.insert("keys".into(), node["keys"].clone());
+            pending.push(json!({ "runner": "docker", "request": request }));
+        }
+        Ok(())
+    }
 }
 
-fn binding(node: &Value) -> Result<Value, String> {
-    node.get("depot")
-        .filter(|depot| depot.is_object())
-        .cloned()
-        .ok_or_else(|| "held stable worker publication carries no depot binding".to_string())
+fn matrix(include: Vec<Value>) -> Value {
+    if include.is_empty() {
+        idle()
+    } else {
+        json!({ "include": include })
+    }
+}
+
+fn idle() -> Value {
+    json!({ "include": [{ "runner": "docker", "control": "reuse" }] })
 }
 
 struct Plan<'a> {
@@ -227,7 +260,6 @@ struct Plan<'a> {
 fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String> {
     let mut fields = vec![
         format!("atom={}", world.atom),
-        format!("depot={}", world.depot),
         format!("plumb={}", world.plumb),
         format!("runner={}", plan.runner),
     ];
