@@ -108,15 +108,20 @@ fn depot() {
     let installed = held
         .find("cp \"$atom/target/debug/plumb\" \"$tool\"")
         .expect("exact Plumb install");
-    let synced = held.find("\"$tool\" depot sync").expect("depot sync");
+    let bootstrap = held.find("\"$tool\" depot sync").expect("bootstrap sync");
+    let exact = held.rfind("\"$tool\" depot sync").expect("exact sync");
     assert_eq!(
         held.matches("\"$tool\" depot sync").count(),
-        1,
-        "bootstrap should sync the depot once"
+        2,
+        "each bootstrap phase should own one sync branch"
     );
     assert!(
-        installed < synced,
-        "the exact Plumb binary must select its own depot generation"
+        bootstrap < installed && installed < exact,
+        "bootstrap rules must precede the build while exact rules follow installation"
+    );
+    assert!(
+        canonical().contains("bootstrap-plumb.sh .plumb-atom exact"),
+        "the depot consumer must select exact configuration"
     );
 }
 

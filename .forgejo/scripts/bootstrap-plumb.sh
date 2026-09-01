@@ -2,6 +2,11 @@
 set -eu
 
 atom=${1:-.plumb-atom}
+mode=${2:-bootstrap}
+case "$mode" in
+  bootstrap|exact) ;;
+  *) printf 'unknown Plumb bootstrap mode: %s\n' "$mode" >&2; exit 2 ;;
+esac
 fetch='curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 --connect-timeout 5 --max-time 30'
 manager="$RUNNER_TEMP/manage-plumb.sh"
 $fetch -o "$manager" "https://releases.plumb.perish.uk/manage.sh"
@@ -18,8 +23,13 @@ else
   bin="$HOME/.local/bin"
 fi
 tool="$bin/plumb"
+if [ "$mode" = bootstrap ]; then
+  "$tool" depot sync
+fi
 cargo build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
 cp "$atom/target/debug/plumb" "$tool"
 printf '%s\n' "$bin" >> "$GITHUB_PATH"
 "$tool" --version
-"$tool" depot sync
+if [ "$mode" = exact ]; then
+  "$tool" depot sync
+fi

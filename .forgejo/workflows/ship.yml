@@ -883,7 +883,7 @@ jobs:
 
       - name: Install the exact atom Plumb
         shell: bash
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom
+        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact
 
       - name: Fetch the exact release marker
         shell: bash
