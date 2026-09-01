@@ -79,3 +79,63 @@ fn pointer() {
     drift.manifest.url = "https://depot.example.test/manifest.json".to_string();
     assert!(drift.encode().is_err());
 }
+
+#[test]
+fn source() {
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let root = tempfile::tempdir().expect("source");
+    std::fs::create_dir(root.path().join("rules")).expect("rules");
+    std::fs::write(root.path().join("rules/probe.toml"), "answer = 42\n").expect("rule");
+    std::fs::write(root.path().join("SKILL.md"), "# Probe\n").expect("skill");
+    #[cfg(unix)]
+    std::fs::set_permissions(
+        root.path().join("SKILL.md"),
+        std::fs::Permissions::from_mode(0o755),
+    )
+    .expect("mode");
+    let bundle = v3::Bundle::read(
+        root.path(),
+        v3::Identity {
+            product: "probe".to_string(),
+            channel: "stable".to_string(),
+            version: "v1.2.3".to_string(),
+            marker: v3::Marker {
+                name: "v1.2.3".to_string(),
+                sha256: "a".repeat(64),
+            },
+            kind: v3::Kind::Skill,
+        },
+    )
+    .expect("bundle");
+    assert_eq!(
+        bundle.bodies.keys().cloned().collect::<Vec<_>>(),
+        ["SKILL.md".to_string(), "rules/probe.toml".to_string()]
+    );
+    assert_eq!(bundle.manifest.objects[0].media, "text/plain");
+    #[cfg(unix)]
+    assert!(bundle.manifest.objects[0].executable);
+    let repeated = v3::Bundle::read(root.path(), bundle.manifest.identity()).expect("repeat");
+    assert_eq!(
+        repeated.manifest.generation().expect("repeated generation"),
+        bundle.manifest.generation().expect("generation")
+    );
+}
+
+#[test]
+#[cfg(unix)]
+fn symbolic() {
+    use std::os::unix::fs::symlink;
+
+    let root = tempfile::tempdir().expect("source");
+    std::fs::write(root.path().join("target"), "held\n").expect("target");
+    symlink("target", root.path().join("alias")).expect("link");
+    let mut identity = manifest().identity();
+    identity.kind = v3::Kind::Changelog;
+    assert!(
+        v3::Bundle::read(root.path(), identity)
+            .unwrap_err()
+            .contains("special object")
+    );
+}

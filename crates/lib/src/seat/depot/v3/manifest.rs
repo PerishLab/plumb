@@ -68,7 +68,7 @@ impl Manifest {
         Ok(())
     }
 
-    pub(super) fn identity(&self) -> Identity {
+    pub fn identity(&self) -> Identity {
         Identity {
             product: self.product.clone(),
             channel: self.channel.clone(),
