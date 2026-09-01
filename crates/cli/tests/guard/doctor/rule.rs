@@ -2,8 +2,11 @@ use serde_json::Value;
 use std::process::{Command, Output};
 
 fn run(args: &[&str]) -> Output {
+    let home = crate::support::depot(&[]);
     Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(args)
+        .env_remove("PLUMB_RELEASE_VERSION")
+        .env("PLUMB_HOME", home.path())
         .output()
         .expect("run plumb rule")
 }
@@ -20,12 +23,12 @@ fn json(args: &[&str]) -> Value {
 
 #[test]
 fn show() {
-    let report = json(&["rule", "show", "structure.guard-lane-present", "--json"]);
+    let report = json(&["rule", "show", "structure.anchor-present", "--json"]);
     assert_eq!(report["schema"], "plumb.rule/v1");
     let rule = &report["rule"];
-    assert_eq!(rule["id"], "structure.guard-lane-present");
+    assert_eq!(rule["id"], "structure.anchor-present");
     assert_eq!(rule["namespace"], "structure");
-    assert_eq!(rule["name"], "guard-lane-present");
+    assert_eq!(rule["name"], "anchor-present");
     assert_eq!(rule["standing"], "mechanized");
     assert_eq!(rule["owner"], "plumb");
     assert!(rule["law"].as_str().is_some_and(|value| !value.is_empty()));
@@ -96,7 +99,7 @@ fn catalog() {
     let prose = json(&["rule", "list", "--standing", "prose-only", "--json"]);
     assert_eq!(all["schema"], "plumb.rule-list/v1");
     let total = all["rules"].as_array().map(Vec::len).expect("all rules");
-    assert_eq!(total, 122);
+    assert_eq!(total, 108);
     let classified = [&mechanized, &observed, &prose]
         .iter()
         .map(|report| report["rules"].as_array().map(Vec::len).expect("rules"))
