@@ -67,6 +67,12 @@ fn recorded() {
         .map(|key| serde_json::from_slice(&store.read(key)).expect("record json"))
         .collect();
     assert_eq!(records.len(), 3);
+    let workloads = records
+        .iter()
+        .filter(|record| record["source"]["type"] == "workload")
+        .collect::<Vec<_>>();
+    assert_eq!(workloads.len(), 2);
+    assert!(workloads.iter().any(|record| record["proof"].is_null()));
     let source = records
         .iter()
         .find(|record| record["source"]["type"] == "workload")

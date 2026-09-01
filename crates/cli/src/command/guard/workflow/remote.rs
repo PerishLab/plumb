@@ -179,26 +179,36 @@ impl Inventory {
 }
 
 impl Record {
-    pub(in crate::command) fn routes(&self) -> Vec<String> {
+    pub(in crate::command) fn routes(&self) -> Vec<(String, Self)> {
         match self.source.kind.as_str() {
-            "workload" => vec![
+            "workload" => {
+                let mut content = self.clone();
+                content.proof = None;
+                vec![
+                    (
+                        route(
+                            "workload-proof",
+                            &[
+                                &self.action,
+                                &self.workload,
+                                self.proof.as_deref().unwrap_or_default(),
+                            ],
+                        ),
+                        self.clone(),
+                    ),
+                    (route("workload", &[&self.action, &self.workload]), content),
+                ]
+            }
+            "url" => vec![(
                 route(
-                    "workload-proof",
+                    "publication",
                     &[
                         &self.action,
                         &self.workload,
-                        self.proof.as_deref().unwrap_or_default(),
+                        self.publication.as_deref().unwrap_or_default(),
                     ],
                 ),
-                route("workload", &[&self.action, &self.workload]),
-            ],
-            "url" => vec![route(
-                "publication",
-                &[
-                    &self.action,
-                    &self.workload,
-                    self.publication.as_deref().unwrap_or_default(),
-                ],
+                self.clone(),
             )],
             _ => Vec::new(),
         }
