@@ -2,6 +2,9 @@ use plumb::depot::{FORMAT, Manifest, Metadata, Object, Pointer, Schema, Seat, sh
 use semver::Version;
 use std::path::Path;
 
+#[path = "support/generation.rs"]
+mod generation;
+
 fn derivative() -> plumb::depot::v2::Manifest {
     use plumb::depot::v2::{FORMAT, Kind, Release, Seal, Snapshot};
     let bytes = b"answer = 42\n";
