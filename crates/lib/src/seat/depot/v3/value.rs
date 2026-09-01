@@ -8,9 +8,12 @@ impl Value<'_> {
         let loopback = ["http://127.0.0.1:", "http://localhost:"]
             .iter()
             .any(|prefix| self.0.starts_with(prefix) && self.0.len() > prefix.len());
-        if !secure && !loopback {
+        if (!secure && !loopback)
+            || self.0.ends_with('/')
+            || self.0.chars().any(char::is_whitespace)
+        {
             return Err(format!(
-                "depot source must be an https or loopback HTTP URL: {}",
+                "depot source must be a normalized HTTPS or loopback HTTP URL: {}",
                 self.0
             ));
         }

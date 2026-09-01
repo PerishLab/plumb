@@ -23,6 +23,10 @@ pub const FORMAT: u32 = 3;
 pub const LEAF: &str = "manifest.json";
 pub const POINTER: &str = "latest.json";
 
+pub fn check(source: &str) -> Result<(), String> {
+    value::Value(source).source()
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Marker {
