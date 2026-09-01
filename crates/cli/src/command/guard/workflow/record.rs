@@ -179,6 +179,7 @@ impl Authority {
                 if route.starts_with("records/workload/") {
                     held.proof = None;
                     wanted.proof = None;
+                    held.source = wanted.source.clone();
                 }
                 if held == wanted {
                     Ok(())
