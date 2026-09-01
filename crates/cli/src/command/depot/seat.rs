@@ -1,8 +1,5 @@
 use crate::shape::depot::POINTER;
 use std::path::Path;
-use std::process::Command;
-
-mod exact;
 
 pub enum Held {
     Absent,
@@ -46,49 +43,4 @@ impl Held {
             _ => None,
         }
     }
-}
-
-pub use exact::Query;
-
-pub use exact::read as exact;
-
-pub(super) fn pull(url: &str) -> Result<Option<String>, String> {
-    let body = tempfile::NamedTempFile::new()
-        .map_err(|error| format!("cannot stage a depot fetch: {error}"))?;
-    let output = Command::new("curl")
-        .args([
-            "--silent",
-            "--show-error",
-            "--location",
-            "--connect-timeout",
-            "5",
-            "--max-time",
-            "15",
-            "--retry",
-            "1",
-            "--retry-all-errors",
-            "--write-out",
-            "%{http_code}",
-            "--output",
-        ])
-        .arg(body.path())
-        .arg(url)
-        .output()
-        .map_err(|error| format!("cannot run curl: {error}"))?;
-    if !output.status.success() {
-        return Err(format!(
-            "cannot fetch {url}: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
-        ));
-    }
-    let code = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if code == "404" {
-        return Ok(None);
-    }
-    if code != "200" {
-        return Err(format!("cannot fetch {url}: HTTP {code}"));
-    }
-    std::fs::read_to_string(body.path())
-        .map(Some)
-        .map_err(|error| format!("cannot read the depot fetch: {error}"))
 }

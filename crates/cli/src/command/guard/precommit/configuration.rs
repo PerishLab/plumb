@@ -15,7 +15,7 @@ impl Seat {
         if spec.product != "plumb" {
             return Err("only Plumb may bootstrap release-line guard configuration".into());
         }
-        let depot = spec.derivative(plumb::depot::v2::Kind::Configuration)?;
+        let depot = spec.derivative(plumb::depot::v3::Kind::Configuration)?;
         let binding = crate::command::release::Product::new(&spec)
             .depot()
             .latest("beta", true)?;

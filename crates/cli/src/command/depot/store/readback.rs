@@ -25,17 +25,6 @@ pub(super) fn generation(proof: Generation<'_>) -> Result<(), String> {
     public(&format!("{source}/{}", proof.key), &proof.pointer.encode()?)
 }
 
-pub(super) fn projection(
-    source: &str,
-    key: &str,
-    pointer: &plumb::depot::v2::Pointer,
-) -> Result<(), String> {
-    public(
-        &format!("{}/{key}", source.trim_end_matches('/')),
-        pointer.encode()?.as_bytes(),
-    )
-}
-
 fn public(url: &str, expected: &[u8]) -> Result<(), String> {
     let output = Command::new("curl")
         .args([

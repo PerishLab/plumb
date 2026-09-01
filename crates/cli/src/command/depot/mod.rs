@@ -49,7 +49,7 @@ pub fn changelog(
     version: &str,
 ) -> Result<Option<plumb::depot::v3::Generation>, String> {
     let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
-    let depot = spec.derivative(plumb::depot::v2::Kind::Changelog)?;
+    let depot = spec.derivative(plumb::depot::v3::Kind::Changelog)?;
     let channel = crate::command::release::channel(version)?;
     plumb::depot::v3::Generation::latest(plumb::depot::v3::Query {
         source: &depot.source,
