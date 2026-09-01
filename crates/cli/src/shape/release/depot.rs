@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 #[serde(deny_unknown_fields)]
 pub struct Depot {
     pub source: String,
-    pub derivatives: Vec<plumb::depot::v2::Kind>,
+    pub derivatives: Vec<plumb::depot::v3::Kind>,
     #[serde(default)]
     pub validator: Vec<String>,
 }
@@ -24,13 +24,13 @@ impl Depot {
                     derivative.label()
                 ));
             }
-            if *derivative == plumb::depot::v2::Kind::Configuration && binaries.is_empty() {
+            if *derivative == plumb::depot::v3::Kind::Configuration && binaries.is_empty() {
                 return Err(
                     "the configuration derivative requires an exact released binary".into(),
                 );
             }
         }
-        if derivatives.contains(&plumb::depot::v2::Kind::Configuration) {
+        if derivatives.contains(&plumb::depot::v3::Kind::Configuration) {
             let Some(binary) = self.validator.first() else {
                 return Err("the configuration derivative requires a validator command".into());
             };
@@ -46,7 +46,7 @@ impl Depot {
 }
 
 impl super::Spec {
-    pub fn derivative(&self, kind: plumb::depot::v2::Kind) -> Result<&Depot, String> {
+    pub fn derivative(&self, kind: plumb::depot::v3::Kind) -> Result<&Depot, String> {
         let depot = self
             .depot
             .as_ref()

@@ -10,7 +10,7 @@ pub struct Wanted<'a> {
 
 pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let target = product::resolve(root, &rig, plumb::depot::v2::Kind::Changelog)?;
+    let target = product::resolve(root, &rig, plumb::depot::v3::Kind::Changelog)?;
     let marker = crate::command::release::ReleaseMarker::at(
         root,
         &target.product,
@@ -91,7 +91,7 @@ pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
 
 pub fn skill(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let target = product::resolve(root, &rig, plumb::depot::v2::Kind::Skill)?;
+    let target = product::resolve(root, &rig, plumb::depot::v3::Kind::Skill)?;
     let marker = crate::command::release::ReleaseMarker::at(
         root,
         &target.product,

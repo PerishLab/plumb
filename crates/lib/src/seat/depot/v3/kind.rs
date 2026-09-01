@@ -11,6 +11,16 @@ pub enum Kind {
 }
 
 impl Kind {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Configuration => "configuration",
+            Self::Changelog => "changelog",
+            Self::Skill => "skill",
+            Self::Worker => "worker",
+            Self::Manager => "manager",
+        }
+    }
+
     pub fn directory(self) -> &'static str {
         match self {
             Self::Configuration => "configurations",

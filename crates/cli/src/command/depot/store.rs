@@ -27,21 +27,6 @@ impl<'a> Remote<'a> {
         Ok(Self { held })
     }
 
-    pub fn promote(&self, pointer: &plumb::depot::v2::Pointer) -> Result<String, String> {
-        let latest = plumb::depot::v2::latest(
-            &pointer.release.product,
-            pointer.derivative,
-            &pointer.release.channel,
-        )?;
-        self.advance(&latest, pointer, false)?;
-        readback::projection(&pointer.source, &latest, pointer)?;
-        Ok(format!(
-            "advanced {} depot latest to {}",
-            pointer.derivative.label(),
-            pointer.release.version
-        ))
-    }
-
     fn create(&self, key: &str, bytes: &[u8]) -> Result<(), String> {
         let output = self.put(
             key,
@@ -65,55 +50,6 @@ impl<'a> Remote<'a> {
             Ok(())
         } else {
             Err(format!("immutable depot object drift: {key}"))
-        }
-    }
-
-    fn advance(
-        &self,
-        key: &str,
-        next: &plumb::depot::v2::Pointer,
-        exact: bool,
-    ) -> Result<(), String> {
-        let text = next.encode()?;
-        let bytes = text.as_bytes();
-        let rule = Rule {
-            cache: "public, max-age=60, must-revalidate",
-            header: "--if-none-match",
-            value: "*",
-        };
-        let Some(etag) = self.head(key)? else {
-            let output = self.put(key, bytes, rule)?;
-            return if output.status.success() {
-                Ok(())
-            } else {
-                Err(failure("create pointer", key, &output))
-            };
-        };
-        let standing = self
-            .read(key)?
-            .ok_or_else(|| format!("depot pointer vanished: {key}"))?;
-        let standing = String::from_utf8(standing)
-            .map_err(|error| format!("depot pointer at {key} is not UTF-8: {error}"))?;
-        let current = plumb::depot::v2::Pointer::parse(&standing)?;
-        if exact && current.release != next.release {
-            return Err("exact depot pointer names another release".into());
-        }
-        if !current.advance(next)? {
-            return Ok(());
-        }
-        let output = self.put(
-            key,
-            bytes,
-            Rule {
-                cache: rule.cache,
-                header: "--if-match",
-                value: &etag,
-            },
-        )?;
-        if output.status.success() {
-            Ok(())
-        } else {
-            Err(failure("move pointer", key, &output))
         }
     }
 

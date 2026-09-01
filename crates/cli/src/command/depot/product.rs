@@ -1,4 +1,4 @@
-use plumb::depot::v2::Kind;
+use plumb::depot::v3::Kind;
 use plumb::forgejo::git;
 use plumb::rig::Rig;
 use serde::Deserialize;
