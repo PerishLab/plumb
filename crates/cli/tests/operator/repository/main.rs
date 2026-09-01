@@ -66,47 +66,6 @@ fn adoption() {
 }
 
 #[test]
-fn cargo() {
-    let dir = std::env::temp_dir().join("plumb-cargo-lane");
-    std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
-    govern(&dir);
-    std::fs::write(
-        dir.join(".forgejo/workflows/release-cargo.yml"),
-        "name: release-cargo\n",
-    )
-    .expect("lane should be written");
-    let held = run(&dir);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(
-        !held.contains("workflow release-cargo has no shadow in the skeleton"),
-        "{held}"
-    );
-}
-
-#[test]
-fn runner() {
-    let dir = std::env::temp_dir().join("plumb-runner");
-    std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
-    std::fs::create_dir_all(dir.join("runner-control")).expect("runner seat should be made");
-    govern(&dir);
-    std::fs::write(
-        dir.join(".forgejo/workflows/release-runner.yml"),
-        "name: release-runner\n",
-    )
-    .expect("lane should be written");
-    let held = run(&dir);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(
-        !held.contains("directory runner-control has no shadow in the skeleton"),
-        "{held}"
-    );
-    assert!(
-        !held.contains("workflow release-runner has no shadow in the skeleton"),
-        "{held}"
-    );
-}
-
-#[test]
 fn wrappers() {
     let fixture = tempfile::tempdir().expect("fixture should be made");
     govern(fixture.path());

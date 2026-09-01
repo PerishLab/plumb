@@ -15,8 +15,11 @@ pub fn govern(root: &Path) {
 }
 
 pub fn run(root: &Path) -> String {
+    let home = super::support::depot(&[]);
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("path should be utf8")])
+        .env_remove("PLUMB_RELEASE_VERSION")
+        .env("PLUMB_HOME", home.path())
         .output()
         .expect("plumb should run");
     String::from_utf8_lossy(&output.stdout).to_string()
