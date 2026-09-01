@@ -9,6 +9,7 @@ fn atoms() {
     let trace = home.path().join("trace.json");
     let report = home.path().join("audit.jsonl");
     let output = plumb()
+        .command()
         .args(["doctor", home.path().to_str().expect("path")])
         .env("PLUMB_LOCUS_ENABLED", "true")
         .env("PLUMB_LOCUS_TRACE_FILE", &trace)
@@ -57,6 +58,7 @@ fn explicit() {
     super::world::govern(home.path());
     let report = home.path().join("audit.jsonl");
     let output = plumb()
+        .command()
         .arg("--version")
         .env("PLUMB_LOCUS_ENABLED", "true")
         .env("PLUMB_LOCUS_TRACE_ID", "manual-trace")
@@ -85,6 +87,7 @@ fn identity() {
     let trace = home.path().join("trace.json");
     let report = home.path().join("audit.jsonl");
     let output = plumb()
+        .command()
         .args(["doctor", home.path().to_str().expect("path")])
         .env("PLUMB_LOCUS_ENABLED", "true")
         .env("PLUMB_LOCUS_TRACE_FILE", &trace)
@@ -119,15 +122,16 @@ fn muted() {
         let report = home.path().join("audit.jsonl");
         let mut command = plumb();
         command
+            .command()
             .args(["doctor", home.path().to_str().expect("path")])
             .env_remove("PLUMB_LOCUS_ENABLED")
             .env("PLUMB_LOCUS_TRACE_FILE", &trace)
             .env("PLUMB_LOCUS_REPORT_FILE", &report)
             .env("PLUMB_LOCUS_TARGET_COLLECTORS", "process:parent");
         if let Some(value) = enabled {
-            command.env("PLUMB_LOCUS_ENABLED", value);
+            command.command().env("PLUMB_LOCUS_ENABLED", value);
         }
-        let output = command.output().expect("plumb");
+        let output = command.command().output().expect("plumb");
         assert!(output.status.success());
         assert!(!trace.exists());
         assert!(!report.exists());
@@ -141,6 +145,7 @@ fn malformed() {
     super::world::govern(home.path());
     let report = home.path().join("audit.jsonl");
     let output = plumb()
+        .command()
         .args(["doctor", home.path().to_str().expect("path")])
         .env("PLUMB_LOCUS_ENABLED", "yes")
         .env("PLUMB_LOCUS_REPORT_FILE", &report)
@@ -200,6 +205,7 @@ fn invalid() {
     super::world::govern(home.path());
     let report = home.path().join("audit.jsonl");
     let output = plumb()
+        .command()
         .args(["doctor", home.path().to_str().expect("path")])
         .env("PLUMB_LOCUS_ENABLED", "true")
         .env("PLUMB_LOCUS_TARGET_COLLECTORS", "process:parent")
@@ -219,6 +225,7 @@ fn invoke(root: &std::path::Path, collectors: &str, value: Option<(&str, &str)>)
     let report = root.join("audit.jsonl");
     let mut command = plumb();
     command
+        .command()
         .args(["doctor", root.to_str().expect("path")])
         .env("PLUMB_LOCUS_ENABLED", "true")
         .env("PLUMB_LOCUS_TRACE_ID", "collector-trace")
@@ -226,17 +233,35 @@ fn invoke(root: &std::path::Path, collectors: &str, value: Option<(&str, &str)>)
         .env("PLUMB_LOCUS_REPORT_FILE", &report)
         .env_remove("PLUMB_AUDIT_MISSING");
     if let Some((name, held)) = value {
-        command.env(name, held);
+        command.command().env(name, held);
     }
-    let output = command.output().expect("plumb");
+    let output = command.command().output().expect("plumb");
     assert!(output.status.success());
     read(&report)
 }
 
-fn plumb() -> Command {
+struct Plumb {
+    command: Command,
+    _home: tempfile::TempDir,
+}
+
+impl Plumb {
+    fn command(&mut self) -> &mut Command {
+        &mut self.command
+    }
+}
+
+fn plumb() -> Plumb {
+    let home = crate::support::depot(&[]);
     let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
-    command.env_remove("CODEX_THREAD_ID");
     command
+        .env_remove("CODEX_THREAD_ID")
+        .env_remove("PLUMB_RELEASE_VERSION")
+        .env("PLUMB_HOME", home.path());
+    Plumb {
+        command,
+        _home: home,
+    }
 }
 
 fn read(path: &std::path::Path) -> Vec<Atom> {
