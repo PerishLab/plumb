@@ -104,6 +104,67 @@ fn direct() {
     store.finish();
 }
 
+#[test]
+fn takeover() {
+    let root = seat("reuse-direct-over-legacy");
+    root.declared(PAIR);
+    root.git(&["commit", "-m", "source"]);
+    let (cold, ok) = root.plan(None, &["runner=linux"]);
+    assert!(ok, "{cold}");
+    let cold: serde_json::Value = serde_json::from_str(&cold).expect("cold plan");
+    let held = &cold["actions"][0];
+    let action = held["name"].as_str().expect("action");
+    let workload = held["keys"]["workload"].as_str().expect("workload");
+    let proof = held["keys"]["proof"].as_str().expect("proof");
+    let record = serde_json::json!({
+        "action": action,
+        "workload": workload,
+        "proof": proof,
+        "source": {"type": "workload", "source": "https://workflow.example/workloads/exact.tgz"}
+    });
+    let store = crate::support::Bucket::open(4);
+    let route = format!(
+        "records/workload-proof/{}.json",
+        route(&[action, workload, proof])
+    );
+    store.seed(&route, record.to_string().as_bytes());
+    let legacy = root.inventory(
+        &serde_json::json!({
+            "schema": "plumb.workflow-inventory/v1",
+            "records": [{
+                "action": action,
+                "workload": workload,
+                "source": {"type": "workload", "source": "r2://legacy/one"}
+            }, {
+                "action": action,
+                "workload": workload,
+                "source": {"type": "workload", "source": "r2://legacy/two"}
+            }]
+        })
+        .to_string(),
+    );
+    let inventory = format!("{}/workflow/inventory.json", store.endpoint());
+    let (text, ok) = root.remote(
+        Plan {
+            base: None,
+            world: &["runner=linux"],
+            identity: &[],
+            project: &[],
+            roots: &[],
+            inventory: Some(&legacy),
+        },
+        Some(&inventory),
+    );
+    assert!(ok, "{text}");
+    let plan: serde_json::Value = serde_json::from_str(&text).expect("plan");
+    assert_eq!(plan["actions"][0]["reason"], "proof-held");
+    assert_eq!(
+        plan["actions"][0]["reuse"]["source"],
+        "https://workflow.example/workloads/exact.tgz"
+    );
+    store.finish();
+}
+
 fn route(values: &[&str]) -> String {
     let mut sponge = Sha256::new();
     for value in values {
