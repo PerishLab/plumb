@@ -1,6 +1,6 @@
 use super::notes::{Notes, changelog};
 use crate::shape::depot::{LEAF, POINTER, Pointer, latest, versions};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 mod exact;
@@ -13,11 +13,14 @@ pub enum Held {
     Blind(String),
 }
 
-pub fn root(over: &Path) -> Result<PathBuf, String> {
-    plumb::depot::root(over)
-}
+pub use plumb::depot::root;
 
 pub fn held(over: &Path) -> Held {
+    if let Some(path) = plumb::config::value("PLUMB_GUARD_CONFIGURATION") {
+        return plumb::depot::Rules::guard(Path::new(&path), plumb::version!("PLUMB"))
+            .map(|seat| Held::Seat(Box::new(seat)))
+            .unwrap_or_else(Held::Blind);
+    }
     let base = match root(over) {
         Ok(base) => base,
         Err(error) => return Held::Blind(error),

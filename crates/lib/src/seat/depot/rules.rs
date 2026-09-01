@@ -8,6 +8,10 @@ pub struct Rules {
 }
 
 enum Source {
+    Guard {
+        base: PathBuf,
+        manifest: crate::guard::Configuration,
+    },
     V1(Seat),
     V2 {
         base: PathBuf,
@@ -28,10 +32,23 @@ pub(super) fn held() -> Result<&'static Rules, String> {
 
 impl Rules {
     fn open() -> Result<Self, String> {
+        if let Some(root) = crate::config::value("PLUMB_GUARD_CONFIGURATION") {
+            return Self::guard(Path::new(&root), crate::version!("PLUMB"));
+        }
         if let Some(root) = crate::config::value("PLUMB_DEPOT_SNAPSHOT") {
             return Self::staged(Path::new(&root), crate::version!("PLUMB"));
         }
         Self::at(&super::root(&PathBuf::new())?, crate::version!("PLUMB"))
+    }
+
+    pub fn guard(base: &Path, running: &str) -> Result<Self, String> {
+        let manifest = crate::guard::Configuration::open(base, running)?;
+        Ok(Self {
+            held: Source::Guard {
+                base: base.to_path_buf(),
+                manifest,
+            },
+        })
     }
 
     pub fn at(root: &Path, running: &str) -> Result<Self, String> {
@@ -95,6 +112,7 @@ impl Rules {
 
     pub fn read(&self, path: &str) -> Result<String, String> {
         match &self.held {
+            Source::Guard { base, manifest } => manifest.read(base, path),
             Source::V1(seat) => seat.read(path),
             Source::V2 { base, manifest } => {
                 anchored(path)?;
@@ -109,6 +127,7 @@ impl Rules {
 
     pub fn mark(&self) -> &str {
         match &self.held {
+            Source::Guard { manifest, .. } => manifest.digest(),
             Source::V1(seat) => seat.mark(),
             Source::V2 { manifest, .. } => &manifest.snapshot.timestamp,
         }
@@ -116,6 +135,7 @@ impl Rules {
 
     pub fn floor(&self) -> &str {
         match &self.held {
+            Source::Guard { manifest, .. } => manifest.target(),
             Source::V1(seat) => &seat.manifest().schema.version,
             Source::V2 { manifest, .. } => &manifest.release.version,
         }
@@ -123,6 +143,7 @@ impl Rules {
 
     pub fn version(&self) -> Option<&str> {
         match &self.held {
+            Source::Guard { manifest, .. } => Some(manifest.target()),
             Source::V1(_) => None,
             Source::V2 { manifest, .. } => Some(&manifest.release.version),
         }
@@ -130,6 +151,7 @@ impl Rules {
 
     pub fn objects(&self) -> &[super::Object] {
         match &self.held {
+            Source::Guard { manifest, .. } => manifest.objects(),
             Source::V1(seat) => &seat.manifest().objects,
             Source::V2 { manifest, .. } => &manifest.objects,
         }

@@ -73,13 +73,16 @@ impl Drop for Index {
     }
 }
 
-pub(super) fn execute(root: &Path, argv: &[String]) -> Result<(), String> {
+pub(super) fn execute(root: &Path, argv: &[String], seat: Option<&Path>) -> Result<(), String> {
     let (program, args) = argv
         .split_first()
         .ok_or_else(|| "guard action has no command".to_string())?;
-    let status = plumb::config::detached(program)
-        .args(args)
-        .current_dir(root)
+    let mut command = plumb::config::detached(program);
+    command.args(args).current_dir(root);
+    if let Some(seat) = seat {
+        command.env("PLUMB_GUARD_CONFIGURATION", seat);
+    }
+    let status = command
         .status()
         .map_err(|error| format!("cannot run {}: {error}", argv.join(" ")))?;
     if status.success() {

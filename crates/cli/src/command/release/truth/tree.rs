@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Output;
 
 pub struct Seat {
     repository: PathBuf,
@@ -51,7 +51,7 @@ fn known(repository: &Path, commit: &str) -> Result<bool, String> {
 }
 
 fn git<const N: usize>(repository: &Path, args: [&str; N]) -> Result<Output, String> {
-    Command::new("git")
+    plumb::config::detached("git")
         .args(args)
         .current_dir(repository)
         .output()

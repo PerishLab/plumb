@@ -12,24 +12,55 @@ struct Check {
 
 struct Catalog<'a> {
     root: &'a Path,
+    configuration: Option<&'a str>,
 }
 
 pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
+    if plumb::config::value("PLUMB_GUARD_CONFIGURATION").is_some() {
+        return Err("guard configuration is internal to one isolated guard action".into());
+    }
     let tree = tree::git(root, &["write-tree"], "read staged tree")?;
     if let Ok(proof) = plumb::guard::staged(root, &tree) {
         return Ok(proof);
     }
-    let checks = Catalog { root }.checks()?;
+    let target = super::configuration::target(root)?;
+    let mismatched = target.as_deref().is_some_and(|target| {
+        plumb::depot::rules().ok().and_then(|held| held.version()) != Some(target)
+    });
+    let mut index = mismatched.then(|| Index::new(root, &tree)).transpose()?;
+    let configuration = index
+        .as_ref()
+        .map(|index| {
+            super::configuration::Seat::new(
+                root,
+                &index.root,
+                target
+                    .as_deref()
+                    .expect("a mismatched Plumb version has a target"),
+            )
+        })
+        .transpose()?;
+    let checks = Catalog {
+        root,
+        configuration: configuration.as_ref().map(|held| held.mark()),
+    }
+    .checks()?;
     let pending = checks
         .iter()
         .filter(|check| !cached(&check.proof))
         .collect::<Vec<_>>();
     if !pending.is_empty() {
-        let index = Index::new(root, &tree)?;
+        if index.is_none() {
+            index = Some(Index::new(root, &tree)?);
+        }
+        let index = index.as_ref().expect("a pending guard has an index");
         for check in pending {
             eprintln!("guard {}", check.proof.name);
             for command in &check.commands {
-                tree::execute(&index.root, command)?;
+                let seat = (check.proof.name == "guard/plumb")
+                    .then(|| configuration.as_ref().map(|held| held.path()))
+                    .flatten();
+                tree::execute(&index.root, command, seat)?;
             }
             cache(&check.proof)?;
         }
@@ -67,7 +98,7 @@ impl Catalog<'_> {
                 continue;
             }
             let input = tree.digest(key);
-            let world = world(&name, &input, &commands)?;
+            let world = world(&name, &input, &commands, self.configuration)?;
             checks.push(Check {
                 proof: Action { name, input, world },
                 commands,
@@ -166,7 +197,12 @@ impl Catalog<'_> {
     }
 }
 
-fn world(name: &str, input: &str, commands: &[Vec<String>]) -> Result<String, String> {
+fn world(
+    name: &str,
+    input: &str,
+    commands: &[Vec<String>],
+    configuration: Option<&str>,
+) -> Result<String, String> {
     let mut sponge = Sha256::new();
     sponge.update(name.as_bytes());
     sponge.update([0]);
@@ -181,6 +217,12 @@ fn world(name: &str, input: &str, commands: &[Vec<String>]) -> Result<String, St
     }
     sponge.update([0]);
     sponge.update(plumb::depot::rules()?.mark().as_bytes());
+    if name == "guard/plumb"
+        && let Some(configuration) = configuration
+    {
+        sponge.update([0]);
+        sponge.update(configuration.as_bytes());
+    }
     sponge.update([0]);
     sponge.update(plumb::config::platform().as_bytes());
     for tool in tools(name) {

@@ -87,6 +87,14 @@ pub fn binary(url: &str, stable: bool) -> Result<String, String> {
 pub(in crate::command::release) struct Surface<'a>(pub(in crate::command::release) &'a str);
 
 impl Surface<'_> {
+    pub(in crate::command::release) fn pointer(&self, channel: &str) -> Result<Pointer, String> {
+        let pointer: Pointer = self.read()?;
+        if pointer.schema != 1 || pointer.channel != channel {
+            return Err(format!("{channel} pointer is not current"));
+        }
+        Ok(pointer)
+    }
+
     pub(in crate::command::release) fn sealed(
         &self,
         binary: bool,

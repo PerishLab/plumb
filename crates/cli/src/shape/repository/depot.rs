@@ -82,6 +82,23 @@ impl Batch {
         Ok(Self { manifest, bodies })
     }
 
+    pub fn validation(held: Held, draft: Draft) -> Result<Self, String> {
+        let (objects, bodies) = held;
+        let manifest = plumb::depot::v2::Manifest {
+            format: plumb::depot::v2::FORMAT,
+            source: draft.source,
+            derivative: plumb::depot::v2::Kind::Configuration,
+            release: draft.release,
+            snapshot: plumb::depot::v2::Snapshot {
+                timestamp: draft.timestamp,
+                commit: draft.commit,
+            },
+            objects,
+        };
+        manifest.encode()?;
+        Ok(Self { manifest, bodies })
+    }
+
     pub fn changelog(draft: Draft, bodies: BTreeMap<String, Vec<u8>>) -> Result<Self, String> {
         Self::gather(plumb::depot::v2::Kind::Changelog, draft, bodies)
     }

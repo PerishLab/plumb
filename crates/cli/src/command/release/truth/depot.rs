@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use crate::shape::depot::Batch;
 use crate::shape::release::{Format, Spec};
@@ -17,6 +16,18 @@ pub(in crate::command) struct Source<'a> {
 }
 
 impl Source<'_> {
+    pub fn latest(&self, channel: &str, binary: bool) -> Result<Binding, String> {
+        let url = format!("{}/v1/channels/{channel}.json", self.authority);
+        let pointer = super::verify::Surface(&url).pointer(channel)?;
+        if pointer.product != self.product {
+            return Err(format!(
+                "{channel} pointer names {}, expected {}",
+                pointer.product, self.product,
+            ));
+        }
+        self.binding(&pointer.version, binary)
+    }
+
     pub fn binding(&self, version: &str, binary: bool) -> Result<Binding, String> {
         let channel = super::super::channel(version)?;
         let url = format!(
@@ -46,11 +57,16 @@ impl Source<'_> {
     }
 }
 
+pub(in crate::command) struct Validated {
+    pub version: String,
+    pub artifact: String,
+}
+
 pub(in crate::command) fn validate(
     spec: &Spec,
     binding: &Binding,
     plan: &Batch,
-) -> Result<(), String> {
+) -> Result<Validated, String> {
     let depot = spec
         .depot
         .as_ref()
@@ -73,18 +89,27 @@ pub(in crate::command) fn validate(
         unpack(&archive, unpacked.path(), target.format)?;
         let executable = locate(unpacked.path(), binary)?;
 
-        let snapshot = tempfile::tempdir()
+        let home = tempfile::tempdir()
             .map_err(|error| format!("cannot stage depot configuration: {error}"))?;
+        let seat = home.path().join("depot");
+        let snapshot = plumb::depot::v2::local(
+            &seat,
+            &plan.manifest.release,
+            &plan.manifest.snapshot.timestamp,
+        )?;
         for (path, bytes) in &plan.bodies {
-            write(&snapshot.path().join(path), bytes)?;
+            write(&snapshot.join(path), bytes)?;
         }
+        let manifest = plan.manifest.encode()?;
+        write(&snapshot.join(plumb::depot::v2::LEAF), manifest.as_bytes())?;
+        let pointer = plumb::depot::v2::Pointer::new(&plan.manifest, manifest.as_bytes())?;
         write(
-            &snapshot.path().join(plumb::depot::v2::LEAF),
-            plan.manifest.encode()?.as_bytes(),
+            &seat.join(plumb::depot::v2::POINTER),
+            pointer.encode()?.as_bytes(),
         )?;
         let source = super::tree::Seat::open(&spec.root, &binding.release.commit)?;
 
-        let mut validator = Command::new(&executable);
+        let mut validator = plumb::config::detached(&executable);
         validator
             .args(depot.validator.iter().skip(1))
             .current_dir(source.path());
@@ -104,10 +129,8 @@ pub(in crate::command) fn validate(
             validator.env_remove(format!("{}_RELEASE_{name}", spec.environment()));
         }
         let output = validator
-            .env(
-                format!("{}_DEPOT_SNAPSHOT", spec.environment()),
-                snapshot.path(),
-            )
+            .env("PLUMB_HOME", home.path())
+            .env(format!("{}_DEPOT_SNAPSHOT", spec.environment()), &snapshot)
             .output()
             .map_err(|error| {
                 format!(
@@ -116,7 +139,10 @@ pub(in crate::command) fn validate(
                 )
             })?;
         if output.status.success() {
-            return Ok(());
+            return Ok(Validated {
+                version: binding.release.version.clone(),
+                artifact: artifact.sha256.clone(),
+            });
         }
         Err(format!(
             "released {} validator refused the configuration:\n{}{}",

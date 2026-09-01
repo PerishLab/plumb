@@ -1,4 +1,5 @@
 mod action;
+mod configuration;
 pub(crate) mod hook;
 mod tree;
 
