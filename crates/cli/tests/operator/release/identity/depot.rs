@@ -141,6 +141,29 @@ fn configuration() {
     stamp(fixture.root, "v1.2.0-beta.1", &commit, true);
     seal(fixture.root, &commit);
     validator(fixture.root);
+    let pointer = fixture.root.join("releases/v1/channels/beta.json");
+    std::fs::create_dir_all(pointer.parent().expect("channel parent")).expect("channel root");
+    std::fs::write(
+        pointer,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "schema": 1,
+            "product": "probe",
+            "channel": "beta",
+            "releaseVersion": "v1.2.0-beta.1",
+            "commit": commit,
+            "seal": {
+                "name": "seal.json",
+                "mime": "application/json; charset=utf-8",
+                "sha256": "0".repeat(64),
+                "size": 0,
+                "url": "https://releases.test/v1/releases/beta/v1.2.0-beta.1/seal.json"
+            },
+            "managers": {}
+        }))
+        .expect("channel pointer"),
+    )
+    .expect("channel pointer write");
+    stamp(fixture.root, "v1.2.0-beta.2", &commit, true);
     let source = fixture.root.join("media/configuration");
     std::fs::create_dir_all(source.join("rules")).expect("configuration source");
     std::fs::write(source.join("rules/probe.toml"), "answer = 42\n").expect("configuration");
@@ -157,7 +180,7 @@ fn configuration() {
             "configuration",
             ".",
             "--marker",
-            "v1.2.0-beta.1",
+            "v1.2.0-beta.2",
             "--from",
             source.to_str().expect("source"),
         ])
@@ -170,7 +193,7 @@ fn configuration() {
     );
     let base = fixture
         .root
-        .join("depot/channels/beta/configurations/versions/v1.2.0-beta.1");
+        .join("depot/channels/beta/configurations/versions/v1.2.0-beta.2");
     assert!(base.join("latest.json").is_file());
     assert!(!fixture.root.join("depot/v2").exists());
 }
