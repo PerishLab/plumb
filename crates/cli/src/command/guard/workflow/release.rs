@@ -8,6 +8,9 @@ pub(super) fn fingerprint(
     path: &str,
     meta: &str,
 ) -> Result<Option<String>, String> {
+    if !guard && path.starts_with(".forgejo/") {
+        return Ok(None);
+    }
     if !guard || source.2 {
         return Ok(Some(meta.to_string()));
     }
