@@ -33,6 +33,7 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
         plumb: env!("CARGO_PKG_VERSION"),
         marker: &marker.marker,
         inventory: inventory.path(),
+        source: Some(&rig.workflow.inventory.url),
         root,
     };
     let binary = binary(&spec, &marker, &world)?;
@@ -67,6 +68,7 @@ struct World<'a> {
     plumb: &'a str,
     marker: &'a str,
     inventory: Option<&'a Path>,
+    source: Option<&'a str>,
     root: &'a Path,
 }
 
@@ -248,6 +250,7 @@ fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String> {
             .map(|root| format!("{}={root}", plan.action))
             .collect(),
         inventory: world.inventory.map(Path::to_path_buf),
+        source: world.source.map(str::to_string),
         target: plumb::cli::Root {
             root: world.root.display().to_string(),
         },

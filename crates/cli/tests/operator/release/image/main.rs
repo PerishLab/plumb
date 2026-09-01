@@ -196,7 +196,7 @@ esac
     assert!(chart.contains("version: 2.0.0"), "{chart}");
     assert!(chart.contains("appVersion: \"2.0.0\""), "{chart}");
 
-    let inventory = crate::support::Bucket::open(3);
+    let inventory = crate::support::Bucket::open(4);
     let request = serde_json::json!({
         "schema": "plumb.ship-request/v1",
         "action": "ship/chart",

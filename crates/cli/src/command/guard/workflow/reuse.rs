@@ -41,9 +41,11 @@ pub struct Inventory {
     pub(super) schema: String,
     #[serde(default)]
     pub(super) records: Vec<Record>,
+    #[serde(skip)]
+    pub(super) base: Option<String>,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct Record {
     pub(super) action: String,
@@ -90,6 +92,7 @@ impl Inventory {
         Self {
             schema: SCHEMA.to_string(),
             records: Vec::new(),
+            base: None,
         }
     }
 
@@ -110,14 +113,12 @@ impl Inventory {
         Ok(held)
     }
 
-    pub(super) fn decode(body: &[u8]) -> Result<Self, String> {
-        let held: Self = serde_json::from_slice(body)
-            .map_err(|error| format!("cannot parse workflow inventory: {error}"))?;
-        held.validate()?;
-        Ok(held)
+    pub fn resolve(&self, action: &str, keys: &Keys) -> Result<Verdict, String> {
+        let held = self.enrich(action, keys)?;
+        held.local(action, keys)
     }
 
-    pub fn resolve(&self, action: &str, keys: &Keys) -> Result<Verdict, String> {
+    fn local(&self, action: &str, keys: &Keys) -> Result<Verdict, String> {
         if let Some(publication) = &keys.publication
             && let Some(record) =
                 self.source(Match::new(action, keys, Some(publication), "url"), None)?

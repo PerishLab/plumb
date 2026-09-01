@@ -1,6 +1,9 @@
 use plumb::rig::Authority;
+use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 use std::process::{Command, Output};
+
+use super::reuse::{Inventory, Keys, Record};
 
 pub const SEAT: &str = "v1";
 
@@ -135,4 +138,90 @@ fn failure(action: &str, seat: &str, output: &Output) -> String {
         "{action} {seat}: {}",
         String::from_utf8_lossy(&output.stderr).trim()
     )
+}
+
+impl Inventory {
+    pub fn at(mut self, url: Option<&str>) -> Result<Self, String> {
+        let Some(url) = url else {
+            return Ok(self);
+        };
+        let suffix = "/inventory.json";
+        self.base = Some(
+            url.strip_suffix(suffix)
+                .ok_or_else(|| format!("workflow inventory URL must end in {suffix}"))?
+                .to_string(),
+        );
+        Ok(self)
+    }
+
+    pub(super) fn enrich(&self, action: &str, keys: &Keys) -> Result<Self, String> {
+        let mut held = Self {
+            schema: self.schema.clone(),
+            records: self.records.clone(),
+            base: None,
+        };
+        let Some(base) = &self.base else {
+            return Ok(held);
+        };
+        for route in lookup(action, keys) {
+            let body = match plumb::bucket::fetch(&format!("{base}/{route}")) {
+                Ok(Some(body)) => body,
+                Ok(None) | Err(_) => continue,
+            };
+            let record = Record::decode(&body)?;
+            if !held.records.contains(&record) {
+                held.records.push(record);
+            }
+        }
+        Ok(held)
+    }
+}
+
+impl Record {
+    pub(in crate::command) fn routes(&self) -> Vec<String> {
+        match self.source.kind.as_str() {
+            "workload" => vec![
+                route(
+                    "workload-proof",
+                    &[
+                        &self.action,
+                        &self.workload,
+                        self.proof.as_deref().unwrap_or_default(),
+                    ],
+                ),
+                route("workload", &[&self.action, &self.workload]),
+            ],
+            "url" => vec![route(
+                "publication",
+                &[
+                    &self.action,
+                    &self.workload,
+                    self.publication.as_deref().unwrap_or_default(),
+                ],
+            )],
+            _ => Vec::new(),
+        }
+    }
+}
+
+fn lookup(action: &str, keys: &Keys) -> Vec<String> {
+    let mut found = Vec::new();
+    if let Some(publication) = &keys.publication {
+        found.push(route("publication", &[action, &keys.workload, publication]));
+    }
+    found.push(route(
+        "workload-proof",
+        &[action, &keys.workload, &keys.proof],
+    ));
+    found.push(route("workload", &[action, &keys.workload]));
+    found
+}
+
+fn route(kind: &str, values: &[&str]) -> String {
+    let mut sponge = Sha256::new();
+    for value in values {
+        sponge.update(value.as_bytes());
+        sponge.update([0]);
+    }
+    format!("records/{kind}/{:x}.json", sponge.finalize())
 }

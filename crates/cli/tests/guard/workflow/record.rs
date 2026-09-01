@@ -4,7 +4,7 @@ use std::process::Command;
 
 #[test]
 fn recorded() {
-    let store = crate::support::Bucket::open(6);
+    let store = crate::support::Bucket::open(11);
     let root = tempfile::tempdir().expect("root");
     let workload = root.path().join("package.tgz");
     std::fs::write(&workload, "workload").expect("workload");
@@ -56,16 +56,18 @@ fn recorded() {
     let repeated = record();
     assert!(
         repeated.status.success(),
-        "an existing inventory uses its ETag: {}",
+        "existing immutable records are idempotent: {}",
         String::from_utf8_lossy(&repeated.stderr)
     );
-    let inventory: serde_json::Value =
-        serde_json::from_slice(&store.read("inventory.json")).expect("inventory json");
-    assert_eq!(inventory["schema"], "plumb.workflow-inventory/v1");
-    assert_eq!(inventory["records"].as_array().expect("records").len(), 2);
-    let source = inventory["records"]
-        .as_array()
-        .expect("records")
+    let keys = store.keys();
+    assert!(!keys.iter().any(|key| key == "inventory.json"));
+    let records: Vec<serde_json::Value> = keys
+        .iter()
+        .filter(|key| key.starts_with("records/"))
+        .map(|key| serde_json::from_slice(&store.read(key)).expect("record json"))
+        .collect();
+    assert_eq!(records.len(), 3);
+    let source = records
         .iter()
         .find(|record| record["source"]["type"] == "workload")
         .and_then(|record| record["source"]["source"].as_str())
@@ -76,9 +78,7 @@ fn recorded() {
         .strip_prefix("https://workflow.example/")
         .expect("public prefix");
     assert!(store.has(object));
-    let publication = inventory["records"]
-        .as_array()
-        .expect("records")
+    let publication = records
         .iter()
         .find(|record| record["source"]["type"] == "url")
         .expect("publication record");
