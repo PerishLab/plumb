@@ -2,6 +2,31 @@ use std::process::Command;
 
 use crate::shape::depot::Batch;
 
+pub(super) struct Generation<'a> {
+    pub bundle: &'a plumb::depot::v3::Bundle,
+    pub base: &'a str,
+    pub key: &'a str,
+    pub manifest: &'a [u8],
+    pub pointer: &'a plumb::depot::v3::Pointer,
+}
+
+pub(super) fn generation(proof: Generation<'_>) -> Result<(), String> {
+    let source = proof
+        .pointer
+        .manifest
+        .url
+        .strip_suffix(&format!("/{}/{}", proof.base, plumb::depot::v3::LEAF))
+        .ok_or_else(|| "depot pointer manifest URL does not bind its source".to_string())?;
+    for (path, bytes) in &proof.bundle.bodies {
+        public(&format!("{source}/{}/objects/{path}", proof.base), bytes)?;
+    }
+    public(
+        &format!("{source}/{}/{}", proof.base, plumb::depot::v3::LEAF),
+        proof.manifest,
+    )?;
+    public(&format!("{source}/{}", proof.key), &proof.pointer.encode()?)
+}
+
 pub(super) fn prove(plan: &Batch, base: &str, manifest: &str, advance: bool) -> Result<(), String> {
     let source = plan.manifest.source.trim_end_matches('/');
     for (path, bytes) in &plan.bodies {

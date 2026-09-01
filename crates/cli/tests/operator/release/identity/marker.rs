@@ -257,7 +257,7 @@ pub(super) fn stamp(root: &Path, version: &str, commit: &str, annotated: bool) {
     ]));
 }
 
-fn seal(root: &Path, commit: &str) {
+pub(super) fn seal(root: &Path, commit: &str) {
     let version = "v1.2.0-beta.1";
     let path = root
         .join("releases/v1/releases/beta")

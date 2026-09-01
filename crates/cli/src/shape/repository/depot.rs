@@ -81,48 +81,6 @@ impl Batch {
         manifest.encode()?;
         Ok(Self { manifest, bodies })
     }
-
-    pub fn changelog(draft: Draft, bodies: BTreeMap<String, Vec<u8>>) -> Result<Self, String> {
-        Self::gather(plumb::depot::v2::Kind::Changelog, draft, bodies)
-    }
-
-    pub fn skill(draft: Draft, bodies: BTreeMap<String, Vec<u8>>) -> Result<Self, String> {
-        if !bodies.contains_key("SKILL.md") {
-            return Err("skill derivative holds no SKILL.md".into());
-        }
-        Self::gather(plumb::depot::v2::Kind::Skill, draft, bodies)
-    }
-
-    fn gather(
-        derivative: plumb::depot::v2::Kind,
-        draft: Draft,
-        bodies: BTreeMap<String, Vec<u8>>,
-    ) -> Result<Self, String> {
-        if bodies.is_empty() {
-            return Err(format!("{} derivative holds no object", derivative.label()));
-        }
-        let objects = bodies
-            .iter()
-            .map(|(path, bytes)| Object {
-                path: path.clone(),
-                sha256: sha(bytes),
-                size: bytes.len() as u64,
-            })
-            .collect();
-        let manifest = plumb::depot::v2::Manifest {
-            format: plumb::depot::v2::FORMAT,
-            source: draft.source,
-            derivative,
-            release: draft.release,
-            snapshot: plumb::depot::v2::Snapshot {
-                timestamp: draft.timestamp,
-                commit: draft.commit,
-            },
-            objects,
-        };
-        manifest.encode()?;
-        Ok(Self { manifest, bodies })
-    }
 }
 
 pub fn configuration(root: &std::path::Path) -> Result<Vec<(String, String)>, String> {

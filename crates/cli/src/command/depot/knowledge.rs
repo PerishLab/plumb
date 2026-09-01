@@ -1,18 +1,15 @@
-use super::{configuration::Tree, notes, product, store};
-use crate::shape::depot::{self as record};
+use super::{configuration::Tree, product, store};
 use plumb::rig::Rig;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub struct Wanted<'a> {
     pub marker: &'a str,
     pub from: &'a str,
-    pub keep: bool,
     pub dry: bool,
 }
 
 pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let staged = wanted.from.is_empty();
     let target = product::resolve(root, &rig, plumb::depot::v2::Kind::Changelog)?;
     let marker = crate::command::release::ReleaseMarker::at(
         root,
@@ -21,10 +18,16 @@ pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
         wanted.marker,
     )?;
     let standing = marker.digest()?;
-    let source = stage(&rig, &target.product, "changelog", &wanted)?;
-    let proof = crate::command::changelog::prove(root, &source, &marker.marker)?;
+    let source = source(wanted.from)?;
+    let proof = crate::command::changelog::prove(root, source, &marker.marker)?;
     let release = crate::command::release::knowledge(&target.product, &target.authority);
     let binding = release.binding(&marker.marker, false)?;
+    if binding.release.commit != marker.commit || binding.release.channel != marker.channel {
+        return Err(format!(
+            "release marker {} does not bind its published release seal",
+            marker.marker
+        ));
+    }
     if binding.release.channel != "stable" {
         return Err(format!(
             "the {} channel does not owe a changelog derivative",
@@ -43,21 +46,22 @@ pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
             marker.marker, marker.commit, proof.candidate
         ));
     }
-    let batch = notes::Batch::gather(&source)?;
-    let plan = record::Batch::changelog(
-        record::Draft {
-            source: target.source.clone(),
-            release: binding.release.clone(),
-            timestamp: super::super::clock::mark()?,
-            commit: proof.candidate.clone(),
-        },
-        batch.bodies,
+    let bundle = plumb::depot::v3::Bundle::read(
+        source,
+        identity(
+            &target,
+            &marker,
+            &standing,
+            plumb::depot::v3::Kind::Changelog,
+        ),
     )?;
     let held = (|| {
         if wanted.dry {
+            let manifest = String::from_utf8(bundle.manifest.encode()?)
+                .map_err(|error| format!("depot manifest is not UTF-8: {error}"))?;
             Ok(format!(
                 "{}\n{} lines within a budget of {} for {} units",
-                plan.manifest.encode()?,
+                manifest,
                 proof
                     .languages
                     .values()
@@ -74,16 +78,19 @@ pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
             ))
         } else {
             rig.depot.authority.load()?;
-            store::Remote::new(&rig.depot.authority)?.derive(&plan, true)
+            store::Remote::new(&rig.depot.authority)?.publish(
+                &bundle,
+                &target.source,
+                super::super::clock::ahead(0)?,
+            )
         }
     })();
     confirm(root, &target, &marker, &standing)?;
-    cleared(held?, staged, wanted.keep, &source)
+    held
 }
 
 pub fn skill(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let staged = wanted.from.is_empty();
     let target = product::resolve(root, &rig, plumb::depot::v2::Kind::Skill)?;
     let marker = crate::command::release::ReleaseMarker::at(
         root,
@@ -92,7 +99,7 @@ pub fn skill(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
         wanted.marker,
     )?;
     let standing = marker.digest()?;
-    let source = stage(&rig, &target.product, "skill", &wanted)?;
+    let source = source(wanted.from)?;
     let commit = Tree(root).commit()?;
     if marker.commit != commit {
         return Err(format!(
@@ -102,26 +109,60 @@ pub fn skill(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     }
     let release = crate::command::release::knowledge(&target.product, &target.authority);
     let binding = release.binding(&marker.marker, false)?;
-    let batch = notes::Batch::gather(&source)?;
-    let plan = record::Batch::skill(
-        record::Draft {
-            source: target.source.clone(),
-            release: binding.release.clone(),
-            timestamp: super::super::clock::mark()?,
-            commit,
-        },
-        batch.bodies,
+    if binding.release.commit != marker.commit || binding.release.channel != marker.channel {
+        return Err(format!(
+            "release marker {} does not bind its published release seal",
+            marker.marker
+        ));
+    }
+    let bundle = plumb::depot::v3::Bundle::read(
+        source,
+        identity(&target, &marker, &standing, plumb::depot::v3::Kind::Skill),
     )?;
+    if !bundle.bodies.contains_key("SKILL.md") {
+        return Err("skill generation holds no SKILL.md".into());
+    }
     let held = (|| {
         if wanted.dry {
-            plan.manifest.encode()
+            String::from_utf8(bundle.manifest.encode()?)
+                .map_err(|error| format!("depot manifest is not UTF-8: {error}"))
         } else {
             rig.depot.authority.load()?;
-            store::Remote::new(&rig.depot.authority)?.derive(&plan, true)
+            store::Remote::new(&rig.depot.authority)?.publish(
+                &bundle,
+                &target.source,
+                super::super::clock::ahead(0)?,
+            )
         }
     })();
     confirm(root, &target, &marker, &standing)?;
-    cleared(held?, staged, wanted.keep, &source)
+    held
+}
+
+fn source(raw: &str) -> Result<&Path, String> {
+    if raw.is_empty() {
+        Err("depot knowledge publication requires an explicit --from directory".into())
+    } else {
+        Ok(Path::new(raw))
+    }
+}
+
+fn identity(
+    target: &product::Target,
+    marker: &crate::command::release::ReleaseMarker,
+    digest: &str,
+    kind: plumb::depot::v3::Kind,
+) -> plumb::depot::v3::Identity {
+    plumb::depot::v3::Identity {
+        product: target.product.clone(),
+        channel: marker.channel.clone(),
+        version: marker.marker.clone(),
+        marker: plumb::depot::v3::Marker {
+            name: marker.marker.clone(),
+            sha256: digest.to_string(),
+        },
+        kind,
+    }
 }
 
 fn confirm(
@@ -144,33 +185,4 @@ fn confirm(
             marker.marker
         ))
     }
-}
-
-fn cleared(held: String, staged: bool, keep: bool, source: &Path) -> Result<String, String> {
-    if staged && !keep {
-        std::fs::remove_dir_all(source)
-            .map_err(|error| format!("cannot clear {}: {error}", source.display()))?;
-        return Ok(format!("{held}, and cleared {}", source.display()));
-    }
-    Ok(held)
-}
-
-fn stage(
-    rig: &Rig,
-    product: &str,
-    derivative: &str,
-    wanted: &Wanted<'_>,
-) -> Result<PathBuf, String> {
-    if !wanted.from.is_empty() {
-        return Ok(PathBuf::from(wanted.from));
-    }
-    if rig.home.is_empty() {
-        return Err("no data home; set PLUMB_HOME".into());
-    }
-    Ok(PathBuf::from(&rig.home)
-        .join("depot")
-        .join("stage")
-        .join(product)
-        .join(derivative)
-        .join(wanted.marker))
 }

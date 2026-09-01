@@ -276,10 +276,13 @@ while [ $# -gt 0 ]; do
     *) url=$1; shift ;;
   esac
 done
-key=${url#https://releases.test/}
-path="$FAKE_S3_ROOT/releases/$key"
+case "$url" in
+  https://releases.test/*) path="$FAKE_S3_ROOT/releases/${url#https://releases.test/}" ;;
+  https://depot.test/*) path="$FAKE_S3_ROOT/depot/${url#https://depot.test/}" ;;
+  *) exit 1 ;;
+esac
 if [ -f "$path" ]; then
-  cp "$path" "$output"
+  if [ -n "$output" ]; then cp "$path" "$output"; else cat "$path"; fi
   [ "$status" = false ] || printf '200'
 elif [ "$status" = true ]; then
   printf '404'

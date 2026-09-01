@@ -1,7 +1,5 @@
 use crate::shape::depot::{FORMAT, Object};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
 
 pub const FLOOR: &str = "v0.0.0";
 
@@ -15,36 +13,6 @@ pub struct Notes {
     pub commit: String,
     #[serde(default, rename = "object")]
     pub objects: Vec<Object>,
-}
-
-pub struct Batch {
-    pub bodies: BTreeMap<String, Vec<u8>>,
-}
-
-impl Batch {
-    pub fn gather(source: &Path) -> Result<Self, String> {
-        let mut bodies = BTreeMap::new();
-        for path in walk(source)? {
-            let name = path
-                .strip_prefix(source)
-                .map_err(|error| {
-                    format!(
-                        "{} is outside {}: {error}",
-                        path.display(),
-                        source.display()
-                    )
-                })?
-                .to_string_lossy()
-                .replace('\\', "/");
-            let bytes = std::fs::read(&path)
-                .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-            bodies.insert(name, bytes);
-        }
-        if bodies.is_empty() {
-            return Err(format!("{} holds no release note", source.display()));
-        }
-        Ok(Self { bodies })
-    }
 }
 
 fn floor() -> String {
@@ -88,22 +56,4 @@ impl Notes {
 
 pub fn changelog(version: &str) -> String {
     format!("changelog/{version}")
-}
-
-fn walk(root: &Path) -> Result<Vec<PathBuf>, String> {
-    let mut found = Vec::new();
-    let listed = std::fs::read_dir(root)
-        .map_err(|error| format!("cannot read {}: {error}", root.display()))?;
-    for entry in listed {
-        let path = entry
-            .map_err(|error| format!("cannot read {}: {error}", root.display()))?
-            .path();
-        if path.is_dir() {
-            found.extend(walk(&path)?);
-        } else {
-            found.push(path);
-        }
-    }
-    found.sort();
-    Ok(found)
 }
