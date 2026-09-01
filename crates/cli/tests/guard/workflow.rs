@@ -1,5 +1,7 @@
 #[path = "workflow/action.rs"]
 mod action;
+#[path = "workflow/control.rs"]
+mod control;
 #[path = "workflow/fixture.rs"]
 mod fixture;
 #[path = "workflow/plan.rs"]
