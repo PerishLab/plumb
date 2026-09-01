@@ -100,16 +100,14 @@ pub enum Deed {
         #[arg(long)]
         request: String,
     },
-    #[command(about = "Publish the changelog derivative one stable Release owes")]
+    #[command(about = "Publish the changelog generation bound to a stable Release marker")]
     Changelog {
         #[arg(default_value = ".")]
         root: String,
         #[arg(long)]
         marker: String,
-        #[arg(long, default_value = "")]
-        from: String,
         #[arg(long)]
-        keep: bool,
+        from: String,
         #[arg(long = "dry-run")]
         dry: bool,
     },
@@ -119,10 +117,8 @@ pub enum Deed {
         root: String,
         #[arg(long)]
         marker: String,
-        #[arg(long, default_value = "")]
-        from: String,
         #[arg(long)]
-        keep: bool,
+        from: String,
         #[arg(long = "dry-run")]
         dry: bool,
     },
@@ -162,14 +158,12 @@ fn execute(deed: Deed) -> Result<String, String> {
             root,
             marker,
             from,
-            keep,
             dry,
         } => knowledge::changelog(
             &PathBuf::from(root),
             knowledge::Wanted {
                 marker: &marker,
                 from: &from,
-                keep,
                 dry,
             },
         ),
@@ -177,14 +171,12 @@ fn execute(deed: Deed) -> Result<String, String> {
             root,
             marker,
             from,
-            keep,
             dry,
         } => knowledge::skill(
             &PathBuf::from(root),
             knowledge::Wanted {
                 marker: &marker,
                 from: &from,
-                keep,
                 dry,
             },
         ),

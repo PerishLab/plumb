@@ -3,6 +3,7 @@ use crate::shape::depot::Batch;
 use std::io::Write;
 use std::process::{Command, Output};
 
+mod generation;
 mod readback;
 
 pub struct Remote<'a> {

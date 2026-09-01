@@ -81,6 +81,25 @@ derivatives = ["changelog"]
 }
 
 #[test]
+fn explicit() {
+    let help = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["depot", "skill", "--help"])
+        .output()
+        .expect("skill help");
+    assert!(help.status.success());
+    let text = String::from_utf8_lossy(&help.stdout);
+    assert!(text.contains("--from <FROM>"), "{text}");
+    assert!(!text.contains("--keep"), "{text}");
+
+    let missing = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["depot", "changelog", "--marker", "v1.2.3"])
+        .output()
+        .expect("missing source");
+    assert!(!missing.status.success());
+    assert!(String::from_utf8_lossy(&missing.stderr).contains("--from <FROM>"));
+}
+
+#[test]
 #[cfg(unix)]
 fn sync() {
     use std::os::unix::fs::PermissionsExt as _;
