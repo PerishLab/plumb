@@ -173,10 +173,19 @@ impl Authority {
 
     fn held(&self, route: &str, record: &Record) -> Result<(), String> {
         match self.control.read(route)? {
-            plumb::bucket::Outcome::Held(object) if Record::decode(&object.body)? == *record => {
-                Ok(())
+            plumb::bucket::Outcome::Held(object) => {
+                let mut held = Record::decode(&object.body)?;
+                let mut wanted = record.clone();
+                if route.starts_with("records/workload/") {
+                    held.proof = None;
+                    wanted.proof = None;
+                }
+                if held == wanted {
+                    Ok(())
+                } else {
+                    Err(format!("workflow record {route} drifted"))
+                }
             }
-            plumb::bucket::Outcome::Held(_) => Err(format!("workflow record {route} drifted")),
             _ => Err(format!("workflow record {route} vanished")),
         }
     }
