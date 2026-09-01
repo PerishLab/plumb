@@ -82,6 +82,17 @@ fn matrix() {
         held.contains(".forgejo/scripts/bootstrap-plumb.ps1"),
         "the canonical workflow should consume its Plumb-owned Windows bootstrap script"
     );
+    assert_eq!(
+        held.matches("bootstrap-plumb.sh .plumb-atom exact").count(),
+        4,
+        "every Unix job must install the exact atom configuration"
+    );
+    assert_eq!(
+        held.matches("bootstrap-plumb.ps1 .plumb-atom exact")
+            .count(),
+        1,
+        "the Windows workload must install the exact atom configuration"
+    );
     assert!(
         !held.contains("cargo build --quiet --locked --manifest-path"),
         "workflow orchestration must not duplicate atom bootstrap implementation"
