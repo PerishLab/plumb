@@ -1,5 +1,6 @@
 mod action;
 mod configuration;
+pub(crate) use configuration::related;
 pub(crate) mod hook;
 mod tree;
 

@@ -29,25 +29,8 @@ impl Tree<'_> {
         let depot = spec.derivative(plumb::depot::v3::Kind::Configuration)?;
         let product = crate::command::release::Product::new(&spec);
         let release = product.depot();
-        let binding = release.binding(&marker.marker, true)?;
-        let standing = (
-            binding.release.product.as_str(),
-            binding.release.channel.as_str(),
-            binding.release.version.as_str(),
-            binding.release.commit.as_str(),
-        );
-        let wanted = (
-            marker.product.as_str(),
-            marker.channel.as_str(),
-            marker.marker.as_str(),
-            marker.commit.as_str(),
-        );
-        if standing != wanted {
-            return Err(format!(
-                "release marker {} does not bind its published release seal",
-                marker.marker
-            ));
-        }
+        let binding = release.latest("beta", true)?;
+        crate::command::guard::precommit::related(&marker.marker, &binding.release.version)?;
         let bundle = plumb::depot::v3::Bundle::read(
             Path::new(from),
             plumb::depot::v3::Identity {

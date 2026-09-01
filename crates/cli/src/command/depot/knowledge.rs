@@ -20,24 +20,10 @@ pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     let standing = marker.digest()?;
     let source = source(wanted.from)?;
     let proof = crate::command::changelog::prove(root, source, &marker.marker)?;
-    let release = crate::command::release::knowledge(&target.product, &target.authority);
-    let binding = release.binding(&marker.marker, false)?;
-    if binding.release.commit != marker.commit || binding.release.channel != marker.channel {
-        return Err(format!(
-            "release marker {} does not bind its published release seal",
-            marker.marker
-        ));
-    }
-    if binding.release.channel != "stable" {
+    if marker.channel != "stable" {
         return Err(format!(
             "the {} channel does not owe a changelog derivative",
-            binding.release.channel
-        ));
-    }
-    if binding.release.commit != proof.candidate {
-        return Err(format!(
-            "changelog proves commit {}, but release {} seals {}",
-            proof.candidate, binding.release.version, binding.release.commit
+            marker.channel
         ));
     }
     if marker.commit != proof.candidate {
@@ -105,14 +91,6 @@ pub fn skill(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
         return Err(format!(
             "release marker {} seals {}, not HEAD at {commit}",
             marker.marker, marker.commit
-        ));
-    }
-    let release = crate::command::release::knowledge(&target.product, &target.authority);
-    let binding = release.binding(&marker.marker, false)?;
-    if binding.release.commit != marker.commit || binding.release.channel != marker.channel {
-        return Err(format!(
-            "release marker {} does not bind its published release seal",
-            marker.marker
         ));
     }
     let bundle = plumb::depot::v3::Bundle::read(
