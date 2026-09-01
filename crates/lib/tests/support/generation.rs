@@ -177,3 +177,94 @@ fn symbolic() {
             .contains("special object")
     );
 }
+
+#[test]
+fn brief() {
+    use std::io::{Read as _, Write as _};
+    use std::net::TcpListener;
+
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+    let source = format!("http://{}", listener.local_addr().expect("address"));
+    let media = tempfile::tempdir().expect("skill source");
+    std::fs::write(media.path().join("SKILL.md"), "# Probe\n").expect("skill");
+    let bundle = v3::Bundle::read(
+        media.path(),
+        v3::Identity {
+            product: "probe".into(),
+            channel: "stable".into(),
+            version: "v1.2.3".into(),
+            marker: v3::Marker {
+                name: "v1.2.3".into(),
+                sha256: "a".repeat(64),
+            },
+            kind: v3::Kind::Skill,
+        },
+    )
+    .expect("bundle");
+    let pointer = v3::Pointer::new(
+        &bundle.manifest,
+        v3::Publication {
+            source: &source,
+            prior: None,
+            created: "2026-09-01T01:02:03Z".into(),
+        },
+    )
+    .expect("pointer");
+    let latest = format!(
+        "/{}",
+        v3::latest(v3::Route::new("stable", v3::Kind::Skill, "v1.2.3")).expect("route")
+    );
+    let generation = pointer
+        .manifest
+        .url
+        .strip_prefix(&source)
+        .expect("manifest path")
+        .to_string();
+    let object = generation.replace(v3::LEAF, "objects/SKILL.md");
+    let responses = std::collections::BTreeMap::from([
+        (latest, pointer.encode().expect("pointer body")),
+        (generation, bundle.manifest.encode().expect("manifest body")),
+        (object, bundle.bodies["SKILL.md"].clone()),
+    ]);
+    std::thread::spawn(move || {
+        for stream in listener.incoming().take(3) {
+            let mut stream = stream.expect("stream");
+            let mut request = [0u8; 2048];
+            let size = stream.read(&mut request).expect("request");
+            let path = String::from_utf8_lossy(&request[..size])
+                .split_whitespace()
+                .nth(1)
+                .expect("request path")
+                .to_string();
+            let body = &responses[&path];
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            )
+            .expect("response head");
+            stream.write_all(body).expect("response body");
+        }
+    });
+    let root = tempfile::tempdir().expect("skill home");
+    std::fs::create_dir_all(root.path().join("home/.claude/skills")).expect("agent seat");
+    let kit = plumb::skill::Kit {
+        name: "probe".into(),
+        home: root.path().join("home"),
+        state: root.path().join("skills.json"),
+        url: "https://unused.example".into(),
+    };
+    let done = kit
+        .depot(&source, "probe", "v1.2.3")
+        .install(&plumb::skill::Ask {
+            channel: "stable".into(),
+            ..plumb::skill::Ask::default()
+        })
+        .expect("depot skill install");
+    assert_eq!(done.kept.len(), 1);
+    assert!(
+        root.path()
+            .join("home/.claude/skills/probe/SKILL.md")
+            .is_file()
+    );
+}

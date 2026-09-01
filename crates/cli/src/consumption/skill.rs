@@ -1,11 +1,11 @@
 use clap::Subcommand;
 use plumb::rig::Rig;
-use plumb::skill::{Action, Ask, Done, Kit, Report};
+use plumb::skill::{Action, Ask, Depot, Done, Kit, Report};
 use std::path::PathBuf;
 
 #[derive(Subcommand)]
 pub enum Deed {
-    #[command(about = "Install a released brief into every agent seat this machine carries")]
+    #[command(about = "Install this binary's marker-bound skill generation into every agent seat")]
     Install {
         #[arg(long, default_value = "stable")]
         channel: String,
@@ -16,7 +16,7 @@ pub enum Deed {
         #[arg(long)]
         force: bool,
     },
-    #[command(about = "Move installed briefs to the version the channel names")]
+    #[command(about = "Restore installed briefs to the generation this binary carries")]
     Upgrade {
         #[arg(long, default_value = "stable")]
         channel: String,
@@ -65,10 +65,11 @@ pub fn run(deed: Deed) -> i32 {
         state: PathBuf::from(&rig.home).join("state").join("skills.json"),
         url: rig.releases.clone(),
     };
-    act(&kit, deed)
+    let depot = kit.depot(&rig.rules.source, "plumb", plumb::version!("PLUMB"));
+    act(&depot, deed)
 }
 
-fn act(kit: &Kit, deed: Deed) -> i32 {
+fn act(kit: &Depot<'_>, deed: Deed) -> i32 {
     match deed {
         Deed::Install {
             channel,
@@ -134,7 +135,7 @@ fn act(kit: &Kit, deed: Deed) -> i32 {
     }
 }
 
-fn tell(kit: &Kit) -> i32 {
+fn tell(kit: &Depot<'_>) -> i32 {
     match kit.list() {
         Ok(records) => {
             for record in &records {

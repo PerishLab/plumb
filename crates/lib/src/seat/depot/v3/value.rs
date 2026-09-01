@@ -4,8 +4,15 @@ pub(super) struct Value<'a>(pub &'a str);
 
 impl Value<'_> {
     pub fn source(&self) -> Result<(), String> {
-        if !self.0.starts_with("https://") || self.0.len() <= "https://".len() {
-            return Err(format!("depot source must be an https URL: {}", self.0));
+        let secure = self.0.starts_with("https://") && self.0.len() > "https://".len();
+        let loopback = ["http://127.0.0.1:", "http://localhost:"]
+            .iter()
+            .any(|prefix| self.0.starts_with(prefix) && self.0.len() > prefix.len());
+        if !secure && !loopback {
+            return Err(format!(
+                "depot source must be an https or loopback HTTP URL: {}",
+                self.0
+            ));
         }
         Ok(())
     }
