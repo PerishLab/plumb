@@ -43,6 +43,8 @@ pub struct Inventory {
     pub(super) records: Vec<Record>,
     #[serde(skip)]
     pub(super) base: Option<String>,
+    #[serde(skip)]
+    pub(super) direct: Vec<Record>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -93,6 +95,7 @@ impl Inventory {
             schema: SCHEMA.to_string(),
             records: Vec::new(),
             base: None,
+            direct: Vec::new(),
         }
     }
 
@@ -181,6 +184,19 @@ impl Inventory {
         key: Match<'_>,
         proof: Option<&str>,
     ) -> Result<Option<&'a Record>, String> {
+        let mut direct = self
+            .direct
+            .iter()
+            .filter(|record| record.key() == key)
+            .filter(|record| proof.is_none() || record.proof.as_deref() == proof);
+        let exact = if proof.is_some() {
+            direct.next()
+        } else {
+            direct.next_back()
+        };
+        if exact.is_some() {
+            return Ok(exact);
+        }
         let mut found = self
             .records
             .iter()

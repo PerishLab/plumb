@@ -159,6 +159,7 @@ impl Inventory {
             schema: self.schema.clone(),
             records: self.records.clone(),
             base: None,
+            direct: Vec::new(),
         };
         let Some(base) = &self.base else {
             return Ok(held);
@@ -169,8 +170,8 @@ impl Inventory {
                 Ok(None) | Err(_) => continue,
             };
             let record = Record::decode(&body)?;
-            if !held.records.contains(&record) {
-                held.records.push(record);
+            if !held.direct.contains(&record) {
+                held.direct.push(record);
             }
         }
         Ok(held)
