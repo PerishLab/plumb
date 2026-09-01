@@ -81,7 +81,7 @@ jobs:
 
       - name: Install the exact atom Plumb
         shell: bash
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom
+        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact
 
       - name: Resolve missing workloads
         id: plan
@@ -127,12 +127,12 @@ jobs:
       - name: Install the exact atom Plumb
         if: matrix.control != 'reuse' && runner.os != 'Windows'
         shell: bash
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom
+        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact
 
       - name: Install the exact atom Plumb on Windows
         if: matrix.control != 'reuse' && runner.os == 'Windows'
         shell: pwsh
-        run: .plumb-atom/.forgejo/scripts/bootstrap-plumb.ps1 .plumb-atom
+        run: .plumb-atom/.forgejo/scripts/bootstrap-plumb.ps1 .plumb-atom exact
 
       - name: Add the requested Rust target
         if: matrix.control != 'reuse'
@@ -188,7 +188,7 @@ jobs:
 
       - name: Install the exact atom Plumb
         shell: bash
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom
+        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact
 
       - name: Resolve missing publications
         id: plan
@@ -249,7 +249,7 @@ jobs:
       - name: Install the exact atom Plumb
         if: matrix.control != 'reuse'
         shell: bash
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom
+        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact
 
       - name: Fetch the exact release marker
         if: matrix.control != 'reuse'
