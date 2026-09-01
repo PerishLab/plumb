@@ -88,7 +88,7 @@ impl Hooks<'_> {
 }
 
 fn carried(path: &str) -> Result<String, String> {
-    let body = crate::command::depot::held().read(path, "")?;
+    let body = plumb::depot::rules()?.read(path)?;
     if body.is_empty() {
         Err(format!("the active depot carries no {path}"))
     } else {

@@ -137,8 +137,9 @@ fn staged() {
     for name in ["pre-commit", "commit-msg"] {
         std::fs::remove_file(root.join(".git/hooks").join(name)).expect("remove projected hook");
     }
-    let home = super::super::support::depot(&[]);
-    let snapshot = stage(&home, &format!("v{}", env!("CARGO_PKG_VERSION")));
+    let source = super::super::support::depot(&[]);
+    let snapshot = stage(&source, &format!("v{}", env!("CARGO_PKG_VERSION")));
+    let home = tempfile::tempdir().expect("unrelated active depot home");
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("fixture")])
         .env_remove("PLUMB_RELEASE_VERSION")
@@ -153,6 +154,7 @@ fn staged() {
     );
     assert!(!out.contains("hook is absent"), "{out}");
     assert!(!out.contains("hooks/pre-commit is absent"), "{out}");
+    assert!(!out.contains("active depot carries no"), "{out}");
 }
 
 #[test]
