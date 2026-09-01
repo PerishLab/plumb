@@ -6,6 +6,12 @@ fn canonical() -> String {
         .expect("Plumb owns one canonical ship workflow")
 }
 
+fn bootstrap() -> String {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    std::fs::read_to_string(root.join(".forgejo/scripts/bootstrap-plumb.sh"))
+        .expect("Plumb owns one canonical bootstrap")
+}
+
 #[test]
 fn matrix() {
     let held = canonical();
@@ -94,6 +100,24 @@ fn opaque() {
     ] {
         assert!(!held.contains(leaked), "workflow leaks {leaked}: {held}");
     }
+}
+
+#[test]
+fn depot() {
+    let held = bootstrap();
+    let installed = held
+        .find("cp \"$atom/target/debug/plumb\" \"$tool\"")
+        .expect("exact Plumb install");
+    let synced = held.find("\"$tool\" depot sync").expect("depot sync");
+    assert_eq!(
+        held.matches("\"$tool\" depot sync").count(),
+        1,
+        "bootstrap should sync the depot once"
+    );
+    assert!(
+        installed < synced,
+        "the exact Plumb binary must select its own depot generation"
+    );
 }
 
 #[test]

@@ -18,8 +18,8 @@ else
   bin="$HOME/.local/bin"
 fi
 tool="$bin/plumb"
-"$tool" depot sync
 cargo build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
 cp "$atom/target/debug/plumb" "$tool"
 printf '%s\n' "$bin" >> "$GITHUB_PATH"
 "$tool" --version
+"$tool" depot sync
