@@ -26,7 +26,13 @@ tool="$bin/plumb"
 if [ "$mode" = bootstrap ]; then
   "$tool" depot sync
 fi
-cargo build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
+: "${PLUMB_RELEASE_VERSION:?PLUMB_RELEASE_VERSION is required}"
+: "${PLUMB_RELEASE_CHANNEL:?PLUMB_RELEASE_CHANNEL is required}"
+: "${PLUMB_RELEASE_COMMIT:?PLUMB_RELEASE_COMMIT is required}"
+PLUMB_BUILD_VERSION="$PLUMB_RELEASE_VERSION" \
+PLUMB_BUILD_CHANNEL="$PLUMB_RELEASE_CHANNEL" \
+PLUMB_BUILD_COMMIT="$PLUMB_RELEASE_COMMIT" \
+  cargo build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
 cp "$atom/target/debug/plumb" "$tool"
 printf '%s\n' "$bin" >> "$GITHUB_PATH"
 "$tool" --version
