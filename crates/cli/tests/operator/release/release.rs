@@ -31,8 +31,10 @@ fn authority(command: &mut Command, capsule: &Path, operation: &str) {
         .env(format!("PLUMB_{operation}_ACCESS"), "access")
         .env(format!("PLUMB_{operation}_SECRET"), "secret")
         .env(format!("PLUMB_{operation}_BUCKET"), "releases")
-        .env(format!("PLUMB_{operation}_ENDPOINT"), "https://s3.test")
-        .env("PLUMB_RELEASE_CAPSULE", capsule);
+        .env(format!("PLUMB_{operation}_ENDPOINT"), "https://s3.test");
+    if operation == "PUBLISH" {
+        command.env("PLUMB_RELEASE_CAPSULE", capsule);
+    }
 }
 
 #[test]

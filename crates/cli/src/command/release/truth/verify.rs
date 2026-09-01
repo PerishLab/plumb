@@ -24,14 +24,6 @@ pub fn published(capsule: &Capsule) -> Result<(), String> {
     Ok(())
 }
 
-pub fn consensus(capsule: &Capsule) -> Result<(), String> {
-    let pointer = capsule
-        .pointer
-        .as_ref()
-        .ok_or_else(|| "stable capsule has no pointer".to_string())?;
-    local(pointer)
-}
-
 pub fn projection(capsule: &Capsule) -> Result<(), String> {
     if capsule.channel != "stable" {
         return Err("only stable has an activated binary surface".into());
@@ -245,6 +237,19 @@ fn parse<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
 
 pub fn object(held: &Local) -> Result<(), String> {
     local(held)
+}
+
+pub fn describe(source: &str, name: &str, mime: &str) -> Result<Remote, String> {
+    let path = Surface(source).download(name)?;
+    let held = super::record::digest(&path).map(|(sha256, size)| Remote {
+        name: name.to_string(),
+        mime: mime.to_string(),
+        sha256,
+        size,
+        url: source.to_string(),
+    });
+    let _ = std::fs::remove_file(path);
+    held
 }
 
 fn local(object: &Local) -> Result<(), String> {
