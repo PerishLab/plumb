@@ -82,21 +82,26 @@ derivatives = ["changelog"]
 
 #[test]
 fn explicit() {
-    let help = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["depot", "skill", "--help"])
-        .output()
-        .expect("skill help");
-    assert!(help.status.success());
-    let text = String::from_utf8_lossy(&help.stdout);
-    assert!(text.contains("--from <FROM>"), "{text}");
-    assert!(!text.contains("--keep"), "{text}");
+    for kind in ["configuration", "skill", "changelog"] {
+        let help = Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["depot", kind, "--help"])
+            .output()
+            .expect("depot help");
+        assert!(help.status.success());
+        let text = String::from_utf8_lossy(&help.stdout);
+        assert!(text.contains("--from <FROM>"), "{kind}: {text}");
+        assert!(!text.contains("--keep"), "{kind}: {text}");
 
-    let missing = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["depot", "changelog", "--marker", "v1.2.3"])
-        .output()
-        .expect("missing source");
-    assert!(!missing.status.success());
-    assert!(String::from_utf8_lossy(&missing.stderr).contains("--from <FROM>"));
+        let missing = Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["depot", kind, "--marker", "v1.2.3"])
+            .output()
+            .expect("missing source");
+        assert!(!missing.status.success());
+        assert!(
+            String::from_utf8_lossy(&missing.stderr).contains("--from <FROM>"),
+            "{kind}"
+        );
+    }
 }
 
 #[test]

@@ -1,14 +1,13 @@
 use super::store;
 use crate::shape::depot as record;
 use plumb::rig::Rig;
-use plumb::snapshot::Snapshot;
 use std::path::Path;
 use std::process::Output;
 
 pub struct Tree<'a>(pub &'a Path);
 
 impl Tree<'_> {
-    pub fn publish(&self, raw: &str, dry: bool) -> Result<String, String> {
+    pub fn publish(&self, raw: &str, from: &str, dry: bool) -> Result<String, String> {
         let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
         let spec = crate::shape::release::Spec::read(&self.0.join("plumb.toml"))?;
         let marker = crate::command::release::ReleaseMarker::at(
@@ -18,35 +17,71 @@ impl Tree<'_> {
             raw,
         )?;
         let proof = marker.digest()?;
-        let commit = self.commit()?;
-        if marker.commit != commit {
+        if marker.commit != self.commit()? {
             return Err(format!(
-                "release marker {} seals {}, not HEAD at {commit}",
-                marker.marker, marker.commit
+                "release marker {} does not stand at HEAD",
+                marker.marker
             ));
+        }
+        if from.is_empty() {
+            return Err("configuration publication requires an explicit --from directory".into());
         }
         let depot = spec.derivative(plumb::depot::v2::Kind::Configuration)?;
         let product = crate::command::release::Product::new(&spec);
         let release = product.depot();
         let binding = release.binding(&marker.marker, true)?;
-        let snapshot = Snapshot::read(self.0).map_err(|error| error.to_string())?;
-        self.clean()?;
-        let plan = record::Batch::configuration(
-            &snapshot,
+        let standing = (
+            binding.release.product.as_str(),
+            binding.release.channel.as_str(),
+            binding.release.version.as_str(),
+            binding.release.commit.as_str(),
+        );
+        let wanted = (
+            marker.product.as_str(),
+            marker.channel.as_str(),
+            marker.marker.as_str(),
+            marker.commit.as_str(),
+        );
+        if standing != wanted {
+            return Err(format!(
+                "release marker {} does not bind its published release seal",
+                marker.marker
+            ));
+        }
+        let bundle = plumb::depot::v3::Bundle::read(
+            Path::new(from),
+            plumb::depot::v3::Identity {
+                product: marker.product.clone(),
+                channel: marker.channel.clone(),
+                version: marker.marker.clone(),
+                marker: plumb::depot::v3::Marker {
+                    name: marker.marker.clone(),
+                    sha256: proof.clone(),
+                },
+                kind: plumb::depot::v3::Kind::Configuration,
+            },
+        )?;
+        let plan = record::Batch::compatibility(
+            &bundle,
             record::Draft {
                 source: depot.source.clone(),
                 release: binding.release.clone(),
                 timestamp: super::super::clock::mark()?,
-                commit,
+                commit: marker.commit.clone(),
             },
         )?;
         crate::command::release::validate_depot(&spec, &binding, &plan)?;
         let held = (|| {
             if dry {
-                plan.manifest.encode()
+                String::from_utf8(bundle.manifest.encode()?)
+                    .map_err(|error| format!("depot manifest is not UTF-8: {error}"))
             } else {
                 rig.depot.authority.load()?;
-                store::Remote::new(&rig.depot.authority)?.derive(&plan, false)
+                store::Remote::new(&rig.depot.authority)?.publish(
+                    &bundle,
+                    &depot.source,
+                    super::super::clock::ahead(0)?,
+                )
             }
         })();
         let after = crate::command::release::ReleaseMarker::at(
@@ -122,30 +157,6 @@ impl Tree<'_> {
             ));
         }
         Ok(held)
-    }
-
-    fn clean(&self) -> Result<(), String> {
-        let mut args = vec!["status", "--porcelain", "--"];
-        let roots = record::configuration(self.0)?;
-        for (root, _) in &roots {
-            args.push(root);
-        }
-        let output = self.git(&args)?;
-        if !output.status.success() {
-            return Err(format!(
-                "cannot read the working tree: {}",
-                String::from_utf8_lossy(&output.stderr).trim()
-            ));
-        }
-        let dirty = String::from_utf8_lossy(&output.stdout);
-        if dirty.trim().is_empty() {
-            Ok(())
-        } else {
-            Err(format!(
-                "depot roots carry uncommitted change:\n{}",
-                dirty.trim()
-            ))
-        }
     }
 
     pub fn commit(&self) -> Result<String, String> {

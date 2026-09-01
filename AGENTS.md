@@ -94,10 +94,10 @@ answers for.
   A marker-exact configuration generation validates against the marker's
   published binary. It moves no channel pointer; depot consensus advances only
   after the immutable publication it consumes reads back.
-  Changelog and skill source trees are caller-owned temporary media passed
-  explicitly, never repository or `PLUMB_HOME` seats. Products consume a skill
-  through their own command surface while delegating its exact generation and
-  digest binding to `plumb` the library.
+  Configuration, changelog, and skill source trees are caller-owned temporary
+  media passed explicitly, never repository or `PLUMB_HOME` seats. Products
+  consume a skill through their own command surface while delegating its exact
+  generation and digest binding to `plumb` the library.
 - This repository carries the one canonical `ship.yml` atom. Its only execution
   classes are reusable workload and marker-bound publication requests. Product
   repositories dispatch its exact Plumb-owned revision and carry neither a

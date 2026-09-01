@@ -73,12 +73,14 @@ pub fn held() -> Held {
 
 #[derive(Subcommand)]
 pub enum Deed {
-    #[command(about = "Publish a Release-bound configuration snapshot after exact validation")]
+    #[command(about = "Publish a configuration generation after marker-exact validation")]
     Configuration {
         #[arg(default_value = ".")]
         root: String,
         #[arg(long)]
         marker: String,
+        #[arg(long)]
+        from: String,
         #[arg(long = "dry-run")]
         dry: bool,
     },
@@ -148,9 +150,12 @@ fn execute(deed: Deed) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let over = PathBuf::new();
     match deed {
-        Deed::Configuration { root, marker, dry } => {
-            configuration::Tree(&PathBuf::from(root)).publish(&marker, dry)
-        }
+        Deed::Configuration {
+            root,
+            marker,
+            from,
+            dry,
+        } => configuration::Tree(&PathBuf::from(root)).publish(&marker, &from, dry),
         Deed::Channel { marker } => projection::project(&marker, projection::Kind::Channel),
         Deed::Managers { marker } => projection::project(&marker, projection::Kind::Managers),
         Deed::Worker { marker, request } => projection::worker(&marker, &request),
