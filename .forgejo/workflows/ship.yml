@@ -421,6 +421,12 @@ jobs:
           Copy-Item (Join-Path $root 'target/debug/plumb.exe') $tool -Force
           & $tool --version
 
+      - name: Fetch the exact release marker
+        shell: bash
+        env:
+          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+        run: bash "$RUNNER_TEMP/plumb-atom/.forgejo/scripts/fetch-marker.sh" "$PLUMB_RELEASE_MARKER"
+
       - name: Fetch the derived promotion proof and its binary artifacts
         if: needs.resolve.outputs.channel == 'stable'
         env:
@@ -532,6 +538,12 @@ jobs:
       - name: Install the exact atom Plumb
         shell: bash
         run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom
+
+      - name: Fetch the exact release marker
+        shell: bash
+        env:
+          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+        run: bash .plumb-atom/.forgejo/scripts/fetch-marker.sh "${{ inputs.marker }}"
 
       - uses: actions/download-artifact@v3
         with:
@@ -872,6 +884,12 @@ jobs:
       - name: Install the exact atom Plumb
         shell: bash
         run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom
+
+      - name: Fetch the exact release marker
+        shell: bash
+        env:
+          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+        run: bash .plumb-atom/.forgejo/scripts/fetch-marker.sh "${{ inputs.marker }}"
 
       - uses: actions/download-artifact@v3
         with:
