@@ -62,6 +62,9 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     } else {
         opened(&mut course, &client, &name, from)?
     };
+    if !course.dry() {
+        git::fetch(&root)?;
+    }
     let head = course
         .step(super::version::plan(&version, &name), || {
             super::version::project(&root, &name, &version, &head)
