@@ -126,6 +126,12 @@ impl Request {
                 return result("workload", "", None);
             }
             Operation::Publication { workloads } => {
+                let bucket = format!("perish-{}-releases", spec.product);
+                if rig.publish.bucket != bucket {
+                    return Err(format!(
+                        "release publish authority must target derived bucket {bucket}"
+                    ));
+                }
                 let artifacts = artifacts(release)?;
                 if release.channel == "stable" {
                     crate::command::release::Product::new(&spec).promote(release)?;
