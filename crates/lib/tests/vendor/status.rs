@@ -71,6 +71,19 @@ fn graph() {
         Outcome::Waiting
     );
     assert_eq!(
+        graph(&[json!({
+            "name": "publication (incomplete matrix)",
+            "status": "blocked"
+        })])
+        .expect("expanding matrix"),
+        Outcome::Waiting
+    );
+    assert!(matches!(
+        graph(&[json!({ "name": "build", "status": "blocked" })])
+            .expect("blocked graph"),
+        Outcome::Failed { status, tasks } if status == "failed" && tasks == ["build"]
+    ));
+    assert_eq!(
         graph(&[task("success"), task("skipped")]).expect("settled graph"),
         Outcome::Success
     );

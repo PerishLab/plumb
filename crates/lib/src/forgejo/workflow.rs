@@ -130,9 +130,12 @@ pub fn graph(tasks: &[Value]) -> Result<Outcome, String> {
 
 fn flight(tasks: &[Value]) -> bool {
     tasks.iter().any(|task| {
-        matches!(
-            task.get("status").and_then(Value::as_str),
-            Some("unknown" | "waiting" | "running")
-        )
+        let status = task.get("status").and_then(Value::as_str);
+        matches!(status, Some("unknown" | "waiting" | "running"))
+            || status == Some("blocked")
+                && task
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .is_some_and(|name| name.ends_with(" (incomplete matrix)"))
     })
 }
