@@ -10,6 +10,7 @@ impl Context {
             Action::Bucket => self.bucket(),
             Action::Domain => self.domain(),
             Action::Capability => self.capability(),
+            Action::Recovery => self.recovery(),
             Action::Repository => self.repository(),
         }
     }
@@ -86,10 +87,66 @@ impl Context {
         Ok(())
     }
 
+    fn recovery(&self) -> Result<(), String> {
+        let writers = self
+            .factory
+            .held()?
+            .into_iter()
+            .filter(|token| token.name == self.model.writer())
+            .map(|token| token.id)
+            .collect::<Vec<_>>();
+        let seat = super::escrow::Seat::new(&self.model.escrow);
+        if let Some(held) = seat.load()?
+            && writers.iter().any(|id| id == &held.access)
+        {
+            held.exact(&self.model.bucket, self.factory.id())?;
+            held.verify()?;
+            self.store(&held)?;
+            return self.prune(&writers, &held.access);
+        }
+
+        let permission = self.factory.permission(ITEM.0, ITEM.1)?;
+        let minted = self.factory.create(&Grant {
+            name: self.model.writer(),
+            permission,
+            resource: format!(
+                "com.cloudflare.edge.r2.bucket.{}_default_{}",
+                self.factory.id(),
+                self.model.bucket
+            ),
+            expires: String::new(),
+        })?;
+        let held = Escrow::minted(
+            minted.id.clone(),
+            minted.value(),
+            self.model.bucket.clone(),
+            self.factory.id(),
+        );
+        if let Err(error) = held.verify().and_then(|()| seat.replace(&held)) {
+            return match self.factory.revoke(&minted.id) {
+                Ok(()) => Err(error),
+                Err(revoke) => Err(format!("{error}; writer rollback also failed: {revoke}")),
+            };
+        }
+        self.store(&held)?;
+        self.prune(&writers, &held.access)
+    }
+
+    fn prune(&self, writers: &[String], retained: &str) -> Result<(), String> {
+        for id in writers.iter().filter(|id| id.as_str() != retained) {
+            self.factory.revoke(id)?;
+        }
+        Ok(())
+    }
+
     fn repository(&self) -> Result<(), String> {
         let held = super::escrow::Seat::new(&self.model.escrow)
             .load()?
             .ok_or_else(|| "release escrow disappeared after planning".to_string())?;
+        self.store(&held)
+    }
+
+    fn store(&self, held: &Escrow) -> Result<(), String> {
         held.exact(&self.model.bucket, self.factory.id())?;
         let client = Client::new(self.model.remote.clone())?;
         let inventory = self.model.inventory();

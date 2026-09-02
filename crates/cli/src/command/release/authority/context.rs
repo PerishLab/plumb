@@ -33,15 +33,17 @@ impl Context {
         let writers = held
             .iter()
             .filter(|token| token.name == self.model.writer())
+            .map(|token| token.id.clone())
             .collect::<Vec<_>>();
         let capability = match writers.as_slice() {
             [] => None,
-            [token] => Some(token.id.clone()),
+            [token] => Some(token.clone()),
+            _ if self.model.recovery => None,
             _ => return Err(format!("duplicate writer {}", self.model.writer())),
         };
         let seat = super::escrow::Seat::new(&self.model.escrow);
         let escrow = seat.load()?;
-        self.writer(capability.as_deref(), escrow.as_ref())?;
+        let recovery = self.writer(&writers, escrow.as_ref())?;
         let (bucket, domain) = self.session(|bucket| {
             let live = bucket.live()?;
             let domain = if live {
@@ -68,24 +70,37 @@ impl Context {
             bucket,
             domain,
             capability,
+            recovery,
             escrow: escrow.as_ref().map(Escrow::view),
             secrets,
         })
     }
 
-    fn writer(&self, id: Option<&str>, held: Option<&Escrow>) -> Result<(), String> {
-        match (id, held) {
-            (None, None) => Ok(()),
-            (Some(id), Some(held)) if id == held.access => {
+    fn writer(&self, writers: &[String], held: Option<&Escrow>) -> Result<bool, String> {
+        if self.model.recovery {
+            if let Some(held) = held
+                && writers.iter().any(|id| id == &held.access)
+            {
                 held.exact(&self.model.bucket, self.factory.id())?;
-                held.verify()
+                held.verify()?;
+                return Ok(writers.len() != 1);
             }
-            (Some(_), None) => Err(format!(
+            return Ok(!writers.is_empty() || held.is_some());
+        }
+        match (writers, held) {
+            ([], None) => Ok(false),
+            ([id], Some(held)) if id == &held.access => {
+                held.exact(&self.model.bucket, self.factory.id())?;
+                held.verify()?;
+                Ok(false)
+            }
+            ([_], None) => Err(format!(
                 "writer exists but {} cannot recover its one-time secret",
                 self.model.escrow.display()
             )),
-            (None, Some(_)) => Err("release escrow names a missing writer".into()),
-            (Some(_), Some(_)) => Err("writer and release escrow disagree".into()),
+            ([], Some(_)) => Err("release escrow names a missing writer".into()),
+            ([_], Some(_)) => Err("writer and release escrow disagree".into()),
+            _ => Err(format!("duplicate writer {}", self.model.writer())),
         }
     }
 

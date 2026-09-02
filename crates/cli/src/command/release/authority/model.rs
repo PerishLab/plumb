@@ -16,6 +16,11 @@ pub struct Release {
     zone: String,
     #[arg(long, help = "Mode-0600 seat for the writer's one-time secret")]
     escrow: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "Recover a missing or inconsistent writer escrow before converging"
+    )]
+    recovery: bool,
     #[arg(long, help = "Apply the ordered plan until every resource is ready")]
     pub(super) apply: bool,
     #[arg(long)]
@@ -46,6 +51,11 @@ pub struct Workflow {
     zone: String,
     #[arg(long, help = "Mode-0600 seat for the writer's one-time secret")]
     escrow: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "Recover a missing or inconsistent writer escrow before converging"
+    )]
+    recovery: bool,
     #[arg(long, help = "Apply the ordered plan until every resource is ready")]
     pub(super) apply: bool,
     #[arg(long)]
@@ -83,6 +93,7 @@ pub(super) struct Model {
     pub escrow: PathBuf,
     pub remote: Remote,
     pub scope: Scope,
+    pub recovery: bool,
 }
 
 impl Model {
@@ -119,6 +130,7 @@ impl Model {
             escrow,
             remote,
             scope: Scope::Repository,
+            recovery: input.recovery,
         })
     }
 
@@ -158,6 +170,7 @@ impl Model {
             escrow,
             remote,
             scope,
+            recovery: input.recovery,
         })
     }
 
