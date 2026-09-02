@@ -59,6 +59,10 @@ fn matrix() {
     assert!(held.contains("\n  workload:\n"), "{held}");
     assert!(held.contains("\n  publish_plan:\n"), "{held}");
     assert!(held.contains("\n  publication:\n"), "{held}");
+    assert!(
+        held.contains("repository: ${{ inputs.repository }}\n          ref: ${{ inputs.marker }}"),
+        "publication planning must retain the marker ref for exact verification"
+    );
     for foreign in [
         "\n  seal:\n",
         "\n  configuration:\n",
