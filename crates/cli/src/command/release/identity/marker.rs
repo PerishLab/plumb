@@ -194,14 +194,14 @@ impl Seat {
     }
 
     fn stood(&self, marker: &str, line: &str, commit: &str) -> Result<(), String> {
-        let head = self.read(["rev-parse", line])?;
-        if head == commit {
-            Ok(())
-        } else {
-            Err(format!(
-                "release marker {marker} stands at {commit}, not {line} at {head}"
-            ))
+        let carried = command(&self.root, ["merge-base", "--is-ancestor", commit, line])?;
+        if carried.status.success() {
+            return Ok(());
         }
+        let head = self.read(["rev-parse", line])?;
+        Err(format!(
+            "release marker {marker} at {commit} is not carried by {line} at {head}"
+        ))
     }
 
     fn datum(&self, version: &str, commit: &str) -> Result<Datum, String> {

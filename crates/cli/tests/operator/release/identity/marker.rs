@@ -83,6 +83,14 @@ fn exact() {
         "-qm",
         "move past marker",
     ]));
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "push",
+        "-q",
+        "origin",
+        "HEAD:refs/heads/release/v1.2.0",
+    ]));
+    let verified = marker(&fixture, "verify", "v1.2.0-beta.1");
+    assert!(verified.status.success());
     let depot = fixture
         .command()
         .current_dir(fixture.root)
