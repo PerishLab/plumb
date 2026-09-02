@@ -176,6 +176,21 @@ pub fn binary() -> Option<PathBuf> {
     std::env::current_exe().ok()
 }
 
+pub fn current(program: impl AsRef<OsStr>) -> Command {
+    let mut command = Command::new(program);
+    let Some(parent) = binary().and_then(|path| path.parent().map(Path::to_path_buf)) else {
+        return command;
+    };
+    let mut paths = vec![parent];
+    if let Some(path) = std::env::var_os("PATH") {
+        paths.extend(std::env::split_paths(&path));
+    }
+    if let Ok(path) = std::env::join_paths(paths) {
+        command.env("PATH", path);
+    }
+    command
+}
+
 pub fn detached(program: impl AsRef<OsStr>) -> Command {
     let mut command = Command::new(program);
     for key in [

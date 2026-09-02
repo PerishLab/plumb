@@ -2,7 +2,7 @@ use std::path::Path;
 use std::process::Command;
 
 #[path = "../../support.rs"]
-mod support;
+pub(super) mod support;
 
 fn forge(root: &Path) -> Option<String> {
     let output = Command::new("git")
