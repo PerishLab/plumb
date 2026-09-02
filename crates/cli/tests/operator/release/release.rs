@@ -82,6 +82,7 @@ fn cycle() {
     run(fixture
         .command()
         .args(["ship", "promote"])
+        .env("PLUMB_RELEASE_CHANNEL", "stable")
         .env("PLUMB_RELEASE_COMMIT", &candidate)
         .env("PLUMB_RELEASE_VERSION", "v1.2.0")
         .env("PLUMB_RELEASE_PROMOTION", &proof));

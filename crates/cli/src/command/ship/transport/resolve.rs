@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 use std::path::Path;
 
 use super::support::{
-    Contract, Inventory, carry, contract, object, projection, sources, strings, text,
+    Contract, Inventory, carry, contract, idle, matrix, object, projection, sources, strings, text,
 };
 
 pub fn run(raw: &str, atom: &str) -> Result<String, String> {
@@ -104,6 +104,7 @@ fn workloads(
                 projections: &[projection.as_str()],
                 roots: &listed,
                 runner,
+                workload: Some(&marker.version),
                 release: Some(&marker.version),
                 target: Some(triple),
             },
@@ -181,6 +182,7 @@ impl Publish<'_> {
                 projections: &[projection.as_str()],
                 roots: &listed,
                 runner: "docker",
+                workload: Some(&self.marker.version),
                 release: Some(&self.marker.version),
                 target: Some(&self.marker.commit),
             },
@@ -218,6 +220,8 @@ impl Publish<'_> {
                     projections: &projections,
                     roots: &roots,
                     runner: "docker",
+                    workload: (binding != Contract::Portable)
+                        .then_some(self.marker.version.as_str()),
                     release: (binding != Contract::Portable)
                         .then_some(self.marker.version.as_str()),
                     target: (binding == Contract::Exact).then_some(self.marker.commit.as_str()),
@@ -239,23 +243,12 @@ impl Publish<'_> {
     }
 }
 
-fn matrix(include: Vec<Value>) -> Value {
-    if include.is_empty() {
-        idle()
-    } else {
-        json!({ "include": include })
-    }
-}
-
-fn idle() -> Value {
-    json!({ "include": [{ "runner": "docker", "control": "reuse" }] })
-}
-
 struct Plan<'a> {
     action: &'a str,
     projections: &'a [&'a str],
     roots: &'a [&'a str],
     runner: &'a str,
+    workload: Option<&'a str>,
     release: Option<&'a str>,
     target: Option<&'a str>,
 }
@@ -268,9 +261,14 @@ fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String> {
     if let Some(target) = plan.target {
         fields.push(format!("target={target}"));
     }
+    let workload = plan
+        .workload
+        .map(|value| vec![format!("release={value}")])
+        .unwrap_or_default();
     let graph = crate::command::workflow::plan::derive(crate::command::workflow::plan::Input {
         base: None,
         world: fields,
+        workload,
         identity: vec![format!("marker={}", world.marker)],
         project: plan
             .projections

@@ -149,6 +149,18 @@ pub(super) fn object(value: &Value) -> Result<Map<String, Value>, String> {
         .ok_or_else(|| "ship plan row is not an object".to_string())
 }
 
+pub(super) fn matrix(include: Vec<Value>) -> Value {
+    if include.is_empty() {
+        idle()
+    } else {
+        serde_json::json!({ "include": include })
+    }
+}
+
+pub(super) fn idle() -> Value {
+    serde_json::json!({ "include": [{ "runner": "docker", "control": "reuse" }] })
+}
+
 pub(super) fn carry(request: &mut Map<String, Value>, workloads: &[Value]) -> Result<(), String> {
     request
         .get_mut("operation")

@@ -13,6 +13,8 @@ pub struct Input {
     pub(in crate::command) base: Option<String>,
     #[arg(long = "world")]
     pub(in crate::command) world: Vec<String>,
+    #[arg(long = "workload")]
+    pub(in crate::command) workload: Vec<String>,
     #[arg(long = "identity")]
     pub(in crate::command) identity: Vec<String>,
     #[arg(long = "project")]
@@ -63,6 +65,7 @@ fn render(root: &Path, input: &Input) -> Result<String, String> {
         return Err(format!("base {}: {error}", base.unwrap_or_default()));
     }
     let world = fields("world", &input.world)?;
+    let workload = fields("workload", &input.workload)?;
     let publication = fields("identity", &input.identity)?;
     let projects = tree::Projects::parse(&input.project)?;
     let roots = roots(&input.roots)?;
@@ -88,7 +91,7 @@ fn render(root: &Path, input: &Input) -> Result<String, String> {
     }
     let base = base.map(|base| git.revision(base)).transpose()?;
     let head = git.revision("HEAD")?;
-    let context = reuse::Context::new(&world, &publication);
+    let context = reuse::Context::new(&workload, &world, &publication);
     let actions: Vec<Action> = current
         .keys
         .iter()

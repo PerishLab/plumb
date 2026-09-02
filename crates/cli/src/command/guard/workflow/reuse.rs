@@ -23,6 +23,7 @@ pub struct Source {
 }
 
 pub struct Context<'a> {
+    workload: &'a BTreeMap<String, String>,
     world: &'a BTreeMap<String, String>,
     identity: &'a BTreeMap<String, String>,
 }
@@ -71,18 +72,24 @@ struct Match<'a> {
 
 impl<'a> Context<'a> {
     pub fn new(
+        workload: &'a BTreeMap<String, String>,
         world: &'a BTreeMap<String, String>,
         identity: &'a BTreeMap<String, String>,
     ) -> Self {
-        Self { world, identity }
+        Self {
+            workload,
+            world,
+            identity,
+        }
     }
 
     pub fn keys(&self, action: &str, workload: &str) -> Keys {
-        let proof = digest(action, workload, self.world);
+        let workload = digest(action, workload, self.workload);
+        let proof = digest(action, &workload, self.world);
         let publication =
             (!self.identity.is_empty()).then(|| digest(action, &proof, self.identity));
         Keys {
-            workload: workload.to_string(),
+            workload,
             proof,
             publication,
         }

@@ -67,6 +67,19 @@ impl Seat {
     }
 
     pub fn remote(&self, input: Plan<'_>, inventory: Option<&str>) -> (String, bool) {
+        self.invoke(input, inventory, &[])
+    }
+
+    pub fn workload(&self, input: Plan<'_>, workload: &[&str]) -> (String, bool) {
+        self.invoke(input, None, workload)
+    }
+
+    fn invoke(
+        &self,
+        input: Plan<'_>,
+        inventory: Option<&str>,
+        workload: &[&str],
+    ) -> (String, bool) {
         let mut args = vec!["workflow", "plan"];
         if let Some(base) = input.base {
             args.push("--base");
@@ -74,6 +87,10 @@ impl Seat {
         }
         for entry in input.world {
             args.push("--world");
+            args.push(entry);
+        }
+        for entry in workload {
+            args.push("--workload");
             args.push(entry);
         }
         for entry in input.identity {

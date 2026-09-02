@@ -42,6 +42,10 @@ impl<'a> Product<'a> {
     }
 
     pub fn promote(&self, release: &plumb::rig::Release) -> Result<String, String> {
+        let channel = required("PLUMB_RELEASE_CHANNEL", &release.channel)?;
+        if channel != "stable" {
+            return Ok(format!("{channel} carries no promotion proof"));
+        }
         promotion::Promotion::new(self.0).fetch(
             required("PLUMB_RELEASE_COMMIT", &release.commit)?,
             required("PLUMB_RELEASE_VERSION", &release.version)?,
@@ -49,7 +53,6 @@ impl<'a> Product<'a> {
                 .promotion
                 .as_deref()
                 .ok_or_else(|| "PLUMB_RELEASE_PROMOTION is required".to_string())?,
-            &artifacts(release)?,
         )
     }
 

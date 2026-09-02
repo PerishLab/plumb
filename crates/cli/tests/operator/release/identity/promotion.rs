@@ -6,6 +6,7 @@ fn promote(fixture: &Fixture<'_>, commit: &str, proof: &Path, artifacts: &Path) 
     fixture
         .command()
         .args(["ship", "promote"])
+        .env("PLUMB_RELEASE_CHANNEL", "stable")
         .env("PLUMB_RELEASE_COMMIT", commit)
         .env("PLUMB_RELEASE_VERSION", "v1.2.0")
         .env("PLUMB_RELEASE_PROMOTION", proof)
@@ -48,14 +49,12 @@ fn derived() {
     assert!(many.status.success(), "{latest}");
     assert!(latest.contains("v1.2.0-beta.8"), "{latest}");
     assert!(proof.exists(), "{latest}");
-    assert_eq!(
-        std::fs::read(artifacts.join("probe-x86_64-unknown-linux-gnu.tar.gz"))
-            .expect("promoted artifact"),
-        b"promoted binary"
+    assert!(
+        !artifacts.exists(),
+        "promotion audits its source artifacts without projecting them"
     );
 
     std::fs::remove_file(&proof).expect("proof should clear");
-    std::fs::remove_dir_all(&artifacts).expect("artifacts should clear");
     for exact in ["v1.2.0-beta.9", "v1.2.0-beta.10"] {
         fixture.tag(exact);
         fixture.seal(exact);

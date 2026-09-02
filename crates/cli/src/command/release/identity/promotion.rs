@@ -24,13 +24,7 @@ impl<'a> Promotion<'a> {
         derive(&self.spec.root, &self.spec.authority, commit, version)
     }
 
-    pub fn fetch(
-        &self,
-        commit: &str,
-        version: &str,
-        output: &Path,
-        artifacts: &Path,
-    ) -> Result<String, String> {
+    pub fn fetch(&self, commit: &str, version: &str, output: &Path) -> Result<String, String> {
         let exact = self.derive(commit, version)?;
         if output.exists() {
             return Err(format!(
@@ -85,12 +79,14 @@ impl<'a> Promotion<'a> {
                 ));
             }
         };
-        if let Err(error) = self.materialize(&seal, artifacts) {
+        let audit = tempfile::tempdir()
+            .map_err(|error| format!("cannot open a promotion audit seat: {error}"))?;
+        if let Err(error) = self.materialize(&seal, &audit.path().join("artifacts")) {
             let _ = std::fs::remove_file(output);
             return Err(error);
         }
         Ok(format!(
-            "fetched promotion proof {} {} and {} binary artifacts",
+            "fetched and audited promotion proof {} {} with {} binary artifacts",
             exact.channel,
             exact.version,
             self.spec.target.len()

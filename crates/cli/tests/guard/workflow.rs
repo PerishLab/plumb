@@ -4,6 +4,8 @@ mod action;
 mod control;
 #[path = "workflow/fixture.rs"]
 mod fixture;
+#[path = "workflow/identity.rs"]
+mod identity;
 #[path = "workflow/plan.rs"]
 mod plan;
 #[path = "workflow/projection.rs"]

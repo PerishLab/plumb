@@ -128,6 +128,7 @@ impl Request {
             }
             Operation::Publication { workloads } => {
                 super::support::authority(&rig.publish, &spec.product)?;
+                crate::command::release::Product::new(&spec).promote(release)?;
                 let artifacts = artifacts(release)?;
                 materialize(&artifacts, &workloads)?;
                 super::super::package::product(&spec).assemble(version, &artifacts)?;
