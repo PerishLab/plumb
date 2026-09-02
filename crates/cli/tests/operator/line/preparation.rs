@@ -57,6 +57,7 @@ fn controller() {
 }
 
 pub fn provenance(root: &Path, cut: PathBuf) {
+    guarded(root, &cut);
     let (forge, _) = serve(Court::Freeze(cut.clone()), 1);
     run(Command::new("git")
         .args(["config", "plumb.test-forgejo-url", &forge])
@@ -101,4 +102,63 @@ pub fn provenance(root: &Path, cut: PathBuf) {
         &["version", "freeze", "--version", "1.2.0", "--dry-run"],
     );
     assert!(String::from_utf8_lossy(&refused.stderr).contains("without cherry-pick -x provenance"));
+}
+
+fn guarded(root: &Path, cut: &Path) {
+    run(Command::new("git")
+        .args(["fetch", "origin", "release/v1.2.0"])
+        .current_dir(root));
+    let head = text(root, &["rev-parse", "origin/release/v1.2.0"]);
+    let prepared = text(root, &["rev-parse", &format!("{head}^")]);
+    let base = text(root, &["rev-parse", &format!("{prepared}^")]);
+    let tree = text(root, &["rev-parse", &format!("{prepared}^{{tree}}")]);
+    let prepared = text(
+        root,
+        &[
+            "commit-tree",
+            &tree,
+            "-p",
+            &base,
+            "-m",
+            "Prepare v1.2.0\n\nPlumb-Guard-Proof: exact",
+        ],
+    );
+    let tree = text(root, &["rev-parse", &format!("{head}^{{tree}}")]);
+    let head = text(
+        root,
+        &[
+            "commit-tree",
+            &tree,
+            "-p",
+            &prepared,
+            "-m",
+            "Record the datum v1.2.0 judges against",
+        ],
+    );
+    run(Command::new("git")
+        .args([
+            "push",
+            "--force",
+            "origin",
+            &format!("{head}:refs/heads/release/v1.2.0"),
+        ])
+        .current_dir(root));
+    run(Command::new("git")
+        .args(["update-ref", "refs/remotes/origin/release/v1.2.0", &head])
+        .current_dir(root));
+    std::fs::write(cut, head).expect("guarded cut");
+}
+
+fn text(root: &Path, args: &[&str]) -> String {
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(root)
+        .output()
+        .expect("git");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout).trim().to_string()
 }
