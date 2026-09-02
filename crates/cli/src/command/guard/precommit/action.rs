@@ -57,9 +57,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         for check in pending {
             eprintln!("guard {}", check.proof.name);
             for command in &check.commands {
-                let seat = (check.proof.name == "guard/plumb")
-                    .then(|| configuration.as_ref().map(|held| held.path()))
-                    .flatten();
+                let seat = configuration.as_ref().map(|held| held.path());
                 tree::execute(&index.root, command, seat)?;
             }
             cache(&check.proof)?;
