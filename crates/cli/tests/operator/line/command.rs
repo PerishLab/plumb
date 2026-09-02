@@ -37,6 +37,23 @@ pub fn plumb(root: &Path, args: &[&str]) -> Command {
 }
 
 #[test]
+fn control() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let home = support::guard(&[], "v9.9.9");
+    let output = plumb(
+        fixture.path(),
+        &["version", "prepare", "--version", "v1.0.0", "--dry-run"],
+    )
+    .env("PLUMB_HOME", home.path())
+    .output()
+    .expect("plumb");
+    assert!(!output.status.success());
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(!error.contains("cannot read installed rules"), "{error}");
+    assert!(error.contains("plumb version:"), "{error}");
+}
+
+#[test]
 fn scoped() {
     let fixture = tempfile::tempdir().expect("fixture");
     let bare = tempfile::tempdir().expect("bare");
