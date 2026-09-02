@@ -131,7 +131,7 @@ impl Tree {
     }
 
     fn git<const N: usize>(&self, args: [&str; N]) -> Result<Output, std::io::Error> {
-        Command::new("git")
+        plumb::config::current("git")
             .arg("-C")
             .arg(&self.seat)
             .args(args)

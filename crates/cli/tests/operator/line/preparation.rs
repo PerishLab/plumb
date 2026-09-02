@@ -1,7 +1,60 @@
+use super::command::support;
+use super::datum::lined;
 use super::stable::{command, run};
 use super::world::{Court, serve};
+use std::env;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+#[test]
+fn controller() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let bare = tempfile::tempdir().expect("bare");
+    let home = support::depot(&[]);
+    let root = fixture.path();
+    let cut = root.join("cut");
+    let (url, _) = serve(Court::Prepare(true, cut.clone()), 7);
+    let origin = format!("{url}/test/probe.git");
+    let head = lined(root, &origin, bare.path(), "release/v1.2.0");
+    std::fs::write(&cut, &head).expect("cut");
+
+    let hooks = root.join(".git/hooks");
+    std::fs::create_dir_all(&hooks).expect("hooks");
+    let hook = hooks.join("pre-commit");
+    std::fs::write(&hook, "#!/bin/sh\nexec plumb --version\n").expect("hook");
+    let mut mode = std::fs::metadata(&hook)
+        .expect("hook metadata")
+        .permissions();
+    mode.set_mode(0o755);
+    std::fs::set_permissions(&hook, mode).expect("executable hook");
+
+    let stale = root.join("stale-bin");
+    std::fs::create_dir(&stale).expect("stale bin");
+    let binary = stale.join("plumb");
+    std::fs::write(&binary, "#!/bin/sh\nexit 93\n").expect("stale plumb");
+    let mut mode = std::fs::metadata(&binary)
+        .expect("stale metadata")
+        .permissions();
+    mode.set_mode(0o755);
+    std::fs::set_permissions(&binary, mode).expect("executable stale plumb");
+    let path = env::join_paths(
+        std::iter::once(stale).chain(env::split_paths(&env::var_os("PATH").unwrap_or_default())),
+    )
+    .expect("PATH");
+
+    let output = super::command::plumb(root, &["version", "prepare", "--version", "1.2.0"])
+        .env("PATH", path)
+        .env("PLUMB_HOME", home.path())
+        .env_remove("PLUMB_GUARD_CONFIGURATION")
+        .output()
+        .expect("plumb");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
 
 pub fn provenance(root: &Path, cut: PathBuf) {
     let (forge, _) = serve(Court::Freeze(cut.clone()), 1);
