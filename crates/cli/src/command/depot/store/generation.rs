@@ -18,11 +18,14 @@ impl Remote<'_> {
         self.create(&format!("{base}/{}", plumb::depot::v3::LEAF), &body)?;
         let key = plumb::depot::v3::latest(route)?;
         let standing = self.pointer(&key)?;
+        let prior = standing
+            .as_ref()
+            .and_then(|(_, pointer)| pointer.projects(held).then(|| pointer.generation.clone()));
         let next = plumb::depot::v3::Pointer::new(
             held,
             plumb::depot::v3::Publication {
                 source,
-                prior: standing.as_ref().map(|(_, held)| held.generation.clone()),
+                prior,
                 created,
             },
         )?;
