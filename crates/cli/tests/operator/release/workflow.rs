@@ -154,7 +154,7 @@ fn depot() {
     let held = bootstrap();
     let windows = windows();
     let installed = held
-        .find("cp \"$atom/target/debug/plumb\" \"$tool\"")
+        .find("cp \"$target/debug/plumb\" \"$tool\"")
         .expect("exact Plumb install");
     let bootstrap = held
         .find("  install_configuration")
@@ -198,6 +198,16 @@ fn depot() {
     assert!(
         !windows.contains("PLUMB_RELEASE_"),
         "Windows atom bootstrap must not consume the product release identity"
+    );
+    assert!(
+        held.contains("plumb-atom-$PLUMB_BUILD_COMMIT")
+            && held.contains("CARGO_TARGET_DIR=\"$target\""),
+        "Unix atom builds must isolate Cargo state by exact atom commit"
+    );
+    assert!(
+        windows.contains("plumb-atom-$env:PLUMB_BUILD_COMMIT")
+            && windows.contains("$env:CARGO_TARGET_DIR = $target"),
+        "Windows atom builds must isolate Cargo state by exact atom commit"
     );
 }
 
