@@ -1,9 +1,10 @@
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const REGION: &str = "auto";
 const SERVICE: &str = "s3";
+const ATTEMPTS: usize = 3;
 
 pub struct Control {
     access: String,
@@ -62,8 +63,19 @@ impl Control {
     }
 
     pub fn read(&self, key: &str) -> Result<Outcome<Object>, String> {
-        let body = [];
-        let signed = self.sign("GET", key, &body, &[])?;
+        for attempt in 0..ATTEMPTS {
+            pause(attempt);
+            let signed = self.sign("GET", key, &[], &[])?;
+            match self.get(signed) {
+                Ok(outcome) => return Ok(outcome),
+                Err(error) if retryable(&error) && attempt + 1 < ATTEMPTS => continue,
+                Err(error) => return Err(format!("cannot read bucket object {key}: {error}")),
+            }
+        }
+        unreachable!()
+    }
+
+    fn get(&self, signed: Signed) -> Result<Outcome<Object>, ureq::Error> {
         match ureq::get(&signed.url)
             .header("host", &self.host)
             .header("x-amz-content-sha256", signed.payload)
@@ -77,14 +89,11 @@ impl Control {
                     .get("etag")
                     .and_then(|value| value.to_str().ok())
                     .map(str::to_string);
-                let mut held = response.into_body();
-                let body = held
-                    .read_to_vec()
-                    .map_err(|error| format!("cannot read bucket object {key}: {error}"))?;
+                let body = response.into_body().read_to_vec()?;
                 Ok(Outcome::Held(Object { body, etag }))
             }
             Err(ureq::Error::StatusCode(404)) => Ok(Outcome::Missing),
-            Err(error) => Err(format!("cannot read bucket object {key}: {error}")),
+            Err(error) => Err(error),
         }
     }
 
@@ -104,20 +113,25 @@ impl Control {
             ("content-type", policy.media),
             (name, value),
         ];
-        let signed = self.sign("PUT", key, body, &fields)?;
-        let mut request = ureq::put(&signed.url)
-            .header("host", &self.host)
-            .header("x-amz-content-sha256", signed.payload)
-            .header("x-amz-date", signed.time)
-            .header("authorization", signed.authorization)
-            .header("content-type", policy.media)
-            .header("cache-control", policy.cache);
-        request = request.header(name, value);
-        match request.send(body) {
-            Ok(_) => Ok(Outcome::Held(())),
-            Err(ureq::Error::StatusCode(412)) => Ok(Outcome::Stale),
-            Err(error) => Err(format!("cannot write bucket object {key}: {error}")),
+        for attempt in 0..ATTEMPTS {
+            pause(attempt);
+            let signed = self.sign("PUT", key, body, &fields)?;
+            let request = ureq::put(&signed.url)
+                .header("host", &self.host)
+                .header("x-amz-content-sha256", signed.payload)
+                .header("x-amz-date", signed.time)
+                .header("authorization", signed.authorization)
+                .header("content-type", policy.media)
+                .header("cache-control", policy.cache)
+                .header(name, value);
+            match request.send(body) {
+                Ok(_) => return Ok(Outcome::Held(())),
+                Err(ureq::Error::StatusCode(412)) => return Ok(Outcome::Stale),
+                Err(error) if retryable(&error) && attempt + 1 < ATTEMPTS => continue,
+                Err(error) => return Err(format!("cannot write bucket object {key}: {error}")),
+            }
         }
+        unreachable!()
     }
 
     fn sign(
@@ -168,6 +182,24 @@ impl Control {
             time: stamp.time,
             authorization,
         })
+    }
+}
+
+fn retryable(error: &ureq::Error) -> bool {
+    match error {
+        ureq::Error::StatusCode(code) => matches!(code, 408 | 429 | 500..=599),
+        ureq::Error::Io(_)
+        | ureq::Error::Protocol(_)
+        | ureq::Error::Timeout(_)
+        | ureq::Error::HostNotFound
+        | ureq::Error::ConnectionFailed => true,
+        _ => false,
+    }
+}
+
+fn pause(attempt: usize) {
+    if attempt > 0 {
+        std::thread::sleep(Duration::from_millis(200 * attempt as u64));
     }
 }
 

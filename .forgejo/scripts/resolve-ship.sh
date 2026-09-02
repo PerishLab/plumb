@@ -15,4 +15,5 @@ fi
   echo "workload_missing=$(printf '%s' "$graph" | jq -r '.workload_missing')"
   echo "publication=$(printf '%s' "$graph" | jq -c '.publication')"
   echo "publication_missing=$(printf '%s' "$graph" | jq -r '.publication_missing')"
+  echo "publication_ready=$(printf '%s' "$graph" | jq -r '.publication_ready')"
 } >> "$GITHUB_OUTPUT"
