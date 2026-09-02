@@ -182,7 +182,12 @@ impl Surface<'_> {
                 "--show-error",
                 "--location",
                 "--retry",
-                "3",
+                "6",
+                "--retry-all-errors",
+                "--retry-delay",
+                "2",
+                "--retry-max-time",
+                "30",
                 "--output",
             ])
             .arg(&path)
