@@ -59,6 +59,7 @@ fn exact() {
     let workload = root.join("target/cfworker/probe-worker.tar.gz");
     assert!(workload.is_file());
     let before = calls(root).matches("--filter @probe/web build").count();
+    let prepared = calls(root).matches("corepack enable").count();
     std::fs::remove_dir_all(root.join("apps/web/dist")).expect("clear built tree");
     let held = run(
         root,
@@ -78,6 +79,11 @@ fn exact() {
         calls(root).matches("--filter @probe/web build").count(),
         before,
         "a held worker workload must not rebuild"
+    );
+    assert_eq!(
+        calls(root).matches("corepack enable").count(),
+        prepared + 1,
+        "a held worker workload still needs the pnpm executable"
     );
     assert!(root.join("apps/web/dist/index.html").is_file());
     inventory.finish();

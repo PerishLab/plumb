@@ -3,9 +3,7 @@ use plumb::rig::Rig;
 use serde_json::{Value, json};
 use std::path::Path;
 
-use super::support::{Inventory, object, projection, sources, strings, text};
-
-const SCHEMA: &str = "plumb.ship-graph/v2";
+use super::support::{Inventory, carry, object, projection, sources, strings, text};
 
 pub fn run(raw: &str, atom: &str) -> Result<String, String> {
     if atom.len() != 40 || !atom.bytes().all(|held| held.is_ascii_hexdigit()) {
@@ -45,7 +43,7 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
     }
     .run()?;
     serde_json::to_string(&json!({
-        "schema": SCHEMA,
+        "schema": "plumb.ship-graph/v2",
         "product": spec.product,
         "channel": marker.channel,
         "commit": marker.commit,
@@ -230,6 +228,9 @@ impl Publish<'_> {
             request.insert("schema".into(), json!("plumb.ship-request/v2"));
             request.insert("reuse".into(), node["reuse"].clone());
             request.insert("keys".into(), node["keys"].clone());
+            if action == "ship/oci" {
+                carry(&mut request, &self.workload.reuse)?;
+            }
             pending.push(json!({ "runner": "docker", "request": request }));
         }
         Ok(())

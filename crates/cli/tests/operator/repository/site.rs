@@ -17,6 +17,7 @@ fn seed(root: &Path) {
         "[workspace]\n[workspace.package]\nversion = \"1.2.3\"\n",
     )
     .expect("manifest");
+    std::fs::write(root.join("pnpm-lock.yaml"), "lockfileVersion: '9.0'\n").expect("pnpm lock");
     std::fs::write(
         root.join("apps/web/package.json"),
         r#"{"name":"@probe/web"}"#,
@@ -45,6 +46,10 @@ case "$*" in
   *"wrangler versions upload"*) printf '%s\n' 'Worker Version ID: abcdefgh12345678' ;;
 esac
 "#,
+    );
+    file(
+        &root.join("bin/corepack"),
+        "#!/bin/sh\nset -eu\nprintf 'corepack %s\\n' \"$*\" >> \"$SITE_CALLS\"\n",
     );
     file(
         &root.join("bin/curl"),
