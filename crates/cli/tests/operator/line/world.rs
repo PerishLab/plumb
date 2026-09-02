@@ -12,6 +12,7 @@ pub enum Court {
     Failed,
     Nested(bool),
     Prepare(bool, PathBuf),
+    Resume(PathBuf),
     Freeze(PathBuf),
     Rejoin(PathBuf),
 }
@@ -113,7 +114,9 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
         Court::Failed if request.contains("/actions/runs/7/jobs/0/attempt/1 ") => {
             ("200 OK", jobs("failure"))
         }
-        Court::Prepare(..) | Court::Rejoin(_) if request.contains("GET /api/v1/user ") => {
+        Court::Prepare(..) | Court::Resume(_) | Court::Rejoin(_)
+            if request.contains("GET /api/v1/user ") =>
+        {
             ("200 OK", json!({"login": "operator"}))
         }
         Court::Freeze(head) if request.contains("GET ") && request.contains("/branches/") => {
@@ -126,6 +129,16 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
                 "404 Not Found",
                 json!({"message": "The target couldn't be found."}),
             )
+        }
+        Court::Resume(_) if request.contains("GET ") && request.contains("branch_protections") => {
+            ("200 OK", json!({"branch_name": "release/v1.2.0"}))
+        }
+        Court::Resume(_)
+            if request.contains("PATCH ") && request.contains("branch_protections") =>
+        {
+            let mut value = body;
+            value["branch_name"] = json!("release/v1.2.0");
+            ("200 OK", value)
         }
         Court::Prepare(exact, _)
             if request.contains("POST ") && request.contains("branch_protections") =>
@@ -170,6 +183,9 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
             "404 Not Found",
             json!({"message": "The target couldn't be found."}),
         ),
+        Court::Resume(head) if request.contains("GET ") && request.contains("/branches/") => {
+            ("200 OK", cut(head))
+        }
         Court::Prepare(_, head)
             if request.contains("POST ") && request.ends_with("/branches HTTP/1.1") =>
         {

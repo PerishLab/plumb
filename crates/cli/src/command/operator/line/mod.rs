@@ -41,6 +41,14 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     let client = Client::new(remote)?;
     let standing = client.branch(&name)?.is_some();
     let head = if standing {
+        if super::mark::point(&root).seen(&version)?.is_some() {
+            return Err(format!(
+                "release marker {version} already stands; retract an unpublished marker before reopening {name}"
+            ));
+        }
+        course.step(plan(client.remote(), &name, "preparing"), || {
+            client.protect(&name, "preparing")
+        })?;
         head(&client, &name)?
     } else {
         opened(&mut course, &client, &name, from)?
