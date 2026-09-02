@@ -15,7 +15,7 @@ pub fn prove(root: &Path, home: &Path, version: &str) -> Result<Proof, String> {
     let version = identity(version)?;
     let stamped = stamped(&version);
     let candidate = point(root, &stamped)?;
-    let previous = prior(root, &version)?;
+    let previous = prior(root, &version, &candidate)?;
     plumb::changelog::prove(plumb::changelog::Claim {
         root,
         home,
@@ -39,7 +39,7 @@ fn point(root: &Path, tag: &str) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
-fn prior(root: &Path, version: &str) -> Result<Option<String>, String> {
+fn prior(root: &Path, version: &str, candidate: &str) -> Result<Option<String>, String> {
     let held =
         Version::parse(version).map_err(|error| format!("invalid version {version}: {error}"))?;
     let output = Command::new("git")
@@ -54,10 +54,18 @@ fn prior(root: &Path, version: &str) -> Result<Option<String>, String> {
         .filter(|other| other < &held)
         .collect::<Vec<_>>();
     found.sort();
-    match found.pop() {
-        Some(base) => point(root, &format!("v{base}")).map(Some),
-        None => Ok(None),
+    while let Some(base) = found.pop() {
+        let commit = point(root, &format!("v{base}"))?;
+        let status = Command::new("git")
+            .current_dir(root)
+            .args(["merge-base", "--is-ancestor", &commit, candidate])
+            .status()
+            .map_err(|error| format!("cannot run git merge-base: {error}"))?;
+        if status.success() {
+            return Ok(Some(commit));
+        }
     }
+    Ok(None)
 }
 
 pub fn identity(version: &str) -> Result<String, String> {
