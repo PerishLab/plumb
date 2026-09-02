@@ -1,9 +1,8 @@
 use std::path::Path;
 
 fn canonical() -> String {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    std::fs::read_to_string(root.join(".forgejo/workflows/ship.yml"))
-        .expect("Plumb owns one canonical ship workflow")
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.forgejo/workflows/ship.yml");
+    std::fs::read_to_string(path).expect("Plumb owns one canonical ship workflow")
 }
 
 fn bootstrap() -> String {
@@ -239,6 +238,7 @@ fn depot() {
         "--world \"channel=$PLUMB_BUILD_CHANNEL\"",
         "--world \"compiler=$compiler\"",
         "--world 'profile=debug'",
+        ".decision == \"reuse\"",
         "workflow record ship/atom",
         "sha256sum \"$archive\"",
     ] {
@@ -251,6 +251,7 @@ fn depot() {
         "--world \"channel=$env:PLUMB_BUILD_CHANNEL\"",
         "--world \"compiler=$compiler\"",
         "--world 'profile=debug'",
+        "$action.decision -eq 'reuse'",
         "workflow record ship/atom",
         "Get-FileHash -Algorithm SHA256",
     ] {
