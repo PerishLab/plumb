@@ -45,6 +45,7 @@ enum Action {
     Bucket,
     Domain,
     Capability,
+    Recovery,
     Repository,
 }
 
@@ -53,6 +54,7 @@ struct Observation {
     bucket: bool,
     domain: Option<Custom>,
     capability: Option<String>,
+    recovery: bool,
     escrow: Option<escrow::View>,
     secrets: BTreeSet<String>,
 }

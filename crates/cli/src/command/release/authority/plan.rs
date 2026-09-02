@@ -50,6 +50,12 @@ pub fn build(model: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
     }
     if !seen.bucket || !seen.domain.as_ref().is_some_and(|held| held.ready()) {
         plan.deferred(resource(model, "capability"), wait(model, "domain"));
+    } else if seen.recovery {
+        plan.change(
+            resource(model, "capability"),
+            "recover the bucket-scoped writer and its local escrow",
+            Action::Recovery,
+        );
     } else if seen.capability.is_some() && seen.escrow.is_some() {
         plan.ready(
             resource(model, "capability"),

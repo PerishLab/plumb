@@ -54,6 +54,14 @@ impl<'a> Seat<'a> {
     }
 
     pub fn write(&self, held: &Escrow) -> Result<(), String> {
+        self.publish(held, false)
+    }
+
+    pub fn replace(&self, held: &Escrow) -> Result<(), String> {
+        self.publish(held, true)
+    }
+
+    fn publish(&self, held: &Escrow, replace: bool) -> Result<(), String> {
         let path = self.0;
         let parent = path
             .parent()
@@ -80,9 +88,15 @@ impl<'a> Seat<'a> {
             .sync_all()
             .map_err(|error| format!("cannot sync release escrow draft: {error}"))?;
         protect(draft.as_file())?;
-        draft
-            .persist_noclobber(path)
-            .map_err(|error| format!("cannot publish {}: {error}", path.display()))?;
+        if replace {
+            draft
+                .persist(path)
+                .map_err(|error| format!("cannot replace {}: {}", path.display(), error.error))?;
+        } else {
+            draft
+                .persist_noclobber(path)
+                .map_err(|error| format!("cannot publish {}: {error}", path.display()))?;
+        }
         Ok(())
     }
 

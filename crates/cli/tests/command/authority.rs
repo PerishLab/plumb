@@ -10,6 +10,7 @@ enum Action {
     Bucket,
     Domain,
     Capability,
+    Recovery,
     Repository,
 }
 
@@ -48,6 +49,7 @@ struct Observation {
     bucket: bool,
     domain: Option<Custom>,
     capability: Option<String>,
+    recovery: bool,
     escrow: Option<()>,
     secrets: BTreeSet<String>,
 }
@@ -69,6 +71,7 @@ fn ordered() {
         bucket: false,
         domain: None,
         capability: None,
+        recovery: false,
         escrow: None,
         secrets: BTreeSet::new(),
     };
@@ -102,6 +105,33 @@ fn identity() {
 }
 
 #[test]
+fn recovery() {
+    let model = Model {
+        profile: "release",
+        secrets: &SECRETS,
+        bucket: "perish-probe-releases".into(),
+        domain: "releases.probe.test".into(),
+        zone: "zone".into(),
+        organization: false,
+    };
+    let seen = Observation {
+        bucket: true,
+        domain: Some(Custom(true)),
+        capability: Some("stale-writer".into()),
+        recovery: true,
+        escrow: None,
+        secrets: SECRETS.map(str::to_string).into_iter().collect(),
+    };
+    let (steps, action) = plan::build(&model, &seen);
+    assert_eq!(action, Some(Action::Recovery));
+    assert_eq!(steps[2].resource, "release.capability");
+    assert_eq!(
+        steps[2].detail,
+        "recover the bucket-scoped writer and its local escrow"
+    );
+}
+
+#[test]
 fn workflow() {
     const HELD: [&str; 5] = ["access", "secret", "bucket", "endpoint", "url"];
     let mut model = Model {
@@ -116,6 +146,7 @@ fn workflow() {
         bucket: true,
         domain: Some(Custom(true)),
         capability: Some("writer".into()),
+        recovery: false,
         escrow: None,
         secrets: SECRETS.map(str::to_string).into_iter().collect(),
     };
