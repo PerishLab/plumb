@@ -47,10 +47,8 @@ target="$RUNNER_TEMP/plumb-atom-$PLUMB_BUILD_COMMIT"
 archive="$RUNNER_TEMP/plumb-atom-$PLUMB_BUILD_COMMIT.tgz"
 host=$(rustc -vV | sed -n 's/^host: //p')
 compiler=$(rustc --version)
-keys=
-source=
-if [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ]; then
-  plan=$($tool workflow plan \
+atom_plan() {
+  "$tool" workflow plan \
     --world "target=$host" \
     --world "version=$PLUMB_BUILD_VERSION" \
     --world "channel=$PLUMB_BUILD_CHANNEL" \
@@ -58,7 +56,12 @@ if [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ]; then
     --world 'profile=debug' \
     --root 'ship/atom=*' \
     --inventory-url "$PLUMB_WORKFLOW_INVENTORY_URL" \
-    "$atom")
+    "$atom"
+}
+keys=
+source=
+if [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ]; then
+  plan=$(atom_plan)
   keys=$(printf '%s' "$plan" | jq -c '.actions[] | select(.name == "ship/atom") | .keys')
   source=$(printf '%s' "$plan" | jq -r \
     '.actions[] | select(.name == "ship/atom" and .decision == "reuse" and .reuse.type == "workload") | .reuse.source')
@@ -84,5 +87,11 @@ if [ "$mode" = exact ]; then
   install_configuration
 fi
 if [ -z "$source" ] && [ -n "$keys" ]; then
-  "$tool" workflow record ship/atom --keys "$keys" --workload "$archive"
+  if ! "$tool" workflow record ship/atom --keys "$keys" --workload "$archive"; then
+    raced=$(atom_plan)
+    winner=$(printf '%s' "$raced" | jq -r \
+      '.actions[] | select(.name == "ship/atom" and .decision == "reuse" and .reuse.type == "workload") | .reuse.source')
+    test -n "$winner"
+    printf 'accepted exact Plumb atom inventory winner %s for %s\n' "$winner" "$host"
+  fi
 fi
