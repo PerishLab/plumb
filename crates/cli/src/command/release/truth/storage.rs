@@ -255,7 +255,7 @@ impl<'a> Remote<'a> {
     }
 
     fn fingerprint(&self) -> String {
-        super::record::sha(self.held.endpoint().trim_end_matches('/').as_bytes())
+        fingerprint(self.held.endpoint())
     }
 
     fn same(&self, object: &Local) -> Result<bool, String> {
@@ -268,6 +268,10 @@ impl<'a> Remote<'a> {
         let _ = std::fs::remove_file(path);
         Ok(same)
     }
+}
+
+pub fn fingerprint(endpoint: &str) -> String {
+    super::record::sha(endpoint.trim_end_matches('/').as_bytes())
 }
 
 fn precondition(output: &Output) -> bool {

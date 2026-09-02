@@ -3,6 +3,24 @@ use std::collections::BTreeSet;
 use std::path::Path;
 use std::process::Command;
 
+pub(super) fn authority(held: &plumb::rig::Authority, product: &str) -> Result<(), String> {
+    let bucket = format!("perish-{product}-releases");
+    if held.bucket != bucket {
+        return Err(format!(
+            "release publish authority must target derived bucket {bucket}"
+        ));
+    }
+    let actual = crate::command::release::storage::fingerprint(&held.endpoint);
+    if actual == held.fingerprint {
+        Ok(())
+    } else {
+        Err(format!(
+            "release publish authority fingerprint drift: expected {}, got {actual}",
+            held.fingerprint
+        ))
+    }
+}
+
 pub(super) struct Inventory(Option<tempfile::NamedTempFile>);
 
 impl Inventory {

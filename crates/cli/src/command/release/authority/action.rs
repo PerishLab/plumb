@@ -150,12 +150,16 @@ impl Context {
         held.exact(&self.model.bucket, self.factory.id())?;
         let client = Client::new(self.model.remote.clone())?;
         let inventory = self.model.inventory();
+        let tail = match self.model.profile {
+            "release" => super::escrow::fingerprint(&held.endpoint),
+            _ => inventory,
+        };
         let values = [
             held.access.as_str(),
             held.secret.as_str(),
             held.bucket.as_str(),
             held.endpoint.as_str(),
-            inventory.as_str(),
+            tail.as_str(),
         ];
         for (name, value) in self.model.secrets().iter().zip(values) {
             match self.model.organization() {

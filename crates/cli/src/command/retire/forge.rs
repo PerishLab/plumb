@@ -1,6 +1,6 @@
 use plumb::forgejo::Client;
 
-pub const SECRETS: [&str; 9] = [
+pub const SECRETS: [&str; 10] = [
     "RELEASE_ACTIVATE_S3_ACCESS_KEY",
     "RELEASE_ACTIVATE_S3_BUCKET",
     "RELEASE_ACTIVATE_S3_ENDPOINT",
@@ -9,6 +9,7 @@ pub const SECRETS: [&str; 9] = [
     "RELEASE_PUBLISH_S3_BUCKET",
     "RELEASE_PUBLISH_S3_ENDPOINT",
     "RELEASE_PUBLISH_S3_SECRET_KEY",
+    "RELEASE_PUBLISH_FINGERPRINT",
     "RELEASE_REGISTRY_TOKEN",
 ];
 
