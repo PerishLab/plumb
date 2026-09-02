@@ -1,6 +1,6 @@
 use plumb::forgejo::git::fetch;
 use std::path::Path;
-use std::process::{Command, Output};
+use std::process::Output;
 
 pub fn validate(root: &Path, name: &str) -> Result<(), String> {
     fetch(root)?;
@@ -95,7 +95,7 @@ pub fn pick(seat: &Path, name: &str, commits: &[String]) -> Result<String, Strin
     if head != remote {
         return Err(format!("{name} must equal origin/{name} before pick"));
     }
-    let picked = Command::new("git")
+    let picked = plumb::config::current("git")
         .args(["cherry-pick", "-x"])
         .args(commits)
         .current_dir(seat)
@@ -149,7 +149,7 @@ fn sealed(seat: &Path) -> Result<(), String> {
 }
 
 fn command<const N: usize>(cwd: &Path, args: [&str; N]) -> Result<Output, String> {
-    Command::new("git")
+    plumb::config::current("git")
         .args(args)
         .current_dir(cwd)
         .output()

@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::process::Command;
+use std::{env, os::unix::fs::PermissionsExt};
 
 #[path = "../../support.rs"]
 pub(super) mod support;
@@ -125,6 +126,29 @@ fn recovery() {
     let two = git(&seat, &["rev-parse", "HEAD"]);
     git(&seat, &["checkout", "-q", "release/v1.0.0"]);
 
+    let hooks = seat.join(".git/hooks");
+    let hook = hooks.join("pre-commit");
+    std::fs::write(&hook, "#!/bin/sh\nexec plumb --version\n").expect("hook");
+    let mut mode = std::fs::metadata(&hook)
+        .expect("hook metadata")
+        .permissions();
+    mode.set_mode(0o755);
+    std::fs::set_permissions(&hook, mode).expect("executable hook");
+    let stale = held.path().join("stale-bin");
+    std::fs::create_dir(&stale).expect("stale bin");
+    let binary = stale.join("plumb");
+    std::fs::write(&binary, "#!/bin/sh\necho stale controller >&2\nexit 93\n")
+        .expect("stale controller");
+    let mut mode = std::fs::metadata(&binary)
+        .expect("stale metadata")
+        .permissions();
+    mode.set_mode(0o755);
+    std::fs::set_permissions(&binary, mode).expect("executable stale controller");
+    let path = env::join_paths(
+        std::iter::once(stale).chain(env::split_paths(&env::var_os("PATH").unwrap_or_default())),
+    )
+    .expect("PATH");
+
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args([
             "version",
@@ -137,12 +161,14 @@ fn recovery() {
             &two,
         ])
         .current_dir(&seat)
+        .env("PATH", path)
         .env("PLUMB_HOME", home.path())
         .output()
         .expect("plumb should run");
     assert!(!output.status.success());
     let error = String::from_utf8_lossy(&output.stderr);
     assert!(error.contains("cherry-pick candidates failed"), "{error}");
+    assert!(!error.contains("stale controller"), "{error}");
     assert_eq!(git(&seat, &["rev-parse", "HEAD"]), base);
     assert!(git(&seat, &["status", "--short"]).is_empty());
     assert!(!seat.join(".git/CHERRY_PICK_HEAD").exists());
