@@ -16,7 +16,13 @@ pub fn publish(path: &Path, authority: &impl Authority) -> Result<String, String
         remote.create(object, &root, true)?;
     }
     remote.create(&capsule.seal, &root, true)?;
-    super::verify::published(&capsule)?;
+    if let Err(error) = super::verify::published(&capsule) {
+        remote.exact(
+            &capsule.seal,
+            "release seal vanished before public projection",
+        )?;
+        return Err(error);
+    }
     let channel = capsule.channel;
     Ok(format!("published exact {channel} {}", capsule.version))
 }
