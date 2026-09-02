@@ -69,6 +69,7 @@ fn provenance(body: &str) -> bool {
 }
 
 pub fn pick(seat: &Path, name: &str, commits: &[String]) -> Result<String, String> {
+    controller(seat, name)?;
     let current = text(
         "read current branch",
         command(seat, ["branch", "--show-current"])?,
@@ -112,6 +113,32 @@ pub fn pick(seat: &Path, name: &str, commits: &[String]) -> Result<String, Strin
         command(seat, ["push", "origin", &format!("HEAD:refs/heads/{name}")])?,
     )?;
     Ok(format!("picked {} onto {name}", commits.join(" ")))
+}
+
+fn controller(root: &Path, name: &str) -> Result<(), String> {
+    let path = root.join("plumb.toml");
+    if !path.is_file() {
+        return Ok(());
+    }
+    let spec = crate::shape::release::Spec::read(&path)?;
+    if spec.product != "plumb" {
+        return Ok(());
+    }
+    exact(name, plumb::version!("PLUMB"))
+}
+
+fn exact(name: &str, running: &str) -> Result<(), String> {
+    let target = semver::Version::parse(name.trim_start_matches("release/v"))
+        .map_err(|error| format!("cannot parse Plumb version line {name}: {error}"))?;
+    let running = semver::Version::parse(running.trim_start_matches('v'))
+        .map_err(|error| format!("cannot parse running Plumb version: {error}"))?;
+    if (running.major, running.minor, running.patch) != (target.major, target.minor, target.patch) {
+        return Err(format!(
+            "{name} must be picked by Plumb v{}.{}.{}, not v{running}",
+            target.major, target.minor, target.patch
+        ));
+    }
+    Ok(())
 }
 
 fn restore(seat: &Path, head: &str, error: String) -> String {
