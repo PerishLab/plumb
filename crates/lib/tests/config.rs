@@ -81,9 +81,11 @@ fn rebases() {
 #[test]
 fn detached() {
     let command = config::detached("git");
-    let held = command
-        .get_envs()
-        .find(|(key, _)| *key == "GIT_DIR")
-        .expect("Git directory is explicitly cleared");
-    assert!(held.1.is_none());
+    for key in ["GIT_DIR", "GIT_INDEX_FILE"] {
+        let held = command
+            .get_envs()
+            .find(|(held, _)| *held == key)
+            .unwrap_or_else(|| panic!("{key} is explicitly cleared"));
+        assert!(held.1.is_none());
+    }
 }

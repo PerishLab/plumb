@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Output;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Entry {
@@ -125,7 +125,7 @@ impl Entry {
 }
 
 fn listing(root: &Path, args: &[&str], fallback: &str) -> Result<Vec<u8>, Refusal> {
-    let output = Command::new("git")
+    let output = crate::config::detached("git")
         .arg("-C")
         .arg(root)
         .args(args)
