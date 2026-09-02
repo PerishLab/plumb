@@ -78,7 +78,10 @@ pub(super) fn execute(root: &Path, argv: &[String], seat: Option<&Path>) -> Resu
         .split_first()
         .ok_or_else(|| "guard action has no command".to_string())?;
     let mut command = plumb::config::detached(program);
-    command.args(args).current_dir(root);
+    command
+        .args(args)
+        .current_dir(root)
+        .env_remove("GIT_INDEX_FILE");
     if let Some(seat) = seat {
         command
             .env_remove("PLUMB_HOME")
