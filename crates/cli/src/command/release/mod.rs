@@ -60,6 +60,15 @@ impl<'a> Product<'a> {
         }
     }
 
+    pub fn activated(&self) -> Result<Option<(String, String)>, String> {
+        let url = format!("{}/v1/channels/stable.json", self.0.authority);
+        if verify::optional(&url)?.is_none() {
+            return Ok(None);
+        }
+        let binding = self.depot().latest("stable", false)?;
+        Ok(Some((binding.release.version, binding.release.commit)))
+    }
+
     pub fn promotion(&self, commit: &str, version: &str) -> Result<promotion::Exact, String> {
         promotion::Promotion::new(self.0).derive(commit, version)
     }

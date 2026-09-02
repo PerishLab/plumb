@@ -1,7 +1,12 @@
 use super::datum::lined;
 use super::stable::{command, run};
 use super::world::{Court, serve};
-use std::process::Command;
+use serde_json::json;
+use sha2::{Digest, Sha256};
+use std::env;
+use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
+use std::process::{Command, Output};
 
 #[test]
 fn late() {
@@ -9,7 +14,7 @@ fn late() {
     let bare = tempfile::tempdir().expect("bare");
     let root = fixture.path();
     let cut = root.join("cut");
-    let (url, _) = serve(Court::Prepare(true, cut.clone()), 7);
+    let (url, _) = serve(Court::Prepare(true, cut.clone()), 10);
     let origin = format!("{url}/test/probe.git");
     let head = lined(root, &origin, bare.path(), "release/v1.3.0");
     std::fs::write(&cut, &head).expect("cut");
@@ -30,8 +35,9 @@ fn late() {
     run(Command::new("git")
         .args(["update-ref", "refs/remotes/origin/main", &head])
         .current_dir(root));
+    activate(root, "v1.2.0", &reference(root, "v1.2.0^{commit}"));
 
-    let output = command(root, &["version", "prepare", "--version", "1.3.0"]);
+    let output = execute(root, &url, &["version", "prepare", "--version", "1.3.0"]);
     assert!(!output.status.success());
     let said = String::from_utf8_lossy(&output.stderr).to_string();
     assert!(said.contains("stable v1.2.0 stands at"), "{said}");
@@ -47,13 +53,14 @@ fn refreshes() {
     let bare = tempfile::tempdir().expect("bare");
     let root = fixture.path();
     let cut = root.join("cut");
-    let (url, _) = serve(Court::Prepare(true, cut.clone()), 1);
+    let (url, _) = serve(Court::Prepare(true, cut.clone()), 3);
     let origin = format!("{url}/test/probe.git");
     let head = lined(root, &origin, bare.path(), "release/v1.3.0");
     std::fs::write(&cut, &head).expect("cut");
     run(Command::new("git")
         .args(["tag", "v1.2.0", &head])
         .current_dir(root));
+    activate(root, "v1.2.0", &head);
 
     let tree = Command::new("git")
         .args(["rev-parse", &format!("{head}^{{tree}}")])
@@ -85,7 +92,7 @@ fn refreshes() {
         .args(["update-ref", "refs/heads/main", &severed])
         .current_dir(bare.path()));
 
-    let output = command(root, &["version", "prepare", "--version", "1.3.0"]);
+    let output = execute(root, &url, &["version", "prepare", "--version", "1.3.0"]);
     assert!(!output.status.success());
     let said = String::from_utf8_lossy(&output.stderr).to_string();
     assert!(said.contains("which origin/main does not hold"), "{said}");
@@ -95,6 +102,38 @@ fn refreshes() {
         .output()
         .expect("git rev-parse");
     assert_eq!(String::from_utf8_lossy(&refreshed.stdout).trim(), severed);
+}
+
+#[test]
+fn freedom() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let bare = tempfile::tempdir().expect("bare");
+    let root = fixture.path();
+    let cut = root.join("cut");
+    let (url, _) = serve(Court::Prepare(true, cut.clone()), 8);
+    let origin = format!("{url}/test/probe.git");
+    let head = lined(root, &origin, bare.path(), "release/v1.2.0");
+    std::fs::write(&cut, &head).expect("cut");
+
+    std::fs::write(root.join("failed"), "never activated\n").expect("failed marker");
+    run(Command::new("git")
+        .args(["add", "failed"])
+        .current_dir(root));
+    run(Command::new("git")
+        .args(["commit", "-q", "-m", "Stand a failed release marker"])
+        .current_dir(root));
+    run(Command::new("git")
+        .args(["tag", "v1.1.0", "HEAD"])
+        .current_dir(root));
+    run(Command::new("git")
+        .args(["update-ref", "refs/remotes/origin/main", &head])
+        .current_dir(root));
+    let output = execute(root, &url, &["version", "prepare", "--version", "1.2.0"]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 #[test]
@@ -141,4 +180,81 @@ fn migrated() {
         touched.contains("datum.json"),
         "the recording commit drops what it swept, so freeze sees one seat commit: {touched}"
     );
+}
+
+fn activate(root: &Path, version: &str, commit: &str) {
+    let authority = "https://releases.test";
+    let url = format!("{authority}/v1/releases/stable/{version}/seal.json");
+    let seal = json!({
+        "schema": 1,
+        "product": "probe",
+        "channel": "stable",
+        "releaseVersion": version,
+        "commit": commit,
+        "url": url,
+        "generator": {"version": version, "template": "test", "origin": {"kind": "stable"}},
+        "artifacts": {},
+        "managers": {}
+    });
+    let bytes = serde_json::to_vec(&seal).expect("seal");
+    std::fs::write(root.join("seal.json"), &bytes).expect("seal record");
+    let pointer = json!({
+        "schema": 1,
+        "product": "probe",
+        "channel": "stable",
+        "releaseVersion": version,
+        "commit": commit,
+        "seal": {
+            "name": "seal.json",
+            "mime": "application/json",
+            "sha256": format!("{:x}", Sha256::digest(&bytes)),
+            "size": bytes.len(),
+            "url": url
+        },
+        "managers": {}
+    });
+    std::fs::write(
+        root.join("pointer.json"),
+        serde_json::to_vec(&pointer).expect("pointer"),
+    )
+    .expect("pointer record");
+}
+
+fn execute(root: &Path, server: &str, args: &[&str]) -> Output {
+    let bin = root.join(".git/court-bin");
+    std::fs::create_dir_all(&bin).expect("court bin");
+    let curl = bin.join("curl");
+    std::fs::write(
+        &curl,
+        format!(
+            r#"#!/bin/bash
+args=("$@")
+for i in "${{!args[@]}}"; do
+  args[$i]="${{args[$i]//https:\/\/releases.test/{server}}}"
+done
+exec /usr/bin/curl "${{args[@]}}"
+"#
+        ),
+    )
+    .expect("curl shim");
+    std::fs::set_permissions(&curl, std::fs::Permissions::from_mode(0o755)).expect("curl mode");
+    let path = env::join_paths(
+        std::iter::once(bin).chain(env::split_paths(&env::var_os("PATH").unwrap_or_default())),
+    )
+    .expect("PATH");
+    super::command::plumb(root, args)
+        .env("PATH", path)
+        .env("HARNESS_RUN_TIMEOUT_MS", "1000")
+        .output()
+        .expect("plumb")
+}
+
+fn reference(root: &Path, name: &str) -> String {
+    let output = Command::new("git")
+        .args(["rev-parse", name])
+        .current_dir(root)
+        .output()
+        .expect("git rev-parse");
+    assert!(output.status.success());
+    String::from_utf8_lossy(&output.stdout).trim().to_string()
 }

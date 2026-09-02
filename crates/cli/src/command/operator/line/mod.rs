@@ -37,7 +37,16 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     let remote = git::remote(&root, repo)?;
     let mut course = Course::new(dry);
     git::fetch(&root)?;
-    rejoined::Seat(&root).rejoined(&version)?;
+    let seat = rejoined::Seat(&root);
+    let activated = seat
+        .marked(&version)?
+        .then(|| {
+            let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
+            super::super::release::Product::new(&spec).activated()
+        })
+        .transpose()?
+        .flatten();
+    seat.rejoined(activated)?;
     let client = Client::new(remote)?;
     let standing = client.branch(&name)?.is_some();
     let head = if standing {
@@ -106,7 +115,16 @@ fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
     let remote = git::remote(&root, repo)?;
     let mut course = Course::new(dry);
     git::fetch(&root)?;
-    rejoined::Seat(&root).rejoined(&version)?;
+    let seat = rejoined::Seat(&root);
+    let activated = seat
+        .marked(&version)?
+        .then(|| {
+            let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
+            super::super::release::Product::new(&spec).activated()
+        })
+        .transpose()?
+        .flatten();
+    seat.rejoined(activated)?;
     let client = Client::new(remote)?;
     freeze(&mut course, &client, &root, &name)?;
     let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;

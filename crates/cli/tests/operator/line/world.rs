@@ -72,6 +72,12 @@ fn request(stream: &mut impl Read) -> (String, Value) {
 
 fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
     match court {
+        Court::Prepare(_, root) if request.contains("GET /v1/channels/stable.json ") => {
+            release(root, "pointer.json")
+        }
+        Court::Prepare(_, root) if request.contains("GET /v1/releases/stable/") => {
+            release(root, "seal.json")
+        }
         Court::Dispatch
         | Court::Expanding(_)
         | Court::Failed
@@ -193,6 +199,21 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
         }
         _ => ("500 Internal Server Error", json!({"message": request})),
     }
+}
+
+fn release(root: &Path, name: &str) -> (&'static str, Value) {
+    let path = root.with_file_name(name);
+    if !path.is_file() {
+        return (
+            "404 Not Found",
+            json!({"message": "The target couldn't be found."}),
+        );
+    }
+    let bytes = std::fs::read(path).expect("release record");
+    (
+        "200 OK",
+        serde_json::from_slice(&bytes).expect("release JSON"),
+    )
 }
 
 fn pulls(settled: &Path) -> Value {
