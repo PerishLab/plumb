@@ -65,6 +65,16 @@ $target = Join-Path $env:RUNNER_TEMP "plumb-atom-$env:PLUMB_BUILD_COMMIT"
 $archive = Join-Path $env:RUNNER_TEMP "plumb-atom-$env:PLUMB_BUILD_COMMIT.tgz"
 $hostTarget = ((rustc -vV | Select-String '^host: ').Line -replace '^host: ', '')
 $compiler = rustc --version
+function Install-AtomSource([string]$uri) {
+  $match = [regex]::Match($uri, '/workloads/([0-9a-fA-F]{64})\.tgz$')
+  if (-not $match.Success) { throw "invalid Plumb atom workload URL: $uri" }
+  Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $archive
+  $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+  if ($actual -ne $match.Groups[1].Value.ToLowerInvariant()) { throw 'Plumb atom workload digest mismatch' }
+  $debug = Join-Path $target 'debug'
+  New-Item -ItemType Directory -Force -Path $debug | Out-Null
+  tar -xzf $archive -C $debug
+}
 function Get-AtomPlan {
   & $tool workflow plan `
     --world "target=$hostTarget" `
@@ -87,14 +97,7 @@ if (-not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL)) {
   }
 }
 if ($source) {
-  $match = [regex]::Match($source, '/workloads/([0-9a-fA-F]{64})\.tgz$')
-  if (-not $match.Success) { throw "invalid Plumb atom workload URL: $source" }
-  Invoke-WebRequest -UseBasicParsing -Uri $source -OutFile $archive
-  $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
-  if ($actual -ne $match.Groups[1].Value.ToLowerInvariant()) { throw 'Plumb atom workload digest mismatch' }
-  $debug = Join-Path $target 'debug'
-  New-Item -ItemType Directory -Force -Path $debug | Out-Null
-  tar -xzf $archive -C $debug
+  Install-AtomSource $source
   Write-Output "reused exact Plumb atom $env:PLUMB_BUILD_COMMIT for $hostTarget"
 } else {
   $env:CARGO_TARGET_DIR = $target
@@ -117,6 +120,8 @@ if (-not $source -and $keys) {
       $_.name -eq 'ship/atom' -and $_.decision -eq 'reuse' -and $_.reuse.type -eq 'workload'
     }
     if (-not $winner) { throw 'cannot resolve exact Plumb atom inventory race' }
+    Install-AtomSource $winner.reuse.source
+    Copy-Item (Join-Path $target 'debug/plumb.exe') $tool -Force
     Write-Output "accepted exact Plumb atom inventory winner $($winner.reuse.source) for $hostTarget"
   }
 }
