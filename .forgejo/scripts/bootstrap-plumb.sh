@@ -43,8 +43,9 @@ if [ -z "${PLUMB_BUILD_CHANNEL:-}" ]; then
     *) PLUMB_BUILD_CHANNEL=stable ;;
   esac
 fi
-cargo build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
-cp "$atom/target/debug/plumb" "$tool"
+target="$RUNNER_TEMP/plumb-atom-$PLUMB_BUILD_COMMIT"
+CARGO_TARGET_DIR="$target" cargo build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
+cp "$target/debug/plumb" "$tool"
 printf '%s\n' "$bin" >> "$GITHUB_PATH"
 "$tool" --version
 if [ "$mode" = exact ]; then
