@@ -4,7 +4,6 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Component::Normal, Path, PathBuf};
-use std::process::Command;
 
 #[derive(Default)]
 pub struct Tree {
@@ -132,7 +131,7 @@ impl Tree {
             Some(revision) => format!("{revision}:{}", project.path),
             None => format!(":{}", project.path),
         };
-        let output = Command::new("git")
+        let output = plumb::config::detached("git")
             .arg("-C")
             .arg(&self.root)
             .args(["show", &object])
@@ -266,7 +265,7 @@ impl<'a> Git<'a> {
 
     pub fn file(&self, rev: &str, path: &str) -> Result<Option<String>, String> {
         let object = format!("{rev}:{path}");
-        let output = Command::new("git")
+        let output = plumb::config::detached("git")
             .arg("-C")
             .arg(self.0)
             .args(["show", &object])
@@ -285,7 +284,7 @@ impl<'a> Git<'a> {
     }
 
     fn listing(&self, args: &[&str]) -> Result<String, String> {
-        let output = Command::new("git")
+        let output = plumb::config::detached("git")
             .arg("-C")
             .arg(self.0)
             .args(args)
