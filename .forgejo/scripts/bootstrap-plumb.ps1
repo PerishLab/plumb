@@ -115,9 +115,17 @@ if ($mode -eq 'exact') {
 if (-not $source -and $keys) {
   & $tool workflow record ship/atom --keys $keys --workload $archive
   if ($LASTEXITCODE -ne 0) {
-    $raced = Get-AtomPlan
-    $winner = $raced.actions | Where-Object {
-      $_.name -eq 'ship/atom' -and $_.decision -eq 'reuse' -and $_.reuse.type -eq 'workload'
+    $winner = $null
+    for ($attempt = 1; $attempt -le 12; $attempt++) {
+      $raced = Get-AtomPlan
+      $winner = $raced.actions | Where-Object {
+        $_.name -eq 'ship/atom' -and $_.decision -eq 'reuse' -and $_.reuse.type -eq 'workload'
+      }
+      if ($winner) { break }
+      if ($attempt -lt 12) {
+        Write-Output "waiting for exact Plumb atom inventory winner ($attempt/12)"
+        Start-Sleep -Seconds 5
+      }
     }
     if (-not $winner) { throw 'cannot resolve exact Plumb atom inventory race' }
     Install-AtomSource $winner.reuse.source

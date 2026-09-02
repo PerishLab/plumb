@@ -239,7 +239,7 @@ fn depot() {
         "--world \"compiler=$compiler\"",
         ".decision == \"reuse\"",
         "workflow record ship/atom",
-        "accepted exact Plumb atom inventory winner",
+        "waiting for exact Plumb atom inventory winner",
         "--max-time 300",
     ] {
         assert!(held.contains(binding), "Unix atom reuse omits {binding}");
@@ -252,7 +252,7 @@ fn depot() {
         "--world \"compiler=$compiler\"",
         "$action.decision -eq 'reuse'",
         "workflow record ship/atom",
-        "accepted exact Plumb atom inventory winner",
+        "waiting for exact Plumb atom inventory winner",
         "-TimeoutSec 300",
     ] {
         assert!(
