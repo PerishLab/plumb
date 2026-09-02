@@ -155,6 +155,10 @@ fn matrix() {
         !graph.contains("format!(\"plumb={}"),
         "a Plumb patch must not invalidate an immutable publication"
     );
+    assert!(
+        graph.contains("super::seal::held(self.marker)?"),
+        "an existing marker seal must hold binary publication across atom changes"
+    );
 }
 
 #[test]

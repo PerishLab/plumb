@@ -4,7 +4,7 @@ use std::process::Command;
 
 #[test]
 fn recorded() {
-    let store = crate::support::Bucket::open(16);
+    let store = crate::support::Bucket::open(18);
     let root = tempfile::tempdir().expect("root");
     let workload = root.path().join("package.tgz");
     std::fs::write(&workload, "workload").expect("workload");

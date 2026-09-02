@@ -23,7 +23,7 @@ esac
 "#;
 
 pub fn prove(path: &Path) {
-    let inventory = crate::support::Bucket::open(4);
+    let inventory = crate::support::Bucket::open(5);
     let request = serde_json::json!({
         "schema": "plumb.ship-request/v2",
         "action": "ship/cargo",
