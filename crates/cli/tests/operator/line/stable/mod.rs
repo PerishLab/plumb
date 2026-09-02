@@ -101,7 +101,11 @@ fn dispatch() {
     assert!(text.contains("run 88: success"), "{text}");
     let calls = calls.lock().expect("calls");
     assert!(calls.iter().any(|call| call.contains("/dispatches ")));
-    assert!(calls.iter().any(|call| call.contains("/actions/tasks?")));
+    assert!(
+        calls
+            .iter()
+            .any(|call| call.contains("/actions/runs/7/jobs/0/attempt/1 "))
+    );
 }
 
 #[test]
@@ -131,7 +135,7 @@ fn nested() {
             .lock()
             .expect("calls")
             .iter()
-            .any(|call| call.contains("/actions/tasks?"))
+            .any(|call| call.contains("/actions/runs/7/jobs/0/attempt/1 "))
     );
 }
 

@@ -33,10 +33,10 @@ pub fn plumb(root: &Path, args: &[&str]) -> Command {
 }
 
 #[test]
-fn pagination() {
+fn scoped() {
     let fixture = tempfile::tempdir().expect("fixture");
     let bare = tempfile::tempdir().expect("bare");
-    let (url, calls) = super::world::serve(super::world::Court::Paged, 10);
+    let (url, calls) = super::world::serve(super::world::Court::Dispatch, 10);
     super::stable::marked(fixture.path(), bare.path(), &url, "v1.2.0-nightly.4");
     let output = plumb(
         fixture.path(),
@@ -61,6 +61,13 @@ fn pagination() {
             .lock()
             .expect("calls")
             .iter()
-            .any(|call| call.contains("page=2"))
+            .any(|call| call.contains("/actions/runs/7/jobs/0/attempt/1 "))
+    );
+    assert!(
+        calls
+            .lock()
+            .expect("calls")
+            .iter()
+            .all(|call| !call.contains("/actions/tasks?"))
     );
 }
