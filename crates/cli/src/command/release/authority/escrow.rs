@@ -1,5 +1,7 @@
 use sha2::Digest as _;
-use std::{collections::BTreeMap, fs, io::Write, path::Path, process::Command};
+use std::{
+    collections::BTreeMap, fs, io::Write, path::Path, process::Command, thread, time::Duration,
+};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct View {
@@ -143,31 +145,34 @@ impl Escrow {
     }
 
     pub fn verify(&self) -> Result<(), String> {
-        let output = Command::new("aws")
-            .args([
-                "--endpoint-url",
-                &self.endpoint,
-                "s3api",
-                "list-objects-v2",
-                "--bucket",
-                &self.bucket,
-                "--max-keys",
-                "1",
-            ])
-            .env("AWS_ACCESS_KEY_ID", &self.access)
-            .env("AWS_SECRET_ACCESS_KEY", &self.secret)
-            .env("AWS_DEFAULT_REGION", "auto")
-            .env("AWS_EC2_METADATA_DISABLED", "true")
-            .output()
-            .map_err(|error| format!("cannot execute aws S3 probe: {error}"))?;
-        if output.status.success() {
-            Ok(())
-        } else {
-            Err(format!(
-                "release capability failed S3 readback: {}",
-                String::from_utf8_lossy(&output.stderr).trim()
-            ))
+        let mut failure = String::new();
+        for turn in 0..8 {
+            let output = Command::new("aws")
+                .args([
+                    "--endpoint-url",
+                    &self.endpoint,
+                    "s3api",
+                    "list-objects-v2",
+                    "--bucket",
+                    &self.bucket,
+                    "--max-keys",
+                    "1",
+                ])
+                .env("AWS_ACCESS_KEY_ID", &self.access)
+                .env("AWS_SECRET_ACCESS_KEY", &self.secret)
+                .env("AWS_DEFAULT_REGION", "auto")
+                .env("AWS_EC2_METADATA_DISABLED", "true")
+                .output()
+                .map_err(|error| format!("cannot execute aws S3 probe: {error}"))?;
+            if output.status.success() {
+                return Ok(());
+            }
+            failure = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            if turn < 7 {
+                thread::sleep(Duration::from_secs(2));
+            }
         }
+        Err(format!("release capability failed S3 readback: {failure}"))
     }
 
     pub fn minted(access: String, value: &str, bucket: String, account: &str) -> Self {
