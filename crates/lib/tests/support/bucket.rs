@@ -91,3 +91,19 @@ fn read() {
     assert_eq!(object.body, b"answer");
     server.join().expect("server");
 }
+
+#[test]
+fn head() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    let control = control(&listener);
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("head");
+        request(&mut stream);
+        reply(&mut stream, "200 OK", "");
+    });
+    assert!(matches!(
+        control.head("workloads/probe.tgz").expect("head"),
+        Outcome::Held(())
+    ));
+    server.join().expect("server");
+}

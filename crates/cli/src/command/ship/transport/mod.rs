@@ -1,5 +1,6 @@
 mod execute;
 mod resolve;
+mod seal;
 mod support;
 
 pub(super) fn execute(request: &str) -> Result<String, String> {

@@ -192,6 +192,13 @@ impl Authority {
     }
 
     fn publish(&self, key: &str, path: &Path, content_type: &str) -> Result<(), String> {
+        match self.control.head(key)? {
+            plumb::bucket::Outcome::Held(()) => return Ok(()),
+            plumb::bucket::Outcome::Missing => {}
+            plumb::bucket::Outcome::Stale => {
+                return Err("probing workflow workload returned stale".into());
+            }
+        }
         let body = fs::read(path)
             .map_err(|error| format!("cannot read workload {}: {error}", path.display()))?;
         match self.control.write(

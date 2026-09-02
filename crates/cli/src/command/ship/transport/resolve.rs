@@ -166,6 +166,9 @@ impl Publish<'_> {
         if !self.spec.binary() || self.workload.missing {
             return Ok(());
         }
+        if super::seal::held(self.marker)? {
+            return Ok(());
+        }
         let projection = projection();
         let roots = sources(self.spec)?;
         let listed = roots.iter().map(String::as_str).collect::<Vec<_>>();

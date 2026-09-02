@@ -210,6 +210,8 @@ fn bucket(mut stream: TcpStream, objects: &Mutex<BTreeMap<String, Vec<u8>>>) {
             .unwrap_or(true)
     });
     let status = match method {
+        "HEAD" if held.contains_key(key) => 200,
+        "HEAD" => 404,
         "GET" if held.contains_key(key) => 200,
         "GET" => 404,
         "PUT" if stale => 412,

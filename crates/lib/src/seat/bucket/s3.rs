@@ -2,6 +2,8 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+mod probe;
+
 const REGION: &str = "auto";
 const SERVICE: &str = "s3";
 const ATTEMPTS: usize = 3;
