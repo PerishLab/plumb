@@ -68,7 +68,7 @@ fn provenance(body: &str) -> bool {
         .any(|(commit, _)| super::value::commit(commit).is_ok())
 }
 
-pub fn pick(seat: &Path, name: &str, commit: &str) -> Result<String, String> {
+pub fn pick(seat: &Path, name: &str, commits: &[String]) -> Result<String, String> {
     let current = text(
         "read current branch",
         command(seat, ["branch", "--show-current"])?,
@@ -95,10 +95,13 @@ pub fn pick(seat: &Path, name: &str, commit: &str) -> Result<String, String> {
     if head != remote {
         return Err(format!("{name} must equal origin/{name} before pick"));
     }
-    success(
-        "cherry-pick candidate",
-        command(seat, ["cherry-pick", "-x", commit])?,
-    )?;
+    let picked = Command::new("git")
+        .args(["cherry-pick", "-x"])
+        .args(commits)
+        .current_dir(seat)
+        .output()
+        .map_err(|error| format!("cannot run git: {error}"))?;
+    success("cherry-pick candidates", picked)?;
     if let Err(error) = sealed(seat) {
         let _ = command(seat, ["reset", "--hard", &head]);
         return Err(error);
@@ -107,7 +110,7 @@ pub fn pick(seat: &Path, name: &str, commit: &str) -> Result<String, String> {
         "push release line",
         command(seat, ["push", "origin", &format!("HEAD:refs/heads/{name}")])?,
     )?;
-    Ok(format!("picked {commit} onto {name}"))
+    Ok(format!("picked {} onto {name}", commits.join(" ")))
 }
 
 fn sealed(seat: &Path) -> Result<(), String> {

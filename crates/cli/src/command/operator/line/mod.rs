@@ -72,13 +72,19 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     }
 }
 
-fn pick(version: &str, commit: &str, dry: bool) -> Result<String, String> {
+fn pick(version: &str, commits: &[String], dry: bool) -> Result<String, String> {
     let version = value::version(version, "stable")?;
-    value::commit(commit)?;
+    if commits.is_empty() {
+        return Err("pick requires at least one commit".into());
+    }
+    for commit in commits {
+        value::commit(commit)?;
+    }
     let name = value::branch(&version);
     let mut course = Course::new(dry);
-    let said = format!("git cherry-pick -x {commit} on {name}, then push");
-    let done = course.step(said, || super::pick::pick(&git::root()?, &name, commit))?;
+    let listed = commits.join(" ");
+    let said = format!("git cherry-pick -x {listed} on {name}, then prove and push once");
+    let done = course.step(said, || super::pick::pick(&git::root()?, &name, commits))?;
     if course.dry() {
         return Ok(course.plan());
     }

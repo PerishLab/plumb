@@ -13,12 +13,12 @@ pub enum Deed {
         #[arg(long = "dry-run")]
         dry: bool,
     },
-    #[command(about = "Cherry-pick one commit onto a version line")]
+    #[command(about = "Cherry-pick one or more commits onto a version line atomically")]
     Pick {
         #[arg(long)]
         version: String,
-        #[arg(long)]
-        commit: String,
+        #[arg(long, required = true)]
+        commit: Vec<String>,
         #[arg(long = "dry-run")]
         dry: bool,
     },
