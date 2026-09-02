@@ -62,11 +62,12 @@ pub struct Workflow {
     pub(super) json: bool,
 }
 
-const RELEASE: [&str; 4] = [
+const RELEASE: [&str; 5] = [
     "RELEASE_PUBLISH_S3_ACCESS_KEY",
     "RELEASE_PUBLISH_S3_SECRET_KEY",
     "RELEASE_PUBLISH_S3_BUCKET",
     "RELEASE_PUBLISH_S3_ENDPOINT",
+    "RELEASE_PUBLISH_FINGERPRINT",
 ];
 
 const WORKFLOW: [&str; 5] = [

@@ -247,6 +247,7 @@ pub struct Authority {
     pub file: PathBuf,
     pub bucket: String,
     pub endpoint: String,
+    pub fingerprint: String,
     pub url: String,
 }
 

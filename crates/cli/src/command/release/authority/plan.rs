@@ -78,7 +78,7 @@ pub fn build(model: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
         plan.ready(
             resource(model, "secrets"),
             match model.profile {
-                "release" => "all four opaque release publish seats are present",
+                "release" => "all five opaque release publish seats are present",
                 "workflow" => "all five opaque workflow inventory seats are present",
                 _ => "all authority secret seats are present",
             },
@@ -87,7 +87,7 @@ pub fn build(model: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
         plan.change(
             resource(model, "secrets"),
             match model.profile {
-                "release" => "upsert exactly the four release publish secrets",
+                "release" => "upsert exactly the five release publish secrets",
                 "workflow" => "upsert exactly the five workflow inventory secrets",
                 _ => "converge the authority secrets",
             },

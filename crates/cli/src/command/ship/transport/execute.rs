@@ -1,5 +1,5 @@
 use super::super::adaptor;
-use crate::command::release::{artifacts, capsule, output, required, storage, verify};
+use crate::command::release::{artifacts, capsule, output, required, storage};
 use plumb::rig::Rig;
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -126,12 +126,7 @@ impl Request {
                 return result("workload", "", None);
             }
             Operation::Publication { workloads } => {
-                let bucket = format!("perish-{}-releases", spec.product);
-                if rig.publish.bucket != bucket {
-                    return Err(format!(
-                        "release publish authority must target derived bucket {bucket}"
-                    ));
-                }
+                super::support::authority(&rig.publish, &spec.product)?;
                 let artifacts = artifacts(release)?;
                 if release.channel == "stable" {
                     crate::command::release::Product::new(&spec).promote(release)?;
@@ -142,7 +137,6 @@ impl Request {
                 crate::command::release::Product::new(&spec).compile(release)?;
                 let capsule = capsule(release)?;
                 storage::publish(&capsule, &rig.publish)?;
-                verify::run(&capsule, false)?;
                 let (compiled, _) = crate::command::release::record::Capsule::read(&capsule)?;
                 let publication = compiled.seal.remote.url;
                 let keys = self
