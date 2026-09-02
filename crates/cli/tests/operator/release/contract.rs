@@ -9,6 +9,10 @@ fn versioned() {
     for action in ["ship/cargo", "ship/oci"] {
         assert!(support.contains(action), "{action} must bind its version");
     }
+    assert!(
+        support.contains("action == \"ship/cargo\""),
+        "only package workloads embed their projected version"
+    );
     let execution =
         std::fs::read_to_string(root.join("crates/cli/src/command/ship/transport/execute.rs"))
             .expect("Plumb owns ship request execution");

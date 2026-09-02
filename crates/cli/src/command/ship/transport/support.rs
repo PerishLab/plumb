@@ -18,6 +18,10 @@ pub(super) fn contract(action: &str) -> Contract {
     }
 }
 
+pub(super) fn embedded(action: &str) -> bool {
+    action == "ship/cargo"
+}
+
 pub(super) fn authority(held: &plumb::rig::Authority, product: &str) -> Result<(), String> {
     let bucket = format!("perish-{product}-releases");
     if held.bucket != bucket {

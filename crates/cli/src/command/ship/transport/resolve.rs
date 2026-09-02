@@ -4,7 +4,8 @@ use serde_json::{Value, json};
 use std::path::Path;
 
 use super::support::{
-    Contract, Inventory, carry, contract, idle, matrix, object, projection, sources, strings, text,
+    Contract, Inventory, carry, contract, embedded, idle, matrix, object, projection, sources,
+    strings, text,
 };
 
 pub fn run(raw: &str, atom: &str) -> Result<String, String> {
@@ -220,8 +221,7 @@ impl Publish<'_> {
                     projections: &projections,
                     roots: &roots,
                     runner: "docker",
-                    workload: (binding != Contract::Portable)
-                        .then_some(self.marker.version.as_str()),
+                    workload: embedded(action).then_some(self.marker.version.as_str()),
                     release: (binding != Contract::Portable)
                         .then_some(self.marker.version.as_str()),
                     target: (binding == Contract::Exact).then_some(self.marker.commit.as_str()),
