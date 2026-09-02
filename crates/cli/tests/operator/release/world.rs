@@ -270,7 +270,7 @@ status=false
 while [ $# -gt 0 ]; do
   case "$1" in
     --output|-o) output=$2; shift 2 ;;
-    --retry|--retry-delay) shift 2 ;;
+    --retry|--retry-delay|--retry-max-time) shift 2 ;;
     --write-out) status=true; shift 2 ;;
     --fail|--silent|--show-error|--location|--retry-all-errors|--head) shift ;;
     *) url=$1; shift ;;
