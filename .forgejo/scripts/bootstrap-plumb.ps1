@@ -65,10 +65,8 @@ $target = Join-Path $env:RUNNER_TEMP "plumb-atom-$env:PLUMB_BUILD_COMMIT"
 $archive = Join-Path $env:RUNNER_TEMP "plumb-atom-$env:PLUMB_BUILD_COMMIT.tgz"
 $hostTarget = ((rustc -vV | Select-String '^host: ').Line -replace '^host: ', '')
 $compiler = rustc --version
-$keys = $null
-$source = $null
-if (-not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL)) {
-  $plan = & $tool workflow plan `
+function Get-AtomPlan {
+  & $tool workflow plan `
     --world "target=$hostTarget" `
     --world "version=$env:PLUMB_BUILD_VERSION" `
     --world "channel=$env:PLUMB_BUILD_CHANNEL" `
@@ -77,6 +75,11 @@ if (-not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL)) {
     --root 'ship/atom=*' `
     --inventory-url $env:PLUMB_WORKFLOW_INVENTORY_URL `
     $atom | ConvertFrom-Json
+}
+$keys = $null
+$source = $null
+if (-not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL)) {
+  $plan = Get-AtomPlan
   $action = $plan.actions | Where-Object { $_.name -eq 'ship/atom' }
   $keys = $action.keys | ConvertTo-Json -Compress
   if ($action.decision -eq 'reuse' -and $action.reuse.type -eq 'workload') {
@@ -108,4 +111,12 @@ if ($mode -eq 'exact') {
 }
 if (-not $source -and $keys) {
   & $tool workflow record ship/atom --keys $keys --workload $archive
+  if ($LASTEXITCODE -ne 0) {
+    $raced = Get-AtomPlan
+    $winner = $raced.actions | Where-Object {
+      $_.name -eq 'ship/atom' -and $_.decision -eq 'reuse' -and $_.reuse.type -eq 'workload'
+    }
+    if (-not $winner) { throw 'cannot resolve exact Plumb atom inventory race' }
+    Write-Output "accepted exact Plumb atom inventory winner $($winner.reuse.source) for $hostTarget"
+  }
 }

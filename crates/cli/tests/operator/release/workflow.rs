@@ -237,9 +237,9 @@ fn depot() {
         "--world \"version=$PLUMB_BUILD_VERSION\"",
         "--world \"channel=$PLUMB_BUILD_CHANNEL\"",
         "--world \"compiler=$compiler\"",
-        "--world 'profile=debug'",
         ".decision == \"reuse\"",
         "workflow record ship/atom",
+        "accepted exact Plumb atom inventory winner",
         "sha256sum \"$archive\"",
     ] {
         assert!(held.contains(binding), "Unix atom reuse omits {binding}");
@@ -250,9 +250,9 @@ fn depot() {
         "--world \"version=$env:PLUMB_BUILD_VERSION\"",
         "--world \"channel=$env:PLUMB_BUILD_CHANNEL\"",
         "--world \"compiler=$compiler\"",
-        "--world 'profile=debug'",
         "$action.decision -eq 'reuse'",
         "workflow record ship/atom",
+        "accepted exact Plumb atom inventory winner",
         "Get-FileHash -Algorithm SHA256",
     ] {
         assert!(
