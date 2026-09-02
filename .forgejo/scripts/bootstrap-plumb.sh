@@ -47,6 +47,16 @@ target="$RUNNER_TEMP/plumb-atom-$PLUMB_BUILD_COMMIT"
 archive="$RUNNER_TEMP/plumb-atom-$PLUMB_BUILD_COMMIT.tgz"
 host=$(rustc -vV | sed -n 's/^host: //p')
 compiler=$(rustc --version)
+install_atom() {
+  held_source=$1
+  digest=$(printf '%s' "$held_source" | sed -n 's#^.*/workloads/\([0-9a-fA-F]\{64\}\)\.tgz$#\1#p')
+  test -n "$digest"
+  $fetch -o "$archive" "$held_source"
+  actual=$(sha256sum "$archive" | cut -d' ' -f1)
+  test "$actual" = "$digest"
+  mkdir -p "$target/debug"
+  tar -xzf "$archive" -C "$target/debug"
+}
 atom_plan() {
   "$tool" workflow plan \
     --world "target=$host" \
@@ -67,13 +77,7 @@ if [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ]; then
     '.actions[] | select(.name == "ship/atom" and .decision == "reuse" and .reuse.type == "workload") | .reuse.source')
 fi
 if [ -n "$source" ]; then
-  digest=$(printf '%s' "$source" | sed -n 's#^.*/workloads/\([0-9a-fA-F]\{64\}\)\.tgz$#\1#p')
-  test -n "$digest"
-  $fetch -o "$archive" "$source"
-  actual=$(sha256sum "$archive" | cut -d' ' -f1)
-  test "$actual" = "$digest"
-  mkdir -p "$target/debug"
-  tar -xzf "$archive" -C "$target/debug"
+  install_atom "$source"
   printf 'reused exact Plumb atom %s for %s\n' "$PLUMB_BUILD_COMMIT" "$host"
 else
   PLUMB_BUILD_SOURCE=1 CARGO_TARGET_DIR="$target" cargo build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
@@ -92,6 +96,8 @@ if [ -z "$source" ] && [ -n "$keys" ]; then
     winner=$(printf '%s' "$raced" | jq -r \
       '.actions[] | select(.name == "ship/atom" and .decision == "reuse" and .reuse.type == "workload") | .reuse.source')
     test -n "$winner"
+    install_atom "$winner"
+    cp "$target/debug/plumb" "$tool"
     printf 'accepted exact Plumb atom inventory winner %s for %s\n' "$winner" "$host"
   fi
 fi
