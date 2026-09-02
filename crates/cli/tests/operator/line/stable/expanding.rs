@@ -26,7 +26,7 @@ fn terminal() {
     assert!(
         calls
             .iter()
-            .filter(|call| call.contains("/actions/runs/88 "))
+            .filter(|call| call.contains("/actions/tasks?"))
             .count()
             >= 5,
         "watcher must survive a transient terminal run state"
