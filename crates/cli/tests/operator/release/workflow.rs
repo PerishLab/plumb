@@ -55,8 +55,8 @@ fn matrix() {
     );
     assert!(held.contains(".forgejo/scripts/resolve-ship.sh"), "{held}");
     assert!(
-        held.contains("timeout --kill-after=5s 45s"),
-        "marker checkout must not inherit an unbounded transport wait"
+        held.contains(".forgejo/scripts/fetch-marker.sh"),
+        "marker checkout must use the bounded canonical transport"
     );
     assert!(
         held.contains("fromJSON(needs.resolve.outputs.workload)"),

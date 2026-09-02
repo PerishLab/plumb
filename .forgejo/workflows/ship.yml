@@ -49,6 +49,15 @@ jobs:
       PLUMB_RELEASE_ROOT: .
       PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
     steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          path: .plumb-atom
+          token: ${{ github.token }}
+
       - name: Check out the release marker
         shell: bash
         env:
@@ -60,31 +69,8 @@ jobs:
           reference="refs/tags/$PLUMB_RELEASE_MARKER"
           git init .
           git remote add origin "$remote"
-          fetch=(git)
-          if [ -n "$PLUMB_CHECKOUT_TOKEN" ]; then
-            basic=$(printf 'x-access-token:%s' "$PLUMB_CHECKOUT_TOKEN" | base64 | tr -d '\n')
-            fetch+=(-c "http.extraheader=AUTHORIZATION: basic $basic")
-          fi
-          fetched=
-          for attempt in 1 2 3; do
-            if timeout --kill-after=5s 45s \
-              "${fetch[@]}" fetch --no-tags --depth=1 origin "+$reference:$reference"; then
-              fetched=true
-              break
-            fi
-            sleep "$attempt"
-          done
-          test "$fetched" = true
+          bash .plumb-atom/.forgejo/scripts/fetch-marker.sh "$PLUMB_RELEASE_MARKER"
           git checkout --detach "$reference^{commit}"
-
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-          repository: ${{ github.repository }}
-          ref: ${{ github.sha }}
-          path: .plumb-atom
-          token: ${{ github.token }}
 
       - name: Install the exact atom Plumb
         shell: bash

@@ -1,3 +1,4 @@
+use super::datum::lined;
 use super::settlement::seed;
 use super::world::{Court, serve};
 use std::process::{Command, Output};
@@ -85,4 +86,64 @@ fn divergence() {
     let calls = std::fs::read_to_string(fixture.path().join("calls")).expect("calls");
     assert!(!calls.contains("git commit-tree"), "{calls}");
     assert!(!calls.contains("git push"), "{calls}");
+}
+
+#[test]
+fn reopens() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let bare = tempfile::tempdir().expect("bare");
+    let cut = fixture.path().join("cut");
+    let (url, calls) = serve(Court::Resume(cut.clone()), 5);
+    let origin = format!("{url}/test/probe.git");
+    let head = lined(fixture.path(), &origin, bare.path(), "release/v1.2.0");
+    std::fs::write(&cut, head).expect("cut");
+    let home = super::command::support::depot(&[]);
+    let output = super::command::plumb(
+        fixture.path(),
+        &["version", "prepare", "--version", "1.2.0"],
+    )
+    .env("PLUMB_HOME", home.path())
+    .output()
+    .expect("plumb");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        calls
+            .lock()
+            .expect("calls")
+            .iter()
+            .any(|call| call.contains("PATCH ") && call.contains("branch_protections")),
+        "an existing line must return to preparing protection"
+    );
+}
+
+#[test]
+fn marked() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let bare = tempfile::tempdir().expect("bare");
+    let cut = fixture.path().join("cut");
+    let (url, _) = serve(Court::Resume(cut.clone()), 1);
+    let origin = format!("{url}/test/probe.git");
+    let head = lined(fixture.path(), &origin, bare.path(), "release/v1.2.0");
+    std::fs::write(&cut, &head).expect("cut");
+    super::stable::run(
+        Command::new("git")
+            .args(["tag", "v1.2.0", &head])
+            .current_dir(fixture.path()),
+    );
+    let home = super::command::support::depot(&[]);
+    let output = super::command::plumb(
+        fixture.path(),
+        &["version", "prepare", "--version", "1.2.0"],
+    )
+    .env("PLUMB_HOME", home.path())
+    .output()
+    .expect("plumb");
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("release marker v1.2.0 already stands")
+    );
 }
