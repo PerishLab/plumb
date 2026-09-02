@@ -6,7 +6,7 @@ pub mod skill;
 pub fn prepare(command: &Command) -> Result<(), String> {
     if matches!(
         command,
-        Command::Depot { .. } | Command::Configuration { .. }
+        Command::Depot { .. } | Command::Configuration { .. } | Command::Version { .. }
     ) {
         return Ok(());
     }
