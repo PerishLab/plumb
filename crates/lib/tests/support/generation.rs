@@ -75,6 +75,15 @@ fn pointer() {
     let mut skipped = next.clone();
     skipped.prior = Some("c".repeat(64));
     assert!(pointer.advance(&skipped).is_err());
+
+    let mut rebound = next.clone();
+    rebound.marker.sha256 = "c".repeat(64);
+    rebound.prior = None;
+    assert!(next.advance(&rebound).expect("marker rebound"));
+    let mut linked = rebound;
+    linked.prior = Some(next.generation.clone());
+    assert!(next.advance(&linked).is_err());
+
     let mut drift = next;
     drift.manifest.url = "https://depot.example.test/manifest.json".to_string();
     assert!(drift.encode().is_err());

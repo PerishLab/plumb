@@ -20,6 +20,14 @@ pub struct Pointer {
     pub created: String,
 }
 
+#[derive(Eq, PartialEq)]
+struct Projection<'a> {
+    product: &'a str,
+    channel: &'a str,
+    version: &'a str,
+    kind: super::Kind,
+}
+
 impl Pointer {
     pub fn new(held: &Manifest, publication: Publication<'_>) -> Result<Self, String> {
         let generation = held.generation()?;
@@ -78,7 +86,13 @@ impl Pointer {
         self.validate()?;
         next.validate()?;
         if self.identity() != next.identity() {
-            return Err("standing depot pointer names another marker projection".into());
+            if self.projection() != next.projection() {
+                return Err("standing depot pointer names another marker projection".into());
+            }
+            if next.prior.is_some() {
+                return Err("a rebound depot marker must begin a new generation lineage".into());
+            }
+            return Ok(true);
         }
         if self.generation == next.generation {
             return Ok(false);
@@ -87,6 +101,19 @@ impl Pointer {
             return Err("depot latest does not continue from its standing generation".into());
         }
         Ok(true)
+    }
+
+    pub fn projects(&self, held: &Manifest) -> bool {
+        self.identity() == held.identity()
+    }
+
+    fn projection(&self) -> Projection<'_> {
+        Projection {
+            product: &self.product,
+            channel: &self.channel,
+            version: &self.version,
+            kind: self.kind,
+        }
     }
 
     fn identity(&self) -> Identity {
