@@ -20,6 +20,8 @@ pub struct Input {
     keys: String,
     #[arg(long, help = "Reusable workload produced by the action")]
     workload: PathBuf,
+    #[arg(long, hide = true)]
+    reuse: Option<String>,
     #[arg(
         long,
         help = "Verified public publication URL, when the action published"
@@ -76,16 +78,24 @@ fn execute(input: Input) -> Result<(), String> {
                 .ok_or_else(|| "--publication requires a publication key".to_string())
         })
         .transpose()?;
-    if !input.workload.is_file() {
-        return Err(format!(
-            "workload {} is not a file",
-            input.workload.display()
-        ));
-    }
     let authority = Authority::read()?;
-    let object = format!("workloads/{}.tgz", digest(&input.workload)?);
-    let source = authority.public(&object)?;
-    authority.publish(&object, &input.workload, "application/gzip")?;
+    let source = if let Some(source) = input.reuse {
+        if !source.starts_with("https://") {
+            return Err("reused workload source must be an HTTPS URL".into());
+        }
+        source
+    } else {
+        if !input.workload.is_file() {
+            return Err(format!(
+                "workload {} is not a file",
+                input.workload.display()
+            ));
+        }
+        let object = format!("workloads/{}.tgz", digest(&input.workload)?);
+        let source = authority.public(&object)?;
+        authority.publish(&object, &input.workload, "application/gzip")?;
+        source
+    };
     let workload = Record::workload(input.action.clone(), &keys, source);
     authority.record(&workload)?;
     if let Some(publication) = &publication {
@@ -98,6 +108,7 @@ pub(in crate::command) struct Project<'a> {
     pub action: &'a str,
     pub keys: &'a str,
     pub workload: PathBuf,
+    pub reuse: Option<&'a str>,
     pub publication: Option<String>,
     pub depot: Option<serde_json::Value>,
 }
@@ -107,6 +118,7 @@ pub(in crate::command) fn project(input: Project<'_>) -> Result<(), String> {
         action: input.action.to_string(),
         keys: input.keys.to_string(),
         workload: input.workload,
+        reuse: input.reuse.map(str::to_string),
         publication: input.publication,
         depot: input.depot.map(|held| held.to_string()),
     })
