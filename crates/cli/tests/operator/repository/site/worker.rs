@@ -1,10 +1,11 @@
+use sha2::{Digest, Sha256};
 use std::path::Path;
 use std::process::Command;
 
 #[test]
 fn exact() {
     let fixture = tempfile::tempdir().expect("worker fixture");
-    let inventory = crate::support::Bucket::open(12);
+    let inventory = crate::support::Bucket::open(11);
     let root = fixture.path();
     super::seed(root);
     std::fs::write(
@@ -58,6 +59,10 @@ fn exact() {
     );
     let workload = root.join("target/cfworker/probe-worker.tar.gz");
     assert!(workload.is_file());
+    let source = format!(
+        "https://workflow.example/workloads/{:x}.tgz",
+        Sha256::digest(std::fs::read(&workload).expect("worker workload"))
+    );
     let before = calls(root).matches("--filter @probe/web build").count();
     let prepared = calls(root).matches("corepack enable").count();
     std::fs::remove_dir_all(root.join("apps/web/dist")).expect("clear built tree");
@@ -65,7 +70,7 @@ fn exact() {
         root,
         &request(serde_json::json!({
             "type": "workload",
-            "source": "https://workflow.example/worker.tgz"
+            "source": source
         })),
         Some(&workload),
         &inventory.endpoint(),

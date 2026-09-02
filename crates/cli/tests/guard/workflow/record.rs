@@ -1,10 +1,11 @@
 #![cfg(unix)]
 
+use sha2::{Digest, Sha256};
 use std::process::Command;
 
 #[test]
 fn recorded() {
-    let store = crate::support::Bucket::open(18);
+    let store = crate::support::Bucket::open(24);
     let root = tempfile::tempdir().expect("root");
     let workload = root.path().join("package.tgz");
     std::fs::write(&workload, "workload").expect("workload");
@@ -58,6 +59,41 @@ fn recorded() {
         repeated.status.success(),
         "existing immutable records are idempotent: {}",
         String::from_utf8_lossy(&repeated.stderr)
+    );
+    std::fs::write(&workload, "projected workload").expect("projected workload");
+    let source = format!(
+        "https://workflow.example/workloads/{:x}.tgz",
+        Sha256::digest(b"workload")
+    );
+    let projected = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args([
+            "workflow",
+            "record",
+            "ship/npm.cli",
+            "--keys",
+            &keys,
+            "--workload",
+            workload.to_str().expect("workload path"),
+            "--reuse",
+            &source,
+            "--publication",
+            "https://registry.example/cli-1.0.0.tgz",
+            "--depot",
+            &depot,
+        ])
+        .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
+        .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
+        .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", "workflow")
+        .env("PLUMB_WORKFLOW_INVENTORY_ENDPOINT", store.endpoint())
+        .env(
+            "PLUMB_WORKFLOW_INVENTORY_URL",
+            "https://workflow.example/inventory.json",
+        )
+        .output()
+        .expect("projected record");
+    assert!(
+        projected.status.success(),
+        "reused source must survive projection"
     );
     let moved = keys
         .replace(&"2".repeat(64), &"4".repeat(64))

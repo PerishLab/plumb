@@ -119,6 +119,7 @@ impl Request {
                         action: &self.action,
                         keys: &keys.to_string(),
                         workload: artifacts(release)?.join(archive),
+                        reuse: None,
                         publication: None,
                         depot: None,
                     },
@@ -147,6 +148,7 @@ impl Request {
                         action: &self.action,
                         keys: &keys.to_string(),
                         workload: output(release)?.join("capsule.json"),
+                        reuse: None,
                         publication: Some(publication.clone()),
                         depot: None,
                     },
@@ -208,6 +210,7 @@ impl Request {
             action: &self.action,
             keys: &keys.to_string(),
             workload: projection.workload,
+            reuse: (self.reuse.kind == "workload").then_some(self.reuse.source.as_str()),
             publication: Some(projection.publication.clone()),
             depot: projection.depot.clone(),
         })?;

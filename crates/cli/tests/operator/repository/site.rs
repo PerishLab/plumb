@@ -71,7 +71,7 @@ case "$url" in
   */workers/subdomain) printf '{"success":true,"result":{"subdomain":"probeaccount"}}' ;;
   https://abcdefgh-probe.probeaccount.workers.dev) printf '200' ;;
   https://site.test/) printf '200' ;;
-  https://workflow.example/worker.tgz) cat "$FAKE_WORKER_WORKLOAD" ;;
+  https://workflow.example/*) cat "$FAKE_WORKER_WORKLOAD" ;;
   *) printf '{"message":"unexpected"}\n500' ;;
 esac
 "#,
