@@ -206,7 +206,9 @@ fn managed() {
     let home = super::super::support::depot(&[]);
     let managed = tempfile::tempdir().expect("managed binary");
     let binary = managed.path().join("plumb");
-    std::fs::copy(env!("CARGO_BIN_EXE_plumb"), &binary).expect("copy Plumb");
+    let staged = managed.path().join("plumb.installing");
+    std::fs::copy(env!("CARGO_BIN_EXE_plumb"), &staged).expect("copy Plumb");
+    std::fs::rename(staged, &binary).expect("install Plumb");
     std::fs::write(
         managed.path().join(".plumb-manager"),
         format!(
