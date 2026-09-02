@@ -44,7 +44,7 @@ if [ -z "${PLUMB_BUILD_CHANNEL:-}" ]; then
   esac
 fi
 target="$RUNNER_TEMP/plumb-atom-$PLUMB_BUILD_COMMIT"
-CARGO_TARGET_DIR="$target" cargo build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
+PLUMB_BUILD_SOURCE=1 CARGO_TARGET_DIR="$target" cargo build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
 cp "$target/debug/plumb" "$tool"
 printf '%s\n' "$bin" >> "$GITHUB_PATH"
 "$tool" --version

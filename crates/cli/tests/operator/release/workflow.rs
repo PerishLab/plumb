@@ -201,12 +201,13 @@ fn depot() {
     );
     assert!(
         held.contains("plumb-atom-$PLUMB_BUILD_COMMIT")
-            && held.contains("CARGO_TARGET_DIR=\"$target\""),
+            && held.contains("PLUMB_BUILD_SOURCE=1 CARGO_TARGET_DIR=\"$target\""),
         "Unix atom builds must isolate Cargo state by exact atom commit"
     );
     assert!(
         windows.contains("plumb-atom-$env:PLUMB_BUILD_COMMIT")
-            && windows.contains("$env:CARGO_TARGET_DIR = $target"),
+            && windows.contains("$env:CARGO_TARGET_DIR = $target")
+            && windows.contains("$env:PLUMB_BUILD_SOURCE = '1'"),
         "Windows atom builds must isolate Cargo state by exact atom commit"
     );
 }

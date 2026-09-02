@@ -63,6 +63,7 @@ if ($mode -eq 'bootstrap') {
 
 $target = Join-Path $env:RUNNER_TEMP "plumb-atom-$env:PLUMB_BUILD_COMMIT"
 $env:CARGO_TARGET_DIR = $target
+$env:PLUMB_BUILD_SOURCE = '1'
 cargo build --quiet --locked --manifest-path (Join-Path $atom 'Cargo.toml') --bin plumb
 Copy-Item (Join-Path $target 'debug/plumb.exe') $tool -Force
 $bin | Out-File -FilePath $env:GITHUB_PATH -Append
