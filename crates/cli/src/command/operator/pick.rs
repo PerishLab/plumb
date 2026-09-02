@@ -101,16 +101,27 @@ pub fn pick(seat: &Path, name: &str, commits: &[String]) -> Result<String, Strin
         .current_dir(seat)
         .output()
         .map_err(|error| format!("cannot run git: {error}"))?;
-    success("cherry-pick candidates", picked)?;
+    if let Err(error) = success("cherry-pick candidates", picked) {
+        return Err(restore(seat, &head, error));
+    }
     if let Err(error) = sealed(seat) {
-        let _ = command(seat, ["reset", "--hard", &head]);
-        return Err(error);
+        return Err(restore(seat, &head, error));
     }
     success(
         "push release line",
         command(seat, ["push", "origin", &format!("HEAD:refs/heads/{name}")])?,
     )?;
     Ok(format!("picked {} onto {name}", commits.join(" ")))
+}
+
+fn restore(seat: &Path, head: &str, error: String) -> String {
+    let _ = command(seat, ["cherry-pick", "--abort"]);
+    match command(seat, ["reset", "--hard", head])
+        .and_then(|done| success("restore release line", done))
+    {
+        Ok(()) => error,
+        Err(recovery) => format!("{error}; {recovery}"),
+    }
 }
 
 fn sealed(seat: &Path) -> Result<(), String> {
