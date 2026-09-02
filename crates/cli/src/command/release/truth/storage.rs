@@ -60,17 +60,21 @@ impl<'a> Remote<'a> {
             },
         )?;
         if output.status.success() {
-            return Ok(());
+            return self.exact(
+                object,
+                "created object is not readable from release authority",
+            );
         }
         if !precondition(&output) {
             return Err(failure("create object", &object.key, &output));
         }
+        self.exact(object, "conditional create raced and object vanished")
+    }
+
+    fn exact(&self, object: &Local, absent: &str) -> Result<(), String> {
         let remote = self.get(&object.key)?;
         let Some(path) = remote else {
-            return Err(format!(
-                "conditional create raced and {} vanished",
-                object.key
-            ));
+            return Err(format!("{absent}: {}", object.key));
         };
         let result = super::record::digest(&path).and_then(|(digest, size)| {
             if digest == object.remote.sha256 && size == object.remote.size {
