@@ -12,7 +12,9 @@ pub fn root(over: &Path) -> Result<PathBuf, String> {
 }
 
 pub fn held(over: &Path) -> Held {
-    if let Some(path) = plumb::config::value("PLUMB_GUARD_CONFIGURATION") {
+    if plumb::config::value("PLUMB_HOME").is_none()
+        && let Some(path) = plumb::config::value("PLUMB_GUARD_CONFIGURATION")
+    {
         return match plumb::depot::Rules::guard(Path::new(&path), plumb::version!("PLUMB")) {
             Ok(seat) => Held::Seat(Box::new(seat)),
             Err(error) => Held::Blind(error),
