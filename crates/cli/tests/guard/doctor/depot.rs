@@ -163,10 +163,9 @@ fn guarded() {
     let root = fixture.path();
     std::fs::write(root.join("plumb.toml"), "[layout]\n").expect("governance");
     let seat = super::super::support::guard(&[], &format!("v{}", env!("CARGO_PKG_VERSION")));
-    let home = tempfile::tempdir().expect("unrelated active depot home");
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("fixture")])
-        .env("PLUMB_HOME", home.path())
+        .env_remove("PLUMB_HOME")
         .env("PLUMB_GUARD_CONFIGURATION", seat.path())
         .output()
         .expect("guarded doctor");

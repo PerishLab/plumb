@@ -80,7 +80,9 @@ pub(super) fn execute(root: &Path, argv: &[String], seat: Option<&Path>) -> Resu
     let mut command = plumb::config::detached(program);
     command.args(args).current_dir(root);
     if let Some(seat) = seat {
-        command.env("PLUMB_GUARD_CONFIGURATION", seat);
+        command
+            .env_remove("PLUMB_HOME")
+            .env("PLUMB_GUARD_CONFIGURATION", seat);
     }
     let status = command
         .status()

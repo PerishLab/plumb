@@ -38,7 +38,9 @@ pub(super) fn held() -> Result<&'static Rules, String> {
 
 impl Rules {
     fn open() -> Result<Self, String> {
-        if let Some(root) = crate::config::value("PLUMB_GUARD_CONFIGURATION") {
+        if crate::config::value("PLUMB_HOME").is_none()
+            && let Some(root) = crate::config::value("PLUMB_GUARD_CONFIGURATION")
+        {
             return Self::guard(Path::new(&root), crate::version!("PLUMB"));
         }
         if let Some(root) = crate::config::value("PLUMB_DEPOT_SNAPSHOT") {
