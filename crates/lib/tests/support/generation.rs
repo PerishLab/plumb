@@ -232,7 +232,8 @@ fn brief() {
         (object, bundle.bodies["SKILL.md"].clone()),
     ]);
     std::thread::spawn(move || {
-        for stream in listener.incoming().take(3) {
+        let mut interrupted = false;
+        for stream in listener.incoming().take(4) {
             let mut stream = stream.expect("stream");
             let mut request = [0u8; 2048];
             let size = stream.read(&mut request).expect("request");
@@ -242,6 +243,16 @@ fn brief() {
                 .expect("request path")
                 .to_string();
             let body = &responses[&path];
+            if path.ends_with("/objects/SKILL.md") && !interrupted {
+                interrupted = true;
+                write!(
+                    stream,
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\nx",
+                    body.len()
+                )
+                .expect("interrupted response");
+                continue;
+            }
             write!(
                 stream,
                 "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
