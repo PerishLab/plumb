@@ -226,20 +226,32 @@ fn managed() {
     )
     .expect("fake curl");
     std::fs::set_permissions(&curl, std::fs::Permissions::from_mode(0o755)).expect("curl mode");
-    let output = Command::new(binary)
-        .args(["doctor", fixture.path().to_str().expect("fixture")])
-        .env("PLUMB_HOME", home.path())
-        .env("PLUMB_RELEASES", "https://releases.test")
-        .env(
-            "PATH",
-            format!(
-                "{}:{}",
-                bin.display(),
-                std::env::var("PATH").unwrap_or_default()
-            ),
-        )
-        .output()
-        .expect("managed doctor");
+    let mut attempts = 0;
+    let output = loop {
+        attempts += 1;
+        match Command::new(&binary)
+            .args(["doctor", fixture.path().to_str().expect("fixture")])
+            .env("PLUMB_HOME", home.path())
+            .env("PLUMB_RELEASES", "https://releases.test")
+            .env(
+                "PATH",
+                format!(
+                    "{}:{}",
+                    bin.display(),
+                    std::env::var("PATH").unwrap_or_default()
+                ),
+            )
+            .output()
+        {
+            Ok(output) => break output,
+            Err(error)
+                if error.kind() == std::io::ErrorKind::ExecutableFileBusy && attempts < 5 =>
+            {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            Err(error) => panic!("managed doctor: {error}"),
+        }
+    };
     let out = format!(
         "{}{}",
         String::from_utf8_lossy(&output.stdout),
