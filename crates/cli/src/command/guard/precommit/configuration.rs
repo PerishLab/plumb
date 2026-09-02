@@ -16,10 +16,18 @@ impl Seat {
             return Err("only Plumb may bootstrap release-line guard configuration".into());
         }
         let depot = spec.derivative(plumb::depot::v3::Kind::Configuration)?;
-        let binding = crate::command::release::Product::new(&spec)
-            .depot()
-            .latest("beta", true)?;
-        related(target, &binding.release.version)?;
+        let product = crate::command::release::Product::new(&spec);
+        let source = product.depot();
+        let beta = source.latest("beta", true)?;
+        let binding = if related(target, &beta.release.version).is_ok()
+            || precedes(target, &beta.release.version).is_ok()
+        {
+            beta
+        } else {
+            let stable = source.latest("stable", true)?;
+            precedes(target, &stable.release.version)?;
+            stable
+        };
         let snapshot = Snapshot::read(staged).map_err(|error| error.to_string())?;
         let held = crate::shape::depot::inventory(&snapshot)?;
         let plan = Batch::validation(
@@ -77,6 +85,19 @@ pub(crate) fn related(target: &str, validator: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn precedes(target: &str, validator: &str) -> Result<(), String> {
+    let target = semver::Version::parse(target.trim_start_matches('v'))
+        .map_err(|error| format!("cannot parse guard target {target}: {error}"))?;
+    let validator = semver::Version::parse(validator.trim_start_matches('v'))
+        .map_err(|error| format!("cannot parse released validator {validator}: {error}"))?;
+    if validator.major != target.major || validator > target {
+        return Err(format!(
+            "released validator v{validator} cannot open v{target}"
+        ));
+    }
+    Ok(())
+}
+
 pub(super) fn target(root: &Path) -> Result<Option<String>, String> {
     let governance = Git(root).file("plumb.toml")?;
     let governance: toml::Table = governance
@@ -106,11 +127,24 @@ struct Git<'a>(&'a Path);
 
 impl Git<'_> {
     fn line(&self, version: &str) -> Result<(), String> {
-        let branch = self.run(&["symbolic-ref", "--short", "HEAD"], "read release line")?;
-        if branch != format!("release/{version}") {
-            return Err(format!(
-                "configuration mismatch may bootstrap only on release/{version}, got {branch}"
-            ));
+        let expected = format!("release/{version}");
+        match self.run(&["symbolic-ref", "--short", "HEAD"], "read release line") {
+            Ok(branch) if branch == expected => return Ok(()),
+            Ok(branch) => {
+                return Err(format!(
+                    "configuration mismatch may bootstrap only on {expected}, got {branch}"
+                ));
+            }
+            Err(error) => {
+                let head = self.run(&["rev-parse", "HEAD"], "read detached release commit")?;
+                let remote = self.run(
+                    &["rev-parse", &format!("origin/{expected}^{{commit}}")],
+                    "read remote release commit",
+                )?;
+                if head != remote {
+                    return Err(error);
+                }
+            }
         }
         Ok(())
     }
