@@ -85,7 +85,7 @@ pub(crate) fn related(target: &str, validator: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn precedes(target: &str, validator: &str) -> Result<(), String> {
+pub(crate) fn precedes(target: &str, validator: &str) -> Result<(), String> {
     let target = semver::Version::parse(target.trim_start_matches('v'))
         .map_err(|error| format!("cannot parse guard target {target}: {error}"))?;
     let validator = semver::Version::parse(validator.trim_start_matches('v'))

@@ -30,7 +30,11 @@ impl Tree<'_> {
         let product = crate::command::release::Product::new(&spec);
         let release = product.depot();
         let binding = release.latest("beta", true)?;
-        crate::command::guard::precommit::related(&marker.marker, &binding.release.version)?;
+        if crate::command::guard::precommit::related(&marker.marker, &binding.release.version)
+            .is_err()
+        {
+            crate::command::guard::precommit::precedes(&marker.marker, &binding.release.version)?;
+        }
         let bundle = plumb::depot::v3::Bundle::read(
             Path::new(from),
             plumb::depot::v3::Identity {
