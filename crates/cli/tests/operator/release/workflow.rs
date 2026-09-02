@@ -214,5 +214,10 @@ fn inputs() {
     assert!(held.contains(":(glob)**/Cargo.toml"), "{held}");
     assert!(held.contains("seat.join(\"src\")"), "{held}");
     assert!(held.contains("spec.depends.get(\"binary\")"), "{held}");
+    assert!(
+        held.contains("Cargo.toml#/workspace/package/version"),
+        "{held}"
+    );
+    assert!(!held.contains("package.json#/version"), "{held}");
     assert!(!held.contains("seat.join(\"tests\")"), "{held}");
 }
