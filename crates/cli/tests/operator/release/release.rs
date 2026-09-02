@@ -58,13 +58,14 @@ fn cycle() {
     fixture.archive(&artifacts, "v1.2.0-beta.7");
 
     let beta = root.join("beta");
+    let stray = root.join("nonstable-must-not-consume-promotion.json");
     compile(Compile {
         fixture: &fixture,
         artifacts: &artifacts,
         channel: "beta",
         version: "v1.2.0-beta.7",
         out: &beta,
-        promotion: None,
+        promotion: Some(&stray),
         commit: &candidate,
     });
     let manifest = beta.join("capsule.json");

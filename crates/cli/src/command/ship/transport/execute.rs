@@ -24,13 +24,23 @@ struct Request {
 #[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase", deny_unknown_fields)]
 enum Operation {
-    Workload { target: String, archive: String },
-    Publication { workloads: Vec<Workload> },
+    Workload {
+        target: String,
+        archive: String,
+    },
+    Publication {
+        workloads: Vec<Workload>,
+    },
     Cargo,
     Cfworker,
     Chart,
-    Npm { package: String },
-    Oci,
+    Npm {
+        package: String,
+    },
+    Oci {
+        #[serde(default)]
+        workloads: Vec<Workload>,
+    },
 }
 
 #[derive(Deserialize)]
@@ -150,9 +160,7 @@ impl Request {
                 &reuse,
             )?),
             Operation::Cfworker => {
-                if self.reuse.kind == "none" {
-                    install(&spec.root)?;
-                }
+                pnpm(&spec.root, self.reuse.kind == "none")?;
                 Some(
                     super::super::site::Worker {
                         root: &spec.root,
@@ -165,9 +173,7 @@ impl Request {
                 Some(adaptor::chart::chart(&spec).exact(version, &release.credential, &reuse)?)
             }
             Operation::Npm { package } => {
-                if self.reuse.kind == "none" {
-                    install(&spec.root)?;
-                }
+                pnpm(&spec.root, self.reuse.kind == "none")?;
                 Some(adaptor::module::module(&spec).exact(
                     &package,
                     version,
@@ -175,16 +181,20 @@ impl Request {
                     &reuse,
                 )?)
             }
-            Operation::Oci => Some(adaptor::container::run(
-                &adaptor::image::image(&spec),
-                adaptor::container::Request {
-                    version,
-                    commit: &release.commit,
-                    artifacts: &artifacts(release)?,
-                    credential: &release.credential,
-                    reuse: &reuse,
-                },
-            )?),
+            Operation::Oci { workloads } => {
+                let artifacts = artifacts(release)?;
+                materialize(&artifacts, &workloads)?;
+                Some(adaptor::container::run(
+                    &adaptor::image::image(&spec),
+                    adaptor::container::Request {
+                        version,
+                        commit: &release.commit,
+                        artifacts: &artifacts,
+                        credential: &release.credential,
+                        reuse: &reuse,
+                    },
+                )?)
+            }
         };
         let Some(projection) = projection else {
             return result("none", "", None);
@@ -237,11 +247,14 @@ fn materialize(root: &std::path::Path, workloads: &[Workload]) -> Result<(), Str
     Ok(())
 }
 
-fn install(root: &std::path::Path) -> Result<(), String> {
+fn pnpm(root: &std::path::Path, install: bool) -> Result<(), String> {
     if !root.join("pnpm-lock.yaml").is_file() {
         return Ok(());
     }
     command(root, "corepack", &["enable"])?;
+    if !install {
+        return Ok(());
+    }
     let store = root.join("target/pnpm-store");
     command(
         root,

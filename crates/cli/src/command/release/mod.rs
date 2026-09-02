@@ -34,7 +34,9 @@ impl<'a> Product<'a> {
             commit,
             artifacts: &artifacts(release)?,
             out: &output(release)?,
-            promotion: release.promotion.as_deref(),
+            promotion: (channel == "stable")
+                .then_some(release.promotion.as_deref())
+                .flatten(),
             toolchain: &release.toolchain,
         })
     }

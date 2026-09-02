@@ -115,3 +115,12 @@ pub(super) fn object(value: &Value) -> Result<Map<String, Value>, String> {
         .cloned()
         .ok_or_else(|| "ship plan row is not an object".to_string())
 }
+
+pub(super) fn carry(request: &mut Map<String, Value>, workloads: &[Value]) -> Result<(), String> {
+    request
+        .get_mut("operation")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| "ship plan carries no operation".to_string())?
+        .insert("workloads".into(), Value::Array(workloads.to_vec()));
+    Ok(())
+}

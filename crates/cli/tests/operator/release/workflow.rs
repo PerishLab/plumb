@@ -30,6 +30,12 @@ fn transport() -> String {
         .expect("Plumb owns binary source discovery")
 }
 
+fn resolver() -> String {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    std::fs::read_to_string(root.join("crates/cli/src/command/ship/transport/resolve.rs"))
+        .expect("Plumb owns ship graph resolution")
+}
+
 #[test]
 fn matrix() {
     let held = canonical();
@@ -118,6 +124,12 @@ fn matrix() {
     assert!(
         held.contains("resolve-ship.sh '${{ github.sha }}' ready"),
         "publication planning must observe the recorded workloads"
+    );
+    let graph = resolver();
+    assert!(graph.contains("action == \"ship/oci\""), "{graph}");
+    assert!(
+        graph.contains("carry(&mut request, &self.workload.reuse)"),
+        "OCI must consume the binary workloads without waiting for a release seal"
     );
 }
 
