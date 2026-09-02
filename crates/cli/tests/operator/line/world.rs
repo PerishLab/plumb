@@ -11,7 +11,6 @@ pub enum Court {
     Flight,
     Failed,
     Nested(bool),
-    Paged,
     Prepare(bool, PathBuf),
     Freeze(PathBuf),
     Rejoin(PathBuf),
@@ -77,7 +76,6 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
         | Court::Failed
         | Court::Flight
         | Court::Nested(_)
-        | Court::Paged
             if request.contains("/dispatches ") =>
         {
             ("201 Created", json!({"id": 88, "run_number": 7}))
@@ -86,49 +84,35 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
             "200 OK",
             json!({"id": 88, "index_in_repo": 7, "status": "success"}),
         ),
-        Court::Dispatch if request.contains("/actions/tasks?") => ("200 OK", tasks("success")),
-        Court::Expanding(turn) if request.contains("/actions/tasks?") => {
+        Court::Dispatch if request.contains("/actions/runs/7/jobs/0/attempt/1 ") => {
+            ("200 OK", jobs("success"))
+        }
+        Court::Expanding(turn) if request.contains("/actions/runs/7/jobs/0/attempt/1 ") => {
             let status = if turn.fetch_add(1, Ordering::SeqCst) == 1 {
                 "running"
             } else {
                 "success"
             };
-            ("200 OK", tasks(status))
+            ("200 OK", jobs(status))
         }
-        Court::Flight if request.contains("/actions/tasks?") => ("200 OK", tasks("running")),
+        Court::Flight if request.contains("/actions/runs/7/jobs/0/attempt/1 ") => {
+            ("200 OK", jobs("running"))
+        }
         Court::Failed if request.contains("/actions/runs/88 ") => (
             "200 OK",
             json!({"id": 88, "index_in_repo": 7, "status": "failure"}),
         ),
-        Court::Nested(_) | Court::Paged if request.contains("/actions/runs/88 ") => (
+        Court::Nested(_) if request.contains("/actions/runs/88 ") => (
             "200 OK",
             json!({"id": 88, "index_in_repo": 7, "status": "blocked"}),
         ),
-        Court::Nested(success) if request.contains("/actions/tasks?") => {
+        Court::Nested(success) if request.contains("/actions/runs/7/jobs/0/attempt/1 ") => {
             let status = if *success { "success" } else { "failure" };
-            ("200 OK", tasks(status))
+            ("200 OK", jobs(status))
         }
-        Court::Failed if request.contains("/actions/tasks?") => ("200 OK", tasks("failure")),
-        Court::Paged if request.contains("/actions/tasks?page=1") => (
-            "200 OK",
-            json!({
-                "total_count": 51,
-                "workflow_runs": vec![json!({
-                    "name": "unrelated",
-                    "run_number": 6,
-                    "status": "success"
-                }); 50]
-            }),
-        ),
-        Court::Paged if request.contains("/actions/tasks?page=2") => (
-            "200 OK",
-            json!({
-                "total_count": 51,
-                "workflow_runs": [
-                    {"name": "release", "run_number": 7, "status": "success"}
-                ]
-            }),
-        ),
+        Court::Failed if request.contains("/actions/runs/7/jobs/0/attempt/1 ") => {
+            ("200 OK", jobs("failure"))
+        }
         Court::Prepare(..) | Court::Rejoin(_) if request.contains("GET /api/v1/user ") => {
             ("200 OK", json!({"login": "operator"}))
         }
@@ -218,12 +202,10 @@ fn cut(head: &PathBuf) -> Value {
     json!({"name": "release/v1.2.0", "commit": {"id": commit.trim()}})
 }
 
-fn tasks(status: &str) -> Value {
-    json!({
-        "total_count": 2,
-        "workflow_runs": [
-            {"name": "build", "run_number": 7, "status": status},
-            {"name": "release", "run_number": 7, "status": "success"}
-        ]
-    })
+fn jobs(status: &str) -> Value {
+    let rows = [
+        json!({"name": "build", "status": status}),
+        json!({"name": "release", "status": "success"}),
+    ];
+    json!({"state": {"run": {"jobs": rows}}})
 }

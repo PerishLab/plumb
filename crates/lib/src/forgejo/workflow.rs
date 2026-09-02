@@ -36,7 +36,7 @@ impl Client {
     }
 
     fn tasks(&self, number: u64) -> Result<Option<Vec<Value>>, String> {
-        let value = self.call(&["task", "list", &number.to_string()])?;
+        let value = self.call(&["job", "list", &number.to_string()])?;
         value
             .as_array()
             .cloned()
