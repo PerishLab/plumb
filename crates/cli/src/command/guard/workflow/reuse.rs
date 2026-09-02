@@ -84,7 +84,11 @@ impl<'a> Context<'a> {
     }
 
     pub fn keys(&self, action: &str, workload: &str) -> Keys {
-        let workload = digest(action, workload, self.workload);
+        let workload = if self.workload.is_empty() {
+            workload.to_string()
+        } else {
+            digest(action, workload, self.workload)
+        };
         let proof = digest(action, &workload, self.world);
         let publication =
             (!self.identity.is_empty()).then(|| digest(action, &proof, self.identity));
