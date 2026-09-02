@@ -73,6 +73,7 @@ struct Report<'a> {
     product: &'a str,
     bucket: &'a str,
     domain: &'a str,
+    fingerprint: String,
     state: &'static str,
     steps: &'a [plan::Step],
     next: Option<Action>,
@@ -150,6 +151,10 @@ impl Plan {
             product: &self.context.model.product,
             bucket: &self.context.model.bucket,
             domain: &self.context.model.domain,
+            fingerprint: escrow::fingerprint(&format!(
+                "https://{}.r2.cloudflarestorage.com",
+                self.context.factory.id()
+            )),
             state: if self.action.is_none() {
                 "ready"
             } else {
@@ -169,6 +174,7 @@ impl Plan {
                 "{} authority {}: {}",
                 report.profile, report.product, report.state
             );
+            println!("endpoint fingerprint {}", report.fingerprint);
             for step in report.steps {
                 let state = match step.status {
                     plan::Status::Ready => "observed",

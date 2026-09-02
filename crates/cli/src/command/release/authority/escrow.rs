@@ -192,6 +192,10 @@ fn sha256(value: &str) -> String {
         .collect()
 }
 
+pub(super) fn fingerprint(endpoint: &str) -> String {
+    sha256(endpoint.trim_end_matches('/'))
+}
+
 #[cfg(unix)]
 fn protect(file: &fs::File) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;

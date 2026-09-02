@@ -21,7 +21,10 @@ pub fn publish(path: &Path, authority: &impl Authority) -> Result<String, String
             &capsule.seal,
             "release seal vanished before public projection",
         )?;
-        return Err(error);
+        return Err(format!(
+            "{error}; release authority endpoint fingerprint {}",
+            remote.fingerprint()
+        ));
     }
     let channel = capsule.channel;
     Ok(format!("published exact {channel} {}", capsule.version))
@@ -249,6 +252,10 @@ impl<'a> Remote<'a> {
             .arg(self.held.endpoint().trim_end_matches('/'))
             .arg("s3api");
         held
+    }
+
+    fn fingerprint(&self) -> String {
+        super::record::sha(self.held.endpoint().trim_end_matches('/').as_bytes())
     }
 
     fn same(&self, object: &Local) -> Result<bool, String> {
