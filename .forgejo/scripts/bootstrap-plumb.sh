@@ -61,7 +61,7 @@ if [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ]; then
     "$atom")
   keys=$(printf '%s' "$plan" | jq -c '.actions[] | select(.name == "ship/atom") | .keys')
   source=$(printf '%s' "$plan" | jq -r \
-    '.actions[] | select(.name == "ship/atom" and .reuse.type == "workload") | .reuse.source')
+    '.actions[] | select(.name == "ship/atom" and .decision == "reuse" and .reuse.type == "workload") | .reuse.source')
 fi
 if [ -n "$source" ]; then
   digest=$(printf '%s' "$source" | sed -n 's#^.*/workloads/\([0-9a-fA-F]\{64\}\)\.tgz$#\1#p')

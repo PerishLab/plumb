@@ -79,7 +79,9 @@ if (-not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL)) {
     $atom | ConvertFrom-Json
   $action = $plan.actions | Where-Object { $_.name -eq 'ship/atom' }
   $keys = $action.keys | ConvertTo-Json -Compress
-  if ($action.reuse.type -eq 'workload') { $source = $action.reuse.source }
+  if ($action.decision -eq 'reuse' -and $action.reuse.type -eq 'workload') {
+    $source = $action.reuse.source
+  }
 }
 if ($source) {
   $match = [regex]::Match($source, '/workloads/([0-9a-fA-F]{64})\.tgz$')
