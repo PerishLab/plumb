@@ -67,7 +67,7 @@ fn graph() {
         "a run that has laid out no job has not finished"
     );
     assert_eq!(
-        graph(&[task("success"), task("running")]).expect("partial graph"),
+        graph(&[task("blocked"), task("running")]).expect("partial graph"),
         Outcome::Waiting
     );
     assert_eq!(
@@ -76,6 +76,6 @@ fn graph() {
     );
     assert!(matches!(
         graph(&[task("success"), task("failure")]).expect("failed graph"),
-        Outcome::Failed { status, tasks } if status == "success" && tasks == ["failure"]
+        Outcome::Failed { status, tasks } if status == "failed" && tasks == ["failure"]
     ));
 }

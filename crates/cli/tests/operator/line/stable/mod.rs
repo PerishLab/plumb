@@ -101,7 +101,7 @@ fn dispatch() {
     assert!(text.contains("run 88: success"), "{text}");
     let calls = calls.lock().expect("calls");
     assert!(calls.iter().any(|call| call.contains("/dispatches ")));
-    assert!(calls.iter().any(|call| call.contains("/actions/runs/88 ")));
+    assert!(calls.iter().any(|call| call.contains("/actions/tasks?")));
 }
 
 #[test]

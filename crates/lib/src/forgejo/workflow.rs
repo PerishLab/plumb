@@ -31,32 +31,8 @@ impl Client {
         }
     }
 
-    pub fn outcome(&self, id: u64) -> Result<Outcome, String> {
-        let run = self.run(id)?;
-        let status = run
-            .get("status")
-            .and_then(Value::as_str)
-            .ok_or_else(|| "Forgejo workflow run has no status".to_string())?;
-        match status {
-            "unknown" | "waiting" | "running" => Ok(Outcome::Waiting),
-            "success" => {
-                let number = number(&run)?;
-                graph(&self.tasks(number)?.unwrap_or_default())
-            }
-            "failure" | "cancelled" | "skipped" => {
-                let number = number(&run)?;
-                let tasks = self.tasks(number)?.unwrap_or_default();
-                Ok(Outcome::Failed {
-                    status: status.to_string(),
-                    tasks: failed(&tasks),
-                })
-            }
-            "blocked" => {
-                let number = number(&run)?;
-                blocked(self.tasks(number)?)
-            }
-            other => Err(format!("Forgejo workflow run has unknown status {other}")),
-        }
+    pub fn outcome(&self, number: u64) -> Result<Outcome, String> {
+        graph(&self.tasks(number)?.unwrap_or_default())
     }
 
     fn tasks(&self, number: u64) -> Result<Option<Vec<Value>>, String> {
@@ -83,8 +59,7 @@ impl Client {
             .unwrap_or_else(|| value.to_string()))
     }
 
-    pub fn logs(&self, id: u64) -> Result<Vec<(usize, String)>, String> {
-        let number = number(&self.run(id)?)?;
+    pub fn logs(&self, number: u64) -> Result<Vec<(usize, String)>, String> {
         let mut found = Vec::new();
         for job in 0..JOBS {
             match self.log(number, job, 1) {
@@ -118,12 +93,6 @@ pub fn route(number: u64, job: usize, attempt: u32) -> String {
     format!("/actions/runs/{number}/jobs/{job}/attempt/{attempt}/logs")
 }
 
-fn number(run: &Value) -> Result<u64, String> {
-    run.get("index_in_repo")
-        .and_then(Value::as_u64)
-        .ok_or_else(|| "Forgejo workflow run has no repository run number".to_string())
-}
-
 fn failed(tasks: &[Value]) -> Vec<String> {
     let mut names = tasks
         .iter()
@@ -146,15 +115,15 @@ pub fn graph(tasks: &[Value]) -> Result<Outcome, String> {
     if tasks.is_empty() {
         return Ok(Outcome::Waiting);
     }
+    if flight(tasks) {
+        return Ok(Outcome::Waiting);
+    }
     let failures = failed(tasks);
     if !failures.is_empty() {
         return Ok(Outcome::Failed {
-            status: "success".into(),
+            status: "failed".into(),
             tasks: failures,
         });
-    }
-    if flight(tasks) {
-        return Ok(Outcome::Waiting);
     }
     Ok(Outcome::Success)
 }
@@ -166,39 +135,4 @@ fn flight(tasks: &[Value]) -> bool {
             Some("unknown" | "waiting" | "running")
         )
     })
-}
-
-fn blocked(tasks: Option<Vec<Value>>) -> Result<Outcome, String> {
-    let Some(tasks) = tasks else {
-        return Ok(Outcome::Failed {
-            status: "blocked".into(),
-            tasks: Vec::new(),
-        });
-    };
-    let failures = failed(&tasks);
-    if !failures.is_empty() {
-        return Ok(Outcome::Failed {
-            status: "blocked".into(),
-            tasks: failures,
-        });
-    }
-    let mut success = false;
-    for task in &tasks {
-        match task.get("status").and_then(Value::as_str) {
-            Some("success") => success = true,
-            Some("skipped") => {}
-            Some("unknown" | "waiting" | "running") => return Ok(Outcome::Waiting),
-            Some("failure" | "cancelled" | "blocked") => unreachable!(),
-            Some(other) => return Err(format!("Forgejo action task has unknown status {other}")),
-            None => return Err("Forgejo action task has no status".into()),
-        }
-    }
-    if success {
-        Ok(Outcome::Success)
-    } else {
-        Ok(Outcome::Failed {
-            status: "blocked".into(),
-            tasks: Vec::new(),
-        })
-    }
 }

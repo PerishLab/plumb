@@ -87,18 +87,14 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
             json!({"id": 88, "index_in_repo": 7, "status": "success"}),
         ),
         Court::Dispatch if request.contains("/actions/tasks?") => ("200 OK", tasks("success")),
-        Court::Expanding(turn) if request.contains("/actions/runs/88 ") => {
+        Court::Expanding(turn) if request.contains("/actions/tasks?") => {
             let status = if turn.fetch_add(1, Ordering::SeqCst) == 1 {
                 "running"
             } else {
                 "success"
             };
-            (
-                "200 OK",
-                json!({"id": 88, "index_in_repo": 7, "status": status}),
-            )
+            ("200 OK", tasks(status))
         }
-        Court::Expanding(_) if request.contains("/actions/tasks?") => ("200 OK", tasks("success")),
         Court::Flight if request.contains("/actions/tasks?") => ("200 OK", tasks("running")),
         Court::Failed if request.contains("/actions/runs/88 ") => (
             "200 OK",

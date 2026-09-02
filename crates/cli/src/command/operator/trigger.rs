@@ -82,6 +82,10 @@ fn launch(flight: Flight<'_>, course: &mut Course) -> Result<String, String> {
         .get("id")
         .and_then(Value::as_u64)
         .ok_or_else(|| "Forgejo did not expose the dispatched run ID".to_string())?;
+    let number = run
+        .get("run_number")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "Forgejo did not expose the dispatched run number".to_string())?;
     let url = flight.client.link(&run);
     if url.is_empty() {
         return Err(format!(
@@ -97,21 +101,21 @@ fn launch(flight: Flight<'_>, course: &mut Course) -> Result<String, String> {
         std::io::stdout()
             .flush()
             .map_err(|error| format!("cannot report dispatched run {id}: {error}"))?;
-        return watch(flight.client, id, &url);
+        return watch(flight.client, id, number, &url);
     }
     Ok(message)
 }
 
-fn watch(client: &Client, id: u64, url: &str) -> Result<String, String> {
+fn watch(client: &Client, id: u64, number: u64, url: &str) -> Result<String, String> {
     let harness = plumb::forgejo::harness()?;
     let deadline = Instant::now() + harness.run.timeout.duration();
     let mut settled = 0;
     while Instant::now() < deadline {
-        match client.outcome(id)? {
+        match client.outcome(number)? {
             Outcome::Success if settle(&mut settled) => return Ok(format!("run {id}: success")),
             Outcome::Success => {}
             Outcome::Failed { status, tasks } => {
-                return Err(report(client, id, &brief(id, url, &status, &tasks)));
+                return Err(report(client, number, &brief(id, url, &status, &tasks)));
             }
             Outcome::Waiting => settled = 0,
         }
@@ -135,8 +139,8 @@ fn brief(id: u64, url: &str, status: &str, tasks: &[String]) -> String {
     format!("run {id}: {status}{detail}\n{url}")
 }
 
-fn report(client: &Client, id: u64, brief: &str) -> String {
-    match client.logs(id) {
+fn report(client: &Client, number: u64, brief: &str) -> String {
+    match client.logs(number) {
         Ok(found) if !found.is_empty() => format!("{brief}\n{}", tails(&found)),
         _ => brief.to_string(),
     }
