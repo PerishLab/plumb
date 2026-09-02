@@ -93,9 +93,18 @@ if [ "$mode" = exact ]; then
 fi
 if [ -z "$source" ] && [ -n "$keys" ]; then
   if ! "$tool" workflow record ship/atom --keys "$keys" --workload "$archive"; then
-    raced=$(atom_plan)
-    winner=$(printf '%s' "$raced" | jq -r \
-      '.actions[] | select(.name == "ship/atom" and .decision == "reuse" and .reuse.type == "workload") | .reuse.source')
+    winner=
+    attempt=1
+    while [ "$attempt" -le 12 ]; do
+      raced=$(atom_plan)
+      winner=$(printf '%s' "$raced" | jq -r \
+        '.actions[] | select(.name == "ship/atom" and .decision == "reuse" and .reuse.type == "workload") | .reuse.source')
+      [ -n "$winner" ] && break
+      [ "$attempt" -lt 12 ] || break
+      printf 'waiting for exact Plumb atom inventory winner (%s/12)\n' "$attempt"
+      sleep 5
+      attempt=$((attempt + 1))
+    done
     test -n "$winner"
     install_atom "$winner"
     cp "$target/debug/plumb" "$tool"
