@@ -16,7 +16,9 @@ struct Catalog<'a> {
 }
 
 pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
-    if plumb::config::value("PLUMB_GUARD_CONFIGURATION").is_some() {
+    if plumb::config::value("PLUMB_HOME").is_none()
+        && plumb::config::value("PLUMB_GUARD_CONFIGURATION").is_some()
+    {
         return Err("guard configuration is internal to one isolated guard action".into());
     }
     let tree = tree::git(root, &["write-tree"], "read staged tree")?;
