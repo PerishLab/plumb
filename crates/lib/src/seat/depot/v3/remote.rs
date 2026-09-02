@@ -1,5 +1,7 @@
 use super::{Kind, Manifest, Pointer, Route};
 
+const ATTEMPTS: usize = 3;
+
 pub struct Query<'a> {
     pub source: &'a str,
     pub product: &'a str,
@@ -81,6 +83,20 @@ impl Generation {
 }
 
 fn pull(url: &str) -> Result<Option<Vec<u8>>, String> {
+    let mut last = String::new();
+    for attempt in 0..ATTEMPTS {
+        match draw(url) {
+            Ok(bytes) => return Ok(bytes),
+            Err(error) => last = error,
+        }
+        if attempt + 1 < ATTEMPTS {
+            std::thread::sleep(std::time::Duration::from_millis(200 * (attempt as u64 + 1)));
+        }
+    }
+    Err(last)
+}
+
+fn draw(url: &str) -> Result<Option<Vec<u8>>, String> {
     let response = match ureq::get(url).call() {
         Ok(response) => response,
         Err(ureq::Error::StatusCode(404)) => return Ok(None),
