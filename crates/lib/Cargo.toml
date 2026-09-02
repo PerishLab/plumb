@@ -66,3 +66,8 @@ required-features = ["radius"]
 [[test]]
 name = "survey"
 required-features = ["skill"]
+
+[[test]]
+name = "bucket"
+path = "tests/support/bucket.rs"
+required-features = ["depot"]

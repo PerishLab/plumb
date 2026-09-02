@@ -26,8 +26,6 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
     }
     let inventory = Inventory::fetch(&rig.workflow.inventory.url)?;
     let world = World {
-        atom,
-        plumb: env!("CARGO_PKG_VERSION"),
         marker: &marker.marker,
         inventory: inventory.path(),
         source: Some(&rig.workflow.inventory.url),
@@ -58,8 +56,6 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
 }
 
 struct World<'a> {
-    atom: &'a str,
-    plumb: &'a str,
     marker: &'a str,
     inventory: Option<&'a Path>,
     source: Option<&'a str>,
@@ -259,11 +255,7 @@ struct Plan<'a> {
 }
 
 fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String> {
-    let mut fields = vec![
-        format!("atom={}", world.atom),
-        format!("plumb={}", world.plumb),
-        format!("runner={}", plan.runner),
-    ];
+    let mut fields = vec![format!("runner={}", plan.runner)];
     if let Some(release) = plan.release {
         fields.push(format!("release={release}"));
     }

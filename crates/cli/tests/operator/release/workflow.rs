@@ -36,6 +36,12 @@ fn resolver() -> String {
         .expect("Plumb owns ship graph resolution")
 }
 
+fn resolution() -> String {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    std::fs::read_to_string(root.join(".forgejo/scripts/resolve-ship.sh"))
+        .expect("Plumb owns ship output projection")
+}
+
 #[test]
 fn matrix() {
     let held = canonical();
@@ -125,11 +131,29 @@ fn matrix() {
         held.contains("resolve-ship.sh '${{ github.sha }}' ready"),
         "publication planning must observe the recorded workloads"
     );
+    assert!(
+        held.contains("needs.resolve.outputs.publication_ready != 'true'")
+            && held.contains("name: Carry already resolved publications")
+            && held.contains("PLUMB_CARRY_PUBLICATION: ${{ needs.resolve.outputs.publication }}"),
+        "held workloads must carry the resolve publication plan without rebuilding the atom"
+    );
+    assert!(
+        resolution().contains("publication_ready=$(printf '%s' \"$graph\""),
+        "resolve must expose whether its publication plan is already final"
+    );
     let graph = resolver();
     assert!(graph.contains("action == \"ship/oci\""), "{graph}");
     assert!(
         graph.contains("carry(&mut request, &self.workload.reuse)"),
         "OCI must consume the binary workloads without waiting for a release seal"
+    );
+    assert!(
+        !graph.contains("format!(\"atom={}"),
+        "an orchestration atom must not invalidate an immutable publication"
+    );
+    assert!(
+        !graph.contains("format!(\"plumb={}"),
+        "a Plumb patch must not invalidate an immutable publication"
     );
 }
 
