@@ -62,12 +62,48 @@ if ($mode -eq 'bootstrap') {
 }
 
 $target = Join-Path $env:RUNNER_TEMP "plumb-atom-$env:PLUMB_BUILD_COMMIT"
-$env:CARGO_TARGET_DIR = $target
-$env:PLUMB_BUILD_SOURCE = '1'
-cargo build --quiet --locked --manifest-path (Join-Path $atom 'Cargo.toml') --bin plumb
+$archive = Join-Path $env:RUNNER_TEMP "plumb-atom-$env:PLUMB_BUILD_COMMIT.tgz"
+$hostTarget = ((rustc -vV | Select-String '^host: ').Line -replace '^host: ', '')
+$compiler = rustc --version
+$keys = $null
+$source = $null
+if (-not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL)) {
+  $plan = & $tool workflow plan `
+    --world "target=$hostTarget" `
+    --world "version=$env:PLUMB_BUILD_VERSION" `
+    --world "channel=$env:PLUMB_BUILD_CHANNEL" `
+    --world "compiler=$compiler" `
+    --world 'profile=debug' `
+    --root 'ship/atom=*' `
+    --inventory-url $env:PLUMB_WORKFLOW_INVENTORY_URL `
+    $atom | ConvertFrom-Json
+  $action = $plan.actions | Where-Object { $_.name -eq 'ship/atom' }
+  $keys = $action.keys | ConvertTo-Json -Compress
+  if ($action.reuse.type -eq 'workload') { $source = $action.reuse.source }
+}
+if ($source) {
+  $match = [regex]::Match($source, '/workloads/([0-9a-fA-F]{64})\.tgz$')
+  if (-not $match.Success) { throw "invalid Plumb atom workload URL: $source" }
+  Invoke-WebRequest -UseBasicParsing -Uri $source -OutFile $archive
+  $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+  if ($actual -ne $match.Groups[1].Value.ToLowerInvariant()) { throw 'Plumb atom workload digest mismatch' }
+  $debug = Join-Path $target 'debug'
+  New-Item -ItemType Directory -Force -Path $debug | Out-Null
+  tar -xzf $archive -C $debug
+  Write-Output "reused exact Plumb atom $env:PLUMB_BUILD_COMMIT for $hostTarget"
+} else {
+  $env:CARGO_TARGET_DIR = $target
+  $env:PLUMB_BUILD_SOURCE = '1'
+  cargo build --quiet --locked --manifest-path (Join-Path $atom 'Cargo.toml') --bin plumb
+  tar -czf $archive -C (Join-Path $target 'debug') plumb.exe
+  Write-Output "built exact Plumb atom $env:PLUMB_BUILD_COMMIT for $hostTarget"
+}
 Copy-Item (Join-Path $target 'debug/plumb.exe') $tool -Force
 $bin | Out-File -FilePath $env:GITHUB_PATH -Append
 & $tool --version
 if ($mode -eq 'exact') {
   Install-Configuration
+}
+if (-not $source -and $keys) {
+  & $tool workflow record ship/atom --keys $keys --workload $archive
 }

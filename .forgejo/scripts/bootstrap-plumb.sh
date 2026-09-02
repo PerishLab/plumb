@@ -44,10 +44,45 @@ if [ -z "${PLUMB_BUILD_CHANNEL:-}" ]; then
   esac
 fi
 target="$RUNNER_TEMP/plumb-atom-$PLUMB_BUILD_COMMIT"
-PLUMB_BUILD_SOURCE=1 CARGO_TARGET_DIR="$target" cargo build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
+archive="$RUNNER_TEMP/plumb-atom-$PLUMB_BUILD_COMMIT.tgz"
+host=$(rustc -vV | sed -n 's/^host: //p')
+compiler=$(rustc --version)
+keys=
+source=
+if [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ]; then
+  plan=$($tool workflow plan \
+    --world "target=$host" \
+    --world "version=$PLUMB_BUILD_VERSION" \
+    --world "channel=$PLUMB_BUILD_CHANNEL" \
+    --world "compiler=$compiler" \
+    --world 'profile=debug' \
+    --root 'ship/atom=*' \
+    --inventory-url "$PLUMB_WORKFLOW_INVENTORY_URL" \
+    "$atom")
+  keys=$(printf '%s' "$plan" | jq -c '.actions[] | select(.name == "ship/atom") | .keys')
+  source=$(printf '%s' "$plan" | jq -r \
+    '.actions[] | select(.name == "ship/atom" and .reuse.type == "workload") | .reuse.source')
+fi
+if [ -n "$source" ]; then
+  digest=$(printf '%s' "$source" | sed -n 's#^.*/workloads/\([0-9a-fA-F]\{64\}\)\.tgz$#\1#p')
+  test -n "$digest"
+  $fetch -o "$archive" "$source"
+  actual=$(sha256sum "$archive" | cut -d' ' -f1)
+  test "$actual" = "$digest"
+  mkdir -p "$target/debug"
+  tar -xzf "$archive" -C "$target/debug"
+  printf 'reused exact Plumb atom %s for %s\n' "$PLUMB_BUILD_COMMIT" "$host"
+else
+  PLUMB_BUILD_SOURCE=1 CARGO_TARGET_DIR="$target" cargo build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
+  tar -czf "$archive" -C "$target/debug" plumb
+  printf 'built exact Plumb atom %s for %s\n' "$PLUMB_BUILD_COMMIT" "$host"
+fi
 cp "$target/debug/plumb" "$tool"
 printf '%s\n' "$bin" >> "$GITHUB_PATH"
 "$tool" --version
 if [ "$mode" = exact ]; then
   install_configuration
+fi
+if [ -z "$source" ] && [ -n "$keys" ]; then
+  "$tool" workflow record ship/atom --keys "$keys" --workload "$archive"
 fi

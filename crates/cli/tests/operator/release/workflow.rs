@@ -181,15 +181,9 @@ fn opaque() {
 fn depot() {
     let held = bootstrap();
     let windows = windows();
-    let installed = held
-        .find("cp \"$target/debug/plumb\" \"$tool\"")
-        .expect("exact Plumb install");
-    let bootstrap = held
-        .find("  install_configuration")
-        .expect("bootstrap configuration");
-    let exact = held
-        .rfind("  install_configuration")
-        .expect("exact configuration");
+    let installed = held.find("cp \"$target/debug/plumb\" \"$tool\"").unwrap();
+    let bootstrap = held.find("  install_configuration").unwrap();
+    let exact = held.rfind("  install_configuration").unwrap();
     assert_eq!(
         held.matches("  install_configuration").count(),
         2,
@@ -238,6 +232,33 @@ fn depot() {
             && windows.contains("$env:PLUMB_BUILD_SOURCE = '1'"),
         "Windows atom builds must isolate Cargo state by exact atom commit"
     );
+    for binding in [
+        "--root 'ship/atom=*'",
+        "--world \"target=$host\"",
+        "--world \"version=$PLUMB_BUILD_VERSION\"",
+        "--world \"channel=$PLUMB_BUILD_CHANNEL\"",
+        "--world \"compiler=$compiler\"",
+        "--world 'profile=debug'",
+        "workflow record ship/atom",
+        "sha256sum \"$archive\"",
+    ] {
+        assert!(held.contains(binding), "Unix atom reuse omits {binding}");
+    }
+    for binding in [
+        "--root 'ship/atom=*'",
+        "--world \"target=$hostTarget\"",
+        "--world \"version=$env:PLUMB_BUILD_VERSION\"",
+        "--world \"channel=$env:PLUMB_BUILD_CHANNEL\"",
+        "--world \"compiler=$compiler\"",
+        "--world 'profile=debug'",
+        "workflow record ship/atom",
+        "Get-FileHash -Algorithm SHA256",
+    ] {
+        assert!(
+            windows.contains(binding),
+            "Windows atom reuse omits {binding}"
+        );
+    }
 }
 
 #[test]

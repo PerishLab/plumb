@@ -21,6 +21,11 @@ permissions:
 env:
   PLUMB_BUILD_VERSION: ${{ inputs.plumb }}
   PLUMB_BUILD_COMMIT: ${{ github.sha }}
+  PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
+  PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
+  PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
+  PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
+  PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
 
 concurrency:
   group: ${{ inputs.repository }}-ship-${{ inputs.marker }}
@@ -43,7 +48,6 @@ jobs:
     env:
       PLUMB_RELEASE_ROOT: .
       PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
-      PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
     steps:
       - name: Check out the release marker
         shell: bash
@@ -103,11 +107,6 @@ jobs:
       PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
       PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
       PLUMB_RELEASE_ARTIFACTS: dist/${{ needs.resolve.outputs.version }}
-      PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
-      PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
-      PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
-      PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
-      PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
     steps:
       - uses: actions/checkout@v6
         if: matrix.control != 'reuse'
@@ -170,7 +169,6 @@ jobs:
     env:
       PLUMB_RELEASE_ROOT: .
       PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
-      PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
     steps:
       - uses: actions/checkout@v6
         if: needs.resolve.outputs.publication_ready != 'true'
@@ -246,11 +244,6 @@ jobs:
       PLUMB_PUBLISH_BUCKET: ${{ secrets.RELEASE_PUBLISH_S3_BUCKET }}
       PLUMB_PUBLISH_ENDPOINT: ${{ secrets.RELEASE_PUBLISH_S3_ENDPOINT }}
       PLUMB_PUBLISH_FINGERPRINT: ${{ secrets.RELEASE_PUBLISH_FINGERPRINT }}
-      PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
-      PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
-      PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
-      PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
-      PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
     steps:
       - uses: actions/checkout@v6
         if: matrix.control != 'reuse'
