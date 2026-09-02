@@ -174,7 +174,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
           repository: ${{ inputs.repository }}
-          ref: ${{ needs.resolve.outputs.commit }}
+          ref: ${{ inputs.marker }}
           token: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
 
       - uses: actions/checkout@v6
