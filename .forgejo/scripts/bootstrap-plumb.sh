@@ -8,6 +8,7 @@ case "$mode" in
   *) printf 'unknown Plumb bootstrap mode: %s\n' "$mode" >&2; exit 2 ;;
 esac
 fetch='curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 --connect-timeout 5 --max-time 30'
+fetch_workload='curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 --connect-timeout 5 --max-time 300'
 manager="$RUNNER_TEMP/manage-plumb.sh"
 $fetch -o "$manager" "https://releases.plumb.perish.uk/manage.sh"
 held=$($fetch "https://releases.plumb.perish.uk/v1/channels/beta.json" 2>/dev/null \
@@ -51,7 +52,7 @@ install_atom() {
   held_source=$1
   digest=$(printf '%s' "$held_source" | sed -n 's#^.*/workloads/\([0-9a-fA-F]\{64\}\)\.tgz$#\1#p')
   test -n "$digest"
-  $fetch -o "$archive" "$held_source"
+  $fetch_workload -o "$archive" "$held_source"
   actual=$(sha256sum "$archive" | cut -d' ' -f1)
   test "$actual" = "$digest"
   mkdir -p "$target/debug"

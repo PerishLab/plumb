@@ -22,9 +22,9 @@ $manager = Join-Path $env:RUNNER_TEMP 'manage-plumb.ps1'
 $held = $null
 for ($attempt = 1; $attempt -le 5; $attempt++) {
   try {
-    Invoke-WebRequest -UseBasicParsing -Uri 'https://releases.plumb.perish.uk/manage.ps1' -OutFile $manager
+    Invoke-WebRequest -UseBasicParsing -TimeoutSec 30 -Uri 'https://releases.plumb.perish.uk/manage.ps1' -OutFile $manager
     try {
-      $channel = Invoke-RestMethod -Uri 'https://releases.plumb.perish.uk/v1/channels/beta.json'
+      $channel = Invoke-RestMethod -TimeoutSec 30 -Uri 'https://releases.plumb.perish.uk/v1/channels/beta.json'
       $held = $channel.releaseVersion
     } catch {
       $held = $null
@@ -68,7 +68,7 @@ $compiler = rustc --version
 function Install-AtomSource([string]$uri) {
   $match = [regex]::Match($uri, '/workloads/([0-9a-fA-F]{64})\.tgz$')
   if (-not $match.Success) { throw "invalid Plumb atom workload URL: $uri" }
-  Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $archive
+  Invoke-WebRequest -UseBasicParsing -TimeoutSec 300 -Uri $uri -OutFile $archive
   $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
   if ($actual -ne $match.Groups[1].Value.ToLowerInvariant()) { throw 'Plumb atom workload digest mismatch' }
   $debug = Join-Path $target 'debug'
