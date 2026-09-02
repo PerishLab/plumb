@@ -1,3 +1,4 @@
+mod contract;
 mod digest;
 #[cfg(unix)]
 #[path = "identity/mod.rs"]

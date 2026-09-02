@@ -3,6 +3,21 @@ use std::collections::BTreeSet;
 use std::path::Path;
 use std::process::Command;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum Contract {
+    Portable,
+    Version,
+    Exact,
+}
+
+pub(super) fn contract(action: &str) -> Contract {
+    match action {
+        "ship/cargo" | "ship/oci" => Contract::Version,
+        "ship/cfworker" => Contract::Exact,
+        _ => Contract::Portable,
+    }
+}
+
 pub(super) fn authority(held: &plumb::rig::Authority, product: &str) -> Result<(), String> {
     let bucket = format!("perish-{product}-releases");
     if held.bucket != bucket {

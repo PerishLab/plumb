@@ -129,11 +129,7 @@ impl Request {
             Operation::Publication { workloads } => {
                 super::support::authority(&rig.publish, &spec.product)?;
                 let artifacts = artifacts(release)?;
-                if release.channel == "stable" {
-                    crate::command::release::Product::new(&spec).promote(release)?;
-                } else {
-                    materialize(&artifacts, &workloads)?;
-                }
+                materialize(&artifacts, &workloads)?;
                 super::super::package::product(&spec).assemble(version, &artifacts)?;
                 crate::command::release::Product::new(&spec).compile(release)?;
                 let capsule = capsule(release)?;

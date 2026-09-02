@@ -3,7 +3,9 @@ use plumb::rig::Rig;
 use serde_json::{Value, json};
 use std::path::Path;
 
-use super::support::{Inventory, carry, object, projection, sources, strings, text};
+use super::support::{
+    Contract, Inventory, carry, contract, object, projection, sources, strings, text,
+};
 
 pub fn run(raw: &str, atom: &str) -> Result<String, String> {
     if atom.len() != 40 || !atom.bytes().all(|held| held.is_ascii_hexdigit()) {
@@ -73,7 +75,7 @@ fn workloads(
     marker: &release::ReleaseMarker,
     world: &World<'_>,
 ) -> Result<Workloads, String> {
-    if marker.channel == "stable" || !spec.binary() {
+    if !spec.binary() {
         return Ok(Workloads {
             matrix: idle(),
             missing: false,
@@ -206,7 +208,7 @@ impl Publish<'_> {
             .ok_or("publication plan has no include array")?;
         for entry in rows {
             let action = text(entry, "action")?;
-            let versioned = action == "ship/cfworker";
+            let binding = contract(action);
             let projections = strings(entry, "projections")?;
             let roots = strings(entry, "roots")?;
             let node = planned(
@@ -216,8 +218,9 @@ impl Publish<'_> {
                     projections: &projections,
                     roots: &roots,
                     runner: "docker",
-                    release: versioned.then_some(self.marker.version.as_str()),
-                    target: versioned.then_some(self.marker.commit.as_str()),
+                    release: (binding != Contract::Portable)
+                        .then_some(self.marker.version.as_str()),
+                    target: (binding == Contract::Exact).then_some(self.marker.commit.as_str()),
                 },
             )?;
             if node["reuse"]["type"] == "url" {
