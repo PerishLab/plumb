@@ -40,25 +40,8 @@ impl Inventory {
     }
 }
 
-pub(super) fn projection(root: &Path) -> String {
-    let packages = root.join("packages");
-    let manifest = std::fs::read_dir(packages)
-        .ok()
-        .into_iter()
-        .flatten()
-        .flatten()
-        .map(|entry| entry.path().join("package.json"))
-        .find(|path| versioned(path));
-    if versioned(&root.join("package.json")) {
-        "package.json#/version".into()
-    } else if let Some(manifest) = manifest {
-        format!(
-            "{}#/version",
-            manifest.strip_prefix(root).unwrap_or(&manifest).display()
-        )
-    } else {
-        "Cargo.toml#/workspace/package/version".into()
-    }
+pub(super) fn projection() -> String {
+    "Cargo.toml#/workspace/package/version".into()
 }
 
 pub(super) fn sources(spec: &crate::shape::release::Spec) -> Result<Vec<String>, String> {
@@ -106,14 +89,6 @@ fn display(path: &Path) -> String {
         .map(|part| part.as_os_str().to_string_lossy())
         .collect::<Vec<_>>()
         .join("/")
-}
-
-fn versioned(path: &Path) -> bool {
-    std::fs::read(path)
-        .ok()
-        .and_then(|body| serde_json::from_slice::<Value>(&body).ok())
-        .and_then(|document| document["version"].as_str().map(str::to_string))
-        .is_some()
 }
 
 pub(super) fn text<'a>(value: &'a Value, key: &str) -> Result<&'a str, String> {

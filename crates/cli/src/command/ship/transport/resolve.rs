@@ -88,7 +88,7 @@ fn workloads(
     }
     let targets: Value = serde_json::from_str(&super::super::package::product(spec).matrix()?)
         .map_err(|error| format!("cannot decode binary matrix: {error}"))?;
-    let projection = projection(world.root);
+    let projection = projection();
     let roots = sources(spec)?;
     let listed = roots.iter().map(String::as_str).collect::<Vec<_>>();
     let mut pending = Vec::new();
@@ -172,7 +172,7 @@ impl Publish<'_> {
         if !self.spec.binary() || self.workload.missing {
             return Ok(());
         }
-        let projection = projection(self.world.root);
+        let projection = projection();
         let roots = sources(self.spec)?;
         let listed = roots.iter().map(String::as_str).collect::<Vec<_>>();
         let node = planned(
