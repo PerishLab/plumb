@@ -25,7 +25,7 @@ pub struct Preparation<'a> {
 }
 
 pub fn prepared(cut: Preparation<'_>) -> bool {
-    if cut.body.trim() != format!("Prepare {}", cut.version) {
+    if message(cut.body) != format!("Prepare {}", cut.version) {
         return false;
     }
     let parent = read(
@@ -63,6 +63,15 @@ pub fn prepared(cut: Preparation<'_>) -> bool {
             .output(),
     );
     expected.is_ok() && expected != original && expected == actual
+}
+
+fn message(body: &str) -> String {
+    body.lines()
+        .filter(|line| !line.starts_with(plumb::guard::TRAILER))
+        .collect::<Vec<_>>()
+        .join("\n")
+        .trim()
+        .to_string()
 }
 
 struct Tree {
