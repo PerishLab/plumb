@@ -32,9 +32,17 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         return Ok(proof);
     }
     let target = super::configuration::target(root)?;
-    let mismatched = target.as_deref().is_some_and(|target| {
-        plumb::depot::rules().ok().and_then(|held| held.version()) != Some(target)
-    });
+    let mismatched = match target.as_deref() {
+        Some(target) => {
+            let root = plumb::depot::root(&PathBuf::new())?;
+            plumb::depot::Rules::at(&root, plumb::version!("PLUMB"))
+                .ok()
+                .and_then(|held| held.version().map(str::to_string))
+                .as_deref()
+                != Some(target)
+        }
+        None => false,
+    };
     let product = crate::shape::product::guard(root, "")?;
     let mut index = mismatched
         .then(|| isolate(root, &tree, product.profile.as_ref()))
@@ -52,12 +60,13 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         })
         .transpose()?;
     if let Some(configuration) = &configuration {
-        crate::catalog::set::guard(
-            configuration.path(),
-            target
-                .as_deref()
-                .expect("a temporary configuration has a target"),
-        )?;
+        let target = target
+            .as_deref()
+            .expect("a temporary configuration has a target");
+        if configuration.transaction() {
+            plumb::depot::guard(configuration.path(), target)?;
+        }
+        crate::catalog::set::guard(configuration.path(), target)?;
     }
     let checks = Catalog {
         root,

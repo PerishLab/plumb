@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::sync::LazyLock;
+use std::sync::{LazyLock, OnceLock};
 
 use super::{Object, Seat, anchored, v2, v3};
 pub mod exact;
@@ -35,9 +35,20 @@ enum Width {
 }
 
 static RULES: LazyLock<Result<Rules, String>> = LazyLock::new(Rules::open);
+static GUARD: OnceLock<Rules> = OnceLock::new();
 
 pub(super) fn held() -> Result<&'static Rules, String> {
-    RULES.as_ref().map_err(Clone::clone)
+    match GUARD.get() {
+        Some(rules) => Ok(rules),
+        None => RULES.as_ref().map_err(Clone::clone),
+    }
+}
+
+pub(super) fn bind(root: &Path, running: &str) -> Result<(), String> {
+    let rules = Rules::guard(root, running)?;
+    GUARD
+        .set(rules)
+        .map_err(|_| "guard depot rules were already prepared".to_string())
 }
 
 impl Rules {
