@@ -144,6 +144,9 @@ fn installation() {
     std::fs::write(source.path().join("rules/probe.toml"), "answer = 42\n").expect("rule");
     let mut identity = manifest().identity();
     identity.product = "plumb".to_string();
+    identity.channel = "beta".to_string();
+    identity.version = "v1.2.3-beta.7".to_string();
+    identity.marker.name = identity.version.clone();
     let bundle = v3::Bundle::read(source.path(), identity).expect("bundle");
     let pointer = v3::Pointer::new(
         &bundle.manifest,
@@ -167,12 +170,13 @@ fn installation() {
     );
     let rules = plumb::depot::Rules::at(root.path(), "v1.2.3").expect("installed rules");
     assert_eq!(rules.mark(), pointer.generation);
-    assert_eq!(rules.version(), Some("v1.2.3"));
+    assert_eq!(rules.version(), Some("v1.2.3-beta.7"));
     assert_eq!(
         rules.read("rules/probe.toml").expect("verified rule"),
         "answer = 42\n"
     );
     assert!(plumb::depot::Rules::at(root.path(), "v1.2.4").is_err());
+    assert!(plumb::depot::Rules::at(root.path(), "v1.2.3-beta.8").is_err());
 }
 
 #[test]

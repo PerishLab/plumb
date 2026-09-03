@@ -50,11 +50,15 @@ if ($held) {
   & $manager install --install-root $versions --bin-dir $bin
 }
 $tool = Join-Path $bin 'plumb.exe'
-function Install-Configuration {
+function Install-Configuration([string]$Path = '') {
   & $tool configuration --help *> $null
   if ($LASTEXITCODE -eq 0) {
     if ([string]::IsNullOrWhiteSpace($configuration)) { throw 'Plumb configuration version is required' }
-    & $tool configuration install --version $configuration
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+      & $tool configuration install --version $configuration
+    } else {
+      & $tool configuration install --version $configuration --path $Path
+    }
   } else {
     Write-Output 'installed Plumb has no configuration command; retaining its managed depot seat'
   }
@@ -116,7 +120,9 @@ Copy-Item (Join-Path $target 'debug/plumb.exe') $tool -Force
 $bin | Out-File -FilePath $env:GITHUB_PATH -Append
 & $tool --version
 if ($mode -eq 'exact') {
-  Install-Configuration
+  $env:PLUMB_HOME = Join-Path $env:RUNNER_TEMP "plumb-home-$configuration"
+  Install-Configuration (Join-Path $env:PLUMB_HOME 'configurations')
+  "PLUMB_HOME=$env:PLUMB_HOME" | Out-File -FilePath $env:GITHUB_ENV -Append
 }
 if (-not $keys -and -not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL)) {
   $plan = Get-AtomPlan

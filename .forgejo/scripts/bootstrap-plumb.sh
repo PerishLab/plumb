@@ -28,7 +28,11 @@ tool="$bin/plumb"
 install_configuration() {
   if "$tool" configuration --help >/dev/null 2>&1; then
     test -n "$configuration"
-    "$tool" configuration install --version "$configuration"
+    if [ "$#" -eq 1 ]; then
+      "$tool" configuration install --version "$configuration" --path "$1"
+    else
+      "$tool" configuration install --version "$configuration"
+    fi
   else
     printf 'installed Plumb has no configuration command; retaining its managed depot seat\n'
   fi
@@ -98,7 +102,10 @@ cp "$target/debug/plumb" "$tool"
 printf '%s\n' "$bin" >> "$GITHUB_PATH"
 "$tool" --version
 if [ "$mode" = exact ]; then
-  install_configuration
+  PLUMB_HOME="$RUNNER_TEMP/plumb-home-$configuration"
+  export PLUMB_HOME
+  install_configuration "$PLUMB_HOME/configurations"
+  printf 'PLUMB_HOME=%s\n' "$PLUMB_HOME" >> "$GITHUB_ENV"
 fi
 if [ -z "$keys" ] && [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ]; then
   plan=$(atom_plan)

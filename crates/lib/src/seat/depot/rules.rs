@@ -113,9 +113,9 @@ impl Rules {
         if pointer.product != "plumb" || pointer.kind != v3::Kind::Configuration {
             return Err("the installed depot generation is not plumb configuration".into());
         }
-        if pointer.version != running {
+        if !related(running, &pointer.version)? {
             return Err(format!(
-                "depot configuration for {} requires that exact product binary, got {running}",
+                "depot configuration for {} requires that marker binary or its release base, got {running}",
                 pointer.version
             ));
         }
@@ -261,6 +261,22 @@ impl Rules {
             _ => None,
         }
     }
+}
+
+fn related(running: &str, released: &str) -> Result<bool, String> {
+    let running = semver::Version::parse(running.trim_start_matches('v'))
+        .map_err(|error| format!("cannot parse running Plumb version: {error}"))?;
+    let released = semver::Version::parse(released.trim_start_matches('v'))
+        .map_err(|error| format!("cannot parse depot release version: {error}"))?;
+    if running == released {
+        return Ok(true);
+    }
+    let core = (running.major, running.minor, running.patch);
+    let candidate = (released.major, released.minor, released.patch);
+    Ok(match (running.pre.is_empty(), released.pre.is_empty()) {
+        (true, false) => core == candidate,
+        _ => false,
+    })
 }
 
 #[cfg(unix)]
