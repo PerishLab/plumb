@@ -21,18 +21,7 @@ impl Seat {
         let product = crate::command::release::Product::new(&spec);
         let source = product.depot();
         let binding = match context {
-            Context::Line => {
-                let beta = source.latest("beta", true)?;
-                if related(target, &beta.release.version).is_ok()
-                    || precedes(target, &beta.release.version).is_ok()
-                {
-                    beta
-                } else {
-                    let stable = source.latest("stable", true)?;
-                    precedes(target, &stable.release.version)?;
-                    stable
-                }
-            }
+            Context::Line => source.validator(target, true)?,
             Context::Source => source.latest("stable", true)?,
         };
         let snapshot = Snapshot::read(staged).map_err(|error| error.to_string())?;
@@ -79,35 +68,6 @@ impl Seat {
     pub fn transaction(&self) -> bool {
         self.transaction
     }
-}
-
-pub(crate) fn related(target: &str, validator: &str) -> Result<(), String> {
-    let target = semver::Version::parse(target.trim_start_matches('v'))
-        .map_err(|error| format!("cannot parse guard target {target}: {error}"))?;
-    let validator = semver::Version::parse(validator.trim_start_matches('v'))
-        .map_err(|error| format!("cannot parse released validator {validator}: {error}"))?;
-    if (validator.major, validator.minor, validator.patch)
-        != (target.major, target.minor, target.patch)
-        || validator.pre.is_empty()
-    {
-        return Err(format!(
-            "released validator v{validator} does not belong to v{target}"
-        ));
-    }
-    Ok(())
-}
-
-pub(crate) fn precedes(target: &str, validator: &str) -> Result<(), String> {
-    let target = semver::Version::parse(target.trim_start_matches('v'))
-        .map_err(|error| format!("cannot parse guard target {target}: {error}"))?;
-    let validator = semver::Version::parse(validator.trim_start_matches('v'))
-        .map_err(|error| format!("cannot parse released validator {validator}: {error}"))?;
-    if validator.major != target.major || validator > target {
-        return Err(format!(
-            "released validator v{validator} cannot open v{target}"
-        ));
-    }
-    Ok(())
 }
 
 pub(super) fn target(root: &Path) -> Result<Option<String>, String> {
