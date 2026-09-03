@@ -34,6 +34,15 @@ fn versioned() {
     let workflow = text(".forgejo/workflows/ship.yml");
     assert!(workflow.contains("configuration:"), "{workflow}");
     assert!(workflow.contains("inputs.configuration"), "{workflow}");
+    let resolver = text("crates/cli/src/command/ship/transport/resolve.rs");
+    assert_eq!(resolver.matches("workload: Some(marker.base())").count(), 1);
+    assert_eq!(
+        resolver
+            .matches("workload: Some(self.marker.base())")
+            .count(),
+        1
+    );
+    assert!(resolver.contains("then_some(self.marker.base())"));
 }
 
 #[test]

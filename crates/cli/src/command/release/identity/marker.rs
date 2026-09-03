@@ -90,6 +90,10 @@ pub(in crate::command) fn bound(root: &Path, raw: &str) -> Result<Descriptor, St
 }
 
 impl Descriptor {
+    pub(in crate::command) fn base(&self) -> &str {
+        self.marker.split('-').next().unwrap_or(&self.marker)
+    }
+
     pub(in crate::command) fn digest(&self) -> Result<String, String> {
         serde_json::to_vec(self)
             .map(|bytes| record::sha(&bytes))
