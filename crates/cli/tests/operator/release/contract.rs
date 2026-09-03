@@ -23,6 +23,17 @@ fn versioned() {
             .expect("Plumb owns ship request execution");
     assert!(execution.contains("materialize(&artifacts, &workloads)"));
     assert!(!execution.contains("if release.channel == \"stable\""));
+
+    let trigger = text("crates/cli/src/command/operator/trigger.rs");
+    assert!(trigger.contains("before.product == \"plumb\""), "{trigger}");
+    assert!(trigger.contains("before.marker.clone()"), "{trigger}");
+    assert!(
+        trigger.contains("plumb::version!(\"PLUMB\").to_string()"),
+        "{trigger}"
+    );
+    let workflow = text(".forgejo/workflows/ship.yml");
+    assert!(workflow.contains("configuration:"), "{workflow}");
+    assert!(workflow.contains("inputs.configuration"), "{workflow}");
 }
 
 #[test]

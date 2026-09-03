@@ -3,6 +3,7 @@ set -eu
 
 atom=${1:-.plumb-atom}
 mode=${2:-bootstrap}
+configuration=${3:-${PLUMB_BUILD_VERSION:-}}
 case "$mode" in
   bootstrap|exact) ;;
   *) printf 'unknown Plumb bootstrap mode: %s\n' "$mode" >&2; exit 2 ;;
@@ -26,7 +27,8 @@ fi
 tool="$bin/plumb"
 install_configuration() {
   if "$tool" configuration --help >/dev/null 2>&1; then
-    "$tool" configuration install
+    test -n "$configuration"
+    "$tool" configuration install --version "$configuration"
   else
     printf 'installed Plumb has no configuration command; retaining its managed depot seat\n'
   fi
