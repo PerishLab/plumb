@@ -50,6 +50,14 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
             )
         })
         .transpose()?;
+    if let Some(configuration) = &configuration {
+        crate::catalog::set::guard(
+            configuration.path(),
+            target
+                .as_deref()
+                .expect("a temporary configuration has a target"),
+        )?;
+    }
     let checks = Catalog {
         root,
         product: &product,
