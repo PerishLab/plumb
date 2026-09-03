@@ -95,10 +95,13 @@ function Get-AtomPlan {
 }
 $keys = $null
 $source = $env:PLUMB_ATOM_SOURCE
+$digest = $env:PLUMB_ATOM_DIGEST
+if (-not $source -and $digest) {
+  if ($digest -notmatch '^[0-9a-fA-F]{64}$') { throw 'invalid Plumb atom digest' }
+  $source = "$($env:PLUMB_WORKFLOW_INVENTORY_URL.TrimEnd('/'))/workloads/$digest.tgz"
+}
 $supportsWorkload = & $tool workflow plan --help 2>&1 | Select-String -SimpleMatch '--workload'
-if ($source) {
-  Install-AtomSource $source
-} elseif (-not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL) -and $supportsWorkload) {
+if (-not $source -and -not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL) -and $supportsWorkload) {
   $plan = Get-AtomPlan
   $action = $plan.actions | Where-Object { $_.name -eq 'ship/atom' }
   $keys = $action.keys | ConvertTo-Json -Compress

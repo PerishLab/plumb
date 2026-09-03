@@ -78,13 +78,17 @@ atom_plan() {
 }
 keys=
 source=${PLUMB_ATOM_SOURCE:-}
+digest=${PLUMB_ATOM_DIGEST:-}
+if [ -z "$source" ] && [ -n "$digest" ]; then
+  test "${#digest}" -eq 64
+  case "$digest" in *[!0-9a-fA-F]*) printf 'invalid Plumb atom digest\n' >&2; exit 2 ;; esac
+  source="${PLUMB_WORKFLOW_INVENTORY_URL%/}/workloads/$digest.tgz"
+fi
 supports_workload=
 if "$tool" workflow plan --help 2>&1 | grep -q -- '--workload'; then
   supports_workload=1
 fi
-if [ -n "$source" ]; then
-  install_atom "$source"
-elif [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ] && [ -n "$supports_workload" ]; then
+if [ -z "$source" ] && [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ] && [ -n "$supports_workload" ]; then
   plan=$(atom_plan)
   keys=$(printf '%s' "$plan" | jq -c '.actions[] | select(.name == "ship/atom") | .keys')
   source=$(printf '%s' "$plan" | jq -r \
