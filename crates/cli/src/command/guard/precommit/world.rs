@@ -19,7 +19,11 @@ pub(super) fn digest(
         sponge.update(commit.as_bytes());
     }
     sponge.update([0]);
-    sponge.update(plumb::depot::rules()?.mark().as_bytes());
+    let rules = match binding.configuration {
+        Some(configuration) => configuration.to_string(),
+        None => plumb::depot::rules()?.mark().to_string(),
+    };
+    sponge.update(rules.as_bytes());
     if name == "guard/plumb"
         && let Some(configuration) = binding.configuration
     {
