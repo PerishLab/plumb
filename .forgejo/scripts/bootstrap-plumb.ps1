@@ -24,7 +24,7 @@ for ($attempt = 1; $attempt -le 5; $attempt++) {
   try {
     Invoke-WebRequest -UseBasicParsing -TimeoutSec 30 -Uri 'https://releases.plumb.perish.uk/manage.ps1' -OutFile $manager
     try {
-      $channel = Invoke-RestMethod -TimeoutSec 30 -Uri 'https://releases.plumb.perish.uk/v1/channels/beta.json'
+      $channel = Invoke-RestMethod -TimeoutSec 30 -Uri 'https://releases.plumb.perish.uk/v1/channels/stable.json'
       $held = $channel.releaseVersion
     } catch {
       $held = $null
@@ -44,7 +44,7 @@ $seat = if ($held) {
 $versions = Join-Path $seat 'versions'
 $bin = Join-Path $seat 'bin'
 if ($held) {
-  & $manager install --channel beta --version $held --install-root $versions --bin-dir $bin
+  & $manager install --channel stable --version $held --install-root $versions --bin-dir $bin
 } else {
   & $manager install --install-root $versions --bin-dir $bin
 }

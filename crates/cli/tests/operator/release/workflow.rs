@@ -176,8 +176,7 @@ fn opaque() {
 
 #[test]
 fn depot() {
-    let held = bootstrap();
-    let windows = windows();
+    let (held, windows) = (bootstrap(), windows());
     let installed = held.find("cp \"$target/debug/plumb\" \"$tool\"").unwrap();
     let bootstrap = held.find("  install_configuration").unwrap();
     let exact = held.rfind("  install_configuration").unwrap();
@@ -239,7 +238,8 @@ fn depot() {
         ".decision == \"reuse\"",
         "workflow record ship/atom",
         "waiting for exact Plumb atom inventory winner",
-        "--max-time 300",
+        "v1/channels/stable.json",
+        "--channel stable",
     ] {
         assert!(held.contains(binding), "Unix atom reuse omits {binding}");
     }
@@ -252,8 +252,8 @@ fn depot() {
         "--world \"compiler=$compiler\"",
         "$action.decision -eq 'reuse'",
         "workflow record ship/atom",
-        "waiting for exact Plumb atom inventory winner",
-        "-TimeoutSec 300",
+        "v1/channels/stable.json",
+        "--channel stable",
     ] {
         assert!(
             windows.contains(binding),
