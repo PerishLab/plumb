@@ -140,7 +140,12 @@ impl Drop for Index {
     }
 }
 
-pub(super) fn execute(root: &Path, argv: &[String], seat: Option<&Path>) -> Result<(), String> {
+pub(super) fn execute(
+    root: &Path,
+    argv: &[String],
+    seat: Option<&Path>,
+    governed: bool,
+) -> Result<(), String> {
     let (program, args) = argv
         .split_first()
         .ok_or_else(|| "guard action has no command".to_string())?;
@@ -148,11 +153,17 @@ pub(super) fn execute(root: &Path, argv: &[String], seat: Option<&Path>) -> Resu
     command
         .args(args)
         .current_dir(root)
-        .env_remove("GIT_INDEX_FILE");
+        .env_remove("GIT_INDEX_FILE")
+        .env_remove("PLUMB_GUARD_CONFIGURATION")
+        .env_remove("PLUMB_GUARD_VIEW");
+    if governed || seat.is_some() {
+        command.env_remove("PLUMB_HOME");
+    }
+    if governed {
+        command.env("PLUMB_GUARD_VIEW", "true");
+    }
     if let Some(seat) = seat {
-        command
-            .env_remove("PLUMB_HOME")
-            .env("PLUMB_GUARD_CONFIGURATION", seat);
+        command.env("PLUMB_GUARD_CONFIGURATION", seat);
     }
     let status = command
         .status()

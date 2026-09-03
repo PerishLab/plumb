@@ -123,6 +123,7 @@ fn matrix() {
         "needs.resolve.outputs.publication_ready != 'true'",
         "needs.publish_plan.outputs.version || needs.resolve.outputs.version",
         "PLUMB_ATOM_SOURCE: ${{ needs.resolve.outputs.atom }}",
+        "atom: ${{ steps.plan.outputs.atom }}",
         "PLUMB_RELEASE_COMMIT: ${{ needs.publish_plan.outputs.commit || needs.resolve.outputs.commit }}",
         "if: needs.resolve.outputs.workload_missing == 'true'",
         "needs.workload.result == 'skipped'",
@@ -134,6 +135,7 @@ fn matrix() {
         resolution().contains("publication_ready=$(printf '%s' \"$graph\""),
         "resolve must expose whether its publication plan is already final"
     );
+    assert!(resolution().contains("atom=${PLUMB_ATOM_SOURCE:-}"));
     let graph = resolver();
     assert!(graph.contains("action == \"ship/oci\""), "{graph}");
     assert!(
@@ -234,6 +236,7 @@ fn depot() {
         "workflow record ship/atom",
         "workflow plan --help",
         "PLUMB_ATOM_SOURCE",
+        "GITHUB_ENV",
         "v1/channels/stable.json",
     ] {
         assert!(held.contains(binding), "Unix atom reuse omits {binding}");
@@ -247,6 +250,7 @@ fn depot() {
         "--world \"compiler=$compiler\"",
         "workflow plan --help",
         "PLUMB_ATOM_SOURCE",
+        "GITHUB_ENV",
         "v1/channels/stable.json",
     ] {
         assert!(

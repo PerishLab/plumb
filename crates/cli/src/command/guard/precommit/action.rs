@@ -73,7 +73,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
             eprintln!("guard {}", check.proof.name);
             for command in &check.commands {
                 let seat = configuration.as_ref().map(|held| held.path());
-                tree::execute(&index.root, command, seat)?;
+                tree::execute(&index.root, command, seat, product.profile.is_some())?;
             }
             cache(&check.proof)?;
         }

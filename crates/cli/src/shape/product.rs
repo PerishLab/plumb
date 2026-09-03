@@ -22,6 +22,9 @@ pub struct Profile {
 }
 
 pub fn governance(root: &Path) -> Result<Option<Target>, String> {
+    if guarded() {
+        return Ok(None);
+    }
     match git::remote(root, "") {
         Ok(remote) if remote.host == DOMAIN => {
             let rig = plumb::rig::Rig::resolve(None).map_err(|error| error.to_string())?;
@@ -87,9 +90,7 @@ fn configured<C: Configuration>(repository: &Path, seat: &C) -> Result<Target, S
 }
 
 pub fn guard(root: &Path, source: &str) -> Result<Target, String> {
-    let internal = plumb::config::value("PLUMB_HOME").is_none()
-        && plumb::config::value("PLUMB_GUARD_CONFIGURATION").is_some();
-    if !internal && git::remote(root, "").is_ok_and(|remote| remote.host == DOMAIN) {
+    if !guarded() && git::remote(root, "").is_ok_and(|remote| remote.host == DOMAIN) {
         return resolve(root, source);
     }
     let path = root.join("plumb.toml");
@@ -110,6 +111,12 @@ pub fn guard(root: &Path, source: &str) -> Result<Target, String> {
         derivatives: Vec::new(),
         profile: None,
     })
+}
+
+fn guarded() -> bool {
+    plumb::config::value("PLUMB_HOME").is_none()
+        && (plumb::config::value("PLUMB_GUARD_VIEW").is_some()
+            || plumb::config::value("PLUMB_GUARD_CONFIGURATION").is_some())
 }
 
 impl Root<'_> {

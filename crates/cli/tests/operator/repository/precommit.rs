@@ -168,6 +168,7 @@ fn governed() {
     let held = String::from_utf8_lossy(&output.stderr);
     assert!(held.contains("guard guard/plumb"), "{held}");
     assert!(held.contains("guard guard/ectropy"), "{held}");
+    assert!(!held.contains("must not carry plumb.toml or ectropy.toml"));
     assert!(!root.join("plumb.toml").exists());
     assert!(!root.join("ectropy.toml").exists());
 
