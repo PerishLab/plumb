@@ -237,7 +237,7 @@ fn depot() {
         "--world \"compiler=$compiler\"",
         ".decision == \"reuse\"",
         "workflow record ship/atom",
-        "waiting for exact Plumb atom inventory winner",
+        "workflow plan --help",
         "v1/channels/stable.json",
         "--channel stable",
     ] {
@@ -251,7 +251,7 @@ fn depot() {
         "--workload \"commit=$env:PLUMB_BUILD_COMMIT\"",
         "--world \"compiler=$compiler\"",
         "$action.decision -eq 'reuse'",
-        "workflow record ship/atom",
+        "workflow plan --help",
         "v1/channels/stable.json",
         "--channel stable",
     ] {

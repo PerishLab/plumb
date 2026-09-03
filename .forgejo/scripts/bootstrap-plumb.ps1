@@ -89,7 +89,8 @@ function Get-AtomPlan {
 }
 $keys = $null
 $source = $null
-if (-not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL)) {
+$supportsWorkload = & $tool workflow plan --help 2>&1 | Select-String -SimpleMatch '--workload'
+if (-not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL) -and $supportsWorkload) {
   $plan = Get-AtomPlan
   $action = $plan.actions | Where-Object { $_.name -eq 'ship/atom' }
   $keys = $action.keys | ConvertTo-Json -Compress
@@ -112,6 +113,11 @@ $bin | Out-File -FilePath $env:GITHUB_PATH -Append
 & $tool --version
 if ($mode -eq 'exact') {
   Install-Configuration
+}
+if (-not $keys -and -not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL)) {
+  $plan = Get-AtomPlan
+  $action = $plan.actions | Where-Object { $_.name -eq 'ship/atom' }
+  $keys = $action.keys | ConvertTo-Json -Compress
 }
 if (-not $source -and $keys) {
   & $tool workflow record ship/atom --keys $keys --workload $archive
