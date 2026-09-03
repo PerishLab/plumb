@@ -16,6 +16,7 @@ struct Report {
     target: String,
     ok: bool,
     clean: bool,
+    configuration: Option<String>,
     profile: Option<String>,
     shape: Shape,
     vocabulary: Vocabulary,
@@ -77,11 +78,13 @@ struct Summary {
 
 pub fn run(root: PathBuf, json: bool) -> i32 {
     let snapshot = plumb::snapshot::Snapshot::read(&root);
+    let mut configuration = None;
     let mut profile = None;
     let mut view = None;
     let mut governance = Vec::new();
     match governed(&root) {
         Ok(Some(held)) => {
+            configuration = Some(held.configuration.clone());
             profile = Some(held.digest.clone());
             if root.join("plumb.toml").exists() || root.join("ectropy.toml").exists() {
                 governance.push(finding::Finding::new(finding::Seed::wrong(
@@ -138,6 +141,7 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
             target: root.display().to_string(),
             ok,
             clean: findings.is_empty(),
+            configuration: configuration.clone(),
             profile: profile.clone(),
             shape: Shape::new(&held),
             vocabulary: Vocabulary::new(vocabulary),
@@ -157,6 +161,7 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
             vocabulary: &vocabulary,
             findings: &findings,
             briefs: &briefs(),
+            configuration: configuration.as_deref(),
             profile: profile.as_deref(),
         });
     }

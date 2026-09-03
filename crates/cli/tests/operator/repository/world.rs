@@ -105,6 +105,7 @@ fn doctor() {
     );
     let report: serde_json::Value = serde_json::from_slice(&output.stdout).expect("report");
     assert_eq!(report["profile"], digest);
+    assert!(report["configuration"].as_str().is_some());
     assert_eq!(report["ok"], true);
     assert!(!root.join("plumb.toml").exists());
     assert!(!root.join("ectropy.toml").exists());
@@ -121,6 +122,11 @@ fn doctor() {
         "cargo"
     );
     assert_eq!(surface["publication"]["include"][0]["profile"], digest);
+    assert!(
+        surface["publication"]["include"][0]["configuration"]
+            .as_str()
+            .is_some()
+    );
 
     std::fs::write(root.join("plumb.toml"), "").expect("second expression");
     let refusal = repo.inspect(depot.path());

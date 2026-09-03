@@ -1,3 +1,4 @@
+mod binding;
 mod execute;
 mod resolve;
 mod seal;

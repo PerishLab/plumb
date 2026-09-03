@@ -16,6 +16,7 @@ use std::path::{Path, PathBuf};
 #[derive(Clone, Debug)]
 pub struct Spec {
     pub root: PathBuf,
+    pub configuration: Option<String>,
     pub profile: Option<String>,
     pub product: String,
     pub authority: String,
@@ -71,6 +72,7 @@ impl Spec {
                 "{subject} release identity differs from its product definition"
             ));
         }
+        spec.configuration = Some(profile.configuration);
         spec.profile = Some(profile.digest);
         Ok(spec)
     }
@@ -105,6 +107,7 @@ impl Spec {
         } = held.release;
         let mut spec = Self {
             root: root.to_path_buf(),
+            configuration: None,
             profile: None,
             target: targets
                 .iter()

@@ -16,6 +16,7 @@ pub struct Target {
 }
 
 pub struct Profile {
+    pub configuration: String,
     pub digest: String,
     pub manifest: String,
     pub ectropy: String,
@@ -141,6 +142,9 @@ fn profiled(
         document.product,
         request,
         Some(Profile {
+            configuration: seat
+                .mark()
+                .ok_or_else(|| "product profile has no configuration generation".to_string())?,
             digest: reference.profile,
             manifest: document.governance.manifest,
             ectropy: document.governance.ectropy,

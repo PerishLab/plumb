@@ -16,6 +16,8 @@ struct Request {
     roots: Vec<String>,
     operation: Operation,
     #[serde(default)]
+    configuration: Option<String>,
+    #[serde(default)]
     profile: Option<String>,
     #[serde(default = "Reuse::none")]
     reuse: Reuse,
@@ -101,9 +103,8 @@ impl Request {
         }
         let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
         let spec = crate::shape::release::Spec::resolve(&rig.release.root)?;
-        if self.profile != spec.profile {
-            return Err("ship request product profile differs from the active depot".into());
-        }
+        super::binding::Binding::new(&spec)
+            .verify(self.configuration.as_deref(), self.profile.as_deref())?;
         let release = &rig.release;
         let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
         let reuse = self.reuse.encode()?;

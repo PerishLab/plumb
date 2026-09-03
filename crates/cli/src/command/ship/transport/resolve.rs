@@ -1,12 +1,12 @@
-use crate::command::release;
-use plumb::rig::Rig;
-use serde_json::{Value, json};
-use std::path::Path;
-
+use super::binding::Binding;
 use super::support::{
     Contract, Inventory, carry, contract, embedded, idle, matrix, object, projection, sources,
     strings, text,
 };
+use crate::command::release;
+use plumb::rig::Rig;
+use serde_json::{Value, json};
+use std::path::Path;
 
 pub fn run(raw: &str, atom: &str) -> Result<String, String> {
     if atom.len() != 40 || !atom.bytes().all(|held| held.is_ascii_hexdigit()) {
@@ -30,6 +30,7 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
     let inventory = Inventory::fetch(&rig.workflow.inventory.url)?;
     let world = World {
         marker: &marker.marker,
+        binding: Binding::new(&spec),
         inventory: inventory.path(),
         source: Some(&rig.workflow.inventory.url),
         root,
@@ -49,6 +50,8 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
         "channel": marker.channel,
         "commit": marker.commit,
         "version": marker.version,
+        "configuration": spec.configuration,
+        "profile": spec.profile,
         "workload": workload.matrix,
         "workload_missing": workload.missing,
         "publication": publication.matrix,
@@ -60,6 +63,7 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
 
 struct World<'a> {
     marker: &'a str,
+    binding: Binding<'a>,
     inventory: Option<&'a Path>,
     source: Option<&'a str>,
     root: &'a Path,
@@ -118,7 +122,7 @@ fn workloads(
             }));
             continue;
         }
-        let request = json!({
+        let request = Binding::new(spec).apply(json!({
             "schema": "plumb.ship-request/v2",
             "action": action,
             "projections": [projection],
@@ -130,7 +134,7 @@ fn workloads(
             },
             "reuse": node["reuse"],
             "keys": node["keys"],
-        });
+        }));
         pending.push(json!({ "runner": runner, "request": request }));
     }
     let missing = !pending.is_empty();
@@ -192,7 +196,7 @@ impl Publish<'_> {
             return Ok(());
         }
         let operation = json!({ "type": "publication", "workloads": self.workload.reuse });
-        let request = json!({
+        let request = Binding::new(self.spec).apply(json!({
             "schema": "plumb.ship-request/v2",
             "action": "ship/binary",
             "projections": [projection],
@@ -200,7 +204,7 @@ impl Publish<'_> {
             "operation": operation,
             "reuse": node["reuse"],
             "keys": node["keys"],
-        });
+        }));
         pending.push(json!({ "runner": "docker", "request": request }));
         Ok(())
     }
@@ -269,7 +273,7 @@ fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String> {
         base: None,
         world: fields,
         workload,
-        identity: vec![format!("marker={}", world.marker)],
+        identity: world.binding.identity(world.marker),
         project: plan
             .projections
             .iter()
