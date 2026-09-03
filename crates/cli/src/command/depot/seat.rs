@@ -20,6 +20,14 @@ pub fn held(over: &Path) -> Held {
             Err(error) => Held::Blind(error),
         };
     }
+    if plumb::config::value("PLUMB_HOME").is_none()
+        && let Some(path) = plumb::config::value("PLUMB_GUARD_DEPOT")
+    {
+        return match plumb::depot::Rules::at(Path::new(&path), plumb::version!("PLUMB")) {
+            Ok(seat) => Held::Seat(Box::new(seat)),
+            Err(error) => Held::Blind(error),
+        };
+    }
     let base = match root(over) {
         Ok(base) => base,
         Err(error) => return Held::Blind(error),

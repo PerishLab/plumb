@@ -47,6 +47,11 @@ impl Rules {
         {
             return Self::guard(Path::new(&root), crate::version!("PLUMB"));
         }
+        if crate::config::value("PLUMB_HOME").is_none()
+            && let Some(root) = crate::config::value("PLUMB_GUARD_DEPOT")
+        {
+            return Self::at(Path::new(&root), crate::version!("PLUMB"));
+        }
         if let Some(root) = crate::config::value("PLUMB_DEPOT_SNAPSHOT") {
             return Self::staged(Path::new(&root), crate::version!("PLUMB"));
         }
