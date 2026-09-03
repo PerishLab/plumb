@@ -90,6 +90,23 @@ fn accepts() {
 }
 
 #[test]
+fn bootstrap() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let held = std::fs::read_to_string(
+        root.join("crates/cli/src/command/guard/precommit/configuration.rs"),
+    )
+    .expect("configuration bootstrap");
+    assert!(
+        held.contains("Context::Source => source.latest(\"stable\", true)?"),
+        "ordinary source changes must use the released stable validator"
+    );
+    assert!(
+        held.contains("Ok(branch) if branch.starts_with(\"release/\")"),
+        "a mismatched release line must still refuse"
+    );
+}
+
+#[test]
 fn staged() {
     let fixture = tempfile::tempdir().expect("fixture");
     let home = tempfile::tempdir().expect("home");

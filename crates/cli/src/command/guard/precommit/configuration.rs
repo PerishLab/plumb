@@ -10,7 +10,7 @@ pub(super) struct Seat {
 
 impl Seat {
     pub fn new(source: &Path, staged: &Path, target: &str) -> Result<Self, String> {
-        Git(source).line(target)?;
+        let context = Git(source).context(target)?;
         let spec = Spec::read(&staged.join("plumb.toml"))?;
         if spec.product != "plumb" {
             return Err("only Plumb may bootstrap release-line guard configuration".into());
@@ -18,15 +18,20 @@ impl Seat {
         let depot = spec.derivative(plumb::depot::v3::Kind::Configuration)?;
         let product = crate::command::release::Product::new(&spec);
         let source = product.depot();
-        let beta = source.latest("beta", true)?;
-        let binding = if related(target, &beta.release.version).is_ok()
-            || precedes(target, &beta.release.version).is_ok()
-        {
-            beta
-        } else {
-            let stable = source.latest("stable", true)?;
-            precedes(target, &stable.release.version)?;
-            stable
+        let binding = match context {
+            Context::Line => {
+                let beta = source.latest("beta", true)?;
+                if related(target, &beta.release.version).is_ok()
+                    || precedes(target, &beta.release.version).is_ok()
+                {
+                    beta
+                } else {
+                    let stable = source.latest("stable", true)?;
+                    precedes(target, &stable.release.version)?;
+                    stable
+                }
+            }
+            Context::Source => source.latest("stable", true)?,
         };
         let snapshot = Snapshot::read(staged).map_err(|error| error.to_string())?;
         let held = crate::shape::depot::inventory(&snapshot)?;
@@ -125,28 +130,35 @@ pub(super) fn target(root: &Path) -> Result<Option<String>, String> {
 
 struct Git<'a>(&'a Path);
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Context {
+    Line,
+    Source,
+}
+
 impl Git<'_> {
-    fn line(&self, version: &str) -> Result<(), String> {
+    fn context(&self, version: &str) -> Result<Context, String> {
         let expected = format!("release/{version}");
         match self.run(&["symbolic-ref", "--short", "HEAD"], "read release line") {
-            Ok(branch) if branch == expected => return Ok(()),
-            Ok(branch) => {
+            Ok(branch) if branch == expected => return Ok(Context::Line),
+            Ok(branch) if branch.starts_with("release/") => {
                 return Err(format!(
                     "configuration mismatch may bootstrap only on {expected}, got {branch}"
                 ));
             }
-            Err(error) => {
+            Ok(_) => return Ok(Context::Source),
+            Err(_) => {
                 let head = self.run(&["rev-parse", "HEAD"], "read detached release commit")?;
-                let remote = self.run(
+                if let Ok(remote) = self.run(
                     &["rev-parse", &format!("origin/{expected}^{{commit}}")],
                     "read remote release commit",
-                )?;
-                if head != remote {
-                    return Err(error);
+                ) && head == remote
+                {
+                    return Ok(Context::Line);
                 }
             }
         }
-        Ok(())
+        Ok(Context::Source)
     }
 
     fn commit(&self) -> Result<String, String> {
