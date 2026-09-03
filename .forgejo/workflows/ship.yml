@@ -37,7 +37,7 @@ jobs:
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
     outputs:
-      atom: ${{ steps.atom.outputs.source }}
+      atom: ${{ steps.plan.outputs.atom }}
       channel: ${{ steps.plan.outputs.channel }}
       commit: ${{ steps.plan.outputs.commit }}
       version: ${{ steps.plan.outputs.version }}
@@ -74,7 +74,6 @@ jobs:
           git checkout --detach "$reference^{commit}"
 
       - name: Install the exact atom Plumb
-        id: atom
         shell: bash
         run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact
 

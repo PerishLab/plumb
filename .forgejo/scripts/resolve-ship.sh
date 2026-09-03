@@ -8,6 +8,7 @@ if [ "$mode" = ready ]; then
   test "$(printf '%s' "$graph" | jq -r '.publication_ready')" = true
 fi
 {
+  echo "atom=${PLUMB_ATOM_SOURCE:-}"
   echo "channel=$(printf '%s' "$graph" | jq -r '.channel')"
   echo "commit=$(printf '%s' "$graph" | jq -r '.commit')"
   echo "version=$(printf '%s' "$graph" | jq -r '.version')"

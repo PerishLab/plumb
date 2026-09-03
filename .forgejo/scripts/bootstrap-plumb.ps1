@@ -149,3 +149,6 @@ if (-not $source -and $keys) {
 if ($source -and $env:GITHUB_OUTPUT) {
   "source=$source" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 }
+if ($source -and $env:GITHUB_ENV) {
+  "PLUMB_ATOM_SOURCE=$source" | Out-File -FilePath $env:GITHUB_ENV -Append
+}

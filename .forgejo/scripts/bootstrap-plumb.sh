@@ -129,3 +129,6 @@ fi
 if [ -n "$source" ] && [ -n "${GITHUB_OUTPUT:-}" ]; then
   printf 'source=%s\n' "$source" >> "$GITHUB_OUTPUT"
 fi
+if [ -n "$source" ] && [ -n "${GITHUB_ENV:-}" ]; then
+  printf 'PLUMB_ATOM_SOURCE=%s\n' "$source" >> "$GITHUB_ENV"
+fi
