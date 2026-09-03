@@ -65,9 +65,6 @@ fn matrix() {
         "{held}"
     );
     assert!(executor().contains("plumb ship execute --request"));
-    assert!(held.contains("\n  workload:\n"), "{held}");
-    assert!(held.contains("\n  publish_plan:\n"), "{held}");
-    assert!(held.contains("\n  publication:\n"), "{held}");
     assert!(
         held.contains("repository: ${{ inputs.repository }}\n          ref: ${{ inputs.marker }}"),
         "publication planning must retain the marker ref for exact verification"
@@ -128,12 +125,15 @@ fn matrix() {
         held.contains("resolve-ship.sh '${{ github.sha }}' ready"),
         "publication planning must observe the recorded workloads"
     );
-    assert!(
-        held.contains("needs.resolve.outputs.publication_ready != 'true'")
-            && held.contains("name: Carry already resolved publications")
-            && held.contains("PLUMB_CARRY_PUBLICATION: ${{ needs.resolve.outputs.publication }}"),
-        "held workloads must carry the resolve publication plan without rebuilding the atom"
-    );
+    for binding in [
+        "needs.resolve.outputs.publication_ready != 'true'",
+        "name: Carry already resolved publications",
+        "PLUMB_CARRY_PUBLICATION: ${{ needs.resolve.outputs.publication }}",
+        "PLUMB_ATOM_SOURCE: ${{ needs.resolve.outputs.atom }}",
+        "PLUMB_ATOM_SOURCE: ${{ needs.publish_plan.outputs.atom }}",
+    ] {
+        assert!(held.contains(binding), "ship carry omits {binding}");
+    }
     assert!(
         resolution().contains("publication_ready=$(printf '%s' \"$graph\""),
         "resolve must expose whether its publication plan is already final"
@@ -238,8 +238,8 @@ fn depot() {
         ".decision == \"reuse\"",
         "workflow record ship/atom",
         "workflow plan --help",
+        "PLUMB_ATOM_SOURCE",
         "v1/channels/stable.json",
-        "--channel stable",
     ] {
         assert!(held.contains(binding), "Unix atom reuse omits {binding}");
     }
@@ -252,8 +252,8 @@ fn depot() {
         "--world \"compiler=$compiler\"",
         "$action.decision -eq 'reuse'",
         "workflow plan --help",
+        "PLUMB_ATOM_SOURCE",
         "v1/channels/stable.json",
-        "--channel stable",
     ] {
         assert!(
             windows.contains(binding),

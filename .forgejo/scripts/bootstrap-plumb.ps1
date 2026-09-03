@@ -88,9 +88,11 @@ function Get-AtomPlan {
     $atom | ConvertFrom-Json
 }
 $keys = $null
-$source = $null
+$source = $env:PLUMB_ATOM_SOURCE
 $supportsWorkload = & $tool workflow plan --help 2>&1 | Select-String -SimpleMatch '--workload'
-if (-not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL) -and $supportsWorkload) {
+if ($source) {
+  Install-AtomSource $source
+} elseif (-not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL) -and $supportsWorkload) {
   $plan = Get-AtomPlan
   $action = $plan.actions | Where-Object { $_.name -eq 'ship/atom' }
   $keys = $action.keys | ConvertTo-Json -Compress
@@ -135,8 +137,15 @@ if (-not $source -and $keys) {
       }
     }
     if (-not $winner) { throw 'cannot resolve exact Plumb atom inventory race' }
-    Install-AtomSource $winner.reuse.source
+    $source = $winner.reuse.source
+    Install-AtomSource $source
     Copy-Item (Join-Path $target 'debug/plumb.exe') $tool -Force
-    Write-Output "accepted exact Plumb atom inventory winner $($winner.reuse.source) for $hostTarget"
+    Write-Output "accepted exact Plumb atom inventory winner $source for $hostTarget"
+  } else {
+    $digest = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+    $source = "$($env:PLUMB_WORKFLOW_INVENTORY_URL.TrimEnd('/'))/workloads/$digest.tgz"
   }
+}
+if ($source -and $env:GITHUB_OUTPUT) {
+  "source=$source" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 }

@@ -71,12 +71,14 @@ atom_plan() {
     "$atom"
 }
 keys=
-source=
+source=${PLUMB_ATOM_SOURCE:-}
 supports_workload=
 if "$tool" workflow plan --help 2>&1 | grep -q -- '--workload'; then
   supports_workload=1
 fi
-if [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ] && [ -n "$supports_workload" ]; then
+if [ -n "$source" ]; then
+  install_atom "$source"
+elif [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ] && [ -n "$supports_workload" ]; then
   plan=$(atom_plan)
   keys=$(printf '%s' "$plan" | jq -c '.actions[] | select(.name == "ship/atom") | .keys')
   source=$(printf '%s' "$plan" | jq -r \
@@ -115,8 +117,15 @@ if [ -z "$source" ] && [ -n "$keys" ]; then
       attempt=$((attempt + 1))
     done
     test -n "$winner"
+    source=$winner
     install_atom "$winner"
     cp "$target/debug/plumb" "$tool"
     printf 'accepted exact Plumb atom inventory winner %s for %s\n' "$winner" "$host"
+  else
+    digest=$(sha256sum "$archive" | cut -d' ' -f1)
+    source="${PLUMB_WORKFLOW_INVENTORY_URL%/}/workloads/$digest.tgz"
   fi
+fi
+if [ -n "$source" ] && [ -n "${GITHUB_OUTPUT:-}" ]; then
+  printf 'source=%s\n' "$source" >> "$GITHUB_OUTPUT"
 fi
