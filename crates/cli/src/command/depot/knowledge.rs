@@ -10,13 +10,10 @@ pub struct Wanted<'a> {
 
 pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let target = product::resolve(root, &rig, plumb::depot::v3::Kind::Changelog)?;
-    let marker = crate::command::release::ReleaseMarker::at(
-        root,
-        &target.product,
-        &target.authority,
-        wanted.marker,
-    )?;
+    product::require(root, &rig, plumb::depot::v3::Kind::Changelog)?;
+    let marker = crate::command::release::ReleaseMarker::bound(root, wanted.marker)?;
+    let spec = marker.spec();
+    let depot = spec.derivative(plumb::depot::v3::Kind::Changelog)?;
     let standing = marker.digest()?;
     let source = source(wanted.from)?;
     let proof = crate::command::changelog::prove(root, source, &marker.marker)?;
@@ -34,12 +31,7 @@ pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     }
     let bundle = plumb::depot::v3::Bundle::read(
         source,
-        identity(
-            &target,
-            &marker,
-            &standing,
-            plumb::depot::v3::Kind::Changelog,
-        ),
+        identity(spec, &marker, &standing, plumb::depot::v3::Kind::Changelog),
     )?;
     let held = (|| {
         if wanted.dry {
@@ -66,24 +58,21 @@ pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
             rig.depot.authority.load()?;
             store::Remote::new(&rig.depot.authority)?.publish(
                 &bundle,
-                &target.source,
+                &depot.source,
                 super::super::clock::ahead(0)?,
             )
         }
     })();
-    confirm(root, &target, &marker, &standing)?;
+    confirm(root, &marker, &standing)?;
     held
 }
 
 pub fn skill(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let target = product::resolve(root, &rig, plumb::depot::v3::Kind::Skill)?;
-    let marker = crate::command::release::ReleaseMarker::at(
-        root,
-        &target.product,
-        &target.authority,
-        wanted.marker,
-    )?;
+    product::require(root, &rig, plumb::depot::v3::Kind::Skill)?;
+    let marker = crate::command::release::ReleaseMarker::bound(root, wanted.marker)?;
+    let spec = marker.spec();
+    let depot = spec.derivative(plumb::depot::v3::Kind::Skill)?;
     let standing = marker.digest()?;
     let source = source(wanted.from)?;
     let commit = Tree(root).commit()?;
@@ -95,7 +84,7 @@ pub fn skill(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     }
     let bundle = plumb::depot::v3::Bundle::read(
         source,
-        identity(&target, &marker, &standing, plumb::depot::v3::Kind::Skill),
+        identity(spec, &marker, &standing, plumb::depot::v3::Kind::Skill),
     )?;
     if !bundle.bodies.contains_key("SKILL.md") {
         return Err("skill generation holds no SKILL.md".into());
@@ -108,12 +97,12 @@ pub fn skill(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
             rig.depot.authority.load()?;
             store::Remote::new(&rig.depot.authority)?.publish(
                 &bundle,
-                &target.source,
+                &depot.source,
                 super::super::clock::ahead(0)?,
             )
         }
     })();
-    confirm(root, &target, &marker, &standing)?;
+    confirm(root, &marker, &standing)?;
     held
 }
 
@@ -126,13 +115,13 @@ fn source(raw: &str) -> Result<&Path, String> {
 }
 
 fn identity(
-    target: &product::Target,
+    spec: &crate::shape::release::Spec,
     marker: &crate::command::release::ReleaseMarker,
     digest: &str,
     kind: plumb::depot::v3::Kind,
 ) -> plumb::depot::v3::Identity {
     plumb::depot::v3::Identity {
-        product: target.product.clone(),
+        product: spec.product.clone(),
         channel: marker.channel.clone(),
         version: marker.marker.clone(),
         marker: plumb::depot::v3::Marker {
@@ -145,16 +134,10 @@ fn identity(
 
 fn confirm(
     root: &Path,
-    target: &product::Target,
     marker: &crate::command::release::ReleaseMarker,
     proof: &str,
 ) -> Result<(), String> {
-    let after = crate::command::release::ReleaseMarker::at(
-        root,
-        &target.product,
-        &target.authority,
-        &marker.marker,
-    )?;
+    let after = crate::command::release::ReleaseMarker::bound(root, &marker.marker)?;
     if after.digest()? == proof {
         Ok(())
     } else {

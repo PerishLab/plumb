@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use std::process::Command;
 
 const SCHEMA: &str = "plumb.ship-request/v2";
-
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Request {
@@ -24,7 +23,6 @@ struct Request {
     #[serde(default)]
     keys: Option<serde_json::Value>,
 }
-
 #[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase", deny_unknown_fields)]
 enum Operation {
@@ -46,7 +44,6 @@ enum Operation {
         workloads: Vec<Workload>,
     },
 }
-
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Workload {
@@ -54,7 +51,6 @@ struct Workload {
     archive: String,
     url: String,
 }
-
 #[derive(Deserialize, serde::Serialize)]
 #[serde(deny_unknown_fields)]
 struct Reuse {
@@ -62,7 +58,6 @@ struct Reuse {
     kind: String,
     source: String,
 }
-
 #[derive(Deserialize)]
 struct Projection {
     workload: PathBuf,
@@ -102,15 +97,20 @@ impl Request {
             return Err("ship request must carry at least one non-empty root".into());
         }
         let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-        let spec = crate::shape::release::Spec::resolve(&rig.release.root)?;
-        super::binding::Binding::new(&spec)
+        let version = required("PLUMB_RELEASE_VERSION", &rig.release.version)?;
+        let governance = super::binding::Governance::resolve(
+            &rig.release.root,
+            version,
+            self.configuration.is_some() || self.profile.is_some(),
+        )?;
+        let spec = governance.spec();
+        super::binding::Binding::new(spec)
             .verify(self.configuration.as_deref(), self.profile.as_deref())?;
         let release = &rig.release;
-        let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
         let reuse = self.reuse.encode()?;
         let projection = match self.operation {
             Operation::Workload { target, archive } => {
-                super::super::package::product(&spec).build(super::super::package::Build {
+                super::super::package::product(spec).build(super::super::package::Build {
                     target: &target,
                     version,
                     channel: required("PLUMB_RELEASE_CHANNEL", &release.channel)?,
@@ -134,11 +134,11 @@ impl Request {
             }
             Operation::Publication { workloads } => {
                 super::support::authority(&rig.publish, &spec.product)?;
-                crate::command::release::Product::new(&spec).promote(release)?;
+                crate::command::release::Product::new(spec).promote(release)?;
                 let artifacts = artifacts(release)?;
                 materialize(&artifacts, &workloads)?;
-                super::super::package::product(&spec).assemble(version, &artifacts)?;
-                crate::command::release::Product::new(&spec).compile(release)?;
+                super::super::package::product(spec).assemble(version, &artifacts)?;
+                crate::command::release::Product::new(spec).compile(release)?;
                 let capsule = capsule(release)?;
                 storage::publish(&capsule, &rig.publish)?;
                 let (compiled, _) = crate::command::release::record::Capsule::read(&capsule)?;
@@ -159,7 +159,7 @@ impl Request {
                 return result("url", &publication, None);
             }
             Operation::Cargo => Some(super::super::package::project::cargo(
-                &adaptor::registry::registry(&spec),
+                &adaptor::registry::registry(spec),
                 version,
                 &release.credential,
                 &reuse,
@@ -170,16 +170,17 @@ impl Request {
                     super::super::site::Worker {
                         root: &spec.root,
                         version,
+                        spec,
                     }
                     .exact(&reuse)?,
                 )
             }
             Operation::Chart => {
-                Some(adaptor::chart::chart(&spec).exact(version, &release.credential, &reuse)?)
+                Some(adaptor::chart::chart(spec).exact(version, &release.credential, &reuse)?)
             }
             Operation::Npm { package } => {
                 pnpm(&spec.root, self.reuse.kind == "none")?;
-                Some(adaptor::module::module(&spec).exact(
+                Some(adaptor::module::module(spec).exact(
                     &package,
                     version,
                     &release.credential,
@@ -190,7 +191,7 @@ impl Request {
                 let artifacts = artifacts(release)?;
                 materialize(&artifacts, &workloads)?;
                 Some(adaptor::container::run(
-                    &adaptor::image::image(&spec),
+                    &adaptor::image::image(spec),
                     adaptor::container::Request {
                         version,
                         commit: &release.commit,

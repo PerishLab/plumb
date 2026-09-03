@@ -4,6 +4,8 @@ use std::path::Path;
 
 #[path = "support/configuration.rs"]
 mod configuration;
+#[path = "support/exact.rs"]
+mod exact;
 #[path = "support/generation.rs"]
 mod generation;
 

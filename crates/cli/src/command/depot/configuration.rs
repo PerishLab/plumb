@@ -9,13 +9,8 @@ pub struct Tree<'a>(pub &'a Path);
 impl Tree<'_> {
     pub fn publish(&self, raw: &str, from: &str, dry: bool) -> Result<String, String> {
         let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-        let spec = crate::shape::release::Spec::resolve(self.0)?;
-        let marker = crate::command::release::ReleaseMarker::at(
-            self.0,
-            &spec.product,
-            &spec.authority,
-            raw,
-        )?;
+        let marker = crate::command::release::ReleaseMarker::bound(self.0, raw)?;
+        let spec = marker.spec();
         let proof = marker.digest()?;
         if marker.commit != self.commit()? {
             return Err(format!(
@@ -27,7 +22,7 @@ impl Tree<'_> {
             return Err("configuration publication requires an explicit --from directory".into());
         }
         let depot = spec.derivative(plumb::depot::v3::Kind::Configuration)?;
-        let product = crate::command::release::Product::new(&spec);
+        let product = crate::command::release::Product::new(spec);
         let release = product.depot();
         let binding = release.latest("beta", true)?;
         if crate::command::guard::precommit::related(&marker.marker, &binding.release.version)
@@ -57,7 +52,7 @@ impl Tree<'_> {
                 commit: marker.commit.clone(),
             },
         )?;
-        crate::command::release::validate_depot(&spec, &binding, &plan)?;
+        crate::command::release::validate_depot(spec, &binding, &plan)?;
         let held = (|| {
             if dry {
                 String::from_utf8(bundle.manifest.encode()?)
@@ -71,12 +66,7 @@ impl Tree<'_> {
                 )
             }
         })();
-        let after = crate::command::release::ReleaseMarker::at(
-            self.0,
-            &spec.product,
-            &spec.authority,
-            &marker.marker,
-        )?;
+        let after = crate::command::release::ReleaseMarker::bound(self.0, &marker.marker)?;
         if after.digest()? != proof {
             return Err(format!(
                 "release marker {} drifted while depot was deriving configuration",

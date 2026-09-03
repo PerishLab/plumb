@@ -62,6 +62,10 @@ impl Spec {
         let Some(target) = super::product::governance(root)? else {
             return Self::read(&root.join("plumb.toml"));
         };
+        Self::governed(root, target)
+    }
+
+    pub(crate) fn governed(root: &Path, target: super::product::Target) -> Result<Self, String> {
         let Some(profile) = target.profile else {
             return Self::read(&root.join("plumb.toml"));
         };

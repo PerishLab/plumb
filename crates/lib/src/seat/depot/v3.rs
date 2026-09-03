@@ -15,7 +15,7 @@ pub use local::{generation as local_generation, install};
 pub use manifest::Manifest;
 pub use pointer::Pointer;
 #[cfg(feature = "depot")]
-pub use remote::{Generation, Query};
+pub use remote::{Exact, Generation, Query};
 pub use route::{Route, generation, latest, manifest};
 pub use source::Bundle;
 

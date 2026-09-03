@@ -17,6 +17,13 @@ pub struct Generation {
     base: String,
 }
 
+#[derive(Clone, Debug)]
+pub struct Exact {
+    pub generation: String,
+    pub manifest: Manifest,
+    base: String,
+}
+
 impl Generation {
     pub fn latest(query: Query<'_>) -> Result<Option<Self>, String> {
         let source = query.source.trim_end_matches('/');
@@ -63,23 +70,62 @@ impl Generation {
         })
     }
 
+    pub fn named(query: Query<'_>, generation: &str) -> Result<Exact, String> {
+        let source = query.source.trim_end_matches('/');
+        let route = Route::new(query.channel, query.kind, query.version);
+        let url = super::manifest(source, route, generation)?;
+        let bytes =
+            pull(&url)?.ok_or_else(|| format!("depot generation {generation} has no manifest"))?;
+        let manifest = Manifest::parse(&bytes)?;
+        let standing = (
+            manifest.product.as_str(),
+            manifest.channel.as_str(),
+            manifest.version.as_str(),
+            manifest.kind,
+        );
+        let wanted = (query.product, query.channel, query.version, query.kind);
+        if standing != wanted || manifest.generation()? != generation {
+            return Err(format!(
+                "depot generation {generation} does not bind the requested projection"
+            ));
+        }
+        let base = url
+            .strip_suffix(super::LEAF)
+            .expect("a valid depot manifest URL ends in its leaf")
+            .to_string();
+        Ok(Exact {
+            generation: generation.to_string(),
+            manifest,
+            base,
+        })
+    }
+
     pub fn read(&self, path: &str) -> Result<Vec<u8>, String> {
-        let bytes = pull(&format!("{}objects/{path}", self.base))?
-            .ok_or_else(|| format!("depot object {path} is absent"))?;
-        let executable = self
-            .manifest
-            .objects
-            .iter()
-            .find(|held| held.path == path)
-            .map(|held| held.executable)
-            .ok_or_else(|| format!("depot manifest names no object at {path}"))?;
-        self.manifest.verify(path, &bytes, executable)?;
-        Ok(bytes)
+        read(&self.base, &self.manifest, path)
     }
 
     pub fn url(&self) -> &str {
         &self.base
     }
+}
+
+impl Exact {
+    pub fn read(&self, path: &str) -> Result<Vec<u8>, String> {
+        read(&self.base, &self.manifest, path)
+    }
+}
+
+fn read(base: &str, manifest: &Manifest, path: &str) -> Result<Vec<u8>, String> {
+    let bytes = pull(&format!("{base}objects/{path}"))?
+        .ok_or_else(|| format!("depot object {path} is absent"))?;
+    let executable = manifest
+        .objects
+        .iter()
+        .find(|held| held.path == path)
+        .map(|held| held.executable)
+        .ok_or_else(|| format!("depot manifest names no object at {path}"))?;
+    manifest.verify(path, &bytes, executable)?;
+    Ok(bytes)
 }
 
 fn pull(url: &str) -> Result<Option<Vec<u8>>, String> {

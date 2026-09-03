@@ -15,29 +15,28 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
     let marker = release::snapshot(raw)?;
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let root = &rig.release.root;
-    let spec = crate::shape::release::Spec::resolve(root)?;
+    let spec = marker.spec();
     let reference = if marker.channel == "stable" {
         format!("refs/heads/release/{}", marker.version)
     } else {
         format!("refs/tags/{}", marker.marker)
     };
-    let plan: Value =
-        serde_json::from_str(&release::plan::plan(&spec, &reference, &marker.commit)?)
-            .map_err(|error| format!("cannot decode release plan: {error}"))?;
+    let plan: Value = serde_json::from_str(&release::plan::plan(spec, &reference, &marker.commit)?)
+        .map_err(|error| format!("cannot decode release plan: {error}"))?;
     if marker.version != plan["version"] || marker.channel != plan["channel"] {
         return Err("release marker disagrees with its derived ship plan".into());
     }
     let inventory = Inventory::fetch(&rig.workflow.inventory.url)?;
     let world = World {
         marker: &marker.marker,
-        binding: Binding::new(&spec),
+        binding: Binding::new(spec),
         inventory: inventory.path(),
         source: Some(&rig.workflow.inventory.url),
         root,
     };
-    let workload = workloads(&spec, &marker, &world)?;
+    let workload = workloads(spec, &marker, &world)?;
     let publication = Publish {
-        spec: &spec,
+        spec,
         input: &plan["publication"],
         marker: &marker,
         world: &world,

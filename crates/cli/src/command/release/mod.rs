@@ -85,14 +85,13 @@ pub(in crate::command) fn snapshot(raw: &str) -> Result<ReleaseMarker, String> {
     markers::resolve(raw, false)
 }
 
+pub(in crate::command) fn annotation(spec: &Spec, marker: &str) -> Result<String, String> {
+    markers::annotation(spec, marker)
+}
+
 impl ReleaseMarker {
-    pub(in crate::command) fn at(
-        root: &Path,
-        product: &str,
-        authority: &str,
-        raw: &str,
-    ) -> Result<Self, String> {
-        markers::marked(root, product, authority, raw)
+    pub(in crate::command) fn bound(root: &Path, raw: &str) -> Result<Self, String> {
+        markers::bound(root, raw)
     }
 }
 

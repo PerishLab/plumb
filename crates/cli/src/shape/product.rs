@@ -10,7 +10,6 @@ const FACTORY: &str = "schema = \"plumb.products/v1\"\n";
 pub struct Target {
     pub product: String,
     pub authority: String,
-    pub source: String,
     derivatives: Vec<Kind>,
     pub profile: Option<Profile>,
 }
@@ -32,24 +31,48 @@ pub fn governance(root: &Path) -> Result<Option<Target>, String> {
     }
 }
 
-struct Request<'a> {
-    identity: &'a str,
-    source: &'a str,
-}
-
 struct Root<'a>(&'a Path);
 
-pub fn resolve(root: &Path, source: &str) -> Result<Target, String> {
-    let remote = git::remote(root, "")?;
+pub fn resolve(root: &Path, _: &str) -> Result<Target, String> {
+    let seat = super::super::command::depot::held();
+    configured(root, &seat)
+}
+
+pub fn at(repository: &Path, _: &str, seat: &plumb::depot::Rules) -> Result<Target, String> {
+    configured(repository, seat)
+}
+
+trait Configuration {
+    fn read(&self, path: &str, factory: &'static str) -> Result<String, String>;
+    fn mark(&self) -> Option<String>;
+}
+
+impl Configuration for super::super::command::depot::Held {
+    fn read(&self, path: &str, factory: &'static str) -> Result<String, String> {
+        super::super::command::depot::Held::read(self, path, factory)
+    }
+
+    fn mark(&self) -> Option<String> {
+        self.mark()
+    }
+}
+
+impl Configuration for plumb::depot::Rules {
+    fn read(&self, path: &str, _: &'static str) -> Result<String, String> {
+        plumb::depot::Rules::read(self, path)
+    }
+
+    fn mark(&self) -> Option<String> {
+        Some(self.mark().to_string())
+    }
+}
+
+fn configured<C: Configuration>(repository: &Path, seat: &C) -> Result<Target, String> {
+    let remote = git::remote(repository, "")?;
     if remote.host != DOMAIN {
-        return Root(root).manifested();
+        return Root(repository).manifested();
     }
     let identity = format!("{}/{}/{}", remote.host, remote.owner, remote.repo);
-    let request = Request {
-        identity: &identity,
-        source,
-    };
-    let seat = super::super::command::depot::held();
     let raw = seat.read("rules/products.toml", FACTORY)?;
     let schema = raw
         .parse::<toml::Table>()
@@ -57,8 +80,8 @@ pub fn resolve(root: &Path, source: &str) -> Result<Target, String> {
         .and_then(|held| held.get("schema")?.as_str().map(str::to_string))
         .ok_or_else(|| "depot rules/products.toml names no schema".to_string())?;
     match schema.as_str() {
-        "plumb.products/v1" => inline(&raw, &request),
-        "plumb.products/v2" => profiled(&raw, &request, &seat),
+        "plumb.products/v1" => inline(&raw, &identity),
+        "plumb.products/v2" => profiled(&raw, &identity, seat),
         _ => Err(format!("unknown product catalog schema {schema}")),
     }
 }
@@ -82,7 +105,6 @@ pub fn guard(root: &Path, source: &str) -> Result<Target, String> {
     Ok(Target {
         product,
         authority: String::new(),
-        source: String::new(),
         derivatives: Vec::new(),
         profile: None,
     })
@@ -91,45 +113,36 @@ pub fn guard(root: &Path, source: &str) -> Result<Target, String> {
 impl Root<'_> {
     fn manifested(&self) -> Result<Target, String> {
         let spec = super::release::Spec::read(&self.0.join("plumb.toml"))?;
-        let depot = spec
-            .depot
-            .as_ref()
-            .ok_or_else(|| "release declares no depot".to_string())?;
         Ok(Target {
             product: spec.product,
             authority: spec.authority,
-            source: depot.source.clone(),
-            derivatives: depot.derivatives.clone(),
+            derivatives: spec.depot.map_or_else(Vec::new, |depot| depot.derivatives),
             profile: None,
         })
     }
 }
 
-fn inline(raw: &str, request: &Request<'_>) -> Result<Target, String> {
+fn inline(raw: &str, identity: &str) -> Result<Target, String> {
     let catalog: Legacy = toml::from_str(raw)
         .map_err(|error| format!("cannot parse depot rules/products.toml: {error}"))?;
     catalog.validate()?;
     let product = catalog
         .product
         .into_iter()
-        .find(|product| product.identity == request.identity)
-        .ok_or_else(|| absent(request.identity))?;
-    Ok(target(product.definition, request, None))
+        .find(|product| product.identity == identity)
+        .ok_or_else(|| absent(identity))?;
+    Ok(target(product.definition, None))
 }
 
-fn profiled(
-    raw: &str,
-    request: &Request<'_>,
-    seat: &crate::command::depot::Held,
-) -> Result<Target, String> {
+fn profiled<C: Configuration>(raw: &str, identity: &str, seat: &C) -> Result<Target, String> {
     let catalog: Catalog = toml::from_str(raw)
         .map_err(|error| format!("cannot parse depot rules/products.toml: {error}"))?;
     catalog.validate()?;
     let reference = catalog
         .product
         .into_iter()
-        .find(|product| product.identity == request.identity)
-        .ok_or_else(|| absent(request.identity))?;
+        .find(|product| product.identity == identity)
+        .ok_or_else(|| absent(identity))?;
     let path = format!("profiles/{}.toml", reference.profile);
     let raw = seat.read(&path, "")?;
     if plumb::depot::sha(raw.as_bytes()) != reference.profile {
@@ -140,7 +153,6 @@ fn profiled(
     document.validate(&path)?;
     Ok(target(
         document.product,
-        request,
         Some(Profile {
             configuration: seat
                 .mark()
@@ -152,11 +164,10 @@ fn profiled(
     ))
 }
 
-fn target(product: Definition, request: &Request<'_>, profile: Option<Profile>) -> Target {
+fn target(product: Definition, profile: Option<Profile>) -> Target {
     Target {
         product: product.name,
         authority: product.authority,
-        source: request.source.to_string(),
         derivatives: product.derivatives,
         profile,
     }

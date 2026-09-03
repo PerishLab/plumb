@@ -24,9 +24,8 @@ pub fn worker(raw: &str, request: &str) -> Result<String, String> {
     }
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let root = &rig.release.root;
-    let spec = crate::shape::release::Spec::resolve(root)?;
-    let marker =
-        crate::command::release::ReleaseMarker::at(root, &spec.product, &spec.authority, raw)?;
+    let marker = crate::command::release::ReleaseMarker::bound(root, raw)?;
+    let spec = marker.spec();
     if request.marker != marker.marker {
         return Err(format!(
             "worker projection belongs to {}, not release marker {}",
@@ -41,13 +40,8 @@ pub fn worker(raw: &str, request: &str) -> Result<String, String> {
             marker.marker, marker.commit
         ));
     }
-    let result = crate::command::ship::site::deploy(root, &request.worker, &request.version)?;
-    let after = crate::command::release::ReleaseMarker::at(
-        root,
-        &spec.product,
-        &spec.authority,
-        &marker.marker,
-    )?;
+    let result = crate::command::ship::site::deploy(root, spec, &request.worker, &request.version)?;
+    let after = crate::command::release::ReleaseMarker::bound(root, &marker.marker)?;
     if after.digest()? != proof {
         return Err(format!(
             "release marker {} drifted while depot deployed its worker",
@@ -59,31 +53,19 @@ pub fn worker(raw: &str, request: &str) -> Result<String, String> {
 
 pub fn project(raw: &str, projection: Kind) -> Result<String, String> {
     let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let spec = crate::shape::release::Spec::resolve(&rig.release.root)?;
-    let marker = crate::command::release::ReleaseMarker::at(
-        &rig.release.root,
-        &spec.product,
-        &spec.authority,
-        raw,
-    )?;
+    let marker = crate::command::release::ReleaseMarker::bound(&rig.release.root, raw)?;
+    let spec = marker.spec();
     let proof = marker.digest()?;
     crate::command::release::knowledge(&spec.product, &spec.authority)
         .binding(&marker.marker, spec.binary())?;
     rig.activate.load()?;
     let result = match projection {
-        Kind::Channel => {
-            crate::command::release::projection::channel(&spec, &marker, &rig.activate)
-        }
+        Kind::Channel => crate::command::release::projection::channel(spec, &marker, &rig.activate),
         Kind::Managers => {
-            crate::command::release::projection::managers(&spec, &marker, &rig.activate)
+            crate::command::release::projection::managers(spec, &marker, &rig.activate)
         }
     }?;
-    let after = crate::command::release::ReleaseMarker::at(
-        &rig.release.root,
-        &spec.product,
-        &spec.authority,
-        &marker.marker,
-    )?;
+    let after = crate::command::release::ReleaseMarker::bound(&rig.release.root, &marker.marker)?;
     if after.digest()? != proof {
         return Err(format!(
             "release marker {} drifted while depot projected it",

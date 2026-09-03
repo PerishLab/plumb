@@ -9,13 +9,18 @@ use std::path::{Path, PathBuf};
 pub struct Seat<'a> {
     pub root: &'a Path,
     pub version: &'a str,
+    pub spec: &'a Spec,
 }
 
 impl Seat<'_> {
     pub fn exact(&self, reuse: &str) -> Result<String, String> {
-        let (spec, held) = self.declared()?;
+        let held = self
+            .spec
+            .cfworker
+            .as_ref()
+            .ok_or_else(|| "this repository declares no worker attachment".to_string())?;
         let app = App::read(self.root)?;
-        let site = self.vantage(&spec, &held)?;
+        let site = self.vantage(self.spec, held)?;
         previews(&site, &app.worker)?;
         let source = crate::command::ship::package::project::Source::parse(reuse)?;
         match source.kind.as_str() {
@@ -93,15 +98,6 @@ impl Seat<'_> {
         }
     }
 
-    fn declared(&self) -> Result<(Spec, Cfworker), String> {
-        let spec = Spec::resolve(self.root)?;
-        let held = spec
-            .cfworker
-            .clone()
-            .ok_or_else(|| "this repository declares no worker attachment".to_string())?;
-        Ok((spec, held))
-    }
-
     fn vantage(&self, spec: &Spec, held: &Cfworker) -> Result<Site, String> {
         let mut site = super::settings::read()?;
         site.account = held.account.clone();
@@ -121,12 +117,13 @@ struct Publication {
 
 pub(in crate::command) fn deploy(
     root: &Path,
+    spec: &Spec,
     expected: &str,
     version: &str,
 ) -> Result<String, String> {
-    let spec = Spec::resolve(root)?;
     let held = spec
         .cfworker
+        .as_ref()
         .ok_or_else(|| "this repository declares no worker attachment".to_string())?;
     let app = App::read(root)?;
     if app.worker != expected {
@@ -136,8 +133,8 @@ pub(in crate::command) fn deploy(
         ));
     }
     let mut site = super::settings::read()?;
-    site.account = held.account;
-    site.domain = held.domain;
+    site.account = held.account.clone();
+    site.domain = held.domain.clone();
     super::settings::require(&site)?;
     let target = format!("{version}@100%");
     super::process::run(Call {

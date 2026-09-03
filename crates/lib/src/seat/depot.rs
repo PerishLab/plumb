@@ -6,7 +6,7 @@ use std::path::{Component, Path, PathBuf};
 mod rules;
 pub mod v2;
 pub mod v3;
-pub use rules::Rules;
+pub use rules::{Rules, Selection};
 
 pub const FORMAT: u32 = 1;
 pub const LEAF: &str = "plumb.toml";

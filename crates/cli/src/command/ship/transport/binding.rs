@@ -1,5 +1,32 @@
 use crate::shape::release::Spec;
 use serde_json::{Value, json};
+use std::path::Path;
+
+pub(super) struct Governance {
+    marker: Option<crate::command::release::ReleaseMarker>,
+    ambient: Option<Spec>,
+}
+
+impl Governance {
+    pub fn resolve(root: &Path, marker: &str, exact: bool) -> Result<Self, String> {
+        let held = exact
+            .then(|| crate::command::release::snapshot(marker))
+            .transpose()?;
+        let ambient = held.is_none().then(|| Spec::resolve(root)).transpose()?;
+        Ok(Self {
+            marker: held,
+            ambient,
+        })
+    }
+
+    pub fn spec(&self) -> &Spec {
+        self.marker
+            .as_ref()
+            .map(crate::command::release::ReleaseMarker::spec)
+            .or(self.ambient.as_ref())
+            .expect("governance always carries one release specification")
+    }
+}
 
 #[derive(Clone, Copy)]
 pub(super) struct Binding<'a> {
@@ -40,10 +67,7 @@ impl<'a> Binding<'a> {
         if configuration == self.configuration && profile == self.profile {
             Ok(())
         } else {
-            Err(
-                "ship request configuration or product profile differs from the active depot"
-                    .into(),
-            )
+            Err("ship request configuration or product profile differs from its governance".into())
         }
     }
 }

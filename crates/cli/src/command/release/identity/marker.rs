@@ -1,12 +1,13 @@
 use super::super::truth::{record, verify};
+use super::binding::{self, Identity};
 use super::promotion;
+use super::seat::command;
 use crate::command::release::{Deed, channel};
 use crate::shape::release::Spec;
 use plumb::datum;
 use plumb::forgejo::git;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,6 +21,12 @@ pub(in crate::command) struct Descriptor {
     pub(in crate::command) channel: String,
     pub(in crate::command) commit: String,
     pub(in crate::command) tree: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(in crate::command) configuration: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(in crate::command) profile: Option<String>,
+    #[serde(skip)]
+    spec: Box<Spec>,
     state: &'static str,
     datum: Datum,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -47,11 +54,9 @@ struct Seal {
     sha256: String,
 }
 
-struct Seat {
-    root: PathBuf,
-    product: String,
-    authority: String,
-    repository: String,
+pub(super) struct Seat {
+    pub(super) root: PathBuf,
+    pub(super) repository: String,
 }
 
 pub fn run(deed: Deed) -> Result<String, String> {
@@ -80,18 +85,8 @@ pub(in crate::command) fn resolve(raw: &str, refresh: bool) -> Result<Descriptor
     Seat::open()?.resolve(raw, refresh)
 }
 
-pub(in crate::command) fn marked(
-    root: &Path,
-    product: &str,
-    authority: &str,
-    raw: &str,
-) -> Result<Descriptor, String> {
-    Seat::new(
-        root.to_path_buf(),
-        product.to_string(),
-        authority.to_string(),
-    )?
-    .resolve(raw, true)
+pub(in crate::command) fn bound(root: &Path, raw: &str) -> Result<Descriptor, String> {
+    Seat::new(root.to_path_buf())?.resolve(raw, true)
 }
 
 impl Descriptor {
@@ -100,21 +95,22 @@ impl Descriptor {
             .map(|bytes| record::sha(&bytes))
             .map_err(|error| error.to_string())
     }
+
+    pub(in crate::command) fn spec(&self) -> &Spec {
+        &self.spec
+    }
 }
 
 impl Seat {
     fn open() -> Result<Self, String> {
         let root = git::root()?;
-        let spec = Spec::resolve(&root)?;
-        Self::new(root, spec.product, spec.authority)
+        Self::new(root)
     }
 
-    fn new(root: PathBuf, product: String, authority: String) -> Result<Self, String> {
+    fn new(root: PathBuf) -> Result<Self, String> {
         let remote = git::remote(&root, "")?;
         Ok(Self {
             root,
-            product,
-            authority,
             repository: format!("{}/{}", remote.owner, remote.repo),
         })
     }
@@ -124,7 +120,7 @@ impl Seat {
         let channel = channel::channel(&marker)
             .map_err(|error| format!("invalid release marker {marker}: {error}"))?;
         refresh.then(|| self.fetch()).transpose()?;
-        self.annotated(&marker)?;
+        let identity = self.identity(&marker)?;
         let commit = self.read(["rev-parse", &format!("{marker}^{{commit}}")])?;
         let tree = self.read(["rev-parse", &format!("{marker}^{{tree}}")])?;
         match plumb::guard::commit(&self.root, &commit) {
@@ -135,7 +131,7 @@ impl Seat {
                 ));
             }
             Ok(_) => {}
-            Err(error) if guarded(&self.product, &marker) => {
+            Err(error) if guarded(&identity.product, &marker) => {
                 return Err(format!(
                     "release marker {marker} has no valid guard proof: {error}"
                 ));
@@ -147,50 +143,59 @@ impl Seat {
         self.stood(&marker, &line, &commit)?;
         let datum = self.datum(&version, &commit)?;
         let promotion = if channel == "stable" {
-            Some(self.promotion(&version, &commit)?)
+            Some(self.promotion(&identity.product, &identity.authority, &version, &commit)?)
         } else {
             None
         };
+        let schema = if identity.configuration.is_some() {
+            "plumb.release-marker/v2"
+        } else {
+            "plumb.release-marker/v1"
+        };
         Ok(Descriptor {
-            schema: "plumb.release-marker/v1",
-            product: self.product.clone(),
+            schema,
+            product: identity.product,
             repository: self.repository.clone(),
-            authority: self.authority.clone(),
+            authority: identity.authority,
             marker: marker.clone(),
             version: marker,
             channel,
             commit,
             tree,
+            configuration: identity.configuration,
+            profile: identity.profile,
+            spec: identity.spec,
             state: "locked",
             datum,
             promotion,
         })
     }
-    fn fetch(&self) -> Result<(), String> {
-        git::fetch(&self.root)?;
-        success(
-            "fetch release markers",
-            Command::new("git")
-                .args(["fetch", "--tags", "origin"])
-                .current_dir(&self.root)
-                .output(),
-        )
-        .map(|_| ())
-    }
-    fn annotated(&self, marker: &str) -> Result<(), String> {
+    fn identity(&self, marker: &str) -> Result<Identity, String> {
         let reference = format!("refs/tags/{marker}");
         let kind = self.read(["cat-file", "-t", &reference])?;
         if kind != "tag" {
             return Err(format!("release marker {marker} is not an annotated tag"));
         }
         let message = self.read(["for-each-ref", "--format=%(contents)", &reference])?;
-        let wanted = format!("{} {marker}", self.product);
+        if let Some(identity) = binding::resolve(message.trim(), &self.root, marker)? {
+            return Ok(identity);
+        }
+        let spec = Spec::resolve(&self.root)?;
+        let product = spec.product.clone();
+        let authority = spec.authority.clone();
+        let wanted = format!("{product} {marker}");
         if message.trim() != wanted {
             return Err(format!(
                 "release marker {marker} annotation disagrees with {wanted:?}"
             ));
         }
-        Ok(())
+        Ok(Identity {
+            product,
+            authority,
+            configuration: None,
+            profile: None,
+            spec: Box::new(spec),
+        })
     }
 
     fn stood(&self, marker: &str, line: &str, commit: &str) -> Result<(), String> {
@@ -215,20 +220,26 @@ impl Seat {
         })
     }
 
-    fn promotion(&self, version: &str, commit: &str) -> Result<Exact, String> {
-        let exact = promotion::derive(&self.root, &self.authority, commit, version)?;
+    fn promotion(
+        &self,
+        product: &str,
+        authority: &str,
+        version: &str,
+        commit: &str,
+    ) -> Result<Exact, String> {
+        let exact = promotion::derive(&self.root, authority, commit, version)?;
         let url = format!(
             "{}/v1/releases/{}/{}/seal.json",
-            self.authority, exact.channel, exact.version
+            authority, exact.channel, exact.version
         );
         let (seal, digest) = verify::Surface(&url).sealed(false)?;
         let standing = (
-            &seal.product,
+            seal.product.as_str(),
             seal.commit.as_str(),
             &seal.channel,
             &seal.version,
         );
-        let wanted = (&self.product, commit, &exact.channel, &exact.version);
+        let wanted = (product, commit, &exact.channel, &exact.version);
         if standing != wanted {
             return Err(format!(
                 "promotion seal does not prove release marker {}",
@@ -244,24 +255,10 @@ impl Seat {
             },
         })
     }
+}
 
-    fn read<const N: usize>(&self, args: [&str; N]) -> Result<String, String> {
-        let output = command(&self.root, args)?;
-        if output.status.success() {
-            Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-        } else {
-            Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
-        }
-    }
-
-    fn bytes<const N: usize>(&self, args: [&str; N]) -> Result<Vec<u8>, String> {
-        let output = command(&self.root, args)?;
-        if output.status.success() {
-            Ok(output.stdout)
-        } else {
-            Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
-        }
-    }
+pub(in crate::command) fn annotation(spec: &Spec, marker: &str) -> Result<String, String> {
+    binding::annotation(spec, marker)
 }
 fn guarded(product: &str, marker: &str) -> bool {
     product == "plumb"
@@ -276,25 +273,5 @@ fn named(raw: &str) -> String {
         raw.to_string()
     } else {
         format!("v{raw}")
-    }
-}
-
-fn command<const N: usize>(root: &Path, args: [&str; N]) -> Result<Output, String> {
-    Command::new("git")
-        .args(args)
-        .current_dir(root)
-        .output()
-        .map_err(|error| format!("cannot run git: {error}"))
-}
-
-fn success(action: &str, output: std::io::Result<Output>) -> Result<String, String> {
-    let output = output.map_err(|error| format!("cannot run git: {error}"))?;
-    if output.status.success() {
-        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-    } else {
-        Err(format!(
-            "cannot {action}: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
-        ))
     }
 }

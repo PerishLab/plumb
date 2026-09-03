@@ -18,12 +18,13 @@ pub(super) fn stamp(raw: &str, dry: bool) -> Result<String, String> {
             .map_err(|error| format!("stable marker {held} requires a frozen {name}: {error}"))?;
     }
     let spec = crate::shape::release::Spec::resolve(&root)?;
+    let annotation = crate::command::release::annotation(&spec, &version)?;
     let seat = point(&root);
     let head = seat.head(&name)?;
     let mut course = Course::new(dry);
     let said = course.step(
         format!("git tag -a {version} at {head} on {name}, then push"),
-        || seat.stamp(&spec.product, &version, &name),
+        || seat.stamp(&annotation, &version, &name),
     )?;
     if course.dry() {
         return Ok(course.plan());
@@ -69,7 +70,7 @@ impl Point<'_> {
         )
     }
 
-    pub fn stamp(&self, product: &str, version: &str, name: &str) -> Result<String, String> {
+    pub fn stamp(&self, annotation: &str, version: &str, name: &str) -> Result<String, String> {
         let head = self.head(name)?;
         plumb::guard::current(self.root, &head)
             .map_err(|error| format!("release marker refuses an unproved tree: {error}"))?;
@@ -84,14 +85,7 @@ impl Point<'_> {
         }
         text(
             "stamp the release point",
-            self.git([
-                "tag",
-                "-a",
-                version,
-                &head,
-                "-m",
-                &format!("{product} {version}"),
-            ])?,
+            self.git(["tag", "-a", version, &head, "-m", annotation])?,
         )?;
         text(
             "publish the release point",

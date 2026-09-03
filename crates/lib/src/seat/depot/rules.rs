@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use super::{Object, Seat, anchored, v2, v3};
+pub mod exact;
+pub use exact::Selection;
 
 pub struct Rules {
     held: Source,
@@ -23,6 +25,8 @@ enum Source {
         generation: String,
         objects: Vec<Object>,
     },
+    #[cfg(feature = "depot")]
+    Remote(v3::Exact, Vec<Object>),
 }
 
 enum Width {
@@ -183,6 +187,9 @@ impl Rules {
                 manifest.verify(path, &bytes, executable)?;
                 String::from_utf8(bytes).map_err(|error| format!("{path} is not UTF-8: {error}"))
             }
+            #[cfg(feature = "depot")]
+            Source::Remote(held, _) => String::from_utf8(held.read(path)?)
+                .map_err(|error| format!("{path} is not UTF-8: {error}")),
         }
     }
 
@@ -192,6 +199,8 @@ impl Rules {
             Source::V1(seat) => seat.mark(),
             Source::V2 { manifest, .. } => &manifest.snapshot.timestamp,
             Source::V3 { generation, .. } => generation,
+            #[cfg(feature = "depot")]
+            Source::Remote(held, _) => &held.generation,
         }
     }
 
@@ -201,6 +210,8 @@ impl Rules {
             Source::V1(seat) => &seat.manifest().schema.version,
             Source::V2 { manifest, .. } => &manifest.release.version,
             Source::V3 { manifest, .. } => &manifest.version,
+            #[cfg(feature = "depot")]
+            Source::Remote(held, _) => &held.manifest.version,
         }
     }
 
@@ -210,6 +221,8 @@ impl Rules {
             Source::V1(_) => None,
             Source::V2 { manifest, .. } => Some(&manifest.release.version),
             Source::V3 { manifest, .. } => Some(&manifest.version),
+            #[cfg(feature = "depot")]
+            Source::Remote(held, _) => Some(&held.manifest.version),
         }
     }
 
@@ -219,6 +232,17 @@ impl Rules {
             Source::V1(seat) => &seat.manifest().objects,
             Source::V2 { manifest, .. } => &manifest.objects,
             Source::V3 { objects, .. } => objects,
+            #[cfg(feature = "depot")]
+            Source::Remote(_, objects) => objects,
+        }
+    }
+
+    pub fn channel(&self) -> Option<&str> {
+        match &self.held {
+            Source::V3 { manifest, .. } => Some(&manifest.channel),
+            #[cfg(feature = "depot")]
+            Source::Remote(held, _) => Some(&held.manifest.channel),
+            _ => None,
         }
     }
 }
