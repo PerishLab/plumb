@@ -3,6 +3,10 @@ name: ship
 on:
   workflow_dispatch:
     inputs:
+      configuration:
+        description: Exact Plumb configuration selected by the dispatcher
+        required: true
+        type: string
       marker:
         description: Immutable release marker shared by every publication
         required: true
@@ -75,7 +79,7 @@ jobs:
 
       - name: Install the exact atom Plumb
         shell: bash
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact
+        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact '${{ inputs.configuration }}'
 
       - name: Resolve missing workloads
         id: plan
@@ -117,12 +121,12 @@ jobs:
       - name: Install the exact atom Plumb
         if: matrix.control != 'reuse' && runner.os != 'Windows'
         shell: bash
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact
+        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact '${{ inputs.configuration }}'
 
       - name: Install the exact atom Plumb on Windows
         if: matrix.control != 'reuse' && runner.os == 'Windows'
         shell: pwsh
-        run: .plumb-atom/.forgejo/scripts/bootstrap-plumb.ps1 .plumb-atom exact
+        run: .plumb-atom/.forgejo/scripts/bootstrap-plumb.ps1 .plumb-atom exact '${{ inputs.configuration }}'
 
       - name: Add the requested Rust target
         if: matrix.control != 'reuse'
@@ -179,7 +183,7 @@ jobs:
         shell: bash
         env:
           PLUMB_ATOM_SOURCE: ${{ needs.resolve.outputs.atom }}
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact
+        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact '${{ inputs.configuration }}'
 
       - name: Resolve missing publications
         id: plan
@@ -239,7 +243,7 @@ jobs:
         shell: bash
         env:
           PLUMB_ATOM_SOURCE: ${{ needs.resolve.outputs.atom }}
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact
+        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact '${{ inputs.configuration }}'
 
       - name: Fetch the exact release marker
         if: matrix.control != 'reuse'

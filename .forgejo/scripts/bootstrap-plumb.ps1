@@ -2,6 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $atom = if ($args.Count -ge 1) { $args[0] } else { '.plumb-atom' }
 $mode = if ($args.Count -ge 2) { $args[1] } else { 'bootstrap' }
+$configuration = if ($args.Count -ge 3) { $args[2] } else { $env:PLUMB_BUILD_VERSION }
 if ($mode -notin @('bootstrap', 'exact')) {
   throw "unknown Plumb bootstrap mode: $mode"
 }
@@ -52,7 +53,8 @@ $tool = Join-Path $bin 'plumb.exe'
 function Install-Configuration {
   & $tool configuration --help *> $null
   if ($LASTEXITCODE -eq 0) {
-    & $tool configuration install
+    if ([string]::IsNullOrWhiteSpace($configuration)) { throw 'Plumb configuration version is required' }
+    & $tool configuration install --version $configuration
   } else {
     Write-Output 'installed Plumb has no configuration command; retaining its managed depot seat'
   }
