@@ -70,23 +70,30 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
             super::version::project(&root, &name, &version, &head)
         })?
         .unwrap_or(head);
-    let recorded = course
-        .step(super::datum::plan(&version), || {
-            super::datum::record(super::datum::Cut {
-                root: &root,
-                name: &name,
-                version: &version,
-                head: &head,
-            })
-        })?
-        .unwrap_or_default();
+    let recorded = course.step(super::datum::plan(&version), || {
+        super::datum::record(super::datum::Cut {
+            root: &root,
+            name: &name,
+            version: &version,
+            head: &head,
+        })
+    })?;
     if course.dry() {
         return Ok(course.plan());
     }
-    if standing {
+    let (recorded, moved) = recorded.map_or_else(
+        || (String::new(), false),
+        |record| {
+            let moved = record.head != head;
+            (record.report, moved)
+        },
+    );
+    if standing && !moved {
         Ok(format!(
             "{name} already stands at {head}; nothing moved; {recorded}"
         ))
+    } else if standing {
+        Ok(format!("{name} advanced from {head}; {recorded}"))
     } else {
         Ok(format!("prepared {name} from {from} at {head}; {recorded}"))
     }

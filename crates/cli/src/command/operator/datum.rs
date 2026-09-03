@@ -14,29 +14,40 @@ pub struct Cut<'a> {
 
 pub struct Seat<'a>(pub &'a Path);
 
+pub struct Record {
+    pub head: String,
+    pub report: String,
+}
+
 pub fn plan(version: &str) -> String {
     format!("record {} on the release line", datum::leaf(version))
 }
 
-pub fn record(cut: Cut<'_>) -> Result<String, String> {
+pub fn record(cut: Cut<'_>) -> Result<Record, String> {
     let seat = Seat(cut.root);
     let datum = Datum::new(cut.version, dependency::answers(cut.root)?);
     let count = datum.answers.len();
     seat.reachable(cut.head)?;
     if seat.settled(cut.head, cut.version) {
-        return Ok(format!(
-            "{} already stands on the release line",
-            datum::leaf(cut.version)
-        ));
+        let head = super::version::prove(cut.root, cut.name, cut.version, cut.head)?;
+        let report = if head == cut.head {
+            format!(
+                "{} already stands on the release line",
+                datum::leaf(cut.version)
+            )
+        } else {
+            format!("refreshed the release proof at {head}")
+        };
+        return Ok(Record { head, report });
     }
     let object = seat.blob(&datum.encode()?)?;
     let tree = seat.staged(cut.head, &object, cut.version)?;
     let commit = seat.sealed(&tree, cut.head, cut.version)?;
     seat.push(&commit, cut.name)?;
-    Ok(format!(
-        "recorded {} with {count} answers",
-        datum::leaf(cut.version)
-    ))
+    Ok(Record {
+        head: commit,
+        report: format!("recorded {} with {count} answers", datum::leaf(cut.version)),
+    })
 }
 
 impl Seat<'_> {
