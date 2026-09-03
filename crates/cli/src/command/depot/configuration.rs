@@ -24,12 +24,7 @@ impl Tree<'_> {
         let depot = spec.derivative(plumb::depot::v3::Kind::Configuration)?;
         let product = crate::command::release::Product::new(spec);
         let release = product.depot();
-        let binding = release.latest("beta", true)?;
-        if crate::command::guard::precommit::related(&marker.marker, &binding.release.version)
-            .is_err()
-        {
-            crate::command::guard::precommit::precedes(&marker.marker, &binding.release.version)?;
-        }
+        let binding = release.validator(&marker.marker, true)?;
         let bundle = plumb::depot::v3::Bundle::read(
             Path::new(from),
             plumb::depot::v3::Identity {

@@ -1,3 +1,4 @@
+mod compatibility;
 pub(in crate::command) mod depot;
 pub(in crate::command) mod manager;
 pub(in crate::command) mod projection;

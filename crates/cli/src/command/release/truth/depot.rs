@@ -55,6 +55,19 @@ impl Source<'_> {
             seal,
         })
     }
+
+    pub fn validator(&self, target: &str, binary: bool) -> Result<Binding, String> {
+        let beta = self.latest("beta", binary)?;
+        if super::compatibility::related(target, &beta.release.version).is_ok() {
+            return Ok(beta);
+        }
+        let stable = self.latest("stable", binary)?;
+        match super::compatibility::channel(target, &beta.release.version, &stable.release.version)?
+        {
+            super::compatibility::Channel::Beta => Ok(beta),
+            super::compatibility::Channel::Stable => Ok(stable),
+        }
+    }
 }
 
 pub(in crate::command) struct Validated {
