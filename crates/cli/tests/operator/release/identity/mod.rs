@@ -1,3 +1,4 @@
+mod controller;
 mod depot;
 mod held;
 mod marker;
