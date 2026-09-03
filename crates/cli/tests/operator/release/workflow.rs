@@ -188,12 +188,9 @@ fn depot() {
         "bootstrap rules must precede the build while exact rules follow installation"
     );
     assert!(
-        held.contains("if \"$tool\" configuration --help >/dev/null 2>&1"),
-        "bootstrap must tolerate the predecessor that predates configuration install"
-    );
-    assert!(
-        windows.contains("& $tool configuration --help *> $null"),
-        "Windows bootstrap must probe the installed predecessor's capability"
+        held.contains("if \"$tool\" configuration --help >/dev/null 2>&1")
+            && windows.contains("& $tool configuration --help *> $null"),
+        "bootstrap must probe the installed predecessor's capability"
     );
     for binding in [
         "PLUMB_BUILD_VERSION is required",
@@ -236,8 +233,11 @@ fn depot() {
         "workflow record ship/atom",
         "workflow plan --help",
         "PLUMB_ATOM_SOURCE",
-        "GITHUB_ENV",
         "v1/channels/stable.json",
+        "PLUMB_HOME=\"$RUNNER_TEMP/plumb-home-$configuration\"",
+        "--path \"$1\"",
+        "install_configuration \"$PLUMB_HOME/configurations\"",
+        "printf 'PLUMB_HOME=%s\\n' \"$PLUMB_HOME\" >> \"$GITHUB_ENV\"",
     ] {
         assert!(held.contains(binding), "Unix atom reuse omits {binding}");
     }
@@ -250,8 +250,10 @@ fn depot() {
         "--world \"compiler=$compiler\"",
         "workflow plan --help",
         "PLUMB_ATOM_SOURCE",
-        "GITHUB_ENV",
-        "v1/channels/stable.json",
+        "$env:PLUMB_HOME = Join-Path $env:RUNNER_TEMP",
+        "--path $Path",
+        "Join-Path $env:PLUMB_HOME 'configurations'",
+        "\"PLUMB_HOME=$env:PLUMB_HOME\" | Out-File -FilePath $env:GITHUB_ENV -Append",
     ] {
         assert!(
             windows.contains(binding),
