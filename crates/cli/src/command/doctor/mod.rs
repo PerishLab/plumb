@@ -16,6 +16,7 @@ struct Report {
     target: String,
     ok: bool,
     clean: bool,
+    profile: Option<String>,
     shape: Shape,
     vocabulary: Vocabulary,
     findings: Vec<finding::Finding>,
@@ -76,15 +77,47 @@ struct Summary {
 
 pub fn run(root: PathBuf, json: bool) -> i32 {
     let snapshot = plumb::snapshot::Snapshot::read(&root);
-    let mut held = shape::capture(&root, &snapshot);
-    dependency::observe(&mut held.dependencies, &root, line(&root).as_deref());
+    let mut profile = None;
+    let mut view = None;
+    let mut governance = Vec::new();
+    match governed(&root) {
+        Ok(Some(held)) => {
+            profile = Some(held.digest.clone());
+            if root.join("plumb.toml").exists() || root.join("ectropy.toml").exists() {
+                governance.push(finding::Finding::new(finding::Seed::wrong(
+                    &DEPOT_SCHEMA,
+                    "a Depot-governed product must not carry plumb.toml or ectropy.toml",
+                )));
+            }
+            match crate::command::precommit::tree::Index::working(&root)
+                .and_then(|index| index.govern(&held).map(|()| index))
+            {
+                Ok(index) => view = Some(index),
+                Err(error) => governance.push(finding::Finding::new(finding::Seed::blind(
+                    &DEPOT_SCHEMA,
+                    error,
+                ))),
+            }
+        }
+        Ok(None) => {}
+        Err(error) => governance.push(finding::Finding::new(finding::Seed::blind(
+            &DEPOT_SCHEMA,
+            error,
+        ))),
+    }
+    let observed = view
+        .as_ref()
+        .map_or(root.as_path(), |index| index.root.as_path());
+    let mut held = shape::capture(observed, &snapshot);
+    dependency::observe(&mut held.dependencies, observed, line(observed).as_deref());
     let vocabulary = match &snapshot {
         Ok(snapshot) => plumb::vocabulary::observe(snapshot),
         Err(error) => Err(error.clone()),
     };
     let depot = depot::observe(&snapshot);
-    let mut findings = judge::judge(&held);
-    if root.join("plumb.toml").is_file() {
+    let mut findings = governance;
+    findings.extend(judge::judge(&held));
+    if profile.is_some() || root.join("plumb.toml").is_file() {
         findings.extend(precommit::hooks(&root).into_iter().map(|held| match held {
             precommit::hook::Finding::Wrong(evidence) => {
                 finding::Finding::new(finding::Seed::wrong(&DEPOT_SCHEMA, evidence))
@@ -105,6 +138,7 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
             target: root.display().to_string(),
             ok,
             clean: findings.is_empty(),
+            profile: profile.clone(),
             shape: Shape::new(&held),
             vocabulary: Vocabulary::new(vocabulary),
             findings,
@@ -123,9 +157,14 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
             vocabulary: &vocabulary,
             findings: &findings,
             briefs: &briefs(),
+            profile: profile.as_deref(),
         });
     }
     i32::from(!ok)
+}
+
+fn governed(root: &Path) -> Result<Option<shape::product::Profile>, String> {
+    shape::product::governance(root)
 }
 
 fn briefs() -> Vec<String> {

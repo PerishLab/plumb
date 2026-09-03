@@ -3,7 +3,7 @@ mod configuration;
 mod world;
 pub(crate) use configuration::{precedes, related};
 pub(crate) mod hook;
-mod tree;
+pub(crate) mod tree;
 
 use plumb::boundary::{Refusal, Report, Request};
 use serde::Serialize;

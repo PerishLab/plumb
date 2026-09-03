@@ -9,6 +9,7 @@ pub struct Held<'a> {
     pub vocabulary: &'a Result<plumb::vocabulary::Report, plumb::vocabulary::Refusal>,
     pub findings: &'a [finding::Finding],
     pub briefs: &'a [String],
+    pub profile: Option<&'a str>,
 }
 
 pub fn render(seen: Held<'_>) {
@@ -18,10 +19,14 @@ pub fn render(seen: Held<'_>) {
         vocabulary,
         findings,
         briefs,
+        profile,
     } = seen;
     let summary = Summary::new(findings);
     println!("plumb doctor {}", root.display());
     println!();
+    if let Some(digest) = profile {
+        println!("  profile   {}", &digest[..12]);
+    }
     println!("  wrappers  {}", show(&held.wrappers));
     println!("  layout    {}", show(&held.dirs));
     println!("  lanes     {}", show(&held.lanes));

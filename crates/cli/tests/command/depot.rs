@@ -172,7 +172,7 @@ fn explicit() {
 #[test]
 #[cfg(unix)]
 fn install() {
-    let remote = support::Bucket::open(4);
+    let remote = support::Bucket::open(6);
     let authority = format!("{}/workflow", remote.endpoint());
     let source = tempfile::tempdir().expect("source");
     let home = tempfile::tempdir().expect("home");
@@ -182,7 +182,18 @@ fn install() {
         .status()
         .expect("git");
     assert!(status.success());
-    std::fs::write(repo.path().join("plumb.toml"), "[layout]\n").expect("governance");
+    let status = Command::new("git")
+        .args([
+            "-C",
+            repo.path().to_str().expect("repo"),
+            "remote",
+            "add",
+            "origin",
+            "ssh://git@git.perish.top/PerishFire/probe.git",
+        ])
+        .status()
+        .expect("git");
+    assert!(status.success());
     let hooks = [
         (
             "assets/git/hooks/pre-commit",
@@ -197,6 +208,21 @@ fn install() {
         let target = source.path().join(path);
         std::fs::create_dir_all(target.parent().expect("hook parent")).expect("hook root");
         std::fs::write(target, body).expect("hook");
+    }
+    let profile = "schema = \"plumb.product-profile/v1\"\n\n[product]\nname = \"probe\"\nauthority = \"https://releases.probe.perish.uk\"\nderivatives = [\"skill\"]\n\n[governance]\nmanifest = \"[layout]\"\nectropy = \"[comment]\\nallow = false\"\n";
+    let digest = plumb::depot::sha(profile.as_bytes());
+    for (path, body) in [
+        (
+            "rules/products.toml".to_string(),
+            format!(
+                "schema = \"plumb.products/v2\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/probe\"\nprofile = \"{digest}\"\n"
+            ),
+        ),
+        (format!("profiles/{digest}.toml"), profile.to_string()),
+    ] {
+        let target = source.path().join(path);
+        std::fs::create_dir_all(target.parent().expect("profile parent")).expect("profile root");
+        std::fs::write(target, body).expect("profile");
     }
     let version = format!("v{}", env!("CARGO_PKG_VERSION"));
     let bundle = plumb::depot::v3::Bundle::read(
@@ -254,6 +280,7 @@ fn install() {
         "#!/bin/sh\nexec plumb guard .\n"
     );
     assert!(String::from_utf8_lossy(&output.stdout).contains("projected Plumb guard hooks"));
+    assert!(!repo.path().join("plumb.toml").exists());
     assert!(home.path().join("configurations/latest.json").is_file());
     assert!(!home.path().join("depot").exists());
     remote.finish();

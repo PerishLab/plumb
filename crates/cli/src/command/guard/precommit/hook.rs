@@ -24,7 +24,7 @@ struct Hooks<'a>(&'a Path);
 
 impl Hooks<'_> {
     fn project(&self) -> Result<Option<String>, String> {
-        if !self.0.join("plumb.toml").is_file() {
+        if !self.governed()? {
             return Ok(None);
         }
         let bodies = HOOKS
@@ -32,6 +32,13 @@ impl Hooks<'_> {
             .map(|(name, source)| carried(source).map(|body| (name, body)))
             .collect::<Result<Vec<_>, _>>()?;
         self.write(&bodies).map(Some)
+    }
+
+    fn governed(&self) -> Result<bool, String> {
+        if self.0.join("plumb.toml").is_file() {
+            return Ok(true);
+        }
+        crate::shape::product::governance(self.0).map(|profile| profile.is_some())
     }
 
     fn write(&self, bodies: &[(&str, String)]) -> Result<String, String> {

@@ -21,15 +21,27 @@ pub struct Profile {
     pub ectropy: String,
 }
 
+pub fn governance(root: &Path) -> Result<Option<Profile>, String> {
+    match git::remote(root, "") {
+        Ok(remote) if remote.host == DOMAIN => {
+            let rig = plumb::rig::Rig::resolve(None).map_err(|error| error.to_string())?;
+            resolve(root, &rig.rules.source).map(|target| target.profile)
+        }
+        _ => Ok(None),
+    }
+}
+
 struct Request<'a> {
     identity: &'a str,
     source: &'a str,
 }
 
+struct Root<'a>(&'a Path);
+
 pub fn resolve(root: &Path, source: &str) -> Result<Target, String> {
     let remote = git::remote(root, "")?;
     if remote.host != DOMAIN {
-        return manifested(root);
+        return Root(root).manifested();
     }
     let identity = format!("{}/{}/{}", remote.host, remote.owner, remote.repo);
     let request = Request {
@@ -75,19 +87,21 @@ pub fn guard(root: &Path, source: &str) -> Result<Target, String> {
     })
 }
 
-fn manifested(root: &Path) -> Result<Target, String> {
-    let spec = super::release::Spec::read(&root.join("plumb.toml"))?;
-    let depot = spec
-        .depot
-        .as_ref()
-        .ok_or_else(|| "release declares no depot".to_string())?;
-    Ok(Target {
-        product: spec.product,
-        authority: spec.authority,
-        source: depot.source.clone(),
-        derivatives: depot.derivatives.clone(),
-        profile: None,
-    })
+impl Root<'_> {
+    fn manifested(&self) -> Result<Target, String> {
+        let spec = super::release::Spec::read(&self.0.join("plumb.toml"))?;
+        let depot = spec
+            .depot
+            .as_ref()
+            .ok_or_else(|| "release declares no depot".to_string())?;
+        Ok(Target {
+            product: spec.product,
+            authority: spec.authority,
+            source: depot.source.clone(),
+            derivatives: depot.derivatives.clone(),
+            profile: None,
+        })
+    }
 }
 
 fn inline(raw: &str, request: &Request<'_>) -> Result<Target, String> {

@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
-pub(super) struct Index {
+pub(crate) struct Index {
     pub root: PathBuf,
     source: PathBuf,
 }
@@ -61,7 +61,49 @@ impl Index {
         })
     }
 
-    pub(super) fn govern(&self, profile: &crate::shape::product::Profile) -> Result<(), String> {
+    pub(crate) fn working(source: &Path) -> Result<Self, String> {
+        let base = temporary()?;
+        let index = base.path().join("index");
+        let mut read = plumb::config::detached("git");
+        let read = read
+            .arg("-C")
+            .arg(source)
+            .args(["read-tree", "HEAD"])
+            .env("GIT_INDEX_FILE", &index)
+            .output()
+            .map_err(|error| format!("cannot run git to prepare governed view: {error}"))?;
+        if !read.status.success() {
+            let output = plumb::config::detached("git")
+                .arg("-C")
+                .arg(source)
+                .args(["read-tree", "--empty"])
+                .env("GIT_INDEX_FILE", &index)
+                .output()
+                .map_err(|error| {
+                    format!("cannot run git to prepare empty governed view: {error}")
+                })?;
+            text(output, "prepare empty governed view")?;
+        }
+        let output = plumb::config::detached("git")
+            .arg("-C")
+            .arg(source)
+            .args(["add", "--all"])
+            .env("GIT_INDEX_FILE", &index)
+            .output()
+            .map_err(|error| format!("cannot run git to capture governed view: {error}"))?;
+        text(output, "capture governed view")?;
+        let output = plumb::config::detached("git")
+            .arg("-C")
+            .arg(source)
+            .args(["write-tree"])
+            .env("GIT_INDEX_FILE", &index)
+            .output()
+            .map_err(|error| format!("cannot run git to write governed view: {error}"))?;
+        let tree = text(output, "write governed view")?;
+        Self::new(source, &tree)
+    }
+
+    pub(crate) fn govern(&self, profile: &crate::shape::product::Profile) -> Result<(), String> {
         for (name, body) in [
             ("plumb.toml", &profile.manifest),
             ("ectropy.toml", &profile.ectropy),
@@ -71,6 +113,20 @@ impl Index {
         }
         Ok(())
     }
+}
+
+fn temporary() -> Result<tempfile::TempDir, String> {
+    let base = plumb::config::value("PLUMB_HOME")
+        .map(PathBuf::from)
+        .or_else(|| plumb::config::data("plumb"))
+        .ok_or_else(|| "cannot prepare governed view: no PLUMB_HOME".to_string())?
+        .join("tmp");
+    std::fs::create_dir_all(&base)
+        .map_err(|error| format!("cannot create {}: {error}", base.display()))?;
+    tempfile::Builder::new()
+        .prefix("view-")
+        .tempdir_in(&base)
+        .map_err(|error| format!("cannot reserve governed view: {error}"))
 }
 
 impl Drop for Index {
