@@ -5,6 +5,8 @@ use super::world::{Court, serve};
 use std::path::Path;
 use std::process::{Command, Output};
 
+mod proof;
+
 pub fn repo(root: &Path, origin: &str) {
     std::fs::write(
         root.join("plumb.toml"),
@@ -60,8 +62,17 @@ pub(super) fn marked(root: &Path, bare: &Path, forge: &str, version: &str) {
 
 pub fn command(root: &Path, args: &[&str]) -> Output {
     let mut command = super::command::plumb(root, args);
+    let binary = Path::new(env!("CARGO_BIN_EXE_plumb"))
+        .parent()
+        .expect("Plumb binary parent");
+    let path = format!(
+        "{}:{}",
+        binary.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
     command
         .env("HARNESS_RUN_TIMEOUT_MS", "1000")
+        .env("PATH", path)
         .output()
         .expect("plumb")
 }

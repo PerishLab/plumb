@@ -16,6 +16,27 @@ pub fn project(root: &Path, line: &str, version: &str, head: &str) -> Result<Str
     tree.commit(line, version)
 }
 
+pub(super) fn prove(root: &Path, line: &str, version: &str, head: &str) -> Result<String, String> {
+    if plumb::guard::current(root, head).is_ok() {
+        return Ok(head.to_string());
+    }
+    let body = read(
+        "read release proof",
+        Command::new("git")
+            .arg("-C")
+            .arg(root)
+            .args(["show", "-s", "--format=%B", head])
+            .output(),
+    )?;
+    if !body
+        .lines()
+        .any(|line| line.starts_with(plumb::guard::TRAILER))
+    {
+        return Ok(head.to_string());
+    }
+    Tree::open(root, head)?.prove(line, version, head)
+}
+
 pub struct Preparation<'a> {
     pub root: &'a Path,
     pub commit: &'a str,
@@ -134,6 +155,34 @@ impl Tree {
         )?;
         success(
             "push release version",
+            self.git(["push", "origin", &format!("{commit}:refs/heads/{line}")]),
+        )?;
+        Ok(commit)
+    }
+
+    fn prove(&self, line: &str, version: &str, head: &str) -> Result<String, String> {
+        let proof = crate::command::guard::precommit::proof(&self.seat)?;
+        let tree = read(
+            "resolve release proof tree",
+            self.git(["rev-parse", "HEAD^{tree}"]),
+        )?;
+        if proof.tree != tree {
+            return Err(format!(
+                "release proof seals {}, not the standing tree {tree}",
+                proof.tree
+            ));
+        }
+        let message = format!(
+            "Refresh the release proof for {version}\n\n{} {}",
+            plumb::guard::TRAILER,
+            proof.encode()?
+        );
+        let commit = read(
+            "commit refreshed release proof",
+            self.git(["commit-tree", &tree, "-p", head, "-m", &message]),
+        )?;
+        success(
+            "push refreshed release proof",
             self.git(["push", "origin", &format!("{commit}:refs/heads/{line}")]),
         )?;
         Ok(commit)
