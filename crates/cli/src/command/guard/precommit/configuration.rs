@@ -104,7 +104,9 @@ pub(crate) fn precedes(target: &str, validator: &str) -> Result<(), String> {
 }
 
 pub(super) fn target(root: &Path) -> Result<Option<String>, String> {
-    let governance = Git(root).file("plumb.toml")?;
+    let Some(governance) = Git(root).optional("plumb.toml")? else {
+        return Ok(None);
+    };
     let governance: toml::Table = governance
         .parse()
         .map_err(|error| format!("cannot parse plumb.toml: {error}"))?;
@@ -167,6 +169,18 @@ impl Git<'_> {
 
     fn file(&self, path: &str) -> Result<String, String> {
         self.run(&["show", &format!(":{path}")], "read staged configuration")
+    }
+
+    fn optional(&self, path: &str) -> Result<Option<String>, String> {
+        let held = self.run(
+            &["ls-files", "--stage", "--", path],
+            "inspect staged configuration",
+        )?;
+        if held.is_empty() {
+            Ok(None)
+        } else {
+            self.file(path).map(Some)
+        }
     }
 
     fn run(&self, args: &[&str], action: &str) -> Result<String, String> {

@@ -1,5 +1,4 @@
 use plumb::guard::{Action, Descriptor};
-use sha2::{Digest as _, Sha256};
 use std::path::{Path, PathBuf};
 
 use super::super::workflow::tree::Tree;
@@ -12,7 +11,13 @@ struct Check {
 
 struct Catalog<'a> {
     root: &'a Path,
-    configuration: Option<&'a str>,
+    product: &'a crate::shape::product::Target,
+    binding: Binding<'a>,
+}
+
+pub(super) struct Binding<'a> {
+    pub configuration: Option<&'a str>,
+    pub profile: Option<&'a crate::shape::product::Profile>,
 }
 
 pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
@@ -29,7 +34,11 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
     let mismatched = target.as_deref().is_some_and(|target| {
         plumb::depot::rules().ok().and_then(|held| held.version()) != Some(target)
     });
-    let mut index = mismatched.then(|| Index::new(root, &tree)).transpose()?;
+    let rig = plumb::rig::Rig::resolve(None).map_err(|error| error.to_string())?;
+    let product = crate::shape::product::guard(root, &rig.rules.source)?;
+    let mut index = mismatched
+        .then(|| isolate(root, &tree, product.profile.as_ref()))
+        .transpose()?;
     let configuration = index
         .as_ref()
         .map(|index| {
@@ -44,7 +53,11 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         .transpose()?;
     let checks = Catalog {
         root,
-        configuration: configuration.as_ref().map(|held| held.mark()),
+        product: &product,
+        binding: Binding {
+            configuration: configuration.as_ref().map(|held| held.mark()),
+            profile: product.profile.as_ref(),
+        },
     }
     .checks()?;
     let pending = checks
@@ -53,7 +66,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         .collect::<Vec<_>>();
     if !pending.is_empty() {
         if index.is_none() {
-            index = Some(Index::new(root, &tree)?);
+            index = Some(isolate(root, &tree, product.profile.as_ref())?);
         }
         let index = index.as_ref().expect("a pending guard has an index");
         for check in pending {
@@ -77,6 +90,12 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
 impl Catalog<'_> {
     fn checks(&self) -> Result<Vec<Check>, String> {
         let tree = Tree::read(self.root, None)?;
+        let governed = self.product.profile.is_some();
+        if governed && (tree.has("plumb.toml") || tree.has("ectropy.toml")) {
+            return Err(
+                "a Depot-governed product must not carry plumb.toml or ectropy.toml".into(),
+            );
+        }
         let mut held = crate::shape::workflow::read(self.root);
         if let Some(error) = held.refusal {
             return Err(error);
@@ -85,20 +104,19 @@ impl Catalog<'_> {
             held = crate::shape::workflow::inferred(
                 tree.has("Cargo.toml"),
                 tree.has("pnpm-lock.yaml"),
-                tree.has("plumb.toml"),
-                tree.has("ectropy.toml"),
+                tree.has("plumb.toml") || governed,
+                tree.has("ectropy.toml") || governed,
             );
         }
-        let product = self.product().unwrap_or_default();
         let mut checks = Vec::new();
         for key in held.keys.iter().filter(|key| key.lane() == "guard") {
             let name = key.name();
-            let commands = self.commands(&product, &name)?;
+            let commands = self.commands(&self.product.product, &name)?;
             if commands.is_empty() {
                 continue;
             }
             let input = tree.digest(key);
-            let world = world(&name, &input, &commands, self.configuration)?;
+            let world = super::world::digest(&name, &input, &commands, &self.binding)?;
             checks.push(Check {
                 proof: Action { name, input, world },
                 commands,
@@ -181,82 +199,18 @@ impl Catalog<'_> {
         }
         Ok(held)
     }
-
-    fn product(&self) -> Result<String, String> {
-        let text = std::fs::read_to_string(self.root.join("plumb.toml"))
-            .map_err(|error| format!("cannot read plumb.toml: {error}"))?;
-        let doc: toml::Table = text
-            .parse()
-            .map_err(|error| format!("cannot parse plumb.toml: {error}"))?;
-        Ok(doc
-            .get("release")
-            .and_then(|release| release.get("product"))
-            .and_then(toml::Value::as_str)
-            .unwrap_or_default()
-            .to_string())
-    }
 }
 
-fn world(
-    name: &str,
-    input: &str,
-    commands: &[Vec<String>],
-    configuration: Option<&str>,
-) -> Result<String, String> {
-    let mut sponge = Sha256::new();
-    sponge.update(name.as_bytes());
-    sponge.update([0]);
-    sponge.update(input.as_bytes());
-    sponge.update([0]);
-    sponge.update(serde_json::to_vec(commands).map_err(|error| error.to_string())?);
-    sponge.update([0]);
-    sponge.update(plumb::version!("PLUMB").as_bytes());
-    if let Some(commit) = plumb::commit!("PLUMB") {
-        sponge.update([0]);
-        sponge.update(commit.as_bytes());
+fn isolate(
+    root: &Path,
+    tree: &str,
+    profile: Option<&crate::shape::product::Profile>,
+) -> Result<Index, String> {
+    let index = Index::new(root, tree)?;
+    if let Some(profile) = profile {
+        index.govern(profile)?;
     }
-    sponge.update([0]);
-    sponge.update(plumb::depot::rules()?.mark().as_bytes());
-    if name == "guard/plumb"
-        && let Some(configuration) = configuration
-    {
-        sponge.update([0]);
-        sponge.update(configuration.as_bytes());
-    }
-    sponge.update([0]);
-    sponge.update(plumb::config::platform().as_bytes());
-    for tool in tools(name) {
-        sponge.update([0]);
-        sponge.update(tool.as_bytes());
-        sponge.update([0]);
-        sponge.update(version(tool)?.as_bytes());
-    }
-    Ok(format!("{:x}", sponge.finalize()))
-}
-
-fn tools(name: &str) -> &'static [&'static str] {
-    match name {
-        "guard/rust" | "guard/test" => &["cargo", "rustc"],
-        "guard/web" => &["node", "pnpm"],
-        "guard/ectropy" => &["ectropy"],
-        "guard/plumb" => &["plumb"],
-        _ => &[],
-    }
-}
-
-fn version(tool: &str) -> Result<String, String> {
-    let output = plumb::config::detached(tool)
-        .arg("--version")
-        .output()
-        .map_err(|error| format!("cannot run {tool} --version: {error}"))?;
-    if output.status.success() {
-        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-    } else {
-        Err(format!(
-            "{tool} --version failed: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
-        ))
-    }
+    Ok(index)
 }
 
 fn seat(proof: &Action) -> Result<PathBuf, String> {

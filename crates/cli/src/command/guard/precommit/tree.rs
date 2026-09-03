@@ -60,6 +60,17 @@ impl Index {
             source: source.to_path_buf(),
         })
     }
+
+    pub(super) fn govern(&self, profile: &crate::shape::product::Profile) -> Result<(), String> {
+        for (name, body) in [
+            ("plumb.toml", &profile.manifest),
+            ("ectropy.toml", &profile.ectropy),
+        ] {
+            std::fs::write(self.root.join(name), body)
+                .map_err(|error| format!("cannot stage profile {name}: {error}"))?;
+        }
+        Ok(())
+    }
 }
 
 impl Drop for Index {

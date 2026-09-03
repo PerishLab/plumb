@@ -8,5 +8,7 @@ pub fn resolve(
     rig: &Rig,
     derivative: plumb::depot::v3::Kind,
 ) -> Result<Target, String> {
-    crate::shape::product::resolve(root, &rig.rules.source, derivative)
+    let target = crate::shape::product::resolve(root, &rig.rules.source)?;
+    target.require(derivative)?;
+    Ok(target)
 }
