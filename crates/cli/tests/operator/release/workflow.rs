@@ -7,14 +7,12 @@ fn canonical() -> String {
 
 fn bootstrap() -> String {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    std::fs::read_to_string(root.join(".forgejo/scripts/bootstrap-plumb.sh"))
-        .expect("Plumb owns one canonical bootstrap")
+    std::fs::read_to_string(root.join(".forgejo/scripts/bootstrap-plumb.sh")).expect("bootstrap")
 }
 
 fn windows() -> String {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    std::fs::read_to_string(root.join(".forgejo/scripts/bootstrap-plumb.ps1"))
-        .expect("Plumb owns one canonical Windows bootstrap")
+    std::fs::read_to_string(root.join(".forgejo/scripts/bootstrap-plumb.ps1")).expect("bootstrap")
 }
 
 fn executor() -> String {
@@ -236,6 +234,7 @@ fn depot() {
         "--world \"target=$host\"",
         "--world \"version=$PLUMB_BUILD_VERSION\"",
         "--world \"channel=$PLUMB_BUILD_CHANNEL\"",
+        "--world \"commit=$PLUMB_BUILD_COMMIT\"",
         "--world \"compiler=$compiler\"",
         ".decision == \"reuse\"",
         "workflow record ship/atom",
@@ -249,6 +248,7 @@ fn depot() {
         "--world \"target=$hostTarget\"",
         "--world \"version=$env:PLUMB_BUILD_VERSION\"",
         "--world \"channel=$env:PLUMB_BUILD_CHANNEL\"",
+        "--world \"commit=$env:PLUMB_BUILD_COMMIT\"",
         "--world \"compiler=$compiler\"",
         "$action.decision -eq 'reuse'",
         "workflow record ship/atom",
