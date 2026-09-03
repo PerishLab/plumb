@@ -123,9 +123,12 @@ pub fn guard(root: &Path, source: &str) -> Result<Target, String> {
 }
 
 fn guarded() -> bool {
-    plumb::config::value("PLUMB_HOME").is_none()
-        && (plumb::config::value("PLUMB_GUARD_VIEW").is_some()
-            || plumb::config::value("PLUMB_GUARD_CONFIGURATION").is_some())
+    if plumb::config::value("PLUMB_HOME").is_some() {
+        return false;
+    }
+    plumb::config::value("PLUMB_GUARD_VIEW").is_some()
+        || plumb::config::value("PLUMB_GUARD_CONFIGURATION").is_some()
+        || plumb::config::value("PLUMB_GUARD_DEPOT").is_some()
 }
 
 impl Root<'_> {

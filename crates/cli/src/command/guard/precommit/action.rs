@@ -22,9 +22,10 @@ pub(super) struct Binding<'a> {
 
 pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
     if plumb::config::value("PLUMB_HOME").is_none()
-        && plumb::config::value("PLUMB_GUARD_CONFIGURATION").is_some()
+        && (plumb::config::value("PLUMB_GUARD_CONFIGURATION").is_some()
+            || plumb::config::value("PLUMB_GUARD_DEPOT").is_some())
     {
-        return Err("guard configuration is internal to one isolated guard action".into());
+        return Err("guard depot binding is internal to one isolated guard action".into());
     }
     let tree = tree::git(root, &["write-tree"], "read staged tree")?;
     if let Ok(proof) = plumb::guard::staged(root, &tree) {
