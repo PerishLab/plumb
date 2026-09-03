@@ -90,7 +90,16 @@ fn configured<C: Configuration>(repository: &Path, seat: &C) -> Result<Target, S
 }
 
 pub fn guard(root: &Path, source: &str) -> Result<Target, String> {
-    if !guarded() && git::remote(root, "").is_ok_and(|remote| remote.host == DOMAIN) {
+    if !guarded()
+        && let Ok(remote) = git::remote(root, "")
+        && remote.host == DOMAIN
+    {
+        if remote.owner == "PerishLab"
+            && remote.repo == "plumb"
+            && root.join("plumb.toml").is_file()
+        {
+            return Root(root).manifested();
+        }
         return resolve(root, source);
     }
     let path = root.join("plumb.toml");
