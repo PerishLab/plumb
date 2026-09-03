@@ -50,15 +50,28 @@ fn sourced(source: &Source<'_>, commit: &str, body: &str) -> bool {
     if body.is_empty() {
         return true;
     }
-    provenance(body)
-        || super::datum::Seat(source.root).carried(commit, source.version)
+    let settled = super::datum::Seat(source.root).carried(commit, source.version)
         || super::version::prepared(super::version::Preparation {
             root: source.root,
             commit,
             base: source.base,
             version: source.version,
             body,
-        })
+        });
+    provenance(body) || refreshed(source, commit) || settled
+}
+
+fn refreshed(source: &Source<'_>, commit: &str) -> bool {
+    let tree = format!("{commit}^{{tree}}");
+    let parent = format!("{commit}^^{{tree}}");
+    let trees = command(source.root, ["rev-parse", &tree, &parent])
+        .ok()
+        .and_then(|output| text("inspect proof carrier", output).ok());
+    trees.is_some_and(|trees| {
+        let mut trees = trees.lines();
+        trees.next().is_some_and(|tree| trees.next() == Some(tree))
+            && plumb::guard::commit(source.root, commit).is_ok()
+    })
 }
 
 fn provenance(body: &str) -> bool {

@@ -2,6 +2,9 @@ use super::command::support;
 use super::datum::lined;
 use super::stable::{command, run};
 use super::world::{Court, serve};
+use base64::Engine as _;
+use serde::Serialize;
+use sha2::{Digest as _, Sha256};
 use std::env;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -135,6 +138,26 @@ fn guarded(root: &Path, cut: &Path) {
             "Record the datum v1.2.0 judges against",
         ],
     );
+    let remote = text(root, &["remote", "get-url", "origin"]);
+    let path = remote.trim_end_matches('/').trim_end_matches(".git");
+    let mut parts = path.split('/').rev();
+    let repository = format!(
+        "{}/{}",
+        parts.nth(1).expect("owner"),
+        path.split('/').next_back().expect("repository")
+    );
+    let proof = proof(&repository, &tree);
+    let head = text(
+        root,
+        &[
+            "commit-tree",
+            &tree,
+            "-p",
+            &head,
+            "-m",
+            &format!("Refresh the release proof\n\nPlumb-Guard-Proof: {proof}"),
+        ],
+    );
     run(Command::new("git")
         .args([
             "push",
@@ -147,6 +170,50 @@ fn guarded(root: &Path, cut: &Path) {
         .args(["update-ref", "refs/remotes/origin/release/v1.2.0", &head])
         .current_dir(root));
     std::fs::write(cut, head).expect("guarded cut");
+}
+
+fn proof(repository: &str, tree: &str) -> String {
+    #[derive(Serialize)]
+    struct Claim<'a> {
+        schema: &'a str,
+        repository: &'a str,
+        tree: &'a str,
+        plumb: &'a str,
+        depot: &'a str,
+        platform: &'a str,
+        actions: &'a [plumb::guard::Action],
+    }
+    let actions = vec![plumb::guard::Action {
+        name: "guard/test".into(),
+        input: "0".repeat(64),
+        world: "1".repeat(64),
+    }];
+    let depot = "2".repeat(64);
+    let claim = Claim {
+        schema: plumb::guard::SCHEMA,
+        repository,
+        tree,
+        plumb: "v0.0.0",
+        depot: &depot,
+        platform: "test",
+        actions: &actions,
+    };
+    let digest = format!(
+        "{:x}",
+        Sha256::digest(serde_json::to_vec(&claim).expect("claim"))
+    );
+    let held = plumb::guard::Descriptor {
+        schema: claim.schema.into(),
+        repository: claim.repository.into(),
+        tree: tree.into(),
+        plumb: claim.plumb.into(),
+        depot: depot.clone(),
+        platform: claim.platform.into(),
+        actions: actions.clone(),
+        digest,
+    };
+    base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .encode(serde_json::to_vec(&held).expect("proof"))
 }
 
 fn text(root: &Path, args: &[&str]) -> String {
