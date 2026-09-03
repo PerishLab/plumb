@@ -60,6 +60,53 @@ fn mapped() {
 }
 
 #[test]
+fn profiled() {
+    let profile = r#"schema = "plumb.product-profile/v1"
+
+[product]
+name = "ectropy"
+authority = "https://releases.ectropy.perish.uk"
+derivatives = ["changelog", "skill"]
+
+[governance]
+manifest = '''
+[release]
+product = "ectropy"
+authority = "https://releases.ectropy.perish.uk"
+'''
+ectropy = '''
+[comment]
+allow = false
+'''
+"#;
+    let digest = plumb::depot::sha(profile.as_bytes());
+    let catalog = format!(
+        "schema = \"plumb.products/v2\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/ectropy\"\nprofile = \"{digest}\"\n"
+    );
+    let path = format!("profiles/{digest}.toml");
+    let depot = support::depot(&[("rules/products.toml", &catalog), (&path, profile)]);
+    let ectropy = repository("ectropy");
+    let (ok, held) = publish(ectropy.path(), depot.path());
+    assert!(!ok, "{held}");
+    assert!(held.contains("invalid release marker vinvalid"), "{held}");
+    assert!(!held.contains("plumb.toml"), "{held}");
+}
+
+#[test]
+fn drift() {
+    let digest = "a".repeat(64);
+    let catalog = format!(
+        "schema = \"plumb.products/v2\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/ectropy\"\nprofile = \"{digest}\"\n"
+    );
+    let path = format!("profiles/{digest}.toml");
+    let depot = support::depot(&[("rules/products.toml", &catalog), (&path, "drift")]);
+    let ectropy = repository("ectropy");
+    let (ok, held) = publish(ectropy.path(), depot.path());
+    assert!(!ok, "{held}");
+    assert!(held.contains("product profile digest drift"), "{held}");
+}
+
+#[test]
 fn refused() {
     let rules = r#"
 schema = "plumb.products/v1"

@@ -5,6 +5,7 @@ use std::path::Path;
 
 pub mod lane;
 pub mod pair;
+pub(crate) mod product;
 pub(crate) mod release;
 mod repository;
 pub mod workflow;

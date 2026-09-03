@@ -82,6 +82,22 @@ pub fn stock(root: &Path, overrides: &[(&str, &str)]) {
             });
         }
     }
+    for (path, text) in overrides {
+        if objects.iter().any(|object| object.path == *path) {
+            continue;
+        }
+        let bytes = text.as_bytes();
+        let target = base.join(path);
+        std::fs::create_dir_all(target.parent().expect("object parent"))
+            .expect("object parent seat");
+        std::fs::write(target, bytes).expect("depot object");
+        objects.push(Object {
+            path: (*path).to_string(),
+            sha256: sha(bytes),
+            size: bytes.len() as u64,
+        });
+    }
+    objects.sort();
     let metadata = Metadata {
         version: MARK.to_string(),
         source: "fixture".to_string(),
