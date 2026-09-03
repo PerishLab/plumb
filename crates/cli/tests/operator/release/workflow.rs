@@ -120,7 +120,7 @@ fn matrix() {
     for binding in [
         "needs.resolve.outputs.publication_missing == 'true'",
         "PLUMB_RELEASE_VERSION: ${{ needs.publish_plan.outputs.version }}",
-        "PLUMB_ATOM_SOURCE: ${{ needs.resolve.outputs.atom }}",
+        "PLUMB_ATOM_DIGEST: ${{ needs.resolve.outputs.atom }}",
         "atom: ${{ steps.plan.outputs.atom }}",
         "PLUMB_RELEASE_COMMIT: ${{ needs.publish_plan.outputs.commit }}",
         "if: needs.resolve.outputs.workload_missing == 'true'",
@@ -133,7 +133,7 @@ fn matrix() {
         resolution().contains("publication_ready=$(printf '%s' \"$graph\""),
         "resolve must expose whether its publication plan is already final"
     );
-    assert!(resolution().contains("atom=${PLUMB_ATOM_SOURCE:-}"));
+    assert!(resolution().contains("/workloads/\\([0-9a-fA-F]\\{64\\}\\)\\.tgz"));
     let graph = resolver();
     assert!(graph.contains("action == \"ship/oci\""), "{graph}");
     assert!(
@@ -231,6 +231,7 @@ fn depot() {
         "workflow record ship/atom",
         "workflow plan --help",
         "PLUMB_ATOM_SOURCE",
+        "PLUMB_ATOM_DIGEST",
         "v1/channels/stable.json",
         "PLUMB_HOME=\"$RUNNER_TEMP/plumb-home-$configuration\"",
         "--path \"$1\"",
@@ -248,6 +249,7 @@ fn depot() {
         "--world \"compiler=$compiler\"",
         "workflow plan --help",
         "PLUMB_ATOM_SOURCE",
+        "PLUMB_ATOM_DIGEST",
         "$env:PLUMB_HOME = Join-Path $env:RUNNER_TEMP",
         "--path $Path",
         "Join-Path $env:PLUMB_HOME 'configurations'",

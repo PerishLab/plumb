@@ -182,7 +182,7 @@ jobs:
       - name: Install the exact atom Plumb
         shell: bash
         env:
-          PLUMB_ATOM_SOURCE: ${{ needs.resolve.outputs.atom }}
+          PLUMB_ATOM_DIGEST: ${{ needs.resolve.outputs.atom }}
         run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact '${{ inputs.configuration }}'
 
       - name: Resolve missing publications
@@ -242,7 +242,7 @@ jobs:
         if: matrix.control != 'reuse'
         shell: bash
         env:
-          PLUMB_ATOM_SOURCE: ${{ needs.resolve.outputs.atom }}
+          PLUMB_ATOM_DIGEST: ${{ needs.resolve.outputs.atom }}
         run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact '${{ inputs.configuration }}'
 
       - name: Fetch the exact release marker
