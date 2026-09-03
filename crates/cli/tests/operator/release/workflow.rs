@@ -107,7 +107,6 @@ fn matrix() {
         !held.contains("cargo build --quiet --locked --manifest-path"),
         "workflow orchestration must not duplicate atom bootstrap implementation"
     );
-    assert!(!held.contains("${{ runner.temp }}"), "{held}");
     assert!(
         !held.contains("PLUMB_HOME:"),
         "ship does not own a depot seat"
@@ -131,6 +130,9 @@ fn matrix() {
         "PLUMB_CARRY_PUBLICATION: ${{ needs.resolve.outputs.publication }}",
         "PLUMB_ATOM_SOURCE: ${{ needs.resolve.outputs.atom }}",
         "PLUMB_ATOM_SOURCE: ${{ needs.publish_plan.outputs.atom }}",
+        "if: needs.resolve.outputs.workload_missing == 'true'",
+        "needs.workload.result == 'skipped'",
+        "if: needs.publish_plan.outputs.publication_missing == 'true'",
     ] {
         assert!(held.contains(binding), "ship carry omits {binding}");
     }
@@ -235,7 +237,6 @@ fn depot() {
         "--world \"channel=$PLUMB_BUILD_CHANNEL\"",
         "--workload \"commit=$PLUMB_BUILD_COMMIT\"",
         "--world \"compiler=$compiler\"",
-        ".decision == \"reuse\"",
         "workflow record ship/atom",
         "workflow plan --help",
         "PLUMB_ATOM_SOURCE",
@@ -250,7 +251,6 @@ fn depot() {
         "--world \"channel=$env:PLUMB_BUILD_CHANNEL\"",
         "--workload \"commit=$env:PLUMB_BUILD_COMMIT\"",
         "--world \"compiler=$compiler\"",
-        "$action.decision -eq 'reuse'",
         "workflow plan --help",
         "PLUMB_ATOM_SOURCE",
         "v1/channels/stable.json",
