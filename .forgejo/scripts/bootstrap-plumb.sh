@@ -72,7 +72,11 @@ atom_plan() {
 }
 keys=
 source=
-if [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ]; then
+supports_workload=
+if "$tool" workflow plan --help 2>&1 | grep -q -- '--workload'; then
+  supports_workload=1
+fi
+if [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ] && [ -n "$supports_workload" ]; then
   plan=$(atom_plan)
   keys=$(printf '%s' "$plan" | jq -c '.actions[] | select(.name == "ship/atom") | .keys')
   source=$(printf '%s' "$plan" | jq -r \
@@ -91,6 +95,10 @@ printf '%s\n' "$bin" >> "$GITHUB_PATH"
 "$tool" --version
 if [ "$mode" = exact ]; then
   install_configuration
+fi
+if [ -z "$keys" ] && [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ]; then
+  plan=$(atom_plan)
+  keys=$(printf '%s' "$plan" | jq -c '.actions[] | select(.name == "ship/atom") | .keys')
 fi
 if [ -z "$source" ] && [ -n "$keys" ]; then
   if ! "$tool" workflow record ship/atom --keys "$keys" --workload "$archive"; then

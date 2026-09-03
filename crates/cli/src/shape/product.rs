@@ -87,7 +87,9 @@ fn configured<C: Configuration>(repository: &Path, seat: &C) -> Result<Target, S
 }
 
 pub fn guard(root: &Path, source: &str) -> Result<Target, String> {
-    if git::remote(root, "").is_ok_and(|remote| remote.host == DOMAIN) {
+    let internal = plumb::config::value("PLUMB_HOME").is_none()
+        && plumb::config::value("PLUMB_GUARD_CONFIGURATION").is_some();
+    if !internal && git::remote(root, "").is_ok_and(|remote| remote.host == DOMAIN) {
         return resolve(root, source);
     }
     let path = root.join("plumb.toml");
