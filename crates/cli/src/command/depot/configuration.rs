@@ -9,7 +9,7 @@ pub struct Tree<'a>(pub &'a Path);
 impl Tree<'_> {
     pub fn publish(&self, raw: &str, from: &str, dry: bool) -> Result<String, String> {
         let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-        let spec = crate::shape::release::Spec::read(&self.0.join("plumb.toml"))?;
+        let spec = crate::shape::release::Spec::resolve(self.0)?;
         let marker = crate::command::release::ReleaseMarker::at(
             self.0,
             &spec.product,

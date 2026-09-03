@@ -15,7 +15,7 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
     let marker = release::snapshot(raw)?;
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let root = &rig.release.root;
-    let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
+    let spec = crate::shape::release::Spec::resolve(root)?;
     let reference = if marker.channel == "stable" {
         format!("refs/heads/release/{}", marker.version)
     } else {

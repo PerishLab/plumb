@@ -21,21 +21,20 @@ pub fn template() -> Result<String, String> {
     Ok(super::record::sha(&bytes))
 }
 
-pub fn write(spec: &Path, channel: &str, version: &str, out: &Path) -> Result<String, String> {
-    let spec = Spec::read(spec)?;
+pub fn write(spec: &Spec, channel: &str, version: &str, out: &Path) -> Result<String, String> {
     super::super::channel::intent(channel, version)?;
     if out.exists() {
         return Err(format!("manager output already exists: {}", out.display()));
     }
     std::fs::create_dir_all(out)
         .map_err(|error| format!("cannot create {}: {error}", out.display()))?;
-    let exact = render(&spec, channel, version)?;
+    let exact = render(spec, channel, version)?;
     store(&out.join("manage.sh"), &exact.0, true)?;
     if let Some(windows) = exact.1 {
         store(&out.join("manage.ps1"), &windows, false)?;
     }
     if channel == "stable" {
-        let canonical = render(&spec, "stable", "")?;
+        let canonical = render(spec, "stable", "")?;
         let root = out.join("canonical");
         std::fs::create_dir(&root)
             .map_err(|error| format!("cannot create {}: {error}", root.display()))?;

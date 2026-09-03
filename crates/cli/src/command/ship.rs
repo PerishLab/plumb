@@ -188,7 +188,7 @@ enum Carry {
 
 fn carry(deed: Carry) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let spec = crate::shape::release::Spec::read(&rig.release.root.join("plumb.toml"))?;
+    let spec = crate::shape::release::Spec::resolve(&rig.release.root)?;
     match deed {
         Carry::Compile => super::release::Product::new(&spec).compile(&rig.release),
         Carry::Inspect => verify::inspect(
@@ -207,8 +207,7 @@ fn carry(deed: Carry) -> Result<String, String> {
 
 fn binary(deed: Binary) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let manifest = rig.release.root.join("plumb.toml");
-    let spec = crate::shape::release::Spec::read(&manifest)?;
+    let spec = crate::shape::release::Spec::resolve(&rig.release.root)?;
     let release = &rig.release;
     match deed {
         Binary::Assemble => package::product(&spec).assemble(
@@ -227,7 +226,7 @@ fn binary(deed: Binary) -> Result<String, String> {
             release.activated,
         ),
         Binary::Managers => manager::write(
-            &manifest,
+            &spec,
             required("PLUMB_RELEASE_CHANNEL", &release.channel)?,
             required("PLUMB_RELEASE_VERSION", &release.version)?,
             &output(release)?,
@@ -235,7 +234,7 @@ fn binary(deed: Binary) -> Result<String, String> {
         Binary::Matrix => package::product(&spec).matrix(),
         Binary::Publish => storage::publish(&capsule(release)?, &rig.publish),
         Binary::Smoke => smoke::run(
-            &manifest,
+            &spec,
             required("PLUMB_RELEASE_URL", &release.url)?,
             required("PLUMB_RELEASE_VERSION", &release.version)?,
         ),

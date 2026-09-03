@@ -24,7 +24,7 @@ pub fn worker(raw: &str, request: &str) -> Result<String, String> {
     }
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let root = &rig.release.root;
-    let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
+    let spec = crate::shape::release::Spec::resolve(root)?;
     let marker =
         crate::command::release::ReleaseMarker::at(root, &spec.product, &spec.authority, raw)?;
     if request.marker != marker.marker {
@@ -59,7 +59,7 @@ pub fn worker(raw: &str, request: &str) -> Result<String, String> {
 
 pub fn project(raw: &str, projection: Kind) -> Result<String, String> {
     let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let spec = crate::shape::release::Spec::read(&rig.release.root.join("plumb.toml"))?;
+    let spec = crate::shape::release::Spec::resolve(&rig.release.root)?;
     let marker = crate::command::release::ReleaseMarker::at(
         &rig.release.root,
         &spec.product,

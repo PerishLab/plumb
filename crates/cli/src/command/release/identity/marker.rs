@@ -105,7 +105,7 @@ impl Descriptor {
 impl Seat {
     fn open() -> Result<Self, String> {
         let root = git::root()?;
-        let spec = Spec::read(&root.join("plumb.toml"))?;
+        let spec = Spec::resolve(&root)?;
         Self::new(root, spec.product, spec.authority)
     }
 

@@ -36,12 +36,7 @@ impl Project<'_> {
         let stage = tempfile::tempdir()
             .map_err(|error| format!("cannot stage stable managers: {error}"))?;
         let root = stage.path().join("managers");
-        super::manager::write(
-            &self.spec.manifest(),
-            &marker.channel,
-            &marker.marker,
-            &root,
-        )?;
+        super::manager::write(self.spec, &marker.channel, &marker.marker, &root)?;
         let roots = self.roots(&root)?;
         let remote = Remote::new(authority)?;
         for object in &roots {
@@ -98,12 +93,7 @@ impl Project<'_> {
             return Ok(BTreeMap::new());
         }
         let root = stage.join("managers");
-        super::manager::write(
-            &self.spec.manifest(),
-            &marker.channel,
-            &marker.marker,
-            &root,
-        )?;
+        super::manager::write(self.spec, &marker.channel, &marker.marker, &root)?;
         Ok(self
             .roots(&root)?
             .into_iter()

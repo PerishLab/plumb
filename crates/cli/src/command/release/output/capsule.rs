@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 pub struct Compile<'a> {
-    pub spec: &'a Path,
+    pub spec: &'a Spec,
     pub channel: &'a str,
     pub version: &'a str,
     pub commit: &'a str,
@@ -42,7 +42,7 @@ struct Route {
 pub fn compile(input: Compile<'_>) -> Result<String, String> {
     channel::intent(input.channel, input.version)?;
     proof::commit(input.commit)?;
-    let spec = Spec::read(input.spec)?;
+    let spec = input.spec;
     if input.out.exists() {
         return Err(format!(
             "capsule output already exists: {}",
@@ -50,9 +50,9 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
         ));
     }
     let seat = input.out.join("managers");
-    manager::write(input.spec, input.channel, input.version, &seat)?;
-    let assets = artifact::list(&spec)?;
-    let declared = files::declared(&spec, &assets);
+    manager::write(spec, input.channel, input.version, &seat)?;
+    let assets = artifact::list(spec)?;
+    let declared = files::declared(spec, &assets);
     files::complete(input.artifacts, &declared)?;
     let payload = input.out.join("payload");
     std::fs::create_dir(&payload)
@@ -95,7 +95,7 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
     }
 
     let promotion = proof::promotion(proof::Claim {
-        spec: &spec,
+        spec,
         channel: input.channel,
         version: input.version,
         commit: input.commit,
@@ -119,7 +119,7 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
         legacy: None,
         proof: promotion,
         radius: None,
-        inputs: object::Seat(&spec).inputs(input.toolchain, input.version)?,
+        inputs: object::Seat(spec).inputs(input.toolchain, input.version)?,
     };
     let path = input.out.join("seal.json");
     json(&path, &seal)?;
@@ -134,7 +134,7 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
 
     let (roots, pointer) = if input.channel == "stable" {
         draft.stable(Stable {
-            spec: &spec,
+            spec,
             version: input.version,
             commit: input.commit,
             managers: &seat,
@@ -144,7 +144,7 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
         (
             Vec::new(),
             Some(draft.channel(Stable {
-                spec: &spec,
+                spec,
                 version: input.version,
                 commit: input.commit,
                 managers: &seat,
@@ -154,10 +154,10 @@ pub fn compile(input: Compile<'_>) -> Result<String, String> {
     };
     let capsule = Capsule {
         schema: 1,
-        product: spec.product,
+        product: spec.product.clone(),
         channel: input.channel.into(),
         version: input.version.into(),
-        authority: spec.authority,
+        authority: spec.authority.clone(),
         objects,
         seal: local,
         roots,

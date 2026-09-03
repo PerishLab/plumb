@@ -17,7 +17,7 @@ pub(super) fn stamp(raw: &str, dry: bool) -> Result<String, String> {
             .protected(&name, "frozen")
             .map_err(|error| format!("stable marker {held} requires a frozen {name}: {error}"))?;
     }
-    let spec = crate::shape::release::Spec::read(&root.join("plumb.toml"))?;
+    let spec = crate::shape::release::Spec::resolve(&root)?;
     let seat = point(&root);
     let head = seat.head(&name)?;
     let mut course = Course::new(dry);

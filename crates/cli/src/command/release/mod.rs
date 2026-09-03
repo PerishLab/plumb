@@ -28,7 +28,7 @@ impl<'a> Product<'a> {
         let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
         let commit = required("PLUMB_RELEASE_COMMIT", &release.commit)?;
         output::capsule::compile(output::capsule::Compile {
-            spec: &self.0.manifest(),
+            spec: self.0,
             channel,
             version,
             commit,
@@ -170,7 +170,7 @@ pub(in crate::command) fn knowledge<'a>(
 }
 
 pub(super) fn authority(root: &Path) -> Result<String, String> {
-    Spec::read(&root.join("plumb.toml")).map(|spec| spec.authority)
+    Spec::resolve(root).map(|spec| spec.authority)
 }
 
 pub(super) fn inspect(url: &str) -> Result<String, String> {

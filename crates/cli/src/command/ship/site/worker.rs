@@ -94,7 +94,7 @@ impl Seat<'_> {
     }
 
     fn declared(&self) -> Result<(Spec, Cfworker), String> {
-        let spec = Spec::read(&self.root.join("plumb.toml"))?;
+        let spec = Spec::resolve(self.root)?;
         let held = spec
             .cfworker
             .clone()
@@ -124,7 +124,7 @@ pub(in crate::command) fn deploy(
     expected: &str,
     version: &str,
 ) -> Result<String, String> {
-    let spec = Spec::read(&root.join("plumb.toml"))?;
+    let spec = Spec::resolve(root)?;
     let held = spec
         .cfworker
         .ok_or_else(|| "this repository declares no worker attachment".to_string())?;

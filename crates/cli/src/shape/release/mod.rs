@@ -16,6 +16,7 @@ use std::path::{Path, PathBuf};
 #[derive(Clone, Debug)]
 pub struct Spec {
     pub root: PathBuf,
+    pub profile: Option<String>,
     pub product: String,
     pub authority: String,
     pub binaries: Vec<String>,
@@ -56,14 +57,36 @@ struct Raw {
     depot: Option<Depot>,
 }
 impl Spec {
+    pub fn resolve(root: &Path) -> Result<Self, String> {
+        let Some(target) = super::product::governance(root)? else {
+            return Self::read(&root.join("plumb.toml"));
+        };
+        let Some(profile) = target.profile else {
+            return Self::read(&root.join("plumb.toml"));
+        };
+        let subject = format!("product profile {}", profile.digest);
+        let mut spec = Self::decode(root, &profile.manifest, &subject)?;
+        if spec.product != target.product || spec.authority != target.authority {
+            return Err(format!(
+                "{subject} release identity differs from its product definition"
+            ));
+        }
+        spec.profile = Some(profile.digest);
+        Ok(spec)
+    }
+
     pub fn read(path: &Path) -> Result<Self, String> {
         let text = std::fs::read_to_string(path)
             .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-        let held: Manifest = toml::from_str(&text)
-            .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
         let root = path
             .parent()
             .ok_or_else(|| format!("release manifest has no root: {}", path.display()))?;
+        Self::decode(root, &text, &path.display().to_string())
+    }
+
+    fn decode(root: &Path, text: &str, subject: &str) -> Result<Self, String> {
+        let held: Manifest =
+            toml::from_str(text).map_err(|error| format!("cannot parse {subject}: {error}"))?;
         let Raw {
             product,
             authority,
@@ -82,6 +105,7 @@ impl Spec {
         } = held.release;
         let mut spec = Self {
             root: root.to_path_buf(),
+            profile: None,
             target: targets
                 .iter()
                 .map(|triple| target::resolve(&product, triple))
@@ -196,10 +220,6 @@ impl Spec {
             }
         }
         Ok(())
-    }
-
-    pub fn manifest(&self) -> PathBuf {
-        self.root.join("plumb.toml")
     }
 
     pub fn environment(&self) -> String {

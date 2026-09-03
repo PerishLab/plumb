@@ -164,7 +164,7 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
 }
 
 fn governed(root: &Path) -> Result<Option<shape::product::Profile>, String> {
-    shape::product::governance(root)
+    shape::product::governance(root).map(|target| target.and_then(|target| target.profile))
 }
 
 fn briefs() -> Vec<String> {

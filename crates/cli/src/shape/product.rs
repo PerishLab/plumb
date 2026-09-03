@@ -21,11 +21,11 @@ pub struct Profile {
     pub ectropy: String,
 }
 
-pub fn governance(root: &Path) -> Result<Option<Profile>, String> {
+pub fn governance(root: &Path) -> Result<Option<Target>, String> {
     match git::remote(root, "") {
         Ok(remote) if remote.host == DOMAIN => {
             let rig = plumb::rig::Rig::resolve(None).map_err(|error| error.to_string())?;
-            resolve(root, &rig.rules.source).map(|target| target.profile)
+            resolve(root, &rig.rules.source).map(Some)
         }
         _ => Ok(None),
     }

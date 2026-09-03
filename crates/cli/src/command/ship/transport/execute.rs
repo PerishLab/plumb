@@ -15,6 +15,8 @@ struct Request {
     projections: Vec<String>,
     roots: Vec<String>,
     operation: Operation,
+    #[serde(default)]
+    profile: Option<String>,
     #[serde(default = "Reuse::none")]
     reuse: Reuse,
     #[serde(default)]
@@ -98,7 +100,10 @@ impl Request {
             return Err("ship request must carry at least one non-empty root".into());
         }
         let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-        let spec = crate::shape::release::Spec::read(&rig.release.root.join("plumb.toml"))?;
+        let spec = crate::shape::release::Spec::resolve(&rig.release.root)?;
+        if self.profile != spec.profile {
+            return Err("ship request product profile differs from the active depot".into());
+        }
         let release = &rig.release;
         let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
         let reuse = self.reuse.encode()?;

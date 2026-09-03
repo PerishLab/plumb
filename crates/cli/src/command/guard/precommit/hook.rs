@@ -38,7 +38,8 @@ impl Hooks<'_> {
         if self.0.join("plumb.toml").is_file() {
             return Ok(true);
         }
-        crate::shape::product::governance(self.0).map(|profile| profile.is_some())
+        crate::shape::product::governance(self.0)
+            .map(|target| target.is_some_and(|target| target.profile.is_some()))
     }
 
     fn write(&self, bodies: &[(&str, String)]) -> Result<String, String> {

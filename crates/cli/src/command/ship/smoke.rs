@@ -8,15 +8,14 @@ struct Seat<'a> {
     root: &'a Path,
 }
 
-pub fn run(spec: &Path, url: &str, version: &str) -> Result<String, String> {
-    let spec = Spec::read(spec)?;
+pub fn run(spec: &Spec, url: &str, version: &str) -> Result<String, String> {
     let root = PathBuf::from(format!(".plumb-smoke-{}", std::process::id()));
     if root.exists() {
         return Err(format!("smoke root already exists: {}", root.display()));
     }
     std::fs::create_dir(&root)
         .map_err(|error| format!("cannot create {}: {error}", root.display()))?;
-    let result = cycle(&spec, url, version, &root);
+    let result = cycle(spec, url, version, &root);
     let clean = std::fs::remove_dir_all(&root)
         .map_err(|error| format!("cannot clean {}: {error}", root.display()));
     result?;

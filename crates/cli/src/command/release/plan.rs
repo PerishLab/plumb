@@ -29,6 +29,7 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
     let row = |medium: &&str| serde_json::json!({ "medium": medium });
     let include = held.iter().map(row).collect::<Vec<_>>();
     let mut publication = Vec::new();
+    let request = |project| request(project, spec.profile.as_deref());
     if spec.cargo.is_some() {
         let mut roots = vec!["Cargo.toml".into(), "crates".into()];
         if spec.root.join("Cargo.lock").is_file() {
@@ -152,16 +153,20 @@ struct Project<'a> {
     package: Option<&'a str>,
 }
 
-fn request(project: Project<'_>) -> serde_json::Value {
+fn request(project: Project<'_>, profile: Option<&str>) -> serde_json::Value {
     let mut operation = serde_json::json!({ "type": project.kind });
     if let Some(package) = project.package {
         operation["package"] = serde_json::json!(package);
     }
-    serde_json::json!({
+    let mut request = serde_json::json!({
         "schema": "plumb.ship-request/v2",
         "action": project.action,
         "projections": project.projections,
         "roots": project.roots,
         "operation": operation,
-    })
+    });
+    if let Some(profile) = profile {
+        request["profile"] = serde_json::json!(profile);
+    }
+    request
 }
