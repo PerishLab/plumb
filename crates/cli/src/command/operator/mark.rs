@@ -20,11 +20,11 @@ pub(super) fn stamp(raw: &str, dry: bool) -> Result<String, String> {
     let spec = crate::shape::release::Spec::controller(&root)?;
     let annotation = crate::command::release::annotation(&spec, &version)?;
     let seat = point(&root);
-    let head = seat.head(&name)?;
+    let head = seat.prove(&name)?;
     let mut course = Course::new(dry);
     let said = course.step(
         format!("git tag -a {version} at {head} on {name}, then push"),
-        || seat.stamp(&annotation, &version, &name),
+        || seat.stamp(&annotation, &version, &name, &head),
     )?;
     if course.dry() {
         return Ok(course.plan());
@@ -70,13 +70,29 @@ impl Point<'_> {
         )
     }
 
-    pub fn stamp(&self, annotation: &str, version: &str, name: &str) -> Result<String, String> {
+    pub fn prove(&self, name: &str) -> Result<String, String> {
         let head = self.head(name)?;
         let proof = plumb::guard::commit(self.root, &head)
             .map_err(|error| format!("release marker refuses an unproved tree: {error}"))?;
         proof
             .witness(self.root)
             .map_err(|error| format!("release marker refuses an unproved tree: {error}"))?;
+        Ok(head)
+    }
+
+    pub fn stamp(
+        &self,
+        annotation: &str,
+        version: &str,
+        name: &str,
+        head: &str,
+    ) -> Result<String, String> {
+        let standing = self.head(name)?;
+        if standing != head {
+            return Err(format!(
+                "{name} moved from {head} to {standing} while its marker was being stamped"
+            ));
+        }
         if let Some(seen) = self.seen(version)? {
             return if seen == head {
                 Ok(format!("{version} already stands at {head}"))
@@ -88,7 +104,7 @@ impl Point<'_> {
         }
         text(
             "stamp the release point",
-            self.git(["tag", "-a", version, &head, "-m", annotation])?,
+            self.git(["tag", "-a", version, head, "-m", annotation])?,
         )?;
         text(
             "publish the release point",
