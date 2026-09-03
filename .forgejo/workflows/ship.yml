@@ -148,7 +148,7 @@ jobs:
 
   publish_plan:
     needs: [resolve, workload]
-    if: always() && needs.resolve.result == 'success' && needs.resolve.outputs.publication_ready != 'true' && (needs.workload.result == 'success' || needs.workload.result == 'skipped')
+    if: always() && needs.resolve.result == 'success' && needs.resolve.outputs.publication_missing == 'true' && (needs.workload.result == 'success' || needs.workload.result == 'skipped')
     runs-on: docker
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
@@ -192,10 +192,10 @@ jobs:
 
   publication:
     needs: [resolve, publish_plan]
-    if: always() && needs.resolve.result == 'success' && ((needs.resolve.outputs.publication_ready == 'true' && needs.resolve.outputs.publication_missing == 'true') || (needs.publish_plan.result == 'success' && needs.publish_plan.outputs.publication_missing == 'true'))
+    if: always() && needs.resolve.result == 'success' && needs.publish_plan.result == 'success' && needs.publish_plan.outputs.publication_missing == 'true'
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.publish_plan.outputs.publication || needs.resolve.outputs.publication) }}
+      matrix: ${{ fromJSON(needs.publish_plan.outputs.publication) }}
     runs-on: ${{ matrix.runner }}
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
@@ -203,10 +203,10 @@ jobs:
       DOCKER_HOST: tcp://172.17.0.1:2375
       PLUMB_RELEASE_ROOT: .
       PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
-      PLUMB_RELEASE_CHANNEL: ${{ needs.publish_plan.outputs.channel || needs.resolve.outputs.channel }}
-      PLUMB_RELEASE_VERSION: ${{ needs.publish_plan.outputs.version || needs.resolve.outputs.version }}
-      PLUMB_RELEASE_COMMIT: ${{ needs.publish_plan.outputs.commit || needs.resolve.outputs.commit }}
-      PLUMB_RELEASE_ARTIFACTS: dist/${{ needs.publish_plan.outputs.version || needs.resolve.outputs.version }}
+      PLUMB_RELEASE_CHANNEL: ${{ needs.publish_plan.outputs.channel }}
+      PLUMB_RELEASE_VERSION: ${{ needs.publish_plan.outputs.version }}
+      PLUMB_RELEASE_COMMIT: ${{ needs.publish_plan.outputs.commit }}
+      PLUMB_RELEASE_ARTIFACTS: dist/${{ needs.publish_plan.outputs.version }}
       PLUMB_RELEASE_OUTPUT: .plumb-release/capsule
       PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
       PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
@@ -225,7 +225,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
           repository: ${{ inputs.repository }}
-          ref: ${{ needs.publish_plan.outputs.commit || needs.resolve.outputs.commit }}
+          ref: ${{ needs.publish_plan.outputs.commit }}
           token: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
 
       - uses: actions/checkout@v6

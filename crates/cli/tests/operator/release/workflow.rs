@@ -55,9 +55,7 @@ fn matrix() {
         "{held}"
     );
     assert!(
-        held.contains(
-            "fromJSON(needs.publish_plan.outputs.publication || needs.resolve.outputs.publication)"
-        ),
+        held.contains("fromJSON(needs.publish_plan.outputs.publication)"),
         "{held}"
     );
     assert!(
@@ -120,11 +118,11 @@ fn matrix() {
         "publication planning must observe the recorded workloads"
     );
     for binding in [
-        "needs.resolve.outputs.publication_ready != 'true'",
-        "needs.publish_plan.outputs.version || needs.resolve.outputs.version",
+        "needs.resolve.outputs.publication_missing == 'true'",
+        "PLUMB_RELEASE_VERSION: ${{ needs.publish_plan.outputs.version }}",
         "PLUMB_ATOM_SOURCE: ${{ needs.resolve.outputs.atom }}",
         "atom: ${{ steps.plan.outputs.atom }}",
-        "PLUMB_RELEASE_COMMIT: ${{ needs.publish_plan.outputs.commit || needs.resolve.outputs.commit }}",
+        "PLUMB_RELEASE_COMMIT: ${{ needs.publish_plan.outputs.commit }}",
         "if: needs.resolve.outputs.workload_missing == 'true'",
         "needs.workload.result == 'skipped'",
         "needs.publish_plan.result == 'success'",
