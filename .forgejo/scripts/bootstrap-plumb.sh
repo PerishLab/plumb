@@ -63,6 +63,7 @@ atom_plan() {
     --world "target=$host" \
     --world "version=$PLUMB_BUILD_VERSION" \
     --world "channel=$PLUMB_BUILD_CHANNEL" \
+    --world "commit=$PLUMB_BUILD_COMMIT" \
     --world "compiler=$compiler" \
     --world 'profile=debug' \
     --root 'ship/atom=*' \

@@ -80,6 +80,7 @@ function Get-AtomPlan {
     --world "target=$hostTarget" `
     --world "version=$env:PLUMB_BUILD_VERSION" `
     --world "channel=$env:PLUMB_BUILD_CHANNEL" `
+    --world "commit=$env:PLUMB_BUILD_COMMIT" `
     --world "compiler=$compiler" `
     --world 'profile=debug' `
     --root 'ship/atom=*' `
