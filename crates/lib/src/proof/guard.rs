@@ -103,6 +103,23 @@ impl Descriptor {
     }
 
     pub fn current(&self, root: &Path) -> Result<(), String> {
+        self.subject(root)?;
+        let depot = crate::depot::rules()?.mark();
+        if self.depot != depot {
+            return Err(format!(
+                "guard proof used depot {}, not the active {depot}",
+                self.depot
+            ));
+        }
+        self.platform()
+    }
+
+    pub fn witness(&self, root: &Path) -> Result<(), String> {
+        self.subject(root)?;
+        self.platform()
+    }
+
+    fn subject(&self, root: &Path) -> Result<(), String> {
         store::Seat::new(root)?.matches(self)?;
         let plumb = identity();
         if self.plumb != plumb {
@@ -111,13 +128,10 @@ impl Descriptor {
                 self.plumb
             ));
         }
-        let depot = crate::depot::rules()?.mark();
-        if self.depot != depot {
-            return Err(format!(
-                "guard proof used depot {}, not the active {depot}",
-                self.depot
-            ));
-        }
+        Ok(())
+    }
+
+    fn platform(&self) -> Result<(), String> {
         let platform = crate::config::platform();
         if self.platform != platform {
             return Err(format!(

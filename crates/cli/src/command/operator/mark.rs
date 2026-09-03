@@ -83,7 +83,10 @@ impl Point<'_> {
 
     pub fn stamp(&self, annotation: &str, version: &str, name: &str) -> Result<String, String> {
         let head = self.head(name)?;
-        plumb::guard::current(self.root, &head)
+        let proof = plumb::guard::commit(self.root, &head)
+            .map_err(|error| format!("release marker refuses an unproved tree: {error}"))?;
+        proof
+            .witness(self.root)
             .map_err(|error| format!("release marker refuses an unproved tree: {error}"))?;
         if let Some(seen) = self.seen(version)? {
             return if seen == head {
