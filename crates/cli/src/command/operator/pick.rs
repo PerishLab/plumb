@@ -129,10 +129,15 @@ pub fn pick(seat: &Path, name: &str, commits: &[String]) -> Result<String, Strin
 }
 
 fn controller(root: &Path, name: &str) -> Result<(), String> {
-    if !root.join("plumb.toml").is_file() && crate::shape::product::governance(root)?.is_none() {
+    let manifest = root.join("plumb.toml");
+    if !manifest.is_file() && crate::shape::product::governance(root)?.is_none() {
         return Ok(());
     }
-    let spec = crate::shape::release::Spec::resolve(root)?;
+    let spec = if manifest.is_file() {
+        crate::shape::release::Spec::read(&manifest)?
+    } else {
+        crate::shape::release::Spec::resolve(root)?
+    };
     if spec.product != "plumb" {
         return Ok(());
     }
