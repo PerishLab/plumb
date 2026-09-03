@@ -97,7 +97,7 @@ note = "Site deployment on explicit dispatch. Carried by design, which is not go
 [[lane.member]]
 name = "depot"
 kind = "retired"
-note = "Depot projection is one phase of Plumb's canonical ship transaction, never a repository workflow."
+note = "Depot owns no repository workflow. It explicitly consumes the same release marker as ship while remaining an independent local transaction."
 
 [[lane.member]]
 name = "exact.release"

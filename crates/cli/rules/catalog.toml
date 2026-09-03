@@ -401,8 +401,8 @@ tags = ["ownership", "release"]
 [[rule]]
 id = "release.generator-stable"
 summary = "Ship uses one exact Plumb atom"
-law = "A release marker records the exact Plumb atom, and ship resolves that atom once without rendering or copying a downstream workflow."
-evidence = "Marker identity, dispatched workflow revision, capsule provenance, and retry boundaries."
+law = "Each ship dispatch names and resolves one exact Plumb atom without rendering or copying a downstream workflow; changing that atom neither mutates the product marker nor invalidates reusable product work."
+evidence = "Dispatch inputs, workflow revision, atom plan identity, product marker identity, and retry boundaries."
 standing = "prose-only"
 owner = "release"
 tags = ["release"]

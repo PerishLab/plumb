@@ -99,7 +99,7 @@ fn command() {
     capture(Vec::new(), &mut held);
     assert_eq!(
         digest(&held),
-        "45ce60ac2674a1dfc942180e0edd4b515a030a4066aaa5e6eabe86944d18d2df"
+        "02d3ae8c9da2e3306a2148f705a629fa709d3d818726a61d8492d88ad1a662b7"
     );
 }
 
@@ -111,7 +111,7 @@ fn rule() {
     assert_eq!(report["rules"].as_array().map(Vec::len), Some(108));
     assert_eq!(
         digest(&output.stdout),
-        "b7c03d7634cb4a840de1a32281688fc6c095b731f968960a8183394f61d41b3b"
+        "4adc3b970512f3618de3a3bcd8e6e79b25cefec89c85a017e2c076bf7e3b771c"
     );
 }
 

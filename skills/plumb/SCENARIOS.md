@@ -10,11 +10,12 @@ substitute a cached assumption.
 ## A release is being prepared
 
 Use `plumb version --help`, `plumb release --help`, and `plumb ship --help` for
-the exact command contracts. One ship run
-binds its source revision and release identity, builds only declared artifacts,
-publishes immutable objects and an exact seal, publishes the marker-exact
-configuration needed by manager smoke, reads the public bytes back, then moves
-declared depot and release channel consensus last.
+the exact command contracts. One ship run binds its source revision and release
+identity, builds only declared artifacts, publishes immutable objects and an
+exact seal, and reads the public bytes back. Depot is a separate marker consumer:
+publish marker-exact configuration explicitly before ship when manager smoke
+needs it, then publish the remaining mutable derivatives and advance stable
+consensus explicitly after immutable readback. Neither command invokes the other.
 Non-stable releases remain exact and have no moving pointer or activation.
 An exact release binds `refs/tags/<exact-version>`, so push that tag before
 dispatching one; its channel is read from the version, never named beside it.
@@ -26,7 +27,12 @@ plumb version prepare --version VERSION
 plumb version pick --version VERSION --commit COMMIT
 plumb version freeze --version VERSION
 plumb release stamp --version VERSION
+plumb depot configuration --marker VERSION --from /temporary/configuration
 plumb ship dispatch --marker VERSION
+plumb depot skill --marker VERSION --from /temporary/skill
+plumb depot changelog --marker VERSION --from /temporary/changelog
+plumb depot managers --marker VERSION
+plumb depot channel --marker VERSION
 plumb version rejoin --version VERSION
 ```
 

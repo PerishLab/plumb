@@ -8,8 +8,9 @@ unless its version line is frozen. Retract removes only an unpublished marker.
 
 Release never builds, compiles, publishes, activates, or edits a version line.
 Use version to project repository identity and govern the line. Use ship with the
-resulting marker to distribute immutable resources. Ship invokes depot to move
-the marker-bound mutable projections after every immutable resource reads back.
+resulting marker to distribute immutable resources. Use depot separately with
+the same marker to publish or move its mutable projections. Ship never invokes
+depot, and depot never selects or waits for a ship transaction.
 
 A marker never moves. Every ship and depot retry names the same marker and
 revalidates it before and after mutation.
