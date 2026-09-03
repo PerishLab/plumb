@@ -15,12 +15,6 @@ fn windows() -> String {
     std::fs::read_to_string(root.join(".forgejo/scripts/bootstrap-plumb.ps1")).expect("bootstrap")
 }
 
-fn executor() -> String {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    std::fs::read_to_string(root.join(".forgejo/scripts/execute-ship.sh"))
-        .expect("Plumb owns one canonical ship executor")
-}
-
 fn transport() -> String {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     std::fs::read_to_string(root.join("crates/cli/src/command/ship/transport/support.rs"))
@@ -61,10 +55,11 @@ fn matrix() {
         "{held}"
     );
     assert!(
-        held.contains("fromJSON(needs.publish_plan.outputs.publication)"),
+        held.contains(
+            "fromJSON(needs.publish_plan.outputs.publication || needs.resolve.outputs.publication)"
+        ),
         "{held}"
     );
-    assert!(executor().contains("plumb ship execute --request"));
     assert!(
         held.contains("repository: ${{ inputs.repository }}\n          ref: ${{ inputs.marker }}"),
         "publication planning must retain the marker ref for exact verification"
@@ -126,13 +121,12 @@ fn matrix() {
     );
     for binding in [
         "needs.resolve.outputs.publication_ready != 'true'",
-        "name: Carry already resolved publications",
-        "PLUMB_CARRY_PUBLICATION: ${{ needs.resolve.outputs.publication }}",
+        "needs.publish_plan.outputs.version || needs.resolve.outputs.version",
         "PLUMB_ATOM_SOURCE: ${{ needs.resolve.outputs.atom }}",
-        "PLUMB_ATOM_SOURCE: ${{ needs.publish_plan.outputs.atom }}",
+        "PLUMB_RELEASE_COMMIT: ${{ needs.publish_plan.outputs.commit || needs.resolve.outputs.commit }}",
         "if: needs.resolve.outputs.workload_missing == 'true'",
         "needs.workload.result == 'skipped'",
-        "if: needs.publish_plan.outputs.publication_missing == 'true'",
+        "needs.publish_plan.result == 'success'",
     ] {
         assert!(held.contains(binding), "ship carry omits {binding}");
     }

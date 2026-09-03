@@ -145,23 +145,21 @@ jobs:
 
   publish_plan:
     needs: [resolve, workload]
-    if: always() && needs.resolve.result == 'success' && (needs.workload.result == 'success' || needs.workload.result == 'skipped')
+    if: always() && needs.resolve.result == 'success' && needs.resolve.outputs.publication_ready != 'true' && (needs.workload.result == 'success' || needs.workload.result == 'skipped')
     runs-on: docker
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
     outputs:
-      atom: ${{ needs.resolve.outputs.atom }}
-      channel: ${{ steps.plan.outputs.channel || steps.carry.outputs.channel }}
-      commit: ${{ steps.plan.outputs.commit || steps.carry.outputs.commit }}
-      version: ${{ steps.plan.outputs.version || steps.carry.outputs.version }}
-      publication: ${{ steps.plan.outputs.publication || steps.carry.outputs.publication }}
-      publication_missing: ${{ steps.plan.outputs.publication_missing || steps.carry.outputs.publication_missing }}
+      channel: ${{ steps.plan.outputs.channel }}
+      commit: ${{ steps.plan.outputs.commit }}
+      version: ${{ steps.plan.outputs.version }}
+      publication: ${{ steps.plan.outputs.publication }}
+      publication_missing: ${{ steps.plan.outputs.publication_missing }}
     env:
       PLUMB_RELEASE_ROOT: .
       PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
     steps:
       - uses: actions/checkout@v6
-        if: needs.resolve.outputs.publication_ready != 'true'
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -170,7 +168,6 @@ jobs:
           token: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
 
       - uses: actions/checkout@v6
-        if: needs.resolve.outputs.publication_ready != 'true'
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -180,7 +177,6 @@ jobs:
           token: ${{ github.token }}
 
       - name: Install the exact atom Plumb
-        if: needs.resolve.outputs.publication_ready != 'true'
         shell: bash
         env:
           PLUMB_ATOM_SOURCE: ${{ needs.resolve.outputs.atom }}
@@ -188,33 +184,15 @@ jobs:
 
       - name: Resolve missing publications
         id: plan
-        if: needs.resolve.outputs.publication_ready != 'true'
         shell: bash
         run: bash .plumb-atom/.forgejo/scripts/resolve-ship.sh '${{ github.sha }}' ready
 
-      - name: Carry already resolved publications
-        id: carry
-        if: needs.resolve.outputs.publication_ready == 'true'
-        shell: bash
-        env:
-          PLUMB_CARRY_CHANNEL: ${{ needs.resolve.outputs.channel }}
-          PLUMB_CARRY_COMMIT: ${{ needs.resolve.outputs.commit }}
-          PLUMB_CARRY_VERSION: ${{ needs.resolve.outputs.version }}
-          PLUMB_CARRY_PUBLICATION: ${{ needs.resolve.outputs.publication }}
-          PLUMB_CARRY_PUBLICATION_MISSING: ${{ needs.resolve.outputs.publication_missing }}
-        run: |
-          printf 'channel=%s\n' "$PLUMB_CARRY_CHANNEL" >> "$GITHUB_OUTPUT"
-          printf 'commit=%s\n' "$PLUMB_CARRY_COMMIT" >> "$GITHUB_OUTPUT"
-          printf 'version=%s\n' "$PLUMB_CARRY_VERSION" >> "$GITHUB_OUTPUT"
-          printf 'publication=%s\n' "$PLUMB_CARRY_PUBLICATION" >> "$GITHUB_OUTPUT"
-          printf 'publication_missing=%s\n' "$PLUMB_CARRY_PUBLICATION_MISSING" >> "$GITHUB_OUTPUT"
-
   publication:
-    needs: publish_plan
-    if: needs.publish_plan.outputs.publication_missing == 'true'
+    needs: [resolve, publish_plan]
+    if: always() && needs.resolve.result == 'success' && ((needs.resolve.outputs.publication_ready == 'true' && needs.resolve.outputs.publication_missing == 'true') || (needs.publish_plan.result == 'success' && needs.publish_plan.outputs.publication_missing == 'true'))
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.publish_plan.outputs.publication) }}
+      matrix: ${{ fromJSON(needs.publish_plan.outputs.publication || needs.resolve.outputs.publication) }}
     runs-on: ${{ matrix.runner }}
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
@@ -222,10 +200,10 @@ jobs:
       DOCKER_HOST: tcp://172.17.0.1:2375
       PLUMB_RELEASE_ROOT: .
       PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
-      PLUMB_RELEASE_CHANNEL: ${{ needs.publish_plan.outputs.channel }}
-      PLUMB_RELEASE_VERSION: ${{ needs.publish_plan.outputs.version }}
-      PLUMB_RELEASE_COMMIT: ${{ needs.publish_plan.outputs.commit }}
-      PLUMB_RELEASE_ARTIFACTS: dist/${{ needs.publish_plan.outputs.version }}
+      PLUMB_RELEASE_CHANNEL: ${{ needs.publish_plan.outputs.channel || needs.resolve.outputs.channel }}
+      PLUMB_RELEASE_VERSION: ${{ needs.publish_plan.outputs.version || needs.resolve.outputs.version }}
+      PLUMB_RELEASE_COMMIT: ${{ needs.publish_plan.outputs.commit || needs.resolve.outputs.commit }}
+      PLUMB_RELEASE_ARTIFACTS: dist/${{ needs.publish_plan.outputs.version || needs.resolve.outputs.version }}
       PLUMB_RELEASE_OUTPUT: .plumb-release/capsule
       PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
       PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
@@ -244,7 +222,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
           repository: ${{ inputs.repository }}
-          ref: ${{ needs.publish_plan.outputs.commit }}
+          ref: ${{ needs.publish_plan.outputs.commit || needs.resolve.outputs.commit }}
           token: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
 
       - uses: actions/checkout@v6
@@ -261,7 +239,7 @@ jobs:
         if: matrix.control != 'reuse'
         shell: bash
         env:
-          PLUMB_ATOM_SOURCE: ${{ needs.publish_plan.outputs.atom }}
+          PLUMB_ATOM_SOURCE: ${{ needs.resolve.outputs.atom }}
         run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact
 
       - name: Fetch the exact release marker
