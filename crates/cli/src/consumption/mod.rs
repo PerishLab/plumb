@@ -9,6 +9,7 @@ pub fn prepare(command: &Command) -> Result<(), String> {
         Command::Depot { .. }
             | Command::Configuration { .. }
             | Command::Release { .. }
+            | Command::Ship { .. }
             | Command::Version { .. }
     ) {
         return Ok(());
