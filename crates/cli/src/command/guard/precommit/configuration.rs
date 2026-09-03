@@ -6,11 +6,13 @@ use std::path::{Path, PathBuf};
 pub(super) struct Seat {
     temporary: tempfile::TempDir,
     manifest: plumb::guard::Configuration,
+    transaction: bool,
 }
 
 impl Seat {
     pub fn new(source: &Path, staged: &Path, target: &str) -> Result<Self, String> {
         let context = Git(source).context(target)?;
+        let transaction = context == Context::Line;
         let spec = Spec::read(&staged.join("plumb.toml"))?;
         if spec.product != "plumb" {
             return Err("only Plumb may bootstrap release-line guard configuration".into());
@@ -62,6 +64,7 @@ impl Seat {
         Ok(Self {
             temporary,
             manifest,
+            transaction,
         })
     }
 
@@ -71,6 +74,10 @@ impl Seat {
 
     pub fn path(&self) -> &Path {
         self.temporary.path()
+    }
+
+    pub fn transaction(&self) -> bool {
+        self.transaction
     }
 }
 

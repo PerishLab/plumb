@@ -65,6 +65,10 @@ pub fn rules() -> Result<&'static Rules, String> {
     rules::held()
 }
 
+pub fn guard(root: &Path, running: &str) -> Result<(), String> {
+    rules::bind(root, running)
+}
+
 impl Seat {
     pub fn open() -> Result<Self, String> {
         Self::at(&root(&PathBuf::new())?)
