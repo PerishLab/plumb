@@ -85,6 +85,7 @@ jobs:
 
   workload:
     needs: resolve
+    if: needs.resolve.outputs.workload_missing == 'true'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.resolve.outputs.workload) }}
@@ -144,7 +145,7 @@ jobs:
 
   publish_plan:
     needs: [resolve, workload]
-    if: always() && needs.resolve.result == 'success' && needs.workload.result == 'success'
+    if: always() && needs.resolve.result == 'success' && (needs.workload.result == 'success' || needs.workload.result == 'skipped')
     runs-on: docker
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
@@ -210,6 +211,7 @@ jobs:
 
   publication:
     needs: publish_plan
+    if: needs.publish_plan.outputs.publication_missing == 'true'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.publish_plan.outputs.publication) }}
