@@ -4,7 +4,6 @@ use super::plan;
 use plumb::forgejo::{Client, Pull, Remote, Strategy, git};
 use serde_json::Value;
 use std::path::Path;
-use std::time::Instant;
 
 struct Published {
     version: String,
@@ -109,10 +108,7 @@ fn joined(course: &mut Course, client: &Client, held: Join<'_>) -> Result<(), St
                     ),
                     || Ok(()),
                 )?;
-                course.step(
-                    "await guard on the topology-only merge, then fast-forward that pull",
-                    || Ok(()),
-                )?;
+                course.step("fast-forward the topology-only pull", || Ok(()))?;
                 return Ok(());
             }
             let head = head.ok_or_else(|| "the settlement made no topology commit".to_string())?;
@@ -133,23 +129,16 @@ fn joined(course: &mut Course, client: &Client, held: Join<'_>) -> Result<(), St
         }
     };
     if course.dry() {
-        course.step(
-            "await guard on the existing topology-only merge, then fast-forward that pull",
-            || Ok(()),
-        )?;
+        course.step("fast-forward the existing topology-only pull", || Ok(()))?;
         return Ok(());
     }
     let said = match &pull {
-        Some(pull) => format!(
-            "await guard on {head}, then fast-forward pull #{}",
-            pull.number
-        ),
-        None => format!("await guard on {head}, then fast-forward that pull"),
+        Some(pull) => format!("fast-forward topology-only pull #{} at {head}", pull.number),
+        None => format!("fast-forward the topology-only pull at {head}"),
     };
     course
         .step(said, || {
             let pull = pull.ok_or_else(|| "the settlement left no pull".to_string())?;
-            guard(client, pull.number, &head)?;
             client.settle(pull.number, &head, Strategy::Forward)
         })
         .map(|_| ())
@@ -176,10 +165,7 @@ fn resume(
             );
             let head = course.step(made, || project(held, projection))?;
             if course.dry() {
-                course.step(
-                    "await guard on the retargeted topology-only merge, then fast-forward that pull",
-                    || Ok(()),
-                )?;
+                course.step("fast-forward the retargeted topology-only pull", || Ok(()))?;
                 return Ok((None, pull));
             }
             let head = head.ok_or_else(|| {
@@ -205,30 +191,6 @@ fn settled(root: &Path, published: &Published) -> Result<bool, String> {
         Err(error) if error.contains("is not an ancestor") => Ok(false),
         Err(error) => Err(error),
     }
-}
-
-fn guard(client: &Client, pull: u64, commit: &str) -> Result<(), String> {
-    let harness = plumb::forgejo::harness()?;
-    let deadline = Instant::now() + harness.guard.timeout.duration();
-    while Instant::now() < deadline {
-        let state = client.context(commit, "guard / guard (pull_request)")?;
-        if state.count == 0 {
-            std::thread::sleep(harness.guard.register.duration());
-        } else if state.state == "success" {
-            return Ok(());
-        } else if state.state == "pending" {
-            std::thread::sleep(harness.guard.pending.duration());
-        } else {
-            return Err(format!(
-                "rejoin guard {} on {commit}; PR #{pull} left open",
-                state.state
-            ));
-        }
-    }
-    Err(format!(
-        "rejoin guard still pending on {commit} after {}s; PR #{pull} left open",
-        harness.guard.timeout.seconds()
-    ))
 }
 
 fn pointer(root: &Path, version: &str) -> Result<Published, String> {

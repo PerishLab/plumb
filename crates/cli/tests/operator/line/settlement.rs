@@ -133,7 +133,7 @@ esac
 fn retains() {
     let fixture = tempfile::tempdir().expect("fixture");
     let settled = fixture.path().join("settled");
-    let (forge, forge_calls) = serve(Court::Rejoin(settled.clone()), 8);
+    let (forge, forge_calls) = serve(Court::Rejoin(settled.clone()), 7);
     seed(fixture.path());
     let calls = fixture.path().join("calls");
     let path = format!(
@@ -172,9 +172,15 @@ fn retains() {
         calls.contains(
             "git push --force-with-lease origin dddddddddddddddddddddddddddddddddddddddd:refs/heads/rejoin/v1.2.0"
         ),
-        "the guarded pull must stand on the topology-only commit: {calls}"
+        "the pull must stand on the verified topology-only commit: {calls}"
     );
     let held = forge_calls.lock().expect("forge calls");
+    assert!(
+        !held
+            .iter()
+            .any(|call| call.contains("/commits/") && call.contains("/status")),
+        "a topology-only rejoin has no content guard to await: {held:?}"
+    );
     let merge = held
         .iter()
         .find(|line| line.contains("/pulls/12/merge"))
@@ -189,7 +195,7 @@ fn resumes() {
     let settled = fixture.path().join("settled");
     let resume = fixture.path().join("resume");
     std::fs::write(&resume, "open pull already proved\n").expect("resume marker");
-    let (forge, held) = serve(Court::Rejoin(settled.clone()), 10);
+    let (forge, held) = serve(Court::Rejoin(settled.clone()), 9);
     seed(fixture.path());
     let calls = fixture.path().join("calls");
     let path = format!(
