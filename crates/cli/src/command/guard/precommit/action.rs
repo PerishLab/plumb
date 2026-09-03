@@ -34,8 +34,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
     let mismatched = target.as_deref().is_some_and(|target| {
         plumb::depot::rules().ok().and_then(|held| held.version()) != Some(target)
     });
-    let rig = plumb::rig::Rig::resolve(None).map_err(|error| error.to_string())?;
-    let product = crate::shape::product::guard(root, &rig.rules.source)?;
+    let product = crate::shape::product::guard(root, "")?;
     let mut index = mismatched
         .then(|| isolate(root, &tree, product.profile.as_ref()))
         .transpose()?;
