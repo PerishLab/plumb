@@ -180,7 +180,7 @@ impl Seat {
         if let Some(identity) = binding::resolve(message.trim(), &self.root, marker)? {
             return Ok(identity);
         }
-        let spec = Spec::resolve(&self.root)?;
+        let spec = Spec::controller(&self.root)?;
         let product = spec.product.clone();
         let authority = spec.authority.clone();
         let wanted = format!("{product} {marker}");

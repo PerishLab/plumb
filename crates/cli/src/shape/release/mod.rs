@@ -58,6 +58,17 @@ struct Raw {
     depot: Option<Depot>,
 }
 impl Spec {
+    pub(crate) fn controller(root: &Path) -> Result<Self, String> {
+        let manifest = root.join("plumb.toml");
+        if manifest.is_file() {
+            let spec = Self::read(&manifest)?;
+            if spec.product == "plumb" {
+                return Ok(spec);
+            }
+        }
+        Self::resolve(root)
+    }
+
     pub fn resolve(root: &Path) -> Result<Self, String> {
         let Some(target) = super::product::governance(root)? else {
             return Self::read(&root.join("plumb.toml"));
