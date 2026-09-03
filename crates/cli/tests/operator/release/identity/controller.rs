@@ -31,6 +31,7 @@ fn local() {
     ]));
     let output = fixture
         .command()
+        .current_dir(fixture.root)
         .env("PLUMB_HOME", blind.path())
         .args([
             "release",
@@ -41,8 +42,35 @@ fn local() {
         ])
         .output()
         .expect("release stamp");
-    assert!(!output.status.success());
-    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(String::from_utf8_lossy(&output.stdout).contains("git tag -a v1.2.0-beta.1"));
+
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "tag",
+        "-a",
+        "v1.2.0-beta.1",
+        "-m",
+        "plumb v1.2.0-beta.1",
+    ]));
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "push",
+        "-q",
+        "origin",
+        "refs/tags/v1.2.0-beta.1",
+    ]));
+    let verified = fixture
+        .command()
+        .current_dir(fixture.root)
+        .env("PLUMB_HOME", blind.path())
+        .args(["release", "verify", "--marker", "v1.2.0-beta.1", "--held"])
+        .output()
+        .expect("release verify");
+    assert!(!verified.status.success());
+    let error = String::from_utf8_lossy(&verified.stderr);
     assert!(!error.contains("plumb depot seat is unreadable"), "{error}");
-    assert!(error.contains("cannot resolve release head"), "{error}");
+    assert!(error.contains("has no valid guard proof"), "{error}");
 }

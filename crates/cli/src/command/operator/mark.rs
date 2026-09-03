@@ -17,7 +17,7 @@ pub(super) fn stamp(raw: &str, dry: bool) -> Result<String, String> {
             .protected(&name, "frozen")
             .map_err(|error| format!("stable marker {held} requires a frozen {name}: {error}"))?;
     }
-    let spec = controller(&root)?;
+    let spec = crate::shape::release::Spec::controller(&root)?;
     let annotation = crate::command::release::annotation(&spec, &version)?;
     let seat = point(&root);
     let head = seat.head(&name)?;
@@ -51,17 +51,6 @@ fn named(raw: &str) -> String {
 
 fn line(version: &str) -> String {
     version.split('-').next().unwrap_or(version).to_string()
-}
-
-fn controller(root: &Path) -> Result<crate::shape::release::Spec, String> {
-    let manifest = root.join("plumb.toml");
-    if manifest.is_file() {
-        let spec = crate::shape::release::Spec::read(&manifest)?;
-        if spec.product == "plumb" {
-            return Ok(spec);
-        }
-    }
-    crate::shape::release::Spec::resolve(root)
 }
 
 pub struct Point<'a> {
