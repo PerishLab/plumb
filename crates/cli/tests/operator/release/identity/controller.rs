@@ -42,12 +42,10 @@ fn local() {
         ])
         .output()
         .expect("release stamp");
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(String::from_utf8_lossy(&output.stdout).contains("git tag -a v1.2.0-beta.1"));
+    assert!(!output.status.success());
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(!error.contains("plumb depot seat is unreadable"), "{error}");
+    assert!(error.contains("unproved tree"), "{error}");
 
     run(Command::new("git").arg("-C").arg(fixture.root).args([
         "tag",
