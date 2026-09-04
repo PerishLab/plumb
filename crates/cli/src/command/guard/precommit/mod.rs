@@ -28,7 +28,8 @@ pub struct Input {
 pub fn run(input: Input) -> i32 {
     if let Some(message) = &input.attach {
         return plain(
-            plumb::guard::attach(&input.root, message)
+            action::prove(&input.root)
+                .and_then(|_| plumb::guard::attach(&input.root, message))
                 .map(|proof| format!("attached guard proof {} for {}", proof.digest, proof.tree)),
         );
     }
