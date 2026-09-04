@@ -104,8 +104,22 @@ fn matrix() {
     let handoff = "PLUMB_ATOM_HANDOFF: ${{ needs.resolve.outputs.atom_handoff }}";
     assert_eq!(
         held.matches(handoff).count(),
-        4,
-        "downstream handoff wiring"
+        2,
+        "Linux-only publication handoff wiring"
+    );
+    assert!(held.contains(
+        "PLUMB_ATOM_HANDOFF: ${{ runner.os == 'Linux' && needs.resolve.outputs.atom_handoff || '' }}"
+    ));
+    let windows = held
+        .split_once("Install the exact atom Plumb on Windows")
+        .unwrap()
+        .1;
+    assert!(
+        !windows
+            .split_once("Add the requested Rust target")
+            .unwrap()
+            .0
+            .contains(handoff)
     );
     let resolve = held.split_once("  workload:\n").unwrap().0;
     assert!(!resolve.contains(handoff), "resolve cannot consume itself");
