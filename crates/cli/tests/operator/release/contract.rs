@@ -57,6 +57,11 @@ fn versioned() {
     let validation = text("crates/cli/src/command/release/truth/depot.rs");
     assert!(validation.contains(".env_remove(\"PLUMB_HOME\")"));
     assert!(validation.contains(".env(\"PLUMB_GUARD_DEPOT\", &seat)"));
+
+    let configuration = text("crates/cli/src/command/depot/configuration.rs");
+    assert!(configuration.contains("release.validator(&marker.version, true)"));
+    assert!(!configuration.contains("release.validator(&marker.marker, true)"));
+    assert!(configuration.contains("validate_depot(spec, &binding, &plan, recovery)"));
 }
 
 #[test]

@@ -196,6 +196,40 @@ fn configuration() {
         .join("depot/channels/beta/configurations/versions/v1.2.0-beta.2");
     assert!(base.join("latest.json").is_file());
     assert!(!fixture.root.join("depot/v2").exists());
+
+    stamp(fixture.root, "v1.2.0-beta.3", &commit, true);
+    let recovery = fixture.root.join("validator/probe");
+    let output = fixture
+        .command()
+        .current_dir(fixture.root)
+        .env("PLUMB_DEPOT_AUTHORITY_ACCESS", "access")
+        .env("PLUMB_DEPOT_AUTHORITY_SECRET", "secret")
+        .env("PLUMB_DEPOT_AUTHORITY_BUCKET", "depot")
+        .env("PLUMB_DEPOT_AUTHORITY_ENDPOINT", "https://s3.test")
+        .args([
+            "depot",
+            "configuration",
+            ".",
+            "--marker",
+            "v1.2.0-beta.3",
+            "--from",
+            source.to_str().expect("source"),
+            "--recovery-validator",
+            recovery.to_str().expect("recovery validator"),
+        ])
+        .output()
+        .expect("configuration recovery publish");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        fixture
+            .root
+            .join("depot/channels/beta/configurations/versions/v1.2.0-beta.3/latest.json")
+            .is_file()
+    );
 }
 
 fn validator(root: &std::path::Path) {
@@ -204,7 +238,7 @@ fn validator(root: &std::path::Path) {
     let binary = stage.join("probe");
     std::fs::write(
         &binary,
-        "#!/bin/sh\n[ \"$1\" = doctor ] && [ -f \"$PROBE_DEPOT_SNAPSHOT/manifest.toml\" ] && [ -f \"$PROBE_DEPOT_SNAPSHOT/rules/probe.toml\" ]\n",
+        "#!/bin/sh\n[ \"$1\" = --version ] && { echo 'probe v1.2.0-beta.1'; exit; }\n[ \"$1\" = doctor ] && [ -f \"$PROBE_DEPOT_SNAPSHOT/manifest.toml\" ] && [ -f \"$PROBE_DEPOT_SNAPSHOT/rules/probe.toml\" ]\n",
     )
     .expect("validator");
     std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755)).expect("mode");

@@ -7,7 +7,13 @@ use std::process::Output;
 pub struct Tree<'a>(pub &'a Path);
 
 impl Tree<'_> {
-    pub fn publish(&self, raw: &str, from: &str, dry: bool) -> Result<String, String> {
+    pub fn publish(
+        &self,
+        raw: &str,
+        from: &str,
+        recovery: Option<&Path>,
+        dry: bool,
+    ) -> Result<String, String> {
         let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
         let marker = crate::command::release::ReleaseMarker::bound(self.0, raw)?;
         let spec = marker.spec();
@@ -24,7 +30,7 @@ impl Tree<'_> {
         let depot = spec.derivative(plumb::depot::v3::Kind::Configuration)?;
         let product = crate::command::release::Product::new(spec);
         let release = product.depot();
-        let binding = release.validator(&marker.marker, true)?;
+        let binding = release.validator(&marker.version, true)?;
         let bundle = plumb::depot::v3::Bundle::read(
             Path::new(from),
             plumb::depot::v3::Identity {
@@ -47,7 +53,7 @@ impl Tree<'_> {
                 commit: marker.commit.clone(),
             },
         )?;
-        crate::command::release::validate_depot(spec, &binding, &plan, None)?;
+        crate::command::release::validate_depot(spec, &binding, &plan, recovery)?;
         let held = (|| {
             if dry {
                 String::from_utf8(bundle.manifest.encode()?)
