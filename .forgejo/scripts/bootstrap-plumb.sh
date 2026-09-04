@@ -78,18 +78,13 @@ atom_plan() {
 }
 keys=
 source=${PLUMB_ATOM_SOURCE:-}
-fragments=${PLUMB_ATOM_0:-}${PLUMB_ATOM_1:-}${PLUMB_ATOM_2:-}${PLUMB_ATOM_3:-}
+handoff=${PLUMB_ATOM_HANDOFF:-}
 inventory_base=${PLUMB_WORKFLOW_INVENTORY_URL%/}
 inventory_base=${inventory_base%/inventory.json}
-if [ -z "$source" ] && [ -n "$fragments" ]; then
-  for fragment in "${PLUMB_ATOM_0:-}" "${PLUMB_ATOM_1:-}" "${PLUMB_ATOM_2:-}" "${PLUMB_ATOM_3:-}"; do
-    test "${#fragment}" -eq 16
-    case "$fragment" in *[!0-9a-fA-F]*) printf 'invalid Plumb atom fragment\n' >&2; exit 2 ;; esac
-  done
-  digest=$fragments
-  test "${#digest}" -eq 64
-  case "$digest" in *[!0-9a-fA-F]*) printf 'invalid Plumb atom digest\n' >&2; exit 2 ;; esac
-  source="$inventory_base/workloads/$digest.tgz"
+if [ -z "$source" ] && [ -n "$handoff" ]; then
+  test "$(printf '%s' "$handoff" | jq -r '.type')" = workload
+  source=$(printf '%s' "$handoff" | jq -r '.source')
+  test -n "$source"
 fi
 supports_workload=
 if "$tool" workflow plan --help 2>&1 | grep -q -- '--workload'; then

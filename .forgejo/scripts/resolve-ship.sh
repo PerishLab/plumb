@@ -11,10 +11,7 @@ if [ "$mode" = ready ]; then
   test "$(printf '%s' "$graph" | jq -r '.publication_ready')" = true
 fi
 {
-  echo "atom_0=$(printf '%s' "$digest" | cut -c 1-16)"
-  echo "atom_1=$(printf '%s' "$digest" | cut -c 17-32)"
-  echo "atom_2=$(printf '%s' "$digest" | cut -c 33-48)"
-  echo "atom_3=$(printf '%s' "$digest" | cut -c 49-64)"
+  echo "atom_handoff=$(jq -cn --arg source "$source" '{type:"workload",source:$source}')"
   echo "channel=$(printf '%s' "$graph" | jq -r '.channel')"
   echo "commit=$(printf '%s' "$graph" | jq -r '.commit')"
   echo "version=$(printf '%s' "$graph" | jq -r '.version')"
