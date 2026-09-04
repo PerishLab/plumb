@@ -28,9 +28,6 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         return Err("guard depot binding is internal to one isolated guard action".into());
     }
     let tree = tree::git(root, &["write-tree"], "read staged tree")?;
-    if let Ok(proof) = plumb::guard::staged(root, &tree) {
-        return Ok(proof);
-    }
     let target = super::configuration::target(root)?;
     let mismatched = match target.as_deref() {
         Some(target) => {
@@ -43,6 +40,9 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         }
         None => false,
     };
+    if !mismatched && let Ok(proof) = plumb::guard::staged(root, &tree) {
+        return Ok(proof);
+    }
     let product = crate::shape::product::guard(root, "")?;
     let mut index = mismatched
         .then(|| isolate(root, &tree, product.profile.as_ref()))
