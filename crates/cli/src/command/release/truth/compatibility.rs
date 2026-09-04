@@ -35,7 +35,37 @@ pub(super) fn related(target: &str, validator: &str) -> Result<(), String> {
     Ok(())
 }
 
+pub(super) fn recovery(
+    binding: &Binding,
+    executable: &Path,
+    binary: &str,
+) -> Result<String, String> {
+    if !executable.is_absolute() || !executable.is_file() {
+        return Err("guard recovery validator must be an absolute executable path".into());
+    }
+    let output = plumb::config::detached(executable)
+        .arg("--version")
+        .output()
+        .map_err(|error| format!("cannot identify guard recovery validator: {error}"))?;
+    let identity = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let expected = format!("{binary} {}", binding.release.version);
+    if !output.status.success() || identity != expected {
+        return Err(format!(
+            "guard recovery validator identifies as {identity:?}, expected {expected:?}"
+        ));
+    }
+    let (artifact, _) = super::record::digest(executable)?;
+    eprintln!(
+        "guard recovery validator {} ({artifact})",
+        executable.display()
+    );
+    Ok(artifact)
+}
+
 fn version(raw: &str, label: &str) -> Result<semver::Version, String> {
     semver::Version::parse(raw.trim_start_matches('v'))
         .map_err(|error| format!("cannot parse {label} {raw}: {error}"))
 }
+use std::path::Path;
+
+use super::depot::Binding;

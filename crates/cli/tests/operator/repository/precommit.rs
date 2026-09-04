@@ -150,11 +150,18 @@ fn governed() {
     let path = format!("profiles/{digest}.toml");
     let depot = support::depot(&[("rules/products.toml", &catalog), (&path, &profile)]);
     super::world::hooks(root);
+    let binary = std::path::Path::new(env!("CARGO_BIN_EXE_plumb"));
+    let path = format!(
+        "{}:{}",
+        binary.parent().expect("Plumb binary directory").display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
     let run = || {
         Command::new(env!("CARGO_BIN_EXE_plumb"))
             .args(["guard", "."])
             .current_dir(root)
             .env("PLUMB_HOME", depot.path())
+            .env("PATH", &path)
             .output()
             .expect("guard")
     };

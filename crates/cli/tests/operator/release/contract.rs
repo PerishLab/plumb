@@ -35,7 +35,8 @@ fn versioned() {
     assert!(workflow.contains("configuration:"), "{workflow}");
     assert!(workflow.contains("inputs.configuration"), "{workflow}");
     let resolver = text("crates/cli/src/command/ship/transport/resolve.rs");
-    assert_eq!(resolver.matches("workload: Some(marker.base())").count(), 1);
+    assert!(resolver.contains("workload: Some(&marker.version)"));
+    assert!(!resolver.contains("workload: Some(marker.base())"));
     assert_eq!(
         resolver
             .matches("workload: Some(self.marker.base())")
@@ -43,6 +44,19 @@ fn versioned() {
         1
     );
     assert!(resolver.contains("then_some(self.marker.base())"));
+
+    let bootstrap = text("crates/cli/src/command/guard/precommit/configuration.rs");
+    assert!(
+        bootstrap.contains("PLUMB_GUARD_RECOVERY_VALIDATOR"),
+        "Plumb must retain a checked recovery path when its released validator is broken"
+    );
+    let recovery = text("crates/cli/src/command/release/truth/compatibility.rs");
+    assert!(recovery.contains("!executable.is_absolute()"));
+    assert!(recovery.contains("binding.release.version"));
+    assert!(recovery.contains("record::digest(executable)"));
+    let validation = text("crates/cli/src/command/release/truth/depot.rs");
+    assert!(validation.contains(".env_remove(\"PLUMB_HOME\")"));
+    assert!(validation.contains(".env(\"PLUMB_GUARD_DEPOT\", &seat)"));
 }
 
 #[test]

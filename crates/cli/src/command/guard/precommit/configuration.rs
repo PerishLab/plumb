@@ -35,7 +35,9 @@ impl Seat {
                 commit: Git(staged).commit()?,
             },
         )?;
-        let validated = crate::command::release::validate_depot(&spec, &binding, &plan)?;
+        let recovery = plumb::config::value("PLUMB_GUARD_RECOVERY_VALIDATOR").map(PathBuf::from);
+        let validated =
+            crate::command::release::validate_depot(&spec, &binding, &plan, recovery.as_deref())?;
         let manifest = plumb::guard::Configuration::new(
             target.to_string(),
             plumb::guard::Validator {

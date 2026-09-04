@@ -47,7 +47,7 @@ impl Tree<'_> {
                 commit: marker.commit.clone(),
             },
         )?;
-        crate::command::release::validate_depot(spec, &binding, &plan)?;
+        crate::command::release::validate_depot(spec, &binding, &plan, None)?;
         let held = (|| {
             if dry {
                 String::from_utf8(bundle.manifest.encode()?)

@@ -75,10 +75,17 @@ pub(in crate::command) struct Validated {
     pub artifact: String,
 }
 
+struct Validation<'a> {
+    spec: &'a Spec,
+    binding: &'a Binding,
+    plan: &'a Batch,
+}
+
 pub(in crate::command) fn validate(
     spec: &Spec,
     binding: &Binding,
     plan: &Batch,
+    recovery: Option<&Path>,
 ) -> Result<Validated, String> {
     let depot = spec
         .depot
@@ -95,34 +102,54 @@ pub(in crate::command) fn validate(
             binding.release.version, target.key
         )
     })?;
+    let validation = Validation {
+        spec,
+        binding,
+        plan,
+    };
+    if let Some(executable) = recovery {
+        let artifact = super::compatibility::recovery(binding, executable, binary)?;
+        return validation.run(executable, artifact);
+    }
     let archive = super::verify::fetch(artifact)?;
     let result = (|| {
         let unpacked = tempfile::tempdir()
             .map_err(|error| format!("cannot stage the released validator: {error}"))?;
         unpack(&archive, unpacked.path(), target.format)?;
         let executable = locate(unpacked.path(), binary)?;
+        validation.run(&executable, artifact.sha256.clone())
+    })();
+    let _ = std::fs::remove_file(archive);
+    result
+}
 
+impl Validation<'_> {
+    fn run(&self, executable: &Path, artifact: String) -> Result<Validated, String> {
+        let depot = self
+            .spec
+            .depot
+            .as_ref()
+            .expect("validated depot declaration");
         let home = tempfile::tempdir()
             .map_err(|error| format!("cannot stage depot configuration: {error}"))?;
         let seat = home.path().join("depot");
         let snapshot = plumb::depot::v2::local(
             &seat,
-            &plan.manifest.release,
-            &plan.manifest.snapshot.timestamp,
+            &self.plan.manifest.release,
+            &self.plan.manifest.snapshot.timestamp,
         )?;
-        for (path, bytes) in &plan.bodies {
+        for (path, bytes) in &self.plan.bodies {
             write(&snapshot.join(path), bytes)?;
         }
-        let manifest = plan.manifest.encode()?;
+        let manifest = self.plan.manifest.encode()?;
         write(&snapshot.join(plumb::depot::v2::LEAF), manifest.as_bytes())?;
-        let pointer = plumb::depot::v2::Pointer::new(&plan.manifest, manifest.as_bytes())?;
+        let pointer = plumb::depot::v2::Pointer::new(&self.plan.manifest, manifest.as_bytes())?;
         write(
             &seat.join(plumb::depot::v2::POINTER),
             pointer.encode()?.as_bytes(),
         )?;
-        let source = super::tree::Seat::open(&spec.root, &binding.release.commit)?;
-
-        let mut validator = plumb::config::detached(&executable);
+        let source = super::tree::Seat::open(&self.spec.root, &self.binding.release.commit)?;
+        let mut validator = plumb::config::detached(executable);
         validator
             .args(depot.validator.iter().skip(1))
             .current_dir(source.path());
@@ -139,11 +166,15 @@ pub(in crate::command) fn validate(
             "ACTIVATED",
             "URL",
         ] {
-            validator.env_remove(format!("{}_RELEASE_{name}", spec.environment()));
+            validator.env_remove(format!("{}_RELEASE_{name}", self.spec.environment()));
         }
         let output = validator
-            .env("PLUMB_HOME", home.path())
-            .env(format!("{}_DEPOT_SNAPSHOT", spec.environment()), &snapshot)
+            .env_remove("PLUMB_HOME")
+            .env("PLUMB_GUARD_DEPOT", &seat)
+            .env(
+                format!("{}_DEPOT_SNAPSHOT", self.spec.environment()),
+                &snapshot,
+            )
             .output()
             .map_err(|error| {
                 format!(
@@ -153,19 +184,17 @@ pub(in crate::command) fn validate(
             })?;
         if output.status.success() {
             return Ok(Validated {
-                version: binding.release.version.clone(),
-                artifact: artifact.sha256.clone(),
+                version: self.binding.release.version.clone(),
+                artifact,
             });
         }
         Err(format!(
             "released {} validator refused the configuration:\n{}{}",
-            binding.release.version,
+            self.binding.release.version,
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
         ))
-    })();
-    let _ = std::fs::remove_file(archive);
-    result
+    }
 }
 
 fn native(spec: &Spec) -> Result<&crate::shape::release::Target, String> {
