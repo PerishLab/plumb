@@ -17,9 +17,6 @@ pub fn project(root: &Path, line: &str, version: &str, head: &str) -> Result<Str
 }
 
 pub(super) fn prove(root: &Path, line: &str, version: &str, head: &str) -> Result<String, String> {
-    if plumb::guard::current(root, head).is_ok() {
-        return Ok(head.to_string());
-    }
     let body = read(
         "read release proof",
         Command::new("git")
@@ -32,6 +29,9 @@ pub(super) fn prove(root: &Path, line: &str, version: &str, head: &str) -> Resul
         .lines()
         .any(|line| line.starts_with(plumb::guard::TRAILER))
     {
+        return Ok(head.to_string());
+    }
+    if plumb::guard::current(root, head).is_ok() {
         return Ok(head.to_string());
     }
     Tree::open(root, head)?.prove(line, version, head)

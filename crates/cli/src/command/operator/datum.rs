@@ -28,8 +28,8 @@ pub fn record(cut: Cut<'_>) -> Result<Record, String> {
     let datum = Datum::new(cut.version, dependency::answers(cut.root)?);
     let count = datum.answers.len();
     seat.reachable(cut.head)?;
-    if seat.settled(cut.head, cut.version) {
-        let head = super::version::prove(cut.root, cut.name, cut.version, cut.head)?;
+    let head = super::version::prove(cut.root, cut.name, cut.version, cut.head)?;
+    if seat.settled(&head, cut.version) {
         let report = if head == cut.head {
             format!(
                 "{} already stands on the release line",
@@ -41,8 +41,8 @@ pub fn record(cut: Cut<'_>) -> Result<Record, String> {
         return Ok(Record { head, report });
     }
     let object = seat.blob(&datum.encode()?)?;
-    let tree = seat.staged(cut.head, &object, cut.version)?;
-    let commit = seat.sealed(&tree, cut.head, cut.version)?;
+    let tree = seat.staged(&head, &object, cut.version)?;
+    let commit = seat.sealed(&tree, &head, cut.version)?;
     seat.push(&commit, cut.name)?;
     Ok(Record {
         head: commit,
