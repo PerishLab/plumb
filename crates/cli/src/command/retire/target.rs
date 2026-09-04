@@ -13,7 +13,7 @@ pub struct Target {
 
 impl Target {
     pub fn read(root: &Path) -> Result<Self, String> {
-        let spec = Spec::resolve(root)?;
+        let spec = Spec::controller(root)?;
         let retire = spec
             .retire
             .ok_or_else(|| "plumb.toml declares no release.retire seat".to_string())?;

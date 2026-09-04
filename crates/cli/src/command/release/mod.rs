@@ -169,7 +169,7 @@ pub(in crate::command) fn knowledge<'a>(
 }
 
 pub(super) fn authority(root: &Path) -> Result<String, String> {
-    Spec::resolve(root).map(|spec| spec.authority)
+    Spec::controller(root).map(|spec| spec.authority)
 }
 
 pub(super) fn inspect(url: &str) -> Result<String, String> {

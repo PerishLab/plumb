@@ -60,11 +60,11 @@ struct Raw {
 impl Spec {
     pub(crate) fn controller(root: &Path) -> Result<Self, String> {
         let manifest = root.join("plumb.toml");
-        if manifest.is_file() {
-            let spec = Self::read(&manifest)?;
-            if spec.product == "plumb" {
-                return Ok(spec);
-            }
+        if manifest.is_file()
+            && let Ok(spec) = Self::read(&manifest)
+            && spec.product == "plumb"
+        {
+            return Ok(spec);
         }
         Self::resolve(root)
     }

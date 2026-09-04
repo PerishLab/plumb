@@ -102,7 +102,7 @@ impl Model {
         let root = PathBuf::from(&input.target.root)
             .canonicalize()
             .map_err(|error| format!("cannot resolve {}: {error}", input.target.root))?;
-        let spec = crate::shape::release::Spec::resolve(&root)?;
+        let spec = crate::shape::release::Spec::controller(&root)?;
         let domain = spec
             .authority
             .strip_prefix("https://")

@@ -48,7 +48,7 @@ pub fn changelog(
     root: &Path,
     version: &str,
 ) -> Result<Option<plumb::depot::v3::Generation>, String> {
-    let spec = crate::shape::release::Spec::resolve(root)?;
+    let spec = crate::shape::release::Spec::controller(root)?;
     let depot = spec.derivative(plumb::depot::v3::Kind::Changelog)?;
     let channel = crate::command::release::channel(version)?;
     plumb::depot::v3::Generation::latest(plumb::depot::v3::Query {

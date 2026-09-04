@@ -4,7 +4,7 @@ use plumb::rig::Rig;
 
 pub(super) fn cargo(deed: super::Cargo) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let spec = crate::shape::release::Spec::resolve(&rig.release.root)?;
+    let spec = crate::shape::release::Spec::controller(&rig.release.root)?;
     let release = &rig.release;
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
     let attachment = adaptor::registry::registry(&spec);
@@ -19,7 +19,7 @@ pub(super) fn cargo(deed: super::Cargo) -> Result<String, String> {
 
 pub(super) fn oci(deed: super::Oci) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let spec = crate::shape::release::Spec::resolve(&rig.release.root)?;
+    let spec = crate::shape::release::Spec::controller(&rig.release.root)?;
     let release = &rig.release;
     let carrier = adaptor::image::image(&spec);
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
@@ -47,7 +47,7 @@ pub(super) fn oci(deed: super::Oci) -> Result<String, String> {
 
 pub(super) fn chart(deed: super::Chart) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let spec = crate::shape::release::Spec::resolve(&rig.release.root)?;
+    let spec = crate::shape::release::Spec::controller(&rig.release.root)?;
     let release = &rig.release;
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
     let carrier = adaptor::chart::chart(&spec);
@@ -66,7 +66,7 @@ pub(super) fn chart(deed: super::Chart) -> Result<String, String> {
 
 pub(super) fn npm(deed: super::Npm) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let spec = crate::shape::release::Spec::resolve(&rig.release.root)?;
+    let spec = crate::shape::release::Spec::controller(&rig.release.root)?;
     let release = &rig.release;
     let version = required("PLUMB_RELEASE_VERSION", &release.version)?;
     let carrier = adaptor::module::module(&spec);
