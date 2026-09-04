@@ -25,10 +25,10 @@ pub fn plan(version: &str) -> String {
 
 pub fn record(cut: Cut<'_>) -> Result<Record, String> {
     let seat = Seat(cut.root);
-    let datum = Datum::new(cut.version, dependency::answers(cut.root)?);
-    let count = datum.answers.len();
     seat.reachable(cut.head)?;
     let head = super::version::prove(cut.root, cut.name, cut.version, cut.head)?;
+    let datum = Datum::new(cut.version, dependency::answers(cut.root)?);
+    let count = datum.answers.len();
     if seat.settled(&head, cut.version) {
         let report = if head == cut.head {
             format!(
