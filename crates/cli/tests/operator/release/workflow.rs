@@ -112,8 +112,8 @@ fn matrix() {
     for binding in [
         "needs.resolve.outputs.publication_missing == 'true'",
         "PLUMB_RELEASE_VERSION: ${{ needs.publish_plan.outputs.version }}",
-        "PLUMB_ATOM_TOKEN: ${{ needs.resolve.outputs.atom_token }}",
-        "atom_token: ${{ steps.plan.outputs.atom_token }}",
+        "PLUMB_ATOM_0: ${{ needs.resolve.outputs.atom_0 }}",
+        "atom_3: ${{ steps.plan.outputs.atom_3 }}",
         "PLUMB_RELEASE_COMMIT: ${{ needs.publish_plan.outputs.commit }}",
         "if: needs.resolve.outputs.workload_missing == 'true'",
         "needs.workload.result == 'skipped'",
@@ -125,7 +125,7 @@ fn matrix() {
         resolution().contains("publication_ready=$(printf '%s' \"$graph\""),
         "resolve must expose whether its publication plan is already final"
     );
-    assert!(resolution().contains("atom_token=sha256-${digest%${digest#????????????????????????????????}}-${digest#????????????????????????????????}"));
+    assert!(resolution().contains("atom_3=$(printf '%s' \"$digest\" | cut -c 49-64)"));
     let graph = resolver();
     assert!(graph.contains("action == \"ship/oci\""), "{graph}");
     assert!(
@@ -223,8 +223,8 @@ fn depot() {
         "workflow record ship/atom",
         "workflow plan --help",
         "PLUMB_ATOM_SOURCE",
-        "PLUMB_ATOM_TOKEN",
-        "sha256-????????????????????????????????-????????????????????????????????)",
+        "PLUMB_ATOM_0",
+        "invalid Plumb atom fragment",
         "inventory_base=${inventory_base%/inventory.json}",
         "--retry 30",
         "confirmed exact Plumb atom visibility",
@@ -245,8 +245,8 @@ fn depot() {
         "--world \"compiler=$compiler\"",
         "workflow plan --help",
         "PLUMB_ATOM_SOURCE",
-        "PLUMB_ATOM_TOKEN",
-        "$Matches[1] + $Matches[2]",
+        "PLUMB_ATOM_0",
+        "$fragments -join ''",
         "-replace '/inventory\\.json$', ''",
         "attempt -le 30",
         "confirmed exact Plumb atom visibility",
