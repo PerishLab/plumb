@@ -37,23 +37,14 @@ fn resolution() -> String {
 fn matrix() {
     let held = canonical();
     assert!(held.contains("workflow_dispatch:"), "{held}");
-    assert!(
-        held.contains("PLUMB_BUILD_VERSION: ${{ inputs.plumb }}"),
-        "{held}"
-    );
-    assert!(
-        held.contains("PLUMB_BUILD_COMMIT: ${{ github.sha }}"),
-        "{held}"
-    );
+    assert!(held.contains("PLUMB_BUILD_VERSION: ${{ inputs.plumb }}"));
+    assert!(held.contains("PLUMB_BUILD_COMMIT: ${{ github.sha }}"));
     assert!(held.contains(".forgejo/scripts/resolve-ship.sh"), "{held}");
     assert!(
         held.contains(".forgejo/scripts/fetch-marker.sh"),
         "marker checkout must use the bounded canonical transport"
     );
-    assert!(
-        held.contains("fromJSON(needs.resolve.outputs.workload)"),
-        "{held}"
-    );
+    assert!(held.contains("fromJSON(needs.resolve.outputs.workload)"));
     assert!(
         held.contains("fromJSON(needs.publish_plan.outputs.publication)"),
         "{held}"
@@ -112,7 +103,6 @@ fn matrix() {
     for binding in [
         "needs.resolve.outputs.publication_missing == 'true'",
         "PLUMB_RELEASE_VERSION: ${{ needs.publish_plan.outputs.version }}",
-        "PLUMB_ATOM_HANDOFF: ${{ needs.resolve.outputs.atom_handoff }}",
         "atom_handoff: ${{ steps.plan.outputs.atom_handoff }}",
         "PLUMB_RELEASE_COMMIT: ${{ needs.publish_plan.outputs.commit }}",
         "if: needs.resolve.outputs.workload_missing == 'true'",
@@ -121,6 +111,14 @@ fn matrix() {
     ] {
         assert!(held.contains(binding), "ship carry omits {binding}");
     }
+    let handoff = "PLUMB_ATOM_HANDOFF: ${{ needs.resolve.outputs.atom_handoff }}";
+    assert_eq!(
+        held.matches(handoff).count(),
+        4,
+        "downstream handoff wiring"
+    );
+    let resolve = held.split_once("  workload:\n").unwrap().0;
+    assert!(!resolve.contains(handoff), "resolve cannot consume itself");
     assert!(
         resolution().contains("publication_ready=$(printf '%s' \"$graph\""),
         "resolve must expose whether its publication plan is already final"
