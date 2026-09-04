@@ -79,10 +79,12 @@ atom_plan() {
 keys=
 source=${PLUMB_ATOM_SOURCE:-}
 digest=${PLUMB_ATOM_DIGEST:-}
+inventory_base=${PLUMB_WORKFLOW_INVENTORY_URL%/}
+inventory_base=${inventory_base%/inventory.json}
 if [ -z "$source" ] && [ -n "$digest" ]; then
   test "${#digest}" -eq 64
   case "$digest" in *[!0-9a-fA-F]*) printf 'invalid Plumb atom digest\n' >&2; exit 2 ;; esac
-  source="${PLUMB_WORKFLOW_INVENTORY_URL%/}/workloads/$digest.tgz"
+  source="$inventory_base/workloads/$digest.tgz"
 fi
 supports_workload=
 if "$tool" workflow plan --help 2>&1 | grep -q -- '--workload'; then
@@ -136,7 +138,7 @@ if [ -z "$source" ] && [ -n "$keys" ]; then
     printf 'accepted exact Plumb atom inventory winner %s for %s\n' "$winner" "$host"
   else
     workload_digest=$(sha256sum "$archive" | cut -d' ' -f1)
-    source="${PLUMB_WORKFLOW_INVENTORY_URL%/}/workloads/$workload_digest.tgz"
+    source="$inventory_base/workloads/$workload_digest.tgz"
     install_atom "$source"
     cp "$target/debug/plumb" "$tool"
     printf 'confirmed exact Plumb atom visibility %s for %s\n' "$source" "$host"

@@ -104,9 +104,10 @@ function Get-AtomPlan {
 $keys = $null
 $source = $env:PLUMB_ATOM_SOURCE
 $digest = $env:PLUMB_ATOM_DIGEST
+$inventoryBase = $env:PLUMB_WORKFLOW_INVENTORY_URL.TrimEnd('/') -replace '/inventory\.json$', ''
 if (-not $source -and $digest) {
   if ($digest -notmatch '^[0-9a-fA-F]{64}$') { throw 'invalid Plumb atom digest' }
-  $source = "$($env:PLUMB_WORKFLOW_INVENTORY_URL.TrimEnd('/'))/workloads/$digest.tgz"
+  $source = "$inventoryBase/workloads/$digest.tgz"
 }
 $supportsWorkload = & $tool workflow plan --help 2>&1 | Select-String -SimpleMatch '--workload'
 if (-not $source -and -not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL) -and $supportsWorkload) {
@@ -162,7 +163,7 @@ if (-not $source -and $keys) {
     Write-Output "accepted exact Plumb atom inventory winner $source for $hostTarget"
   } else {
     $workloadDigest = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
-    $source = "$($env:PLUMB_WORKFLOW_INVENTORY_URL.TrimEnd('/'))/workloads/$workloadDigest.tgz"
+    $source = "$inventoryBase/workloads/$workloadDigest.tgz"
     Install-AtomSource $source
     Copy-Item (Join-Path $target 'debug/plumb.exe') $tool -Force
     Write-Output "confirmed exact Plumb atom visibility $source for $hostTarget"
