@@ -48,6 +48,7 @@ fn recovery() {
     }
     assert!(held.contains("[ -x \"$tool\" ]"));
     assert!(windows.contains("if (Test-Path $tool)"));
+    assert!(windows.contains("catch {\n      $managerInstalled = $false"));
 
     for binding in [
         "PLUMB_BUILD_VERSION is required",

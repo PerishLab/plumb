@@ -100,12 +100,18 @@ if (-not $source) {
     $seat = Join-Path $env:RUNNER_TEMP "plumb-bootstrap-$(if ($held) { $held } else { 'stable' })"
     $versions = Join-Path $seat 'versions'
     $bootstrapBin = Join-Path $seat 'bin'
-    if ($held) {
-      & $manager install --channel stable --version $held --install-root $versions --bin-dir $bootstrapBin
-    } else {
-      & $manager install --install-root $versions --bin-dir $bootstrapBin
+    $managerInstalled = $false
+    try {
+      if ($held) {
+        & $manager install --channel stable --version $held --install-root $versions --bin-dir $bootstrapBin
+      } else {
+        & $manager install --install-root $versions --bin-dir $bootstrapBin
+      }
+      $managerInstalled = $LASTEXITCODE -eq 0
+    } catch {
+      $managerInstalled = $false
     }
-    if ($LASTEXITCODE -eq 0) {
+    if ($managerInstalled) {
       $tool = Join-Path $bootstrapBin 'plumb.exe'
       Write-Output "installed stable Plumb $(if ($held) { $held } else { '' }) for atom planning"
     } else {
