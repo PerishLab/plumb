@@ -41,7 +41,7 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     let activated = seat
         .marked(&version)?
         .then(|| {
-            let spec = crate::shape::release::Spec::resolve(&root)?;
+            let spec = crate::shape::release::Spec::controller(&root)?;
             super::super::release::Product::new(&spec).activated()
         })
         .transpose()?
@@ -129,7 +129,7 @@ fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
     let activated = seat
         .marked(&version)?
         .then(|| {
-            let spec = crate::shape::release::Spec::resolve(&root)?;
+            let spec = crate::shape::release::Spec::controller(&root)?;
             super::super::release::Product::new(&spec).activated()
         })
         .transpose()?
@@ -137,7 +137,7 @@ fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
     seat.rejoined(activated)?;
     let client = Client::new(remote)?;
     freeze(&mut course, &client, &root, &name)?;
-    let spec = crate::shape::release::Spec::resolve(&root)?;
+    let spec = crate::shape::release::Spec::controller(&root)?;
     let commit = head(&client, &name)?;
     let exact = super::super::release::Product::new(&spec).promotion(&commit, &version)?;
     if course.dry() {

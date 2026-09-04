@@ -12,7 +12,7 @@ impl Governance {
         let held = exact
             .then(|| crate::command::release::snapshot(marker))
             .transpose()?;
-        let ambient = held.is_none().then(|| Spec::resolve(root)).transpose()?;
+        let ambient = held.is_none().then(|| Spec::controller(root)).transpose()?;
         Ok(Self {
             marker: held,
             ambient,
