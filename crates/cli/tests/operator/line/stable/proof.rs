@@ -83,6 +83,61 @@ fn refresh() {
     plumb::guard::commit(root, &head).expect("refreshed proof must be valid");
 }
 
+#[test]
+fn datum() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let bare = tempfile::tempdir().expect("bare");
+    let root = fixture.path();
+    let cut = root.join("cut");
+    let (url, _) = serve(Court::Prepare(true, cut.clone()), 7);
+    let origin = format!("{url}/test/probe.git");
+    let head = lined(root, &origin, bare.path(), "release/v1.2.0");
+    let tree = show(root, "--format=%T --no-patch HEAD").trim().to_string();
+    let stale = Command::new("git")
+        .args([
+            "commit-tree",
+            &tree,
+            "-p",
+            &head,
+            "-m",
+            "Stale release proof\n\nPlumb-Guard-Proof: stale",
+        ])
+        .current_dir(root)
+        .output()
+        .expect("git commit-tree");
+    assert!(
+        stale.status.success(),
+        "{}",
+        String::from_utf8_lossy(&stale.stderr)
+    );
+    let stale = String::from_utf8_lossy(&stale.stdout).trim().to_string();
+    run(Command::new("git")
+        .args([
+            "push",
+            "origin",
+            &format!("{stale}:refs/heads/release/v1.2.0"),
+        ])
+        .current_dir(root));
+    std::fs::write(&cut, &stale).expect("cut");
+    hooks(root);
+
+    let home = super::super::command::support::guard(&[], plumb::version!("PLUMB"));
+    let output = isolated(root, home.path());
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report = String::from_utf8_lossy(&output.stdout);
+    assert!(report.contains("recorded"), "{report}");
+    let standing = show(bare.path(), "--format=%H --no-patch release/v1.2.0")
+        .trim()
+        .to_string();
+    let parent = show(bare.path(), &format!("--format=%P --no-patch {standing}"));
+    assert_ne!(parent.trim(), stale, "datum must follow a refreshed proof");
+    plumb::guard::commit(root, &standing).expect("recorded datum proof");
+}
+
 fn isolated(root: &Path, home: &Path) -> std::process::Output {
     let binary = Path::new(env!("CARGO_BIN_EXE_plumb"));
     let path = format!(
