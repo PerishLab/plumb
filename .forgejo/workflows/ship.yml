@@ -41,7 +41,7 @@ jobs:
     container:
       image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
     outputs:
-      atom: ${{ steps.plan.outputs.atom }}
+      atom_token: ${{ steps.plan.outputs.atom_token }}
       channel: ${{ steps.plan.outputs.channel }}
       commit: ${{ steps.plan.outputs.commit }}
       version: ${{ steps.plan.outputs.version }}
@@ -80,7 +80,7 @@ jobs:
       - name: Install the exact atom Plumb
         shell: bash
         env:
-          PLUMB_ATOM_DIGEST: ${{ needs.resolve.outputs.atom }}
+          PLUMB_ATOM_TOKEN: ${{ needs.resolve.outputs.atom_token }}
         run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact '${{ inputs.configuration }}'
 
       - name: Resolve missing workloads
@@ -242,7 +242,7 @@ jobs:
         if: matrix.control != 'reuse'
         shell: bash
         env:
-          PLUMB_ATOM_DIGEST: ${{ needs.resolve.outputs.atom }}
+          PLUMB_ATOM_TOKEN: ${{ needs.resolve.outputs.atom_token }}
         run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact '${{ inputs.configuration }}'
 
       - name: Fetch the exact release marker
