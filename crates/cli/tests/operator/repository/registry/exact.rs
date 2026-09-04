@@ -5,6 +5,7 @@ pub const CURL: &str = r#"#!/bin/sh
 set -eu
 cd "$FAKE_CARGO_ROOT"
 case "$*" in
+  *workflow.example/workload.tgz*) cat "$FAKE_CARGO_ROOT/reuse.tgz"; exit 0 ;;
   *family-macro*) package=family-macro ;;
   *family-core*) package=family-core ;;
   *) printf '\n404'; exit 0 ;;
@@ -23,13 +24,39 @@ esac
 "#;
 
 pub fn prove(path: &Path) {
-    let inventory = crate::support::Bucket::open(5);
+    let inventory = crate::support::Bucket::open(3);
+    let reuse = std::fs::File::create(path.join("reuse.tgz")).expect("reuse workload");
+    let reuse = flate2::write::GzEncoder::new(reuse, flate2::Compression::default());
+    let mut reuse = tar::Builder::new(reuse);
+    for package in ["family-macro", "family-core"] {
+        let body = b"prior marker crate";
+        let mut header = tar::Header::new_gnu();
+        header.set_size(body.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+        reuse
+            .append_data(
+                &mut header,
+                format!("{package}-0.10.2-beta.0.crate"),
+                body.as_slice(),
+            )
+            .expect("carried crate");
+    }
+    reuse
+        .into_inner()
+        .expect("finish reuse archive")
+        .finish()
+        .expect("finish reuse workload");
     let request = serde_json::json!({
         "schema": "plumb.ship-request/v2",
         "action": "ship/cargo",
         "projections": [],
         "roots": ["Cargo.toml", "Cargo.lock", "crates"],
         "operation": { "type": "cargo" },
+        "reuse": {
+            "type": "workload",
+            "source": "https://workflow.example/workload.tgz"
+        },
         "keys": {
             "workload": "1".repeat(64),
             "proof": "2".repeat(64),

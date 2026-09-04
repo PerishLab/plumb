@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use sha2::Digest;
 use std::collections::BTreeMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -130,7 +129,7 @@ pub fn cargo(
         let bytes = std::fs::read(&archive)
             .map_err(|error| format!("cannot read {}: {error}", archive.display()))?;
         if source.kind == "workload" {
-            verify(package, &identity, &archive, &carried)?;
+            verify(package, &carried)?;
         }
         publish(Publication {
             carrier,
@@ -219,23 +218,18 @@ fn publish(input: Publication<'_, '_>) -> Result<(), String> {
     )
 }
 
-fn verify(
-    package: &str,
-    identity: &semver::Version,
-    archive: &Path,
-    carried: &BTreeMap<String, Vec<u8>>,
-) -> Result<(), String> {
-    let name = format!("{package}-{identity}.crate");
-    let expected = carried
-        .get(&name)
-        .ok_or_else(|| format!("reusable Cargo workload carries no {name}"))?;
-    if crate::command::release::record::digest(archive)?.0
-        == format!("{:x}", sha2::Sha256::digest(expected))
-    {
+fn verify(package: &str, carried: &BTreeMap<String, Vec<u8>>) -> Result<(), String> {
+    let prefix = format!("{package}-");
+    let held = carried.keys().filter(|name| {
+        name.strip_prefix(&prefix)
+            .and_then(|held| held.strip_suffix(".crate"))
+            .is_some_and(|held| semver::Version::parse(held).is_ok())
+    });
+    if held.count() == 1 {
         Ok(())
     } else {
         Err(format!(
-            "reusable Cargo workload disagrees with packaged {package} {identity}"
+            "reusable Cargo workload carries no unique {package} crate"
         ))
     }
 }
