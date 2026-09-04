@@ -122,14 +122,12 @@ jobs:
         if: matrix.control != 'reuse' && runner.os != 'Windows'
         shell: bash
         env:
-          PLUMB_ATOM_HANDOFF: ${{ needs.resolve.outputs.atom_handoff }}
+          PLUMB_ATOM_HANDOFF: ${{ runner.os == 'Linux' && needs.resolve.outputs.atom_handoff || '' }}
         run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact '${{ inputs.configuration }}'
 
       - name: Install the exact atom Plumb on Windows
         if: matrix.control != 'reuse' && runner.os == 'Windows'
         shell: pwsh
-        env:
-          PLUMB_ATOM_HANDOFF: ${{ needs.resolve.outputs.atom_handoff }}
         run: .plumb-atom/.forgejo/scripts/bootstrap-plumb.ps1 .plumb-atom exact '${{ inputs.configuration }}'
 
       - name: Add the requested Rust target
