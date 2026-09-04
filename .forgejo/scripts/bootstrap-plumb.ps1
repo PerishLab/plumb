@@ -103,13 +103,12 @@ function Get-AtomPlan {
 }
 $keys = $null
 $source = $env:PLUMB_ATOM_SOURCE
-$fragments = @($env:PLUMB_ATOM_0, $env:PLUMB_ATOM_1, $env:PLUMB_ATOM_2, $env:PLUMB_ATOM_3)
+$handoff = $env:PLUMB_ATOM_HANDOFF
 $inventoryBase = $env:PLUMB_WORKFLOW_INVENTORY_URL.TrimEnd('/') -replace '/inventory\.json$', ''
-if (-not $source -and ($fragments -join '')) {
-  if ($fragments.Where({ $_ -notmatch '^[0-9a-fA-F]{16}$' }).Count) { throw 'invalid Plumb atom fragment' }
-  $digest = $fragments -join ''
-  if ($digest -notmatch '^[0-9a-fA-F]{64}$') { throw 'invalid Plumb atom digest' }
-  $source = "$inventoryBase/workloads/$digest.tgz"
+if (-not $source -and $handoff) {
+  $reuse = $handoff | ConvertFrom-Json
+  if ($reuse.type -ne 'workload' -or -not $reuse.source) { throw 'invalid Plumb atom handoff' }
+  $source = $reuse.source
 }
 $supportsWorkload = & $tool workflow plan --help 2>&1 | Select-String -SimpleMatch '--workload'
 if (-not $source -and -not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL) -and $supportsWorkload) {
