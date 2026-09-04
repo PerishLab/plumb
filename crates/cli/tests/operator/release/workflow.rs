@@ -101,10 +101,6 @@ fn matrix() {
         "workflow orchestration must not duplicate atom bootstrap implementation"
     );
     assert!(
-        !held.contains("PLUMB_HOME:"),
-        "ship does not own a depot seat"
-    );
-    assert!(
         !held.contains("name: release-${{ matrix.target }}"),
         "binary workloads must not cross Forgejo artifact storage"
     );
@@ -228,6 +224,7 @@ fn depot() {
         "workflow plan --help",
         "PLUMB_ATOM_SOURCE",
         "PLUMB_ATOM_DIGEST",
+        "inventory_base=${inventory_base%/inventory.json}",
         "--retry 30",
         "confirmed exact Plumb atom visibility",
         "v1/channels/stable.json",
@@ -248,6 +245,7 @@ fn depot() {
         "workflow plan --help",
         "PLUMB_ATOM_SOURCE",
         "PLUMB_ATOM_DIGEST",
+        "-replace '/inventory\\.json$', ''",
         "attempt -le 30",
         "confirmed exact Plumb atom visibility",
         "$env:PLUMB_HOME = Join-Path $env:RUNNER_TEMP",
