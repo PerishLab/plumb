@@ -106,8 +106,8 @@ $source = $env:PLUMB_ATOM_SOURCE
 $token = $env:PLUMB_ATOM_TOKEN
 $inventoryBase = $env:PLUMB_WORKFLOW_INVENTORY_URL.TrimEnd('/') -replace '/inventory\.json$', ''
 if (-not $source -and $token) {
-  if ($token -notmatch '^sha256-') { throw 'invalid Plumb atom token' }
-  $digest = $token.Substring(7)
+  if ($token -notmatch '^sha256-([0-9a-fA-F]{32})-([0-9a-fA-F]{32})$') { throw 'invalid Plumb atom token' }
+  $digest = $Matches[1] + $Matches[2]
   if ($digest -notmatch '^[0-9a-fA-F]{64}$') { throw 'invalid Plumb atom digest' }
   $source = "$inventoryBase/workloads/$digest.tgz"
 }

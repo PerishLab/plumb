@@ -82,7 +82,12 @@ token=${PLUMB_ATOM_TOKEN:-}
 inventory_base=${PLUMB_WORKFLOW_INVENTORY_URL%/}
 inventory_base=${inventory_base%/inventory.json}
 if [ -z "$source" ] && [ -n "$token" ]; then
-  case "$token" in sha256-*) digest=${token#sha256-} ;; *) printf 'invalid Plumb atom token\n' >&2; exit 2 ;; esac
+  case "$token" in sha256-????????????????????????????????-????????????????????????????????)
+    digest=${token#sha256-}
+    digest=${digest%-*}${digest#*-}
+    ;;
+    *) printf 'invalid Plumb atom token\n' >&2; exit 2 ;;
+  esac
   test "${#digest}" -eq 64
   case "$digest" in *[!0-9a-fA-F]*) printf 'invalid Plumb atom digest\n' >&2; exit 2 ;; esac
   source="$inventory_base/workloads/$digest.tgz"
