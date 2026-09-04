@@ -41,24 +41,21 @@ pub(super) fn recovery(
     binary: &str,
 ) -> Result<String, String> {
     if !executable.is_absolute() || !executable.is_file() {
-        return Err("guard recovery validator must be an absolute executable path".into());
+        return Err("recovery validator must be an absolute executable path".into());
     }
     let output = plumb::config::detached(executable)
         .arg("--version")
         .output()
-        .map_err(|error| format!("cannot identify guard recovery validator: {error}"))?;
+        .map_err(|error| format!("cannot identify recovery validator: {error}"))?;
     let identity = String::from_utf8_lossy(&output.stdout).trim().to_string();
     let expected = format!("{binary} {}", binding.release.version);
     if !output.status.success() || identity != expected {
         return Err(format!(
-            "guard recovery validator identifies as {identity:?}, expected {expected:?}"
+            "recovery validator identifies as {identity:?}, expected {expected:?}"
         ));
     }
     let (artifact, _) = super::record::digest(executable)?;
-    eprintln!(
-        "guard recovery validator {} ({artifact})",
-        executable.display()
-    );
+    eprintln!("recovery validator {} ({artifact})", executable.display());
     Ok(artifact)
 }
 

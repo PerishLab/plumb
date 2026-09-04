@@ -80,6 +80,11 @@ pub enum Deed {
         marker: String,
         #[arg(long)]
         from: String,
+        #[arg(
+            long,
+            help = "Use one exact local replacement for the selected released validator"
+        )]
+        recovery_validator: Option<PathBuf>,
         #[arg(long = "dry-run")]
         dry: bool,
     },
@@ -148,8 +153,14 @@ fn execute(deed: Deed) -> Result<String, String> {
             root,
             marker,
             from,
+            recovery_validator,
             dry,
-        } => configuration::Tree(&PathBuf::from(root)).publish(&marker, &from, dry),
+        } => configuration::Tree(&PathBuf::from(root)).publish(
+            &marker,
+            &from,
+            recovery_validator.as_deref(),
+            dry,
+        ),
         Deed::Channel { marker } => projection::project(&marker, projection::Kind::Channel),
         Deed::Managers { marker } => projection::project(&marker, projection::Kind::Managers),
         Deed::Worker { marker, request } => projection::worker(&marker, &request),
