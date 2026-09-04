@@ -4,10 +4,14 @@ set -eu
 atom=${1:?exact Plumb atom is required}
 mode=${2:-workload}
 graph=$(plumb ship resolve --marker "$PLUMB_RELEASE_MARKER" --atom "$atom")
+source=${PLUMB_ATOM_SOURCE:-}
+digest=$(printf '%s' "$source" | sed -n 's#^.*/workloads/\([0-9a-fA-F]\{64\}\)\.tgz$#\1#p')
+test -n "$digest"
 if [ "$mode" = ready ]; then
   test "$(printf '%s' "$graph" | jq -r '.publication_ready')" = true
 fi
 {
+  echo "atom=$digest"
   echo "channel=$(printf '%s' "$graph" | jq -r '.channel')"
   echo "commit=$(printf '%s' "$graph" | jq -r '.commit')"
   echo "version=$(printf '%s' "$graph" | jq -r '.version')"

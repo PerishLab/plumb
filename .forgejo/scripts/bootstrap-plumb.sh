@@ -9,7 +9,7 @@ case "$mode" in
   *) printf 'unknown Plumb bootstrap mode: %s\n' "$mode" >&2; exit 2 ;;
 esac
 fetch='curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 --connect-timeout 5 --max-time 30'
-fetch_workload='curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 --connect-timeout 5 --max-time 300'
+fetch_workload='curl -fsSL --retry 30 --retry-all-errors --retry-delay 2 --connect-timeout 5 --max-time 300'
 manager="$RUNNER_TEMP/manage-plumb.sh"
 $fetch -o "$manager" "https://releases.plumb.perish.uk/manage.sh"
 held=$($fetch "https://releases.plumb.perish.uk/v1/channels/stable.json" 2>/dev/null \
@@ -78,6 +78,12 @@ atom_plan() {
 }
 keys=
 source=${PLUMB_ATOM_SOURCE:-}
+digest=${PLUMB_ATOM_DIGEST:-}
+if [ -z "$source" ] && [ -n "$digest" ]; then
+  test "${#digest}" -eq 64
+  case "$digest" in *[!0-9a-fA-F]*) printf 'invalid Plumb atom digest\n' >&2; exit 2 ;; esac
+  source="${PLUMB_WORKFLOW_INVENTORY_URL%/}/workloads/$digest.tgz"
+fi
 supports_workload=
 if "$tool" workflow plan --help 2>&1 | grep -q -- '--workload'; then
   supports_workload=1
@@ -131,6 +137,9 @@ if [ -z "$source" ] && [ -n "$keys" ]; then
   else
     workload_digest=$(sha256sum "$archive" | cut -d' ' -f1)
     source="${PLUMB_WORKFLOW_INVENTORY_URL%/}/workloads/$workload_digest.tgz"
+    install_atom "$source"
+    cp "$target/debug/plumb" "$tool"
+    printf 'confirmed exact Plumb atom visibility %s for %s\n' "$source" "$host"
   fi
 fi
 if [ -n "$source" ] && [ -n "${GITHUB_OUTPUT:-}" ]; then

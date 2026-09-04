@@ -74,7 +74,15 @@ $compiler = rustc --version
 function Install-AtomSource([string]$uri) {
   $match = [regex]::Match($uri, '/workloads/([0-9a-fA-F]{64})\.tgz$')
   if (-not $match.Success) { throw "invalid Plumb atom workload URL: $uri" }
-  Invoke-WebRequest -UseBasicParsing -TimeoutSec 300 -Uri $uri -OutFile $archive
+  for ($attempt = 1; $attempt -le 30; $attempt++) {
+    try {
+      Invoke-WebRequest -UseBasicParsing -TimeoutSec 300 -Uri $uri -OutFile $archive
+      break
+    } catch {
+      if ($attempt -eq 30) { throw }
+      Start-Sleep -Seconds 2
+    }
+  }
   $actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
   if ($actual -ne $match.Groups[1].Value.ToLowerInvariant()) { throw 'Plumb atom workload digest mismatch' }
   $debug = Join-Path $target 'debug'
@@ -95,6 +103,11 @@ function Get-AtomPlan {
 }
 $keys = $null
 $source = $env:PLUMB_ATOM_SOURCE
+$digest = $env:PLUMB_ATOM_DIGEST
+if (-not $source -and $digest) {
+  if ($digest -notmatch '^[0-9a-fA-F]{64}$') { throw 'invalid Plumb atom digest' }
+  $source = "$($env:PLUMB_WORKFLOW_INVENTORY_URL.TrimEnd('/'))/workloads/$digest.tgz"
+}
 $supportsWorkload = & $tool workflow plan --help 2>&1 | Select-String -SimpleMatch '--workload'
 if (-not $source -and -not [string]::IsNullOrWhiteSpace($env:PLUMB_WORKFLOW_INVENTORY_URL) -and $supportsWorkload) {
   $plan = Get-AtomPlan
@@ -150,6 +163,9 @@ if (-not $source -and $keys) {
   } else {
     $workloadDigest = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
     $source = "$($env:PLUMB_WORKFLOW_INVENTORY_URL.TrimEnd('/'))/workloads/$workloadDigest.tgz"
+    Install-AtomSource $source
+    Copy-Item (Join-Path $target 'debug/plumb.exe') $tool -Force
+    Write-Output "confirmed exact Plumb atom visibility $source for $hostTarget"
   }
 }
 if ($source -and $env:GITHUB_OUTPUT) {
