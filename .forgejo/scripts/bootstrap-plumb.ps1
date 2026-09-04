@@ -103,11 +103,11 @@ function Get-AtomPlan {
 }
 $keys = $null
 $source = $env:PLUMB_ATOM_SOURCE
-$token = $env:PLUMB_ATOM_TOKEN
+$fragments = @($env:PLUMB_ATOM_0, $env:PLUMB_ATOM_1, $env:PLUMB_ATOM_2, $env:PLUMB_ATOM_3)
 $inventoryBase = $env:PLUMB_WORKFLOW_INVENTORY_URL.TrimEnd('/') -replace '/inventory\.json$', ''
-if (-not $source -and $token) {
-  if ($token -notmatch '^sha256-([0-9a-fA-F]{32})-([0-9a-fA-F]{32})$') { throw 'invalid Plumb atom token' }
-  $digest = $Matches[1] + $Matches[2]
+if (-not $source -and ($fragments -join '')) {
+  if ($fragments.Where({ $_ -notmatch '^[0-9a-fA-F]{16}$' }).Count) { throw 'invalid Plumb atom fragment' }
+  $digest = $fragments -join ''
   if ($digest -notmatch '^[0-9a-fA-F]{64}$') { throw 'invalid Plumb atom digest' }
   $source = "$inventoryBase/workloads/$digest.tgz"
 }
