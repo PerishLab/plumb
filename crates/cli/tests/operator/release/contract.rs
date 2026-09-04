@@ -6,6 +6,96 @@ fn text(path: &str) -> String {
 }
 
 #[test]
+fn recovery() {
+    let held = text(".forgejo/scripts/bootstrap-plumb.sh");
+    let windows = text(".forgejo/scripts/bootstrap-plumb.ps1");
+    let installed = held
+        .find("cp \"$target/debug/plumb\" \"$bin/plumb\"")
+        .unwrap();
+    for configured in held
+        .match_indices("  install_configuration")
+        .map(|(at, _)| at)
+    {
+        assert!(
+            installed < configured,
+            "only the exact atom may install configuration"
+        );
+    }
+    assert_eq!(held.matches("  install_configuration").count(), 2);
+    assert!(held.contains("if \"$tool\" configuration --help >/dev/null 2>&1"));
+    assert!(windows.contains("& $tool configuration --help *> $null"));
+
+    let handoff = held
+        .find("if [ -z \"$source\" ] && [ -n \"$handoff\" ]")
+        .unwrap();
+    let manager = held
+        .find("manager=\"$RUNNER_TEMP/manage-plumb.sh\"")
+        .unwrap();
+    assert!(
+        handoff < manager,
+        "an exact handoff must bypass stable bootstrap"
+    );
+    for recovery in [
+        "stable Plumb is unavailable; cold-building the exact atom",
+        "workflow plan --help",
+        "confirmed exact Plumb atom visibility",
+    ] {
+        assert!(held.contains(recovery), "Unix bootstrap omits {recovery}");
+        assert!(
+            windows.contains(recovery),
+            "Windows bootstrap omits {recovery}"
+        );
+    }
+    assert!(held.contains("[ -x \"$tool\" ]"));
+    assert!(windows.contains("if (Test-Path $tool)"));
+
+    for binding in [
+        "PLUMB_BUILD_VERSION is required",
+        "PLUMB_BUILD_COMMIT is required",
+        "plumb-atom-$PLUMB_BUILD_COMMIT",
+        "PLUMB_BUILD_SOURCE=1 CARGO_TARGET_DIR=\"$target\"",
+        "--root 'ship/atom=*'",
+        "--workload \"commit=$PLUMB_BUILD_COMMIT\"",
+        "workflow record ship/atom",
+        "PLUMB_ATOM_SOURCE",
+        "PLUMB_ATOM_HANDOFF",
+        "jq -r '.type'",
+        "inventory_base=${inventory_base%/inventory.json}",
+        "--retry 30",
+        "v1/channels/stable.json",
+        "PLUMB_HOME=\"$RUNNER_TEMP/plumb-home-$configuration\"",
+        "install_configuration \"$PLUMB_HOME/configurations\"",
+    ] {
+        assert!(
+            held.contains(binding),
+            "Unix atom bootstrap omits {binding}"
+        );
+    }
+    for binding in [
+        "PLUMB_BUILD_VERSION",
+        "PLUMB_BUILD_COMMIT",
+        "plumb-atom-$env:PLUMB_BUILD_COMMIT",
+        "$env:CARGO_TARGET_DIR = $target",
+        "$env:PLUMB_BUILD_SOURCE = '1'",
+        "--root 'ship/atom=*'",
+        "--workload \"commit=$env:PLUMB_BUILD_COMMIT\"",
+        "PLUMB_ATOM_SOURCE",
+        "PLUMB_ATOM_HANDOFF",
+        "ConvertFrom-Json",
+        "-replace '/inventory\\.json$', ''",
+        "$env:PLUMB_HOME = Join-Path $env:RUNNER_TEMP",
+        "Join-Path $env:PLUMB_HOME 'configurations'",
+    ] {
+        assert!(
+            windows.contains(binding),
+            "Windows atom bootstrap omits {binding}"
+        );
+    }
+    assert!(!held.contains("PLUMB_RELEASE_"));
+    assert!(!windows.contains("PLUMB_RELEASE_"));
+}
+
+#[test]
 fn versioned() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let support =

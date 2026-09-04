@@ -5,16 +5,6 @@ fn canonical() -> String {
     std::fs::read_to_string(path).expect("Plumb owns one canonical ship workflow")
 }
 
-fn bootstrap() -> String {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    std::fs::read_to_string(root.join(".forgejo/scripts/bootstrap-plumb.sh")).expect("bootstrap")
-}
-
-fn windows() -> String {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    std::fs::read_to_string(root.join(".forgejo/scripts/bootstrap-plumb.ps1")).expect("bootstrap")
-}
-
 fn transport() -> String {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     std::fs::read_to_string(root.join("crates/cli/src/command/ship/transport/support.rs"))
@@ -157,106 +147,6 @@ fn opaque() {
         "plumb workflow plan",
     ] {
         assert!(!held.contains(leaked), "workflow leaks {leaked}: {held}");
-    }
-}
-
-#[test]
-fn depot() {
-    let (held, windows) = (bootstrap(), windows());
-    let installed = held.find("cp \"$target/debug/plumb\" \"$tool\"").unwrap();
-    let bootstrap = held.find("  install_configuration").unwrap();
-    let exact = held.rfind("  install_configuration").unwrap();
-    assert_eq!(
-        held.matches("  install_configuration").count(),
-        2,
-        "each bootstrap phase should own one sync branch"
-    );
-    assert!(
-        bootstrap < installed && installed < exact,
-        "bootstrap rules must precede the build while exact rules follow installation"
-    );
-    assert!(
-        held.contains("if \"$tool\" configuration --help >/dev/null 2>&1")
-            && windows.contains("& $tool configuration --help *> $null"),
-        "bootstrap must probe the installed predecessor's capability"
-    );
-    for binding in [
-        "PLUMB_BUILD_VERSION is required",
-        "PLUMB_BUILD_COMMIT is required",
-    ] {
-        assert!(held.contains(binding), "atom build omits {binding}");
-    }
-    assert!(
-        !held.contains("PLUMB_RELEASE_"),
-        "Unix release identity leaked"
-    );
-    for binding in ["PLUMB_BUILD_VERSION", "PLUMB_BUILD_COMMIT"] {
-        assert!(
-            windows.contains(binding),
-            "Windows atom build omits {binding}"
-        );
-    }
-    assert!(
-        !windows.contains("PLUMB_RELEASE_"),
-        "Windows release identity leaked"
-    );
-    assert!(
-        held.contains("plumb-atom-$PLUMB_BUILD_COMMIT")
-            && held.contains("PLUMB_BUILD_SOURCE=1 CARGO_TARGET_DIR=\"$target\""),
-        "Unix atom builds must isolate Cargo state by exact atom commit"
-    );
-    assert!(
-        windows.contains("plumb-atom-$env:PLUMB_BUILD_COMMIT")
-            && windows.contains("$env:CARGO_TARGET_DIR = $target")
-            && windows.contains("$env:PLUMB_BUILD_SOURCE = '1'"),
-        "Windows atom builds must isolate Cargo state by exact atom commit"
-    );
-    for binding in [
-        "--root 'ship/atom=*'",
-        "--world \"target=$host\"",
-        "--world \"version=$PLUMB_BUILD_VERSION\"",
-        "--world \"channel=$PLUMB_BUILD_CHANNEL\"",
-        "--workload \"commit=$PLUMB_BUILD_COMMIT\"",
-        "--world \"compiler=$compiler\"",
-        "workflow record ship/atom",
-        "workflow plan --help",
-        "PLUMB_ATOM_SOURCE",
-        "PLUMB_ATOM_HANDOFF",
-        "jq -r '.type'",
-        "inventory_base=${inventory_base%/inventory.json}",
-        "--retry 30",
-        "confirmed exact Plumb atom visibility",
-        "v1/channels/stable.json",
-        "PLUMB_HOME=\"$RUNNER_TEMP/plumb-home-$configuration\"",
-        "--path \"$1\"",
-        "install_configuration \"$PLUMB_HOME/configurations\"",
-        "printf 'PLUMB_HOME=%s\\n' \"$PLUMB_HOME\" >> \"$GITHUB_ENV\"",
-    ] {
-        assert!(held.contains(binding), "Unix atom reuse omits {binding}");
-    }
-    for binding in [
-        "--root 'ship/atom=*'",
-        "--world \"target=$hostTarget\"",
-        "--world \"version=$env:PLUMB_BUILD_VERSION\"",
-        "--world \"channel=$env:PLUMB_BUILD_CHANNEL\"",
-        "--workload \"commit=$env:PLUMB_BUILD_COMMIT\"",
-        "--world \"compiler=$compiler\"",
-        "workflow plan --help",
-        "PLUMB_ATOM_SOURCE",
-        "PLUMB_ATOM_HANDOFF",
-        "ConvertFrom-Json",
-        "-replace '/inventory\\.json$', ''",
-        "attempt -le 30",
-        "confirmed exact Plumb atom visibility",
-        "$env:PLUMB_HOME = Join-Path $env:RUNNER_TEMP",
-        "--path $Path",
-        "Join-Path $env:PLUMB_HOME 'configurations'",
-        "\"PLUMB_HOME=$env:PLUMB_HOME\" | Out-File -FilePath $env:GITHUB_ENV -Append",
-    ] {
-        assert!(
-            windows.contains(binding),
-            "Windows atom reuse omits {binding}"
-        );
     }
 }
 

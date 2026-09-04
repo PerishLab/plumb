@@ -10,36 +10,6 @@ case "$mode" in
 esac
 fetch='curl -fsSL --retry 5 --retry-all-errors --retry-delay 1 --connect-timeout 5 --max-time 30'
 fetch_workload='curl -fsSL --retry 30 --retry-all-errors --retry-delay 2 --connect-timeout 5 --max-time 300'
-manager="$RUNNER_TEMP/manage-plumb.sh"
-$fetch -o "$manager" "https://releases.plumb.perish.uk/manage.sh"
-held=$($fetch "https://releases.plumb.perish.uk/v1/channels/stable.json" 2>/dev/null \
-  | sed -n 's/.*"releaseVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p') || held=
-if [ -n "$held" ]; then
-  seat="$RUNNER_TEMP/plumb-$held"
-  sh "$manager" install \
-    --channel stable --version "$held" \
-    --install-root "$seat/versions" --bin-dir "$seat/bin"
-  bin="$seat/bin"
-else
-  sh "$manager"
-  bin="$HOME/.local/bin"
-fi
-tool="$bin/plumb"
-install_configuration() {
-  if "$tool" configuration --help >/dev/null 2>&1; then
-    test -n "$configuration"
-    if [ "$#" -eq 1 ]; then
-      "$tool" configuration install --version "$configuration" --path "$1"
-    else
-      "$tool" configuration install --version "$configuration"
-    fi
-  else
-    printf 'installed Plumb has no configuration command; retaining its managed depot seat\n'
-  fi
-}
-if [ "$mode" = bootstrap ]; then
-  install_configuration
-fi
 : "${PLUMB_BUILD_VERSION:?PLUMB_BUILD_VERSION is required}"
 : "${PLUMB_BUILD_COMMIT:?PLUMB_BUILD_COMMIT is required}"
 if [ -z "${PLUMB_BUILD_CHANNEL:-}" ]; then
@@ -52,8 +22,22 @@ if [ -z "${PLUMB_BUILD_CHANNEL:-}" ]; then
 fi
 target="$RUNNER_TEMP/plumb-atom-$PLUMB_BUILD_COMMIT"
 archive="$RUNNER_TEMP/plumb-atom-$PLUMB_BUILD_COMMIT.tgz"
+bin="$RUNNER_TEMP/plumb-exact-$PLUMB_BUILD_COMMIT/bin"
+tool="$bin/plumb"
 host=$(rustc -vV | sed -n 's/^host: //p')
 compiler=$(rustc --version)
+install_configuration() {
+  if "$tool" configuration --help >/dev/null 2>&1; then
+    test -n "$configuration"
+    if [ "$#" -eq 1 ]; then
+      "$tool" configuration install --version "$configuration" --path "$1"
+    else
+      "$tool" configuration install --version "$configuration"
+    fi
+  else
+    printf 'installed Plumb has no configuration command; retaining its managed depot seat\n'
+  fi
+}
 install_atom() {
   held_source=$1
   digest=$(printf '%s' "$held_source" | sed -n 's#^.*/workloads/\([0-9a-fA-F]\{64\}\)\.tgz$#\1#p')
@@ -87,7 +71,30 @@ if [ -z "$source" ] && [ -n "$handoff" ]; then
   test -n "$source"
 fi
 supports_workload=
-if "$tool" workflow plan --help 2>&1 | grep -q -- '--workload'; then
+if [ -z "$source" ]; then
+  manager="$RUNNER_TEMP/manage-plumb.sh"
+  held=
+  if $fetch -o "$manager" "https://releases.plumb.perish.uk/manage.sh"; then
+    held=$($fetch "https://releases.plumb.perish.uk/v1/channels/stable.json" 2>/dev/null \
+      | sed -n 's/.*"releaseVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p') || held=
+    seat="$RUNNER_TEMP/plumb-bootstrap-${held:-stable}"
+    if [ -n "$held" ] && sh "$manager" install \
+      --channel stable --version "$held" \
+      --install-root "$seat/versions" --bin-dir "$seat/bin"; then
+      tool="$seat/bin/plumb"
+      printf 'installed stable Plumb %s for atom planning\n' "$held"
+    elif [ -z "$held" ] && sh "$manager" install \
+      --install-root "$seat/versions" --bin-dir "$seat/bin"; then
+      tool="$seat/bin/plumb"
+      printf 'installed stable Plumb for atom planning\n'
+    else
+      printf 'stable Plumb is unavailable; cold-building the exact atom\n'
+    fi
+  else
+    printf 'stable Plumb manager is unavailable; cold-building the exact atom\n'
+  fi
+fi
+if [ -x "$tool" ] && "$tool" workflow plan --help 2>&1 | grep -q -- '--workload'; then
   supports_workload=1
 fi
 if [ -z "$source" ] && [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ] && [ -n "$supports_workload" ]; then
@@ -104,7 +111,9 @@ else
   tar -czf "$archive" -C "$target/debug" plumb
   printf 'built exact Plumb atom %s for %s\n' "$PLUMB_BUILD_COMMIT" "$host"
 fi
-cp "$target/debug/plumb" "$tool"
+mkdir -p "$bin"
+cp "$target/debug/plumb" "$bin/plumb"
+tool="$bin/plumb"
 printf '%s\n' "$bin" >> "$GITHUB_PATH"
 "$tool" --version
 if [ "$mode" = exact ]; then
@@ -112,6 +121,8 @@ if [ "$mode" = exact ]; then
   export PLUMB_HOME
   install_configuration "$PLUMB_HOME/configurations"
   printf 'PLUMB_HOME=%s\n' "$PLUMB_HOME" >> "$GITHUB_ENV"
+else
+  install_configuration
 fi
 if [ -z "$keys" ] && [ -n "${PLUMB_WORKFLOW_INVENTORY_URL:-}" ]; then
   plan=$(atom_plan)
@@ -134,13 +145,13 @@ if [ -z "$source" ] && [ -n "$keys" ]; then
     test -n "$winner"
     source=$winner
     install_atom "$winner"
-    cp "$target/debug/plumb" "$tool"
+    cp "$target/debug/plumb" "$bin/plumb"
     printf 'accepted exact Plumb atom inventory winner %s for %s\n' "$winner" "$host"
   else
     workload_digest=$(sha256sum "$archive" | cut -d' ' -f1)
     source="$inventory_base/workloads/$workload_digest.tgz"
     install_atom "$source"
-    cp "$target/debug/plumb" "$tool"
+    cp "$target/debug/plumb" "$bin/plumb"
     printf 'confirmed exact Plumb atom visibility %s for %s\n' "$source" "$host"
   fi
 fi
