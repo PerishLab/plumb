@@ -238,7 +238,7 @@ pub struct Workflow {
     pub inventory: Authority,
 }
 
-#[derive(Debug, Default, PartialEq, Cascade)]
+#[derive(Clone, Debug, Default, PartialEq, Cascade)]
 #[cascade(section)]
 pub struct Authority {
     pub access: String,

@@ -1,7 +1,7 @@
 #[path = "../../src/command/release/authority/cloudflare.rs"]
 mod adapter;
 
-use adapter::{Bucket, Custom, Factory, Grant};
+use adapter::{Bucket, Custom, Factory, Grant, Resource};
 use std::{
     io::{Read, Write},
     net::TcpListener,
@@ -11,6 +11,18 @@ use std::{
 #[test]
 fn lifecycle() {
     let _: Option<Custom> = None;
+    assert_eq!(
+        Resource::Exact("one-bucket".into()).policy(),
+        serde_json::json!({"one-bucket": "*"})
+    );
+    assert_eq!(
+        Resource::Account("account".into()).policy(),
+        serde_json::json!({
+            "com.cloudflare.api.account.account": {
+                "com.cloudflare.edge.r2.bucket.*": "*"
+            }
+        })
+    );
     let answers = vec![
         r#"{"success":true,"result":{"status":"active"}}"#,
         r#"{"success":true,"result":[{"id":"old","name":"stale"}],"result_info":{"total_pages":1}}"#,
@@ -40,7 +52,7 @@ fn lifecycle() {
         .create(&Grant {
             name: "temporary".into(),
             permission: "permit".into(),
-            resource: "resource".into(),
+            resource: Resource::Account("account".into()),
             expires: "soon".into(),
         })
         .expect("create");

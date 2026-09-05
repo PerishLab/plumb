@@ -133,14 +133,14 @@ impl Request {
                 return result("workload", "", None);
             }
             Operation::Publication { workloads } => {
-                super::support::authority(&rig.publish, &spec.product)?;
+                let authority = super::support::authority(&rig.publish, &spec.product)?;
                 crate::command::release::Product::new(spec).promote(release)?;
                 let artifacts = artifacts(release)?;
                 materialize(&artifacts, &workloads)?;
                 super::super::package::product(spec).assemble(version, &artifacts)?;
                 crate::command::release::Product::new(spec).compile(release)?;
                 let capsule = capsule(release)?;
-                storage::publish(&capsule, &rig.publish)?;
+                storage::publish(&capsule, &authority)?;
                 let (compiled, _) = crate::command::release::record::Capsule::read(&capsule)?;
                 let publication = compiled.seal.remote.url;
                 let keys = self

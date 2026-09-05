@@ -2,7 +2,7 @@ mod forge;
 mod store;
 mod target;
 
-use super::release::authority::cloudflare::{Bucket, Factory, Grant, Minted};
+use super::release::authority::cloudflare::{Bucket, Factory, Grant, Minted, Resource};
 use clap::Args;
 use plumb::config::Cascade as _;
 use plumb::forgejo::Client;
@@ -101,17 +101,17 @@ fn act(deed: Deed) -> Result<String, String> {
     let admin = factory.create(&Grant {
         name: names.admin.clone(),
         permission: permits.0,
-        resource: format!("com.cloudflare.api.account.{}", factory.id()),
+        resource: Resource::Exact(format!("com.cloudflare.api.account.{}", factory.id())),
         expires: until.clone(),
     })?;
     let item = factory.create(&Grant {
         name: names.item.clone(),
         permission: permits.1,
-        resource: format!(
+        resource: Resource::Exact(format!(
             "com.cloudflare.edge.r2.bucket.{}_default_{}",
             factory.id(),
             target.bucket
-        ),
+        )),
         expires: until,
     });
     let outcome = item.as_ref().map_err(String::clone).and_then(|item| {

@@ -22,22 +22,26 @@ pub(super) fn embedded(action: &str) -> bool {
     action == "ship/cargo"
 }
 
-pub(super) fn authority(held: &plumb::rig::Authority, product: &str) -> Result<(), String> {
+pub(super) fn authority(
+    held: &plumb::rig::Authority,
+    product: &str,
+) -> Result<plumb::rig::Authority, String> {
     let bucket = format!("perish-{product}-releases");
-    if held.bucket != bucket {
+    if !held.bucket.is_empty() && held.bucket != bucket {
         return Err(format!(
             "release publish authority must target derived bucket {bucket}"
         ));
     }
     let actual = crate::command::release::storage::fingerprint(&held.endpoint);
-    if actual == held.fingerprint {
-        Ok(())
-    } else {
-        Err(format!(
+    if actual != held.fingerprint {
+        return Err(format!(
             "release publish authority fingerprint drift: expected {}, got {actual}",
             held.fingerprint
-        ))
+        ));
     }
+    let mut derived = held.clone();
+    derived.bucket = bucket;
+    Ok(derived)
 }
 
 pub(super) struct Inventory(Option<tempfile::NamedTempFile>);

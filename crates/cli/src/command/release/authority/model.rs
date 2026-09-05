@@ -62,6 +62,26 @@ pub struct Workflow {
     pub(super) json: bool,
 }
 
+#[derive(Args)]
+pub struct Ship {
+    #[command(flatten)]
+    pub(super) target: Root,
+    #[arg(
+        long,
+        help = "Mode-0600 seat for the controller writer's one-time secret"
+    )]
+    escrow: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "Recover a missing or inconsistent controller writer escrow before converging"
+    )]
+    recovery: bool,
+    #[arg(long, help = "Apply the ordered plan until every resource is ready")]
+    pub(super) apply: bool,
+    #[arg(long)]
+    pub(super) json: bool,
+}
+
 const RELEASE: [&str; 5] = [
     "RELEASE_PUBLISH_S3_ACCESS_KEY",
     "RELEASE_PUBLISH_S3_SECRET_KEY",
@@ -76,6 +96,13 @@ const WORKFLOW: [&str; 5] = [
     "WORKFLOW_INVENTORY_S3_BUCKET",
     "WORKFLOW_INVENTORY_S3_ENDPOINT",
     "WORKFLOW_INVENTORY_URL",
+];
+
+const SHIP: [&str; 4] = [
+    "SHIP_PUBLISH_S3_ACCESS_KEY",
+    "SHIP_PUBLISH_S3_SECRET_KEY",
+    "SHIP_PUBLISH_S3_ENDPOINT",
+    "SHIP_PUBLISH_FINGERPRINT",
 ];
 
 #[derive(Clone)]
@@ -175,8 +202,36 @@ impl Model {
         })
     }
 
+    pub fn ship(input: Ship) -> Result<Self, String> {
+        let root = PathBuf::from(&input.target.root)
+            .canonicalize()
+            .map_err(|error| format!("cannot resolve {}: {error}", input.target.root))?;
+        let escrow = input
+            .escrow
+            .unwrap_or_else(|| root.join(".local/ship-authority.env"));
+        let escrow = if escrow.is_absolute() {
+            escrow
+        } else {
+            root.join(escrow)
+        };
+        Ok(Self {
+            profile: "ship",
+            product: "release-buckets".into(),
+            bucket: "perish-plumb-releases".into(),
+            domain: String::new(),
+            zone: String::new(),
+            escrow,
+            remote: git::remote(&root, "")?,
+            scope: Scope::Repository,
+            recovery: input.recovery,
+        })
+    }
+
     pub fn writer(&self) -> String {
-        format!("publish:{}", self.bucket)
+        match self.profile {
+            "ship" => "ship:release-buckets".into(),
+            _ => format!("publish:{}", self.bucket),
+        }
     }
 
     pub fn temporary(&self) -> String {
@@ -187,6 +242,7 @@ impl Model {
         match self.profile {
             "release" => &RELEASE,
             "workflow" => &WORKFLOW,
+            "ship" => &SHIP,
             _ => &[],
         }
     }

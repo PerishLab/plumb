@@ -1,6 +1,6 @@
 use plumb::{config::Cascade as _, forgejo::Client, rig::Mint};
 
-use super::cloudflare::{Bucket, Factory, Grant};
+use super::cloudflare::{Bucket, Factory, Grant, Resource};
 use super::{ADMIN, Observation, escrow::Escrow, model::Model};
 
 pub(super) struct Context {
@@ -44,15 +44,19 @@ impl Context {
         let seat = super::escrow::Seat::new(&self.model.escrow);
         let escrow = seat.load()?;
         let recovery = self.writer(&writers, escrow.as_ref())?;
-        let (bucket, domain) = self.session(|bucket| {
-            let live = bucket.live()?;
-            let domain = if live {
-                bucket.find(&self.model.domain)?
-            } else {
-                None
-            };
-            Ok((live, domain))
-        })?;
+        let (bucket, domain) = if self.model.profile == "ship" {
+            (true, None)
+        } else {
+            self.session(|bucket| {
+                let live = bucket.live()?;
+                let domain = if live {
+                    bucket.find(&self.model.domain)?
+                } else {
+                    None
+                };
+                Ok((live, domain))
+            })?
+        };
         if let Some(domain) = &domain
             && domain.zone != self.model.zone
         {
@@ -120,7 +124,7 @@ impl Context {
         let minted = self.factory.create(&Grant {
             name: self.model.temporary(),
             permission,
-            resource: format!("com.cloudflare.api.account.{}", self.factory.id()),
+            resource: Resource::Exact(format!("com.cloudflare.api.account.{}", self.factory.id())),
             expires: crate::command::clock::ahead(15)?,
         })?;
         let result = operation(&Bucket::new(&self.factory, &minted, &self.model.bucket));

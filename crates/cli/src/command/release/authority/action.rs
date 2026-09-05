@@ -1,7 +1,7 @@
 use plumb::forgejo::Client;
 use std::{thread, time::Duration};
 
-use super::cloudflare::Grant;
+use super::cloudflare::{Grant, Resource};
 use super::{Action, ITEM, context::Context, escrow::Escrow};
 
 impl Context {
@@ -64,11 +64,15 @@ impl Context {
         let minted = self.factory.create(&Grant {
             name: self.model.writer(),
             permission,
-            resource: format!(
-                "com.cloudflare.edge.r2.bucket.{}_default_{}",
-                self.factory.id(),
-                self.model.bucket
-            ),
+            resource: if self.model.profile == "ship" {
+                Resource::Account(self.factory.id().to_string())
+            } else {
+                Resource::Exact(format!(
+                    "com.cloudflare.edge.r2.bucket.{}_default_{}",
+                    self.factory.id(),
+                    self.model.bucket
+                ))
+            },
             expires: String::new(),
         })?;
         let held = Escrow::minted(
@@ -109,11 +113,15 @@ impl Context {
         let minted = self.factory.create(&Grant {
             name: self.model.writer(),
             permission,
-            resource: format!(
-                "com.cloudflare.edge.r2.bucket.{}_default_{}",
-                self.factory.id(),
-                self.model.bucket
-            ),
+            resource: if self.model.profile == "ship" {
+                Resource::Account(self.factory.id().to_string())
+            } else {
+                Resource::Exact(format!(
+                    "com.cloudflare.edge.r2.bucket.{}_default_{}",
+                    self.factory.id(),
+                    self.model.bucket
+                ))
+            },
             expires: String::new(),
         })?;
         let held = Escrow::minted(
@@ -151,16 +159,24 @@ impl Context {
         let client = Client::new(self.model.remote.clone())?;
         let inventory = self.model.inventory();
         let tail = match self.model.profile {
-            "release" => super::escrow::fingerprint(&held.endpoint),
+            "release" | "ship" => super::escrow::fingerprint(&held.endpoint),
             _ => inventory,
         };
-        let values = [
-            held.access.as_str(),
-            held.secret.as_str(),
-            held.bucket.as_str(),
-            held.endpoint.as_str(),
-            tail.as_str(),
-        ];
+        let values = match self.model.profile {
+            "ship" => vec![
+                held.access.as_str(),
+                held.secret.as_str(),
+                held.endpoint.as_str(),
+                tail.as_str(),
+            ],
+            _ => vec![
+                held.access.as_str(),
+                held.secret.as_str(),
+                held.bucket.as_str(),
+                held.endpoint.as_str(),
+                tail.as_str(),
+            ],
+        };
         for (name, value) in self.model.secrets().iter().zip(values) {
             match self.model.organization() {
                 Some(owner) => client.store(owner, name, value)?,

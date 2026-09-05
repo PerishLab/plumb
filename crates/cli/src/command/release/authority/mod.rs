@@ -8,7 +8,7 @@ mod registry;
 
 use clap::Subcommand;
 use context::Context;
-use model::{Model, Release, Workflow};
+use model::{Model, Release, Ship, Workflow};
 use serde::Serialize;
 use std::collections::BTreeSet;
 
@@ -35,6 +35,8 @@ pub enum Deed {
     Release(Release),
     #[command(about = "Converge the closed shared-workflow inventory authority profile")]
     Workflow(Workflow),
+    #[command(about = "Converge the central ship controller's release-bucket authority")]
+    Ship(Ship),
     #[command(about = "Converge the closed package-registry authority profile")]
     Registry(registry::Input),
 }
@@ -83,6 +85,7 @@ pub fn run(deed: Deed) -> i32 {
     let result = match deed {
         Deed::Release(release) => execute(release),
         Deed::Workflow(input) => workflow(input),
+        Deed::Ship(input) => ship(input),
         Deed::Registry(registry) => registry::execute(registry),
     };
     match result {
@@ -115,6 +118,12 @@ fn workflow(input: Workflow) -> Result<(), String> {
     let apply = input.apply;
     let json = input.json;
     converge(Model::workflow(input)?, apply, json)
+}
+
+fn ship(input: Ship) -> Result<(), String> {
+    let apply = input.apply;
+    let json = input.json;
+    converge(Model::ship(input)?, apply, json)
 }
 
 fn converge(model: Model, apply: bool, json: bool) -> Result<(), String> {

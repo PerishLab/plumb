@@ -23,8 +23,26 @@ pub struct Minted {
 pub struct Grant {
     pub name: String,
     pub permission: String,
-    pub resource: String,
+    pub resource: Resource,
     pub expires: String,
+}
+
+pub enum Resource {
+    Exact(String),
+    Account(String),
+}
+
+impl Resource {
+    pub fn policy(&self) -> Value {
+        match self {
+            Self::Exact(resource) => json!({ resource.clone(): "*" }),
+            Self::Account(account) => json!({
+                format!("com.cloudflare.api.account.{account}"): {
+                    "com.cloudflare.edge.r2.bucket.*": "*"
+                }
+            }),
+        }
+    }
 }
 
 pub struct Factory {
@@ -100,12 +118,13 @@ impl Factory {
     }
 
     pub fn create(&self, grant: &Grant) -> Result<Minted, String> {
+        let resources = grant.resource.policy();
         let mut body = json!({
             "name": grant.name,
             "expires_on": grant.expires,
             "policies": [{
                 "effect": "allow",
-                "resources": { grant.resource.clone(): "*" },
+                "resources": resources,
                 "permission_groups": [{ "id": grant.permission }],
             }],
         });

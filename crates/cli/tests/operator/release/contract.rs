@@ -131,6 +131,11 @@ fn versioned() {
     let workflow = text(".forgejo/workflows/ship.yml");
     assert!(workflow.contains("configuration:"), "{workflow}");
     assert!(workflow.contains("inputs.configuration"), "{workflow}");
+    assert!(workflow.contains("secrets.SHIP_PUBLISH_S3_ACCESS_KEY"));
+    assert!(workflow.contains("secrets.SHIP_PUBLISH_FINGERPRINT"));
+    assert!(!workflow.contains("PLUMB_PUBLISH_BUCKET:"));
+    assert!(support.contains("!held.bucket.is_empty() && held.bucket != bucket"));
+    assert!(support.contains("derived.bucket = bucket"));
     let resolver = text("crates/cli/src/command/ship/transport/resolve.rs");
     assert!(resolver.contains("workload: Some(&marker.version)"));
     assert!(!resolver.contains("workload: Some(marker.base())"));

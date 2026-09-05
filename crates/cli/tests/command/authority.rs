@@ -218,3 +218,37 @@ fn workflow() {
             .contains("--organization must name one Forgejo organization")
     );
 }
+
+#[test]
+fn ship() {
+    const HELD: [&str; 4] = ["access", "secret", "endpoint", "fingerprint"];
+    let model = Model {
+        profile: "ship",
+        secrets: &HELD,
+        bucket: "perish-plumb-releases".into(),
+        domain: String::new(),
+        zone: String::new(),
+        organization: false,
+    };
+    let mut seen = Observation {
+        bucket: true,
+        domain: None,
+        capability: None,
+        recovery: false,
+        escrow: None,
+        secrets: BTreeSet::new(),
+    };
+    let (steps, action) = plan::build(&model, &seen);
+    assert_eq!(action, Some(Action::Capability));
+    assert_eq!(steps.len(), 2);
+    assert_eq!(steps[0].resource, "ship.capability");
+    assert_eq!(steps[1].resource, "repository.secrets");
+
+    seen.capability = Some("writer".into());
+    seen.escrow = Some(());
+    seen.secrets.extend(HELD.map(str::to_string));
+    let (steps, action) = plan::build(&model, &seen);
+    assert_eq!(action, None);
+    assert_eq!(steps[0].status, plan::Status::Ready);
+    assert_eq!(steps[1].status, plan::Status::Ready);
+}

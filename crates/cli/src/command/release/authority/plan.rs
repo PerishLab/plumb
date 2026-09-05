@@ -18,6 +18,9 @@ pub struct Step {
 }
 
 pub fn build(model: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
+    if model.profile == "ship" {
+        return ship(model, seen);
+    }
     let mut plan = Builder::default();
     if seen.bucket {
         plan.ready(
@@ -91,6 +94,47 @@ pub fn build(model: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
                 "workflow" => "upsert exactly the five workflow inventory secrets",
                 _ => "converge the authority secrets",
             },
+            Action::Repository,
+        );
+    }
+    plan.finish()
+}
+
+fn ship(target: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
+    let mut plan = Builder::default();
+    if seen.recovery {
+        plan.change(
+            "ship.capability",
+            "recover the all-release-buckets writer and its local escrow",
+            Action::Recovery,
+        );
+    } else if seen.capability.is_some() && seen.escrow.is_some() {
+        plan.ready(
+            "ship.capability",
+            "all-release-buckets writer matches its local escrow",
+        );
+    } else {
+        plan.change(
+            "ship.capability",
+            format!("mint {} and retain its one-time secret", target.writer()),
+            Action::Capability,
+        );
+    }
+    if seen.escrow.is_none() {
+        plan.deferred("repository.secrets", "waiting for ship.capability");
+    } else if target
+        .secrets()
+        .iter()
+        .all(|name| seen.secrets.contains(*name))
+    {
+        plan.ready(
+            "repository.secrets",
+            "all four opaque central ship publish seats are present",
+        );
+    } else {
+        plan.change(
+            "repository.secrets",
+            "upsert exactly the four central ship publish secrets",
             Action::Repository,
         );
     }
