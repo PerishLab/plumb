@@ -95,6 +95,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     env:
       PLUMB_RELEASE_ROOT: .
+      PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
       PLUMB_RELEASE_CHANNEL: ${{ needs.resolve.outputs.channel }}
       PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
       PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
@@ -129,6 +130,13 @@ jobs:
         if: matrix.control != 'reuse' && runner.os == 'Windows'
         shell: pwsh
         run: .plumb-atom/.forgejo/scripts/bootstrap-plumb.ps1 .plumb-atom exact '${{ inputs.configuration }}'
+
+      - name: Fetch the exact release marker
+        if: matrix.control != 'reuse'
+        shell: bash
+        env:
+          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+        run: bash .plumb-atom/.forgejo/scripts/fetch-marker.sh "$PLUMB_RELEASE_MARKER"
 
       - name: Add the requested Rust target
         if: matrix.control != 'reuse'
