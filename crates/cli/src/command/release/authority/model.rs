@@ -116,6 +116,7 @@ pub(super) struct Model {
     pub profile: &'static str,
     pub product: String,
     pub bucket: String,
+    pub buckets: Vec<String>,
     pub domain: String,
     pub zone: String,
     pub escrow: PathBuf,
@@ -152,6 +153,7 @@ impl Model {
         Ok(Self {
             profile: "release",
             bucket: format!("perish-{}-releases", spec.product),
+            buckets: Vec::new(),
             product: spec.product,
             domain,
             zone: input.zone,
@@ -192,6 +194,7 @@ impl Model {
         Ok(Self {
             profile: "workflow",
             bucket: "perish-workflow-inventory".into(),
+            buckets: Vec::new(),
             product: "inventory".into(),
             domain,
             zone: input.zone,
@@ -214,10 +217,30 @@ impl Model {
         } else {
             root.join(escrow)
         };
+        let catalog = std::fs::read_to_string(root.join("crates/cli/rules/products.toml"))
+            .map_err(|error| format!("cannot read the ship product catalog: {error}"))?;
+        let catalog: toml::Table = catalog
+            .parse()
+            .map_err(|error| format!("cannot parse the ship product catalog: {error}"))?;
+        let buckets = catalog
+            .get("product")
+            .and_then(toml::Value::as_array)
+            .ok_or_else(|| "ship product catalog names no products".to_string())?
+            .iter()
+            .map(|product| {
+                product
+                    .get("name")
+                    .and_then(toml::Value::as_str)
+                    .filter(|name| !name.is_empty())
+                    .map(|name| format!("perish-{name}-releases"))
+                    .ok_or_else(|| "ship product catalog carries an unnamed product".to_string())
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(Self {
             profile: "ship",
             product: "release-buckets".into(),
             bucket: "perish-plumb-releases".into(),
+            buckets,
             domain: String::new(),
             zone: String::new(),
             escrow,

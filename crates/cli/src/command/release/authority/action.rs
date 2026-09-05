@@ -65,7 +65,10 @@ impl Context {
             name: self.model.writer(),
             permission,
             resource: if self.model.profile == "ship" {
-                Resource::Account(self.factory.id().to_string())
+                Resource::Set {
+                    account: self.factory.id().to_string(),
+                    buckets: self.model.buckets.clone(),
+                }
             } else {
                 Resource::Exact(format!(
                     "com.cloudflare.edge.r2.bucket.{}_default_{}",
@@ -114,7 +117,10 @@ impl Context {
             name: self.model.writer(),
             permission,
             resource: if self.model.profile == "ship" {
-                Resource::Account(self.factory.id().to_string())
+                Resource::Set {
+                    account: self.factory.id().to_string(),
+                    buckets: self.model.buckets.clone(),
+                }
             } else {
                 Resource::Exact(format!(
                     "com.cloudflare.edge.r2.bucket.{}_default_{}",

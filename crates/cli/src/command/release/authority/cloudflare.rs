@@ -29,18 +29,27 @@ pub struct Grant {
 
 pub enum Resource {
     Exact(String),
-    Account(String),
+    Set {
+        account: String,
+        buckets: Vec<String>,
+    },
 }
 
 impl Resource {
     pub fn policy(&self) -> Value {
         match self {
             Self::Exact(resource) => json!({ resource.clone(): "*" }),
-            Self::Account(account) => json!({
-                format!("com.cloudflare.api.account.{account}"): {
-                    "com.cloudflare.edge.r2.bucket.*": "*"
-                }
-            }),
+            Self::Set { account, buckets } => Value::Object(
+                buckets
+                    .iter()
+                    .map(|bucket| {
+                        (
+                            format!("com.cloudflare.edge.r2.bucket.{account}_default_{bucket}"),
+                            Value::String("*".into()),
+                        )
+                    })
+                    .collect(),
+            ),
         }
     }
 }

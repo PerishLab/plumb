@@ -16,11 +16,14 @@ fn lifecycle() {
         serde_json::json!({"one-bucket": "*"})
     );
     assert_eq!(
-        Resource::Account("account".into()).policy(),
+        Resource::Set {
+            account: "account".into(),
+            buckets: vec!["one".into(), "two".into()],
+        }
+        .policy(),
         serde_json::json!({
-            "com.cloudflare.api.account.account": {
-                "com.cloudflare.edge.r2.bucket.*": "*"
-            }
+            "com.cloudflare.edge.r2.bucket.account_default_one": "*",
+            "com.cloudflare.edge.r2.bucket.account_default_two": "*"
         })
     );
     let answers = vec![
@@ -52,7 +55,10 @@ fn lifecycle() {
         .create(&Grant {
             name: "temporary".into(),
             permission: "permit".into(),
-            resource: Resource::Account("account".into()),
+            resource: Resource::Set {
+                account: "account".into(),
+                buckets: vec!["bucket".into()],
+            },
             expires: "soon".into(),
         })
         .expect("create");
