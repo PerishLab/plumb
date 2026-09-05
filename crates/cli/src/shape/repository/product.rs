@@ -28,6 +28,22 @@ pub(in crate::shape) struct Catalog {
     pub product: Vec<Reference>,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(in crate::shape) struct Migrations {
+    schema: String,
+    #[serde(default)]
+    pub product: Vec<Migration>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(in crate::shape) struct Migration {
+    pub identity: String,
+    pub profile: String,
+    pub source: Source,
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum Source {
@@ -40,7 +56,6 @@ pub(crate) enum Source {
 pub(in crate::shape) struct Reference {
     pub identity: String,
     pub profile: String,
-    pub source: Option<Source>,
 }
 
 #[derive(Deserialize)]
@@ -111,10 +126,7 @@ impl Legacy {
 
 impl Catalog {
     pub fn validate(&self) -> Result<(), String> {
-        if !matches!(
-            self.schema.as_str(),
-            "plumb.products/v2" | "plumb.products/v3"
-        ) {
+        if self.schema != "plumb.products/v2" {
             return Err(format!("unknown product catalog schema {}", self.schema));
         }
         let mut identities = BTreeSet::new();
@@ -128,9 +140,24 @@ impl Catalog {
                     product.identity
                 ));
             }
-            if self.schema == "plumb.products/v3" && product.source.is_none() {
+        }
+        Ok(())
+    }
+}
+
+impl Migrations {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.schema != "plumb.migrations/v1" {
+            return Err(format!("unknown product migration schema {}", self.schema));
+        }
+        let mut identities = BTreeSet::new();
+        for product in &self.product {
+            identity(&product.identity, &mut identities)?;
+            if product.profile.len() != 64
+                || !product.profile.bytes().all(|byte| byte.is_ascii_hexdigit())
+            {
                 return Err(format!(
-                    "product identity {} names no governance source",
+                    "product identity {} has an invalid profile digest",
                     product.identity
                 ));
             }

@@ -189,11 +189,16 @@ fn migration() {
 
     let document = profile("probe", manifest, ectropy);
     let digest = plumb::depot::sha(document.as_bytes());
-    let catalog = format!(
-        "schema = \"plumb.products/v3\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/probe\"\nprofile = \"{digest}\"\nsource = \"repository\"\n"
+    let catalog = "schema = \"plumb.products/v1\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/probe\"\nname = \"probe\"\nauthority = \"https://releases.probe.perish.uk\"\nderivatives = [\"skill\"]\n";
+    let migrations = format!(
+        "schema = \"plumb.migrations/v1\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/probe\"\nprofile = \"{digest}\"\nsource = \"repository\"\n"
     );
     let path = format!("profiles/{digest}.toml");
-    let depot = super::support::depot(&[("rules/products.toml", &catalog), (&path, &document)]);
+    let depot = super::support::depot(&[
+        ("rules/products.toml", catalog),
+        ("rules/migrations.toml", &migrations),
+        (&path, &document),
+    ]);
     let exact = repo.inspect(depot.path());
     assert!(
         exact.status.success(),
