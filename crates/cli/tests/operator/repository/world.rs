@@ -155,6 +155,63 @@ fn doctor() {
     );
 }
 
+#[test]
+#[cfg(unix)]
+fn migration() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let root = fixture.path().join("probe");
+    std::fs::create_dir(&root).expect("repository");
+    let repo = Fixture(&root);
+    repo.git(&["init", "-q"]);
+    repo.git(&[
+        "remote",
+        "add",
+        "origin",
+        "ssh://git@git.perish.top/PerishFire/probe.git",
+    ]);
+    std::fs::create_dir(root.join("src")).expect("source");
+    std::fs::write(root.join(".gitignore"), "target/\n").expect("ignore");
+    std::fs::write(
+        root.join("Cargo.toml"),
+        "[package]\nname = \"probe\"\nversion = \"0.1.0\"\nedition = \"2024\"\n",
+    )
+    .expect("manifest");
+    std::fs::write(root.join("src/lib.rs"), "pub fn answer() -> u8 { 42 }\n").expect("source");
+    let manifest = "[release]\nproduct = \"probe\"\nauthority = \"https://releases.probe.perish.uk\"\n[release.cargo]\nregistry = \"perish\"\npackages = [\"probe\"]\n\n[layout]\n[[layout.seat]]\npath = \"src\"\n[[layout.file]]\nname = [\".gitignore\", \"Cargo.toml\", \"ectropy.toml\", \"plumb.toml\"]\n";
+    let ectropy = "[comment]\nallow = false\n[limit]\nblock = 4\nfanout = 10\nfile = 300\nmarkup = 8\nparam = 4\npath = 3\n[word]\nsingle = true\n";
+    std::fs::create_dir_all(root.join(".forgejo/workflows")).expect("legacy workflow seat");
+    std::fs::write(root.join(".forgejo/workflows/legacy.yml"), "name: legacy\n")
+        .expect("legacy workflow");
+    std::fs::write(root.join("plumb.toml"), manifest).expect("governance");
+    std::fs::write(root.join("ectropy.toml"), ectropy).expect("policy");
+    repo.git(&["add", "-A"]);
+    hooks(&root);
+
+    let document = profile("probe", manifest, ectropy);
+    let digest = plumb::depot::sha(document.as_bytes());
+    let catalog = format!(
+        "schema = \"plumb.products/v3\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/probe\"\nprofile = \"{digest}\"\nsource = \"repository\"\n"
+    );
+    let path = format!("profiles/{digest}.toml");
+    let depot = super::support::depot(&[("rules/products.toml", &catalog), (&path, &document)]);
+    let exact = repo.inspect(depot.path());
+    assert!(
+        exact.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&exact.stdout),
+        String::from_utf8_lossy(&exact.stderr)
+    );
+
+    std::fs::write(root.join("plumb.toml"), format!("{manifest}\n")).expect("drift");
+    repo.git(&["add", "plumb.toml"]);
+    let drift = repo.inspect(depot.path());
+    assert!(!drift.status.success());
+    assert!(
+        String::from_utf8_lossy(&drift.stdout)
+            .contains("plumb.toml differs from its exact Depot profile")
+    );
+}
+
 impl Fixture<'_> {
     fn inspect(&self, home: &Path) -> std::process::Output {
         Command::new(env!("CARGO_BIN_EXE_plumb"))

@@ -108,11 +108,7 @@ impl Catalog<'_> {
     fn checks(&self) -> Result<Vec<Check>, String> {
         let tree = Tree::read(self.root, None)?;
         let governed = self.product.profile.is_some();
-        if governed && (tree.has("plumb.toml") || tree.has("ectropy.toml")) {
-            return Err(
-                "a Depot-governed product must not carry plumb.toml or ectropy.toml".into(),
-            );
-        }
+        profile(&tree, self.product.profile.as_ref())?;
         let mut held = crate::shape::workflow::read(self.root);
         if let Some(error) = held.refusal {
             return Err(error);
@@ -216,6 +212,38 @@ impl Catalog<'_> {
         }
         Ok(held)
     }
+}
+
+fn profile(tree: &Tree, profile: Option<&crate::shape::product::Profile>) -> Result<(), String> {
+    let Some(profile) = profile else {
+        return Ok(());
+    };
+    match profile.source {
+        crate::shape::product::Source::Repository => exact(tree, profile),
+        crate::shape::product::Source::Depot => {
+            if tree.has("plumb.toml") || tree.has("ectropy.toml") {
+                return Err(
+                    "a Depot-governed product must not carry plumb.toml or ectropy.toml".into(),
+                );
+            }
+            Ok(())
+        }
+    }
+}
+
+fn exact(tree: &Tree, profile: &crate::shape::product::Profile) -> Result<(), String> {
+    for (name, expected) in [
+        ("plumb.toml", profile.manifest.as_str()),
+        ("ectropy.toml", profile.ectropy.as_str()),
+    ] {
+        let actual = tree
+            .text(name)?
+            .ok_or_else(|| format!("{name} is required by its repository migration state"))?;
+        if actual != expected {
+            return Err(format!("{name} differs from its exact Depot profile"));
+        }
+    }
+    Ok(())
 }
 
 fn isolate(

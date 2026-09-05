@@ -7,8 +7,9 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 const MARK: &str = "29990101T000000Z";
-const SOURCES: [(&str, &str); 5] = [
+const SOURCES: [(&str, &str); 6] = [
     ("rules", "rules"),
+    ("profiles", "profiles"),
     ("../lib/rules", "rules"),
     ("assets", "assets"),
     ("cookbook", "cookbook"),

@@ -4,7 +4,6 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Component::Normal, Path, PathBuf};
-
 #[derive(Default)]
 pub struct Tree {
     root: PathBuf,
@@ -12,17 +11,14 @@ pub struct Tree {
     leaves: BTreeMap<String, String>,
 }
 pub struct Git<'a>(&'a Path);
-
 #[derive(Clone, Serialize)]
 pub struct Project {
     pub path: String,
     pub omit: Vec<String>,
 }
-
 #[derive(Default)]
 pub struct Projects(BTreeMap<String, Vec<Project>>);
 type Roots = BTreeMap<String, Vec<String>>;
-
 impl Tree {
     pub fn read(root: &Path, rev: Option<&str>) -> Result<Self, String> {
         let listed = match rev {
@@ -126,6 +122,12 @@ impl Tree {
     pub fn has(&self, path: &str) -> bool {
         self.leaves.contains_key(path)
     }
+    pub fn text(&self, path: &str) -> Result<Option<String>, String> {
+        if !self.has(path) {
+            return Ok(None);
+        }
+        Git::new(&self.root).file(self.revision.as_deref().unwrap_or(""), path)
+    }
     fn project(&self, project: &Project) -> Result<String, String> {
         let object = match &self.revision {
             Some(revision) => format!("{revision}:{}", project.path),
@@ -201,7 +203,6 @@ impl Projects {
     pub fn action(&self, name: &str) -> Vec<Project> {
         self.0.get(name).cloned().unwrap_or_default()
     }
-
     pub fn declare(&self, keys: &mut Vec<Key>, roots: &Roots) -> Result<(), String> {
         let actions = self.0.keys().chain(roots.keys()).collect::<BTreeSet<_>>();
         for action in actions {
@@ -234,20 +235,13 @@ impl Projects {
         Ok(())
     }
 }
-
 fn covers(root: &str, path: &str) -> bool {
     root == "*" || path == root || path.starts_with(&format!("{root}/"))
 }
-
-pub(super) fn relative(path: &str) -> bool {
-    !path.is_empty() && Path::new(path).components().all(|p| matches!(p, Normal(_)))
-}
-
 impl<'a> Git<'a> {
     pub fn new(root: &'a Path) -> Self {
         Self(root)
     }
-
     pub fn history(&self, rev: &str) -> Result<Vec<String>, String> {
         Ok(self
             .listing(&["rev-list", "--reverse", &format!("{rev}..HEAD")])?
@@ -257,14 +251,16 @@ impl<'a> Git<'a> {
             .map(str::to_string)
             .collect())
     }
-
     pub fn revision(&self, rev: &str) -> Result<String, String> {
         self.listing(&["rev-parse", "--verify", rev])
             .map(|held| held.trim().to_string())
     }
-
     pub fn file(&self, rev: &str, path: &str) -> Result<Option<String>, String> {
-        let object = format!("{rev}:{path}");
+        let object = if rev.is_empty() {
+            format!(":{path}")
+        } else {
+            format!("{rev}:{path}")
+        };
         let output = plumb::config::detached("git")
             .arg("-C")
             .arg(self.0)
@@ -282,7 +278,6 @@ impl<'a> Git<'a> {
         }
         Err(error.trim().to_string())
     }
-
     fn listing(&self, args: &[&str]) -> Result<String, String> {
         let output = plumb::config::detached("git")
             .arg("-C")
@@ -295,4 +290,7 @@ impl<'a> Git<'a> {
         }
         String::from_utf8(output.stdout).map_err(|_| "git emitted non-UTF-8 output".to_string())
     }
+}
+pub(super) fn relative(path: &str) -> bool {
+    !path.is_empty() && Path::new(path).components().all(|p| matches!(p, Normal(_)))
 }

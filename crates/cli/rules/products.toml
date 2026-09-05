@@ -1,13 +1,16 @@
-schema = "plumb.products/v1"
+schema = "plumb.products/v3"
 
 [[product]]
 identity = "git.perish.top/PerishLab/plumb"
-name = "plumb"
-authority = "https://releases.plumb.perish.uk"
-derivatives = ["changelog", "skill"]
+profile = "41b69ff0bc71102b71403a0bab5cf6d69354f60ae242b11b96477a6e387a7e3c"
+source = "repository"
 
 [[product]]
 identity = "git.perish.top/PerishFire/ectropy"
-name = "ectropy"
-authority = "https://releases.ectropy.perish.uk"
-derivatives = ["changelog", "skill"]
+profile = "08b305524398fd6f7661ef09fa35c3b183f7abb4ab5f254a8ed3435b6314d33e"
+source = "repository"
+
+[[product]]
+identity = "git.perish.top/PerishFire/runseal"
+profile = "4476a6590c9915d334d5b33e89b7cca5038ced45bcaef06a39bd098bb1dd908c"
+source = "repository"

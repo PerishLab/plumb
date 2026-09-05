@@ -8,6 +8,7 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 
 pub(crate) mod dependency;
+mod governance;
 mod human;
 
 #[derive(Serialize)]
@@ -78,40 +79,18 @@ struct Summary {
 
 pub fn run(root: PathBuf, json: bool) -> i32 {
     let snapshot = plumb::snapshot::Snapshot::read(&root);
-    let mut configuration = None;
-    let mut profile = None;
-    let mut view = None;
-    let mut governance = Vec::new();
-    match governed(&root) {
-        Ok(Some(held)) => {
-            configuration = Some(held.configuration.clone());
-            profile = Some(held.digest.clone());
-            if root.join("plumb.toml").exists() || root.join("ectropy.toml").exists() {
-                governance.push(finding::Finding::new(finding::Seed::wrong(
-                    &DEPOT_SCHEMA,
-                    "a Depot-governed product must not carry plumb.toml or ectropy.toml",
-                )));
-            }
-            match crate::command::precommit::tree::Index::working(&root)
-                .and_then(|index| index.govern(&held).map(|()| index))
-            {
-                Ok(index) => view = Some(index),
-                Err(error) => governance.push(finding::Finding::new(finding::Seed::blind(
-                    &DEPOT_SCHEMA,
-                    error,
-                ))),
-            }
-        }
-        Ok(None) => {}
-        Err(error) => governance.push(finding::Finding::new(finding::Seed::blind(
-            &DEPOT_SCHEMA,
-            error,
-        ))),
-    }
+    let governance::Read {
+        configuration,
+        profile,
+        rooted,
+        view,
+        findings: governance,
+    } = governance::inspect(&root);
     let observed = view
         .as_ref()
         .map_or(root.as_path(), |index| index.root.as_path());
     let mut held = shape::capture(observed, &snapshot);
+    held.rooted = rooted;
     dependency::observe(&mut held.dependencies, observed, line(observed).as_deref());
     let vocabulary = match &snapshot {
         Ok(snapshot) => plumb::vocabulary::observe(snapshot),
@@ -166,10 +145,6 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
         });
     }
     i32::from(!ok)
-}
-
-fn governed(root: &Path) -> Result<Option<shape::product::Profile>, String> {
-    shape::product::governance(root).map(|target| target.and_then(|target| target.profile))
 }
 
 fn briefs() -> Vec<String> {

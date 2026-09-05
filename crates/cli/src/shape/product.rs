@@ -2,6 +2,7 @@ use plumb::depot::v3::Kind;
 use plumb::forgejo::git;
 use std::path::Path;
 
+pub(crate) use super::repository::product::Source;
 use super::repository::product::{Catalog, Definition, Document, Legacy};
 
 const DOMAIN: &str = "git.perish.top";
@@ -19,6 +20,7 @@ pub struct Profile {
     pub digest: String,
     pub manifest: String,
     pub ectropy: String,
+    pub source: Source,
 }
 
 pub fn governance(root: &Path) -> Result<Option<Target>, String> {
@@ -84,7 +86,7 @@ fn configured<C: Configuration>(repository: &Path, seat: &C) -> Result<Target, S
         .ok_or_else(|| "depot rules/products.toml names no schema".to_string())?;
     match schema.as_str() {
         "plumb.products/v1" => inline(&raw, &identity),
-        "plumb.products/v2" => profiled(&raw, &identity, seat),
+        "plumb.products/v2" | "plumb.products/v3" => profiled(&raw, &identity, seat),
         _ => Err(format!("unknown product catalog schema {schema}")),
     }
 }
@@ -164,6 +166,7 @@ fn profiled<C: Configuration>(raw: &str, identity: &str, seat: &C) -> Result<Tar
         .into_iter()
         .find(|product| product.identity == identity)
         .ok_or_else(|| absent(identity))?;
+    let source = reference.source.unwrap_or(Source::Depot);
     let path = format!("profiles/{}.toml", reference.profile);
     let raw = seat.read(&path, "")?;
     if plumb::depot::sha(raw.as_bytes()) != reference.profile {
@@ -181,6 +184,7 @@ fn profiled<C: Configuration>(raw: &str, identity: &str, seat: &C) -> Result<Tar
             digest: reference.profile,
             manifest: document.governance.manifest,
             ectropy: document.governance.ectropy,
+            source,
         }),
     ))
 }

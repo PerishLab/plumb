@@ -28,11 +28,19 @@ pub(in crate::shape) struct Catalog {
     pub product: Vec<Reference>,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum Source {
+    Repository,
+    Depot,
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(in crate::shape) struct Reference {
     pub identity: String,
     pub profile: String,
+    pub source: Option<Source>,
 }
 
 #[derive(Deserialize)]
@@ -103,7 +111,10 @@ impl Legacy {
 
 impl Catalog {
     pub fn validate(&self) -> Result<(), String> {
-        if self.schema != "plumb.products/v2" {
+        if !matches!(
+            self.schema.as_str(),
+            "plumb.products/v2" | "plumb.products/v3"
+        ) {
             return Err(format!("unknown product catalog schema {}", self.schema));
         }
         let mut identities = BTreeSet::new();
@@ -114,6 +125,12 @@ impl Catalog {
             {
                 return Err(format!(
                     "product identity {} has an invalid profile digest",
+                    product.identity
+                ));
+            }
+            if self.schema == "plumb.products/v3" && product.source.is_none() {
+                return Err(format!(
+                    "product identity {} names no governance source",
                     product.identity
                 ));
             }

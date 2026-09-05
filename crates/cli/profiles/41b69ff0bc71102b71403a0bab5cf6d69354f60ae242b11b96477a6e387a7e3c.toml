@@ -1,3 +1,12 @@
+schema = "plumb.product-profile/v1"
+
+[product]
+name = "plumb"
+authority = "https://releases.plumb.perish.uk"
+derivatives = ["changelog", "skill"]
+
+[governance]
+manifest = '''
 
 [layout]
 
@@ -140,3 +149,79 @@ packages = ["@perish/plumb"]
 [release.cfworker]
 account = "a6776d8a453d1b84d01576245a9c4f8d"
 domain = "plumb.perish.uk"
+'''
+ectropy = '''
+[[ban]]
+paths = ["apps/web/src/lib/components/**"]
+syntax = "style"
+
+[comment]
+allow = false
+
+[[grant]]
+paths = [
+    "apps/*/tests/**/*.test.ts",
+    "crates/*/tests/**/*.rs",
+    "packages/*/tests/**/*.test.ts",
+    "packages/*/tests/**/*.test.tsx",
+]
+syntax = "test"
+
+[[grant]]
+paths = [
+    "apps/*/tests/**/*.test.ts",
+    "apps/web/vite.config.ts",
+    "crates/*/tests/**/*.rs",
+    "crates/lib/src/config.rs",
+    "crates/lib/src/forgejo/settings.rs",
+    "crates/lib/src/seat/mod.rs",
+    "crates/macro/src/parse.rs",
+    "packages/*/tests/**/*.test.ts",
+    "packages/*/tests/**/*.test.tsx",
+]
+syntax = "environment"
+
+[limit]
+block = 4
+fanout = 10
+file = 300
+markup = 8
+param = 4
+path = 3
+
+[module]
+roots = [
+    "apps/*",
+    "apps/*/src",
+    "apps/*/tests",
+    "crates/*/src",
+    "crates/*/tests",
+    "packages/*/lib",
+    "packages/*/src",
+    "packages/*/tests",
+    "skills/*",
+]
+
+[scan]
+exclude = [
+    "**/.svelte-kit/**",
+    "**/dist/**",
+    "**/node_modules/**",
+    "**/target/**",
+]
+include = [
+    "apps/**/*.css",
+    "apps/**/*.scss",
+    "apps/**/*.svelte",
+    "apps/**/*.ts",
+    "crates/**/*.rs",
+    "packages/**/*.css",
+    "packages/**/*.scss",
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "skills/**/*.md",
+]
+
+[word]
+single = true
+'''
