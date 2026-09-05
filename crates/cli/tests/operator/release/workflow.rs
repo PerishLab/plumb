@@ -40,6 +40,12 @@ fn matrix() {
         held.contains(".forgejo/scripts/fetch-marker.sh"),
         "marker checkout must use the bounded canonical transport"
     );
+    assert!(
+        held.contains(".forgejo/scripts/fetch-marker.ps1"),
+        "Windows marker checkout must use the bounded canonical transport"
+    );
+    assert!(held.contains("runner.os != 'Windows'"), "{held}");
+    assert!(held.contains("runner.os == 'Windows'"), "{held}");
     let marker = marker();
     assert!(marker.contains("bounded_fetch()"), "{marker}");
     assert!(marker.contains("kill -TERM \"$fetch_pid\""), "{marker}");
