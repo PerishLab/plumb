@@ -477,7 +477,7 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "plumb"
-version = "0.37.6"
+version = "0.37.21"
 dependencies = [
  "base64",
  "clap",
@@ -497,7 +497,7 @@ dependencies = [
 
 [[package]]
 name = "plumb-cli"
-version = "0.37.6"
+version = "0.37.21"
 dependencies = [
  "base64",
  "clap",
@@ -518,7 +518,7 @@ dependencies = [
 
 [[package]]
 name = "plumb-macro"
-version = "0.37.6"
+version = "0.37.21"
 dependencies = [
  "proc-macro2",
  "quote",
