@@ -31,7 +31,13 @@ pub fn governance(root: &Path) -> Result<Option<Target>, String> {
     match git::remote(root, "") {
         Ok(remote) if remote.host == DOMAIN => {
             let rig = plumb::rig::Rig::resolve(None).map_err(|error| error.to_string())?;
-            resolve(root, &rig.rules.source).map(Some)
+            let mut target = resolve(root, &rig.rules.source)?;
+            if projected()
+                && let Some(profile) = target.profile.as_mut()
+            {
+                profile.source = Source::Repository;
+            }
+            Ok(Some(target))
         }
         _ => Ok(None),
     }
@@ -129,8 +135,19 @@ fn guarded() -> bool {
     if plumb::config::value("PLUMB_HOME").is_some() {
         return false;
     }
-    plumb::config::value("PLUMB_GUARD_VIEW").is_some()
-        || plumb::config::value("PLUMB_GUARD_CONFIGURATION").is_some()
+    let view = plumb::config::value("PLUMB_GUARD_VIEW").is_some();
+    let binding = binding();
+    (view || binding) && !projected()
+}
+
+fn projected() -> bool {
+    plumb::config::value("PLUMB_HOME").is_none()
+        && plumb::config::value("PLUMB_GUARD_VIEW").is_some()
+        && binding()
+}
+
+fn binding() -> bool {
+    plumb::config::value("PLUMB_GUARD_CONFIGURATION").is_some()
         || plumb::config::value("PLUMB_GUARD_DEPOT").is_some()
 }
 

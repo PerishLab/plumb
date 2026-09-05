@@ -207,6 +207,18 @@ fn migration() {
         String::from_utf8_lossy(&exact.stderr)
     );
 
+    let guarded = repo.projected(&depot.path().join("configurations"));
+    assert!(
+        guarded.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&guarded.stdout),
+        String::from_utf8_lossy(&guarded.stderr)
+    );
+    let report: serde_json::Value =
+        serde_json::from_slice(&guarded.stdout).expect("guarded report");
+    assert_eq!(report["profile"], digest);
+    assert_eq!(report["ok"], true);
+
     std::fs::write(root.join("plumb.toml"), format!("{manifest}\n")).expect("drift");
     repo.git(&["add", "plumb.toml"]);
     let drift = repo.inspect(depot.path());
@@ -243,6 +255,18 @@ impl Fixture<'_> {
             .expect("git text")
             .trim()
             .to_string()
+    }
+
+    fn projected(&self, depot: &Path) -> std::process::Output {
+        Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["doctor", ".", "--json"])
+            .current_dir(self.0)
+            .env_remove("PLUMB_HOME")
+            .env_remove("PLUMB_GUARD_CONFIGURATION")
+            .env("PLUMB_GUARD_VIEW", "true")
+            .env("PLUMB_GUARD_DEPOT", depot)
+            .output()
+            .expect("guarded doctor")
     }
 
     fn surface(&self, home: &Path) -> std::process::Output {
