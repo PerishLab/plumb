@@ -24,6 +24,13 @@ pub fn depot(overrides: &[(&str, &str)]) -> tempfile::TempDir {
 }
 
 #[allow(dead_code)]
+pub fn home(overrides: &[(&str, &str)]) -> tempfile::TempDir {
+    let fixture = tempfile::tempdir().expect("home fixture");
+    stock(&fixture.path().join(".plumb/configurations"), overrides);
+    fixture
+}
+
+#[allow(dead_code)]
 pub fn guard(overrides: &[(&str, &str)], target: &str) -> tempfile::TempDir {
     let fixture = depot(overrides);
     let base = fixture.path().join("configurations").join(MARK);

@@ -150,7 +150,7 @@ pub(super) fn execute(
         .split_first()
         .ok_or_else(|| "guard action has no command".to_string())?;
     let mut command = plumb::config::detached(program);
-    let depot = plumb::config::value("PLUMB_HOME");
+    let depot = plumb::depot::root(&PathBuf::new()).ok();
     command
         .args(args)
         .current_dir(root)
@@ -167,10 +167,7 @@ pub(super) fn execute(
     if let Some(seat) = seat {
         command.env("PLUMB_GUARD_CONFIGURATION", seat);
     } else if governed && let Some(depot) = depot {
-        command.env(
-            "PLUMB_GUARD_DEPOT",
-            PathBuf::from(depot).join("configurations"),
-        );
+        command.env("PLUMB_GUARD_DEPOT", depot);
     }
     let status = command
         .status()
