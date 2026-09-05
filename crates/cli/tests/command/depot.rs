@@ -117,7 +117,13 @@ name = "ectropy"
 authority = "https://releases.ectropy.perish.uk"
 derivatives = ["changelog"]
 "#;
-    let depot = support::depot(&[("rules/products.toml", rules)]);
+    let depot = support::depot(&[
+        ("rules/products.toml", rules),
+        (
+            "rules/migrations.toml",
+            "schema = \"plumb.migrations/v1\"\n",
+        ),
+    ]);
     let ectropy = repository("ectropy");
     let (ok, held) = publish(ectropy.path(), depot.path());
     assert!(!ok, "{held}");

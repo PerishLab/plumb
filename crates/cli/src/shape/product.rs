@@ -3,10 +3,11 @@ use plumb::forgejo::git;
 use std::path::Path;
 
 pub(crate) use super::repository::product::Source;
-use super::repository::product::{Catalog, Definition, Document, Legacy};
+use super::repository::product::{Catalog, Definition, Document, Legacy, Migration, Migrations};
 
 const DOMAIN: &str = "git.perish.top";
 const FACTORY: &str = "schema = \"plumb.products/v1\"\n";
+const MIGRATIONS: &str = "schema = \"plumb.migrations/v1\"\n";
 
 pub struct Target {
     pub product: String,
@@ -85,8 +86,8 @@ fn configured<C: Configuration>(repository: &Path, seat: &C) -> Result<Target, S
         .and_then(|held| held.get("schema")?.as_str().map(str::to_string))
         .ok_or_else(|| "depot rules/products.toml names no schema".to_string())?;
     match schema.as_str() {
-        "plumb.products/v1" => inline(&raw, &identity),
-        "plumb.products/v2" | "plumb.products/v3" => profiled(&raw, &identity, seat),
+        "plumb.products/v1" => inline(&raw, &identity, seat),
+        "plumb.products/v2" => profiled(&raw, &identity, seat),
         _ => Err(format!("unknown product catalog schema {schema}")),
     }
 }
@@ -145,7 +146,7 @@ impl Root<'_> {
     }
 }
 
-fn inline(raw: &str, identity: &str) -> Result<Target, String> {
+fn inline<C: Configuration>(raw: &str, identity: &str, seat: &C) -> Result<Target, String> {
     let catalog: Legacy = toml::from_str(raw)
         .map_err(|error| format!("cannot parse depot rules/products.toml: {error}"))?;
     catalog.validate()?;
@@ -154,7 +155,54 @@ fn inline(raw: &str, identity: &str) -> Result<Target, String> {
         .into_iter()
         .find(|product| product.identity == identity)
         .ok_or_else(|| absent(identity))?;
-    Ok(target(product.definition, None))
+    let migrations = seat.read("rules/migrations.toml", MIGRATIONS)?;
+    let migrations: Migrations = toml::from_str(&migrations)
+        .map_err(|error| format!("cannot parse depot rules/migrations.toml: {error}"))?;
+    migrations.validate()?;
+    let migration = migrations
+        .product
+        .into_iter()
+        .find(|migration| migration.identity == identity);
+    match migration {
+        Some(migration) => migrated(seat, product.definition, migration),
+        None => Ok(target(product.definition, None)),
+    }
+}
+
+fn migrated<C: Configuration>(
+    seat: &C,
+    definition: Definition,
+    migration: Migration,
+) -> Result<Target, String> {
+    let path = format!("profiles/{}.toml", migration.profile);
+    let raw = seat.read(&path, "")?;
+    if plumb::depot::sha(raw.as_bytes()) != migration.profile {
+        return Err(format!("product profile digest drift: {path}"));
+    }
+    let document: Document =
+        toml::from_str(&raw).map_err(|error| format!("cannot parse {path}: {error}"))?;
+    document.validate(&path)?;
+    if document.product.name != definition.name
+        || document.product.authority != definition.authority
+        || document.product.derivatives != definition.derivatives
+    {
+        return Err(format!(
+            "product migration profile {} differs from its catalog definition",
+            migration.profile
+        ));
+    }
+    Ok(target(
+        document.product,
+        Some(Profile {
+            configuration: seat
+                .mark()
+                .ok_or_else(|| "product profile has no configuration generation".to_string())?,
+            digest: migration.profile,
+            manifest: document.governance.manifest,
+            ectropy: document.governance.ectropy,
+            source: migration.source,
+        }),
+    ))
 }
 
 fn profiled<C: Configuration>(raw: &str, identity: &str, seat: &C) -> Result<Target, String> {
@@ -166,7 +214,6 @@ fn profiled<C: Configuration>(raw: &str, identity: &str, seat: &C) -> Result<Tar
         .into_iter()
         .find(|product| product.identity == identity)
         .ok_or_else(|| absent(identity))?;
-    let source = reference.source.unwrap_or(Source::Depot);
     let path = format!("profiles/{}.toml", reference.profile);
     let raw = seat.read(&path, "")?;
     if plumb::depot::sha(raw.as_bytes()) != reference.profile {
@@ -184,7 +231,7 @@ fn profiled<C: Configuration>(raw: &str, identity: &str, seat: &C) -> Result<Tar
             digest: reference.profile,
             manifest: document.governance.manifest,
             ectropy: document.governance.ectropy,
-            source,
+            source: Source::Depot,
         }),
     ))
 }
