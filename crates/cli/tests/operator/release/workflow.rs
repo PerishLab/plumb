@@ -23,6 +23,12 @@ fn resolution() -> String {
         .expect("Plumb owns ship output projection")
 }
 
+fn marker() -> String {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    std::fs::read_to_string(root.join(".forgejo/scripts/fetch-marker.sh"))
+        .expect("Plumb owns marker transport")
+}
+
 #[test]
 fn matrix() {
     let held = canonical();
@@ -33,6 +39,14 @@ fn matrix() {
     assert!(
         held.contains(".forgejo/scripts/fetch-marker.sh"),
         "marker checkout must use the bounded canonical transport"
+    );
+    let marker = marker();
+    assert!(marker.contains("bounded_fetch()"), "{marker}");
+    assert!(marker.contains("kill -TERM \"$fetch_pid\""), "{marker}");
+    assert!(marker.contains("kill -KILL \"$fetch_pid\""), "{marker}");
+    assert!(
+        !marker.contains("timeout --"),
+        "marker transport must not require GNU coreutils on macOS: {marker}"
     );
     assert!(held.contains("fromJSON(needs.resolve.outputs.workload)"));
     assert!(
