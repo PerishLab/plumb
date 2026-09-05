@@ -116,8 +116,14 @@ fn versioned() {
     assert!(!execution.contains("if release.channel == \"stable\""));
 
     let trigger = text("crates/cli/src/command/operator/trigger.rs");
-    assert!(trigger.contains("before.product == \"plumb\""), "{trigger}");
-    assert!(trigger.contains("before.marker.clone()"), "{trigger}");
+    assert!(
+        !trigger.contains("before.product == \"plumb\""),
+        "Plumb must not bind controller configuration to the product marker: {trigger}"
+    );
+    assert!(
+        trigger.contains("let configuration = plumb::version!(\"PLUMB\").to_string()"),
+        "every ship must use the dispatching Plumb atom's configuration: {trigger}"
+    );
     assert!(
         trigger.contains("plumb::version!(\"PLUMB\").to_string()"),
         "{trigger}"

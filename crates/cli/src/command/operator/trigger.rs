@@ -19,11 +19,7 @@ struct Flight<'a> {
 pub fn run(options: Dispatch) -> Result<String, String> {
     let before = super::super::release::marker(&options.marker)?;
     let digest = before.digest()?;
-    let configuration = if before.product == "plumb" {
-        before.marker.clone()
-    } else {
-        plumb::version!("PLUMB").to_string()
-    };
+    let configuration = plumb::version!("PLUMB").to_string();
     let root = git::root()?;
     let product = git::remote(&root, &options.repo)?;
     let remote = git::remote(&root, "PerishLab/plumb")?;
