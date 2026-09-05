@@ -4,16 +4,19 @@ schema = "plumb.products/v1"
 identity = "git.perish.top/PerishLab/plumb"
 name = "plumb"
 authority = "https://releases.plumb.perish.uk"
+depot = "https://depot.plumb.perish.uk"
 derivatives = ["changelog", "skill"]
 
 [[product]]
 identity = "git.perish.top/PerishFire/ectropy"
 name = "ectropy"
 authority = "https://releases.ectropy.perish.uk"
+depot = "https://depot.ectropy.perish.uk"
 derivatives = ["changelog", "skill"]
 
 [[product]]
 identity = "git.perish.top/PerishFire/runseal"
 name = "runseal"
 authority = "https://releases.runseal.perish.uk"
+depot = "https://depot.runseal.perish.uk"
 derivatives = ["changelog", "skill"]

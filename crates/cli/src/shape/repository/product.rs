@@ -71,6 +71,8 @@ pub(in crate::shape) struct Document {
 pub(in crate::shape) struct Definition {
     pub name: String,
     pub authority: String,
+    #[serde(default)]
+    pub depot: Option<String>,
     pub derivatives: Vec<Kind>,
 }
 
@@ -81,6 +83,17 @@ pub(in crate::shape) struct Governance {
     pub ectropy: String,
 }
 
+impl Definition {
+    pub(in crate::shape) fn identity(&self) -> (&str, &str, Option<&str>, &[Kind]) {
+        (
+            &self.name,
+            &self.authority,
+            self.depot.as_deref(),
+            &self.derivatives,
+        )
+    }
+}
+
 impl Document {
     pub fn validate(&self, path: &str) -> Result<(), String> {
         if self.schema != "plumb.product-profile/v1" {
@@ -88,6 +101,11 @@ impl Document {
         }
         token("product name", &self.product.name)?;
         authority(&self.product.name, &self.product.authority)?;
+        depot(
+            &self.product.name,
+            &self.product.authority,
+            self.product.depot.as_deref(),
+        )?;
         derivatives(&self.product.name, &self.product.derivatives)?;
         self.governance
             .manifest
@@ -118,6 +136,11 @@ impl Legacy {
                 ));
             }
             authority(&product.definition.name, &product.definition.authority)?;
+            depot(
+                &product.definition.name,
+                &product.definition.authority,
+                product.definition.depot.as_deref(),
+            )?;
             derivatives(&product.definition.name, &product.definition.derivatives)?;
         }
         Ok(())
@@ -201,6 +224,33 @@ fn authority(product: &str, authority: &str) -> Result<(), String> {
         ));
     }
     Ok(())
+}
+
+pub(in crate::shape) fn depot(
+    product: &str,
+    authority: &str,
+    declared: Option<&str>,
+) -> Result<String, String> {
+    let source = match declared {
+        Some(source) => source.to_string(),
+        None => authority
+            .strip_prefix("https://releases.")
+            .map(|suffix| format!("https://depot.{suffix}"))
+            .ok_or_else(|| {
+                format!(
+                    "product {product} must declare a depot because its release authority has no conventional depot sibling"
+                )
+            })?,
+    };
+    if !source.starts_with("https://")
+        || source.ends_with('/')
+        || source.chars().any(char::is_whitespace)
+    {
+        return Err(format!(
+            "product {product} depot must be one normalized https URL"
+        ));
+    }
+    Ok(source)
 }
 
 fn derivatives(product: &str, derivatives: &[Kind]) -> Result<(), String> {

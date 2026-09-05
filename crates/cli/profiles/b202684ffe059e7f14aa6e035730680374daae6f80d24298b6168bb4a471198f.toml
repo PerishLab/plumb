@@ -3,6 +3,7 @@ schema = "plumb.product-profile/v1"
 [product]
 name = "plumb"
 authority = "https://releases.plumb.perish.uk"
+depot = "https://depot.plumb.perish.uk"
 derivatives = ["changelog", "skill"]
 
 [governance]

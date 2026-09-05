@@ -91,6 +91,8 @@ answers for.
 - Depot generations remain immutable and addressable. Configuration, changelog,
   skill, channel, manager, and provider bindings may move their latest pointer,
   but every movement names the release marker and uses conditional readback.
+  A marker locks its Product Profile, which alone declares the product's depot
+  derivatives and their authority; product repositories repeat neither.
   A marker-exact configuration generation validates against the marker's
   published binary. It moves no channel pointer; depot consensus advances only
   after the immutable publication it consumes reads back.

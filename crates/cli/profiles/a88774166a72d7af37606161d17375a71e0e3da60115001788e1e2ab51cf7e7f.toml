@@ -1,8 +1,9 @@
 schema = "plumb.product-profile/v1"
 
 [product]
-name = "runseal"
-authority = "https://releases.runseal.perish.uk"
+name = "ectropy"
+authority = "https://releases.ectropy.perish.uk"
+depot = "https://depot.ectropy.perish.uk"
 derivatives = ["changelog", "skill"]
 
 [governance]
@@ -10,14 +11,18 @@ manifest = '''
 [layout]
 
 [[layout.seat]]
-path = "app"
+path = "crates/*"
 anchor = ["Cargo.toml"]
-note = "The Runseal Rust package."
+note = "The CLI, kernel, and grammar Rust workspace members."
 
 [[layout.seat]]
 path = "skills/*"
 anchor = ["SKILL.md"]
 note = "Published agent skill packages."
+
+[[layout.seat]]
+path = "docs"
+note = "Admitted design and release history."
 
 [[layout.seat]]
 path = ".cargo"
@@ -52,36 +57,39 @@ note = "Rust workspace anchors."
 name = ["plumb.toml", "ectropy.toml", "runseal.toml"]
 note = "Governance and isolated execution declarations."
 
+[[layout.file]]
+name = ["DESIGN.md"]
+note = "The admitted structure-tree and adapter contract."
+
 [release]
-product = "runseal"
-authority = "https://releases.runseal.perish.uk"
-binaries = ["runseal"]
+product = "ectropy"
+authority = "https://releases.ectropy.perish.uk"
+binaries = ["ectropy"]
 targets = [
   "x86_64-unknown-linux-gnu",
   "aarch64-apple-darwin",
-  "x86_64-apple-darwin",
   "x86_64-pc-windows-msvc",
 ]
 skill = true
-
-[release.cargo]
-registry = "perish"
-packages = ["runseal"]
 '''
 ectropy = '''
+[[boundary]]
+allow = [
+    "path",
+    "comment",
+]
+note = "release product glue is platform-specific ci infrastructure"
+paths = [".forgejo/**"]
+
 [comment]
 allow = false
 
 [[grant]]
-paths = ["app/tests/**/*.rs"]
+paths = ["crates/*/tests/**/*.rs"]
 syntax = "test"
 
 [[grant]]
-paths = [
-    "app/src/bin/runseal/**/*.rs",
-    "app/src/core/config.rs",
-    "app/tests/**/*.rs",
-]
+paths = ["crates/*/tests/**/*.rs"]
 syntax = "environment"
 
 [limit]
@@ -94,18 +102,17 @@ path = 3
 
 [module]
 roots = [
-    ".runseal",
-    "app/src",
-    "app/tests",
+    "crates/*/src",
+    "crates/*/tests",
+    "docs",
     "skills/*",
 ]
 
 [scan]
 exclude = ["**/target/**"]
 include = [
-    ".runseal/**",
-    "app/src/**/*.rs",
-    "app/tests/**/*.rs",
+    "crates/**/*.rs",
+    "docs/**/*.md",
     "skills/**/*.md",
 ]
 

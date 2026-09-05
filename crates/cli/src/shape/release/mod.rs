@@ -20,6 +20,8 @@ pub struct Spec {
     pub profile: Option<String>,
     pub product: String,
     pub authority: String,
+    pub route: Option<String>,
+    pub derivatives: Vec<plumb::depot::v3::Kind>,
     pub binaries: Vec<String>,
     pub target: Vec<Target>,
     pub skill: bool,
@@ -77,6 +79,8 @@ impl Spec {
     }
 
     pub(crate) fn governed(root: &Path, target: super::product::Target) -> Result<Self, String> {
+        let route = target.depot.clone();
+        let derivatives = target.derivatives().to_vec();
         let Some(profile) = target.profile else {
             return Self::read(&root.join("plumb.toml"));
         };
@@ -89,6 +93,8 @@ impl Spec {
         }
         spec.configuration = Some(profile.configuration);
         spec.profile = Some(profile.digest);
+        spec.route = Some(route);
+        spec.derivatives = derivatives;
         Ok(spec)
     }
 
@@ -130,6 +136,10 @@ impl Spec {
                 .collect::<Result<Vec<_>, _>>()?,
             product,
             authority,
+            route: depot.as_ref().map(|held| held.source.clone()),
+            derivatives: depot
+                .as_ref()
+                .map_or_else(Vec::new, |held| held.derivatives.clone()),
             binaries,
             skill,
             cargo,
@@ -142,8 +152,10 @@ impl Spec {
             retire,
             depot,
         };
-        if let Some(deb) = &mut spec.deb {
-            deb.root = rebase(root, &deb.root);
+        if let Some(deb) = &mut spec.deb
+            && deb.root.is_relative()
+        {
+            deb.root = root.join(&deb.root);
         }
         spec.validate()?;
         Ok(spec)
@@ -280,12 +292,4 @@ pub(super) fn token(subject: &str, value: &str, upper: bool) -> Result<(), Strin
         return Err(format!("invalid {subject}: {value}"));
     }
     Ok(())
-}
-
-fn rebase(root: &Path, path: &Path) -> PathBuf {
-    if path.is_relative() {
-        root.join(path)
-    } else {
-        path.to_path_buf()
-    }
 }

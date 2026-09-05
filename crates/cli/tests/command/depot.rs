@@ -66,6 +66,7 @@ fn profiled() {
 [product]
 name = "ectropy"
 authority = "https://releases.ectropy.perish.uk"
+depot = "https://depot.ectropy.perish.uk"
 derivatives = ["changelog", "skill"]
 
 [governance]
@@ -127,10 +128,7 @@ derivatives = ["changelog"]
     let ectropy = repository("ectropy");
     let (ok, held) = publish(ectropy.path(), depot.path());
     assert!(!ok, "{held}");
-    assert!(
-        held.contains("perish.code product ectropy does not carry the skill derivative"),
-        "{held}"
-    );
+    assert!(held.contains("invalid release marker vinvalid"), "{held}");
 }
 
 #[test]

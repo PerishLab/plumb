@@ -12,6 +12,7 @@ const MIGRATIONS: &str = "schema = \"plumb.migrations/v1\"\n";
 pub struct Target {
     pub product: String,
     pub authority: String,
+    pub depot: String,
     derivatives: Vec<Kind>,
     pub profile: Option<Profile>,
 }
@@ -126,6 +127,7 @@ pub fn guard(root: &Path, source: &str) -> Result<Target, String> {
     Ok(Target {
         product,
         authority: String::new(),
+        depot: String::new(),
         derivatives: Vec::new(),
         profile: None,
     })
@@ -157,6 +159,11 @@ impl Root<'_> {
         Ok(Target {
             product: spec.product,
             authority: spec.authority,
+            depot: spec
+                .depot
+                .as_ref()
+                .map(|depot| depot.source.clone())
+                .unwrap_or_default(),
             derivatives: spec.depot.map_or_else(Vec::new, |depot| depot.derivatives),
             profile: None,
         })
@@ -182,7 +189,7 @@ fn inline<C: Configuration>(raw: &str, identity: &str, seat: &C) -> Result<Targe
         .find(|migration| migration.identity == identity);
     match migration {
         Some(migration) => migrated(seat, product.definition, migration),
-        None => Ok(target(product.definition, None)),
+        None => target(product.definition, None),
     }
 }
 
@@ -199,16 +206,13 @@ fn migrated<C: Configuration>(
     let document: Document =
         toml::from_str(&raw).map_err(|error| format!("cannot parse {path}: {error}"))?;
     document.validate(&path)?;
-    if document.product.name != definition.name
-        || document.product.authority != definition.authority
-        || document.product.derivatives != definition.derivatives
-    {
+    if document.product.identity() != definition.identity() {
         return Err(format!(
             "product migration profile {} differs from its catalog definition",
             migration.profile
         ));
     }
-    Ok(target(
+    target(
         document.product,
         Some(Profile {
             configuration: seat
@@ -219,7 +223,7 @@ fn migrated<C: Configuration>(
             ectropy: document.governance.ectropy,
             source: migration.source,
         }),
-    ))
+    )
 }
 
 fn profiled<C: Configuration>(raw: &str, identity: &str, seat: &C) -> Result<Target, String> {
@@ -239,7 +243,7 @@ fn profiled<C: Configuration>(raw: &str, identity: &str, seat: &C) -> Result<Tar
     let document: Document =
         toml::from_str(&raw).map_err(|error| format!("cannot parse {path}: {error}"))?;
     document.validate(&path)?;
-    Ok(target(
+    target(
         document.product,
         Some(Profile {
             configuration: seat
@@ -250,28 +254,27 @@ fn profiled<C: Configuration>(raw: &str, identity: &str, seat: &C) -> Result<Tar
             ectropy: document.governance.ectropy,
             source: Source::Depot,
         }),
-    ))
+    )
 }
 
-fn target(product: Definition, profile: Option<Profile>) -> Target {
-    Target {
+fn target(product: Definition, profile: Option<Profile>) -> Result<Target, String> {
+    let depot = super::repository::product::depot(
+        &product.name,
+        &product.authority,
+        product.depot.as_deref(),
+    )?;
+    Ok(Target {
         product: product.name,
         authority: product.authority,
+        depot,
         derivatives: product.derivatives,
         profile,
-    }
+    })
 }
 
 impl Target {
-    pub fn require(&self, derivative: Kind) -> Result<(), String> {
-        if self.derivatives.contains(&derivative) {
-            return Ok(());
-        }
-        Err(format!(
-            "perish.code product {} does not carry the {} derivative",
-            self.product,
-            derivative.label()
-        ))
+    pub fn derivatives(&self) -> &[Kind] {
+        &self.derivatives
     }
 }
 

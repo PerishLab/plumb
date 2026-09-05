@@ -10,10 +10,10 @@ pub struct Wanted<'a> {
 
 pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    product::require(root, &rig, plumb::depot::v3::Kind::Changelog)?;
+    product::validate(root, &rig)?;
     let marker = crate::command::release::ReleaseMarker::bound(root, wanted.marker)?;
     let spec = marker.spec();
-    let depot = spec.derivative(plumb::depot::v3::Kind::Changelog)?;
+    let depot = spec.route(plumb::depot::v3::Kind::Changelog)?;
     let standing = marker.digest()?;
     let source = source(wanted.from)?;
     let proof = crate::command::changelog::prove(root, source, &marker.marker)?;
@@ -58,7 +58,7 @@ pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
             rig.depot.authority.load()?;
             store::Remote::new(&rig.depot.authority)?.publish(
                 &bundle,
-                &depot.source,
+                depot,
                 super::super::clock::ahead(0)?,
             )
         }
@@ -69,10 +69,10 @@ pub fn changelog(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
 
 pub fn skill(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
     let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    product::require(root, &rig, plumb::depot::v3::Kind::Skill)?;
+    product::validate(root, &rig)?;
     let marker = crate::command::release::ReleaseMarker::bound(root, wanted.marker)?;
     let spec = marker.spec();
-    let depot = spec.derivative(plumb::depot::v3::Kind::Skill)?;
+    let depot = spec.route(plumb::depot::v3::Kind::Skill)?;
     let standing = marker.digest()?;
     let source = source(wanted.from)?;
     let commit = Tree(root).commit()?;
@@ -97,7 +97,7 @@ pub fn skill(root: &Path, wanted: Wanted<'_>) -> Result<String, String> {
             rig.depot.authority.load()?;
             store::Remote::new(&rig.depot.authority)?.publish(
                 &bundle,
-                &depot.source,
+                depot,
                 super::super::clock::ahead(0)?,
             )
         }

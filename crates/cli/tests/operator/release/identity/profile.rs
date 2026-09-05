@@ -1,5 +1,6 @@
 use super::super::world::{Fixture, run};
 use serde_json::Value;
+use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
 use std::process::Command;
 
@@ -60,6 +61,39 @@ fn retained() {
     assert_eq!(value["authority"], "https://releases.old.perish.uk");
     assert_eq!(value["configuration"], first);
     assert_eq!(value["profile"], profile);
+
+    let git = tools.join("git");
+    std::fs::write(
+        &git,
+        "#!/bin/sh\nfor arg in \"$@\"; do [ \"$arg\" = fetch ] && exit 0; done\nexec /usr/bin/git \"$@\"\n",
+    )
+    .expect("git shim");
+    std::fs::set_permissions(&git, std::fs::Permissions::from_mode(0o755)).expect("git shim mode");
+    let skill = temp.path().join("skill");
+    std::fs::create_dir(&skill).expect("skill root");
+    std::fs::write(skill.join("SKILL.md"), "# Probe\n").expect("skill body");
+    let depot = fixture
+        .command()
+        .current_dir(fixture.root)
+        .env("PLUMB_HOME", home.path())
+        .env("PLUMB_RULES_SOURCE", "https://depot.test")
+        .args([
+            "depot",
+            "skill",
+            ".",
+            "--marker",
+            "v1.2.0-beta.1",
+            "--from",
+            skill.to_str().expect("skill path"),
+            "--dry-run",
+        ])
+        .output()
+        .expect("profile depot should run");
+    assert!(
+        depot.status.success(),
+        "{}",
+        String::from_utf8_lossy(&depot.stderr)
+    );
 }
 
 fn annotate(root: &Path, version: &str, commit: &str, message: &str) {

@@ -29,12 +29,10 @@ says what none of those can. Ask the one that owns the question.
   hooks; Doctor requires them.
 - A **landing** projects that exact proved tree onto its base.
 - A **version** is repository identity projected through every package carrier.
-  A **release** is its immutable distribution marker. **Ship** publishes every
-  immutable medium bound to that marker; **depot** moves its mutable projections.
-  Generations stay immutable. Marker-exact configuration precedes manager
-  smoke; its channel pointer advances only with final depot consensus.
-  `[release.depot]` declares public capability; a product's Runseal profile
-  holds write authority.
+  A **release** is its immutable marker. **Ship** publishes immutable media;
+  **depot** moves mutable projections. Both bind that marker. A locked Product
+  Profile owns depot routes; only Plumb's `[release.depot]` binds its
+  configuration validator. Runseal profiles hold write authority.
 - Plumb's **rules seat** consumes configuration. Rules are never compiled or
   fetched while reading; an invalid seat names `plumb configuration install`.
   Publishing validates with the released binary. Skill consumes its Depot

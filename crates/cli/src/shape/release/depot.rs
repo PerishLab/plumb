@@ -46,6 +46,18 @@ impl Depot {
 }
 
 impl super::Spec {
+    pub fn route(&self, kind: plumb::depot::v3::Kind) -> Result<&str, String> {
+        if !self.derivatives.contains(&kind) {
+            return Err(format!(
+                "release identity does not carry the {} derivative",
+                kind.label()
+            ));
+        }
+        self.route
+            .as_deref()
+            .ok_or_else(|| "release identity carries no depot authority".to_string())
+    }
+
     pub fn derivative(&self, kind: plumb::depot::v3::Kind) -> Result<&Depot, String> {
         let depot = self
             .depot

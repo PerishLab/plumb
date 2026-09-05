@@ -172,6 +172,10 @@ impl Validation<'_> {
             .env_remove("PLUMB_HOME")
             .env("PLUMB_GUARD_DEPOT", &seat)
             .env(
+                format!("{}_RELEASE_VERSION", self.spec.environment()),
+                &self.binding.release.version,
+            )
+            .env(
                 format!("{}_DEPOT_SNAPSHOT", self.spec.environment()),
                 &snapshot,
             )
