@@ -2,5 +2,5 @@ apiVersion: v2
 name: plumb
 description: plumb carrier — a minimal nginx workload, so the chart adaptor projects onto a real medium
 type: application
-version: 0.37.6
-appVersion: "0.37.6"
+version: 0.37.16
+appVersion: "0.37.16"
