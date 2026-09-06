@@ -1,5 +1,10 @@
 const BINARY: &str = "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n";
 
+#[path = "../../../src/shape/pair/identity.rs"]
+mod identity;
+
+use std::process::Command;
+
 fn seat(name: &str) -> std::path::PathBuf {
     let dir = std::env::temp_dir().join(name);
     let _ = std::fs::remove_dir_all(&dir);
@@ -195,4 +200,92 @@ fn width() {
         wide.contains("the npm attachment declares 11 packages and Plumb permits 10"),
         "{wide}"
     );
+}
+
+#[test]
+fn settled() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let root = fixture.path();
+    initialize(root);
+    let base = commit(root, "base", None, &[]);
+    let release = commit(root, "release", Some(&base), &[]);
+    let rejoin = commit(root, "rejoin", Some(&base), &[&release]);
+    run(root, ["reset", "--hard", &rejoin]);
+
+    assert_eq!(identity::Seat(root).blind("plumb", Some(&release)), None);
+}
+
+#[test]
+fn advanced() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let root = fixture.path();
+    initialize(root);
+    let base = commit(root, "base", None, &[]);
+    std::fs::write(root.join("source"), "changed").expect("fixture file should be written");
+    run(root, ["add", "source"]);
+    let head = commit(root, "head", Some(&base), &[]);
+    run(root, ["reset", "--hard", &head]);
+
+    assert!(identity::Seat(root).blind("plumb", Some(&base)).is_some());
+}
+
+#[test]
+fn drifted() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let root = fixture.path();
+    initialize(root);
+    let base = commit(root, "base", None, &[]);
+    let release = commit(root, "release", Some(&base), &[]);
+    std::fs::write(root.join("source"), "drift").expect("fixture file should be written");
+    run(root, ["add", "source"]);
+    let drift = commit(root, "drift", Some(&base), &[]);
+    let rejoin = commit(root, "rejoin", Some(&drift), &[&release]);
+    run(root, ["reset", "--hard", &rejoin]);
+
+    assert!(
+        identity::Seat(root)
+            .blind("plumb", Some(&release))
+            .is_some()
+    );
+}
+
+fn initialize(root: &std::path::Path) {
+    run(root, ["init", "-q"]);
+    run(root, ["config", "user.name", "Plumb"]);
+    run(root, ["config", "user.email", "plumb@example.invalid"]);
+    std::fs::write(root.join("source"), "base").expect("fixture file should be written");
+    run(root, ["add", "source"]);
+}
+
+fn commit(root: &std::path::Path, message: &str, parent: Option<&str>, merges: &[&str]) -> String {
+    let written = Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .arg("write-tree")
+        .output()
+        .expect("git should run");
+    assert!(written.status.success(), "git write-tree should succeed");
+    let tree = String::from_utf8_lossy(&written.stdout).trim().to_string();
+    let mut command = Command::new("git");
+    command.arg("-C").arg(root).args(["commit-tree", &tree]);
+    if let Some(parent) = parent {
+        command.args(["-p", parent]);
+    }
+    for merge in merges {
+        command.args(["-p", merge]);
+    }
+    command.args(["-m", message]);
+    let output = command.output().expect("git should run");
+    assert!(output.status.success(), "git commit-tree should succeed");
+    String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
+fn run<const N: usize>(root: &std::path::Path, args: [&str; N]) {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(args)
+        .output()
+        .expect("git should run");
+    assert!(output.status.success(), "git command should succeed");
 }
