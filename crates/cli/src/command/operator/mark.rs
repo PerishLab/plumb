@@ -9,7 +9,8 @@ pub(super) fn stamp(raw: &str, dry: bool) -> Result<String, String> {
     let held = named(raw);
     let channel = super::super::release::channel(&held)?;
     let version = value::version(&held, &channel)?;
-    let name = value::branch(&line(&version));
+    let base = line(&version);
+    let name = value::branch(&base);
     let root = plumb::forgejo::git::root()?;
     if channel == "stable" {
         let remote = plumb::forgejo::git::remote(&root, "")?;
@@ -21,6 +22,7 @@ pub(super) fn stamp(raw: &str, dry: bool) -> Result<String, String> {
     let annotation = crate::command::release::annotation(&spec, &version)?;
     let seat = point(&root);
     let head = seat.prove(&name)?;
+    seat.datum(&base, &head)?;
     let mut course = Course::new(dry);
     let said = course.step(
         format!("git tag -a {version} at {head} on {name}, then push"),
@@ -62,6 +64,21 @@ pub fn point(root: &Path) -> Point<'_> {
 }
 
 impl Point<'_> {
+    fn datum(&self, version: &str, head: &str) -> Result<(), String> {
+        let path = plumb::datum::leaf(version);
+        let object = format!("{head}:{path}");
+        let output = self.git(["show", &object])?;
+        if !output.status.success() {
+            return Err(format!(
+                "release marker requires {path} at {head}; finish version prepare before stamping"
+            ));
+        }
+        plumb::datum::decode(version, &output.stdout).map_err(|error| {
+            format!("release marker requires a valid {path} at {head}: {error}")
+        })?;
+        Ok(())
+    }
+
     pub fn head(&self, name: &str) -> Result<String, String> {
         fetch(self.root)?;
         text(
