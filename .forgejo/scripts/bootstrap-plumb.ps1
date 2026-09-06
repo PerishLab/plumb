@@ -138,7 +138,7 @@ if ($source) {
 } else {
   $env:CARGO_TARGET_DIR = $target
   $env:PLUMB_BUILD_SOURCE = '1'
-  cargo build --quiet --locked --manifest-path (Join-Path $atom 'Cargo.toml') --bin plumb
+  cargo --config (Join-Path $atom '.cargo/config.toml') build --quiet --locked --manifest-path (Join-Path $atom 'Cargo.toml') --bin plumb
   tar -czf $archive -C (Join-Path $target 'debug') plumb.exe
   Write-Output "built exact Plumb atom $env:PLUMB_BUILD_COMMIT for $hostTarget"
 }

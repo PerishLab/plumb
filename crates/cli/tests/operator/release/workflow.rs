@@ -32,6 +32,19 @@ fn marker() -> String {
 #[test]
 fn matrix() {
     let held = canonical();
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let unix = std::fs::read_to_string(root.join(".forgejo/scripts/bootstrap-plumb.sh"))
+        .expect("Plumb owns the Unix atom bootstrap");
+    let windows = std::fs::read_to_string(root.join(".forgejo/scripts/bootstrap-plumb.ps1"))
+        .expect("Plumb owns the Windows atom bootstrap");
+    assert!(
+        unix.contains("cargo --config \"$atom/.cargo/config.toml\" build"),
+        "Unix cold builds must carry the exact atom Cargo context: {unix}"
+    );
+    assert!(
+        windows.contains("cargo --config (Join-Path $atom '.cargo/config.toml') build"),
+        "Windows cold builds must carry the exact atom Cargo context: {windows}"
+    );
     assert!(held.contains("workflow_dispatch:"), "{held}");
     assert!(held.contains("PLUMB_BUILD_VERSION: ${{ inputs.plumb }}"));
     assert!(held.contains("PLUMB_BUILD_COMMIT: ${{ github.sha }}"));
