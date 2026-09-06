@@ -93,6 +93,7 @@ fn workloads(
     let listed = roots.iter().map(String::as_str).collect::<Vec<_>>();
     let mut pending = Vec::new();
     let mut reuse = Vec::new();
+    let base = marker.base();
     for target in targets["include"]
         .as_array()
         .ok_or("binary matrix has no include array")?
@@ -108,8 +109,8 @@ fn workloads(
                 projections: &[projection.as_str()],
                 roots: &listed,
                 runner,
-                workload: Some(&marker.version),
-                release: Some(&marker.version),
+                workload: Some(base),
+                release: Some(base),
                 target: Some(triple),
             },
         )?;

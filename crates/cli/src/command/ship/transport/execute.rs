@@ -1,5 +1,5 @@
 use super::super::adaptor;
-use crate::command::release::{artifacts, capsule, output, required, storage};
+use crate::command::release::{artifacts, capsule, channel, output, required, storage};
 use plumb::rig::Rig;
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -106,14 +106,14 @@ impl Request {
         let spec = governance.spec();
         super::binding::Binding::new(spec)
             .verify(self.configuration.as_deref(), self.profile.as_deref())?;
-        let release = &rig.release;
+        let (release, build) = (&rig.release, channel::base(version)?);
         let reuse = self.reuse.encode()?;
         let projection = match self.operation {
             Operation::Workload { target, archive } => {
                 super::super::package::product(spec).build(super::super::package::Build {
                     target: &target,
-                    version,
-                    channel: required("PLUMB_RELEASE_CHANNEL", &release.channel)?,
+                    version: &build,
+                    channel: "stable",
                     commit: required("PLUMB_RELEASE_COMMIT", &release.commit)?,
                     artifacts: &artifacts(release)?,
                 })?;

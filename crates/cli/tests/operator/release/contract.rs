@@ -137,9 +137,10 @@ fn versioned() {
     assert!(support.contains("!held.bucket.is_empty() && held.bucket != bucket"));
     assert!(support.contains("derived.bucket = bucket"));
     let resolver = text("crates/cli/src/command/ship/transport/resolve.rs");
-    assert!(resolver.contains("workload: Some(&marker.version)"));
+    assert!(!resolver.contains("workload: Some(&marker.version)"));
     assert!(!resolver.contains("workload: Some(&marker.commit)"));
-    assert!(!resolver.contains("workload: Some(marker.base())"));
+    assert!(resolver.contains("workload: Some(base)"));
+    assert!(resolver.contains("release: Some(base)"));
     assert_eq!(
         resolver
             .matches("workload: Some(self.marker.base())")
@@ -147,6 +148,12 @@ fn versioned() {
         1
     );
     assert!(resolver.contains("then_some(self.marker.base())"));
+    let execution = text("crates/cli/src/command/ship/transport/execute.rs");
+    assert!(
+        execution.contains("channel::base(version)"),
+        "binary execution must derive its reusable version instead of trusting the plan"
+    );
+    assert!(execution.contains("channel: \"stable\""));
 
     let bootstrap = text("crates/cli/src/command/guard/precommit/configuration.rs");
     assert!(

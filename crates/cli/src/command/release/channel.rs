@@ -1,5 +1,17 @@
 use semver::Version;
 
+pub(in crate::command) fn base(value: &str) -> Result<String, String> {
+    let raw = value
+        .strip_prefix('v')
+        .ok_or_else(|| format!("release version must begin with v: {value}"))?;
+    let version =
+        Version::parse(raw).map_err(|error| format!("invalid release version: {error}"))?;
+    Ok(format!(
+        "v{}.{}.{}",
+        version.major, version.minor, version.patch
+    ))
+}
+
 pub(in crate::command) fn channel(value: &str) -> Result<String, String> {
     let raw = value
         .strip_prefix('v')
