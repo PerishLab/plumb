@@ -571,12 +571,11 @@ dependencies = [
 
 [[package]]
 name = "runseal"
-version = "0.18.5"
+version = "0.18.6"
 source = "sparse+https://git.perish.top/api/packages/PerishLab/cargo/"
-checksum = "4f919d09196118a58c34fe38a11c0aa3f6bb4988496bce5f125c1ae64cfb2293"
+checksum = "eb350c6e9daf93e152648564ffc32688d7f197765b4ef42c3f4862fdd0d59bfa"
 dependencies = [
  "anyhow",
- "clap",
  "path-absolutize",
  "serde",
  "serde_json",
