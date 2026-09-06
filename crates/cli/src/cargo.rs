@@ -6,7 +6,7 @@ pub fn command() -> Command {
 }
 
 fn configured(registry: &str, index: &str) -> Command {
-    let mut command = Command::new("cargo");
+    let mut command = plumb::config::detached("cargo");
     command.env(
         format!(
             "CARGO_REGISTRIES_{}_INDEX",
