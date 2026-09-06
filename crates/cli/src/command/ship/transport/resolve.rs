@@ -256,7 +256,6 @@ struct Plan<'a> {
     release: Option<&'a str>,
     target: Option<&'a str>,
 }
-
 fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String> {
     let mut fields = vec![format!("runner={}", plan.runner)];
     if let Some(release) = plan.release {
@@ -269,27 +268,28 @@ fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String> {
         .workload
         .map(|value| vec![format!("release={value}")])
         .unwrap_or_default();
-    let graph = crate::command::workflow::plan::derive(crate::command::workflow::plan::Input {
-        base: None,
-        world: fields,
-        workload,
-        identity: world.binding.identity(world.marker),
-        project: plan
-            .projections
+    let named = |values: &[&str]| {
+        values
             .iter()
-            .map(|projection| format!("{}={projection}", plan.action))
-            .collect(),
-        roots: plan
-            .roots
-            .iter()
-            .map(|root| format!("{}={root}", plan.action))
-            .collect(),
-        inventory: world.inventory.map(Path::to_path_buf),
-        source: world.source.map(str::to_string),
-        target: plumb::cli::Root {
-            root: world.root.display().to_string(),
+            .map(|value| format!("{}={value}", plan.action))
+            .collect()
+    };
+    let graph = crate::command::workflow::plan::derive(
+        crate::command::workflow::plan::Input {
+            base: None,
+            world: fields,
+            workload,
+            identity: world.binding.identity(world.marker),
+            project: named(plan.projections),
+            roots: named(plan.roots),
+            inventory: world.inventory.map(Path::to_path_buf),
+            source: world.source.map(str::to_string),
+            target: plumb::cli::Root {
+                root: world.root.display().to_string(),
+            },
         },
-    })?;
+        Some(plan.action),
+    )?;
     let graph: Value = serde_json::from_str(&graph)
         .map_err(|error| format!("cannot decode {} plan: {error}", plan.action))?;
     graph["actions"]

@@ -29,13 +29,13 @@ pub struct Input {
     pub(in crate::command) target: Root,
 }
 
-pub(in crate::command) fn derive(input: Input) -> Result<String, String> {
-    render(Path::new(&input.target.root), &input)
+pub(in crate::command) fn derive(input: Input, wanted: Option<&str>) -> Result<String, String> {
+    render(Path::new(&input.target.root), &input, wanted)
 }
 
 pub fn run(input: Input) -> i32 {
     let root = Path::new(&input.target.root);
-    match render(root, &input) {
+    match render(root, &input, None) {
         Ok(plan) => {
             println!("{plan}");
             0
@@ -47,7 +47,7 @@ pub fn run(input: Input) -> i32 {
     }
 }
 
-fn render(root: &Path, input: &Input) -> Result<String, String> {
+fn render(root: &Path, input: &Input, wanted: Option<&str>) -> Result<String, String> {
     let base = input.base.as_deref();
     let mut current = shape::workflow::read(root);
     if let Some(error) = current.refusal {
@@ -86,8 +86,15 @@ fn render(root: &Path, input: &Input) -> Result<String, String> {
     if base.is_some() {
         projects.declare(&mut prior.keys, &roots)?;
     }
+    if let Some(wanted) = wanted {
+        current.keys.retain(|key| key.name() == wanted);
+        prior.keys.retain(|key| key.name() == wanted);
+    }
     if current.keys.is_empty() {
-        return Err("the repository implies no workflow action".to_string());
+        return Err(match wanted {
+            Some(wanted) => format!("the repository implies no workflow action called {wanted}"),
+            None => "the repository implies no workflow action".to_string(),
+        });
     }
     let base = base.map(|base| git.revision(base)).transpose()?;
     let head = git.revision("HEAD")?;
