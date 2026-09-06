@@ -78,9 +78,17 @@ fn graph() {
         .expect("expanding matrix"),
         Outcome::Waiting
     );
+    assert_eq!(
+        graph(&[json!({ "name": "build", "status": "blocked" })]).expect("blocked graph"),
+        Outcome::Waiting,
+        "Forgejo briefly blocks downstream jobs while a skipped matrix settles"
+    );
     assert!(matches!(
-        graph(&[json!({ "name": "build", "status": "blocked" })])
-            .expect("blocked graph"),
+        graph(&[
+            json!({ "name": "build", "status": "failure" }),
+            json!({ "name": "publish", "status": "blocked" }),
+        ])
+        .expect("failed dependency graph"),
         Outcome::Failed { status, tasks } if status == "failed" && tasks == ["build"]
     ));
     assert_eq!(

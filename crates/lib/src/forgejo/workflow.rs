@@ -98,7 +98,7 @@ fn failed(tasks: &[Value]) -> Vec<String> {
         .iter()
         .filter_map(|task| {
             let status = task.get("status").and_then(Value::as_str)?;
-            matches!(status, "failure" | "cancelled" | "blocked").then(|| {
+            matches!(status, "failure" | "cancelled").then(|| {
                 task.get("name")
                     .and_then(Value::as_str)
                     .unwrap_or(status)
@@ -125,6 +125,12 @@ pub fn graph(tasks: &[Value]) -> Result<Outcome, String> {
             tasks: failures,
         });
     }
+    if tasks
+        .iter()
+        .any(|task| task.get("status").and_then(Value::as_str) == Some("blocked"))
+    {
+        return Ok(Outcome::Waiting);
+    }
     Ok(Outcome::Success)
 }
 
@@ -132,10 +138,5 @@ fn flight(tasks: &[Value]) -> bool {
     tasks.iter().any(|task| {
         let status = task.get("status").and_then(Value::as_str);
         matches!(status, Some("unknown" | "waiting" | "running"))
-            || status == Some("blocked")
-                && task
-                    .get("name")
-                    .and_then(Value::as_str)
-                    .is_some_and(|name| name.ends_with(" (incomplete matrix)"))
     })
 }
