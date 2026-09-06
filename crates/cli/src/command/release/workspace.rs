@@ -3,7 +3,6 @@ use semver::Version;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 #[derive(Deserialize)]
 pub struct Workspace {
@@ -55,7 +54,7 @@ impl Workspace {
     }
 
     pub fn read(root: &Path) -> Result<Self, String> {
-        let output = Command::new("cargo")
+        let output = crate::cargo::command()
             .args(["metadata", "--no-deps", "--format-version", "1"])
             .current_dir(root)
             .output()
@@ -105,7 +104,7 @@ impl Workspace {
                 ));
             }
             let msvc = input.triple.ends_with("-msvc");
-            let mut command = Command::new("cargo");
+            let mut command = crate::cargo::command();
             command
                 .arg(if msvc { "rustc" } else { "build" })
                 .args([

@@ -4,6 +4,8 @@ use std::process::Command;
 
 #[path = "exact.rs"]
 mod exact;
+#[path = "runseal.rs"]
+mod runseal;
 
 const SEALED: [&str; 4] = ["cargo", "chart", "npm", "oci"];
 const PRODUCT: &str = "[release]\nproduct = \"family\"\nauthority = \"https://example.invalid\"\nbinaries = [\"family\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n\n[release.cargo]\nregistry = \"perish\"\npackages = [\"family-macro\", \"family-core\"]\n";

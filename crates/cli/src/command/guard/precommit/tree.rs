@@ -149,7 +149,11 @@ pub(super) fn execute(
     let (program, args) = argv
         .split_first()
         .ok_or_else(|| "guard action has no command".to_string())?;
-    let mut command = plumb::config::detached(program);
+    let mut command = if program == "cargo" {
+        crate::cargo::command()
+    } else {
+        plumb::config::detached(program)
+    };
     let depot = plumb::depot::root(&PathBuf::new()).ok();
     command
         .args(args)

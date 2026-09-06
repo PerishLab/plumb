@@ -1,4 +1,5 @@
 mod anchor;
+mod cargo;
 mod catalog;
 mod command;
 mod consumption;

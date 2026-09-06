@@ -6,7 +6,6 @@ use semver::Version;
 use std::collections::BTreeMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 pub struct Registry<'a> {
     pub(in crate::command::ship) spec: &'a Spec,
@@ -228,7 +227,7 @@ impl Registry<'_> {
         args: [&str; N],
         token: &str,
     ) -> Result<(), String> {
-        let mut command = Command::new("cargo");
+        let mut command = crate::cargo::command();
         command.args(args).current_dir(&self.spec.root);
         if let Some(cargo) = &self.spec.cargo
             && !token.is_empty()

@@ -2,7 +2,6 @@ use super::{Dependencies, Dependency, Ecosystem};
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 use std::path::Path;
-use std::process::Command;
 
 #[derive(Deserialize)]
 struct Metadata {
@@ -43,7 +42,7 @@ pub fn read(root: &Path, registry: &str, index: &str) -> Dependencies {
     if !root.join("Cargo.toml").is_file() || candidates.is_empty() {
         return found;
     }
-    let output = match Command::new("cargo")
+    let output = match crate::cargo::command()
         .args(["metadata", "--frozen", "--no-deps", "--format-version", "1"])
         .current_dir(root)
         .output()
