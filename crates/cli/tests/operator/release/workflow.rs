@@ -162,6 +162,14 @@ fn matrix() {
     );
     assert!(resolution().contains("{type:\"workload\",source:$source}"));
     let graph = resolver();
+    assert!(
+        graph.contains("workflow::plan::derive("),
+        "ship must resolve only the requested action instead of probing every unrelated action: {graph}"
+    );
+    assert!(
+        graph.contains("Some(plan.action)"),
+        "ship must select one action instead of deriving the whole workflow graph: {graph}"
+    );
     assert!(graph.contains("action == \"ship/oci\""), "{graph}");
     assert!(
         graph.contains("carry(&mut request, &self.workload.reuse)"),
