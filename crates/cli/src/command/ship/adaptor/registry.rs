@@ -88,7 +88,7 @@ impl Registry<'_> {
             let archive = self.archive(package, &identity);
             inspect(&archive, package, &identity)?;
             let checksum = crate::command::release::record::digest(&archive)?.0;
-            let held = ledger::entries(self.spec, cargo, package, token)?;
+            let held = ledger::entries(cargo, package, token)?;
             if ledger::verified(package, &identity, &checksum, &held)? {
                 continue;
             }
@@ -121,7 +121,6 @@ impl Registry<'_> {
                 token,
             )?;
             ledger::readback(ledger::Readback {
-                spec: self.spec,
                 cargo,
                 package,
                 version: &identity,

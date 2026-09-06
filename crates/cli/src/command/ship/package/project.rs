@@ -162,7 +162,6 @@ pub fn cargo(
         "packages": cargo.packages,
         "workload": path,
         "publication": crate::command::ship::adaptor::ledger::publication(
-            carrier.spec,
             cargo,
             package,
         )?,
@@ -185,12 +184,7 @@ fn publish(input: Publication<'_, '_>) -> Result<(), String> {
         input.package,
         input.identity,
         &checksum,
-        &crate::command::ship::adaptor::ledger::entries(
-            input.carrier.spec,
-            input.cargo,
-            input.package,
-            input.token,
-        )?,
+        &crate::command::ship::adaptor::ledger::entries(input.cargo, input.package, input.token)?,
     )? {
         return Ok(());
     }
@@ -208,7 +202,6 @@ fn publish(input: Publication<'_, '_>) -> Result<(), String> {
     )?;
     crate::command::ship::adaptor::ledger::readback(
         crate::command::ship::adaptor::ledger::Readback {
-            spec: input.carrier.spec,
             cargo: input.cargo,
             package: input.package,
             version: input.identity,

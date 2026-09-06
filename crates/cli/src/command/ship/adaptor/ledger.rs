@@ -1,4 +1,4 @@
-use crate::shape::release::{Cargo, Spec};
+use crate::shape::release::Cargo;
 use semver::Version;
 use serde::Deserialize;
 use std::process::Command;
@@ -13,7 +13,6 @@ pub struct Entry {
 }
 
 pub struct Readback<'a> {
-    pub spec: &'a Spec,
     pub cargo: &'a Cargo,
     pub package: &'a str,
     pub version: &'a Version,
@@ -21,13 +20,8 @@ pub struct Readback<'a> {
     pub token: &'a str,
 }
 
-pub fn entries(
-    spec: &Spec,
-    cargo: &Cargo,
-    package: &str,
-    token: &str,
-) -> Result<Vec<Entry>, String> {
-    let index = index(spec, &cargo.registry)?;
+pub fn entries(cargo: &Cargo, package: &str, token: &str) -> Result<Vec<Entry>, String> {
+    let index = index(&cargo.registry)?;
     let output = Command::new("curl")
         .args(["--silent", "--show-error", "--location"])
         .args(["--header", &format!("Authorization: {token}")])
@@ -93,7 +87,7 @@ pub fn readback(input: Readback<'_>) -> Result<(), String> {
             input.package,
             input.version,
             input.checksum,
-            &entries(input.spec, input.cargo, input.package, input.token)?,
+            &entries(input.cargo, input.package, input.token)?,
         )? {
             return Ok(());
         }
@@ -107,31 +101,26 @@ pub fn readback(input: Readback<'_>) -> Result<(), String> {
     ))
 }
 
-fn index(spec: &Spec, registry: &str) -> Result<String, String> {
-    let path = spec.root.join(".cargo/config.toml");
-    let document = std::fs::read_to_string(&path)
-        .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-    let value: toml::Value = toml::from_str(&document).map_err(|error| error.to_string())?;
-    value
-        .get("registries")
-        .and_then(|held| held.get(registry))
-        .and_then(|held| held.get("index"))
-        .and_then(toml::Value::as_str)
-        .and_then(|held| held.strip_prefix("sparse+"))
+fn index(registry: &str) -> Result<String, String> {
+    let cargo = &crate::catalog::set::current().stable.cargo;
+    if cargo.registry != registry {
+        return Err(format!(
+            "Cargo attachment registry {registry} is not catalogued as {}",
+            cargo.registry
+        ));
+    }
+    cargo
+        .index
+        .strip_prefix("sparse+")
         .map(|held| held.trim_end_matches('/').to_string())
-        .ok_or_else(|| format!("missing sparse registry {registry} in {}", path.display()))
+        .ok_or_else(|| format!("catalogued Cargo registry {registry} is not sparse"))
 }
 
 pub(in crate::command::ship) fn publication(
-    spec: &Spec,
     cargo: &Cargo,
     package: &str,
 ) -> Result<String, String> {
-    Ok(format!(
-        "{}/{}",
-        index(spec, &cargo.registry)?,
-        route(package)
-    ))
+    Ok(format!("{}/{}", index(&cargo.registry)?, route(package)))
 }
 
 fn route(name: &str) -> String {

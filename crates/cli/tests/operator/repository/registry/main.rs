@@ -41,17 +41,12 @@ fn cargo() {
     for package in ["core", "macro", "helper"] {
         std::fs::create_dir_all(path.join("crates").join(package)).expect("crate root");
     }
-    std::fs::create_dir_all(path.join(".cargo")).expect("Cargo config root");
     for (seat, text) in [
         ("plumb.toml", ATTACHMENT),
         ("Cargo.toml", WORKSPACE),
         ("crates/core/Cargo.toml", CORE),
         ("crates/macro/Cargo.toml", MACRO),
         ("crates/helper/Cargo.toml", HELPER),
-        (
-            ".cargo/config.toml",
-            "[registries.perish]\nindex = \"sparse+https://registry.example/index/\"\n",
-        ),
         ("cargo", CARGO),
         ("curl", exact::CURL),
         ("aws", exact::AWS),
