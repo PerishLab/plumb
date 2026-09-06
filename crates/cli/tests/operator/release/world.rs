@@ -277,7 +277,11 @@ while [ $# -gt 0 ]; do
   esac
 done
 case "$url" in
-  https://releases.test/*) path="$FAKE_S3_ROOT/releases/${url#https://releases.test/}" ;;
+  https://releases.test/*)
+    key=${url#https://releases.test/}
+    path="$FAKE_S3_ROOT/perish-probe-releases/$key"
+    [ -f "$path" ] || path="$FAKE_S3_ROOT/releases/$key"
+    ;;
   https://depot.test/*) path="$FAKE_S3_ROOT/depot/${url#https://depot.test/}" ;;
   *) exit 1 ;;
 esac

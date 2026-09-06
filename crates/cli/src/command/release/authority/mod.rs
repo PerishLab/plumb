@@ -8,7 +8,7 @@ mod registry;
 
 use clap::Subcommand;
 use context::Context;
-use model::{Model, Release, Ship, Workflow};
+use model::{Depot, Model, RELEASE, Release, SHIP, Scope, Ship, WORKFLOW, Workflow};
 use serde::Serialize;
 use std::collections::BTreeSet;
 
@@ -37,6 +37,8 @@ pub enum Deed {
     Workflow(Workflow),
     #[command(about = "Converge the central ship controller's release-bucket authority")]
     Ship(Ship),
+    #[command(about = "Converge one product's shared depot delivery authority")]
+    Depot(Depot),
     #[command(about = "Converge the closed package-registry authority profile")]
     Registry(registry::Input),
 }
@@ -81,11 +83,57 @@ struct Report<'a> {
     next: Option<Action>,
 }
 
+impl Model {
+    pub fn writer(&self) -> String {
+        match self.profile {
+            "ship" => "ship:release-buckets".into(),
+            _ => format!("publish:{}", self.bucket),
+        }
+    }
+
+    pub fn temporary(&self) -> String {
+        format!("tmp:{}", self.bucket)
+    }
+
+    pub fn inventory(&self) -> String {
+        format!("https://{}/inventory.json", self.domain)
+    }
+
+    pub fn secrets(&self) -> &'static [&'static str] {
+        match self.profile {
+            "release" => &RELEASE,
+            "workflow" => &WORKFLOW,
+            "ship" => &SHIP,
+            _ => &[],
+        }
+    }
+
+    pub fn organization(&self) -> Option<&str> {
+        match &self.scope {
+            Scope::Repository => None,
+            Scope::Organization(owner) => Some(owner),
+        }
+    }
+}
+
+fn hostname(value: &str, profile: &str) -> Result<String, String> {
+    let held = value
+        .strip_prefix("https://")
+        .unwrap_or(value)
+        .trim_end_matches('/');
+    if held.contains('.') && !held.contains(['/', ':', '\r', '\n']) {
+        Ok(held.to_string())
+    } else {
+        Err(format!("{profile} authority must name one HTTPS hostname"))
+    }
+}
+
 pub fn run(deed: Deed) -> i32 {
     let result = match deed {
         Deed::Release(release) => execute(release),
         Deed::Workflow(input) => workflow(input),
         Deed::Ship(input) => ship(input),
+        Deed::Depot(input) => depot(input),
         Deed::Registry(registry) => registry::execute(registry),
     };
     match result {
@@ -124,6 +172,12 @@ fn ship(input: Ship) -> Result<(), String> {
     let apply = input.apply;
     let json = input.json;
     converge(Model::ship(input)?, apply, json)
+}
+
+fn depot(input: Depot) -> Result<(), String> {
+    let apply = input.apply;
+    let json = input.json;
+    converge(Model::depot(input)?, apply, json)
 }
 
 fn converge(model: Model, apply: bool, json: bool) -> Result<(), String> {
@@ -197,12 +251,18 @@ impl Plan {
     }
 
     fn apply(&self) -> Result<(), String> {
-        let action = self
-            .action
-            .ok_or_else(|| "release authority has no pending action".to_string())?;
+        let action = self.action.ok_or_else(|| {
+            format!(
+                "{} authority has no pending action",
+                self.context.model.profile
+            )
+        })?;
         let fresh = Self::inspect(self.context.model.clone())?;
         if fresh.seen != self.seen || fresh.action != self.action {
-            return Err("release authority plan became stale".into());
+            return Err(format!(
+                "{} authority plan became stale",
+                self.context.model.profile
+            ));
         }
         self.context.apply(action)
     }

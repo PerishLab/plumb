@@ -43,6 +43,10 @@ impl Custom {
     fn ready(&self) -> bool {
         self.0
     }
+
+    fn state(&self) -> String {
+        if self.0 { "ready" } else { "pending" }.into()
+    }
 }
 
 struct Observation {
@@ -247,6 +251,40 @@ fn ship() {
     seen.capability = Some("writer".into());
     seen.escrow = Some(());
     seen.secrets.extend(HELD.map(str::to_string));
+    let (steps, action) = plan::build(&model, &seen);
+    assert_eq!(action, None);
+    assert_eq!(steps[0].status, plan::Status::Ready);
+    assert_eq!(steps[1].status, plan::Status::Ready);
+}
+
+#[test]
+fn depot() {
+    let model = Model {
+        profile: "depot",
+        secrets: &[],
+        bucket: "perish-plumb-depot".into(),
+        domain: "depot.probe.test".into(),
+        zone: "zone".into(),
+        organization: false,
+    };
+    let mut seen = Observation {
+        bucket: false,
+        domain: None,
+        capability: None,
+        recovery: false,
+        escrow: None,
+        secrets: BTreeSet::new(),
+    };
+    let (steps, action) = plan::build(&model, &seen);
+    assert_eq!(action, Some(Action::Bucket));
+    assert_eq!(steps.len(), 2);
+    assert_eq!(steps[0].resource, "depot.bucket");
+    assert_eq!(steps[1].resource, "depot.domain");
+
+    seen.bucket = true;
+    assert_eq!(plan::build(&model, &seen).1, Some(Action::Domain));
+
+    seen.domain = Some(Custom(true));
     let (steps, action) = plan::build(&model, &seen);
     assert_eq!(action, None);
     assert_eq!(steps[0].status, plan::Status::Ready);

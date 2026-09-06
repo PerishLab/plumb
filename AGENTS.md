@@ -135,3 +135,7 @@ bucket-scoped writer escrow, and organization Actions-secret binding. The
 `workflow record` transaction owns immutable workload upload and conditional
 inventory merge. Reusable workflows transport that transaction; ordinary
 repositories own neither R2 configuration nor inventory JSON.
+
+The closed depot authority profile derives a product's public delivery domain
+from its Product Profile and binds it to the one shared depot bucket. It creates
+no product writer, repository secret, workflow, or second storage namespace.

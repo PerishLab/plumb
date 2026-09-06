@@ -18,6 +18,9 @@ pub struct Step {
 }
 
 pub fn build(model: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
+    if model.profile == "depot" {
+        return depot(model, seen);
+    }
     if model.profile == "ship" {
         return ship(model, seen);
     }
@@ -95,6 +98,42 @@ pub fn build(model: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
                 _ => "converge the authority secrets",
             },
             Action::Repository,
+        );
+    }
+    plan.finish()
+}
+
+fn depot(target: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
+    let mut plan = Builder::default();
+    if seen.bucket {
+        plan.ready("depot.bucket", format!("{} exists", target.bucket));
+    } else {
+        plan.change(
+            "depot.bucket",
+            format!("create shared R2 bucket {}", target.bucket),
+            Action::Bucket,
+        );
+    }
+    if !seen.bucket {
+        plan.deferred("depot.domain", "waiting for depot.bucket");
+    } else if seen.domain.as_ref().is_some_and(|held| held.ready()) {
+        plan.ready(
+            "depot.domain",
+            format!("{} serves active TLS 1.2", target.domain),
+        );
+    } else {
+        let state = seen
+            .domain
+            .as_ref()
+            .map(|held| format!(" ({})", held.state()))
+            .unwrap_or_default();
+        plan.change(
+            "depot.domain",
+            format!(
+                "attach or normalize {} in zone {}{}",
+                target.domain, target.zone, state
+            ),
+            Action::Domain,
         );
     }
     plan.finish()

@@ -137,7 +137,8 @@ fn versioned() {
     assert!(support.contains("!held.bucket.is_empty() && held.bucket != bucket"));
     assert!(support.contains("derived.bucket = bucket"));
     let resolver = text("crates/cli/src/command/ship/transport/resolve.rs");
-    assert!(resolver.contains("workload: Some(&marker.version)"));
+    assert!(resolver.contains("workload: Some(&marker.commit)"));
+    assert!(!resolver.contains("workload: Some(&marker.version)"));
     assert!(!resolver.contains("workload: Some(marker.base())"));
     assert_eq!(
         resolver

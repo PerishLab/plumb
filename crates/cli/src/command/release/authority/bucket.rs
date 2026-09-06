@@ -130,6 +130,13 @@ impl Custom {
         self.delivery() && self.ownership == "active" && self.certificate == "active"
     }
 
+    pub fn state(&self) -> String {
+        format!(
+            "ownership={}, certificate={}, enabled={}, minimum-tls={}",
+            self.ownership, self.certificate, self.enabled, self.tls
+        )
+    }
+
     fn delivery(&self) -> bool {
         self.enabled && self.tls == "1.2"
     }

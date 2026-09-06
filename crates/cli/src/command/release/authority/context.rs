@@ -29,6 +29,30 @@ impl Context {
 
     pub fn observe(&self) -> Result<Observation, String> {
         self.factory.verify()?;
+        if self.model.profile == "depot" {
+            let (bucket, domain) = self.session(|bucket| {
+                let live = bucket.live()?;
+                let domain = if live {
+                    bucket.find(&self.model.domain)?
+                } else {
+                    None
+                };
+                Ok((live, domain))
+            })?;
+            if let Some(domain) = &domain
+                && domain.zone != self.model.zone
+            {
+                return Err(format!("depot domain belongs to zone {}", domain.zone));
+            }
+            return Ok(Observation {
+                bucket,
+                domain,
+                capability: None,
+                recovery: false,
+                escrow: None,
+                secrets: Default::default(),
+            });
+        }
         let held = self.factory.held()?;
         let writers = held
             .iter()

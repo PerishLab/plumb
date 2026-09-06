@@ -27,10 +27,15 @@ pub fn compile(input: Compile<'_>) {
 }
 
 fn authority(command: &mut Command, capsule: &Path, operation: &str) {
+    let bucket = if operation == "ACTIVATE" {
+        "perish-probe-releases"
+    } else {
+        "releases"
+    };
     command
         .env(format!("PLUMB_{operation}_ACCESS"), "access")
         .env(format!("PLUMB_{operation}_SECRET"), "secret")
-        .env(format!("PLUMB_{operation}_BUCKET"), "releases")
+        .env(format!("PLUMB_{operation}_BUCKET"), bucket)
         .env(format!("PLUMB_{operation}_ENDPOINT"), "https://s3.test");
     if operation == "PUBLISH" {
         command.env("PLUMB_RELEASE_CAPSULE", capsule);
@@ -116,6 +121,17 @@ fn cycle() {
     publish.args(["ship", "binary", "publish"]);
     authority(&mut publish, &record, "PUBLISH");
     run(&mut publish);
+    let mut wrong = fixture.command();
+    wrong.args(["depot", "managers", "--marker", "v1.2.0"]);
+    authority(&mut wrong, &record, "ACTIVATE");
+    let wrong = wrong
+        .env("PLUMB_ACTIVATE_BUCKET", "perish-another-releases")
+        .output()
+        .expect("wrong activation target should be inspected");
+    assert!(!wrong.status.success());
+    assert!(String::from_utf8_lossy(&wrong.stderr).contains(
+        "activation authority targets perish-another-releases, not perish-probe-releases"
+    ));
     for _ in 0..2 {
         let mut activate = fixture.command();
         activate.args(["depot", "channel", "--marker", "v1.2.0"]);
@@ -157,8 +173,11 @@ fn cycle() {
             "https://releases.test/v1/channels/stable.json",
         )
         .env("PLUMB_RELEASE_ACTIVATED", "true"));
-    assert!(root.join("releases/v1/channels/stable.json").is_file());
-    assert!(root.join("releases/manage.sh").is_file());
+    assert!(
+        root.join("perish-probe-releases/v1/channels/stable.json")
+            .is_file()
+    );
+    assert!(root.join("perish-probe-releases/manage.sh").is_file());
 }
 
 #[test]

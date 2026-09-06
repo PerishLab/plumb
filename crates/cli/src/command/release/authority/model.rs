@@ -82,7 +82,22 @@ pub struct Ship {
     pub(super) json: bool,
 }
 
-const RELEASE: [&str; 5] = [
+#[derive(Args)]
+pub struct Depot {
+    #[command(flatten)]
+    target: Root,
+    #[arg(
+        long = "zone-id",
+        help = "Exact Cloudflare zone ID that owns the depot domain"
+    )]
+    zone: String,
+    #[arg(long, help = "Apply the ordered plan until every resource is ready")]
+    pub(super) apply: bool,
+    #[arg(long)]
+    pub(super) json: bool,
+}
+
+pub(super) const RELEASE: [&str; 5] = [
     "RELEASE_PUBLISH_S3_ACCESS_KEY",
     "RELEASE_PUBLISH_S3_SECRET_KEY",
     "RELEASE_PUBLISH_S3_BUCKET",
@@ -90,7 +105,7 @@ const RELEASE: [&str; 5] = [
     "RELEASE_PUBLISH_FINGERPRINT",
 ];
 
-const WORKFLOW: [&str; 5] = [
+pub(super) const WORKFLOW: [&str; 5] = [
     "WORKFLOW_INVENTORY_S3_ACCESS_KEY",
     "WORKFLOW_INVENTORY_S3_SECRET_KEY",
     "WORKFLOW_INVENTORY_S3_BUCKET",
@@ -98,7 +113,7 @@ const WORKFLOW: [&str; 5] = [
     "WORKFLOW_INVENTORY_URL",
 ];
 
-const SHIP: [&str; 4] = [
+pub(super) const SHIP: [&str; 4] = [
     "SHIP_PUBLISH_S3_ACCESS_KEY",
     "SHIP_PUBLISH_S3_SECRET_KEY",
     "SHIP_PUBLISH_S3_ENDPOINT",
@@ -168,7 +183,7 @@ impl Model {
         let root = PathBuf::from(&input.target.root)
             .canonicalize()
             .map_err(|error| format!("cannot resolve {}: {error}", input.target.root))?;
-        let domain = hostname(&input.domain, "workflow inventory")?;
+        let domain = super::hostname(&input.domain, "workflow inventory")?;
         if input.zone.trim().is_empty() {
             return Err("--zone-id cannot be empty".into());
         }
@@ -250,46 +265,29 @@ impl Model {
         })
     }
 
-    pub fn writer(&self) -> String {
-        match self.profile {
-            "ship" => "ship:release-buckets".into(),
-            _ => format!("publish:{}", self.bucket),
+    pub fn depot(input: Depot) -> Result<Self, String> {
+        let root = PathBuf::from(&input.target.root)
+            .canonicalize()
+            .map_err(|error| format!("cannot resolve {}: {error}", input.target.root))?;
+        let spec = crate::shape::release::Spec::controller(&root)?;
+        let route = spec
+            .route
+            .ok_or_else(|| format!("product {} declares no depot route", spec.product))?;
+        let domain = super::hostname(&route, "depot")?;
+        if input.zone.trim().is_empty() {
+            return Err("--zone-id cannot be empty".into());
         }
-    }
-
-    pub fn temporary(&self) -> String {
-        format!("tmp:{}", self.bucket)
-    }
-
-    pub fn secrets(&self) -> &'static [&'static str] {
-        match self.profile {
-            "release" => &RELEASE,
-            "workflow" => &WORKFLOW,
-            "ship" => &SHIP,
-            _ => &[],
-        }
-    }
-
-    pub fn inventory(&self) -> String {
-        format!("https://{}/inventory.json", self.domain)
-    }
-
-    pub fn organization(&self) -> Option<&str> {
-        match &self.scope {
-            Scope::Repository => None,
-            Scope::Organization(owner) => Some(owner),
-        }
-    }
-}
-
-fn hostname(value: &str, profile: &str) -> Result<String, String> {
-    let held = value
-        .strip_prefix("https://")
-        .unwrap_or(value)
-        .trim_end_matches('/');
-    if held.contains('.') && !held.contains(['/', ':', '\r', '\n']) {
-        Ok(held.to_string())
-    } else {
-        Err(format!("{profile} authority must name one HTTPS hostname"))
+        Ok(Self {
+            profile: "depot",
+            product: spec.product,
+            bucket: "perish-plumb-depot".into(),
+            buckets: Vec::new(),
+            domain,
+            zone: input.zone,
+            escrow: PathBuf::new(),
+            remote: git::remote(&root, "")?,
+            scope: Scope::Repository,
+            recovery: false,
+        })
     }
 }

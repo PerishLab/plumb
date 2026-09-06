@@ -5,29 +5,49 @@ fn binding() {
     let root = seat("workload-binding");
     root.declared(PAIR);
     root.git(&["commit", "-m", "source"]);
-    let request = || Plan {
+    let request = |world, identity| Plan {
         base: None,
-        world: &["runner=docker"],
-        identity: &["marker=v1.2.0"],
+        world,
+        identity,
         project: &[],
         roots: &[],
         inventory: None,
     };
-    let (beta, ok) = root.workload(request(), &["release=v1.2.0-beta.1"]);
+    let (beta, ok) = root.workload(
+        request(
+            &["runner=docker", "release=v1.2.0-beta.1"],
+            &["marker=v1.2.0-beta.1"],
+        ),
+        &["source=0123456789abcdef"],
+    );
     assert!(ok, "{beta}");
-    let (stable, ok) = root.workload(request(), &["release=v1.2.0"]);
+    let (stable, ok) = root.workload(
+        request(&["runner=docker", "release=v1.2.0"], &["marker=v1.2.0"]),
+        &["source=0123456789abcdef"],
+    );
     assert!(ok, "{stable}");
-    let (portable, ok) = root.workload(request(), &[]);
-    assert!(ok, "{portable}");
+    let (moved, ok) = root.workload(
+        request(&["runner=docker", "release=v1.2.0"], &["marker=v1.2.0"]),
+        &["source=fedcba9876543210"],
+    );
+    assert!(ok, "{moved}");
     let beta: serde_json::Value = serde_json::from_str(&beta).expect("beta plan");
     let stable: serde_json::Value = serde_json::from_str(&stable).expect("stable plan");
-    let portable: serde_json::Value = serde_json::from_str(&portable).expect("portable plan");
-    assert_ne!(
-        beta["actions"][0]["keys"]["workload"], stable["actions"][0]["keys"]["workload"],
-        "version-bound workloads must not cross marker identities"
-    );
+    let moved: serde_json::Value = serde_json::from_str(&moved).expect("moved plan");
     assert_eq!(
-        portable["actions"][0]["keys"]["workload"], portable["actions"][0]["after"],
-        "an unbound workload must retain its source key"
+        beta["actions"][0]["keys"]["workload"], stable["actions"][0]["keys"]["workload"],
+        "one source commit must cross beta and stable marker identities"
+    );
+    assert_ne!(
+        beta["actions"][0]["keys"]["proof"], stable["actions"][0]["keys"]["proof"],
+        "marker worlds must retain distinct proofs"
+    );
+    assert_ne!(
+        beta["actions"][0]["keys"]["publication"], stable["actions"][0]["keys"]["publication"],
+        "marker identities must retain distinct publications"
+    );
+    assert_ne!(
+        stable["actions"][0]["keys"]["workload"], moved["actions"][0]["keys"]["workload"],
+        "a changed source identity must rebuild"
     );
 }

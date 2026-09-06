@@ -59,6 +59,13 @@ pub fn project(raw: &str, projection: Kind) -> Result<String, String> {
     crate::command::release::knowledge(&spec.product, &spec.authority)
         .binding(&marker.marker, spec.binary())?;
     rig.activate.load()?;
+    let bucket = format!("perish-{}-releases", spec.product);
+    if rig.activate.bucket != bucket {
+        return Err(format!(
+            "activation authority targets {}, not {}",
+            rig.activate.bucket, bucket
+        ));
+    }
     let result = match projection {
         Kind::Channel => crate::command::release::projection::channel(spec, &marker, &rig.activate),
         Kind::Managers => {

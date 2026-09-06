@@ -108,7 +108,7 @@ fn workloads(
                 projections: &[projection.as_str()],
                 roots: &listed,
                 runner,
-                workload: Some(&marker.version),
+                workload: Some(&marker.commit),
                 release: Some(&marker.version),
                 target: Some(triple),
             },

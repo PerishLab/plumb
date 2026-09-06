@@ -70,6 +70,10 @@ fn lifecycle() {
     assert_eq!(domains[0].domain, "site.test");
     assert_eq!(domains[0].zone, "zone");
     assert!(domains[0].ready());
+    assert_eq!(
+        domains[0].state(),
+        "ownership=active, certificate=active, enabled=true, minimum-tls=1.2"
+    );
     assert!(bucket.find("site.test").expect("find domain").is_some());
     bucket.bind("site.test", "zone").expect("bind domain");
     bucket.detach("site.test").expect("detach");

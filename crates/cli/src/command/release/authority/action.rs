@@ -46,7 +46,10 @@ impl Context {
                     thread::sleep(Duration::from_secs(5));
                 }
             }
-            Err("release domain did not become active within 40 seconds".into())
+            Err(format!(
+                "{} domain did not become active within 40 seconds",
+                self.model.profile
+            ))
         })
     }
 
