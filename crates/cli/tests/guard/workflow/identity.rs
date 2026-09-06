@@ -18,25 +18,25 @@ fn binding() {
             &["runner=docker", "release=v1.2.0-beta.1"],
             &["marker=v1.2.0-beta.1"],
         ),
-        &["source=0123456789abcdef"],
+        &["release=v1.2.0-beta.1"],
     );
     assert!(ok, "{beta}");
     let (stable, ok) = root.workload(
         request(&["runner=docker", "release=v1.2.0"], &["marker=v1.2.0"]),
-        &["source=0123456789abcdef"],
+        &["release=v1.2.0"],
     );
     assert!(ok, "{stable}");
-    let (moved, ok) = root.workload(
+    let (retry, ok) = root.workload(
         request(&["runner=docker", "release=v1.2.0"], &["marker=v1.2.0"]),
-        &["source=fedcba9876543210"],
+        &["release=v1.2.0"],
     );
-    assert!(ok, "{moved}");
+    assert!(ok, "{retry}");
     let beta: serde_json::Value = serde_json::from_str(&beta).expect("beta plan");
     let stable: serde_json::Value = serde_json::from_str(&stable).expect("stable plan");
-    let moved: serde_json::Value = serde_json::from_str(&moved).expect("moved plan");
-    assert_eq!(
+    let retry: serde_json::Value = serde_json::from_str(&retry).expect("retry plan");
+    assert_ne!(
         beta["actions"][0]["keys"]["workload"], stable["actions"][0]["keys"]["workload"],
-        "one source commit must cross beta and stable marker identities"
+        "an embedded release version must rebuild across beta and stable"
     );
     assert_ne!(
         beta["actions"][0]["keys"]["proof"], stable["actions"][0]["keys"]["proof"],
@@ -46,8 +46,8 @@ fn binding() {
         beta["actions"][0]["keys"]["publication"], stable["actions"][0]["keys"]["publication"],
         "marker identities must retain distinct publications"
     );
-    assert_ne!(
-        stable["actions"][0]["keys"]["workload"], moved["actions"][0]["keys"]["workload"],
-        "a changed source identity must rebuild"
+    assert_eq!(
+        stable["actions"][0]["keys"]["workload"], retry["actions"][0]["keys"]["workload"],
+        "one exact effective release version must remain reusable"
     );
 }
