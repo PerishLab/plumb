@@ -85,6 +85,9 @@ pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {
         format!("POST {seat}/pulls (base={base}, head={projection}) if missing"),
         format!("verify <candidate> carries the staged-tree guard proof"),
         format!(
+            "POST {seat}/statuses/<candidate> (context=guard / guard (pull_request), state=success)"
+        ),
+        format!(
             "POST {seat}/pulls/<n>/merge (Do=fast-forward-only, head_commit_id=<candidate>, delete_branch_after_merge=false)"
         ),
         format!("git pull --ff-only origin {base} in the worktree holding {base}"),
@@ -144,6 +147,13 @@ pub fn run(request: Request<'_>) -> Result<Report, Refusal> {
         return Ok(report);
     }
     landing.settled(&candidate)?;
+    client
+        .mark(
+            &candidate.head,
+            "guard / guard (pull_request)",
+            "Plumb verified the staged-tree Guard proof",
+        )
+        .map_err(|error| refuse("forge", error))?;
     client
         .settle(pull.number, &candidate.head, Strategy::Forward)
         .map_err(|error| refuse("forge", error))?;

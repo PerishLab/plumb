@@ -3,6 +3,21 @@ use crate::forgejo::model::State;
 use serde_json::Value;
 
 impl Client {
+    pub fn mark(&self, commit: &str, context: &str, description: &str) -> Result<(), String> {
+        self.call(&[
+            "status",
+            "set",
+            commit,
+            "--state",
+            "success",
+            "--context",
+            context,
+            "--description",
+            description,
+        ])?;
+        Ok(())
+    }
+
     pub fn combined(&self, commit: &str) -> Result<State, String> {
         Ok(State::read(&self.statuses(commit)?))
     }

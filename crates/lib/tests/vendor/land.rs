@@ -159,6 +159,13 @@ fn planned() {
         plan.steps
     );
     assert!(
+        plan.steps
+            .iter()
+            .any(|step| step.contains("guard / guard (pull_request)")),
+        "the proof status must be visible before merge: {:?}",
+        plan.steps
+    );
+    assert!(
         !plan.steps.iter().any(|step| step.contains("branch -D")),
         "no plan step may delete a branch: {:?}",
         plan.steps
