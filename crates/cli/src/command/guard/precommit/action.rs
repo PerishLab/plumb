@@ -12,6 +12,7 @@ struct Check {
 
 struct Catalog<'a> {
     root: &'a Path,
+    tree: &'a Tree,
     product: &'a crate::shape::product::Target,
     binding: Binding<'a>,
 }
@@ -30,7 +31,8 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         return Err("guard depot binding is internal to one isolated guard action".into());
     }
     let tree = tree::git(root, &["write-tree"], "read staged tree")?;
-    let target = super::configuration::target(root)?;
+    let captured = Tree::read(root, Some(&tree))?;
+    let target = super::configuration::target(&captured)?;
     let mismatched = match target.as_deref() {
         Some(target) => {
             let root = plumb::depot::root(&PathBuf::new())?;
@@ -42,7 +44,8 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         }
         None => false,
     };
-    let product = crate::shape::product::guard(root, "")?;
+    let manifest = captured.text("plumb.toml")?;
+    let product = crate::shape::product::guard(root, manifest.as_deref())?;
     let mut index = mismatched
         .then(|| isolate(root, &tree, product.profile.as_ref()))
         .transpose()?;
@@ -69,6 +72,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
     }
     let checks = Catalog {
         root,
+        tree: &captured,
         product: &product,
         binding: Binding {
             configuration: configuration.as_ref().map(|held| held.mark()),
@@ -123,10 +127,17 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
 
 impl Catalog<'_> {
     fn checks(&self) -> Result<Vec<Check>, String> {
-        let tree = Tree::read(self.root, None)?;
+        let tree = self.tree;
         let governed = self.product.profile.is_some();
-        profile(&tree, self.product.profile.as_ref())?;
-        let mut held = crate::shape::workflow::read(self.root);
+        profile(tree, self.product.profile.as_ref())?;
+        let manifest = match &self.product.profile {
+            Some(profile) => Some(profile.manifest.clone()),
+            None => tree.text("plumb.toml")?,
+        };
+        let mut held = manifest
+            .as_deref()
+            .map(crate::shape::workflow::parse)
+            .unwrap_or_default();
         if let Some(error) = held.refusal {
             return Err(error);
         }
@@ -141,7 +152,7 @@ impl Catalog<'_> {
         let mut checks = Vec::new();
         for key in held.keys.iter().filter(|key| key.lane() == "guard") {
             let name = key.name();
-            let commands = self.commands(&self.product.product, &name)?;
+            let commands = self.commands(tree, &self.product.product, &name)?;
             if commands.is_empty() {
                 continue;
             }
@@ -168,7 +179,7 @@ impl Catalog<'_> {
         Ok(checks)
     }
 
-    fn commands(&self, product: &str, name: &str) -> Result<Vec<Vec<String>>, String> {
+    fn commands(&self, tree: &Tree, product: &str, name: &str) -> Result<Vec<Vec<String>>, String> {
         let cargo = |args: &[&str]| {
             std::iter::once("cargo".to_string())
                 .chain(args.iter().map(|arg| arg.to_string()))
@@ -187,7 +198,7 @@ impl Catalog<'_> {
                 ]),
             ],
             "guard/test" => vec![cargo(&["test", "--locked"])],
-            "guard/web" => self.web()?,
+            "guard/web" => super::web::commands(tree)?,
             "guard/plumb" if product == "plumb" => vec![cargo(&[
                 "run", "--quiet", "--locked", "--bin", "plumb", "--", "doctor", ".",
             ])],
@@ -198,46 +209,6 @@ impl Catalog<'_> {
             "guard/ectropy" => vec![vec!["ectropy".into(), ".".into()]],
             _ => Vec::new(),
         })
-    }
-
-    fn web(&self) -> Result<Vec<Vec<String>>, String> {
-        let mut held = vec![
-            vec!["corepack".into(), "enable".into()],
-            vec!["pnpm".into(), "install".into(), "--frozen-lockfile".into()],
-        ];
-        if self.root.join("biome.json").is_file() {
-            held.push(vec!["pnpm".into(), "biome".into(), "ci".into(), ".".into()]);
-        }
-        held.push(vec![
-            "pnpm".into(),
-            "-r".into(),
-            "exec".into(),
-            "tsc".into(),
-            "--noEmit".into(),
-        ]);
-        held.push(vec!["pnpm".into(), "-r".into(), "test".into()]);
-        let Ok(entries) = std::fs::read_dir(self.root.join("apps")) else {
-            return Ok(held);
-        };
-        let mut sites = Vec::new();
-        for entry in entries.flatten() {
-            let Ok(text) = std::fs::read_to_string(entry.path().join("package.json")) else {
-                continue;
-            };
-            let Ok(doc) = serde_json::from_str::<serde_json::Value>(&text) else {
-                continue;
-            };
-            if doc.pointer("/scripts/build").is_some()
-                && let Some(name) = doc.get("name").and_then(serde_json::Value::as_str)
-            {
-                sites.push(name.to_string());
-            }
-        }
-        sites.sort();
-        for site in sites {
-            held.push(vec!["pnpm".into(), "--filter".into(), site, "build".into()]);
-        }
-        Ok(held)
     }
 }
 

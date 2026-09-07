@@ -107,7 +107,7 @@ impl Spec {
         Self::decode(root, &text, &path.display().to_string())
     }
 
-    fn decode(root: &Path, text: &str, subject: &str) -> Result<Self, String> {
+    pub(crate) fn decode(root: &Path, text: &str, subject: &str) -> Result<Self, String> {
         let held: Manifest =
             toml::from_str(text).map_err(|error| format!("cannot parse {subject}: {error}"))?;
         let Raw {

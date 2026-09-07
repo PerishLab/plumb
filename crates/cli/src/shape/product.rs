@@ -99,25 +99,27 @@ fn configured<C: Configuration>(repository: &Path, seat: &C) -> Result<Target, S
     }
 }
 
-pub fn guard(root: &Path, source: &str) -> Result<Target, String> {
+pub fn guard(root: &Path, manifest: Option<&str>) -> Result<Target, String> {
     if !guarded()
         && let Ok(remote) = git::remote(root, "")
         && remote.host == DOMAIN
     {
         if remote.owner == "PerishLab"
             && remote.repo == "plumb"
-            && root.join("plumb.toml").is_file()
+            && let Some(raw) = manifest
         {
-            return Root(root).manifested();
+            return Root(root).decoded(super::release::Spec::decode(
+                root,
+                raw,
+                "staged plumb.toml",
+            )?);
         }
-        return resolve(root, source);
+        return resolve(root, "");
     }
-    let path = root.join("plumb.toml");
-    let raw = std::fs::read_to_string(&path)
-        .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+    let raw = manifest.ok_or_else(|| "staged tree requires plumb.toml".to_string())?;
     let doc: toml::Table = raw
         .parse()
-        .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
+        .map_err(|error| format!("cannot parse staged plumb.toml: {error}"))?;
     let product = doc
         .get("release")
         .and_then(|held| held.get("product"))
@@ -156,6 +158,10 @@ fn binding() -> bool {
 impl Root<'_> {
     fn manifested(&self) -> Result<Target, String> {
         let spec = super::release::Spec::read(&self.0.join("plumb.toml"))?;
+        self.decoded(spec)
+    }
+
+    fn decoded(&self, spec: super::release::Spec) -> Result<Target, String> {
         Ok(Target {
             product: spec.product,
             authority: spec.authority,

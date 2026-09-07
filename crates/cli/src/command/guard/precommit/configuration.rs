@@ -72,8 +72,8 @@ impl Seat {
     }
 }
 
-pub(super) fn target(root: &Path) -> Result<Option<String>, String> {
-    let Some(governance) = Git(root).optional("plumb.toml")? else {
+pub(super) fn target(tree: &super::super::workflow::tree::Tree) -> Result<Option<String>, String> {
+    let Some(governance) = tree.text("plumb.toml")? else {
         return Ok(None);
     };
     let governance: toml::Table = governance
@@ -86,7 +86,9 @@ pub(super) fn target(root: &Path) -> Result<Option<String>, String> {
     if product != Some("plumb") {
         return Ok(None);
     }
-    let text = Git(root).file("Cargo.toml")?;
+    let text = tree
+        .text("Cargo.toml")?
+        .ok_or_else(|| "staged tree requires Cargo.toml".to_string())?;
     let doc: toml::Table = text
         .parse()
         .map_err(|error| format!("cannot parse workspace version: {error}"))?;
@@ -134,22 +136,6 @@ impl Git<'_> {
 
     fn commit(&self) -> Result<String, String> {
         self.run(&["rev-parse", "HEAD"], "read staged release commit")
-    }
-
-    fn file(&self, path: &str) -> Result<String, String> {
-        self.run(&["show", &format!(":{path}")], "read staged configuration")
-    }
-
-    fn optional(&self, path: &str) -> Result<Option<String>, String> {
-        let held = self.run(
-            &["ls-files", "--stage", "--", path],
-            "inspect staged configuration",
-        )?;
-        if held.is_empty() {
-            Ok(None)
-        } else {
-            self.file(path).map(Some)
-        }
     }
 
     fn run(&self, args: &[&str], action: &str) -> Result<String, String> {

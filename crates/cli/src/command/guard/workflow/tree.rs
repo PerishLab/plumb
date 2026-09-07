@@ -122,6 +122,9 @@ impl Tree {
     pub fn has(&self, path: &str) -> bool {
         self.leaves.contains_key(path)
     }
+    pub fn paths(&self) -> impl Iterator<Item = &str> {
+        self.leaves.keys().map(String::as_str)
+    }
     pub fn text(&self, path: &str) -> Result<Option<String>, String> {
         if !self.has(path) {
             return Ok(None);

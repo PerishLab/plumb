@@ -5,6 +5,7 @@ mod configuration;
 mod environment;
 pub(crate) mod hook;
 pub(crate) mod tree;
+mod web;
 mod world;
 
 use plumb::boundary::{Refusal, Report, Request};
