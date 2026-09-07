@@ -52,7 +52,7 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     let head = if standing {
         if super::mark::point(&root).seen(&version)?.is_some() {
             return Err(format!(
-                "release marker {version} already stands; retract an unpublished marker before reopening {name}"
+                "release marker {version} already stands; markers are immutable, prepare a new version instead of reopening {name}"
             ));
         }
         course.step(plan(client.remote(), &name, "preparing"), || {
@@ -137,16 +137,11 @@ fn wall(raw: &str, repo: &str, dry: bool) -> Result<String, String> {
     seat.rejoined(activated)?;
     let client = Client::new(remote)?;
     freeze(&mut course, &client, &root, &name)?;
-    let spec = crate::shape::release::Spec::controller(&root)?;
     let commit = head(&client, &name)?;
-    let exact = super::super::release::Product::new(&spec).promotion(&commit, &version)?;
     if course.dry() {
         return Ok(course.plan());
     }
-    Ok(format!(
-        "froze {name} at {commit}; promotion source is {}",
-        exact.version
-    ))
+    Ok(format!("froze {name} at {commit}"))
 }
 
 fn head(client: &Client, name: &str) -> Result<String, String> {

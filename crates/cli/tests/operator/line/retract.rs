@@ -1,42 +1,21 @@
 use super::stable::{command, repo};
+
 #[test]
-fn retraction() {
+fn retired() {
     let fixture = tempfile::tempdir().expect("fixture");
     let root = fixture.path();
     repo(root, "https://forge.test/PerishLab/probe.git");
-
-    let exact = command(
-        root,
-        &[
-            "release",
-            "retract",
-            "--version",
-            "v0.10.2-beta.1",
-            "--dry-run",
-        ],
-    );
-    let refused = String::from_utf8_lossy(&exact.stderr).to_string();
-    assert!(
-        refused.contains("https://releases.test/v1/releases/beta/v0.10.2-beta.1/seal.json"),
-        "an exact point is retractable, and reads its own channel: {refused}"
-    );
-
-    let plan = command(
-        root,
-        &["release", "retract", "--version", "0.10.2", "--dry-run"],
-    );
-    let printed = String::from_utf8_lossy(&plan.stdout).to_string();
-    let refusal = String::from_utf8_lossy(&plan.stderr).to_string();
-    assert!(
-        !plan.status.success(),
-        "a preview that cannot read the authority must refuse: {printed}"
-    );
-    assert!(
-        refusal.contains("https://releases.test/v1/releases/stable/v0.10.2/seal.json"),
-        "a refusal must name what it could not read: {refusal}"
-    );
-    assert!(
-        !printed.contains("--delete"),
-        "a refused preview must not have printed a plan: {printed}"
-    );
+    for version in ["v0.10.2-beta.1", "v0.10.2"] {
+        let output = command(root, &["release", "retract", "--version", version]);
+        assert!(!output.status.success());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            error.contains("unrecognized subcommand 'retract'"),
+            "{error}"
+        );
+        assert!(output.stdout.is_empty());
+    }
+    let help = command(root, &["release", "--help"]);
+    assert!(help.status.success());
+    assert!(!String::from_utf8_lossy(&help.stdout).contains("Withdraw"));
 }

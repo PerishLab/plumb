@@ -34,15 +34,6 @@ pub(super) fn stamp(raw: &str, dry: bool) -> Result<String, String> {
     said.ok_or_else(|| "the stamp left no report".to_string())
 }
 
-pub(super) fn retract(raw: &str, dry: bool) -> Result<String, String> {
-    let held = named(raw);
-    let channel = super::super::release::channel(&held)?;
-    let version = value::version(&held, &channel)?;
-    let root = plumb::forgejo::git::root()?;
-    let authority = super::super::release::authority(&root)?;
-    point(&root).retract(&authority, &channel, &version, dry)
-}
-
 fn named(raw: &str) -> String {
     if raw.starts_with('v') {
         raw.to_string()
@@ -130,42 +121,6 @@ impl Point<'_> {
         Ok(format!("stamped {version} at {head}"))
     }
 
-    pub fn retract(
-        &self,
-        authority: &str,
-        channel: &str,
-        version: &str,
-        dry: bool,
-    ) -> Result<String, String> {
-        let url = format!("{authority}/v1/releases/{channel}/{version}/seal.json");
-        let mut course = Course::new(dry);
-        if published(&url)? {
-            return Err(format!(
-                "{version} is published at {url}; retraction acts only on a declaration"
-            ));
-        }
-        fetch(self.root)?;
-        let point = reference(version);
-        course.step(format!("git push origin --delete {point}"), || {
-            text(
-                "withdraw the release point",
-                self.git(["push", "origin", "--delete", &point])?,
-            )
-        })?;
-        if self.seen(version)?.is_some() {
-            course.step(format!("git tag --delete {version}"), || {
-                text(
-                    "forget the release point",
-                    self.git(["tag", "--delete", version])?,
-                )
-            })?;
-        }
-        if course.dry() {
-            return Ok(course.plan());
-        }
-        Ok(format!("retracted {version}; it projected nothing"))
-    }
-
     pub fn seen(&self, version: &str) -> Result<Option<String>, String> {
         let output = self.git(["rev-parse", &format!("{version}^{{commit}}")])?;
         if output.status.success() {
@@ -183,18 +138,6 @@ impl Point<'_> {
             .current_dir(self.root)
             .output()
             .map_err(|error| format!("cannot run git: {error}"))
-    }
-}
-
-fn published(url: &str) -> Result<bool, String> {
-    let response = plumb::vendor::send(url, "GET", None, None)
-        .map_err(|error| format!("cannot read {url}: {error}"))?;
-    match response.status {
-        200 => Ok(true),
-        404 => Ok(false),
-        status => Err(format!(
-            "release authority answered {status} for {url}; retraction refuses a reading it cannot trust"
-        )),
     }
 }
 

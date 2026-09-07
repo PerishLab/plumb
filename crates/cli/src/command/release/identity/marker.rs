@@ -63,7 +63,7 @@ pub fn run(deed: Deed) -> Result<String, String> {
     let (name, show, held) = match deed {
         Deed::Show { marker, held } => (marker, true, held),
         Deed::Verify { marker, held } => (marker, false, held),
-        Deed::Retract { .. } | Deed::Stamp { .. } => {
+        Deed::Stamp { .. } => {
             return Err("a marker mutation reached marker inspection".into());
         }
     };
@@ -90,6 +90,10 @@ pub(in crate::command) fn bound(root: &Path, raw: &str) -> Result<Descriptor, St
 }
 
 impl Descriptor {
+    pub(in crate::command) fn independent(&self) -> bool {
+        self.schema == "plumb.release-marker/v3"
+    }
+
     pub(in crate::command) fn base(&self) -> &str {
         self.marker.split('-').next().unwrap_or(&self.marker)
     }
@@ -135,7 +139,10 @@ impl Seat {
                 ));
             }
             Ok(_) => {}
-            Err(error) if guarded(&identity.product, &marker) => {
+            Err(error)
+                if identity.schema == "plumb.release-marker/v3"
+                    || guarded(&identity.product, &marker) =>
+            {
                 return Err(format!(
                     "release marker {marker} has no valid guard proof: {error}"
                 ));
@@ -146,18 +153,13 @@ impl Seat {
         let line = super::standing::line(&version, refresh);
         self.stood(&marker, &line, &commit)?;
         let datum = self.datum(&version, &commit)?;
-        let promotion = if channel == "stable" {
+        let promotion = if channel == "stable" && identity.schema != "plumb.release-marker/v3" {
             Some(self.promotion(&identity.product, &identity.authority, &version, &commit)?)
         } else {
             None
         };
-        let schema = if identity.configuration.is_some() {
-            "plumb.release-marker/v2"
-        } else {
-            "plumb.release-marker/v1"
-        };
         Ok(Descriptor {
-            schema,
+            schema: identity.schema,
             product: identity.product,
             repository: self.repository.clone(),
             authority: identity.authority,
@@ -194,6 +196,7 @@ impl Seat {
             ));
         }
         Ok(Identity {
+            schema: "plumb.release-marker/v1",
             product,
             authority,
             configuration: None,

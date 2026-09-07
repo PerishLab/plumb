@@ -12,6 +12,9 @@ impl Governance {
         let held = exact
             .then(|| crate::command::release::snapshot(marker))
             .transpose()?;
+        if let Some(marker) = &held {
+            super::promotion::verify(marker)?;
+        }
         let ambient = held.is_none().then(|| Spec::controller(root)).transpose()?;
         Ok(Self {
             marker: held,

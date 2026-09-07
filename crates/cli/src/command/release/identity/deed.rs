@@ -16,13 +16,6 @@ pub enum Deed {
         #[arg(long, help = "Verify the already-held Git snapshot without fetching")]
         held: bool,
     },
-    #[command(about = "Withdraw an unpublished release point")]
-    Retract {
-        #[arg(long)]
-        version: String,
-        #[arg(long = "dry-run")]
-        dry: bool,
-    },
     #[command(about = "Stamp the release point at the head of its line")]
     Stamp {
         #[arg(long)]

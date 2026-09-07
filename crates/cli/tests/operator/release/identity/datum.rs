@@ -54,7 +54,7 @@ fn unfinished() {
     assert!(remote.stdout.is_empty());
 }
 
-fn proof(root: &Path, tree: &str) -> String {
+pub(super) fn proof(root: &Path, tree: &str) -> String {
     #[derive(Serialize)]
     struct Claim<'a> {
         schema: &'a str,

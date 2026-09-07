@@ -1,6 +1,145 @@
 use super::super::world::{Fixture, run};
 use super::marker::{seeded, stamp};
+use super::profile::configuration;
+use serde_json::Value;
+use std::os::unix::fs::PermissionsExt as _;
 use std::process::Command;
+
+#[test]
+fn independent() {
+    let temp = tempfile::tempdir().expect("temp root");
+    let bare = tempfile::tempdir().expect("bare root");
+    let home = tempfile::tempdir().expect("plumb home");
+    let tools = temp.path().join("tools");
+    std::fs::create_dir(&tools).expect("tool root");
+    let fixture = Fixture {
+        root: temp.path(),
+        tools: &tools,
+    };
+    super::marker::seeded(&fixture, bare.path());
+    std::fs::write(
+        tools.join("curl"),
+        super::super::world::CURL
+            .replace("https://releases.test/", "https://releases.new.perish.uk/"),
+    )
+    .expect("release authority fixture");
+    let (generation, profile) = configuration(home.path(), "new", None);
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "remote",
+        "set-url",
+        "origin",
+        "ssh://git@git.perish.top/PerishFire/probe.git",
+    ]));
+    let tree = run(Command::new("git")
+        .arg("-C")
+        .arg(fixture.root)
+        .args(["rev-parse", "HEAD^{tree}"]));
+    let proof = super::datum::proof(fixture.root, String::from_utf8_lossy(&tree.stdout).trim());
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "commit",
+        "--allow-empty",
+        "-qm",
+        &format!("candidate\n\nPlumb-Guard-Proof: {proof}"),
+    ]));
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "update-ref",
+        "refs/remotes/origin/release/v1.2.0",
+        "HEAD",
+    ]));
+    let mut annotation = serde_json::json!({
+        "schema": "plumb.release-marker/v3", "product": "probe", "marker": "v1.2.0",
+        "configuration": { "channel": "stable", "version": plumb::version!("PLUMB").to_string(), "generation": generation },
+        "profile": profile,
+    });
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "tag",
+        "-a",
+        "v1.2.0",
+        "-m",
+        &annotation.to_string(),
+    ]));
+    let command = || {
+        let mut held = fixture.command();
+        held.current_dir(fixture.root)
+            .env("PLUMB_HOME", home.path())
+            .env(
+                "PLUMB_WORKFLOW_INVENTORY_URL",
+                "https://depot.test/inventory.json",
+            )
+            .env("PLUMB_RULES_SOURCE", "https://depot.test");
+        held
+    };
+    let shown = command()
+        .args(["release", "show", "--marker", "v1.2.0", "--held"])
+        .output()
+        .expect("marker");
+    assert!(
+        shown.status.success(),
+        "{}",
+        String::from_utf8_lossy(&shown.stderr)
+    );
+    let value: Value = serde_json::from_slice(&shown.stdout).expect("marker json");
+    assert_eq!(value["schema"], "plumb.release-marker/v3");
+    assert!(value.get("promotion").is_none());
+    let git = tools.join("git");
+    std::fs::write(&git, "#!/bin/sh\nfor arg in \"$@\"; do [ \"$arg\" = fetch ] && exit 0; done\nexec /usr/bin/git \"$@\"\n").expect("git shim");
+    std::fs::set_permissions(&git, std::fs::Permissions::from_mode(0o755)).expect("git mode");
+    let skill = temp.path().join("skill");
+    std::fs::create_dir(&skill).expect("skill root");
+    std::fs::write(skill.join("SKILL.md"), "# Probe\n").expect("skill body");
+    let depot = command()
+        .args([
+            "depot",
+            "skill",
+            ".",
+            "--marker",
+            "v1.2.0",
+            "--from",
+            skill.to_str().expect("skill path"),
+            "--dry-run",
+        ])
+        .output()
+        .expect("depot");
+    assert!(
+        depot.status.success(),
+        "{}",
+        String::from_utf8_lossy(&depot.stderr)
+    );
+    let ship = command()
+        .args([
+            "ship",
+            "resolve",
+            "--marker",
+            "v1.2.0",
+            "--atom",
+            &"a".repeat(40),
+        ])
+        .output()
+        .expect("ship");
+    assert!(!ship.status.success());
+    assert!(
+        String::from_utf8_lossy(&ship.stderr).contains("fully proven candidate publication graph")
+    );
+    super::profile::candidates(&fixture, &command, &annotation);
+    annotation["schema"] = serde_json::json!("plumb.release-marker/v2");
+    run(Command::new("git")
+        .arg("-C")
+        .arg(fixture.root)
+        .args(["tag", "-d", "v1.2.0"]));
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "tag",
+        "-a",
+        "v1.2.0",
+        "-m",
+        &annotation.to_string(),
+    ]));
+    let legacy = command()
+        .args(["release", "verify", "--marker", "v1.2.0", "--held"])
+        .output()
+        .expect("legacy marker");
+    assert!(!legacy.status.success());
+    assert!(String::from_utf8_lossy(&legacy.stderr).contains("no published exact seal"));
+}
 
 #[test]
 fn snapshot() {

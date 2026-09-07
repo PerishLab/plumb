@@ -21,6 +21,7 @@ struct Configuration {
 }
 
 pub(super) struct Identity {
+    pub schema: &'static str,
     pub product: String,
     pub authority: String,
     pub configuration: Option<String>,
@@ -43,7 +44,7 @@ pub(super) fn annotation(spec: &Spec, marker: &str) -> Result<String, String> {
         .channel()
         .ok_or_else(|| "a Product Profile requires a v3 configuration generation".to_string())?;
     serde_json::to_string(&Annotation {
-        schema: "plumb.release-marker/v2".into(),
+        schema: "plumb.release-marker/v3".into(),
         product: spec.product.clone(),
         marker: marker.to_string(),
         configuration: Configuration {
@@ -71,12 +72,16 @@ pub(super) fn resolve(
 
 impl Annotation {
     fn resolve(self, root: &Path, marker: &str) -> Result<Identity, String> {
-        if self.schema != "plumb.release-marker/v2" {
-            return Err(format!(
-                "unknown release marker annotation schema {}",
-                self.schema
-            ));
-        }
+        let schema = match self.schema.as_str() {
+            "plumb.release-marker/v2" => "plumb.release-marker/v2",
+            "plumb.release-marker/v3" => "plumb.release-marker/v3",
+            _ => {
+                return Err(format!(
+                    "unknown release marker annotation schema {}",
+                    self.schema
+                ));
+            }
+        };
         if self.marker != marker {
             return Err(format!(
                 "release marker {marker} annotation names {}",
@@ -117,6 +122,7 @@ impl Annotation {
         }
         let spec = Spec::governed(root, target)?;
         Ok(Identity {
+            schema,
             product: spec.product.clone(),
             authority: spec.authority.clone(),
             configuration: Some(configuration),

@@ -4,6 +4,85 @@ use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
 use std::process::Command;
 
+pub(super) fn candidates(
+    fixture: &Fixture<'_>,
+    command: &impl Fn() -> Command,
+    annotation: &Value,
+) {
+    let mut beta = annotation.clone();
+    beta["marker"] = serde_json::json!("v1.2.0-beta.1");
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "tag",
+        "-a",
+        "v1.2.0-beta.1",
+        "-m",
+        &beta.to_string(),
+    ]));
+    let output = run(command().args([
+        "ship",
+        "resolve",
+        "--marker",
+        "v1.2.0-beta.1",
+        "--atom",
+        &"a".repeat(40),
+    ]));
+    let graph: Value = serde_json::from_slice(&output.stdout).expect("candidate graph");
+    assert_eq!(graph["workload_missing"], false);
+    assert_eq!(graph["publication_missing"], true);
+    let records = graph["publication"]["include"]
+        .as_array()
+        .expect("requests")
+        .iter()
+        .map(|row| {
+            let request = &row["request"];
+            let keys = &request["keys"];
+            serde_json::json!({
+                "action": request["action"], "workload": keys["workload"],
+                "proof": keys["proof"], "publication": keys["publication"],
+                "source": { "type": "url", "source": "https://registry.test/probe" },
+            })
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(records.len(), 2);
+    std::fs::create_dir(fixture.root.join("depot")).expect("inventory root");
+    let mut cases = (0..=records.len())
+        .map(|count| (records[..count].to_vec(), count == records.len()))
+        .collect::<Vec<_>>();
+    for field in ["workload", "publication"] {
+        let mut drift = records.clone();
+        drift[0][field] = serde_json::json!("0".repeat(64));
+        cases.push((drift, false));
+    }
+    for (records, complete) in cases {
+        let inventory = serde_json::json!({
+            "schema": "plumb.workflow-inventory/v1",
+            "records": records,
+        });
+        std::fs::write(
+            fixture.root.join("depot/inventory.json"),
+            inventory.to_string(),
+        )
+        .expect("inventory");
+        let stable = command()
+            .args([
+                "ship",
+                "resolve",
+                "--marker",
+                "v1.2.0",
+                "--atom",
+                &"a".repeat(40),
+            ])
+            .output()
+            .expect("stable graph");
+        assert_eq!(
+            stable.status.success(),
+            complete,
+            "{}",
+            String::from_utf8_lossy(&stable.stderr)
+        );
+    }
+}
+
 #[test]
 fn retained() {
     let temp = tempfile::tempdir().expect("temp root");
@@ -109,10 +188,10 @@ fn annotate(root: &Path, version: &str, commit: &str, message: &str) {
     ]));
 }
 
-fn configuration(home: &Path, authority: &str, prior: Option<&str>) -> (String, String) {
+pub(super) fn configuration(home: &Path, authority: &str, prior: Option<&str>) -> (String, String) {
     let source = tempfile::tempdir().expect("configuration source");
     let profile = format!(
-        "schema = \"plumb.product-profile/v1\"\n\n[product]\nname = \"probe\"\nauthority = \"https://releases.{authority}.perish.uk\"\nderivatives = [\"skill\"]\n\n[governance]\nmanifest = '''\n[release]\nproduct = \"probe\"\nauthority = \"https://releases.{authority}.perish.uk\"\n[release.cargo]\nregistry = \"perish\"\npackages = [\"probe\"]\n'''\nectropy = \"[comment]\\nallow = false\"\n"
+        "schema = \"plumb.product-profile/v1\"\n\n[product]\nname = \"probe\"\nauthority = \"https://releases.{authority}.perish.uk\"\nderivatives = [\"skill\"]\n\n[governance]\nmanifest = '''\n[release]\nproduct = \"probe\"\nauthority = \"https://releases.{authority}.perish.uk\"\n[release.cargo]\nregistry = \"perish\"\npackages = [\"probe\"]\n[release.oci]\nregistry = \"registry.test\"\nimage = \"owner/probe\"\naccount = \"probe\"\n'''\nectropy = \"[comment]\\nallow = false\"\n"
     );
     let digest = plumb::depot::sha(profile.as_bytes());
     let catalog = format!(

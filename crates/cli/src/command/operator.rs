@@ -34,7 +34,3 @@ pub(super) fn line(deed: super::version::Deed) -> Result<String, String> {
 pub(super) fn stamp(version: &str, dry: bool) -> Result<String, String> {
     mark::stamp(version, dry)
 }
-
-pub(super) fn retract(version: &str, dry: bool) -> Result<String, String> {
-    mark::retract(version, dry)
-}

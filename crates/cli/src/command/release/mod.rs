@@ -71,10 +71,6 @@ impl<'a> Product<'a> {
         let binding = self.depot().latest("stable", false)?;
         Ok(Some((binding.release.version, binding.release.commit)))
     }
-
-    pub fn promotion(&self, commit: &str, version: &str) -> Result<promotion::Exact, String> {
-        promotion::Promotion::new(self.0).derive(commit, version)
-    }
 }
 
 pub(in crate::command) fn marker(raw: &str) -> Result<ReleaseMarker, String> {
@@ -112,7 +108,6 @@ pub fn run(deed: Deed) -> i32 {
 fn execute(deed: Deed) -> Result<String, String> {
     match deed {
         Deed::Stamp { version, dry } => super::operator::stamp(&version, dry),
-        Deed::Retract { version, dry } => super::operator::retract(&version, dry),
         deed => markers::run(deed),
     }
 }

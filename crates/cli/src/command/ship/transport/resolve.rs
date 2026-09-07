@@ -8,11 +8,7 @@ use plumb::rig::Rig;
 use serde_json::{Value, json};
 use std::path::Path;
 
-pub fn run(raw: &str, atom: &str) -> Result<String, String> {
-    if atom.len() != 40 || !atom.bytes().all(|held| held.is_ascii_hexdigit()) {
-        return Err("--atom must be one full Git commit".into());
-    }
-    let marker = release::snapshot(raw)?;
+pub(super) fn graph(marker: &release::ReleaseMarker) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let root = &rig.release.root;
     let spec = marker.spec();
@@ -28,17 +24,17 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
     }
     let inventory = Inventory::fetch(&rig.workflow.inventory.url)?;
     let world = World {
-        marker: &marker,
+        marker,
         binding: Binding::new(spec),
         inventory: inventory.path(),
         source: Some(&rig.workflow.inventory.url),
         root,
     };
-    let workload = workloads(spec, &marker, &world)?;
+    let workload = workloads(spec, marker, &world)?;
     let publication = Publish {
         spec,
         input: &plan["publication"],
-        marker: &marker,
+        marker,
         world: &world,
         workload: &workload,
     }

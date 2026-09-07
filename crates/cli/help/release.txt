@@ -2,9 +2,10 @@ Define and verify one immutable distribution marker.
 
 Release owns identity, not distribution. A marker is one annotated Git tag that
 binds the product, repository, version, channel, commit, tree, datum digest, and
-stable promotion proof. Show and verify resolve that complete identity. Stamp
-creates it only from a proved source point; a stable marker additionally refuses
-unless its version line is frozen. Retract removes only an unpublished marker.
+Product Profile. Show and verify resolve that complete identity. Stamp creates
+it only from a proved source point; a stable marker additionally refuses unless
+its version line is frozen. Ship owns candidate publication and stable promotion
+validation. Historical marker protocols retain their original proof semantics.
 
 Release never builds, compiles, publishes, activates, or edits a version line.
 Use version to project repository identity and govern the line. Use ship with the
@@ -12,5 +13,6 @@ resulting marker to distribute immutable resources. Use depot separately with
 the same marker to publish or move its mutable projections. Ship never invokes
 depot, and depot never selects or waits for a ship transaction.
 
-A marker never moves. Every ship and depot retry names the same marker and
-revalidates it before and after mutation.
+A marker never moves or retracts. Every ship and depot retry names the same
+marker and revalidates it before and after mutation. Correct an identity by
+preparing a new marker or version, never by deleting or replacing an existing tag.
