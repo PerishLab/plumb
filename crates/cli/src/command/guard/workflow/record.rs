@@ -36,7 +36,7 @@ pub struct Input {
 }
 
 pub fn run(input: Input) -> i32 {
-    match execute(input) {
+    match execute(input, None, None) {
         Ok(()) => 0,
         Err(error) => {
             eprintln!("plumb workflow record: {error}");
@@ -45,7 +45,11 @@ pub fn run(input: Input) -> i32 {
     }
 }
 
-fn execute(input: Input) -> Result<(), String> {
+fn execute(
+    input: Input,
+    receipt: Option<plumb::rule::Receipt>,
+    contract: Option<&plumb::rule::Production>,
+) -> Result<(), String> {
     if input.action.trim().is_empty() {
         return Err("action cannot be empty".into());
     }
@@ -79,6 +83,12 @@ fn execute(input: Input) -> Result<(), String> {
         })
         .transpose()?;
     let authority = Authority::read()?;
+    if let Some(receipt) = &receipt {
+        receipt.verify(&input.workload)?;
+        if input.reuse.is_some() {
+            return Err("a producer receipt cannot be assigned to an unverified reused URL".into());
+        }
+    }
     let source = if let Some(source) = input.reuse {
         if !source.starts_with("https://") {
             return Err("reused workload source must be an HTTPS URL".into());
@@ -96,10 +106,11 @@ fn execute(input: Input) -> Result<(), String> {
         authority.publish(&object, &input.workload, "application/gzip")?;
         source
     };
-    let workload = Record::workload(input.action.clone(), &keys, source);
-    authority.record(&workload)?;
+    let mut workload = Record::workload(input.action.clone(), &keys, source);
+    workload.receipt = receipt;
+    authority.record(&workload, contract)?;
     if let Some(publication) = &publication {
-        authority.record(publication)?;
+        authority.record(publication, None)?;
     }
     Ok(())
 }
@@ -111,17 +122,30 @@ pub(in crate::command) struct Project<'a> {
     pub reuse: Option<&'a str>,
     pub publication: Option<String>,
     pub depot: Option<serde_json::Value>,
+    pub production: Option<(&'a plumb::rule::Production, plumb::rule::Receipt)>,
 }
 
 pub(in crate::command) fn project(input: Project<'_>) -> Result<(), String> {
-    execute(Input {
-        action: input.action.to_string(),
-        keys: input.keys.to_string(),
-        workload: input.workload,
-        reuse: input.reuse.map(str::to_string),
-        publication: input.publication,
-        depot: input.depot.map(|held| held.to_string()),
-    })
+    let contract = input.production.as_ref().map(|(contract, _)| *contract);
+    let receipt = input
+        .production
+        .map(|(contract, receipt)| {
+            contract.verify(&receipt)?;
+            Ok::<_, String>(receipt)
+        })
+        .transpose()?;
+    execute(
+        Input {
+            action: input.action.to_string(),
+            keys: input.keys.to_string(),
+            workload: input.workload,
+            reuse: input.reuse.map(str::to_string),
+            publication: input.publication,
+            depot: input.depot.map(|held| held.to_string()),
+        },
+        receipt,
+        contract,
+    )
 }
 
 struct Authority {
@@ -161,7 +185,11 @@ impl Authority {
         Ok(format!("{base}/{key}"))
     }
 
-    fn record(&self, record: &Record) -> Result<(), String> {
+    fn record(
+        &self,
+        record: &Record,
+        contract: Option<&plumb::rule::Production>,
+    ) -> Result<(), String> {
         for (route, record) in record.routes() {
             let body = record.encode()?;
             match self.control.write(
@@ -174,7 +202,7 @@ impl Authority {
                 plumb::bucket::Condition::Absent,
             )? {
                 plumb::bucket::Outcome::Held(()) => {}
-                plumb::bucket::Outcome::Stale => self.held(&route, &record)?,
+                plumb::bucket::Outcome::Stale => self.held(&route, &record, contract)?,
                 plumb::bucket::Outcome::Missing => {
                     return Err(format!("workflow record {route} returned missing"));
                 }
@@ -183,7 +211,12 @@ impl Authority {
         Ok(())
     }
 
-    fn held(&self, route: &str, record: &Record) -> Result<(), String> {
+    fn held(
+        &self,
+        route: &str,
+        record: &Record,
+        contract: Option<&plumb::rule::Production>,
+    ) -> Result<(), String> {
         match self.control.read(route)? {
             plumb::bucket::Outcome::Held(object) => {
                 let mut held = Record::decode(&object.body)?;
@@ -192,8 +225,9 @@ impl Authority {
                     held.proof = None;
                     wanted.proof = None;
                     held.source = wanted.source.clone();
+                    held.receipt = wanted.receipt.clone();
                 }
-                if held == wanted {
+                if held.equivalent(&wanted, contract) {
                     Ok(())
                 } else {
                     Err(format!("workflow record {route} drifted"))
@@ -204,6 +238,12 @@ impl Authority {
     }
 
     fn publish(&self, key: &str, path: &Path, content_type: &str) -> Result<(), String> {
+        use sha2::{Digest, Sha256};
+        let body = fs::read(path)
+            .map_err(|error| format!("cannot read workload {}: {error}", path.display()))?;
+        if key != format!("workloads/{:x}.tgz", Sha256::digest(&body)) {
+            return Err("workflow workload changed before immutable upload".into());
+        }
         match self.control.head(key)? {
             plumb::bucket::Outcome::Held(()) => return Ok(()),
             plumb::bucket::Outcome::Missing => {}
@@ -211,8 +251,6 @@ impl Authority {
                 return Err("probing workflow workload returned stale".into());
             }
         }
-        let body = fs::read(path)
-            .map_err(|error| format!("cannot read workload {}: {error}", path.display()))?;
         match self.control.write(
             key,
             &body,

@@ -8,6 +8,8 @@ mod fixture;
 mod identity;
 #[path = "workflow/plan.rs"]
 mod plan;
+#[path = "workflow/production.rs"]
+mod production;
 #[path = "workflow/projection.rs"]
 mod projection;
 #[path = "workflow/record.rs"]

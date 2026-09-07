@@ -179,7 +179,7 @@ impl Inventory {
 }
 
 impl Record {
-    pub(in crate::command) fn routes(&self) -> Vec<(String, Self)> {
+    pub(super) fn routes(&self) -> Vec<(String, Self)> {
         match self.source.kind.as_str() {
             "workload" => {
                 let mut content = self.clone();

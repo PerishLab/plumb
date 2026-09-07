@@ -3,8 +3,10 @@ use serde_json::Value;
 
 mod probe;
 mod process;
+mod production;
 pub use probe::Probe;
 pub use process::Observation;
+pub use production::{Producer, Production, Receipt};
 
 #[derive(Default, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]

@@ -28,7 +28,7 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
     }
     let inventory = Inventory::fetch(&rig.workflow.inventory.url)?;
     let world = World {
-        marker: &marker.marker,
+        marker: &marker,
         binding: Binding::new(spec),
         inventory: inventory.path(),
         source: Some(&rig.workflow.inventory.url),
@@ -61,7 +61,7 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
 }
 
 struct World<'a> {
-    marker: &'a str,
+    marker: &'a release::ReleaseMarker,
     binding: Binding<'a>,
     inventory: Option<&'a Path>,
     source: Option<&'a str>,
@@ -119,6 +119,7 @@ fn workloads(
                 "target": triple,
                 "archive": archive,
                 "url": node["reuse"]["source"],
+                "receipt": node["receipt"],
             }));
             continue;
         }
@@ -134,6 +135,7 @@ fn workloads(
             },
             "reuse": node["reuse"],
             "keys": node["keys"],
+            "production": node["production"],
         }));
         pending.push(json!({ "runner": runner, "request": request }));
     }
@@ -274,22 +276,20 @@ fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String> {
             .map(|value| format!("{}={value}", plan.action))
             .collect()
     };
-    let graph = crate::command::workflow::plan::derive(
-        crate::command::workflow::plan::Input {
-            base: None,
-            world: fields,
-            workload,
-            identity: world.binding.identity(world.marker),
-            project: named(plan.projections),
-            roots: named(plan.roots),
-            inventory: world.inventory.map(Path::to_path_buf),
-            source: world.source.map(str::to_string),
-            target: plumb::cli::Root {
-                root: world.root.display().to_string(),
-            },
+    let input = crate::command::workflow::plan::Input {
+        base: None,
+        world: fields,
+        workload,
+        identity: world.binding.identity(&world.marker.marker),
+        project: named(plan.projections),
+        roots: named(plan.roots),
+        inventory: world.inventory.map(Path::to_path_buf),
+        source: world.source.map(str::to_string),
+        target: plumb::cli::Root {
+            root: world.root.display().to_string(),
         },
-        Some(plan.action),
-    )?;
+    };
+    let graph = super::production::plan(input, world.marker, plan.action, plan.target)?;
     let graph: Value = serde_json::from_str(&graph)
         .map_err(|error| format!("cannot decode {} plan: {error}", plan.action))?;
     graph["actions"]

@@ -38,8 +38,16 @@ fn transport() -> String {
 
 fn resolver() -> String {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    std::fs::read_to_string(root.join("crates/cli/src/command/ship/transport/resolve.rs"))
-        .expect("Plumb owns ship graph resolution")
+    ["resolve", "production"]
+        .iter()
+        .map(|name| {
+            std::fs::read_to_string(
+                root.join(format!("crates/cli/src/command/ship/transport/{name}.rs")),
+            )
+            .expect("Plumb owns ship graph resolution")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn resolution() -> String {
@@ -192,7 +200,7 @@ fn matrix() {
         "ship must resolve only the requested action instead of probing every unrelated action: {graph}"
     );
     assert!(
-        graph.contains("Some(plan.action)"),
+        graph.contains("Some(action)"),
         "ship must select one action instead of deriving the whole workflow graph: {graph}"
     );
     assert!(graph.contains("action == \"ship/oci\""), "{graph}");

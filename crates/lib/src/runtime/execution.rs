@@ -1,5 +1,5 @@
 use super::environment::Environment;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::io::Read;
@@ -12,10 +12,11 @@ pub struct Execution {
     tools: BTreeMap<String, Tool>,
 }
 
-#[derive(Serialize)]
-struct Tool {
-    path: PathBuf,
-    digest: String,
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Tool {
+    pub path: PathBuf,
+    pub digest: String,
 }
 
 impl Execution {
@@ -52,13 +53,7 @@ impl Execution {
     }
 
     pub fn command(&self, program: &str) -> Result<Command, String> {
-        for (name, tool) in &self.tools {
-            let path = which::which_in(name, self.environment.get("PATH"), &self.root)
-                .map_err(|error| format!("cannot resolve tool {name}: {error}"))?;
-            if path != tool.path || fingerprint(&path)? != tool.digest {
-                return Err(format!("resolved tool {name} changed before execution"));
-            }
-        }
+        self.verify()?;
         let tool = self
             .tools
             .get(program)
@@ -68,9 +63,31 @@ impl Execution {
         command.current_dir(&self.root);
         Ok(command)
     }
+
+    pub fn tools(&self) -> Result<BTreeMap<String, Tool>, String> {
+        self.verify()?;
+        Ok(self.tools.clone())
+    }
+
+    pub fn imprint(&self) -> Result<String, String> {
+        let body = serde_json::to_vec(&self.environment.evidence())
+            .map_err(|error| format!("cannot encode execution environment: {error}"))?;
+        Ok(format!("{:x}", Sha256::digest(body)))
+    }
+
+    pub fn verify(&self) -> Result<(), String> {
+        for (name, tool) in &self.tools {
+            let path = which::which_in(name, self.environment.get("PATH"), &self.root)
+                .map_err(|error| format!("cannot resolve tool {name}: {error}"))?;
+            if path != tool.path || fingerprint(&path)? != tool.digest {
+                return Err(format!("resolved tool {name} changed before execution"));
+            }
+        }
+        Ok(())
+    }
 }
 
-fn fingerprint(path: &Path) -> Result<String, String> {
+pub(crate) fn fingerprint(path: &Path) -> Result<String, String> {
     let mut file = std::fs::File::open(path)
         .map_err(|error| format!("cannot read resolved tool {}: {error}", path.display()))?;
     let mut digest = Sha256::new();

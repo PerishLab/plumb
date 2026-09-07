@@ -30,12 +30,28 @@ pub struct Input {
 }
 
 pub(in crate::command) fn derive(input: Input, wanted: Option<&str>) -> Result<String, String> {
-    render(Path::new(&input.target.root), &input, wanted)
+    render(Path::new(&input.target.root), &input, wanted, None)
+}
+
+pub(in crate::command) fn production(
+    mut input: Input,
+    wanted: &str,
+    contract: &plumb::rule::Production,
+) -> Result<String, String> {
+    input
+        .world
+        .push(format!("production={}", contract.digest()?));
+    render(
+        Path::new(&input.target.root),
+        &input,
+        Some(wanted),
+        Some(contract),
+    )
 }
 
 pub fn run(input: Input) -> i32 {
     let root = Path::new(&input.target.root);
-    match render(root, &input, None) {
+    match render(root, &input, None, None) {
         Ok(plan) => {
             println!("{plan}");
             0
@@ -47,7 +63,12 @@ pub fn run(input: Input) -> i32 {
     }
 }
 
-fn render(root: &Path, input: &Input, wanted: Option<&str>) -> Result<String, String> {
+fn render(
+    root: &Path,
+    input: &Input,
+    wanted: Option<&str>,
+    contract: Option<&plumb::rule::Production>,
+) -> Result<String, String> {
     let base = input.base.as_deref();
     let mut current = shape::workflow::read(root);
     if let Some(error) = current.refusal {
@@ -111,7 +132,7 @@ fn render(root: &Path, input: &Input, wanted: Option<&str>) -> Result<String, St
             let current = after.projected(key, &project)?;
             let moved = prior.as_ref() != Some(&current);
             let keys = context.keys(&key.name(), &current);
-            let verdict = inventory.resolve(&key.name(), &keys)?;
+            let (verdict, receipt) = inventory.verified(&key.name(), &keys, contract)?;
             let cold = base.is_none() || moved;
             let run = cold && verdict.decision == "run";
             Ok(Action {
@@ -134,6 +155,8 @@ fn render(root: &Path, input: &Input, wanted: Option<&str>) -> Result<String, St
                     reuse::Source::none()
                 },
                 depot: if cold { verdict.depot } else { None },
+                receipt: if cold { receipt } else { None },
+                production: contract.map(plumb::rule::Production::digest).transpose()?,
             })
         })
         .collect::<Result<_, _>>()?;
@@ -183,6 +206,10 @@ struct Action {
     reuse: reuse::Source,
     #[serde(skip_serializing_if = "Option::is_none")]
     depot: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    receipt: Option<plumb::rule::Receipt>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    production: Option<String>,
 }
 
 fn fields(kind: &str, entries: &[String]) -> Result<BTreeMap<String, String>, String> {

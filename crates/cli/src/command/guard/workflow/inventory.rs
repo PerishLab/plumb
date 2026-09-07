@@ -1,10 +1,67 @@
-use super::reuse::{Keys, Record, Source, hash};
+use super::reuse::{Inventory, Keys, Record, Source, Verdict, hash};
+use plumb::rule::{Production, Receipt};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Read as _;
 use std::path::Path;
 
+impl Inventory {
+    pub(super) fn verified(
+        &self,
+        action: &str,
+        keys: &Keys,
+        contract: Option<&Production>,
+    ) -> Result<(Verdict, Option<Receipt>), String> {
+        let Some(contract) = contract else {
+            return self.resolve(action, keys).map(|verdict| (verdict, None));
+        };
+        contract.digest()?;
+        let mut held = self.enrich(action, keys)?;
+        let valid = |record: &Record| {
+            record.receipt.as_ref().is_some_and(|receipt| {
+                contract.verify(receipt).is_ok()
+                    && record.source.kind == "workload"
+                    && record
+                        .source
+                        .source
+                        .ends_with(&format!("/workloads/{}.tgz", receipt.artifact))
+            })
+        };
+        held.records.retain(valid);
+        held.direct.retain(valid);
+        let verdict = held.local(action, keys)?;
+        let receipt = held
+            .direct
+            .iter()
+            .chain(&held.records)
+            .filter(|record| record.action == action && record.workload == keys.workload)
+            .find(|record| {
+                record.proof.as_deref() == Some(&keys.proof) && record.source == verdict.source
+            })
+            .and_then(|record| record.receipt.clone());
+        Ok((verdict, receipt))
+    }
+}
+
 impl Record {
+    pub(super) fn equivalent(&self, wanted: &Self, contract: Option<&Production>) -> bool {
+        let Some(contract) = contract else {
+            return self == wanted;
+        };
+        let (Some(held), Some(produced)) = (&self.receipt, &wanted.receipt) else {
+            return false;
+        };
+        if contract.verify(held).is_err()
+            || contract.verify(produced).is_err()
+            || held.artifact != produced.artifact
+        {
+            return false;
+        }
+        let mut historical = self.clone();
+        historical.receipt = wanted.receipt.clone();
+        historical == *wanted
+    }
+
     pub(super) fn encode(&self) -> Result<Vec<u8>, String> {
         let mut body = serde_json::to_vec_pretty(self)
             .map_err(|error| format!("cannot encode workflow record: {error}"))?;
@@ -30,6 +87,7 @@ impl Record {
                 source,
             },
             depot: None,
+            receipt: None,
         }
     }
 
@@ -49,6 +107,7 @@ impl Record {
                 source,
             },
             depot,
+            receipt: None,
         })
     }
 

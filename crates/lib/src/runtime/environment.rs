@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::process::Command;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Contract {
     pub inherit: Vec<String>,

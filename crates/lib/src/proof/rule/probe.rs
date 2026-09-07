@@ -54,7 +54,11 @@ impl Probe {
         }
         let actual =
             std::str::from_utf8(&output.stdout).map_err(|_| "probe stdout is not UTF-8")?;
-        Ok(normalized(actual) == normalized(&self.stdout))
+        Ok(self.accepts(actual))
+    }
+
+    pub fn accepts(&self, actual: &str) -> bool {
+        normalized(actual) == normalized(&self.stdout)
     }
 }
 

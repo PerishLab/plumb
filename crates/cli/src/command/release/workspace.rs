@@ -54,7 +54,17 @@ impl Workspace {
     }
 
     pub fn read(root: &Path) -> Result<Self, String> {
-        let output = crate::cargo::command()
+        Self::inspect(root, crate::cargo::command())
+    }
+
+    pub fn bound(execution: &plumb::config::Execution, root: &Path) -> Result<Self, String> {
+        let mut command = execution.command("cargo")?;
+        crate::cargo::configure(&mut command);
+        Self::inspect(root, command)
+    }
+
+    fn inspect(root: &Path, mut command: std::process::Command) -> Result<Self, String> {
+        let output = command
             .args(["metadata", "--no-deps", "--format-version", "1"])
             .current_dir(root)
             .output()
@@ -73,6 +83,7 @@ impl Workspace {
         &self,
         spec: &Spec,
         input: Build<'_>,
+        execution: Option<&plumb::config::Execution>,
     ) -> Result<BTreeMap<String, PathBuf>, String> {
         let expected = release(input.version)?;
         let mut found = BTreeMap::new();
@@ -104,7 +115,11 @@ impl Workspace {
                 ));
             }
             let msvc = input.triple.ends_with("-msvc");
-            let mut command = crate::cargo::command();
+            let mut command = match execution {
+                Some(execution) => execution.command("cargo")?,
+                None => crate::cargo::command(),
+            };
+            crate::cargo::configure(&mut command);
             command
                 .arg(if msvc { "rustc" } else { "build" })
                 .args([

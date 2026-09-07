@@ -60,6 +60,8 @@ pub(super) struct Record {
     pub(super) source: Source,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) depot: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) receipt: Option<plumb::rule::Receipt>,
 }
 
 #[derive(PartialEq)]
@@ -132,7 +134,7 @@ impl Inventory {
         held.local(action, keys)
     }
 
-    fn local(&self, action: &str, keys: &Keys) -> Result<Verdict, String> {
+    pub(super) fn local(&self, action: &str, keys: &Keys) -> Result<Verdict, String> {
         if let Some(publication) = &keys.publication
             && let Some(record) =
                 self.source(Match::new(action, keys, Some(publication), "url"), None)?

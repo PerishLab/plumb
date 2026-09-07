@@ -2,7 +2,7 @@ mod action;
 mod cache;
 mod cargo;
 mod configuration;
-mod environment;
+pub(in crate::command) mod environment;
 pub(crate) mod hook;
 pub(crate) mod tree;
 mod web;

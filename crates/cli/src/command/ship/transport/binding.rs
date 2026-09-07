@@ -26,6 +26,12 @@ impl Governance {
             .or(self.ambient.as_ref())
             .expect("governance always carries one release specification")
     }
+
+    pub fn marker(&self) -> Result<&crate::command::release::ReleaseMarker, String> {
+        self.marker
+            .as_ref()
+            .ok_or_else(|| "production requires an exact release marker".into())
+    }
 }
 
 #[derive(Clone, Copy)]

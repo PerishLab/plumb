@@ -44,12 +44,23 @@ impl Product<'_> {
     }
 
     pub fn build(&self, input: Build<'_>) -> Result<String, String> {
+        self.produce(input, None)
+    }
+
+    pub fn produce(
+        &self,
+        input: Build<'_>,
+        execution: Option<&plumb::config::Execution>,
+    ) -> Result<String, String> {
         crate::command::release::channel::intent(input.channel, input.version)?;
         crate::command::release::proof::commit(input.commit)?;
         let target = self.spec.target(input.target)?;
         std::fs::create_dir_all(input.artifacts)
             .map_err(|error| format!("cannot create {}: {error}", input.artifacts.display()))?;
-        let workspace = Workspace::read(&self.spec.root)?;
+        let workspace = match execution {
+            Some(execution) => Workspace::bound(execution, &self.spec.root)?,
+            None => Workspace::read(&self.spec.root)?,
+        };
         let binaries = workspace.build(
             self.spec,
             crate::command::release::workspace::Build {
@@ -58,6 +69,7 @@ impl Product<'_> {
                 channel: input.channel,
                 commit: input.commit,
             },
+            execution,
         )?;
         let archive = input.artifacts.join(&target.archive);
         if archive.exists() {

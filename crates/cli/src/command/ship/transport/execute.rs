@@ -1,5 +1,6 @@
 use super::super::adaptor;
-use crate::command::release::{artifacts, capsule, channel, output, required, storage};
+use super::production::{Workload, materialize};
+use crate::command::release::{artifacts, capsule, output, required, storage};
 use plumb::rig::Rig;
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -22,6 +23,8 @@ struct Request {
     reuse: Reuse,
     #[serde(default)]
     keys: Option<serde_json::Value>,
+    #[serde(default)]
+    production: Option<String>,
 }
 #[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase", deny_unknown_fields)]
@@ -43,13 +46,6 @@ enum Operation {
         #[serde(default)]
         workloads: Vec<Workload>,
     },
-}
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Workload {
-    target: String,
-    archive: String,
-    url: String,
 }
 #[derive(Deserialize, serde::Serialize)]
 #[serde(deny_unknown_fields)]
@@ -106,28 +102,18 @@ impl Request {
         let spec = governance.spec();
         super::binding::Binding::new(spec)
             .verify(self.configuration.as_deref(), self.profile.as_deref())?;
-        let (release, build) = (&rig.release, channel::base(version)?);
+        let release = &rig.release;
         let reuse = self.reuse.encode()?;
         let projection = match self.operation {
             Operation::Workload { target, archive } => {
-                super::super::package::product(spec).build(super::super::package::Build {
-                    target: &target,
-                    version: &build,
-                    channel: "stable",
-                    commit: required("PLUMB_RELEASE_COMMIT", &release.commit)?,
-                    artifacts: &artifacts(release)?,
-                })?;
-                let keys = self
-                    .keys
-                    .ok_or_else(|| "an exact ship request carries no inventory keys".to_string())?;
-                crate::command::workflow::record::project(
-                    crate::command::workflow::record::Project {
+                super::production::execute(
+                    governance.marker()?,
+                    super::production::Input {
+                        target: &target,
+                        archive: &archive,
                         action: &self.action,
-                        keys: &keys.to_string(),
-                        workload: artifacts(release)?.join(archive),
-                        reuse: None,
-                        publication: None,
-                        depot: None,
+                        keys: self.keys.as_ref(),
+                        contract: self.production.as_deref(),
                     },
                 )?;
                 return result("workload", "", None);
@@ -136,7 +122,7 @@ impl Request {
                 let authority = super::support::authority(&rig.publish, &spec.product)?;
                 crate::command::release::Product::new(spec).promote(release)?;
                 let artifacts = artifacts(release)?;
-                materialize(&artifacts, &workloads)?;
+                materialize(&artifacts, &workloads, governance.marker()?)?;
                 super::super::package::product(spec).assemble(version, &artifacts)?;
                 crate::command::release::Product::new(spec).compile(release)?;
                 let capsule = capsule(release)?;
@@ -154,6 +140,7 @@ impl Request {
                         reuse: None,
                         publication: Some(publication.clone()),
                         depot: None,
+                        production: None,
                     },
                 )?;
                 return result("url", &publication, None);
@@ -189,7 +176,7 @@ impl Request {
             }
             Operation::Oci { workloads } => {
                 let artifacts = artifacts(release)?;
-                materialize(&artifacts, &workloads)?;
+                materialize(&artifacts, &workloads, governance.marker()?)?;
                 Some(adaptor::container::run(
                     &adaptor::image::image(spec),
                     adaptor::container::Request {
@@ -217,41 +204,10 @@ impl Request {
             reuse: (self.reuse.kind == "workload").then_some(self.reuse.source.as_str()),
             publication: Some(projection.publication.clone()),
             depot: projection.depot.clone(),
+            production: None,
         })?;
         result("url", &projection.publication, projection.depot)
     }
-}
-
-fn materialize(root: &std::path::Path, workloads: &[Workload]) -> Result<(), String> {
-    std::fs::create_dir_all(root)
-        .map_err(|error| format!("cannot create {}: {error}", root.display()))?;
-    for workload in workloads {
-        if workload.target.is_empty() || workload.archive.is_empty() || workload.url.is_empty() {
-            return Err("binary publication carries an incomplete workload".into());
-        }
-        let target = root.join(&workload.archive);
-        let status = Command::new("curl")
-            .args([
-                "--fail",
-                "--silent",
-                "--show-error",
-                "--location",
-                "--retry",
-                "3",
-                "--output",
-            ])
-            .arg(&target)
-            .arg(&workload.url)
-            .status()
-            .map_err(|error| format!("cannot fetch {}: {error}", workload.url))?;
-        if !status.success() {
-            return Err(format!(
-                "cannot fetch binary workload for {}",
-                workload.target
-            ));
-        }
-    }
-    Ok(())
 }
 
 fn pnpm(root: &std::path::Path, install: bool) -> Result<(), String> {

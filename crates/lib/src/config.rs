@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub use crate::runtime::environment::{Contract, Environment};
-pub use crate::runtime::execution::Execution;
+pub use crate::runtime::execution::{Execution, Tool};
 pub use plumb_macro::Cascade;
 
 pub fn environment(contract: &Contract) -> Result<Environment, String> {

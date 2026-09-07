@@ -112,7 +112,7 @@ fn versioned() {
     let execution =
         std::fs::read_to_string(root.join("crates/cli/src/command/ship/transport/execute.rs"))
             .expect("Plumb owns ship request execution");
-    assert!(execution.contains("materialize(&artifacts, &workloads)"));
+    assert!(execution.contains("materialize(&artifacts, &workloads, governance.marker()?)"));
     assert!(!execution.contains("if release.channel == \"stable\""));
 
     let trigger = text("crates/cli/src/command/operator/trigger.rs");
@@ -148,9 +148,9 @@ fn versioned() {
         1
     );
     assert!(resolver.contains("then_some(self.marker.base())"));
-    let execution = text("crates/cli/src/command/ship/transport/execute.rs");
+    let execution = text("crates/cli/src/command/ship/transport/production.rs");
     assert!(
-        execution.contains("channel::base(version)"),
+        execution.contains("channel::base(&marker.version)"),
         "binary execution must derive its reusable version instead of trusting the plan"
     );
     assert!(execution.contains("channel: \"stable\""));

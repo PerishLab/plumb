@@ -23,7 +23,7 @@ pub(super) fn cargo(root: &Path) -> Result<Environment, String> {
     Ok(environment)
 }
 
-pub(super) fn inspect(root: &Path, environment: &Environment) -> Result<(), String> {
+pub(in crate::command) fn inspect(root: &Path, environment: &Environment) -> Result<(), String> {
     let home = environment
         .get("CARGO_HOME")
         .map(PathBuf::from)
