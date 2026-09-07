@@ -1,8 +1,6 @@
 use crate::command::release::ReleaseMarker;
-use crate::judge::structure::layout::rule;
 use plumb::rule::{Production, Receipt};
 use sha2::{Digest, Sha256};
-use std::collections::BTreeMap;
 
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -78,30 +76,15 @@ pub(super) fn contract(marker: &ReleaseMarker, triple: &str) -> Result<Productio
     let execution = workflow
         .get("execution")
         .ok_or("workflow rules declare no execution contract")?;
-    let environment = execution
-        .get("cargo")
-        .ok_or("workflow rules declare no Cargo execution contract")?
-        .clone()
-        .try_into()
-        .map_err(|error| format!("invalid Cargo execution contract: {error}"))?;
+    let environment = crate::execution::contract("cargo")?;
     let runner = &marker.spec().target(triple)?.runner;
     let platform = execution
         .get("platform")
         .and_then(|held| held.get(runner))
         .and_then(toml::Value::as_str)
         .ok_or_else(|| format!("workflow rules declare no platform for {runner}"))?;
-    let manifest: toml::Table = profile
-        .manifest
-        .parse()
-        .map_err(|error| format!("invalid execution product manifest: {error}"))?;
-    let mut probes = BTreeMap::new();
-    for name in references(&manifest)? {
-        let reference = rule::parse(&name)?;
-        let member = rule::member(&reference)?;
-        if !member.probe.is_empty() {
-            probes.insert(name, member.probe);
-        }
-    }
+    let roots = super::support::sources(marker.spec())?;
+    let probes = crate::catalog::probe::read(&profile.manifest, roots.iter().map(String::as_str))?;
     let contract = Production {
         platform: platform.to_string(),
         target: triple.to_string(),
@@ -113,34 +96,6 @@ pub(super) fn contract(marker: &ReleaseMarker, triple: &str) -> Result<Productio
     Ok(contract)
 }
 
-fn references(manifest: &toml::Table) -> Result<Vec<String>, String> {
-    let groups = manifest
-        .get("layout")
-        .and_then(|held| held.get("file"))
-        .and_then(toml::Value::as_array)
-        .ok_or("product profile declares no file rules")?;
-    let mut names = Vec::new();
-    for group in groups {
-        let cargo = group
-            .get("name")
-            .and_then(toml::Value::as_array)
-            .is_some_and(|names| names.iter().any(|name| name.as_str() == Some("Cargo.toml")));
-        if !cargo || group.get("kind").and_then(toml::Value::as_str) == Some("retired") {
-            continue;
-        }
-        if let Some(rules) = group.get("rule").and_then(toml::Value::as_array) {
-            for name in rules {
-                names.push(
-                    name.as_str()
-                        .ok_or("file rule must be an address")?
-                        .to_string(),
-                );
-            }
-        }
-    }
-    Ok(names)
-}
-
 fn implementation() -> String {
     let mut digest = Sha256::new();
     for source in [
@@ -148,7 +103,9 @@ fn implementation() -> String {
         include_str!("../package.rs"),
         include_str!("../archive.rs"),
         include_str!("../../release/workspace.rs"),
-        include_str!("../../../cargo.rs"),
+        include_str!("../../../execution/cargo.rs"),
+        include_str!("../../../execution/mod.rs"),
+        include_str!("../../../catalog/probe.rs"),
         include_str!("../../../../../lib/src/proof/rule/production.rs"),
         include_str!("../../../../../lib/src/proof/rule/probe.rs"),
         include_str!("../../../../../lib/src/proof/rule/process.rs"),
@@ -199,7 +156,8 @@ pub(super) fn execute(marker: &ReleaseMarker, input: Input<'_>) -> Result<(), St
 
 fn build(marker: &ReleaseMarker, triple: &str, contract: &Production) -> Result<Receipt, String> {
     let spec = marker.spec();
-    crate::command::guard::precommit::environment::inspect(
+    crate::execution::inspect(
+        "cargo",
         &spec.root,
         &plumb::config::environment(&contract.environment)?,
     )?;

@@ -1,8 +1,9 @@
 mod anchor;
-mod cargo;
 mod catalog;
 mod command;
 mod consumption;
+mod execution;
+use execution::cargo;
 mod judge;
 mod shape;
 

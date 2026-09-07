@@ -171,7 +171,11 @@ pub(super) fn execute(
         command.env("CARGO_TARGET_DIR", &cache.root);
     }
     if let Some(context) = context {
-        super::environment::inspect(root, &context.environment)?;
+        crate::execution::inspect(
+            crate::execution::family(program),
+            root,
+            &context.environment,
+        )?;
     }
     let depot = plumb::depot::root(&PathBuf::new()).ok();
     command

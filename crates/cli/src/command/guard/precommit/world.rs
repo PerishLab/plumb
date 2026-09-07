@@ -39,8 +39,15 @@ pub(super) fn digest(
     if let Some(execution) = binding.execution {
         sponge.update([0]);
         sponge.update(execution.evidence()?);
+        sponge.update([0]);
+        sponge.update(crate::catalog::probe::evidence(binding.probes, execution)?);
     }
     for tool in tools(name) {
+        if binding.execution.is_some()
+            && crate::catalog::probe::covers(binding.probes, &[tool, "--version"])?
+        {
+            continue;
+        }
         sponge.update([0]);
         sponge.update(tool.as_bytes());
         sponge.update([0]);
@@ -63,15 +70,41 @@ pub(super) fn execution(
     name: &str,
     environment: plumb::config::Environment,
     root: &std::path::Path,
+    selected: &[String],
 ) -> Result<plumb::config::Execution, String> {
     let mut programs = tools(name)
         .iter()
         .map(|name| name.to_string())
         .collect::<Vec<_>>();
-    programs.extend(["cargo".to_string(), "rustc".to_string()]);
+    programs.extend(selected.iter().cloned());
     programs.sort();
     programs.dedup();
     plumb::config::Execution::new(environment, &programs, root)
+}
+
+pub(super) fn environment(
+    commands: &[Vec<String>],
+    captured: Option<plumb::config::Environment>,
+    root: &std::path::Path,
+    mismatched: bool,
+) -> Result<plumb::config::Environment, String> {
+    if let Some(captured) = captured {
+        return if mismatched {
+            super::environment::cargo(root)
+        } else {
+            Ok(captured)
+        };
+    }
+    let name = if commands
+        .iter()
+        .filter_map(|command| command.first())
+        .any(|program| crate::execution::family(program) == "pnpm")
+    {
+        "pnpm"
+    } else {
+        "probe"
+    };
+    crate::execution::environment(name)
 }
 
 fn version(tool: &str, execution: Option<&plumb::config::Execution>) -> Result<String, String> {

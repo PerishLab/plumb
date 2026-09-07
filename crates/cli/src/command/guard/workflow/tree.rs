@@ -47,7 +47,7 @@ impl Tree {
             leaves: held,
         })
     }
-    fn under(&self, roots: &[String]) -> Vec<(&String, &String)> {
+    pub fn selection(&self, roots: &[String]) -> Vec<(&String, &String)> {
         self.leaves
             .iter()
             .filter(|(path, _)| roots.iter().any(|root| covers(root, path)))
@@ -96,7 +96,7 @@ impl Tree {
                 sponge.update([1]);
             }
         }
-        for (path, meta) in self.under(&key.paths) {
+        for (path, meta) in self.selection(&key.paths) {
             let project = projects.iter().find(|project| project.path == *path);
             let held = match project {
                 Some(project) => self.project(project)?,
@@ -117,7 +117,7 @@ impl Tree {
         Ok(format!("{:x}", sponge.finalize()))
     }
     pub fn covered(&self, key: &Key) -> usize {
-        self.under(&key.paths).len()
+        self.selection(&key.paths).len()
     }
     pub fn has(&self, path: &str) -> bool {
         self.leaves.contains_key(path)

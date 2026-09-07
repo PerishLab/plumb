@@ -21,6 +21,10 @@ pub fn stated(root: &Path) -> Held {
         Ok(text) => text,
         Err(error) => return Held::Wrong(format!("cannot read plumb.toml: {error}")),
     };
+    parse(&text)
+}
+
+pub fn parse(text: &str) -> Held {
     let doc = match text.parse::<toml::Table>() {
         Ok(doc) => doc,
         Err(error) => return Held::Wrong(format!("cannot parse plumb.toml: {error}")),

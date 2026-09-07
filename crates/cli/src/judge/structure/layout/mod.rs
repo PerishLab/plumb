@@ -3,7 +3,7 @@ mod face;
 mod names;
 mod private;
 mod retired;
-pub(crate) mod rule;
+pub(crate) use crate::catalog::member as rule;
 
 pub(crate) use face::{Faces, authority};
 

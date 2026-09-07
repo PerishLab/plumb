@@ -34,20 +34,13 @@ struct Content<'a>(&'a Snapshot);
 
 impl Content<'_> {
     fn probe(&self, group: &Group, rules: &[plumb::rule::Probe]) -> Vec<Seed> {
-        if rules.is_empty()
-            || !self
-                .0
-                .entries()
-                .iter()
-                .any(|entry| group.names.iter().any(|name| name == entry.path()))
-        {
+        let paths = self.0.entries().iter().map(|entry| entry.path()).collect();
+        if rules.is_empty() || !crate::catalog::probe::applies(group, &paths) {
             return Vec::new();
         }
         let result =
             plumb::rule::Probe::select(rules, &plumb::config::platform()).and_then(|probe| {
-                let mut command = probe.command()?;
-                command.current_dir(self.0.root());
-                probe.observe(&mut command).map(|seen| (probe, seen))
+                crate::execution::observe(probe, self.0.root()).map(|seen| (probe, seen))
             });
         match result {
             Ok((_, seen)) if seen.matches => Vec::new(),

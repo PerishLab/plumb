@@ -41,3 +41,27 @@ reject = [
   "CFLAGS", "CFLAGS_*", "CXXFLAGS", "CXXFLAGS_*", "CPPFLAGS", "LDFLAGS",
   "CMAKE_*", "PKG_CONFIG*", "LD_PRELOAD", "LD_LIBRARY_PATH", "DYLD_*",
 ]
+
+[execution.platform]
+linux = "linux-x86_64"
+macos = "macos-aarch64"
+windows = "windows-x86_64"
+
+[execution.pnpm]
+inherit = [
+  "PATH", "HOME", "USERPROFILE", "SystemRoot", "SYSTEMROOT", "WINDIR",
+  "COMSPEC", "PATHEXT", "TEMP", "TMP", "TMPDIR",
+  "LANG", "LC_ALL", "LC_CTYPE", "TZ", "PNPM_HOME",
+]
+managed = []
+reject = ["NODE_*", "NPM_CONFIG_*", "npm_config_*", "PNPM_*", "LD_PRELOAD", "DYLD_*"]
+
+[execution.probe]
+inherit = [
+  "PATH", "HOME", "USERPROFILE", "SystemRoot", "SYSTEMROOT", "WINDIR",
+  "COMSPEC", "PATHEXT", "TEMP", "TMP", "TMPDIR",
+  "LANG", "LC_ALL", "LC_CTYPE", "TZ", "PLUMB_HOME",
+  "PLUMB_GUARD_CONFIGURATION", "PLUMB_GUARD_DEPOT", "PLUMB_GUARD_VIEW", "PLUMB_DEPOT_SNAPSHOT",
+]
+managed = []
+reject = ["LD_PRELOAD", "DYLD_*"]

@@ -3,6 +3,7 @@ mod cache;
 mod environment;
 mod graph;
 mod physical;
+mod probe;
 mod world;
 use serde_json::Value;
 use std::process::{Command, Output};

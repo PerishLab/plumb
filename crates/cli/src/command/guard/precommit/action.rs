@@ -15,6 +15,8 @@ struct Preparation {
     input: String,
     commands: Vec<Vec<String>>,
     environment: Option<plumb::config::Environment>,
+    manifest: Option<String>,
+    paths: Vec<String>,
 }
 
 struct Catalog<'a> {
@@ -27,6 +29,7 @@ pub(super) struct Binding<'a> {
     pub configuration: Option<&'a str>,
     pub profile: Option<&'a crate::shape::product::Profile>,
     pub execution: Option<&'a plumb::config::Execution>,
+    pub probes: &'a std::collections::BTreeMap<String, Vec<plumb::rule::Probe>>,
 }
 
 pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
@@ -85,20 +88,36 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         input,
         commands,
         environment,
+        manifest,
+        paths,
     } in prepared
     {
-        let environment = if mismatched && environment.is_some() {
-            Some(super::environment::cargo(root)?)
-        } else {
-            environment
-        };
-        let execution = environment
-            .map(|environment| super::world::execution(&name, environment, &index.root))
-            .transpose()?;
+        let environment = super::world::environment(&commands, environment, root, mismatched)?;
+        let probes = manifest
+            .as_deref()
+            .map(|manifest| crate::catalog::probe::read(manifest, paths.iter().map(String::as_str)))
+            .transpose()?
+            .unwrap_or_default();
+        let mut programs = crate::catalog::probe::programs(&probes)?;
+        programs.extend(
+            commands
+                .iter()
+                .filter_map(|command| command.first().cloned()),
+        );
+        if programs.iter().any(|program| program == "cargo") {
+            programs.push("rustc".into());
+        }
+        let execution = Some(super::world::execution(
+            &name,
+            environment,
+            &index.root,
+            &programs,
+        )?);
         let binding = Binding {
             configuration: configuration.as_ref().map(|held| held.mark()),
             profile: product.profile.as_ref(),
             execution: execution.as_ref(),
+            probes: &probes,
         };
         let world = super::world::digest(&name, &input, &commands, &binding)?;
         checks.push(Check {
@@ -189,6 +208,12 @@ impl Catalog<'_> {
                 input,
                 commands,
                 environment,
+                manifest: manifest.clone(),
+                paths: tree
+                    .selection(&key.paths)
+                    .iter()
+                    .map(|(path, _)| (*path).clone())
+                    .collect(),
             });
         }
         if checks.is_empty() {

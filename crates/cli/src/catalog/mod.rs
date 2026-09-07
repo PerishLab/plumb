@@ -1,4 +1,6 @@
+pub(crate) mod member;
 pub mod model;
+pub(crate) mod probe;
 pub mod query;
 pub mod rules;
 pub mod set;

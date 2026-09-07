@@ -125,9 +125,9 @@ fn probe() {
     assert!(held.contains("expected stdout"), "{held}");
     let missing = "[[member.entry.probe]]\nargv = ['plumb-probe-does-not-exist']\nstdout = ''";
     let held = inspect(missing, "Cargo.toml", Some(b""));
-    assert!(held.contains("cannot start"), "{held}");
+    assert!(held.contains("cannot resolve tool"), "{held}");
     let held = inspect(missing, "Cargo.toml", None);
-    assert!(!held.contains("cannot start"), "{held}");
+    assert!(!held.contains("cannot resolve tool"), "{held}");
     let held = inspect(
         &format!("{rule}\nplatform = ['unavailable']"),
         "Cargo.toml",
