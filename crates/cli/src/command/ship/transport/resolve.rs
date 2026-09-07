@@ -114,7 +114,7 @@ fn workloads(
                 target: Some(triple),
             },
         )?;
-        if node["reuse"]["type"] == "workload" {
+        if super::reuse::workload(&node) {
             reuse.push(json!({
                 "target": triple,
                 "archive": archive,

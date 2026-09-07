@@ -1,6 +1,7 @@
 mod binding;
 mod execute;
 mod resolve;
+mod reuse;
 mod seal;
 mod sources;
 mod support;

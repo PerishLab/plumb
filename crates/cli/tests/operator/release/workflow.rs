@@ -1,5 +1,30 @@
 use std::path::Path;
 
+#[path = "../../../src/command/ship/transport/reuse.rs"]
+mod ship;
+
+#[test]
+fn proof() {
+    for reason in ["proof-held", "publication-moved"] {
+        let node = serde_json::json!({
+            "reason": reason,
+            "reuse": {"type": "workload", "source": "https://example.invalid/held.tgz"}
+        });
+        assert!(ship::workload(&node));
+    }
+    for reason in ["proof-moved", "record-absent", "unknown"] {
+        let node = serde_json::json!({
+            "decision": "run", "reason": reason,
+            "reuse": {"type": "workload", "source": "https://example.invalid/held.tgz"}
+        });
+        assert!(
+            !ship::workload(&node),
+            "{reason} must not skip its workload"
+        );
+    }
+    assert!(!ship::workload(&serde_json::json!({})));
+}
+
 fn canonical() -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.forgejo/workflows/ship.yml");
     std::fs::read_to_string(path).expect("Plumb owns one canonical ship workflow")
