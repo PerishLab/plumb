@@ -7,6 +7,10 @@ use std::path::Path;
 
 #[path = "container.rs"]
 mod container;
+#[path = "context.rs"]
+mod context;
+#[path = "native.rs"]
+mod native;
 
 const DOCKER: &str = "#!/bin/sh\nexit 0\n";
 const ARCHIVE: &str = "probe-x86_64-unknown-linux-gnu.tar.gz";

@@ -92,7 +92,7 @@ fn media(spec: &Spec) -> Result<serde_json::Value, String> {
         publication.push(request(Project {
             action: "ship/oci".into(),
             projections: Vec::new(),
-            roots: vec!["*".into()],
+            roots: crate::command::ship::adaptor::image::inputs(spec)?,
             kind: "oci",
             package: None,
         }));

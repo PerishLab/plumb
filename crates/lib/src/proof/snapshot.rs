@@ -33,19 +33,40 @@ impl std::error::Error for Refusal {}
 
 impl Snapshot {
     pub fn read(root: &Path) -> Result<Self, Refusal> {
+        let mut held = Self::listed(root)?;
+        for entry in &mut held.entries {
+            entry.bytes = bytes(root, entry)?;
+        }
+        Ok(held)
+    }
+
+    pub fn staged(root: &Path) -> Result<Self, Refusal> {
+        let mut held = Self::listed(root)?;
+        for entry in &mut held.entries {
+            entry.bytes = if entry.mode == "160000" {
+                entry.oid.as_bytes().to_vec()
+            } else {
+                listing(
+                    root,
+                    &["cat-file", "blob", &entry.oid],
+                    "cannot read staged object",
+                )?
+            };
+        }
+        Ok(held)
+    }
+
+    fn listed(root: &Path) -> Result<Self, Refusal> {
         let listed = listing(
             root,
             &["ls-files", "--stage", "-z"],
             "cannot list tracked paths",
         )?;
-        let mut entries = listed
+        let entries = listed
             .split(|byte| *byte == 0)
             .filter(|record| !record.is_empty())
             .map(Entry::parse)
             .collect::<Result<Vec<_>, _>>()?;
-        for entry in &mut entries {
-            entry.bytes = bytes(root, entry)?;
-        }
         Ok(Self {
             root: root.to_path_buf(),
             entries,

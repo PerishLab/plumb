@@ -19,6 +19,7 @@ fn exact() {
     )
     .expect("manifest");
     std::fs::write(root.join("Containerfile"), "FROM scratch\n").expect("container file");
+    fixture.track("Containerfile");
     let observed = root.join("docker.calls");
     let published = root.join("published");
     let scenario = root.join("scenario");
@@ -32,7 +33,8 @@ scenario=$(cat "$PLUMB_TEST_SCENARIO")
 printf '%s\n' "$*" >> "$PLUMB_TEST_DOCKER"
 case "$1" in
   login) cat >/dev/null ;;
-  build|tag) ;;
+  build) cat >/dev/null ;;
+  tag) ;;
   save)
     shift
     [ "$1" = --output ]

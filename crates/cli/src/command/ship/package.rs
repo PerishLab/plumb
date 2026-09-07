@@ -1,5 +1,6 @@
 use super::{archive, skill};
 pub mod chart;
+pub(in crate::command) mod context;
 mod debian;
 pub mod project;
 pub mod projection;

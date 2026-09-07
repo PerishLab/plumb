@@ -1,5 +1,7 @@
+use super::super::package::context;
 use super::container::{fetch, reference};
 use crate::shape::release::Spec;
+pub(in crate::command) use context::inputs;
 
 const LINUX: &str = "x86_64-unknown-linux-gnu";
 const PAYLOAD: &str = "uk.perish.plumb.payload";
@@ -26,7 +28,7 @@ impl Image<'_> {
             return Ok(format!("{} has no image attachment", self.spec.product));
         };
         let file = self.spec.root.join("Containerfile");
-        if !file.is_file() {
+        if self.spec.binary() && !file.is_file() {
             return Err(format!("declared image has no {}", file.display()));
         }
         let (seat, payload) = if self.spec.binary() {
@@ -37,7 +39,8 @@ impl Image<'_> {
             (self.spec.root.clone(), commit.to_string())
         };
         let reference = reference(oci, version);
-        self.command([
+        let mut command = Command::new("docker");
+        command.args([
             "build",
             "--network",
             "host",
@@ -46,9 +49,21 @@ impl Image<'_> {
             "--tag",
             &reference,
             "--file",
-            &file.to_string_lossy(),
-            &seat.to_string_lossy(),
-        ])?;
+        ]);
+        if self.spec.binary() {
+            command.arg(&file).arg(&seat);
+        } else {
+            command
+                .args(["Containerfile", "-"])
+                .stdin(context::archive(self.spec)?);
+        }
+        let status = command
+            .current_dir(&self.spec.root)
+            .status()
+            .map_err(|error| format!("cannot build image: {error}"))?;
+        if !status.success() {
+            return Err("image build failed".into());
+        }
         Ok(format!("built {reference} carrying {payload}"))
     }
 
