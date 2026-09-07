@@ -4,5 +4,6 @@ pub mod datum;
 pub mod guard;
 #[cfg(feature = "radius")]
 pub mod radius;
+pub mod rule;
 pub mod snapshot;
 pub mod vocabulary;

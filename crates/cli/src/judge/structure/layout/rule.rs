@@ -5,6 +5,7 @@ pub(crate) struct Reference {
 
 pub(crate) struct Member {
     pub lines: Option<Lines>,
+    pub fields: Vec<plumb::rule::Fields>,
     pub allow: Option<Vec<String>>,
     pub deny: Vec<String>,
     pub holds: Option<String>,
@@ -48,6 +49,16 @@ pub(crate) fn member(reference: &Reference) -> Result<Member, String> {
         .find(|entry| entry.get("name").and_then(toml::Value::as_str) == Some(slug))
         .ok_or_else(|| format!("rule://{}/{slug} names no rule", reference.set))?;
     Ok(Member {
+        fields: entry
+            .get("fields")
+            .map(|value| {
+                value
+                    .clone()
+                    .try_into()
+                    .map_err(|error| format!("invalid member fields: {error}"))
+            })
+            .transpose()?
+            .unwrap_or_default(),
         lines: entry
             .get("lines")
             .map(|value| {

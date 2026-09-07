@@ -32,9 +32,43 @@ fn unreadable() {
 }
 
 fn report(rule: &str, body: Option<&[u8]>) -> String {
+    inspect(
+        &format!("[member.entry.lines]\n{rule}"),
+        ".gitattributes",
+        body,
+    )
+}
+
+#[test]
+fn fields() {
+    let rule = "[[member.entry.fields]]\ndeny = ['packageManager']";
+    for text in [
+        r#"{"packageManager":null}"#,
+        "{\n\"packageManager\": \"pnpm@11.13.0\"\n}",
+    ] {
+        let held = inspect(rule, "package.json", Some(text.as_bytes()));
+        assert!(held.contains("unapproved field"), "{held}");
+    }
+    let held = inspect(
+        rule,
+        "package.json",
+        Some(br#"{"description":"packageManager"}"#),
+    );
+    assert!(!held.contains("unapproved field"), "{held}");
+    let held = inspect(rule, "package.json", Some(b"{invalid-private-value"));
+    assert!(held.contains("invalid governed JSON"), "{held}");
+    assert!(!held.contains("invalid-private-value"), "{held}");
+    let held = inspect(
+        "[[member.entry.fields]]\ndeny = 7",
+        "package.json",
+        Some(b"{}"),
+    );
+    assert!(held.contains("invalid member fields"), "{held}");
+}
+
+fn inspect(rule: &str, name: &str, body: Option<&[u8]>) -> String {
     let root = tempfile::tempdir().expect("repository");
-    let rules =
-        format!("[member]\n[[member.entry]]\nname = \"content\"\n[member.entry.lines]\n{rule}\n");
+    let rules = format!("[member]\n[[member.entry]]\nname = \"content\"\n{rule}\n");
     let depot = super::support::depot(&[("rules/seat.toml", &rules)]);
     assert!(
         Command::new("git")
@@ -45,9 +79,9 @@ fn report(rule: &str, body: Option<&[u8]>) -> String {
             .expect("git")
             .success()
     );
-    std::fs::write(root.path().join("plumb.toml"), "[[layout.file]]\nname = [\".gitattributes\"]\nrule = [\"rule://seat/content\"]\nnote = \"content\"\n").expect("layout");
+    std::fs::write(root.path().join("plumb.toml"), format!("[[layout.file]]\nname = [\"{name}\"]\nrule = [\"rule://seat/content\"]\nnote = \"content\"\n")).expect("layout");
     if let Some(body) = body {
-        std::fs::write(root.path().join(".gitattributes"), body).expect("content");
+        std::fs::write(root.path().join(name), body).expect("content");
     }
     assert!(
         Command::new("git")
