@@ -31,7 +31,7 @@ impl Image<'_> {
         }
         let (seat, payload) = if self.spec.binary() {
             self.payload(artifacts, version)?
-        } else if commit.is_empty() {
+        } else if !super::container::hex(commit, 40) {
             return Err("PLUMB_RELEASE_COMMIT binds an image that carries no archive".into());
         } else {
             (self.spec.root.clone(), commit.to_string())
@@ -162,9 +162,10 @@ impl Image<'_> {
         };
         let reference = reference(oci, version);
         self.login(&oci.registry, &identity)?;
-        let built = self.carried(&reference)?;
+        self.carried(&reference)?;
+        let built = self.identity(&reference)?;
         if self.fetched(&reference)? {
-            let held = self.carried(&reference)?;
+            let held = self.identity(&reference)?;
             if held != built {
                 return Err(format!(
                     "published image drift: {reference} carries {held} while this projection carries {built}"
@@ -241,31 +242,11 @@ impl Image<'_> {
             return Err(format!("no {reference} to read a payload from"));
         }
         let held = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if held.is_empty() || held == "<no value>" {
-            return Err(format!("{reference} declares no {}", self.mark()));
+        let width = if self.spec.binary() { 64 } else { 40 };
+        if !super::container::hex(&held, width) {
+            return Err(format!("{reference} declares no valid {}", self.mark()));
         }
         Ok(held)
-    }
-
-    fn digest(&self, reference: &str) -> Result<String, String> {
-        let output = Command::new("docker")
-            .args([
-                "image",
-                "inspect",
-                "--format",
-                "{{index .RepoDigests 0}}",
-                reference,
-            ])
-            .current_dir(&self.spec.root)
-            .output()
-            .map_err(|error| format!("cannot run docker: {error}"))?;
-        if !output.status.success() {
-            return Err("image attachment kept no published digest".into());
-        }
-        let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        text.split_once('@')
-            .map(|(_, digest)| digest.to_string())
-            .ok_or_else(|| format!("image digest is not addressable: {text}"))
     }
 
     pub(super) fn command<const N: usize>(&self, args: [&str; N]) -> Result<(), String> {

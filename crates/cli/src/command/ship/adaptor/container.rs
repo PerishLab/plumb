@@ -39,12 +39,14 @@ impl Exact<'_, '_> {
             "url" => return Err("a held publication URL must skip the image action".into()),
             _ => unreachable!(),
         };
+        let provenance = self.carrier.carried(&reference)?;
         let publication = self.carrier.project(request.version, request.credential)?;
         serde_json::to_string(&serde_json::json!({
             "format": "plumb.image-project/v1",
             "version": request.version,
             "workload": workload,
             "publication": publication,
+            "provenance": provenance,
         }))
         .map_err(|error| format!("cannot encode image project: {error}"))
     }
@@ -79,15 +81,18 @@ impl Exact<'_, '_> {
             return Err("cannot load reusable image workload".into());
         }
         let stdout = String::from_utf8_lossy(&output.stdout);
-        let loaded = stdout
-            .lines()
-            .find_map(|line| {
-                line.strip_prefix("Loaded image: ")
-                    .or_else(|| line.strip_prefix("Loaded image ID: "))
-            })
+        let mut loaded = stdout.lines().filter_map(|line| {
+            line.strip_prefix("Loaded image: ")
+                .or_else(|| line.strip_prefix("Loaded image ID: "))
+        });
+        let image = loaded
+            .next()
             .ok_or_else(|| "docker load named no reusable image".to_string())?;
-        self.carrier.carried(loaded)?;
-        self.carrier.command(["tag", loaded, reference])?;
+        if loaded.next().is_some() {
+            return Err("reusable image workload must carry exactly one image".into());
+        }
+        self.carrier.carried(image)?;
+        self.carrier.command(["tag", image, reference])?;
         Ok(path)
     }
 
@@ -96,6 +101,57 @@ impl Exact<'_, '_> {
         std::fs::create_dir_all(&seat)
             .map_err(|error| format!("cannot open {}: {error}", seat.display()))?;
         Ok(seat.join(format!("{}-image.tar", self.carrier.spec.product)))
+    }
+}
+
+pub(super) fn hex(value: &str, width: usize) -> bool {
+    value.len() == width
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+impl Image<'_> {
+    pub(super) fn identity(&self, reference: &str) -> Result<String, String> {
+        let held = self.inspect(reference, "{{.Id}}")?;
+        if !held
+            .strip_prefix("sha256:")
+            .is_some_and(|value| hex(value, 64))
+        {
+            return Err("image declares no valid content identity".into());
+        }
+        Ok(held)
+    }
+
+    pub(super) fn digest(&self, reference: &str) -> Result<String, String> {
+        let text = self.inspect(reference, "{{json .RepoDigests}}")?;
+        let digests: Vec<String> = serde_json::from_str(&text)
+            .map_err(|error| format!("cannot read image repository digests: {error}"))?;
+        let repository = reference
+            .rsplit_once(':')
+            .ok_or("image reference has no tag")?
+            .0;
+        let prefix = format!("{repository}@sha256:");
+        let mut selected = digests.iter().filter_map(|held| held.strip_prefix(&prefix));
+        let digest = selected
+            .next()
+            .ok_or("image has no digest for its publication repository")?;
+        if !hex(digest, 64) || selected.next().is_some() {
+            return Err("image has no unique valid publication digest".into());
+        }
+        Ok(format!("sha256:{digest}"))
+    }
+
+    fn inspect(&self, reference: &str, format: &str) -> Result<String, String> {
+        let output = Command::new("docker")
+            .args(["image", "inspect", "--format", format, reference])
+            .current_dir(&self.spec.root)
+            .output()
+            .map_err(|error| format!("cannot run docker: {error}"))?;
+        if !output.status.success() {
+            return Err(format!("cannot inspect image {reference}"));
+        }
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
     }
 }
 
