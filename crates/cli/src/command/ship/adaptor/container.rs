@@ -53,7 +53,9 @@ impl Exact<'_, '_> {
 
     fn save(&self, reference: &str) -> Result<PathBuf, String> {
         let path = self.workload()?;
-        let status = Command::new("docker")
+        let status = self
+            .carrier
+            .docker()
             .args(["save", "--output"])
             .arg(&path)
             .arg(reference)
@@ -71,7 +73,9 @@ impl Exact<'_, '_> {
         let path = self.workload()?;
         std::fs::write(&path, fetch_workload("image", source)?)
             .map_err(|error| format!("cannot create {}: {error}", path.display()))?;
-        let output = Command::new("docker")
+        let output = self
+            .carrier
+            .docker()
             .args(["load", "--input"])
             .arg(&path)
             .current_dir(&self.carrier.spec.root)
@@ -143,7 +147,8 @@ impl Image<'_> {
     }
 
     fn inspect(&self, reference: &str, format: &str) -> Result<String, String> {
-        let output = Command::new("docker")
+        let output = self
+            .docker()
             .args(["image", "inspect", "--format", format, reference])
             .current_dir(&self.spec.root)
             .output()

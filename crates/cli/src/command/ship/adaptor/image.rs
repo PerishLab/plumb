@@ -6,15 +6,19 @@ pub(in crate::command) use context::inputs;
 const LINUX: &str = "x86_64-unknown-linux-gnu";
 const PAYLOAD: &str = "uk.perish.plumb.payload";
 const REVISION: &str = "org.opencontainers.image.revision";
-use std::io::Write;
-use std::process::{Command, Stdio};
+use super::super::package::session::Session;
+use std::process::Command;
 
 pub struct Image<'a> {
     pub(super) spec: &'a Spec,
+    pub(super) session: Option<&'a Session>,
 }
 
 pub fn image(spec: &Spec) -> Image<'_> {
-    Image { spec }
+    Image {
+        spec,
+        session: None,
+    }
 }
 
 impl Image<'_> {
@@ -39,7 +43,7 @@ impl Image<'_> {
             (self.spec.root.clone(), commit.to_string())
         };
         let reference = reference(oci, version);
-        let mut command = Command::new("docker");
+        let mut command = self.docker();
         command.args([
             "build",
             "--network",
@@ -175,8 +179,18 @@ impl Image<'_> {
             user: &oci.account,
             token: crate::command::ship::attachment::credential(credential)?,
         };
+        let session = Session::open(&self.spec.root, &oci.registry)?;
+        session.login(&oci.registry, &identity)?;
+        Image {
+            spec: self.spec,
+            session: Some(&session),
+        }
+        .transfer(version)
+    }
+
+    fn transfer(&self, version: &str) -> Result<String, String> {
+        let oci = self.spec.oci.as_ref().ok_or("image declares no registry")?;
         let reference = reference(oci, version);
-        self.login(&oci.registry, &identity)?;
         self.carried(&reference)?;
         let built = self.identity(&reference)?;
         if self.fetched(&reference)? {
@@ -191,7 +205,18 @@ impl Image<'_> {
         }
         let digest = self.digest(&reference)?;
         let published = format!("{}/{}@{digest}", oci.registry, oci.image);
-        self.command(["manifest", "inspect", &published])?;
+        let status = self
+            .session
+            .ok_or("image publication has no isolated session")?
+            .anonymous()
+            .current_dir(&self.spec.root)
+            .args(["manifest", "inspect", &published])
+            .stdout(std::process::Stdio::null())
+            .status()
+            .map_err(|error| format!("cannot read image anonymously: {error}"))?;
+        if !status.success() {
+            return Err("published image cannot be read anonymously".into());
+        }
         Ok(format!(
             "https://{}/v2/{}/manifests/{digest}",
             oci.registry.trim_end_matches('/'),
@@ -199,41 +224,9 @@ impl Image<'_> {
         ))
     }
 
-    fn login(
-        &self,
-        registry: &str,
-        identity: &crate::command::ship::attachment::Identity<'_>,
-    ) -> Result<(), String> {
-        let mut child = Command::new("docker")
-            .args([
-                "login",
-                registry,
-                "--username",
-                identity.user,
-                "--password-stdin",
-            ])
-            .current_dir(&self.spec.root)
-            .stdin(Stdio::piped())
-            .spawn()
-            .map_err(|error| format!("cannot run docker: {error}"))?;
-        child
-            .stdin
-            .take()
-            .ok_or_else(|| "docker login refused its stdin".to_string())?
-            .write_all(identity.token.as_bytes())
-            .map_err(|error| format!("cannot send registry token: {error}"))?;
-        let status = child
-            .wait()
-            .map_err(|error| format!("cannot run docker: {error}"))?;
-        if status.success() {
-            Ok(())
-        } else {
-            Err("image attachment login failed".into())
-        }
-    }
-
     fn fetched(&self, reference: &str) -> Result<bool, String> {
-        let output = Command::new("docker")
+        let output = self
+            .docker()
             .args(["pull", reference])
             .current_dir(&self.spec.root)
             .output()
@@ -242,7 +235,8 @@ impl Image<'_> {
     }
 
     pub(super) fn carried(&self, reference: &str) -> Result<String, String> {
-        let output = Command::new("docker")
+        let output = self
+            .docker()
             .args([
                 "image",
                 "inspect",
@@ -265,7 +259,8 @@ impl Image<'_> {
     }
 
     pub(super) fn command<const N: usize>(&self, args: [&str; N]) -> Result<(), String> {
-        let status = Command::new("docker")
+        let status = self
+            .docker()
             .args(args)
             .current_dir(&self.spec.root)
             .status()
@@ -275,5 +270,10 @@ impl Image<'_> {
         } else {
             Err("image attachment command failed".into())
         }
+    }
+
+    pub(super) fn docker(&self) -> Command {
+        self.session
+            .map_or_else(|| Command::new("docker"), Session::command)
     }
 }

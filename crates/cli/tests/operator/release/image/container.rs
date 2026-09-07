@@ -30,9 +30,48 @@ fn exact() {
         r#"#!/bin/sh
 set -eu
 scenario=$(cat "$PLUMB_TEST_SCENARIO")
+config=
+context=
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --config) config=$2; shift 2 ;;
+    --context) context=$2; shift 2 ;;
+    *) break ;;
+  esac
+done
+if [ -n "$config" ]; then
+  [ -z "${DOCKER_AUTH_CONFIG+x}" ]
+  [ "$config" != "$DOCKER_CONFIG" ]
+  printf 'seat %s\n' "$config" >> "$PLUMB_TEST_DOCKER"
+  case "$(cat "$config/config.json")" in
+    '{"auths":{"registry.example":{}}}') ;;
+    *) exit 95 ;;
+  esac
+fi
 printf '%s\n' "$*" >> "$PLUMB_TEST_DOCKER"
 case "$1" in
-  login) cat >/dev/null ;;
+  context)
+    case "$2" in
+      show) printf 'original\n' ;;
+      export) [ "$3" = original ]; printf 'context archive\n' ;;
+      import) [ "$3" = plumb ]; [ "$(cat)" = 'context archive' ] ;;
+      *) exit 94 ;;
+    esac
+    ;;
+  info)
+    if [ "$scenario" = daemon ] && [ -n "$config" ]; then
+      printf 'different\n'
+    else
+      printf 'original-daemon\n'
+    fi
+    ;;
+  login)
+    [ "$context" = plumb ]
+    [ "${config##*/}" = authenticated ]
+    [ "$(cat)" = secret ]
+    touch "$config/logged-in"
+    [ "$scenario" != login ]
+    ;;
   build) cat >/dev/null ;;
   tag) ;;
   save)
@@ -45,8 +84,13 @@ case "$1" in
     if [ "$scenario" = multiple ]; then printf 'Loaded image: extra/probe:old\n'; fi
     ;;
   pull) [ -f "$PLUMB_TEST_PUBLISHED" ] && touch "$PLUMB_TEST_PULLED" ;;
-  push) touch "$PLUMB_TEST_PUBLISHED" ;;
-  manifest) ;;
+  push) [ -f "$config/logged-in" ]; touch "$PLUMB_TEST_PUBLISHED" ;;
+  manifest)
+    [ "$context" = default ]
+    [ "${config##*/}" = anonymous ]
+    [ ! -f "$config/logged-in" ]
+    [ "$scenario" != anonymous ]
+    ;;
   image)
     case "$*" in
       *RepoDigests*)
@@ -77,6 +121,9 @@ esac
         &tools.join("curl"),
         "#!/bin/sh\nset -eu\ncat \"$PLUMB_TEST_WORKLOAD\"\n",
     );
+    let ambient = root.join("ambient");
+    std::fs::create_dir(&ambient).expect("ambient configuration");
+    std::fs::write(ambient.join("config.json"), "untouched").expect("ambient credential");
     let run = |version: &str, commit: &str, reuse: &str, workload: Option<&Path>| {
         let mut command = fixture.command();
         command
@@ -84,6 +131,8 @@ esac
             .env("PLUMB_RELEASE_VERSION", version)
             .env("PLUMB_RELEASE_COMMIT", commit)
             .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
+            .env("DOCKER_CONFIG", &ambient)
+            .env("DOCKER_AUTH_CONFIG", "ambient credentials")
             .env("PLUMB_TEST_DOCKER", &observed)
             .env("PLUMB_TEST_PUBLISHED", &published)
             .env("PLUMB_TEST_SCENARIO", &scenario)
@@ -92,7 +141,17 @@ esac
         if let Some(workload) = workload {
             command.env("PLUMB_TEST_WORKLOAD", workload);
         }
-        command.output().expect("plumb should run")
+        let output = command.output().expect("plumb should run");
+        let calls = std::fs::read_to_string(&observed).expect("docker calls");
+        assert!(!calls.contains("secret"), "credential entered argv");
+        for path in calls.lines().filter_map(|line| line.strip_prefix("seat ")) {
+            assert!(!Path::new(path).exists(), "configuration leaked: {path}");
+        }
+        assert_eq!(
+            std::fs::read_to_string(ambient.join("config.json")).expect("ambient configuration"),
+            "untouched"
+        );
+        output
     };
 
     let first = run(
@@ -159,6 +218,9 @@ esac
         ("absent", "no digest for its publication repository"),
         ("duplicate", "no unique valid publication digest"),
         ("invalid", "no unique valid publication digest"),
+        ("daemon", "different daemon"),
+        ("login", "image attachment login failed"),
+        ("anonymous", "cannot be read anonymously"),
     ] {
         std::fs::write(&scenario, case).expect("scenario");
         std::fs::write(&observed, "").expect("reset calls");

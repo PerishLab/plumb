@@ -4,6 +4,7 @@ pub(in crate::command) mod context;
 mod debian;
 pub mod project;
 pub mod projection;
+pub(in crate::command::ship) mod session;
 use crate::command::release::workspace::Workspace;
 use crate::command::release::{artifact, artifact::Asset};
 use crate::shape::release::{Format, Spec};

@@ -69,6 +69,129 @@ struct Image<'a, 'b> {
     reference: String,
 }
 
+#[test]
+#[ignore = "explicit local Docker context and anonymous registry authentication integration"]
+fn authentication() {
+    let temp = tempfile::tempdir().expect("root");
+    let root = temp.path();
+    let tools = root.join("tools");
+    std::fs::create_dir(&tools).expect("tools");
+    let fixture = Fixture {
+        root,
+        tools: &tools,
+    };
+    fixture.seed();
+    let native = run(Command::new("sh").args(["-c", "command -v docker"]));
+    let native = String::from_utf8(native.stdout).expect("Docker path");
+    let name = root
+        .file_name()
+        .expect("name")
+        .to_string_lossy()
+        .to_ascii_lowercase()
+        .replace('.', "");
+    let image = Image {
+        fixture: &fixture,
+        reference: format!("127.0.0.1:1/plumb-proof/{name}:v1.0.0"),
+    };
+    std::fs::write(root.join("plumb.toml"), format!(
+        "[release]\nproduct = \"probe\"\nauthority = \"https://releases.test\"\n[release.oci]\nregistry = \"127.0.0.1:1\"\nimage = \"plumb-proof/{name}\"\naccount = \"Example\"\n"
+    )).expect("profile");
+    std::fs::write(
+        root.join("Containerfile"),
+        "FROM scratch\nLABEL probe=authentication\n",
+    )
+    .expect("recipe");
+    fixture.track("Containerfile");
+    image.build();
+    super::executable(
+        &tools.join("docker"),
+        r#"#!/bin/sh
+set -eu
+if [ "$1" = --config ]; then
+  printf '%s\n' "$2" >> "$PLUMB_TEST_SEATS"
+fi
+case "$*" in
+  *' login '*) cat >/dev/null; exit 0 ;;
+  *' pull '*) exit 0 ;;
+  *' push '*) exit 98 ;;
+  *RepoDigests*) printf '["%s@sha256:%064d"]\n' "$PLUMB_TEST_REPOSITORY" 1; exit 0 ;;
+esac
+exec "$PLUMB_TEST_NATIVE" "$@"
+"#,
+    );
+    for name in [
+        "pass",
+        "docker-credential-pass",
+        "docker-credential-secretservice",
+    ] {
+        super::executable(
+            &tools.join(name),
+            "#!/bin/sh\ntouch \"$PLUMB_TEST_HELPER\"\nexit 1\n",
+        );
+    }
+    let invoked = root.join("invoked");
+    let seats = root.join("seats");
+    let output = fixture
+        .command()
+        .args(["ship", "oci", "publish"])
+        .env("PLUMB_RELEASE_VERSION", "v1.0.0")
+        .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer fixture")
+        .env("PLUMB_TEST_NATIVE", native.trim())
+        .env(
+            "PLUMB_TEST_REPOSITORY",
+            image.reference.trim_end_matches(":v1.0.0"),
+        )
+        .env("PLUMB_TEST_SEATS", &seats)
+        .env("PLUMB_TEST_HELPER", &invoked)
+        .output()
+        .expect("publication");
+    assert!(!output.status.success(), "closed registry cannot exist");
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains("cannot be read anonymously"), "{error}");
+    assert!(
+        !invoked.exists(),
+        "anonymous read invoked credential helper"
+    );
+    let seats = std::fs::read_to_string(seats).expect("configurations");
+    assert!(
+        seats.lines().any(|path| path.ends_with("/anonymous")),
+        "{seats}"
+    );
+    for path in seats.lines() {
+        assert!(
+            !std::path::Path::new(path).exists(),
+            "configuration leaked: {path}"
+        );
+    }
+    let control = root.join("control");
+    std::fs::create_dir(&control).expect("control configuration");
+    std::fs::write(control.join("config.json"), "{}").expect("empty configuration");
+    let mut paths = vec![tools.clone()];
+    paths.extend(std::env::split_paths(
+        &std::env::var_os("PATH").expect("PATH"),
+    ));
+    let output = Command::new(native.trim())
+        .arg("--config")
+        .arg(control)
+        .args([
+            "--context",
+            "default",
+            "manifest",
+            "inspect",
+            "127.0.0.1:1/probe:absent",
+        ])
+        .env("PATH", std::env::join_paths(paths).expect("paths"))
+        .env("PLUMB_TEST_HELPER", &invoked)
+        .env_remove("DOCKER_AUTH_CONFIG")
+        .output()
+        .expect("control inspect");
+    assert!(!output.status.success());
+    assert!(
+        invoked.exists(),
+        "empty configuration did not exercise credential helper"
+    );
+}
+
 impl Image<'_, '_> {
     fn payload(&self) -> String {
         let created = run(Command::new("docker").args([
