@@ -7,6 +7,7 @@ use super::tree::{self, Index};
 struct Check {
     proof: Action,
     commands: Vec<Vec<String>>,
+    environment: Option<plumb::config::Environment>,
 }
 
 struct Catalog<'a> {
@@ -18,6 +19,7 @@ struct Catalog<'a> {
 pub(super) struct Binding<'a> {
     pub configuration: Option<&'a str>,
     pub profile: Option<&'a crate::shape::product::Profile>,
+    pub environment: Option<&'a plumb::config::Environment>,
 }
 
 pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
@@ -71,6 +73,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         binding: Binding {
             configuration: configuration.as_ref().map(|held| held.mark()),
             profile: product.profile.as_ref(),
+            environment: None,
         },
     }
     .checks()?;
@@ -85,7 +88,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
     }
     let pending = checks
         .iter()
-        .filter(|check| !cached(&check.proof))
+        .filter(|check| !super::cache::contains(&check.proof))
         .collect::<Vec<_>>();
     if !pending.is_empty() {
         if index.is_none() {
@@ -96,9 +99,17 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
             eprintln!("guard {}", check.proof.name);
             for command in &check.commands {
                 let seat = configuration.as_ref().map(|held| held.path());
-                tree::execute(&index.root, command, seat, product.profile.is_some())?;
+                tree::execute(
+                    &index.root,
+                    command,
+                    &tree::Execution {
+                        seat,
+                        governed: product.profile.is_some(),
+                        environment: check.environment.as_ref(),
+                    },
+                )?;
             }
-            cache(&check.proof)?;
+            super::cache::record(&check.proof)?;
         }
     }
     let proof = Descriptor::new(
@@ -135,10 +146,20 @@ impl Catalog<'_> {
                 continue;
             }
             let input = tree.digest(key);
-            let world = super::world::digest(&name, &input, &commands, &self.binding)?;
+            let environment = commands
+                .iter()
+                .any(|command| command.first().is_some_and(|program| program == "cargo"))
+                .then(|| super::environment::cargo(self.root))
+                .transpose()?;
+            let binding = Binding {
+                environment: environment.as_ref(),
+                ..self.binding
+            };
+            let world = super::world::digest(&name, &input, &commands, &binding)?;
             checks.push(Check {
                 proof: Action { name, input, world },
                 commands,
+                environment,
             });
         }
         if checks.is_empty() {
@@ -262,39 +283,4 @@ fn isolate(
         index.govern(profile)?;
     }
     Ok(index)
-}
-
-fn seat(proof: &Action) -> Result<PathBuf, String> {
-    let home = plumb::config::value("PLUMB_HOME")
-        .map(PathBuf::from)
-        .or_else(|| plumb::config::data("plumb"))
-        .ok_or_else(|| "cannot cache guard action: no PLUMB_HOME".to_string())?;
-    Ok(home
-        .join("proof")
-        .join("guard")
-        .join("actions")
-        .join(format!("{}.json", proof.world)))
-}
-
-fn cached(proof: &Action) -> bool {
-    seat(proof)
-        .ok()
-        .and_then(|path| std::fs::read(path).ok())
-        .and_then(|bytes| serde_json::from_slice::<Action>(&bytes).ok())
-        .as_ref()
-        == Some(proof)
-}
-
-fn cache(proof: &Action) -> Result<(), String> {
-    let path = seat(proof)?;
-    let parent = path
-        .parent()
-        .ok_or_else(|| "guard action has no cache parent".to_string())?;
-    std::fs::create_dir_all(parent)
-        .map_err(|error| format!("cannot create {}: {error}", parent.display()))?;
-    std::fs::write(
-        &path,
-        serde_json::to_vec_pretty(proof).map_err(|error| error.to_string())?,
-    )
-    .map_err(|error| format!("cannot write {}: {error}", path.display()))
 }

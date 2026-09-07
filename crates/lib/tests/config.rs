@@ -89,3 +89,51 @@ fn detached() {
         assert!(held.1.is_none());
     }
 }
+
+#[test]
+fn execution() {
+    let contract: config::Contract =
+        toml::from_str("inherit = ['PUBLIC']\nmanaged = ['OWNED']\nreject = ['BUILD_*']\n")
+            .expect("contract");
+    let values = [
+        ("PUBLIC", "one"),
+        ("OWNED", "ambient"),
+        ("SECRET", "private"),
+    ]
+    .map(|(key, value)| (key.into(), value.into()));
+    let held = contract.capture(values).expect("environment");
+    assert_eq!(held.get("PUBLIC"), Some("one"));
+    assert_eq!(held.get("SECRET"), None);
+    assert_eq!(held.get("OWNED"), None);
+    let encoded = serde_json::to_string(&held).expect("identity");
+    assert!(!encoded.contains("private"));
+    let mut command = std::process::Command::new("probe");
+    command.env("OWNED", "governed");
+    held.apply(&mut command);
+    let keys = command.get_envs().collect::<Vec<_>>();
+    assert_eq!(keys.len(), 2);
+    assert!(keys.iter().any(|(key, value)| *key == "OWNED" && *value == Some(std::ffi::OsStr::new("governed"))));
+    let refused = contract.capture([("BUILD_FLAGS".into(), "private".into())]);
+    let error = refused.err().expect("refusal");
+    assert!(error.contains("BUILD_FLAGS"));
+    assert!(!error.contains("private"));
+}
+
+#[test]
+fn contract() {
+    for text in [
+        "inherit = ['PUBLIC']\nmanaged = ['PUBLIC']\nreject = []\n",
+        "inherit = ['PUBLIC*']\nmanaged = []\nreject = []\n",
+        "inherit = []\nmanaged = []\nreject = ['BUILD_*_FLAGS']\n",
+    ] {
+        let contract: config::Contract = toml::from_str(text).expect("contract");
+        assert!(contract.capture([]).is_err());
+    }
+    assert!(toml::from_str::<config::Contract>("inherit = []").is_err());
+    assert!(
+        toml::from_str::<config::Contract>(
+            "inherit = []\nmanaged = []\nreject = []\nunknown = true"
+        )
+        .is_err()
+    );
+}

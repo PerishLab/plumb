@@ -36,11 +36,15 @@ pub(super) fn digest(
     }
     sponge.update([0]);
     sponge.update(plumb::config::platform().as_bytes());
+    if let Some(environment) = binding.environment {
+        sponge.update([0]);
+        sponge.update(serde_json::to_vec(environment).map_err(|error| error.to_string())?);
+    }
     for tool in tools(name) {
         sponge.update([0]);
         sponge.update(tool.as_bytes());
         sponge.update([0]);
-        sponge.update(version(tool)?.as_bytes());
+        sponge.update(version(tool, binding.environment)?.as_bytes());
     }
     Ok(format!("{:x}", sponge.finalize()))
 }
@@ -55,8 +59,12 @@ fn tools(name: &str) -> &'static [&'static str] {
     }
 }
 
-fn version(tool: &str) -> Result<String, String> {
-    let output = plumb::config::detached(tool)
+fn version(tool: &str, environment: Option<&plumb::config::Environment>) -> Result<String, String> {
+    let mut command = plumb::config::detached(tool);
+    if let Some(environment) = environment {
+        environment.apply(&mut command);
+    }
+    let output = command
         .arg("--version")
         .output()
         .map_err(|error| format!("cannot run {tool} --version: {error}"))?;

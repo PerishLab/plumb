@@ -140,12 +140,22 @@ impl Drop for Index {
     }
 }
 
+pub(super) struct Execution<'a> {
+    pub seat: Option<&'a Path>,
+    pub governed: bool,
+    pub environment: Option<&'a plumb::config::Environment>,
+}
+
 pub(super) fn execute(
     root: &Path,
     argv: &[String],
-    seat: Option<&Path>,
-    governed: bool,
+    execution: &Execution<'_>,
 ) -> Result<(), String> {
+    let Execution {
+        seat,
+        governed,
+        environment,
+    } = *execution;
     let (program, args) = argv
         .split_first()
         .ok_or_else(|| "guard action has no command".to_string())?;
@@ -159,6 +169,10 @@ pub(super) fn execute(
     } else {
         plumb::config::detached(program)
     };
+    if let Some(environment) = environment {
+        environment.apply(&mut command);
+        super::environment::inspect(root, environment)?;
+    }
     let depot = plumb::depot::root(&PathBuf::new()).ok();
     command
         .args(args)

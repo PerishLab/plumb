@@ -1,5 +1,6 @@
 use super::support;
 mod cache;
+mod environment;
 mod world;
 use serde_json::Value;
 use std::process::{Command, Output};

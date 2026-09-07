@@ -1,6 +1,8 @@
 mod action;
+mod cache;
 mod cargo;
 mod configuration;
+mod environment;
 pub(crate) mod hook;
 pub(crate) mod tree;
 mod world;
