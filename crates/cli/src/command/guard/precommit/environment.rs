@@ -36,26 +36,59 @@ pub(super) fn inspect(root: &Path, environment: &Environment) -> Result<(), Stri
     if !home.is_absolute() {
         return Err("Cargo execution requires an absolute home".into());
     }
-    absent(&home)?;
-    for parent in root.ancestors().skip(1) {
-        absent(&parent.join(".cargo"))?;
+    Configuration(&home).absent()?;
+    let parent = physical(root)?;
+    for parent in parent.ancestors() {
+        Configuration(&parent.join(".cargo")).absent()?;
     }
     Ok(())
 }
 
-fn absent(root: &Path) -> Result<(), String> {
-    for name in ["config", "config.toml"] {
-        let path = root.join(name);
-        match std::fs::symlink_metadata(&path) {
-            Ok(_) => {
+fn physical(root: &Path) -> Result<PathBuf, String> {
+    for candidate in root.ancestors() {
+        match candidate.canonicalize() {
+            Ok(path) if candidate == root => {
+                return path
+                    .parent()
+                    .map(Path::to_path_buf)
+                    .ok_or_else(|| "Cargo execution root has no parent".to_string());
+            }
+            Ok(path) => return Ok(path),
+            Err(error)
+                if error.kind() == std::io::ErrorKind::NotFound
+                    && matches!(std::fs::symlink_metadata(candidate), Err(error)
+                        if error.kind() == std::io::ErrorKind::NotFound) => {}
+            Err(error) => {
                 return Err(format!(
-                    "Cargo execution refuses unbound host configuration {}; use the Plumb-owned configuration",
-                    path.display()
+                    "cannot resolve Cargo execution path {}: {error}",
+                    candidate.display()
                 ));
             }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
-            Err(error) => return Err(format!("cannot inspect {}: {error}", path.display())),
         }
     }
-    Ok(())
+    Err(format!(
+        "cannot resolve Cargo execution path {}",
+        root.display()
+    ))
+}
+
+struct Configuration<'a>(&'a Path);
+
+impl Configuration<'_> {
+    fn absent(&self) -> Result<(), String> {
+        for name in ["config", "config.toml"] {
+            let path = self.0.join(name);
+            match std::fs::symlink_metadata(&path) {
+                Ok(_) => {
+                    return Err(format!(
+                        "Cargo execution refuses unbound host configuration {}; use the Plumb-owned configuration",
+                        path.display()
+                    ));
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+                Err(error) => return Err(format!("cannot inspect {}: {error}", path.display())),
+            }
+        }
+        Ok(())
+    }
 }
