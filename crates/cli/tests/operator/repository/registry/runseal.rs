@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::process::{Command, Output};
 
-const PROFILE: &str = "2f1639e5915be5049de25201dfe2d7e2958be4ab1484b41bba96aee832152ef9";
+const PROFILE: &str = "da8d8a022797190575831d4c44adb70dadc3ef7830b9f83eac027bed1a1e0722";
 
 #[test]
 fn closed() {
@@ -19,7 +19,8 @@ fn closed() {
             "ssh://git@git.perish.top/PerishFire/runseal.git",
         ],
     );
-    std::fs::write(root.join(".gitignore"), "target/\n").expect("ignore");
+    std::fs::write(root.join(".gitignore"), "/.task/\n/.local/\ntarget/\n").expect("ignore");
+    std::fs::write(root.join(".gitattributes"), "* text=auto eol=lf\n").expect("attributes");
     std::fs::write(root.join("AGENTS.md"), "# Runseal\n").expect("operations");
     std::fs::write(
         root.join("Cargo.toml"),
@@ -63,6 +64,17 @@ fn closed() {
         .expect("publication rows");
     assert_eq!(operations.len(), 1);
     assert_eq!(operations[0]["operation"]["type"], "cargo");
+
+    std::fs::create_dir_all(root.join("crates/other")).expect("unapproved role");
+    std::fs::write(root.join("crates/other/Cargo.toml"), "").expect("unapproved manifest");
+    git(&root, &["add", "-A"]);
+    let refused = plumb(&root, depot.path(), &["doctor", ".", "--json"]);
+    assert!(!refused.status.success());
+    assert!(
+        text(&refused).contains("crates/other is outside"),
+        "{}",
+        text(&refused)
+    );
 }
 
 fn plumb(root: &Path, home: &Path, args: &[&str]) -> Output {

@@ -12,5 +12,5 @@ source = "repository"
 
 [[product]]
 identity = "git.perish.top/PerishFire/runseal"
-profile = "2f1639e5915be5049de25201dfe2d7e2958be4ab1484b41bba96aee832152ef9"
+profile = "da8d8a022797190575831d4c44adb70dadc3ef7830b9f83eac027bed1a1e0722"
 source = "depot"

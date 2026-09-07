@@ -15,6 +15,25 @@
 rule = "structure.seat-member"
 
 [[member.entry]]
+name = "rust-roles"
+allow = ["cli", "api", "lib"]
+note = "Rust workspace members occupy only established product roles. Optional roles remain absent until the product needs them."
+
+[[member.entry]]
+name = "rust-ignore"
+note = "Rust-only product repositories carry one conventional Git ignore policy."
+[member.entry.lines]
+allow = ["/.task/", "/.local/", "target/"]
+required = ["/.task/", "/.local/", "target/"]
+
+[[member.entry]]
+name = "text-attributes"
+note = "Text uses the domain LF convention; a product carrying PowerShell may also declare its CRLF attribute."
+[member.entry.lines]
+allow = ["* text=auto eol=lf", "*.ps1 text eol=crlf"]
+required = ["* text=auto eol=lf"]
+
+[[member.entry]]
 name = "named-after-repository"
 holds = "repository"
 count = 1

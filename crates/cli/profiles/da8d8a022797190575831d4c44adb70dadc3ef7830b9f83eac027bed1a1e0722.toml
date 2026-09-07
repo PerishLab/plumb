@@ -13,6 +13,7 @@ manifest = '''
 [[layout.seat]]
 path = "crates/*"
 anchor = ["Cargo.toml"]
+rule = ["rule://seat/rust-roles"]
 note = "Rust packages occupy the closed cli, api, or lib product roles."
 
 [[layout.file]]
@@ -20,8 +21,18 @@ name = ["AGENTS.md"]
 note = "The only product-specific operating entrypoint."
 
 [[layout.file]]
-name = ["LICENSE", ".gitignore", ".gitattributes"]
-note = "Repository identity and Git policy."
+name = ["LICENSE"]
+note = "Repository identity."
+
+[[layout.file]]
+name = [".gitignore"]
+rule = ["rule://seat/rust-ignore"]
+note = "The shared Rust ignore policy."
+
+[[layout.file]]
+name = [".gitattributes"]
+rule = ["rule://seat/text-attributes"]
+note = "The shared text normalization policy."
 
 [[layout.file]]
 name = ["Cargo.toml", "Cargo.lock"]

@@ -1,4 +1,6 @@
+mod content;
 mod face;
+mod names;
 mod private;
 mod retired;
 pub(crate) mod rule;
@@ -58,10 +60,8 @@ impl Tree<'_> {
         }
         for group in declared.groups.iter().filter(|group| !group.retired) {
             for held in &group.rule {
-                match rule::parse(held).and_then(|held| rule::member(&held)) {
-                    Err(error) => found.push(blind(&law::SEAT_MEMBER, error)),
-                    Ok(_) => found.extend(self.affirmed(declared, held, &named(group))),
-                }
+                found.extend(content::read(self.0, group, held));
+                found.extend(self.affirmed(declared, held, &named(group)));
             }
         }
         found
@@ -142,6 +142,7 @@ impl Tree<'_> {
             ));
         }
         found.extend(self.capped(&members, &member, held));
+        found.extend(names::judge(&members, &member, held));
         let Some(holds) = member.holds.as_deref() else {
             return found;
         };

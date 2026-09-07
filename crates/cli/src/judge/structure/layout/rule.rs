@@ -4,6 +4,9 @@ pub(crate) struct Reference {
 }
 
 pub(crate) struct Member {
+    pub lines: Option<Lines>,
+    pub allow: Option<Vec<String>>,
+    pub deny: Vec<String>,
     pub holds: Option<String>,
     pub count: Option<usize>,
     pub leaf: Option<String>,
@@ -45,6 +48,17 @@ pub(crate) fn member(reference: &Reference) -> Result<Member, String> {
         .find(|entry| entry.get("name").and_then(toml::Value::as_str) == Some(slug))
         .ok_or_else(|| format!("rule://{}/{slug} names no rule", reference.set))?;
     Ok(Member {
+        lines: entry
+            .get("lines")
+            .map(|value| {
+                value
+                    .clone()
+                    .try_into()
+                    .map_err(|error| format!("invalid member lines: {error}"))
+            })
+            .transpose()?,
+        allow: names(entry, "allow")?,
+        deny: names(entry, "deny")?.unwrap_or_default(),
         holds: entry
             .get("holds")
             .and_then(toml::Value::as_str)
@@ -75,12 +89,41 @@ fn sized(entry: &toml::Value, key: &str) -> Option<usize> {
         .and_then(|held| usize::try_from(held).ok())
 }
 
+fn names(entry: &toml::Value, key: &str) -> Result<Option<Vec<String>>, String> {
+    let Some(value) = entry.get(key) else {
+        return Ok(None);
+    };
+    let list = value
+        .as_array()
+        .ok_or_else(|| format!("member {key} must be a name list"))?;
+    list.iter()
+        .map(|value| {
+            let name = value
+                .as_str()
+                .ok_or_else(|| format!("member {key} must hold names"))?;
+            if name.is_empty() || name.contains(['/', '\\', '*']) || matches!(name, "." | "..") {
+                return Err(format!("member {key} contains an invalid name {name}"));
+            }
+            Ok(name.to_string())
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .map(Some)
+}
+
 pub fn named(name: &str, holds: &str, repository: &str) -> bool {
     match holds {
         "repository" => name == repository,
         "version" => versioned(name),
         _ => true,
     }
+}
+
+#[derive(Default, serde::Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub(crate) struct Lines {
+    pub allow: Option<Vec<String>>,
+    pub deny: Vec<String>,
+    pub required: Vec<String>,
 }
 
 pub fn known(holds: &str) -> bool {
