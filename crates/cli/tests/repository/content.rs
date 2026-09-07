@@ -106,3 +106,34 @@ fn inspect(rule: &str, name: &str, body: Option<&[u8]>) -> String {
     );
     shown
 }
+
+#[test]
+fn probe() {
+    let output = Command::new("git").arg("--version").output().expect("git");
+    let version = String::from_utf8(output.stdout).expect("version");
+    let rule = format!(
+        "[[member.entry.probe]]\nargv = ['git', '--version']\nstdout = {:?}",
+        version
+    );
+    let held = inspect(&rule, "Cargo.toml", Some(b""));
+    assert!(!held.contains("expected stdout"), "{held}");
+    let held = inspect(
+        "[[member.entry.probe]]\nargv = ['git', '--version']\nstdout = 'wrong'",
+        "Cargo.toml",
+        Some(b""),
+    );
+    assert!(held.contains("expected stdout"), "{held}");
+    let missing = "[[member.entry.probe]]\nargv = ['plumb-probe-does-not-exist']\nstdout = ''";
+    let held = inspect(missing, "Cargo.toml", Some(b""));
+    assert!(held.contains("cannot start"), "{held}");
+    let held = inspect(missing, "Cargo.toml", None);
+    assert!(!held.contains("cannot start"), "{held}");
+    let held = inspect(
+        &format!("{rule}\nplatform = ['unavailable']"),
+        "Cargo.toml",
+        Some(b""),
+    );
+    assert!(held.contains("no probe rule for platform"), "{held}");
+    let held = inspect(&format!("{rule}\n{rule}"), "Cargo.toml", Some(b""));
+    assert!(held.contains("conflicting probe rules"), "{held}");
+}

@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 mod probe;
+mod process;
 pub use probe::Probe;
+pub use process::Observation;
 
 #[derive(Default, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]

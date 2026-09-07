@@ -12,23 +12,62 @@ pub(super) fn read(snapshot: &Snapshot, group: &Group, held: &str) -> Vec<Seed> 
 }
 
 pub(super) fn judge(snapshot: &Snapshot, group: &Group, member: &Member) -> Vec<Seed> {
-    group
-        .names
-        .iter()
-        .flat_map(|path| {
-            let content = Content(snapshot);
-            let mut found = content.structured(path, &member.fields);
-            if let Some(rule) = &member.lines {
-                found.extend(content.file(path, rule));
-            }
-            found
-        })
-        .collect()
+    let mut found = Content(snapshot).probe(group, &member.probe);
+    found.extend(
+        group
+            .names
+            .iter()
+            .flat_map(|path| {
+                let content = Content(snapshot);
+                let mut found = content.structured(path, &member.fields);
+                if let Some(rule) = &member.lines {
+                    found.extend(content.file(path, rule));
+                }
+                found
+            })
+            .collect::<Vec<_>>(),
+    );
+    found
 }
 
 struct Content<'a>(&'a Snapshot);
 
 impl Content<'_> {
+    fn probe(&self, group: &Group, rules: &[plumb::rule::Probe]) -> Vec<Seed> {
+        if rules.is_empty()
+            || !self
+                .0
+                .entries()
+                .iter()
+                .any(|entry| group.names.iter().any(|name| name == entry.path()))
+        {
+            return Vec::new();
+        }
+        let result =
+            plumb::rule::Probe::select(rules, &plumb::config::platform()).and_then(|probe| {
+                let mut command = probe.command()?;
+                command.current_dir(self.0.root());
+                probe.observe(&mut command).map(|seen| (probe, seen))
+            });
+        match result {
+            Ok((_, seen)) if seen.matches => Vec::new(),
+            Ok((probe, seen)) => vec![wrong(
+                &law::SEAT_MEMBER,
+                format!(
+                    "{} probe {:?} expected stdout {:?}, observed {:?}",
+                    group.names.join(", "),
+                    probe.argv,
+                    probe.stdout,
+                    seen.stdout
+                ),
+            )],
+            Err(error) => vec![blind(
+                &law::SEAT_MEMBER,
+                format!("{}: {error}", group.names.join(", ")),
+            )],
+        }
+    }
+
     fn structured(&self, path: &str, rules: &[plumb::rule::Fields]) -> Vec<Seed> {
         if rules.is_empty() {
             return Vec::new();
