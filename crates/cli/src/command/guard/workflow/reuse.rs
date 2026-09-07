@@ -62,6 +62,8 @@ pub(super) struct Record {
     pub(super) depot: Option<serde_json::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) receipt: Option<plumb::rule::Receipt>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) binding: Option<String>,
 }
 
 #[derive(PartialEq)]

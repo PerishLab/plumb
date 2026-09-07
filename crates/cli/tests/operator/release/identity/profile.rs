@@ -9,6 +9,18 @@ pub(super) fn candidates(
     command: &impl Fn() -> Command,
     annotation: &Value,
 ) {
+    let store = crate::support::Bucket::open(55);
+    let source = format!("{}/workflow/inventory.json", store.endpoint());
+    let original = std::fs::read_to_string(fixture.tools.join("curl")).unwrap();
+    std::fs::write(fixture.tools.join("curl"), original.replace(
+        "case \"$url\" in",
+        "case \"$url\" in\n  http://127.0.0.1:*/workflow/*) path=\"$FAKE_S3_ROOT/depot/${url##*/}\" ;;",
+    )).unwrap();
+    let command = || {
+        let mut held = command();
+        held.env("PLUMB_WORKFLOW_INVENTORY_URL", &source);
+        held
+    };
     let mut beta = annotation.clone();
     beta["marker"] = serde_json::json!("v1.2.0-beta.1");
     run(Command::new("git").arg("-C").arg(fixture.root).args([
@@ -81,6 +93,8 @@ pub(super) fn candidates(
             String::from_utf8_lossy(&stable.stderr)
         );
     }
+    super::held::bound(&command, &graph, &store);
+    store.finish();
 }
 
 #[test]

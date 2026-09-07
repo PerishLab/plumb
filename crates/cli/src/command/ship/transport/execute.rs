@@ -103,6 +103,15 @@ impl Request {
         super::binding::Binding::new(spec)
             .verify(self.configuration.as_deref(), self.profile.as_deref())?;
         let release = &rig.release;
+        let binding = if matches!(self.operation, Operation::Oci { .. }) {
+            let binding = super::super::package::publication::image(governance.marker()?)?;
+            if let Some(source) = binding.resolve(None, Some(&rig.workflow.inventory.url))? {
+                return result("url", &source, None);
+            }
+            Some(binding)
+        } else {
+            None
+        };
         let reuse = self.reuse.encode()?;
         let projection = match self.operation {
             Operation::Workload { target, archive } => {
@@ -194,18 +203,24 @@ impl Request {
         };
         let projection: Projection = serde_json::from_str(&projection)
             .map_err(|error| format!("cannot read adaptor result: {error}"))?;
+        if let Some(binding) = &binding {
+            binding.verify(&projection.publication)?;
+        }
         let keys = self
             .keys
             .ok_or_else(|| "an exact ship request carries no inventory keys".to_string())?;
-        crate::command::workflow::record::project(crate::command::workflow::record::Project {
-            action: &self.action,
-            keys: &keys.to_string(),
-            workload: projection.workload,
-            reuse: (self.reuse.kind == "workload").then_some(self.reuse.source.as_str()),
-            publication: Some(projection.publication.clone()),
-            depot: projection.depot.clone(),
-            production: None,
-        })?;
+        crate::command::workflow::record::bound(
+            crate::command::workflow::record::Project {
+                action: &self.action,
+                keys: &keys.to_string(),
+                workload: projection.workload,
+                reuse: (self.reuse.kind == "workload").then_some(self.reuse.source.as_str()),
+                publication: Some(projection.publication.clone()),
+                depot: projection.depot.clone(),
+                production: None,
+            },
+            binding.as_ref().map(|binding| binding.binding.key.as_str()),
+        )?;
         result("url", &projection.publication, projection.depot)
     }
 }

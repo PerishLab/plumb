@@ -5,6 +5,72 @@ use serde_json::Value;
 use std::os::unix::fs::PermissionsExt as _;
 use std::process::Command;
 
+pub(super) fn bound(command: &impl Fn() -> Command, graph: &Value, store: &crate::support::Bucket) {
+    use sha2::{Digest, Sha256};
+    let output = run(command().args(["release", "verify", "--marker", "v1.2.0-beta.1", "--held"]));
+    let output = String::from_utf8(output.stdout).unwrap();
+    let marker = output
+        .rsplit_once('(')
+        .unwrap()
+        .1
+        .trim()
+        .trim_end_matches(')');
+    let key = format!(
+        "{:x}",
+        Sha256::digest(serde_json::to_vec(&(marker, "oci://registry.test/owner/probe")).unwrap())
+    );
+    let request = graph["publication"]["include"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| &row["request"])
+        .find(|request| request["action"] == "ship/oci")
+        .unwrap();
+    let source = format!(
+        "https://registry.test/v2/owner/probe/manifests/sha256:{}",
+        "a".repeat(64)
+    );
+    let mut record = serde_json::json!({
+        "action": "ship/oci", "workload": "0".repeat(64), "proof": "0".repeat(64),
+        "publication": "0".repeat(64), "binding": key,
+        "source": { "type": "url", "source": source },
+    });
+    let route = format!("records/binding/{key}.json");
+    store.seed(&route, &serde_json::to_vec(&record).unwrap());
+    let resolved = run(command().args([
+        "ship",
+        "resolve",
+        "--marker",
+        "v1.2.0-beta.1",
+        "--atom",
+        &"b".repeat(40),
+    ]));
+    let resolved: Value = serde_json::from_slice(&resolved.stdout).unwrap();
+    let rows = resolved["publication"]["include"].as_array().unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0]["request"]["action"], "ship/cargo");
+    let execute = || {
+        command()
+            .args(["ship", "execute", "--request", &request.to_string()])
+            .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1")
+            .output()
+            .unwrap()
+    };
+    let output = execute();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let returned: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(returned["result"]["source"], source);
+    record["source"]["source"] = serde_json::json!("https://registry.test/wrong-resource");
+    store.seed(&route, &serde_json::to_vec(&record).unwrap());
+    let refused = execute();
+    assert!(!refused.status.success());
+    assert!(String::from_utf8_lossy(&refused.stderr).contains("different resource"));
+}
+
 #[test]
 fn independent() {
     let temp = tempfile::tempdir().expect("temp root");

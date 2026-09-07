@@ -147,3 +147,85 @@ fn producers() {
     current.receipt.as_mut().unwrap().artifact = "1".repeat(64);
     assert!(!historical.equivalent(&current, Some(&contract)));
 }
+
+#[test]
+fn binding() {
+    let binding = inventory::Binding::new(&"a".repeat(64), "oci://registry.test/probe").unwrap();
+    let other = inventory::Binding::new(&"b".repeat(64), "oci://registry.test/probe").unwrap();
+    assert_ne!(binding.key, other.key);
+    let mut held = Record::publication(
+        "ship/oci".into(),
+        &keys(),
+        "https://registry.test/digest".into(),
+        None,
+    )
+    .unwrap();
+    held.binding = Some(binding.key.clone());
+    let mut current = held.clone();
+    current.workload = "1".repeat(64);
+    current.proof = Some("2".repeat(64));
+    current.publication = Some("3".repeat(64));
+    assert!(held.binding(&current).is_ok());
+    let routes = held.routes();
+    assert_eq!(routes[0].0, format!("records/binding/{}.json", binding.key));
+    let moved = current.routes();
+    assert_eq!(routes[0].0, moved[0].0);
+    assert_ne!(routes[1].0, moved[1].0);
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("inventory.json");
+    let mut inventory = Inventory::empty();
+    inventory.records = vec![held.clone(), current.clone()];
+    std::fs::write(&path, serde_json::to_vec(&inventory).unwrap()).unwrap();
+    assert_eq!(
+        binding.resolve(Some(&path), None).unwrap(),
+        Some(held.source.source.clone())
+    );
+    assert_eq!(other.resolve(Some(&path), None).unwrap(), None);
+    current.source.source = "https://registry.test/different".into();
+    assert!(held.binding(&current).unwrap_err().contains("drifted"));
+    inventory.records.push(current);
+    std::fs::write(&path, serde_json::to_vec(&inventory).unwrap()).unwrap();
+    assert!(
+        binding
+            .resolve(Some(&path), None)
+            .unwrap_err()
+            .contains("ambiguous")
+    );
+    held.source.kind = "workload".into();
+    assert!(held.valid().is_err());
+}
+
+#[test]
+fn permanent() {
+    let binding = inventory::Binding::new(&"a".repeat(64), "oci://registry.test/probe").unwrap();
+    let store = crate::support::Bucket::open(3);
+    let url = format!("{}/workflow/inventory.json", store.endpoint());
+    assert_eq!(binding.resolve(None, Some(&url)).unwrap(), None);
+    let mut record = Record::publication(
+        "ship/oci".into(),
+        &keys(),
+        "https://registry.test/digest".into(),
+        None,
+    )
+    .unwrap();
+    record.binding = Some(binding.key.clone());
+    let route = record.routes()[0].0.clone();
+    store.seed(&route, &record.encode().unwrap());
+    assert_eq!(
+        binding.resolve(None, Some(&url)).unwrap(),
+        Some(record.source.source.clone())
+    );
+    record.binding = Some("f".repeat(64));
+    store.seed(&route, &record.encode().unwrap());
+    assert!(
+        binding
+            .resolve(None, Some(&url))
+            .unwrap_err()
+            .contains("different identity")
+    );
+    store.finish();
+    assert!(
+        binding.resolve(None, Some(&url)).is_err(),
+        "unreadable authority cannot prove absence"
+    );
+}

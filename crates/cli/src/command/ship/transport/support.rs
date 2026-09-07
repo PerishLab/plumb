@@ -2,6 +2,16 @@ use serde_json::{Map, Value};
 use std::path::Path;
 use std::process::Command;
 
+pub(super) struct Plan<'a> {
+    pub action: &'a str,
+    pub projections: &'a [&'a str],
+    pub roots: &'a [&'a str],
+    pub runner: &'a str,
+    pub workload: Option<&'a str>,
+    pub release: Option<&'a str>,
+    pub target: Option<&'a str>,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum Contract {
     Portable,

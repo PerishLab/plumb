@@ -44,6 +44,21 @@ impl Inventory {
 }
 
 impl Record {
+    pub(super) fn bound(&self, wanted: &Self) -> bool {
+        if self.binding.is_none() {
+            return false;
+        }
+        self.binding == wanted.binding && self.source == wanted.source && self.depot == wanted.depot
+    }
+
+    pub(super) fn binding(&self, wanted: &Self) -> Result<(), String> {
+        if self.bound(wanted) {
+            Ok(())
+        } else {
+            Err("permanent publication binding drifted".into())
+        }
+    }
+
     pub(super) fn equivalent(&self, wanted: &Self, contract: Option<&Production>) -> bool {
         let Some(contract) = contract else {
             return self == wanted;
@@ -88,6 +103,7 @@ impl Record {
             },
             depot: None,
             receipt: None,
+            binding: None,
         }
     }
 
@@ -108,10 +124,17 @@ impl Record {
             },
             depot,
             receipt: None,
+            binding: None,
         })
     }
 
     pub(super) fn valid(&self) -> Result<(), String> {
+        if let Some(binding) = &self.binding {
+            hash(binding)?;
+            if self.source.kind != "url" || !self.source.source.starts_with("https://") {
+                return Err("permanent publication binding requires an HTTPS publication".into());
+            }
+        }
         if self.action.trim().is_empty() {
             return Err("workflow inventory record names no action".to_string());
         }
@@ -143,6 +166,53 @@ impl Record {
             ));
         }
         Ok(())
+    }
+}
+
+pub struct Binding {
+    pub key: String,
+}
+
+impl Binding {
+    pub fn new(marker: &str, resource: &str) -> Result<Self, String> {
+        hash(marker)?;
+        if resource.trim().is_empty() {
+            return Err("publication binding requires a resource".into());
+        }
+        let bytes = serde_json::to_vec(&(marker, resource)).map_err(|error| error.to_string())?;
+        Ok(Self {
+            key: format!("{:x}", Sha256::digest(bytes)),
+        })
+    }
+
+    pub fn resolve(
+        &self,
+        path: Option<&Path>,
+        source: Option<&str>,
+    ) -> Result<Option<String>, String> {
+        let inventory = Inventory::read(path)?.at(source)?;
+        let mut records = inventory.records;
+        if let Some(base) = &inventory.base {
+            let route = format!("{base}/records/binding/{}.json", self.key);
+            if let Some(body) = plumb::bucket::fetch(&route)? {
+                let record = Record::decode(&body)?;
+                if record.binding.as_ref() != Some(&self.key) {
+                    return Err("publication binding returned a different identity".into());
+                }
+                records.push(record);
+            }
+        }
+        let mut held: Option<&Record> = None;
+        for record in records
+            .iter()
+            .filter(|record| record.binding.as_ref() == Some(&self.key))
+        {
+            if held.is_some_and(|held| !held.bound(record)) {
+                return Err("permanent publication binding is ambiguous".into());
+            }
+            held = Some(record);
+        }
+        Ok(held.map(|record| record.source.source.clone()))
     }
 }
 

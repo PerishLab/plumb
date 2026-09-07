@@ -1,7 +1,7 @@
 use super::binding::Binding;
 use super::support::{
-    Contract, Inventory, carry, contract, embedded, idle, matrix, object, projection, sources,
-    strings, text,
+    Contract, Inventory, Plan, carry, contract, embedded, idle, matrix, object, projection,
+    sources, strings, text,
 };
 use crate::command::release;
 use plumb::rig::Rig;
@@ -213,6 +213,13 @@ impl Publish<'_> {
             .ok_or("publication plan has no include array")?;
         for entry in rows {
             let action = text(entry, "action")?;
+            if action == "ship/oci"
+                && super::super::package::publication::image(self.marker)?
+                    .resolve(self.world.inventory, self.world.source)?
+                    .is_some()
+            {
+                continue;
+            }
             let binding = contract(action);
             let projections = strings(entry, "projections")?;
             let roots = strings(entry, "roots")?;
@@ -245,15 +252,6 @@ impl Publish<'_> {
     }
 }
 
-struct Plan<'a> {
-    action: &'a str,
-    projections: &'a [&'a str],
-    roots: &'a [&'a str],
-    runner: &'a str,
-    workload: Option<&'a str>,
-    release: Option<&'a str>,
-    target: Option<&'a str>,
-}
 fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String> {
     let mut fields = vec![format!("runner={}", plan.runner)];
     if let Some(release) = plan.release {

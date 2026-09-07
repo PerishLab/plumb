@@ -199,17 +199,22 @@ impl Record {
                     (route("workload", &[&self.action, &self.workload]), content),
                 ]
             }
-            "url" => vec![(
-                route(
-                    "publication",
-                    &[
-                        &self.action,
-                        &self.workload,
-                        self.publication.as_deref().unwrap_or_default(),
-                    ],
-                ),
-                self.clone(),
-            )],
+            "url" => self
+                .binding
+                .iter()
+                .map(|binding| (format!("records/binding/{binding}.json"), self.clone()))
+                .chain(std::iter::once((
+                    route(
+                        "publication",
+                        &[
+                            &self.action,
+                            &self.workload,
+                            self.publication.as_deref().unwrap_or_default(),
+                        ],
+                    ),
+                    self.clone(),
+                )))
+                .collect(),
             _ => Vec::new(),
         }
     }

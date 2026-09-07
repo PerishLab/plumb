@@ -1,3 +1,4 @@
+pub(in crate::command) use super::inventory::Binding;
 use super::inventory::{digest, field};
 use super::reuse::hash;
 use super::reuse::{Keys, Record};
@@ -36,7 +37,7 @@ pub struct Input {
 }
 
 pub fn run(input: Input) -> i32 {
-    match execute(input, None, None) {
+    match execute(input, None, None, None) {
         Ok(()) => 0,
         Err(error) => {
             eprintln!("plumb workflow record: {error}");
@@ -49,6 +50,7 @@ fn execute(
     input: Input,
     receipt: Option<plumb::rule::Receipt>,
     contract: Option<&plumb::rule::Production>,
+    binding: Option<&str>,
 ) -> Result<(), String> {
     if input.action.trim().is_empty() {
         return Err("action cannot be empty".into());
@@ -72,7 +74,7 @@ fn execute(
             }
         })
         .transpose()?;
-    let publication = input
+    let mut publication = input
         .publication
         .map(|source| {
             if !source.starts_with("https://") {
@@ -82,6 +84,13 @@ fn execute(
                 .ok_or_else(|| "--publication requires a publication key".to_string())
         })
         .transpose()?;
+    if let Some(binding) = binding {
+        hash(binding)?;
+        publication
+            .as_mut()
+            .ok_or("binding requires a publication")?
+            .binding = Some(binding.to_string());
+    }
     let authority = Authority::read()?;
     if let Some(receipt) = &receipt {
         receipt.verify(&input.workload)?;
@@ -126,6 +135,10 @@ pub(in crate::command) struct Project<'a> {
 }
 
 pub(in crate::command) fn project(input: Project<'_>) -> Result<(), String> {
+    bound(input, None)
+}
+
+pub(in crate::command) fn bound(input: Project<'_>, binding: Option<&str>) -> Result<(), String> {
     let contract = input.production.as_ref().map(|(contract, _)| *contract);
     let receipt = input
         .production
@@ -145,6 +158,7 @@ pub(in crate::command) fn project(input: Project<'_>) -> Result<(), String> {
         },
         receipt,
         contract,
+        binding,
     )
 }
 
@@ -221,6 +235,9 @@ impl Authority {
             plumb::bucket::Outcome::Held(object) => {
                 let mut held = Record::decode(&object.body)?;
                 let mut wanted = record.clone();
+                if route.starts_with("records/binding/") {
+                    return held.binding(&wanted);
+                }
                 if route.starts_with("records/workload/") {
                     held.proof = None;
                     wanted.proof = None;
