@@ -142,6 +142,27 @@ impl Survey<'_> {
             ));
         }
         let installed = version(&record.version)?;
+        if installed == *self.target
+            && record.sha != self.grant.sha
+            && self.grant.generation.is_some()
+        {
+            let clean = super::integrity::held(self.grant, record)?;
+            return Ok(if clean {
+                status(
+                    record,
+                    Standing::Available,
+                    Action::Upgrade,
+                    "a new verified Depot generation is available for this version",
+                )
+            } else {
+                status(
+                    record,
+                    Standing::Drift,
+                    Action::Refuse,
+                    "installed skill content differs from its recorded Depot generation",
+                )
+            });
+        }
         let (standing, action, note) = match installed.cmp(self.target) {
             std::cmp::Ordering::Equal if record.sha == self.grant.sha => (
                 Standing::Current,

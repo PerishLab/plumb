@@ -1,4 +1,6 @@
 use plumb::skill::{Action, Ask, Kit, Standing};
+#[path = "support/generations.rs"]
+mod generations;
 use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpListener;

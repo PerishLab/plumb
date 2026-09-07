@@ -9,7 +9,7 @@ pub struct Grant {
     pub version: String,
     pub url: String,
     pub sha: String,
-    generation: Option<crate::depot::v3::Generation>,
+    pub(super) generation: Option<crate::depot::v3::Generation>,
 }
 
 pub struct Wanted<'a> {

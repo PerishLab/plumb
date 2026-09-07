@@ -3,6 +3,7 @@ mod error;
 pub use error::Error;
 pub mod command;
 mod fetch;
+mod integrity;
 mod place;
 mod source;
 mod state;
