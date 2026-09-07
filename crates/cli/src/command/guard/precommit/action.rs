@@ -40,9 +40,6 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         }
         None => false,
     };
-    if !mismatched && let Ok(proof) = plumb::guard::staged(root, &tree) {
-        return Ok(proof);
-    }
     let product = crate::shape::product::guard(root, "")?;
     let mut index = mismatched
         .then(|| isolate(root, &tree, product.profile.as_ref()))
@@ -77,6 +74,15 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         },
     }
     .checks()?;
+    if !mismatched
+        && let Ok(proof) = plumb::guard::staged(root, &tree)
+        && proof
+            .actions
+            .iter()
+            .eq(checks.iter().map(|check| &check.proof))
+    {
+        return Ok(proof);
+    }
     let pending = checks
         .iter()
         .filter(|check| !cached(&check.proof))

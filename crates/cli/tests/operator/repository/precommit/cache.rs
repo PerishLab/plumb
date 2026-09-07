@@ -2,7 +2,7 @@ use super::{Repo, support};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-fn fixture() -> tempfile::TempDir {
+pub(super) fn fixture() -> tempfile::TempDir {
     let held = tempfile::tempdir().expect("repository");
     let root = held.path();
     Repo::git(root, &["init", "-q"]);
@@ -46,7 +46,7 @@ fn fixture() -> tempfile::TempDir {
     held
 }
 
-fn run(root: &Path, home: &Path) -> Output {
+pub(super) fn run(root: &Path, home: &Path) -> Output {
     Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["guard", ".", "--json"])
         .current_dir(root)
@@ -63,7 +63,7 @@ fn seats(home: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
-fn success(output: &Output) {
+pub(super) fn success(output: &Output) {
     assert!(
         output.status.success(),
         "{}{}",
