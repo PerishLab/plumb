@@ -3,6 +3,7 @@ mod audit;
 mod chart;
 #[cfg(unix)]
 mod module;
+#[path = "precommit/main.rs"]
 mod precommit;
 #[cfg(unix)]
 #[path = "registry/main.rs"]

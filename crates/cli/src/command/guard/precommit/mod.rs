@@ -1,4 +1,5 @@
 mod action;
+mod cargo;
 mod configuration;
 pub(crate) mod hook;
 pub(crate) mod tree;

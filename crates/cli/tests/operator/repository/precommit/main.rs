@@ -1,4 +1,5 @@
 use super::support;
+mod cache;
 use serde_json::Value;
 use std::process::{Command, Output};
 pub(super) struct Repo {
@@ -263,7 +264,6 @@ fn staged() {
         .args(["guard", ".", "--attach"])
         .arg(&message)
         .current_dir(root)
-        .env("PLUMB_HOME", home.path())
         .env("PLUMB_HOME", depot.path())
         .output()
         .expect("attach");

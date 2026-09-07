@@ -149,8 +149,13 @@ pub(super) fn execute(
     let (program, args) = argv
         .split_first()
         .ok_or_else(|| "guard action has no command".to_string())?;
-    let mut command = if program == "cargo" {
-        crate::cargo::command()
+    let cache = (program == "cargo")
+        .then(|| super::cargo::Lease::new(root))
+        .transpose()?;
+    let mut command = if let Some(cache) = &cache {
+        let mut command = crate::cargo::command();
+        command.env("CARGO_TARGET_DIR", &cache.root);
+        command
     } else {
         plumb::config::detached(program)
     };
