@@ -75,16 +75,21 @@ pub(super) fn execution(
 }
 
 fn version(tool: &str, execution: Option<&plumb::config::Execution>) -> Result<String, String> {
-    let mut command = match execution {
-        Some(execution) => execution.command(tool)?,
-        None => plumb::config::detached(tool),
-    };
-    let output = command
-        .arg("--version")
-        .output()
-        .map_err(|error| format!("cannot run {tool} --version: {error}"))?;
+    let output = match execution {
+        Some(execution) => execution.output(&[tool.into(), "--version".into()]),
+        None => plumb::config::detached(tool)
+            .arg("--version")
+            .output()
+            .map_err(|error| error.to_string()),
+    }
+    .map_err(|error| format!("cannot run {tool} --version: {error}"))?;
     if output.status.success() {
-        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        let stdout = std::str::from_utf8(&output.stdout)
+            .map_err(|_| format!("{tool} --version stdout is not UTF-8"))?;
+        Ok(stdout
+            .replace("\r\n", "\n")
+            .trim_end_matches('\n')
+            .to_string())
     } else {
         Err(format!(
             "{tool} --version failed: {}",

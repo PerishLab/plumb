@@ -57,6 +57,41 @@ fn unrelated() {
 
 #[test]
 #[cfg(unix)]
+fn bounded() {
+    use std::os::unix::fs::PermissionsExt as _;
+    let fixture = cache::fixture();
+    let home = support::depot(&[]);
+    cache::success(&cache::run(fixture.path(), home.path()));
+    let tools = tempfile::tempdir().expect("tools");
+    let rustc = tools.path().join("rustc");
+    let mut paths = vec![tools.path().to_path_buf()];
+    paths.extend(std::env::split_paths(
+        &std::env::var_os("PATH").expect("PATH"),
+    ));
+    let path = std::env::join_paths(paths).expect("PATH");
+    for (body, expected) in [
+        ("while :; do printf x; done", "65536"),
+        ("while :; do :; done", "5 second"),
+        ("printf '\\377'", "not UTF-8"),
+    ] {
+        std::fs::write(&rustc, format!("#!/bin/sh\n{body}\n")).expect("probe tool");
+        std::fs::set_permissions(&rustc, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let output = std::process::Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["guard", ".", "--json"])
+            .current_dir(fixture.path())
+            .env("PLUMB_HOME", home.path())
+            .env("PATH", &path)
+            .output()
+            .expect("guard");
+        assert!(!output.status.success());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains(expected), "{error}");
+        assert!(!error.contains("guard guard/rust"), "{error}");
+    }
+}
+
+#[test]
+#[cfg(unix)]
 fn unread() {
     use std::os::unix::fs::PermissionsExt as _;
     let version = std::process::Command::new("rustc")

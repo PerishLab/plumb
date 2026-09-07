@@ -4,7 +4,7 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Output};
 
 pub struct Execution {
     pub environment: Environment,
@@ -40,6 +40,15 @@ impl Execution {
     pub fn evidence(&self) -> Result<Vec<u8>, String> {
         serde_json::to_vec(&(self.environment.evidence(), &self.tools))
             .map_err(|error| format!("cannot encode execution evidence: {error}"))
+    }
+
+    pub fn output(&self, argv: &[String]) -> Result<Output, String> {
+        let (program, args) = argv
+            .split_first()
+            .ok_or_else(|| "execution requires a program".to_string())?;
+        let mut command = self.command(program)?;
+        command.args(args);
+        super::process::capture(&mut command)
     }
 
     pub fn command(&self, program: &str) -> Result<Command, String> {

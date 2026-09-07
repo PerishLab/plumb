@@ -1,4 +1,63 @@
+use plumb::config::{Contract, Execution};
 use plumb::rule::Probe;
+
+fn execution(root: &std::path::Path, program: &str, mode: Option<&str>) -> Execution {
+    let mut values = std::env::vars_os().collect::<Vec<_>>();
+    if let Some(mode) = mode {
+        values.push(("PLUMB_PROBE_TEST".into(), mode.into()));
+    }
+    let environment = Contract {
+        inherit: [
+            "PATH",
+            "SystemRoot",
+            "SYSTEMROOT",
+            "WINDIR",
+            "PATHEXT",
+            "PLUMB_PROBE_TEST",
+        ]
+        .map(str::to_string)
+        .to_vec(),
+        managed: vec![],
+        reject: vec![],
+    }
+    .capture(values)
+    .expect("environment");
+    Execution::new(environment, &[program.into()], root).expect("execution")
+}
+
+#[test]
+fn bound() {
+    let root = tempfile::tempdir().expect("repository");
+    let output = std::process::Command::new("git")
+        .args(["init", "-q"])
+        .current_dir(root.path())
+        .output()
+        .expect("init");
+    assert!(output.status.success());
+    let held = execution(root.path(), "git", None);
+    let mut probe = Probe {
+        argv: vec![
+            "git".into(),
+            "rev-parse".into(),
+            "--is-inside-work-tree".into(),
+        ],
+        stdout: "true\r\n".into(),
+        platform: None,
+    };
+    assert!(probe.run(&held).expect("bound observation").matches);
+    probe.stdout = "false\n".into();
+    assert!(!probe.run(&held).expect("mismatch").matches);
+    probe.argv[0] = "unbound-tool".into();
+    assert!(probe.run(&held).err().unwrap().contains("no resolved tool"));
+    probe.argv.clear();
+    assert!(probe.run(&held).err().unwrap().contains("nonempty program"));
+    assert!(
+        held.output(&[])
+            .err()
+            .unwrap()
+            .contains("requires a program")
+    );
+}
 
 #[test]
 fn direct() {
@@ -47,6 +106,10 @@ fn bounded() {
         let mut command = probe.command().expect("command");
         command.env("PLUMB_PROBE_TEST", mode);
         let error = probe.observe(&mut command).err().expect("bounded refusal");
+        assert!(error.contains(expected), "{error}");
+        let root = tempfile::tempdir().expect("execution root");
+        let held = execution(root.path(), &probe.argv[0], Some(mode));
+        let error = probe.run(&held).err().expect("bound refusal");
         assert!(error.contains(expected), "{error}");
     }
 }
