@@ -32,6 +32,7 @@ tar = { version = "0.4", optional = true }
 ureq = { version = "3", optional = true }
 pin-project-lite = "0.2"
 tempfile = "3"
+which = "8"
 plumb-macro = { path = "../macro", version = "=0.37.6", registry = "perish" }
 runseal = { version = "=0.18.8", registry = "perish", default-features = false, optional = true }
 serde = { version = "1", features = ["derive"] }

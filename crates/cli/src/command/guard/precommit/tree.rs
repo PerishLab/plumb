@@ -143,7 +143,7 @@ impl Drop for Index {
 pub(super) struct Execution<'a> {
     pub seat: Option<&'a Path>,
     pub governed: bool,
-    pub environment: Option<&'a plumb::config::Environment>,
+    pub execution: Option<&'a plumb::config::Execution>,
 }
 
 pub(super) fn execute(
@@ -154,7 +154,7 @@ pub(super) fn execute(
     let Execution {
         seat,
         governed,
-        environment,
+        execution: context,
     } = *execution;
     let (program, args) = argv
         .split_first()
@@ -162,16 +162,16 @@ pub(super) fn execute(
     let cache = (program == "cargo")
         .then(|| super::cargo::Lease::new(root))
         .transpose()?;
-    let mut command = if let Some(cache) = &cache {
-        let mut command = crate::cargo::command();
-        command.env("CARGO_TARGET_DIR", &cache.root);
-        command
-    } else {
-        plumb::config::detached(program)
+    let mut command = match context {
+        Some(context) => context.command(program)?,
+        None => plumb::config::detached(program),
     };
-    if let Some(environment) = environment {
-        environment.apply(&mut command);
-        super::environment::inspect(root, environment)?;
+    if let Some(cache) = &cache {
+        crate::cargo::configure(&mut command);
+        command.env("CARGO_TARGET_DIR", &cache.root);
+    }
+    if let Some(context) = context {
+        super::environment::inspect(root, &context.environment)?;
     }
     let depot = plumb::depot::root(&PathBuf::new()).ok();
     command

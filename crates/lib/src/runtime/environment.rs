@@ -56,6 +56,14 @@ impl Contract {
 }
 
 impl Environment {
+    pub(crate) fn evidence(&self) -> BTreeMap<&str, &str> {
+        self.0
+            .iter()
+            .filter(|(key, _)| key.as_str() != "PATH")
+            .map(|(key, value)| (key.as_str(), value.as_str()))
+            .collect()
+    }
+
     pub fn get(&self, key: &str) -> Option<&str> {
         self.0.get(key).map(String::as_str)
     }

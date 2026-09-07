@@ -33,9 +33,38 @@ fn unchanged() {
 }
 
 #[test]
+fn unrelated() {
+    let fixture = cache::fixture();
+    let home = support::depot(&[]);
+    let first = cache::run(fixture.path(), home.path());
+    cache::success(&first);
+    let extra = tempfile::tempdir().expect("unrelated tools");
+    let mut paths = vec![extra.path().to_path_buf()];
+    paths.extend(std::env::split_paths(
+        &std::env::var_os("PATH").expect("PATH"),
+    ));
+    let second = std::process::Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["guard", ".", "--json"])
+        .current_dir(fixture.path())
+        .env("PLUMB_HOME", home.path())
+        .env("PATH", std::env::join_paths(paths).expect("PATH"))
+        .output()
+        .expect("guard");
+    cache::success(&second);
+    assert_eq!(first.stdout, second.stdout);
+    assert!(!String::from_utf8_lossy(&second.stderr).contains("guard guard/rust"));
+}
+
+#[test]
 #[cfg(unix)]
 fn unread() {
     use std::os::unix::fs::PermissionsExt as _;
+    let version = std::process::Command::new("rustc")
+        .arg("--version")
+        .output()
+        .expect("real rustc");
+    assert!(version.status.success());
+    let version = String::from_utf8(version.stdout).expect("version");
     let fixture = cache::fixture();
     let root = fixture.path();
     let home = support::depot(&[]);
@@ -71,6 +100,20 @@ fn unread() {
         assert!(
             !output.status.success(),
             "changed broken tool cannot reuse proof"
+        );
+        assert!(String::from_utf8_lossy(&output.stderr).contains("guard guard/rust"));
+        std::fs::write(
+            &rustc,
+            format!(
+                "#!/bin/sh\nprintf '%s' '{}'\n",
+                version.replace('\'', "'\\''")
+            ),
+        )
+        .expect("same version, different tool");
+        let output = guard.output().expect("guard");
+        assert!(
+            !output.status.success(),
+            "same version cannot hide changed tool"
         );
         assert!(String::from_utf8_lossy(&output.stderr).contains("guard guard/rust"));
     }

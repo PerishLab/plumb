@@ -36,15 +36,15 @@ pub(super) fn digest(
     }
     sponge.update([0]);
     sponge.update(plumb::config::platform().as_bytes());
-    if let Some(environment) = binding.environment {
+    if let Some(execution) = binding.execution {
         sponge.update([0]);
-        sponge.update(serde_json::to_vec(environment).map_err(|error| error.to_string())?);
+        sponge.update(execution.evidence()?);
     }
     for tool in tools(name) {
         sponge.update([0]);
         sponge.update(tool.as_bytes());
         sponge.update([0]);
-        sponge.update(version(tool, binding.environment)?.as_bytes());
+        sponge.update(version(tool, binding.execution)?.as_bytes());
     }
     Ok(format!("{:x}", sponge.finalize()))
 }
@@ -59,11 +59,26 @@ fn tools(name: &str) -> &'static [&'static str] {
     }
 }
 
-fn version(tool: &str, environment: Option<&plumb::config::Environment>) -> Result<String, String> {
-    let mut command = plumb::config::detached(tool);
-    if let Some(environment) = environment {
-        environment.apply(&mut command);
-    }
+pub(super) fn execution(
+    name: &str,
+    environment: plumb::config::Environment,
+    root: &std::path::Path,
+) -> Result<plumb::config::Execution, String> {
+    let mut programs = tools(name)
+        .iter()
+        .map(|name| name.to_string())
+        .collect::<Vec<_>>();
+    programs.extend(["cargo".to_string(), "rustc".to_string()]);
+    programs.sort();
+    programs.dedup();
+    plumb::config::Execution::new(environment, &programs, root)
+}
+
+fn version(tool: &str, execution: Option<&plumb::config::Execution>) -> Result<String, String> {
+    let mut command = match execution {
+        Some(execution) => execution.command(tool)?,
+        None => plumb::config::detached(tool),
+    };
     let output = command
         .arg("--version")
         .output()

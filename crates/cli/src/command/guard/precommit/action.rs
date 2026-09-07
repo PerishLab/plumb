@@ -7,6 +7,13 @@ use super::tree::{self, Index};
 struct Check {
     proof: Action,
     commands: Vec<Vec<String>>,
+    execution: Option<plumb::config::Execution>,
+}
+
+struct Preparation {
+    name: String,
+    input: String,
+    commands: Vec<Vec<String>>,
     environment: Option<plumb::config::Environment>,
 }
 
@@ -14,13 +21,12 @@ struct Catalog<'a> {
     root: &'a Path,
     tree: &'a Tree,
     product: &'a crate::shape::product::Target,
-    binding: Binding<'a>,
 }
 
 pub(super) struct Binding<'a> {
     pub configuration: Option<&'a str>,
     pub profile: Option<&'a crate::shape::product::Profile>,
-    pub environment: Option<&'a plumb::config::Environment>,
+    pub execution: Option<&'a plumb::config::Execution>,
 }
 
 pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
@@ -46,12 +52,15 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
     };
     let manifest = captured.text("plumb.toml")?;
     let product = crate::shape::product::guard(root, manifest.as_deref())?;
-    let mut index = mismatched
-        .then(|| isolate(root, &tree, product.profile.as_ref()))
-        .transpose()?;
-    let configuration = index
-        .as_ref()
-        .map(|index| {
+    let prepared = Catalog {
+        root,
+        tree: &captured,
+        product: &product,
+    }
+    .checks()?;
+    let index = isolate(root, &tree, product.profile.as_ref())?;
+    let configuration = mismatched
+        .then(|| {
             super::configuration::Seat::new(
                 root,
                 &index.root,
@@ -70,17 +79,34 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         }
         crate::catalog::set::guard(configuration.path(), target)?;
     }
-    let checks = Catalog {
-        root,
-        tree: &captured,
-        product: &product,
-        binding: Binding {
+    let mut checks = Vec::new();
+    for Preparation {
+        name,
+        input,
+        commands,
+        environment,
+    } in prepared
+    {
+        let environment = if mismatched && environment.is_some() {
+            Some(super::environment::cargo(root)?)
+        } else {
+            environment
+        };
+        let execution = environment
+            .map(|environment| super::world::execution(&name, environment, &index.root))
+            .transpose()?;
+        let binding = Binding {
             configuration: configuration.as_ref().map(|held| held.mark()),
             profile: product.profile.as_ref(),
-            environment: None,
-        },
+            execution: execution.as_ref(),
+        };
+        let world = super::world::digest(&name, &input, &commands, &binding)?;
+        checks.push(Check {
+            proof: Action { name, input, world },
+            commands,
+            execution,
+        });
     }
-    .checks()?;
     if !mismatched
         && let Ok(proof) = plumb::guard::staged(root, &tree)
         && proof
@@ -95,10 +121,6 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         .filter(|check| !super::cache::contains(&check.proof))
         .collect::<Vec<_>>();
     if !pending.is_empty() {
-        if index.is_none() {
-            index = Some(isolate(root, &tree, product.profile.as_ref())?);
-        }
-        let index = index.as_ref().expect("a pending guard has an index");
         for check in pending {
             eprintln!("guard {}", check.proof.name);
             for command in &check.commands {
@@ -109,7 +131,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
                     &tree::Execution {
                         seat,
                         governed: product.profile.is_some(),
-                        environment: check.environment.as_ref(),
+                        execution: check.execution.as_ref(),
                     },
                 )?;
             }
@@ -126,7 +148,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
 }
 
 impl Catalog<'_> {
-    fn checks(&self) -> Result<Vec<Check>, String> {
+    fn checks(&self) -> Result<Vec<Preparation>, String> {
         let tree = self.tree;
         let governed = self.product.profile.is_some();
         profile(tree, self.product.profile.as_ref())?;
@@ -162,13 +184,9 @@ impl Catalog<'_> {
                 .any(|command| command.first().is_some_and(|program| program == "cargo"))
                 .then(|| super::environment::cargo(self.root))
                 .transpose()?;
-            let binding = Binding {
-                environment: environment.as_ref(),
-                ..self.binding
-            };
-            let world = super::world::digest(&name, &input, &commands, &binding)?;
-            checks.push(Check {
-                proof: Action { name, input, world },
+            checks.push(Preparation {
+                name,
+                input,
                 commands,
                 environment,
             });
