@@ -18,6 +18,7 @@ fn contract() -> Production {
                 .to_vec(),
             managed: vec![],
             reject: vec![],
+            bind: Default::default(),
         },
         probes: BTreeMap::from([(
             "rule://fixture/git".into(),
@@ -87,6 +88,38 @@ fn platform() {
     assert!(held.start(root.path()).is_err());
     held.probes.clear();
     assert!(held.digest().is_err());
+}
+
+#[test]
+fn bound() {
+    let mut held = contract();
+    let original = held.digest().unwrap();
+    held.environment.bind.insert(
+        "WRAPPER".into(),
+        plumb::config::Binding::Tool {
+            tool: "missing-wrapper".into(),
+        },
+    );
+    assert!(
+        held.digest()
+            .unwrap_err()
+            .contains("requires a probe for bound tool")
+    );
+    held.environment.bind.insert(
+        "WRAPPER".into(),
+        plumb::config::Binding::Tool { tool: "git".into() },
+    );
+    assert_ne!(original, held.digest().unwrap());
+    let root = tempfile::tempdir().unwrap();
+    let artifact = root.path().join("artifact");
+    std::fs::write(&artifact, "artifact").unwrap();
+    let producer = held.start(root.path()).unwrap();
+    let receipt = producer.finish(&artifact).unwrap();
+    held.verify(&receipt).unwrap();
+    held.environment
+        .bind
+        .insert("MODE".into(), plumb::config::Binding::Value("0".into()));
+    assert!(held.verify(&receipt).is_err());
 }
 
 #[test]

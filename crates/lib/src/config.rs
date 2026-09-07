@@ -4,7 +4,8 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub use crate::runtime::environment::{Contract, Environment};
+pub use crate::runtime::cache::Cache;
+pub use crate::runtime::environment::{Binding, Contract, Environment};
 pub use crate::runtime::execution::{Execution, Tool};
 pub use plumb_macro::Cascade;
 

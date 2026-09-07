@@ -19,6 +19,7 @@ fn execution(root: &std::path::Path, program: &str, mode: Option<&str>) -> Execu
         .to_vec(),
         managed: vec![],
         reject: vec![],
+        bind: Default::default(),
     }
     .capture(values)
     .expect("environment");

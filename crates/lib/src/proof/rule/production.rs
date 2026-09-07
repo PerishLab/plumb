@@ -43,10 +43,19 @@ impl Production {
         if self.probes.is_empty() || self.probes.keys().any(|name| name.is_empty()) {
             return Err("production requires named probe rules".into());
         }
-        self.probes
+        let selected = self
+            .probes
             .iter()
             .map(|(name, rules)| Ok((name.as_str(), Probe::select(rules, &self.platform)?)))
-            .collect()
+            .collect::<Result<BTreeMap<_, _>, String>>()?;
+        for binding in self.environment.bind.values() {
+            if let crate::config::Binding::Tool { tool } = binding
+                && !selected.values().any(|probe| probe.argv[0] == *tool)
+            {
+                return Err(format!("production requires a probe for bound tool {tool}"));
+            }
+        }
+        Ok(selected)
     }
 
     pub fn digest(&self) -> Result<String, String> {

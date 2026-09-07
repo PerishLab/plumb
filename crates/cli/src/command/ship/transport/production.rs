@@ -110,6 +110,7 @@ fn implementation() -> String {
         include_str!("../../../../../lib/src/proof/rule/probe.rs"),
         include_str!("../../../../../lib/src/proof/rule/process.rs"),
         include_str!("../../../../../lib/src/runtime/environment.rs"),
+        include_str!("../../../../../lib/src/runtime/cache.rs"),
         include_str!("../../../../../lib/src/runtime/execution.rs"),
         include_str!("../../../../../lib/src/runtime/process.rs"),
     ] {

@@ -86,6 +86,7 @@ impl Workspace {
         execution: Option<&plumb::config::Execution>,
     ) -> Result<BTreeMap<String, PathBuf>, String> {
         let expected = release(input.version)?;
+        let cache = crate::cargo::cache(execution)?;
         let mut found = BTreeMap::new();
         for binary in &spec.binaries {
             let packages = self
@@ -120,6 +121,9 @@ impl Workspace {
                 None => crate::cargo::command(),
             };
             crate::cargo::configure(&mut command);
+            if let Some(cache) = &cache {
+                cache.apply(&mut command);
+            }
             command
                 .arg(if msvc { "rustc" } else { "build" })
                 .args([
@@ -172,6 +176,9 @@ impl Workspace {
                 return Err(format!("built binary is absent: {}", path.display()));
             }
             found.insert(binary.clone(), path);
+        }
+        if let Some(cache) = cache {
+            cache.finish()?;
         }
         Ok(found)
     }

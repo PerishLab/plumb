@@ -9,10 +9,31 @@ pub struct Contract {
     pub inherit: Vec<String>,
     pub managed: Vec<String>,
     pub reject: Vec<String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub bind: BTreeMap<String, Binding>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(untagged, deny_unknown_fields)]
+pub enum Binding {
+    Value(String),
+    Tool { tool: String },
 }
 
 #[derive(Serialize)]
-pub struct Environment(BTreeMap<String, String>);
+pub struct Environment {
+    values: BTreeMap<String, String>,
+    pub(crate) tools: BTreeMap<String, String>,
+}
+
+impl Binding {
+    fn text(&self) -> &str {
+        match self {
+            Self::Value(value) => value,
+            Self::Tool { tool } => tool,
+        }
+    }
+}
 
 impl Contract {
     pub fn capture(
@@ -20,9 +41,25 @@ impl Contract {
         values: impl IntoIterator<Item = (OsString, OsString)>,
     ) -> Result<Environment, String> {
         self.validate()?;
-        let mut held = BTreeMap::new();
+        let mut held = self
+            .bind
+            .iter()
+            .map(|(key, value)| (key.clone(), value.text().to_string()))
+            .collect::<BTreeMap<_, _>>();
         for (key, value) in values {
             let Some(key) = key.to_str() else { continue };
+            if let Some(binding) = self.bind.get(key) {
+                let value = value
+                    .into_string()
+                    .map_err(|_| format!("execution input {key} is not Unicode"))?;
+                if matches!(binding, Binding::Value(expected) if expected != &value) {
+                    return Err(format!(
+                        "execution input {key} differs from its bound value"
+                    ));
+                }
+                held.insert(key.to_string(), value);
+                continue;
+            }
             if self.managed.iter().any(|pattern| matches(pattern, key)) {
                 continue;
             }
@@ -37,10 +74,39 @@ impl Contract {
                 ));
             }
         }
-        Ok(Environment(held))
+        let tools = self
+            .bind
+            .iter()
+            .filter_map(|(key, value)| match value {
+                Binding::Tool { tool } => Some((key.clone(), tool.clone())),
+                _ => None,
+            })
+            .collect();
+        Ok(Environment {
+            values: held,
+            tools,
+        })
     }
 
     fn validate(&self) -> Result<(), String> {
+        for (key, binding) in &self.bind {
+            if !token(key)
+                || self.inherit.contains(key)
+                || self.managed.iter().any(|pattern| matches(pattern, key))
+            {
+                return Err(format!("invalid bound execution input {key}"));
+            }
+            if let Binding::Tool { tool } = binding
+                && (tool.is_empty()
+                    || !tool
+                        .bytes()
+                        .all(|byte| byte.is_ascii_alphanumeric() || b"_.-".contains(&byte)))
+            {
+                return Err(format!(
+                    "bound execution tool for {key} must be a program name"
+                ));
+            }
+        }
         for name in &self.inherit {
             if !token(name) || self.managed.iter().any(|pattern| matches(pattern, name)) {
                 return Err(format!("invalid inherited execution input {name}"));
@@ -57,15 +123,15 @@ impl Contract {
 
 impl Environment {
     pub(crate) fn evidence(&self) -> BTreeMap<&str, &str> {
-        self.0
+        self.values
             .iter()
             .filter(|(key, _)| key.as_str() != "PATH")
-            .map(|(key, value)| (key.as_str(), value.as_str()))
+            .map(|(key, value)| (key.as_str(), self.tools.get(key).unwrap_or(value).as_str()))
             .collect()
     }
 
     pub fn get(&self, key: &str) -> Option<&str> {
-        self.0.get(key).map(String::as_str)
+        self.values.get(key).map(String::as_str)
     }
 
     pub fn apply(&self, command: &mut Command) {
@@ -73,7 +139,7 @@ impl Environment {
             .get_envs()
             .map(|(key, value)| (key.to_os_string(), value.map(OsString::from)))
             .collect::<Vec<_>>();
-        command.env_clear().envs(&self.0);
+        command.env_clear().envs(&self.values);
         for (key, value) in overrides {
             match value {
                 Some(value) => {

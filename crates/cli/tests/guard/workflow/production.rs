@@ -21,6 +21,7 @@ fn contract() -> Production {
             inherit: vec!["PATH".into()],
             managed: vec![],
             reject: vec![],
+            bind: Default::default(),
         },
         probes: BTreeMap::from([(
             "rule://fixture/cargo".into(),

@@ -137,3 +137,41 @@ fn contract() {
         .is_err()
     );
 }
+
+#[test]
+fn bound() {
+    let contract: config::Contract = toml::from_str(
+        "inherit=[]\nmanaged=[]\nreject=['BUILD_*']\n[bind]\nBUILD_INCREMENTAL='0'\n",
+    )
+    .unwrap();
+    assert_eq!(
+        contract.capture([]).unwrap().get("BUILD_INCREMENTAL"),
+        Some("0")
+    );
+    assert!(
+        contract
+            .capture([("BUILD_INCREMENTAL".into(), "0".into())])
+            .is_ok()
+    );
+    let error = contract
+        .capture([("BUILD_INCREMENTAL".into(), "private-value".into())])
+        .err()
+        .unwrap();
+    assert!(error.contains("BUILD_INCREMENTAL"));
+    assert!(!error.contains("private-value"));
+    for text in [
+        "inherit=['X']\nmanaged=[]\nreject=[]\n[bind]\nX='0'",
+        "inherit=[]\nmanaged=['X*']\nreject=[]\n[bind]\nX='0'",
+        "inherit=[]\nmanaged=[]\nreject=[]\n[bind]\nX={tool='/bin/tool'}",
+        "inherit=[]\nmanaged=[]\nreject=[]\n[bind]\nX={tool=''}",
+    ] {
+        let contract: config::Contract = toml::from_str(text).unwrap();
+        assert!(contract.capture([]).is_err(), "{text}");
+    }
+    assert!(
+        toml::from_str::<config::Contract>(
+            "inherit=[]\nmanaged=[]\nreject=[]\n[bind]\nX={tool='tool', arbitrary='bad'}"
+        )
+        .is_err()
+    );
+}

@@ -123,3 +123,42 @@ fn isolated() {
     success(&run(second.path(), home.path()));
     assert_eq!(seats(home.path()).len(), 2);
 }
+
+#[test]
+#[ignore = "explicit integration with the canonical image's exact sccache binary"]
+fn compiler() {
+    let fixture = fixture();
+    let root = fixture.path();
+    let workflow = format!(
+        "{}\n[execution.cargo.bind]\nRUSTC_WRAPPER={{tool='sccache'}}\nCARGO_INCREMENTAL='0'\n",
+        include_str!("../../../../rules/workflow.toml")
+    );
+    let version = Command::new("sccache").arg("--version").output().unwrap();
+    assert!(version.status.success());
+    let seat = format!(
+        "[member]\n[[member.entry]]\nname='compiler'\n[[member.entry.probe]]\nargv=['sccache','--version']\nstdout={:?}\n",
+        String::from_utf8(version.stdout).unwrap()
+    );
+    std::fs::write(root.join("plumb.toml"), "[workflow.hash.guard]\nrust=['Cargo.toml','Cargo.lock','src']\n[[layout.file]]\nname=['Cargo.toml']\nrule=['rule://seat/compiler']\n").unwrap();
+    Repo::git(root, &["add", "plumb.toml"]);
+    let home = support::depot(&[
+        ("rules/workflow.toml", &workflow),
+        ("rules/seat.toml", &seat),
+    ]);
+    let first = run(root, home.path());
+    success(&first);
+    assert!(home.path().join("cache/compiler").is_dir());
+    let next = run(root, home.path());
+    success(&next);
+    assert_eq!(first.stdout, next.stdout);
+    assert!(!String::from_utf8_lossy(&next.stderr).contains("guard guard/rust"));
+    let refused = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["guard", ".", "--json"])
+        .current_dir(root)
+        .env("PLUMB_HOME", home.path())
+        .env("RUSTC_WRAPPER", "/unapproved/sccache")
+        .output()
+        .unwrap();
+    assert!(!refused.status.success());
+    assert!(String::from_utf8_lossy(&refused.stderr).contains("differs from its resolved tool"));
+}

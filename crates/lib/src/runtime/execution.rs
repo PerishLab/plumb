@@ -25,11 +25,19 @@ impl Execution {
             .canonicalize()
             .map_err(|error| format!("cannot resolve execution root: {error}"))?;
         let mut tools = BTreeMap::new();
-        for program in programs {
+        for program in programs.iter().chain(environment.tools.values()) {
             let path = which::which_in(program, environment.get("PATH"), &root)
                 .map_err(|error| format!("cannot resolve tool {program}: {error}"))?;
             let digest = fingerprint(&path)?;
             tools.insert(program.clone(), Tool { path, digest });
+        }
+        for (key, program) in &environment.tools {
+            let supplied = environment.get(key).unwrap_or(program);
+            if supplied != program && Path::new(supplied) != tools[program].path {
+                return Err(format!(
+                    "execution input {key} differs from its resolved tool"
+                ));
+            }
         }
         Ok(Self {
             environment,
@@ -60,6 +68,9 @@ impl Execution {
             .ok_or_else(|| format!("execution has no resolved tool {program}"))?;
         let mut command = crate::config::detached(&tool.path);
         self.environment.apply(&mut command);
+        for (key, program) in &self.environment.tools {
+            command.env(key, &self.tools[program].path);
+        }
         command.current_dir(&self.root);
         Ok(command)
     }

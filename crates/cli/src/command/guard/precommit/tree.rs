@@ -177,6 +177,14 @@ pub(super) fn execute(
             &context.environment,
         )?;
     }
+    let compiler = if program == "cargo" {
+        crate::cargo::cache(context)?
+    } else {
+        None
+    };
+    if let Some(compiler) = &compiler {
+        compiler.apply(&mut command);
+    }
     let depot = plumb::depot::root(&PathBuf::new()).ok();
     command
         .args(args)
@@ -200,6 +208,9 @@ pub(super) fn execute(
         .status()
         .map_err(|error| format!("cannot run {}: {error}", argv.join(" ")))?;
     if status.success() {
+        if let Some(compiler) = compiler {
+            compiler.finish()?;
+        }
         Ok(())
     } else {
         Err(format!("{} failed with {status}", argv.join(" ")))

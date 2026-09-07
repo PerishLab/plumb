@@ -14,6 +14,7 @@ fn execution(root: &Path, paths: &[&Path]) -> Result<Execution, String> {
         inherit: vec!["PATH".into()],
         managed: vec![],
         reject: vec![],
+        bind: Default::default(),
     }
     .capture([("PATH".into(), path)])?;
     Execution::new(environment, &["probe".into()], root)
@@ -103,5 +104,48 @@ fn absent() {
             .err()
             .unwrap()
             .contains("cannot resolve tool probe")
+    );
+}
+
+#[test]
+fn bindings() {
+    let root = tempfile::tempdir().unwrap();
+    tool(root.path(), "#!/bin/sh\nprintf '%s' \"$WRAPPER\"\n");
+    let contract: Contract = toml::from_str("inherit=['PATH']\nmanaged=[]\nreject=['WRAPPER']\n[bind]\nWRAPPER={tool='probe'}\nINCREMENTAL='0'\n").unwrap();
+    let capture = |wrapper: &str| {
+        contract
+            .capture([
+                ("PATH".into(), root.path().as_os_str().to_owned()),
+                ("WRAPPER".into(), wrapper.into()),
+            ])
+            .unwrap()
+    };
+    let first = Execution::new(capture("probe"), &[], root.path()).unwrap();
+    let path = root.path().join("probe");
+    let second = Execution::new(capture(path.to_str().unwrap()), &[], root.path()).unwrap();
+    assert_eq!(first.evidence().unwrap(), second.evidence().unwrap());
+    assert_eq!(first.imprint().unwrap(), second.imprint().unwrap());
+    let command = first.command("probe").unwrap();
+    assert!(
+        command
+            .get_envs()
+            .any(|(key, value)| key == "INCREMENTAL" && value == Some(std::ffi::OsStr::new("0")))
+    );
+    let output = first.output(&["probe".into()]).unwrap();
+    assert!(output.status.success());
+    assert_eq!(output.stdout, path.to_str().unwrap().as_bytes());
+    assert!(
+        Execution::new(capture("/private/probe"), &[], root.path())
+            .err()
+            .unwrap()
+            .contains("differs from its resolved tool")
+    );
+    tool(root.path(), "#!/bin/sh\necho changed\n");
+    assert!(
+        first
+            .command("probe")
+            .err()
+            .unwrap()
+            .contains("changed before execution")
     );
 }

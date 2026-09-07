@@ -1,3 +1,4 @@
+mod cache;
 mod cancel;
 mod context;
 #[cfg(unix)]

@@ -113,3 +113,31 @@ fn external() {
     assert!(String::from_utf8_lossy(&output.stderr).contains("unbound host configuration"));
     assert!(!String::from_utf8_lossy(&output.stderr).contains("guard guard/rust"));
 }
+
+#[test]
+fn node() {
+    let rules: toml::Value =
+        toml::from_str(include_str!("../../../../rules/workflow.toml")).unwrap();
+    let contract: plumb::config::Contract = rules["execution"]["pnpm"].clone().try_into().unwrap();
+    let clean = contract.capture([]).unwrap();
+    let metadata = contract
+        .capture([("NODE_VERSION".into(), "24.18.0".into())])
+        .unwrap();
+    assert_eq!(
+        serde_json::to_string(&clean).unwrap(),
+        serde_json::to_string(&metadata).unwrap()
+    );
+    for key in [
+        "NODE_OPTIONS",
+        "NODE_PATH",
+        "NODE_ENV",
+        "NODE_TLS_REJECT_UNAUTHORIZED",
+    ] {
+        let refused = contract
+            .capture([(key.into(), "private-override".into())])
+            .err()
+            .unwrap();
+        assert!(refused.contains(key));
+        assert!(!refused.contains("private-override"));
+    }
+}

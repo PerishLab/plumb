@@ -28,6 +28,26 @@ fn configured(registry: &str, index: &str) -> Command {
     command
 }
 
+pub fn cache(
+    execution: Option<&plumb::config::Execution>,
+) -> Result<Option<plumb::config::Cache<'_>>, String> {
+    let Some(execution) = execution else {
+        return Ok(None);
+    };
+    let directory = execution
+        .environment
+        .get("SCCACHE_DIR")
+        .map(PathBuf::from)
+        .or_else(|| {
+            plumb::config::value("PLUMB_HOME")
+                .map(PathBuf::from)
+                .or_else(|| plumb::config::data("plumb"))
+                .map(|home| home.join("cache/compiler"))
+        })
+        .ok_or("compiler cache has no managed home")?;
+    plumb::config::Cache::start(execution, &directory)
+}
+
 pub(super) fn inspect(root: &Path, environment: &Environment) -> Result<(), String> {
     let home = environment
         .get("CARGO_HOME")
