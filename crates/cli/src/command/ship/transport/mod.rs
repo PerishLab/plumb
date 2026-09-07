@@ -2,6 +2,7 @@ mod binding;
 mod execute;
 mod resolve;
 mod seal;
+mod sources;
 mod support;
 
 pub(super) fn execute(request: &str) -> Result<String, String> {

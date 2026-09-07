@@ -231,8 +231,7 @@ fn singular() {
 #[test]
 fn inputs() {
     let held = transport();
-    assert!(held.contains(":(glob)**/Cargo.toml"), "{held}");
-    assert!(held.contains("seat.join(\"src\")"), "{held}");
+    assert!(held.contains("super::sources::read(&spec.root)?"), "{held}");
     assert!(held.contains("spec.depends.get(\"binary\")"), "{held}");
     assert!(
         held.contains("Cargo.toml#/workspace/package/version"),

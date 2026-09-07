@@ -6,3 +6,4 @@ mod held;
 mod marker;
 mod profile;
 mod promotion;
+mod resources;
