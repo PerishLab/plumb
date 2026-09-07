@@ -172,7 +172,7 @@ fn guarded(root: &Path, cut: &Path) {
     std::fs::write(cut, head).expect("guarded cut");
 }
 
-fn proof(repository: &str, tree: &str) -> String {
+pub(super) fn proof(repository: &str, tree: &str) -> String {
     #[derive(Serialize)]
     struct Claim<'a> {
         schema: &'a str,

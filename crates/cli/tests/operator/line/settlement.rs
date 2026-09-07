@@ -18,6 +18,9 @@ fn digest(text: &str) -> String {
 pub(super) fn seed(root: &Path) {
     let bin = root.join("bin");
     std::fs::create_dir(&bin).expect("bin");
+    let proof = super::preparation::proof("test/probe", &"e".repeat(40));
+    std::fs::write(root.join("proof"), format!("Plumb-Guard-Proof: {proof}\n"))
+        .expect("main proof");
     std::fs::write(
         root.join("plumb.toml"),
         r#"[release]
@@ -42,6 +45,7 @@ targets = ["x86_64-unknown-linux-gnu"]
         &bin.join("git"),
         r#"#!/bin/sh
 set -eu
+if [ "${1:-}" = "-C" ]; then shift 2; fi
 printf 'git %s\n' "$*" >> "$COURT_CALLS"
 case "$*" in
   "rev-parse --show-toplevel") printf '%s\n' "$COURT_ROOT" ;;
@@ -52,22 +56,31 @@ case "$*" in
   "rev-parse origin/main^{commit}") printf '%s\n' "cccccccccccccccccccccccccccccccccccccccc" ;;
   "rev-parse origin/main^{tree}") printf '%s\n' "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" ;;
   "rev-parse cccccccccccccccccccccccccccccccccccccccc^{tree}") printf '%s\n' "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" ;;
+  "rev-parse dddddddddddddddddddddddddddddddddddddddd^1") printf '%s\n' "cccccccccccccccccccccccccccccccccccccccc" ;;
+  "show -s --format=%B cccccccccccccccccccccccccccccccccccccccc") cat "$COURT_ROOT/proof" ;;
+  "show -s --format=%B dddddddddddddddddddddddddddddddddddddddd")
+    if [ -f "$COURT_ROOT/unproved" ] && [ ! -f "$COURT_ROOT/projected" ]; then
+      printf '%s\n' 'Old rejoin without proof'
+    else
+      cat "$COURT_ROOT/proof"
+    fi
+    ;;
   "rev-parse aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa^{tree}") printf '%s\n' "ffffffffffffffffffffffffffffffffffffffff" ;;
   "rev-parse dddddddddddddddddddddddddddddddddddddddd^{tree}")
-    if [ -f "${COURT_STALE:-}" ]; then
+    if [ -f "${COURT_STALE:-}" ] && [ ! -f "$COURT_ROOT/projected" ]; then
       printf '%s\n' "ffffffffffffffffffffffffffffffffffffffff"
     else
       printf '%s\n' "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
     fi
     ;;
   "rev-list --parents --max-count=1 dddddddddddddddddddddddddddddddddddddddd")
-    if [ -f "${COURT_STALE:-}" ]; then
+    if [ -f "${COURT_STALE:-}" ] && [ ! -f "$COURT_ROOT/projected" ]; then
       printf '%s\n' "dddddddddddddddddddddddddddddddddddddddd aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     else
       printf '%s\n' "dddddddddddddddddddddddddddddddddddddddd cccccccccccccccccccccccccccccccccccccccc bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     fi
     ;;
-  "commit-tree "*) printf '%s\n' "dddddddddddddddddddddddddddddddddddddddd" ;;
+  "commit-tree "*) touch "$COURT_ROOT/projected"; printf '%s\n' "dddddddddddddddddddddddddddddddddddddddd" ;;
   "diff-tree --quiet "*) ;;
   "push --force-with-lease origin "*) ;;
   "merge-base --is-ancestor aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa origin/main")
@@ -133,7 +146,7 @@ esac
 fn retains() {
     let fixture = tempfile::tempdir().expect("fixture");
     let settled = fixture.path().join("settled");
-    let (forge, forge_calls) = serve(Court::Rejoin(settled.clone()), 7);
+    let (forge, forge_calls) = serve(Court::Rejoin(settled.clone()), 8);
     seed(fixture.path());
     let calls = fixture.path().join("calls");
     let path = format!(
@@ -175,6 +188,15 @@ fn retains() {
         "the pull must stand on the verified topology-only commit: {calls}"
     );
     let held = forge_calls.lock().expect("forge calls");
+    let attestation = held
+        .iter()
+        .position(|call| call.contains("/statuses/"))
+        .expect("inherited proof status");
+    let merging = held
+        .iter()
+        .position(|call| call.contains("/pulls/12/merge"))
+        .expect("merge");
+    assert!(attestation < merging);
     assert!(
         !held
             .iter()
@@ -195,7 +217,7 @@ fn resumes() {
     let settled = fixture.path().join("settled");
     let resume = fixture.path().join("resume");
     std::fs::write(&resume, "open pull already proved\n").expect("resume marker");
-    let (forge, held) = serve(Court::Rejoin(settled.clone()), 9);
+    let (forge, held) = serve(Court::Rejoin(settled.clone()), 10);
     seed(fixture.path());
     let calls = fixture.path().join("calls");
     let path = format!(

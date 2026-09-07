@@ -171,11 +171,13 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
         Court::Rejoin(_) if request.contains("POST ") && request.ends_with("/pulls HTTP/1.1") => {
             ("201 Created", json!({"number": 12}))
         }
+        Court::Rejoin(settled) if request.contains("POST ") && request.contains("/statuses/") => {
+            attest(settled, body)
+        }
         Court::Rejoin(settled)
             if request.contains("POST ") && request.contains("/pulls/12/merge ") =>
         {
-            std::fs::write(settled, "settled").expect("settled marker");
-            ("204 No Content", Value::Null)
+            merge(settled)
         }
         Court::Rejoin(_) if request.contains("GET ") && request.contains("/commits/") => (
             "200 OK",
@@ -199,6 +201,28 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
         }
         _ => ("500 Internal Server Error", json!({"message": request})),
     }
+}
+
+fn attest(settled: &Path, body: Value) -> (&'static str, Value) {
+    if body["state"] != "success" || body["context"] != "guard / guard (pull_request)" {
+        return (
+            "422 Unprocessable Entity",
+            json!({"message":"invalid Guard status"}),
+        );
+    }
+    std::fs::write(settled.with_file_name("attested"), "Guard proof").expect("attested");
+    ("201 Created", body)
+}
+
+fn merge(settled: &Path) -> (&'static str, Value) {
+    if !settled.with_file_name("attested").is_file() {
+        return (
+            "403 Forbidden",
+            json!({"message":"required Guard status is missing"}),
+        );
+    }
+    std::fs::write(settled, "settled").expect("settled marker");
+    ("204 No Content", Value::Null)
 }
 
 fn release(root: &Path, name: &str) -> (&'static str, Value) {

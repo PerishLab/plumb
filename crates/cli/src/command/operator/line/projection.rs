@@ -16,7 +16,12 @@ pub fn make(
         "resolve main tree for rejoin",
         command(root, &["rev-parse", "origin/main^{tree}"])?,
     )?;
-    let message = format!("Rejoin {version}");
+    let proof = plumb::guard::commit(root, &base)?;
+    let message = format!(
+        "Rejoin {version}\n\n{} {}",
+        plumb::guard::TRAILER,
+        proof.encode()?
+    );
     let head = read(
         "make topology-only rejoin",
         command(
@@ -38,12 +43,26 @@ pub fn make(
         "verify topology-only rejoin tree",
         command(root, &["diff-tree", "--quiet", &base, &head])?,
     )?;
+    proved(root, &head)?;
     let refspec = format!("{head}:refs/heads/{projection}");
     success(
         "push topology-only rejoin",
         command(root, &["push", "--force-with-lease", "origin", &refspec])?,
     )?;
     Ok(head)
+}
+
+pub fn proved(root: &Path, head: &str) -> Result<(), String> {
+    let base = read(
+        "resolve rejoin first parent",
+        command(root, &["rev-parse", &format!("{head}^1")])?,
+    )?;
+    let inherited = plumb::guard::commit(root, &base)?;
+    let carried = plumb::guard::commit(root, head)?;
+    if inherited != carried {
+        return Err("rejoin does not carry its main parent's exact Guard proof".into());
+    }
+    Ok(())
 }
 
 fn command(root: &Path, args: &[&str]) -> Result<Output, String> {

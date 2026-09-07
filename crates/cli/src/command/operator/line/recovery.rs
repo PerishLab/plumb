@@ -48,7 +48,11 @@ pub fn head(root: &Path, published: &str, projection: &str) -> Result<Head, Stri
         ));
     }
     if first == base {
-        return Ok(Head::Current(head));
+        return Ok(if super::projection::proved(root, &head).is_ok() {
+            Head::Current(head)
+        } else {
+            Head::Stale
+        });
     }
     success(
         "prove the projected main remains in current main",

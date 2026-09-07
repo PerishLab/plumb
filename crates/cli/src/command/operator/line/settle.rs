@@ -108,6 +108,7 @@ fn joined(course: &mut Course, client: &Client, held: Join<'_>) -> Result<(), St
                     ),
                     || Ok(()),
                 )?;
+                course.step("attest the inherited main tree Guard proof", || Ok(()))?;
                 course.step("fast-forward the topology-only pull", || Ok(()))?;
                 return Ok(());
             }
@@ -129,9 +130,18 @@ fn joined(course: &mut Course, client: &Client, held: Join<'_>) -> Result<(), St
         }
     };
     if course.dry() {
+        course.step("attest the inherited main tree Guard proof", || Ok(()))?;
         course.step("fast-forward the existing topology-only pull", || Ok(()))?;
         return Ok(());
     }
+    course.step("attest the inherited main tree Guard proof", || {
+        super::projection::proved(held.root, &head)?;
+        client.mark(
+            &head,
+            "guard / guard (pull_request)",
+            "Plumb verified rejoin preserves main's guarded tree",
+        )
+    })?;
     let said = match &pull {
         Some(pull) => format!("fast-forward topology-only pull #{} at {head}", pull.number),
         None => format!("fast-forward the topology-only pull at {head}"),
@@ -165,6 +175,7 @@ fn resume(
             );
             let head = course.step(made, || project(held, projection))?;
             if course.dry() {
+                course.step("attest the inherited main tree Guard proof", || Ok(()))?;
                 course.step("fast-forward the retargeted topology-only pull", || Ok(()))?;
                 return Ok((None, pull));
             }
