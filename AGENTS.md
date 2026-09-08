@@ -94,6 +94,9 @@ answers for.
 - Version settlement consumes the stable marker's complete Ship evidence and
   preserves main's tree while joining ancestry. The next line requires that
   delivered baseline in main; mutable Depot channel pointers do not own this gate.
+- Version picks preflight their configuration before changing history. A retry
+  replays the requested sources to verify the retained local delta, then proves
+  and conditionally pushes it; unrelated work is never adopted as recovery.
 - Depot generations remain immutable and addressable. Configuration, changelog,
   skill, channel, manager, and provider bindings may move their latest pointer,
   but every movement names the release marker and uses conditional readback.
