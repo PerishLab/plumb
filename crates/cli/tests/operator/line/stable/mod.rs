@@ -1,3 +1,4 @@
+mod configuration;
 mod expanding;
 mod flight;
 mod picks;
