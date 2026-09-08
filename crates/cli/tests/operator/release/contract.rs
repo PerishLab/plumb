@@ -124,11 +124,11 @@ fn versioned() {
         "Plumb must not bind controller configuration to the product marker: {trigger}"
     );
     assert!(
-        trigger.contains("let configuration = plumb::version!(\"PLUMB\").to_string()"),
+        trigger.contains("let configuration = plumb::depot::rules()?"),
         "every ship must use the dispatching Plumb atom's configuration: {trigger}"
     );
     assert!(
-        trigger.contains("plumb::version!(\"PLUMB\").to_string()"),
+        trigger.contains("\"plumb\": plumb::version!(\"PLUMB\")"),
         "{trigger}"
     );
     let workflow = text(".forgejo/workflows/ship.yml");
