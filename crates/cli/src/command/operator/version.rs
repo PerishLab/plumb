@@ -113,7 +113,7 @@ impl Tree {
     }
 
     fn prepare(&self, version: &str) -> Result<(), String> {
-        let spec = Spec::controller(&self.seat)?;
+        let spec = Spec::resolve(&self.seat)?;
         adaptor::registry::registry(&spec).prepare(version)?;
         adaptor::module::module(&spec).prepare(version)?;
         adaptor::chart::chart(&spec).prepare(version)?;

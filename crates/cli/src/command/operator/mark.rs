@@ -18,7 +18,7 @@ pub(super) fn stamp(raw: &str, dry: bool) -> Result<String, String> {
             .protected(&name, "frozen")
             .map_err(|error| format!("stable marker {held} requires a frozen {name}: {error}"))?;
     }
-    let spec = crate::shape::release::Spec::controller(&root)?;
+    let spec = crate::shape::release::Spec::resolve(&root)?;
     let seat = point(&root);
     let head = seat.prove(&name)?;
     seat.datum(&base, &head)?;

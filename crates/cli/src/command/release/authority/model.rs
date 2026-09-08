@@ -145,7 +145,7 @@ impl Model {
         let root = PathBuf::from(&input.target.root)
             .canonicalize()
             .map_err(|error| format!("cannot resolve {}: {error}", input.target.root))?;
-        let spec = crate::shape::release::Spec::controller(&root)?;
+        let spec = crate::shape::release::Spec::resolve(&root)?;
         let domain = spec
             .authority
             .strip_prefix("https://")
@@ -269,7 +269,7 @@ impl Model {
         let root = PathBuf::from(&input.target.root)
             .canonicalize()
             .map_err(|error| format!("cannot resolve {}: {error}", input.target.root))?;
-        let spec = crate::shape::release::Spec::controller(&root)?;
+        let spec = crate::shape::release::Spec::resolve(&root)?;
         let route = spec
             .route
             .ok_or_else(|| format!("product {} declares no depot route", spec.product))?;

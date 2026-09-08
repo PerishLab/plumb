@@ -162,7 +162,7 @@ impl Annotation {
             if schema != "plumb.release-marker/v4" || self.profile.is_some() {
                 return Err("release marker has incomplete configuration identity".into());
             }
-            let spec = Spec::controller(root)?;
+            let spec = Spec::resolve(root)?;
             if spec.product != self.product || spec.profile.is_some() {
                 return Err("release marker omitted its Product Profile binding".into());
             }

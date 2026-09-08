@@ -71,4 +71,53 @@ fn local() {
     let error = String::from_utf8_lossy(&verified.stderr);
     assert!(!error.contains("plumb depot seat is unreadable"), "{error}");
     assert!(error.contains("has no valid guard proof"), "{error}");
+
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "remote",
+        "set-url",
+        "origin",
+        "ssh://git@git.perish.top/PerishLab/plumb.git",
+    ]));
+    let governed = fixture
+        .command()
+        .current_dir(fixture.root)
+        .env("PLUMB_HOME", blind.path())
+        .args(["release", "verify", "--marker", "v1.2.0-beta.1", "--held"])
+        .output()
+        .expect("governed release verify");
+    assert!(!governed.status.success());
+    let error = String::from_utf8_lossy(&governed.stderr);
+    assert!(
+        error.contains("product identity git.perish.top/PerishLab/plumb is absent"),
+        "{error}"
+    );
+
+    super::profile::catalogued(blind.path(), "central", None, "PerishLab/plumb");
+    let marker = "v1.2.0-beta.2";
+    let annotation = serde_json::json!({
+        "schema": "plumb.release-marker/v4",
+        "product": "plumb",
+        "marker": marker,
+        "datum": "0".repeat(64),
+    });
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "tag",
+        "-a",
+        marker,
+        "-m",
+        &annotation.to_string(),
+    ]));
+    let unbound = fixture
+        .command()
+        .current_dir(fixture.root)
+        .env("PLUMB_HOME", blind.path())
+        .args(["release", "verify", "--marker", marker, "--held"])
+        .output()
+        .expect("unbound release verify");
+    assert!(!unbound.status.success());
+    let error = String::from_utf8_lossy(&unbound.stderr);
+    assert!(
+        error.contains("omitted its Product Profile binding"),
+        "{error}"
+    );
 }
