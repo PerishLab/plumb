@@ -37,7 +37,7 @@ impl Seat<'_> {
             command(self.0, ["rev-parse", &format!("{}^", commits[0])])?,
         )?;
         self.verify(&base, head, sources)?;
-        plumb::guard::current(self.0, head)?;
+        plumb::guard::commit(self.0, head)?;
         Ok(true)
     }
 

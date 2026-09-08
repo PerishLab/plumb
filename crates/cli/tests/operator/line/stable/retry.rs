@@ -2,6 +2,67 @@ use super::{Fixture, git};
 use std::os::unix::fs::PermissionsExt as _;
 
 #[test]
+fn historical() {
+    let fixture = Fixture::new();
+    let home = super::support::depot(&[("help/version.txt", "Earlier version guidance.\n")]);
+    let root = home.path().join("configurations");
+    let pointer = root.join("metadata.json");
+    let held: plumb::depot::Pointer =
+        serde_json::from_slice(&std::fs::read(&pointer).unwrap()).unwrap();
+    let previous = root.join(&held.version);
+    let mut manifest: plumb::depot::Manifest =
+        toml::from_str(&std::fs::read_to_string(previous.join("plumb.toml")).unwrap()).unwrap();
+    manifest.metadata.version = "29990101T000001Z".into();
+    let next = root.join(&manifest.metadata.version);
+    std::fs::rename(previous, &next).unwrap();
+    std::fs::write(next.join("plumb.toml"), manifest.encode().unwrap()).unwrap();
+    std::fs::write(
+        pointer,
+        plumb::depot::Pointer::new(&manifest.metadata, "plumb")
+            .encode()
+            .unwrap(),
+    )
+    .unwrap();
+    let first = fixture
+        .command()
+        .env("PLUMB_HOME", home.path())
+        .output()
+        .unwrap();
+    assert!(
+        first.status.success(),
+        "{}",
+        String::from_utf8_lossy(&first.stderr)
+    );
+    let head = fixture.remote();
+    assert_eq!(
+        plumb::guard::commit(fixture.root.path(), &head)
+            .unwrap()
+            .depot,
+        "29990101T000001Z",
+    );
+    let repeated = fixture.command().output().unwrap();
+    assert!(
+        repeated.status.success(),
+        "{}",
+        String::from_utf8_lossy(&repeated.stderr)
+    );
+    assert!(String::from_utf8_lossy(&repeated.stdout).contains("nothing moved"));
+    assert!(!String::from_utf8_lossy(&repeated.stderr).contains("guard guard/"));
+    assert_eq!(fixture.remote(), head);
+}
+
+#[test]
+fn unproved() {
+    let fixture = Fixture::new();
+    fixture.picked();
+    git(
+        fixture.root.path(),
+        &["push", "origin", "HEAD:release/v1.0.0"],
+    );
+    fixture.refused("must carry exactly one Plumb-Guard-Proof:");
+}
+
+#[test]
 fn push() {
     let fixture = Fixture::new();
     let hook = fixture.bare.path().join("hooks/pre-receive");
