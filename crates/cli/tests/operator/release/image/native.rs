@@ -70,7 +70,7 @@ struct Image<'a, 'b> {
 }
 
 #[test]
-#[ignore = "explicit local Docker context and anonymous registry authentication integration"]
+#[ignore = "explicit local Docker build and native regctl archive/authentication integration"]
 fn authentication() {
     let temp = tempfile::tempdir().expect("root");
     let root = temp.path();
@@ -81,8 +81,8 @@ fn authentication() {
         tools: &tools,
     };
     fixture.seed();
-    let native = run(Command::new("sh").args(["-c", "command -v docker"]));
-    let native = String::from_utf8(native.stdout).expect("Docker path");
+    let native = run(Command::new("sh").args(["-c", "command -v regctl"]));
+    let native = String::from_utf8(native.stdout).expect("regctl path");
     let name = root
         .file_name()
         .expect("name")
@@ -104,26 +104,27 @@ fn authentication() {
     fixture.track("Containerfile");
     image.build();
     super::executable(
-        &tools.join("docker"),
+        &tools.join("regctl"),
         r#"#!/bin/sh
 set -eu
-if [ "$1" = --config ]; then
-  printf '%s\n' "$2" >> "$PLUMB_TEST_SEATS"
-fi
-case "$*" in
-  *' login '*) cat >/dev/null; exit 0 ;;
-  *' pull '*) exit 0 ;;
-  *' push '*) exit 98 ;;
-  *RepoDigests*) printf '["%s@sha256:%064d"]\n' "$PLUMB_TEST_REPOSITORY" 1; exit 0 ;;
+printf '%s\n' "$REGCTL_CONFIG" >> "$PLUMB_TEST_SEATS"
+case "$1 $2" in
+  'registry login') cat >/dev/null; exit 0 ;;
+  'image copy')
+    case "$3" in
+      ocidir:*) printf '%s' "$3" > "$PLUMB_TEST_SOURCE"; exit 0 ;;
+    esac
+    ;;
+  'image digest')
+    case "$3" in
+      127.0.0.1:1/*) exec "$PLUMB_TEST_NATIVE" image digest "$(cat "$PLUMB_TEST_SOURCE")" ;;
+    esac
+    ;;
 esac
 exec "$PLUMB_TEST_NATIVE" "$@"
 "#,
     );
-    for name in [
-        "pass",
-        "docker-credential-pass",
-        "docker-credential-secretservice",
-    ] {
+    for name in ["docker-credential-pass", "docker-credential-secretservice"] {
         super::executable(
             &tools.join(name),
             "#!/bin/sh\ntouch \"$PLUMB_TEST_HELPER\"\nexit 1\n",
@@ -137,10 +138,7 @@ exec "$PLUMB_TEST_NATIVE" "$@"
         .env("PLUMB_RELEASE_VERSION", "v1.0.0")
         .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer fixture")
         .env("PLUMB_TEST_NATIVE", native.trim())
-        .env(
-            "PLUMB_TEST_REPOSITORY",
-            image.reference.trim_end_matches(":v1.0.0"),
-        )
+        .env("PLUMB_TEST_SOURCE", root.join("source"))
         .env("PLUMB_TEST_SEATS", &seats)
         .env("PLUMB_TEST_HELPER", &invoked)
         .output()
@@ -148,10 +146,7 @@ exec "$PLUMB_TEST_NATIVE" "$@"
     assert!(!output.status.success(), "closed registry cannot exist");
     let error = String::from_utf8_lossy(&output.stderr);
     assert!(error.contains("cannot be read anonymously"), "{error}");
-    assert!(
-        !invoked.exists(),
-        "anonymous read invoked credential helper"
-    );
+    assert!(!invoked.exists(), "registry read invoked credential helper");
     let seats = std::fs::read_to_string(seats).expect("configurations");
     assert!(
         seats.lines().any(|path| path.ends_with("/anonymous")),
@@ -163,33 +158,6 @@ exec "$PLUMB_TEST_NATIVE" "$@"
             "configuration leaked: {path}"
         );
     }
-    let control = root.join("control");
-    std::fs::create_dir(&control).expect("control configuration");
-    std::fs::write(control.join("config.json"), "{}").expect("empty configuration");
-    let mut paths = vec![tools.clone()];
-    paths.extend(std::env::split_paths(
-        &std::env::var_os("PATH").expect("PATH"),
-    ));
-    let output = Command::new(native.trim())
-        .arg("--config")
-        .arg(control)
-        .args([
-            "--context",
-            "default",
-            "manifest",
-            "inspect",
-            "127.0.0.1:1/probe:absent",
-        ])
-        .env("PATH", std::env::join_paths(paths).expect("paths"))
-        .env("PLUMB_TEST_HELPER", &invoked)
-        .env_remove("DOCKER_AUTH_CONFIG")
-        .output()
-        .expect("control inspect");
-    assert!(!output.status.success());
-    assert!(
-        invoked.exists(),
-        "empty configuration did not exercise credential helper"
-    );
 }
 
 impl Image<'_, '_> {

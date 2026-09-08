@@ -11,6 +11,8 @@ mod container;
 mod context;
 #[path = "native.rs"]
 mod native;
+#[path = "registry.rs"]
+mod registry;
 
 const DOCKER: &str = "#!/bin/sh\nexit 0\n";
 const ARCHIVE: &str = "probe-x86_64-unknown-linux-gnu.tar.gz";

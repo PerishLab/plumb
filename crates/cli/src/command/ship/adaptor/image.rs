@@ -6,19 +6,14 @@ pub(in crate::command) use context::inputs;
 const LINUX: &str = "x86_64-unknown-linux-gnu";
 const PAYLOAD: &str = "uk.perish.plumb.payload";
 const REVISION: &str = "org.opencontainers.image.revision";
-use super::super::package::session::Session;
 use std::process::Command;
 
 pub struct Image<'a> {
     pub(super) spec: &'a Spec,
-    pub(super) session: Option<&'a Session>,
 }
 
 pub fn image(spec: &Spec) -> Image<'_> {
-    Image {
-        spec,
-        session: None,
-    }
+    Image { spec }
 }
 
 impl Image<'_> {
@@ -160,120 +155,7 @@ impl Image<'_> {
         Ok((seat, payload))
     }
 
-    pub fn publish(&self, version: &str, credential: &str) -> Result<String, String> {
-        let Some(oci) = &self.spec.oci else {
-            return Ok(format!("{} has no image attachment", self.spec.product));
-        };
-        let reference = reference(oci, version);
-        let publication = self.project(version, credential)?;
-        Ok(format!("published {reference} as {publication}"))
-    }
-
-    pub(super) fn project(&self, version: &str, credential: &str) -> Result<String, String> {
-        let oci = self
-            .spec
-            .oci
-            .as_ref()
-            .ok_or_else(|| format!("{} has no image attachment", self.spec.product))?;
-        let identity = crate::command::ship::attachment::Identity {
-            user: &oci.account,
-            token: crate::command::ship::attachment::credential(credential)?,
-        };
-        let session = Session::open(&self.spec.root, &oci.registry)?;
-        session.login(&oci.registry, &identity)?;
-        Image {
-            spec: self.spec,
-            session: Some(&session),
-        }
-        .transfer(version)
-    }
-
-    fn transfer(&self, version: &str) -> Result<String, String> {
-        let oci = self.spec.oci.as_ref().ok_or("image declares no registry")?;
-        let reference = reference(oci, version);
-        self.carried(&reference)?;
-        let built = self.identity(&reference)?;
-        if self.fetched(&reference)? {
-            let held = self.identity(&reference)?;
-            if held != built {
-                return Err(format!(
-                    "published image drift: {reference} carries {held} while this projection carries {built}"
-                ));
-            }
-        } else {
-            self.command(["push", &reference])?;
-        }
-        let digest = self.digest(&reference)?;
-        let published = format!("{}/{}@{digest}", oci.registry, oci.image);
-        let status = self
-            .session
-            .ok_or("image publication has no isolated session")?
-            .anonymous()
-            .current_dir(&self.spec.root)
-            .args(["manifest", "inspect", &published])
-            .stdout(std::process::Stdio::null())
-            .status()
-            .map_err(|error| format!("cannot read image anonymously: {error}"))?;
-        if !status.success() {
-            return Err("published image cannot be read anonymously".into());
-        }
-        Ok(format!(
-            "https://{}/v2/{}/manifests/{digest}",
-            oci.registry.trim_end_matches('/'),
-            oci.image
-        ))
-    }
-
-    fn fetched(&self, reference: &str) -> Result<bool, String> {
-        let output = self
-            .docker()
-            .args(["pull", reference])
-            .current_dir(&self.spec.root)
-            .output()
-            .map_err(|error| format!("cannot run docker: {error}"))?;
-        Ok(output.status.success())
-    }
-
-    pub(super) fn carried(&self, reference: &str) -> Result<String, String> {
-        let output = self
-            .docker()
-            .args([
-                "image",
-                "inspect",
-                "--format",
-                &format!("{{{{index .Config.Labels \"{}\"}}}}", self.mark()),
-                reference,
-            ])
-            .current_dir(&self.spec.root)
-            .output()
-            .map_err(|error| format!("cannot run docker: {error}"))?;
-        if !output.status.success() {
-            return Err(format!("no {reference} to read a payload from"));
-        }
-        let held = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        let width = if self.spec.binary() { 64 } else { 40 };
-        if !super::container::hex(&held, width) {
-            return Err(format!("{reference} declares no valid {}", self.mark()));
-        }
-        Ok(held)
-    }
-
-    pub(super) fn command<const N: usize>(&self, args: [&str; N]) -> Result<(), String> {
-        let status = self
-            .docker()
-            .args(args)
-            .current_dir(&self.spec.root)
-            .status()
-            .map_err(|error| format!("cannot run docker: {error}"))?;
-        if status.success() {
-            Ok(())
-        } else {
-            Err("image attachment command failed".into())
-        }
-    }
-
     pub(super) fn docker(&self) -> Command {
-        self.session
-            .map_or_else(|| Command::new("docker"), Session::command)
+        Command::new("docker")
     }
 }
