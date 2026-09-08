@@ -140,7 +140,7 @@ fn managed() -> Option<std::path::PathBuf> {
 fn floor(manifest: &Manifest) -> Vec<Finding> {
     let running = plumb::version!("PLUMB");
     if let Some(exact) = &manifest.version
-        && parse(running) != parse(exact)
+        && !plumb::depot::related(running, exact).unwrap_or(false)
     {
         return vec![Finding::new(Seed::wrong(
             &DEPOT_SCHEMA,

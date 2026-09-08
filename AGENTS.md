@@ -88,6 +88,9 @@ answers for.
   and publishes every immutable medium through one request graph. `depot`
   independently consumes the same marker and moves its mutable projections;
   neither command is a phase inside the other.
+- Version carries its dependency datum in Git commit metadata, not repository
+  files. Release binds that datum to the marker; Guard captures it for Doctor
+  without invalidating unrelated source actions. Historical tags are never rewritten.
 - Depot generations remain immutable and addressable. Configuration, changelog,
   skill, channel, manager, and provider bindings may move their latest pointer,
   but every movement names the release marker and uses conditional readback.

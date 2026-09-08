@@ -72,7 +72,12 @@ fn stage(home: &tempfile::TempDir, version: &str) -> std::path::PathBuf {
     let legacy = plumb::depot::Seat::at(&root).expect("legacy fixture");
     let release = plumb::depot::v2::Release {
         product: "plumb".into(),
-        channel: "stable".into(),
+        channel: if version.contains('-') {
+            "beta"
+        } else {
+            "stable"
+        }
+        .into(),
         version: version.into(),
         commit: "1".repeat(40),
         seal: plumb::depot::v2::Seal {
@@ -127,6 +132,17 @@ fn exact() {
         )),
         "{out}"
     );
+}
+
+#[test]
+fn related() {
+    let fixture = super::fixture();
+    let home = super::super::support::depot(&[]);
+    let version = format!("v{}-beta.1", env!("CARGO_PKG_VERSION"));
+    stage(&home, &version);
+    let out = run(fixture.path(), home.path());
+    assert!(!out.contains("cannot read installed rules"), "{out}");
+    assert!(!out.contains("belongs to Plumb"), "{out}");
 }
 
 #[test]

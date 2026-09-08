@@ -169,6 +169,7 @@ fn restore(seat: &Path, head: &str, error: String) -> String {
 }
 
 fn sealed(seat: &Path) -> Result<(), String> {
+    let datum = plumb::datum::Tree(seat).capture("")?;
     let proof = crate::command::precommit::proof(seat)?;
     let body = text(
         "read picked commit message",
@@ -176,7 +177,9 @@ fn sealed(seat: &Path) -> Result<(), String> {
     )?;
     let mut message = body
         .lines()
-        .filter(|line| !line.starts_with(plumb::guard::TRAILER))
+        .filter(|line| {
+            !line.starts_with(plumb::guard::TRAILER) && !line.starts_with(plumb::datum::TRAILER)
+        })
         .collect::<Vec<_>>()
         .join("\n")
         .trim_end()
@@ -185,6 +188,9 @@ fn sealed(seat: &Path) -> Result<(), String> {
     message.push_str(plumb::guard::TRAILER);
     message.push(' ');
     message.push_str(&proof.encode()?);
+    if let Some(datum) = datum {
+        message.push_str(&format!("\n{}", datum.trailer()?));
+    }
     success(
         "seal picked commit",
         command(seat, ["commit", "--amend", "--no-verify", "-m", &message])?,

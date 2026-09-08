@@ -121,3 +121,93 @@ fn text(root: &Path, args: &[&str]) -> String {
     );
     String::from_utf8_lossy(&output.stdout).trim().to_string()
 }
+
+#[test]
+fn metadata() {
+    let temp = tempfile::tempdir().unwrap();
+    let bare = tempfile::tempdir().unwrap();
+    let tools = temp.path().join("tools");
+    std::fs::create_dir(&tools).unwrap();
+    let fixture = Fixture {
+        root: temp.path(),
+        tools: &tools,
+    };
+    let old = seeded(&fixture, bare.path());
+    super::marker::stamp(fixture.root, "v1.2.0-beta.1", &old, true);
+    let before = shown(&fixture, "v1.2.0-beta.1");
+    let before: serde_json::Value = serde_json::from_slice(&before.stdout).unwrap();
+    let datum = plumb::datum::Git(fixture.root)
+        .legacy("v1.2.0", "HEAD")
+        .unwrap()
+        .unwrap();
+    text(fixture.root, &["rm", "-r", "--", ".plumb/releases/v1.2.0"]);
+    let tree = text(fixture.root, &["write-tree"]);
+    let message = format!(
+        "Migrate datum\n\n{}\nPlumb-Guard-Proof: {}",
+        datum.trailer().unwrap(),
+        proof(fixture.root, &tree)
+    );
+    text(fixture.root, &["commit", "-qm", &message]);
+    let commit = text(fixture.root, &["rev-parse", "HEAD"]);
+    text(
+        fixture.root,
+        &["push", "-q", "origin", "HEAD:refs/heads/release/v1.2.0"],
+    );
+    let stamped = fixture
+        .command()
+        .current_dir(fixture.root)
+        .args(["release", "stamp", "--version", "v1.2.0-beta.2"])
+        .output()
+        .unwrap();
+    assert!(
+        stamped.status.success(),
+        "{}",
+        String::from_utf8_lossy(&stamped.stderr)
+    );
+    let shown = shown(&fixture, "v1.2.0-beta.2");
+    assert!(
+        shown.status.success(),
+        "{}",
+        String::from_utf8_lossy(&shown.stderr)
+    );
+    let value: serde_json::Value = serde_json::from_slice(&shown.stdout).unwrap();
+    assert_eq!(value["schema"], "plumb.release-marker/v4");
+    assert_eq!(value["datum"]["commit"], commit);
+    assert_eq!(value["datum"]["sha256"], datum.digest().unwrap());
+    assert!(value["datum"].get("path").is_none());
+    let after = self::shown(&fixture, "v1.2.0-beta.1");
+    let after: serde_json::Value = serde_json::from_slice(&after.stdout).unwrap();
+    assert_eq!(before["datum"], after["datum"]);
+    assert_eq!(
+        text(fixture.root, &["rev-parse", "v1.2.0-beta.1^{commit}"]),
+        old
+    );
+    for (marker, digest, target) in [
+        ("v1.2.0-beta.3", "0".repeat(64), commit),
+        ("v1.2.0-beta.4", datum.digest().unwrap(), old),
+    ] {
+        let annotation = serde_json::json!({
+            "schema": "plumb.release-marker/v4", "product": "probe",
+            "marker": marker, "datum": digest,
+        })
+        .to_string();
+        text(
+            fixture.root,
+            &["tag", "-a", marker, &target, "-m", &annotation],
+        );
+        text(
+            fixture.root,
+            &["push", "-q", "origin", &format!("refs/tags/{marker}")],
+        );
+        assert!(!self::shown(&fixture, marker).status.success());
+    }
+}
+
+fn shown(fixture: &Fixture<'_>, marker: &str) -> std::process::Output {
+    fixture
+        .command()
+        .current_dir(fixture.root)
+        .args(["release", "show", "--marker", marker])
+        .output()
+        .unwrap()
+}

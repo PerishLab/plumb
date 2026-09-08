@@ -4,7 +4,6 @@ use super::promotion;
 use super::seat::command;
 use crate::command::release::{Deed, channel};
 use crate::shape::release::Spec;
-use plumb::datum;
 use plumb::forgejo::git;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -28,16 +27,9 @@ pub(in crate::command) struct Descriptor {
     #[serde(skip)]
     spec: Box<Spec>,
     state: &'static str,
-    datum: Datum,
+    datum: binding::Datum,
     #[serde(skip_serializing_if = "Option::is_none")]
     promotion: Option<Exact>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Datum {
-    path: String,
-    sha256: String,
 }
 
 #[derive(Serialize)]
@@ -91,7 +83,10 @@ pub(in crate::command) fn bound(root: &Path, raw: &str) -> Result<Descriptor, St
 
 impl Descriptor {
     pub(in crate::command) fn independent(&self) -> bool {
-        self.schema == "plumb.release-marker/v3"
+        matches!(
+            self.schema,
+            "plumb.release-marker/v3" | "plumb.release-marker/v4"
+        )
     }
 
     pub(in crate::command) fn base(&self) -> &str {
@@ -140,8 +135,10 @@ impl Seat {
             }
             Ok(_) => {}
             Err(error)
-                if identity.schema == "plumb.release-marker/v3"
-                    || guarded(&identity.product, &marker) =>
+                if matches!(
+                    identity.schema,
+                    "plumb.release-marker/v3" | "plumb.release-marker/v4"
+                ) || guarded(&identity.product, &marker) =>
             {
                 return Err(format!(
                     "release marker {marker} has no valid guard proof: {error}"
@@ -152,8 +149,12 @@ impl Seat {
         let version = marker.split('-').next().unwrap_or(&marker).to_string();
         let line = super::standing::line(&version, refresh);
         self.stood(&marker, &line, &commit)?;
-        let datum = self.datum(&version, &commit)?;
-        let promotion = if channel == "stable" && identity.schema != "plumb.release-marker/v3" {
+        let datum = binding::datum(&self.root, &version, &commit, identity.datum.as_deref())?;
+        let promotion = if channel == "stable"
+            && !matches!(
+                identity.schema,
+                "plumb.release-marker/v3" | "plumb.release-marker/v4"
+            ) {
             Some(self.promotion(&identity.product, &identity.authority, &version, &commit)?)
         } else {
             None
@@ -201,6 +202,7 @@ impl Seat {
             authority,
             configuration: None,
             profile: None,
+            datum: None,
             spec: Box::new(spec),
         })
     }
@@ -214,17 +216,6 @@ impl Seat {
         Err(format!(
             "release marker {marker} at {commit} is not carried by {line} at {head}"
         ))
-    }
-
-    fn datum(&self, version: &str, commit: &str) -> Result<Datum, String> {
-        let path = datum::leaf(version);
-        let object = format!("{commit}:{path}");
-        let bytes = self.bytes(["show", &object])?;
-        datum::decode(version, &bytes)?;
-        Ok(Datum {
-            path,
-            sha256: record::sha(&bytes),
-        })
     }
 
     fn promotion(
@@ -264,8 +255,12 @@ impl Seat {
     }
 }
 
-pub(in crate::command) fn annotation(spec: &Spec, marker: &str) -> Result<String, String> {
-    binding::annotation(spec, marker)
+pub(in crate::command) fn annotation(
+    spec: &Spec,
+    marker: &str,
+    head: &str,
+) -> Result<String, String> {
+    binding::annotation(spec, marker, head)
 }
 fn guarded(product: &str, marker: &str) -> bool {
     product == "plumb"

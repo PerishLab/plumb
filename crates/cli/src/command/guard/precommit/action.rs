@@ -1,8 +1,7 @@
-use plumb::guard::{Action, Descriptor};
-use std::path::{Path, PathBuf};
-
 use super::super::workflow::tree::Tree;
 use super::tree::{self, Index};
+use plumb::guard::{Action, Descriptor};
+use std::path::{Path, PathBuf};
 
 struct Check {
     proof: Action,
@@ -26,6 +25,7 @@ struct Catalog<'a> {
 }
 
 pub(super) struct Binding<'a> {
+    pub root: &'a Path,
     pub configuration: Option<&'a str>,
     pub profile: Option<&'a crate::shape::product::Profile>,
     pub execution: Option<&'a plumb::config::Execution>,
@@ -61,7 +61,10 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         product: &product,
     }
     .checks()?;
-    let index = isolate(root, &tree, product.profile.as_ref())?;
+    let index = Index::new(root, &tree)?;
+    if let Some(profile) = &product.profile {
+        index.govern(profile)?;
+    }
     let configuration = mismatched
         .then(|| {
             super::configuration::Seat::new(
@@ -114,6 +117,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
             &programs,
         )?);
         let binding = Binding {
+            root: &index.root,
             configuration: configuration.as_ref().map(|held| held.mark()),
             profile: product.profile.as_ref(),
             execution: execution.as_ref(),
@@ -285,16 +289,4 @@ fn exact(tree: &Tree, profile: &crate::shape::product::Profile) -> Result<(), St
         }
     }
     Ok(())
-}
-
-fn isolate(
-    root: &Path,
-    tree: &str,
-    profile: Option<&crate::shape::product::Profile>,
-) -> Result<Index, String> {
-    let index = Index::new(root, tree)?;
-    if let Some(profile) = profile {
-        index.govern(profile)?;
-    }
-    Ok(index)
 }

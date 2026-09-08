@@ -19,10 +19,10 @@ pub(super) fn stamp(raw: &str, dry: bool) -> Result<String, String> {
             .map_err(|error| format!("stable marker {held} requires a frozen {name}: {error}"))?;
     }
     let spec = crate::shape::release::Spec::controller(&root)?;
-    let annotation = crate::command::release::annotation(&spec, &version)?;
     let seat = point(&root);
     let head = seat.prove(&name)?;
     seat.datum(&base, &head)?;
+    let annotation = crate::command::release::annotation(&spec, &version, &head)?;
     let mut course = Course::new(dry);
     let said = course.step(
         format!("git tag -a {version} at {head} on {name}, then push"),
@@ -56,17 +56,11 @@ pub fn point(root: &Path) -> Point<'_> {
 
 impl Point<'_> {
     fn datum(&self, version: &str, head: &str) -> Result<(), String> {
-        let path = plumb::datum::leaf(version);
-        let object = format!("{head}:{path}");
-        let output = self.git(["show", &object])?;
-        if !output.status.success() {
+        if plumb::datum::Git(self.root).at(version, head)?.is_none() {
             return Err(format!(
-                "release marker requires {path} at {head}; finish version prepare before stamping"
+                "release marker requires a commit-carried datum for {version} at {head}; finish version prepare before stamping"
             ));
         }
-        plumb::datum::decode(version, &output.stdout).map_err(|error| {
-            format!("release marker requires a valid {path} at {head}: {error}")
-        })?;
         Ok(())
     }
 

@@ -81,8 +81,12 @@ pub(in crate::command) fn snapshot(raw: &str) -> Result<ReleaseMarker, String> {
     markers::resolve(raw, false)
 }
 
-pub(in crate::command) fn annotation(spec: &Spec, marker: &str) -> Result<String, String> {
-    markers::annotation(spec, marker)
+pub(in crate::command) fn annotation(
+    spec: &Spec,
+    marker: &str,
+    head: &str,
+) -> Result<String, String> {
+    markers::annotation(spec, marker, head)
 }
 
 impl ReleaseMarker {

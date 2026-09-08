@@ -24,15 +24,6 @@ impl Seat {
             Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
         }
     }
-
-    pub(super) fn bytes<const N: usize>(&self, args: [&str; N]) -> Result<Vec<u8>, String> {
-        let output = command(&self.root, args)?;
-        if output.status.success() {
-            Ok(output.stdout)
-        } else {
-            Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
-        }
-    }
 }
 
 pub(super) fn command<const N: usize>(root: &Path, args: [&str; N]) -> Result<Output, String> {

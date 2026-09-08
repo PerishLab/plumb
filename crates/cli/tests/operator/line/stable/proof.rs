@@ -134,7 +134,13 @@ fn datum() {
         .trim()
         .to_string();
     let parent = show(bare.path(), &format!("--format=%P --no-patch {standing}"));
-    assert_ne!(parent.trim(), stale, "datum must follow a refreshed proof");
+    assert_eq!(
+        parent.trim(),
+        stale,
+        "datum and refreshed proof must share one commit"
+    );
+    let message = show(bare.path(), &format!("--format=%B --no-patch {standing}"));
+    assert!(plumb::datum::carried(&message).unwrap().is_some());
     plumb::guard::commit(root, &standing).expect("recorded datum proof");
 }
 

@@ -21,8 +21,18 @@ impl Index {
                 .arg("-p")
                 .arg(String::from_utf8_lossy(&parent.stdout).trim());
         }
+        let mut message = "plumb staged guard".to_string();
+        if parent.status.success() {
+            let declared = plumb::rig::Rig::resolve(None)
+                .map_err(|error| error.to_string())?
+                .release
+                .version;
+            if let Some(datum) = plumb::datum::Tree(source).capture(&declared)? {
+                message.push_str(&format!("\n\n{}", datum.trailer()?));
+            }
+        }
         let output = record
-            .args(["-m", "plumb staged guard"])
+            .args(["-m", &message])
             .output()
             .map_err(|error| format!("cannot run git to record staged tree: {error}"))?;
         let commit = text(output, "record staged tree")?;
