@@ -14,4 +14,4 @@ cargo = 2
 npm = 1
 
 [forge]
-image = "git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0"
+image = "git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73"

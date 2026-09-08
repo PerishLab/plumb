@@ -39,7 +39,7 @@ jobs:
   resolve:
     runs-on: docker
     container:
-      image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
+      image: git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73
     outputs:
       atom_handoff: ${{ steps.plan.outputs.atom_handoff }}
       channel: ${{ steps.plan.outputs.channel }}
@@ -168,7 +168,7 @@ jobs:
     if: always() && needs.resolve.result == 'success' && needs.resolve.outputs.publication_missing == 'true' && (needs.workload.result == 'success' || needs.workload.result == 'skipped')
     runs-on: docker
     container:
-      image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
+      image: git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73
     outputs:
       channel: ${{ steps.plan.outputs.channel }}
       commit: ${{ steps.plan.outputs.commit }}
@@ -215,7 +215,7 @@ jobs:
       matrix: ${{ fromJSON(needs.publish_plan.outputs.publication) }}
     runs-on: ${{ matrix.runner }}
     container:
-      image: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
+      image: git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73
     env:
       DOCKER_HOST: tcp://172.17.0.1:2375
       PLUMB_RELEASE_ROOT: .
@@ -227,7 +227,7 @@ jobs:
       PLUMB_RELEASE_OUTPUT: .plumb-release/capsule
       PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
       PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
-      PLUMB_RELEASE_TOOLCHAIN: git.perish.top/perishfire/images/forge@sha256:3bc746c0428576eb47c1ece051f2dfa6f6016094be6565977268f76dc1f269a0
+      PLUMB_RELEASE_TOOLCHAIN: git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73
       PLUMB_RELEASE_REGISTRY_TOKEN: ${{ secrets.RELEASE_REGISTRY_TOKEN }}
       PLUMB_SITE_TOKEN: ${{ secrets.PLUMB_SITE_TOKEN }}
       PLUMB_PUBLISH_ACCESS: ${{ secrets.SHIP_PUBLISH_S3_ACCESS_KEY }}
