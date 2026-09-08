@@ -96,7 +96,7 @@ fn identity() {
     std::fs::create_dir_all(root.path().join("charts/probe")).unwrap();
     std::fs::write(
         root.path().join("charts/probe/Chart.yaml"),
-        "name: probe\nversion: 1.2.0\n",
+        "name: probe\nversion: 1.2.0\nappVersion: '1.2.0'\n",
     )
     .unwrap();
     let binding = crate::marker::prepare(
@@ -108,6 +108,7 @@ fn identity() {
     let mut request = request();
     request["configuration"] = binding["configuration"].clone();
     request["profile"] = binding["profile"].clone();
+    let request = crate::marker::planned(root.path(), home.path(), request, "v1.2.0-beta.1");
     let bound = || {
         let mut held = command(root.path(), home.path());
         held.env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1");
@@ -144,6 +145,18 @@ fn identity() {
         refused(&mut bound(), &drifted, "invalid hash");
     }
     let mut missing = request.clone();
+    for field in ["workload", "proof", "publication"] {
+        let mut drifted = request.clone();
+        drifted["keys"][field] = json!("0".repeat(64));
+        refused(&mut bound(), &drifted, "keys differ from its marker plan");
+    }
+    let mut drifted = request.clone();
+    drifted["production"] = json!("0".repeat(64));
+    refused(
+        &mut bound(),
+        &drifted,
+        "production differs from its marker plan",
+    );
     missing["keys"]
         .as_object_mut()
         .unwrap()

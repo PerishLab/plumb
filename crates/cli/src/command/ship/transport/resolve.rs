@@ -56,12 +56,12 @@ pub(super) fn graph(marker: &release::ReleaseMarker) -> Result<String, String> {
     .map_err(|error| format!("cannot encode ship graph: {error}"))
 }
 
-struct World<'a> {
-    marker: &'a release::ReleaseMarker,
-    binding: Binding<'a>,
-    inventory: Option<&'a Path>,
-    source: Option<&'a str>,
-    root: &'a Path,
+pub(super) struct World<'a> {
+    pub marker: &'a release::ReleaseMarker,
+    pub binding: Binding<'a>,
+    pub inventory: Option<&'a Path>,
+    pub source: Option<&'a str>,
+    pub root: &'a Path,
 }
 
 struct Workloads {
@@ -257,7 +257,7 @@ impl Publish<'_> {
     }
 }
 
-fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String> {
+pub(super) fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String> {
     let mut fields = vec![format!("runner={}", plan.runner)];
     if let Some(release) = plan.release {
         fields.push(format!("release={release}"));

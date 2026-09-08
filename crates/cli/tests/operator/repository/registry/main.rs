@@ -173,6 +173,7 @@ fn settled() {
             "reuse":serde_json::from_str::<serde_json::Value>(reuse).unwrap(),
             "keys":{"workload":"1".repeat(64),"proof":"2".repeat(64),"publication":"3".repeat(64)},
         });
+        let request = crate::marker::planned(root, home.path(), request, "v1.2.0-beta.1");
         std::process::Command::new(env!("CARGO_BIN_EXE_plumb"))
             .current_dir(root)
             .env("PLUMB_HOME", home.path())

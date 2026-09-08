@@ -133,6 +133,11 @@ fn publish(
     observed: &std::path::Path,
 ) -> std::process::Output {
     let home = tempfile::tempdir().unwrap();
+    std::fs::write(
+        root.join("packages/held/package.json"),
+        r#"{"name":"held","version":"1.0.0-beta.1","main":"index.js"}"#,
+    )
+    .unwrap();
     let binding = crate::marker::prepare(
         root,
         home.path(),
@@ -150,6 +155,7 @@ fn publish(
         "reuse":{"type":"workload","source":"https://inventory.invalid/held.tgz"},
         "keys":{"workload":"1".repeat(64),"proof":"2".repeat(64),"publication":"3".repeat(64)},
     });
+    let request = crate::marker::planned(root, home.path(), request, version);
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .current_dir(root)
         .args(["ship", "execute", "--request", &request.to_string()])

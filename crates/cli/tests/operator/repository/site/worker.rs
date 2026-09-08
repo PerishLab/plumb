@@ -20,7 +20,7 @@ fn exact() {
     let manifest = "[release]\nproduct='probe'\nauthority='https://releases.test'\n[release.cfworker]\naccount='account'\ndomain='site.test'\n";
     let binding = crate::marker::prepare(root, &root.join("home"), manifest, "v1.2.3-beta.1");
     let request = |reuse: serde_json::Value| {
-        serde_json::json!({
+        let request = serde_json::json!({
             "schema": "plumb.ship-request/v2",
             "configuration": binding["configuration"],
             "profile": binding["profile"],
@@ -34,8 +34,8 @@ fn exact() {
                 "proof": "2".repeat(64),
                 "publication": "3".repeat(64)
             }
-        })
-        .to_string()
+        });
+        crate::marker::planned(root, &root.join("home"), request, "v1.2.3-beta.1").to_string()
     };
     let first = run(
         root,

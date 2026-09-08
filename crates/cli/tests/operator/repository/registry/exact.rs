@@ -66,8 +66,8 @@ pub fn prove(path: &Path) {
             "proof": "2".repeat(64),
             "publication": "3".repeat(64)
         }
-    })
-    .to_string();
+    });
+    let request = crate::marker::planned(path, home.path(), request, "v0.10.2-beta.1").to_string();
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .current_dir(path)
         .env("PLUMB_HOME", home.path())

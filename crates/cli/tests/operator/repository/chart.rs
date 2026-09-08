@@ -68,6 +68,11 @@ fn reused() {
     )
     .expect("release manifest");
     let home = tempfile::tempdir().unwrap();
+    std::fs::write(
+        root.join("charts/probe/Chart.yaml"),
+        "name: probe\nversion: 1.2.3\nappVersion: \"1.2.3\"\n",
+    )
+    .unwrap();
     let binding = crate::marker::prepare(
         root,
         home.path(),
@@ -104,6 +109,7 @@ done
         "reuse":{"type":"workload","source":"https://inventory.invalid/probe.tgz"},
         "keys":{"workload":"1".repeat(64),"proof":"2".repeat(64),"publication":"3".repeat(64)},
     });
+    let request = crate::marker::planned(root, home.path(), request, "v1.2.3-beta.1");
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .current_dir(root)
         .env("PLUMB_HOME", home.path())

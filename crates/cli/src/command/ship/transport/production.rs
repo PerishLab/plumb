@@ -8,56 +8,6 @@ pub(super) fn reuse(action: &str, node: &mut serde_json::Value) {
     }
 }
 
-#[derive(serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(super) struct Workload {
-    target: String,
-    archive: String,
-    url: String,
-    receipt: Receipt,
-}
-
-pub(super) fn materialize(
-    root: &std::path::Path,
-    workloads: &[Workload],
-    marker: &ReleaseMarker,
-) -> Result<(), String> {
-    std::fs::create_dir_all(root)
-        .map_err(|error| format!("cannot create {}: {error}", root.display()))?;
-    for workload in workloads {
-        contract(marker, &workload.target)?.verify(&workload.receipt)?;
-        if workload.archive != marker.spec().target(&workload.target)?.archive {
-            return Err("reused workload archive differs from its target".into());
-        }
-        if !workload.url.starts_with("https://") {
-            return Err("binary workload must use an HTTPS URL".into());
-        }
-        let target = root.join(&workload.archive);
-        let status = std::process::Command::new("curl")
-            .args([
-                "--fail",
-                "--silent",
-                "--show-error",
-                "--location",
-                "--retry",
-                "3",
-                "--output",
-            ])
-            .arg(&target)
-            .arg(&workload.url)
-            .status()
-            .map_err(|error| format!("cannot fetch {}: {error}", workload.url))?;
-        if !status.success() {
-            return Err(format!(
-                "cannot fetch binary workload for {}",
-                workload.target
-            ));
-        }
-        workload.receipt.verify(&target)?;
-    }
-    Ok(())
-}
-
 pub(super) fn plan(
     input: crate::command::workflow::plan::Input,
     marker: &ReleaseMarker,

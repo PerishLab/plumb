@@ -203,7 +203,13 @@ esac
             "proof": "2".repeat(64),
             "publication": "3".repeat(64)
         }
-    })
+    });
+    let request = crate::marker::planned(
+        fixture.root,
+        &fixture.root.join("home"),
+        request,
+        "v2.0.0-beta.1",
+    )
     .to_string();
     let executed = super::world::run(
         fixture

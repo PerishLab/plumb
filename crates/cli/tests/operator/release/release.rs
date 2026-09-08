@@ -2,6 +2,9 @@ use super::world::{Fixture, SPEC, run};
 use std::path::Path;
 use std::process::Command;
 
+#[path = "../inputs.rs"]
+mod inputs;
+
 pub struct Compile<'a> {
     pub fixture: &'a Fixture<'a>,
     pub artifacts: &'a Path,
@@ -54,8 +57,15 @@ fn cycle() {
         tools: &tools,
     };
     fixture.seed();
+    std::fs::write(
+        root.join("Cargo.toml"),
+        "[workspace]\n[workspace.package]\nversion='1.2.0'\n",
+    )
+    .unwrap();
     let home = tempfile::tempdir().unwrap();
-    let binding = crate::marker::prepare(root, home.path(), SPEC, "v1.2.0-beta.7");
+    let manifest =
+        format!("[[layout.file]]\nname=['Cargo.toml']\nrule=['rule://seat/compiler']\n{SPEC}");
+    let binding = crate::marker::prepare(root, home.path(), &manifest, "v1.2.0-beta.7");
     let candidate = run(Command::new("git")
         .arg("-C")
         .arg(root)
@@ -75,18 +85,33 @@ fn cycle() {
             .env("PLUMB_RULES_SOURCE", "https://depot.test");
         held
     };
-    let inventory = crate::support::Bucket::open(17);
+    let inventory = crate::support::Bucket::open(18);
+    let source = root.join("binary");
+    std::fs::create_dir_all(&source).unwrap();
+    fixture.archive(&source, "v1.2.0-beta.7");
+    let workload = inputs::workload(
+        &mut command(),
+        &source.join("probe-x86_64-unknown-linux-gnu.tar.gz"),
+    );
+    let original = std::fs::read_to_string(tools.join("curl")).unwrap();
+    super::image::executable(&tools.join("curl"), &original.replace(
+        "case \"$url\" in", "case \"$url\" in\n  https://inventory.invalid/binary.tar.gz) touch \"$FAKE_S3_ROOT/fetched\"; path=\"$FAKE_S3_ROOT/binary/probe-x86_64-unknown-linux-gnu.tar.gz\" ;;"));
     let request = |version: &str| {
-        serde_json::json!({
-        "schema":"plumb.ship-request/v2", "configuration":binding["configuration"], "profile":binding["profile"],
-        "action":"ship/binary", "projections":["Cargo.toml#/workspace/package/version"], "roots":["plumb.toml"],
-        "operation":{"type":"publication","workloads":[]},
-        "keys":{"workload":plumb::depot::sha(version.as_bytes()),"proof":"2".repeat(64),"publication":plumb::depot::sha(version.as_bytes())},
-    }).to_string()
+        let mut workload = workload.clone();
+        workload["receipt"]["artifact"] = serde_json::json!(plumb::depot::sha(
+            &std::fs::read(source.join("probe-x86_64-unknown-linux-gnu.tar.gz")).unwrap()
+        ));
+        let request = serde_json::json!({
+            "schema":"plumb.ship-request/v2", "configuration":binding["configuration"], "profile":binding["profile"],
+            "action":"ship/binary", "projections":["Cargo.toml#/workspace/package/version"], "roots":["Cargo.toml","plumb.toml"],
+        "operation":{"type":"publication","workloads":[workload]},
+            "keys":{"workload":plumb::depot::sha(version.as_bytes()),"proof":"2".repeat(64),"publication":plumb::depot::sha(version.as_bytes())},
+        });
+        crate::marker::planned(root, home.path(), request, version)
     };
-    let publish = |version: &str, out: &Path| {
+    let publish = |version: &str, out: &Path, request: &serde_json::Value| {
         let mut held = command();
-        held.args(["ship", "execute", "--request", &request(version)])
+        held.args(["ship", "execute", "--request", &request.to_string()])
             .env("PLUMB_RELEASE_VERSION", version)
             .env("PLUMB_RELEASE_OUTPUT", out)
             .env("PLUMB_RELEASE_ARTIFACTS", &artifacts)
@@ -102,6 +127,11 @@ fn cycle() {
         held
     };
     fixture.archive(&artifacts, "v1.2.0-beta.7");
+    inputs::refuses(
+        &|request| publish("v1.2.0-beta.7", &root.join("refused"), request),
+        &request("v1.2.0-beta.7"),
+        root,
+    );
 
     let beta = root.join("beta");
     let stray = root.join("nonstable-must-not-consume-promotion.json");
@@ -111,7 +141,7 @@ fn cycle() {
         } else {
             root.join("beta-retry")
         };
-        let mut held = publish("v1.2.0-beta.7", &output);
+        let mut held = publish("v1.2.0-beta.7", &output, &request("v1.2.0-beta.7"));
         held.env("PLUMB_RELEASE_PROMOTION", &stray);
         if attempt == 1 {
             held.env("FAKE_S3_GET_FAILURE", "true");
@@ -137,7 +167,7 @@ fn cycle() {
         .env("PLUMB_RELEASE_URL", manager)
         .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.7"));
 
-    fixture.archive(&artifacts, "v1.2.0");
+    fixture.archive(&source, "v1.2.0");
     let annotation = serde_json::json!({
         "schema":"plumb.release-marker/v2","product":"probe","marker":"v1.2.0",
         "configuration":{"channel":"stable","version":plumb::version!("PLUMB").to_string(),"generation":binding["configuration"]},
@@ -152,7 +182,7 @@ fn cycle() {
     ]));
     let stable = root.join("stable");
     let record = stable.join("capsule.json");
-    run(publish("v1.2.0", &stable).env(
+    run(publish("v1.2.0", &stable, &request("v1.2.0")).env(
         "PLUMB_RELEASE_PROMOTION",
         root.join("stable-promotion.json"),
     ));

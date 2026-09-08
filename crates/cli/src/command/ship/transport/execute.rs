@@ -1,5 +1,5 @@
 use super::super::adaptor;
-use super::production::{Workload, materialize};
+use super::binding::{Workload, materialize};
 use super::support::pnpm;
 use crate::command::release::{artifacts, capsule, output, required, storage};
 use plumb::rig::Rig;
@@ -122,6 +122,7 @@ impl Request {
         governance.request(&serde_json::json!({
             "action":self.action, "projections":self.projections,
             "roots":self.roots, "operation":self.operation,
+            "keys":self.keys, "production":self.production,
         }))?;
         let release = &rig.release;
         let binding = if matches!(self.operation, Operation::Oci { .. }) {
@@ -161,7 +162,7 @@ impl Request {
                 let authority = super::support::authority(&rig.publish, &spec.product)?;
                 crate::command::release::Product::new(spec).promote(release)?;
                 let artifacts = artifacts(release)?;
-                materialize(&artifacts, &workloads, governance.marker())?;
+                materialize(&artifacts, &workloads, governance.marker(), false)?;
                 super::super::package::product(spec).assemble(version, &artifacts)?;
                 crate::command::release::Product::new(spec).compile(release)?;
                 let capsule = capsule(release)?;
@@ -214,7 +215,7 @@ impl Request {
             Operation::Oci { workloads } => {
                 let artifacts = artifacts(release)?;
                 if self.reuse.kind == "none" {
-                    materialize(&artifacts, &workloads, governance.marker())?;
+                    materialize(&artifacts, &workloads, governance.marker(), true)?;
                 }
                 Some(adaptor::container::run(
                     &adaptor::image::image(spec),

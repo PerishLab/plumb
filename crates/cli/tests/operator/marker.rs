@@ -82,7 +82,14 @@ fn configuration(home: &Path, manifest: &str) -> Value {
     let address = format!("profiles/{digest}.toml");
     crate::support::stock(
         &source.path().join("configurations"),
-        &[("rules/products.toml", &catalog), (&address, &profile)],
+        &[
+            ("rules/products.toml", &catalog),
+            (&address, &profile),
+            (
+                "rules/seat.toml",
+                "[member]\n[[member.entry]]\nname='compiler'\n[[member.entry.probe]]\nargv=['cargo','--version']\nstdout='fixture cargo'\n",
+            ),
+        ],
     );
     let version = plumb::version!("PLUMB").to_string();
     let bundle = plumb::depot::v3::Bundle::read(
@@ -110,6 +117,59 @@ fn configuration(home: &Path, manifest: &str) -> Value {
     .unwrap();
     plumb::depot::v3::install(&home.join("configurations"), &pointer, &bundle).unwrap();
     json!({"configuration":pointer.generation,"profile":digest,"product":product})
+}
+
+#[allow(dead_code)]
+pub fn planned(root: &Path, home: &Path, mut request: Value, version: &str) -> Value {
+    let action = request["action"].as_str().unwrap();
+    let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
+    command
+        .current_dir(root)
+        .env("PLUMB_HOME", home)
+        .env("PLUMB_RULES_SOURCE", "https://depot.test")
+        .args(["workflow", "plan", "--world", "runner=docker"]);
+    for (field, flag) in [("roots", "--root"), ("projections", "--project")] {
+        for entry in request[field].as_array().unwrap() {
+            command.args([flag, &format!("{action}={}", entry.as_str().unwrap())]);
+        }
+    }
+    for field in ["configuration", "profile"] {
+        command.args([
+            "--identity",
+            &format!("{field}={}", request[field].as_str().unwrap()),
+        ]);
+    }
+    command.args(["--identity", &format!("marker={version}")]);
+    if matches!(action, "ship/binary" | "ship/cargo") {
+        command.args([
+            "--workload",
+            &format!("release={}", version.split('-').next().unwrap()),
+        ]);
+    }
+    if matches!(action, "ship/binary" | "ship/cargo" | "ship/cfworker") {
+        command.args(["--world", &format!("release={version}")]);
+    }
+    if matches!(action, "ship/binary" | "ship/cfworker") {
+        command.args([
+            "--world",
+            &format!("target={}", git(root, &["rev-parse", "HEAD"])),
+        ]);
+    }
+    let output = command.output().unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let graph: Value = serde_json::from_slice(&output.stdout).unwrap();
+    let node = graph["actions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|node| node["name"] == action)
+        .unwrap();
+    request["keys"] = node["keys"].clone();
+    request
 }
 
 fn proof(tree: &str, repository: &str) -> String {
