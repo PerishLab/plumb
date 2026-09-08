@@ -11,6 +11,8 @@ mod container;
 mod context;
 #[path = "evidence.rs"]
 pub(super) mod evidence;
+#[path = "../../local.rs"]
+mod local;
 #[path = "native.rs"]
 mod native;
 #[path = "registry.rs"]
@@ -145,16 +147,13 @@ fn chart() {
     );
     let source = temp.path().join("source.tgz");
     packed(&source, "1.0.0");
-    executable(
-        &tools.join("curl"),
-        "#!/bin/sh\nset -eu\ncat \"$FAKE_CHART_WORKLOAD\"\n",
-    );
+    executable(&tools.join("curl"), local::CURL);
     executable(
         &tools.join("helm"),
         r#"#!/bin/sh
 set -eu
 case "$1" in
-  registry) cat >/dev/null ;;
+  registry) [ "${PLUMB_TEST_REFUSE:-}" != 1 ] || exit 99; cat >/dev/null ;;
   pull)
     shift
     destination=
@@ -209,11 +208,10 @@ esac
         &fixture.root.join("home"),
         request,
         "v2.0.0-beta.1",
-    )
-    .to_string();
-    let executed = super::world::run(
-        fixture
-            .command()
+    );
+    let command = || {
+        let mut command = fixture.command();
+        command
             .current_dir(fixture.root)
             .env("PLUMB_HOME", fixture.root.join("home"))
             .env("PLUMB_RULES_SOURCE", "https://depot.test")
@@ -231,23 +229,14 @@ esac
             .env(
                 "PLUMB_WORKFLOW_INVENTORY_URL",
                 "https://workflow.example/inventory.json",
-            )
-            .args(["ship", "execute", "--request", &request]),
-    );
-    let result: serde_json::Value =
-        serde_json::from_slice(&executed.stdout).expect("generic ship result");
-    assert_eq!(result["schema"], "plumb.ship-result/v1");
-    assert_eq!(result["result"]["type"], "url");
+            );
+        command
+    };
+    local::run(fixture.root, &command, &request);
     let registry = fixture.root.join("beta-registry.tgz");
-    let workload = fixture.root.join("target/chart/probe-2.0.0-beta.1.tgz");
-    assert_eq!(manifest(&workload), manifest(&registry));
-    let chart = manifest(&workload);
+    let chart = manifest(&registry);
     assert!(chart.contains("version: 2.0.0-beta.1"), "{chart}");
     assert!(chart.contains("appVersion: \"2.0.0-beta.1\""), "{chart}");
-    assert_eq!(
-        result["result"]["source"],
-        "https://registry.example/owner/-/packages/container/probe/2.0.0-beta.1"
-    );
     inventory.finish();
 }
 

@@ -13,6 +13,13 @@ use plumb::rig::Rig;
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(about = "Execute this marker's shared Ship plan locally for bootstrap or recovery")]
+    Local {
+        #[arg(long)]
+        marker: String,
+        #[arg(long = "dry-run")]
+        dry: bool,
+    },
     #[command(about = "Dispatch every declared distribution medium for one release marker")]
     Dispatch {
         #[command(flatten)]
@@ -125,6 +132,7 @@ pub enum Binary {
 
 pub fn run(deed: Deed) -> i32 {
     let result = match deed {
+        Deed::Local { marker, dry } => transport::local(&marker, dry),
         Deed::Dispatch { options } => super::operator::dispatch(options),
         Deed::Execute { request } => transport::execute(&request),
         Deed::Resolve { marker, atom } => transport::resolve(&marker, &atom),

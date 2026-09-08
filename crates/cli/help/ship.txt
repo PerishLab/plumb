@@ -15,6 +15,16 @@ Recovery repeats the same marker. The workflow plan may reuse a verified
 workload or URL, run missing work, or omit irrelevant work; a successful node
 does not receive another runner merely because a sibling medium is retried.
 
+Use plumb ship local --marker MARKER for explicit local bootstrap or recovery.
+Default dispatch remains unchanged. Local execution requires the marker's
+clean tracked checkout and consumes the same plan, configuration, tool contracts
+and inventory as the workflow. Each node runs in a fresh temporary clone below
+PLUMB_HOME; the caller's checkout is not a build or artifact destination.
+--dry-run reports the shared graph without running nodes or creating clones.
+Only nodes matching this host's declared runner platform execute. Other nodes,
+or newly recorded work not yet visible in the inventory, leave the transaction
+incomplete. Repeat the same marker to resume; completed work is not rebuilt.
+
 Only marker-bound plan requests perform immutable publication. Execute requires
 the marker's locked configuration and Product Profile; conflicting repository,
 channel, or commit inputs refuse before publication. Medium-specific exact and

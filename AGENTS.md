@@ -104,6 +104,9 @@ answers for.
   classes are reusable workload and marker-bound publication requests. Product
   repositories dispatch its exact Plumb-owned revision and carry neither a
   workflow copy nor a rendered derivative.
+  Explicit local Ship recovery consumes the same marker and execution graph;
+  each node gets a fresh temporary checkout, and unavailable platforms remain
+  incomplete. It is an execution backend, not another publication contract.
 
 The verbs are `plumb version --help`, `plumb release --help`, `plumb ship --help`,
 and `plumb depot --help`. The laws are
