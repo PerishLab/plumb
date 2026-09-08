@@ -27,7 +27,7 @@ impl Seat<'_> {
             }
         }
         if legacy {
-            let spec = crate::shape::release::Spec::controller(self.0)?;
+            let spec = crate::shape::release::Spec::resolve(self.0)?;
             self.rejoined(crate::command::release::Product::new(&spec).activated()?)?;
         }
         Ok(())

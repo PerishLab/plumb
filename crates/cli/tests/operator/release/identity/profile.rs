@@ -200,18 +200,28 @@ fn annotate(root: &Path, version: &str, commit: &str, message: &str) {
 }
 
 pub(super) fn configuration(home: &Path, authority: &str, prior: Option<&str>) -> (String, String) {
+    catalogued(home, authority, prior, "PerishFire/probe")
+}
+
+pub(super) fn catalogued(
+    home: &Path,
+    authority: &str,
+    prior: Option<&str>,
+    identity: &str,
+) -> (String, String) {
     let source = tempfile::tempdir().expect("configuration source");
+    let product = identity.rsplit('/').next().expect("product name");
     let profile = format!(
         "schema = \"plumb.product-profile/v1\"\n\n[product]\nname = \"probe\"\nauthority = \"https://releases.{authority}.perish.uk\"\nderivatives = [\"skill\"]\n\n[governance]\nmanifest = '''\n[release]\nproduct = \"probe\"\nauthority = \"https://releases.{authority}.perish.uk\"\n[release.cargo]\nregistry = \"perish\"\npackages = [\"probe\"]\n[release.oci]\nregistry = \"registry.test\"\nimage = \"owner/probe\"\naccount = \"probe\"\n'''\nectropy = \"[comment]\\nallow = false\"\n"
     );
-    let profile = profile.replace(
+    let profile = profile.replace("probe", product).replace(
         "[release]\n",
         "[[layout.file]]\nname=['Containerfile']\nrule=['rule://seat/docker','rule://seat/regctl']\n[release]\n",
     );
     let probes = "[member]\n[[member.entry]]\nname='docker'\n[[member.entry.probe]]\nargv=['docker','--version']\nstdout='fixture docker'\n[[member.entry]]\nname='regctl'\n[[member.entry.probe]]\nargv=['regctl','version']\nstdout='fixture regctl'\n";
     let digest = plumb::depot::sha(profile.as_bytes());
     let catalog = format!(
-        "schema = \"plumb.products/v2\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/probe\"\nprofile = \"{digest}\"\n"
+        "schema = \"plumb.products/v2\"\n\n[[product]]\nidentity = \"git.perish.top/{identity}\"\nprofile = \"{digest}\"\n"
     );
     let address = format!("profiles/{digest}.toml");
     crate::support::stock(

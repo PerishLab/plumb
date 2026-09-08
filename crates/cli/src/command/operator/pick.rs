@@ -159,7 +159,7 @@ fn controller(root: &Path, name: &str) -> Result<(), String> {
     let spec = if manifest.is_file() {
         crate::shape::release::Spec::read(&manifest)?
     } else {
-        crate::shape::release::Spec::controller(root)?
+        crate::shape::release::Spec::resolve(root)?
     };
     if spec.product != "plumb" {
         return Ok(());

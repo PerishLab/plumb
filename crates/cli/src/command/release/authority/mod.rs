@@ -41,7 +41,7 @@ const SECRETS: [&str; 4] = [
     "RELEASE_PUBLISH_S3_ENDPOINT",
 ];
 fn product(root: &std::path::Path) -> Result<String, String> {
-    crate::shape::release::Spec::controller(root).map(|spec| spec.product)
+    crate::shape::release::Spec::resolve(root).map(|spec| spec.product)
 }
 
 #[derive(Subcommand)]
