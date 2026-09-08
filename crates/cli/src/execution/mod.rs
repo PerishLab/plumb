@@ -21,7 +21,9 @@ pub(crate) fn environment(name: &str) -> Result<Environment, String> {
 pub(crate) fn family(program: &str) -> &'static str {
     match program {
         "cargo" | "rustc" | "rustup" => "cargo",
-        "node" | "pnpm" | "corepack" => "pnpm",
+        "node" | "pnpm" => "pnpm",
+        "docker" => "oci",
+        "regctl" => "registry",
         _ => "probe",
     }
 }

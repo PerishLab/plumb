@@ -2,6 +2,12 @@ use crate::command::release::ReleaseMarker;
 use plumb::rule::{Production, Receipt};
 use sha2::{Digest, Sha256};
 
+pub(super) fn reuse(action: &str, node: &mut serde_json::Value) {
+    if action == "ship/oci" && node["receipt"].is_null() && node["reuse"]["type"] == "workload" {
+        node["reuse"] = serde_json::json!({ "type": "none", "source": "" });
+    }
+}
+
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct Workload {
@@ -60,6 +66,9 @@ pub(super) fn plan(
 ) -> Result<String, String> {
     if action.starts_with("ship/binary.") {
         let contract = contract(marker, target.ok_or("binary plan has no target")?)?;
+        crate::command::workflow::plan::production(input, action, &contract)
+    } else if action == "ship/oci" {
+        let contract = super::super::package::production::contract(marker)?;
         crate::command::workflow::plan::production(input, action, &contract)
     } else {
         crate::command::workflow::plan::derive(input, Some(action))

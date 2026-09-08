@@ -3,28 +3,32 @@ use crate::command::ship::attachment::Identity;
 use crate::shape::release::Spec;
 use std::path::Path;
 
-pub(in crate::command::ship) struct Image {
-    session: Session,
+pub(in crate::command::ship) struct Image<'a> {
+    session: Session<'a>,
     source: String,
     digest: String,
     pub provenance: String,
 }
 
-impl Image {
-    pub fn read(spec: &Spec, archive: &Path) -> Result<Self, String> {
+impl<'a> Image<'a> {
+    pub fn read(
+        spec: &Spec,
+        archive: &Path,
+        execution: Option<&'a plumb::config::Execution>,
+    ) -> Result<Self, String> {
         single(archive)?;
-        let session = Session::open()?;
+        let session = Session::open(execution)?;
         let source = format!(
             "ocidir://{}:workload",
             session.path().join("image").display()
         );
         status(
             session
-                .command()
+                .command()?
                 .args(["image", "import", &source])
                 .arg(archive),
         )?;
-        let digest = output(session.command().args(["image", "digest", &source]))?;
+        let digest = output(session.command()?.args(["image", "digest", &source]))?;
         let digest = digest.trim().to_string();
         if !digest
             .strip_prefix("sha256:")
@@ -33,12 +37,13 @@ impl Image {
             return Err("image declares no valid manifest digest".into());
         }
         let source = format!("{}@{digest}", source.trim_end_matches(":workload"));
-        let body =
-            output(
-                session
-                    .command()
-                    .args(["image", "config", &source, "--format", "{{json .}}"]),
-            )?;
+        let body = output(session.command()?.args([
+            "image",
+            "config",
+            &source,
+            "--format",
+            "{{json .}}",
+        ]))?;
         let body: serde_json::Value = serde_json::from_str(&body)
             .map_err(|error| format!("cannot read image configuration: {error}"))?;
         let (mark, width) = if spec.binary() {
@@ -69,10 +74,10 @@ impl Image {
         let anchor = format!("{repository}:{}", self.digest.replace(':', "-"));
         status(
             self.session
-                .command()
+                .command()?
                 .args(["image", "copy", &self.source, &anchor]),
         )?;
-        let held = output(self.session.command().args(["image", "digest", &anchor]))?;
+        let held = output(self.session.command()?.args(["image", "digest", &anchor]))?;
         if held.trim() != self.digest {
             return Err("published image drift at content reference".into());
         }
@@ -82,7 +87,7 @@ impl Image {
             self.session.path().join("readback").display(),
             self.digest
         );
-        status(self.session.anonymous().args([
+        status(self.session.anonymous()?.args([
             "image",
             "copy",
             &published,
@@ -92,7 +97,7 @@ impl Image {
         .map_err(|_| "published image or its content cannot be read anonymously".to_string())?;
         let held = output(
             self.session
-                .anonymous()
+                .anonymous()?
                 .args(["image", "digest", &readback]),
         )?;
         if held.trim() != self.digest {

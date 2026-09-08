@@ -49,6 +49,37 @@ pub(super) fn bound(command: &impl Fn() -> Command, graph: &Value, store: &crate
     let rows = resolved["publication"]["include"].as_array().unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["request"]["action"], "ship/cargo");
+    let cargo = graph["publication"]["include"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| &row["request"])
+        .find(|request| request["action"] == "ship/cargo")
+        .unwrap();
+    let inventory = serde_json::json!({
+        "schema": "plumb.workflow-inventory/v1",
+        "records": [{
+            "action": "ship/cargo", "workload": cargo["keys"]["workload"],
+            "proof": cargo["keys"]["proof"], "publication": cargo["keys"]["publication"],
+            "source": { "type": "url", "source": "https://registry.test/probe" },
+        }],
+    });
+    std::fs::write(
+        command()
+            .get_current_dir()
+            .unwrap()
+            .join("depot/inventory.json"),
+        inventory.to_string(),
+    )
+    .unwrap();
+    run(command().args([
+        "ship",
+        "resolve",
+        "--marker",
+        "v1.2.0",
+        "--atom",
+        &"a".repeat(40),
+    ]));
     let execute = || {
         command()
             .args(["ship", "execute", "--request", &request.to_string()])

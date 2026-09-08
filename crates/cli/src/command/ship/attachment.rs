@@ -34,6 +34,7 @@ pub(super) fn oci(deed: super::Oci) -> Result<String, String> {
                     artifacts: &artifacts(release)?,
                     credential: &release.credential,
                     reuse: &reuse,
+                    proof: None,
                 },
             )
         }

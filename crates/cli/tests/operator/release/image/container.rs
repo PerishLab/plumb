@@ -141,7 +141,7 @@ esac
     assert!(String::from_utf8_lossy(&refused.stderr).contains("exactly one image"));
 }
 
-fn archive(path: &Path, count: usize) {
+pub(super) fn archive(path: &Path, count: usize) {
     let file = std::fs::File::create(path).expect("archive");
     let mut archive = tar::Builder::new(file);
     let body = serde_json::to_vec(&vec![serde_json::json!({"Config":"config.json"}); count])

@@ -69,3 +69,21 @@ inherit = [
 ]
 managed = []
 reject = ["LD_PRELOAD", "DYLD_*"]
+
+[execution.oci]
+inherit = [
+  "PATH", "HOME", "USERPROFILE", "SystemRoot", "SYSTEMROOT", "WINDIR",
+  "COMSPEC", "PATHEXT", "TEMP", "TMP", "TMPDIR",
+  "LANG", "LC_ALL", "LC_CTYPE", "TZ", "DOCKER_HOST",
+]
+managed = ["REGCTL_CONFIG", "DOCKER_AUTH_CONFIG"]
+reject = ["DOCKER_*", "BUILDKIT_*", "BUILDX_*", "LD_PRELOAD", "DYLD_*"]
+
+[execution.registry]
+inherit = [
+  "PATH", "HOME", "USERPROFILE", "SystemRoot", "SYSTEMROOT", "WINDIR",
+  "COMSPEC", "PATHEXT", "TEMP", "TMP", "TMPDIR",
+  "LANG", "LC_ALL", "LC_CTYPE", "TZ",
+]
+managed = ["REGCTL_CONFIG", "DOCKER_AUTH_CONFIG"]
+reject = ["REGCTL_*", "LD_PRELOAD", "DYLD_*"]

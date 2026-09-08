@@ -25,6 +25,8 @@ struct Request {
     keys: Option<serde_json::Value>,
     #[serde(default)]
     production: Option<String>,
+    #[serde(default)]
+    receipt: Option<plumb::rule::Receipt>,
 }
 #[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase", deny_unknown_fields)]
@@ -58,6 +60,8 @@ struct Reuse {
 struct Projection {
     workload: PathBuf,
     publication: String,
+    #[serde(default)]
+    receipt: Option<plumb::rule::Receipt>,
     #[serde(default)]
     depot: Option<serde_json::Value>,
 }
@@ -113,6 +117,15 @@ impl Request {
             None
         };
         let reuse = self.reuse.encode()?;
+        let production = binding
+            .as_ref()
+            .map(|_| super::super::package::production::contract(governance.marker()?))
+            .transpose()?;
+        if let Some(contract) = &production
+            && self.production.as_deref() != Some(contract.digest()?.as_str())
+        {
+            return Err("image request production contract differs from its dispatch configuration and implementation".into());
+        }
         let projection = match self.operation {
             Operation::Workload { target, archive } => {
                 super::production::execute(
@@ -185,7 +198,9 @@ impl Request {
             }
             Operation::Oci { workloads } => {
                 let artifacts = artifacts(release)?;
-                materialize(&artifacts, &workloads, governance.marker()?)?;
+                if self.reuse.kind == "none" {
+                    materialize(&artifacts, &workloads, governance.marker()?)?;
+                }
                 Some(adaptor::container::run(
                     &adaptor::image::image(spec),
                     adaptor::container::Request {
@@ -194,6 +209,12 @@ impl Request {
                         artifacts: &artifacts,
                         credential: &release.credential,
                         reuse: &reuse,
+                        proof: production.as_ref().map(|contract| {
+                            super::super::package::production::Proof {
+                                contract,
+                                receipt: self.receipt.as_ref(),
+                            }
+                        }),
                     },
                 )?)
             }
@@ -217,7 +238,17 @@ impl Request {
                 reuse: (self.reuse.kind == "workload").then_some(self.reuse.source.as_str()),
                 publication: Some(projection.publication.clone()),
                 depot: projection.depot.clone(),
-                production: None,
+                production: production
+                    .as_ref()
+                    .map(|contract| {
+                        projection
+                            .receipt
+                            .map(|receipt| (contract, receipt))
+                            .ok_or_else(|| {
+                                "image projection carries no production receipt".to_string()
+                            })
+                    })
+                    .transpose()?,
             },
             binding.as_ref().map(|binding| binding.binding.key.as_str()),
         )?;
@@ -226,11 +257,7 @@ impl Request {
 }
 
 fn pnpm(root: &std::path::Path, install: bool) -> Result<(), String> {
-    if !root.join("pnpm-lock.yaml").is_file() {
-        return Ok(());
-    }
-    command(root, "corepack", &["enable"])?;
-    if !install {
+    if !install || !root.join("pnpm-lock.yaml").is_file() {
         return Ok(());
     }
     let store = root.join("target/pnpm-store");

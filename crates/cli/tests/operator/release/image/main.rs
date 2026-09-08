@@ -9,6 +9,8 @@ use std::path::Path;
 mod container;
 #[path = "context.rs"]
 mod context;
+#[path = "evidence.rs"]
+pub(super) mod evidence;
 #[path = "native.rs"]
 mod native;
 #[path = "registry.rs"]

@@ -9,7 +9,7 @@ pub(super) fn candidates(
     command: &impl Fn() -> Command,
     annotation: &Value,
 ) {
-    let store = crate::support::Bucket::open(55);
+    let store = crate::support::Bucket::open(83);
     let source = format!("{}/workflow/inventory.json", store.endpoint());
     let original = std::fs::read_to_string(fixture.tools.join("curl")).unwrap();
     std::fs::write(fixture.tools.join("curl"), original.replace(
@@ -41,6 +41,8 @@ pub(super) fn candidates(
     let graph: Value = serde_json::from_slice(&output.stdout).expect("candidate graph");
     assert_eq!(graph["workload_missing"], false);
     assert_eq!(graph["publication_missing"], true);
+    super::super::image::evidence::identity(fixture, &command, &graph, &beta);
+    super::super::image::evidence::refuses(fixture, &command, &graph);
     let records = graph["publication"]["include"]
         .as_array()
         .expect("requests")
@@ -56,9 +58,9 @@ pub(super) fn candidates(
         })
         .collect::<Vec<_>>();
     assert_eq!(records.len(), 2);
-    std::fs::create_dir(fixture.root.join("depot")).expect("inventory root");
+    std::fs::create_dir_all(fixture.root.join("depot")).expect("inventory root");
     let mut cases = (0..=records.len())
-        .map(|count| (records[..count].to_vec(), count == records.len()))
+        .map(|count| (records[..count].to_vec(), false))
         .collect::<Vec<_>>();
     for field in ["workload", "publication"] {
         let mut drift = records.clone();
@@ -207,6 +209,11 @@ pub(super) fn configuration(home: &Path, authority: &str, prior: Option<&str>) -
     let profile = format!(
         "schema = \"plumb.product-profile/v1\"\n\n[product]\nname = \"probe\"\nauthority = \"https://releases.{authority}.perish.uk\"\nderivatives = [\"skill\"]\n\n[governance]\nmanifest = '''\n[release]\nproduct = \"probe\"\nauthority = \"https://releases.{authority}.perish.uk\"\n[release.cargo]\nregistry = \"perish\"\npackages = [\"probe\"]\n[release.oci]\nregistry = \"registry.test\"\nimage = \"owner/probe\"\naccount = \"probe\"\n'''\nectropy = \"[comment]\\nallow = false\"\n"
     );
+    let profile = profile.replace(
+        "[release]\n",
+        "[[layout.file]]\nname=['Containerfile']\nrule=['rule://seat/docker','rule://seat/regctl']\n[release]\n",
+    );
+    let probes = "[member]\n[[member.entry]]\nname='docker'\n[[member.entry.probe]]\nargv=['docker','--version']\nstdout='fixture docker'\n[[member.entry]]\nname='regctl'\n[[member.entry.probe]]\nargv=['regctl','version']\nstdout='fixture regctl'\n";
     let digest = plumb::depot::sha(profile.as_bytes());
     let catalog = format!(
         "schema = \"plumb.products/v2\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/probe\"\nprofile = \"{digest}\"\n"
@@ -214,7 +221,11 @@ pub(super) fn configuration(home: &Path, authority: &str, prior: Option<&str>) -
     let address = format!("profiles/{digest}.toml");
     crate::support::stock(
         &source.path().join("configurations"),
-        &[("rules/products.toml", &catalog), (&address, &profile)],
+        &[
+            ("rules/products.toml", &catalog),
+            ("rules/seat.toml", probes),
+            (&address, &profile),
+        ],
     );
     let version = plumb::version!("PLUMB").to_string();
     let bundle = plumb::depot::v3::Bundle::read(

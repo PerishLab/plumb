@@ -223,7 +223,7 @@ impl Publish<'_> {
             let binding = contract(action);
             let projections = strings(entry, "projections")?;
             let roots = strings(entry, "roots")?;
-            let node = planned(
+            let mut node = planned(
                 self.world,
                 Plan {
                     action,
@@ -236,6 +236,7 @@ impl Publish<'_> {
                     target: (binding == Contract::Exact).then_some(self.marker.commit.as_str()),
                 },
             )?;
+            super::production::reuse(action, &mut node);
             if node["reuse"]["type"] == "url" {
                 continue;
             }
@@ -244,6 +245,10 @@ impl Publish<'_> {
             request.insert("reuse".into(), node["reuse"].clone());
             request.insert("keys".into(), node["keys"].clone());
             if action == "ship/oci" {
+                request.insert("production".into(), node["production"].clone());
+                request.insert("receipt".into(), node["receipt"].clone());
+            }
+            if action == "ship/oci" && node["reuse"]["type"] != "workload" {
                 carry(&mut request, &self.workload.reuse)?;
             }
             pending.push(json!({ "runner": "docker", "request": request }));

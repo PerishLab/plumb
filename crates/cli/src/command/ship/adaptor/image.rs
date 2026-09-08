@@ -10,13 +10,34 @@ use std::process::Command;
 
 pub struct Image<'a> {
     pub(super) spec: &'a Spec,
+    pub(super) execution: Option<&'a plumb::config::Execution>,
 }
 
 pub fn image(spec: &Spec) -> Image<'_> {
-    Image { spec }
+    Image {
+        spec,
+        execution: None,
+    }
 }
 
 impl Image<'_> {
+    pub(super) fn save(&self, reference: &str) -> Result<std::path::PathBuf, String> {
+        let path = self.workload()?;
+        let status = self
+            .docker()?
+            .args(["save", "--output"])
+            .arg(&path)
+            .arg(reference)
+            .current_dir(&self.spec.root)
+            .status()
+            .map_err(|error| format!("cannot run docker: {error}"))?;
+        if status.success() && path.is_file() {
+            Ok(path)
+        } else {
+            Err(format!("image attachment left no {}", path.display()))
+        }
+    }
+
     pub fn build(
         &self,
         version: &str,
@@ -38,9 +59,11 @@ impl Image<'_> {
             (self.spec.root.clone(), commit.to_string())
         };
         let reference = reference(oci, version);
-        let mut command = self.docker();
+        let mut command = self.docker()?;
         command.args([
             "build",
+            "--platform",
+            "linux/amd64",
             "--network",
             "host",
             "--label",
@@ -155,7 +178,10 @@ impl Image<'_> {
         Ok((seat, payload))
     }
 
-    pub(super) fn docker(&self) -> Command {
-        Command::new("docker")
+    pub(super) fn docker(&self) -> Result<Command, String> {
+        self.execution.map_or_else(
+            || Ok(Command::new("docker")),
+            |execution| execution.command("docker"),
+        )
     }
 }

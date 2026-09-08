@@ -64,7 +64,6 @@ fn exact() {
         Sha256::digest(std::fs::read(&workload).expect("worker workload"))
     );
     let before = calls(root).matches("--filter @probe/web build").count();
-    let prepared = calls(root).matches("corepack enable").count();
     std::fs::remove_dir_all(root.join("apps/web/dist")).expect("clear built tree");
     let held = run(
         root,
@@ -87,8 +86,8 @@ fn exact() {
     );
     assert_eq!(
         calls(root).matches("corepack enable").count(),
-        prepared + 1,
-        "a held worker workload still needs the pnpm executable"
+        0,
+        "standalone pnpm must not be provisioned through Corepack"
     );
     assert!(root.join("apps/web/dist/index.html").is_file());
     inventory.finish();

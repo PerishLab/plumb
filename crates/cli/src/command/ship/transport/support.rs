@@ -21,7 +21,8 @@ pub(super) enum Contract {
 
 pub(super) fn contract(action: &str) -> Contract {
     match action {
-        "ship/cargo" | "ship/oci" => Contract::Version,
+        "ship/cargo" => Contract::Version,
+        "ship/oci" => Contract::Portable,
         "ship/cfworker" => Contract::Exact,
         _ => Contract::Portable,
     }
