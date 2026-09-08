@@ -92,6 +92,7 @@ fn cycle() {
     let workload = inputs::workload(
         &mut command(),
         &source.join("probe-x86_64-unknown-linux-gnu.tar.gz"),
+        1,
     );
     let original = std::fs::read_to_string(tools.join("curl")).unwrap();
     super::image::executable(&tools.join("curl"), &original.replace(

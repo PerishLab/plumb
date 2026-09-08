@@ -156,6 +156,7 @@ impl Inventory {
 
     pub(super) fn enrich(&self, action: &str, keys: &Keys) -> Result<Self, String> {
         let mut held = Self {
+            evidence: self.evidence,
             schema: self.schema.clone(),
             records: self.records.clone(),
             base: None,
@@ -167,6 +168,7 @@ impl Inventory {
         for route in lookup(action, keys) {
             let body = match plumb::bucket::fetch(&format!("{base}/{route}")) {
                 Ok(Some(body)) => body,
+                Err(error) if self.evidence => return Err(error),
                 Ok(None) | Err(_) => continue,
             };
             let record = Record::decode(&body)?;
@@ -175,6 +177,11 @@ impl Inventory {
             }
         }
         Ok(held)
+    }
+
+    pub(super) fn evidence(mut self, required: bool) -> Self {
+        self.evidence = required;
+        self
     }
 }
 

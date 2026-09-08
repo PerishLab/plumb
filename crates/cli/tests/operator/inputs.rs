@@ -2,11 +2,12 @@ use serde_json::{Value, json};
 use std::path::Path;
 use std::process::Command;
 
-pub fn workload(command: &mut Command, archive: &Path) -> Value {
+pub fn workload(command: &mut Command, archive: &Path, targets: usize) -> Value {
+    let inventory = crate::support::Bucket::open(targets * 3);
     let output = command
         .env(
             "PLUMB_WORKFLOW_INVENTORY_URL",
-            "https://depot.test/inventory.json",
+            format!("{}/workflow/inventory.json", inventory.endpoint()),
         )
         .args([
             "ship",
@@ -24,6 +25,7 @@ pub fn workload(command: &mut Command, archive: &Path) -> Value {
         String::from_utf8_lossy(&output.stderr)
     );
     let graph: Value = serde_json::from_slice(&output.stdout).unwrap();
+    inventory.finish();
     let request = &graph["workload"]["include"][0]["request"];
     assert_eq!(request["operation"]["type"], "workload");
     let tools = json!({"cargo":{"path":"/fixture/cargo","digest":"c".repeat(64)}});
@@ -124,7 +126,7 @@ fn partial() {
     };
     let artifact = root.path().join("binary.tar");
     std::fs::write(&artifact, "untrusted archive").unwrap();
-    let workload = workload(&mut command(), &artifact);
+    let workload = workload(&mut command(), &artifact, 2);
     let request = json!({
         "schema":"plumb.ship-request/v2", "configuration":binding["configuration"], "profile":binding["profile"],
         "action":"ship/binary", "roots":["Cargo.toml","plumb.toml"],

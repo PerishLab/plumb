@@ -1,4 +1,39 @@
-use super::seat;
+use super::{PAIR, Plan, seat};
+
+#[test]
+fn unread() {
+    let root = seat("unread-inventory");
+    root.declared(PAIR);
+    root.git(&["commit", "-m", "source"]);
+    let store = crate::support::Bucket::open(4);
+    let inventory = format!("{}/workflow/inventory.json", store.endpoint());
+    let resolve = || {
+        root.remote(
+            Plan {
+                base: None,
+                world: &[],
+                identity: &[],
+                project: &[],
+                roots: &[],
+                inventory: None,
+            },
+            Some(&inventory),
+        )
+    };
+    let (absent, ok) = resolve();
+    assert!(ok, "{absent}");
+    store.finish();
+    let (unread, ok) = resolve();
+    assert!(ok, "{unread}");
+    let plan: serde_json::Value = serde_json::from_str(&unread).unwrap();
+    assert!(
+        plan["actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|row| row["run"] == true)
+    );
+}
 
 #[test]
 fn separated() {

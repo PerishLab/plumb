@@ -74,14 +74,27 @@ pub fn run(deed: Deed) -> Result<String, String> {
 }
 
 pub(in crate::command) fn resolve(raw: &str, refresh: bool) -> Result<Descriptor, String> {
-    Seat::open()?.resolve(raw, refresh)
+    Seat::open()?.resolve(raw, refresh, None)
 }
 
 pub(in crate::command) fn bound(root: &Path, raw: &str) -> Result<Descriptor, String> {
-    Seat::new(root.to_path_buf())?.resolve(raw, true)
+    Seat::new(root.to_path_buf())?.resolve(raw, true, None)
 }
 
 impl Descriptor {
+    pub(in crate::command) fn recorded(root: &Path, raw: &str) -> Result<Option<Self>, String> {
+        let seat = Seat::new(root.to_path_buf())?;
+        let reference = format!("refs/tags/{raw}");
+        let message = seat.read(["for-each-ref", "--format=%(contents)", &reference])?;
+        if !matches!(
+            binding::protocol(message.trim())?,
+            Some("plumb.release-marker/v3" | "plumb.release-marker/v4")
+        ) {
+            return Ok(None);
+        }
+        seat.resolve(raw, false, Some(&reference)).map(Some)
+    }
+
     pub(in crate::command) fn independent(&self) -> bool {
         matches!(
             self.schema,
@@ -118,7 +131,12 @@ impl Seat {
         })
     }
 
-    fn resolve(&self, raw: &str, refresh: bool) -> Result<Descriptor, String> {
+    fn resolve(
+        &self,
+        raw: &str,
+        refresh: bool,
+        standing: Option<&str>,
+    ) -> Result<Descriptor, String> {
         let marker = named(raw);
         let channel = channel::channel(&marker)
             .map_err(|error| format!("invalid release marker {marker}: {error}"))?;
@@ -148,7 +166,7 @@ impl Seat {
         }
         let version = marker.split('-').next().unwrap_or(&marker).to_string();
         let line = super::standing::line(&version, refresh);
-        self.stood(&marker, &line, &commit)?;
+        self.stood(&marker, standing.unwrap_or(&line), &commit)?;
         let datum = binding::datum(&self.root, &version, &commit, identity.datum.as_deref())?;
         let promotion = if channel == "stable"
             && !matches!(

@@ -72,7 +72,7 @@ pub(super) fn bound(command: &impl Fn() -> Command, graph: &Value, store: &crate
         inventory.to_string(),
     )
     .unwrap();
-    run(command().args([
+    let stable = run(command().args([
         "ship",
         "resolve",
         "--marker",
@@ -80,6 +80,7 @@ pub(super) fn bound(command: &impl Fn() -> Command, graph: &Value, store: &crate
         "--atom",
         &"a".repeat(40),
     ]));
+    super::dry::settlement(command, &serde_json::from_slice(&stable.stdout).unwrap());
     let execute = || {
         command()
             .args(["ship", "execute", "--request", &request.to_string()])

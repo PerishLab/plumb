@@ -12,6 +12,19 @@ use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::process::Command;
 
+pub(in crate::command) fn completed(
+    marker: &crate::command::release::ReleaseMarker,
+) -> Result<bool, String> {
+    let temporary = temporary()?;
+    let root = checkout(marker, temporary.path())?;
+    let held = crate::command::release::ReleaseMarker::recorded(&root, &marker.marker)?
+        .ok_or("Ship evidence requires an independent release marker")?;
+    if held.digest()? != marker.digest()? {
+        return Err("release marker changed while reading Ship evidence".into());
+    }
+    promotion::completed(&held)
+}
+
 pub(super) fn local(raw: &str, dry: bool) -> Result<String, String> {
     let marker = crate::command::release::snapshot(raw)?;
     let digest = marker.digest()?;
@@ -84,24 +97,7 @@ fn compatible(runner: &str) -> Result<bool, String> {
 
 fn node(marker: &crate::command::release::ReleaseMarker, request: &Value) -> Result<(), String> {
     let temporary = temporary()?;
-    let root = temporary.path().join("source");
-    let source = &marker.spec().root;
-    let remote = git(Command::new("git")
-        .arg("-C")
-        .arg(source)
-        .args(["remote", "get-url", "origin"]))?;
-    git(Command::new("git")
-        .args(["clone", "--local", "--no-hardlinks", "--no-checkout"])
-        .arg(source)
-        .arg(&root))?;
-    git(Command::new("git")
-        .arg("-C")
-        .arg(&root)
-        .args(["remote", "set-url", "origin", &remote]))?;
-    git(Command::new("git")
-        .arg("-C")
-        .arg(&root)
-        .args(["checkout", "--detach", &marker.commit]))?;
+    let root = checkout(marker, temporary.path())?;
     let status =
         Command::new(plumb::config::binary().ok_or("cannot locate the executing Plumb binary")?)
             .current_dir(&root)
@@ -143,6 +139,31 @@ fn node(marker: &crate::command::release::ReleaseMarker, request: &Value) -> Res
     }
 }
 
+fn checkout(
+    marker: &crate::command::release::ReleaseMarker,
+    temporary: &std::path::Path,
+) -> Result<PathBuf, String> {
+    let root = temporary.join("source");
+    let source = &marker.spec().root;
+    let remote = git(Command::new("git")
+        .arg("-C")
+        .arg(source)
+        .args(["remote", "get-url", "origin"]))?;
+    git(Command::new("git")
+        .args(["clone", "--local", "--no-hardlinks", "--no-checkout"])
+        .arg(source)
+        .arg(&root))?;
+    git(Command::new("git")
+        .arg("-C")
+        .arg(&root)
+        .args(["remote", "set-url", "origin", &remote]))?;
+    git(Command::new("git")
+        .arg("-C")
+        .arg(&root)
+        .args(["checkout", "--detach", &marker.commit]))?;
+    Ok(root)
+}
+
 fn temporary() -> Result<tempfile::TempDir, String> {
     let root = plumb::config::value("PLUMB_HOME")
         .map(PathBuf::from)
@@ -181,7 +202,7 @@ pub(super) fn inspect(raw: &str, expected: &str) -> Result<String, String> {
     }
     let mut rig = plumb::rig::Rig::resolve(None).map_err(|error| error.to_string())?;
     governance.apply(&mut rig.release)?;
-    resolve::graph(governance.marker())
+    resolve::graph(governance.marker(), false)
 }
 
 pub(super) fn execute(request: &str) -> Result<String, String> {
@@ -194,5 +215,5 @@ pub(super) fn resolve(raw: &str, atom: &str) -> Result<String, String> {
     }
     let marker = crate::command::release::snapshot(raw)?;
     promotion::verify(&marker)?;
-    resolve::graph(&marker)
+    resolve::graph(&marker, false)
 }

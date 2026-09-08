@@ -31,9 +31,7 @@ pub(super) fn verify(marker: &ReleaseMarker) -> Result<(), String> {
         if identity(&candidate) != identity(marker) {
             continue;
         }
-        let graph: Value = serde_json::from_str(&super::resolve::graph(&candidate)?)
-            .map_err(|error| format!("cannot read candidate ship proof: {error}"))?;
-        if graph["workload_missing"] == false && graph["publication_missing"] == false {
+        if completed(&candidate)? {
             return Ok(());
         }
     }
@@ -41,4 +39,10 @@ pub(super) fn verify(marker: &ReleaseMarker) -> Result<(), String> {
         "stable ship {} requires a fully proven candidate publication graph at {}; release marker identity remains valid",
         marker.marker, marker.commit
     ))
+}
+
+pub(super) fn completed(marker: &ReleaseMarker) -> Result<bool, String> {
+    let graph: Value = serde_json::from_str(&super::resolve::graph(marker, true)?)
+        .map_err(|error| format!("cannot read ship proof: {error}"))?;
+    Ok(graph["workload_missing"] == false && graph["publication_missing"] == false)
 }
