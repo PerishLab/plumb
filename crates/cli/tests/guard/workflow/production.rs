@@ -12,6 +12,39 @@ use plumb::rule::{Production, Receipt};
 use reuse::{Inventory, Keys, Record};
 use std::collections::BTreeMap;
 
+#[test]
+fn produced() {
+    let root = tempfile::tempdir().unwrap();
+    let workload = root.path().join("workload.tgz");
+    std::fs::write(&workload, b"proven workload").unwrap();
+    let mut receipt = receipt(&contract());
+    receipt.artifact = inventory::digest(&workload).unwrap();
+    let source = format!(
+        "https://inventory.example/workloads/{}.tgz",
+        receipt.artifact
+    );
+    assert!(inventory::produced(&receipt, &workload, None, &source).is_ok());
+    assert!(inventory::produced(&receipt, &workload, Some(&source), &source).is_ok());
+    for changed in [
+        source.replace("inventory.example", "unverified.example"),
+        source.replace(&receipt.artifact, &"c".repeat(64)),
+        format!("{source}?unverified"),
+        source.replace("https://", "http://"),
+    ] {
+        assert!(
+            inventory::produced(&receipt, &workload, Some(&changed), &source)
+                .unwrap_err()
+                .contains("canonical workload URL")
+        );
+    }
+    std::fs::write(&workload, b"changed workload").unwrap();
+    assert!(
+        inventory::produced(&receipt, &workload, Some(&source), &source)
+            .unwrap_err()
+            .contains("differs from its receipt")
+    );
+}
+
 fn contract() -> Production {
     Production {
         platform: "windows-x86_64".into(),

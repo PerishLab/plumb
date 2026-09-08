@@ -5,6 +5,19 @@ use std::fs;
 use std::io::Read as _;
 use std::path::Path;
 
+pub(super) fn produced(
+    receipt: &Receipt,
+    workload: &Path,
+    source: Option<&str>,
+    expected: &str,
+) -> Result<(), String> {
+    receipt.verify(workload)?;
+    if source.is_some_and(|source| source != expected) {
+        return Err("producer receipt requires its canonical workload URL".into());
+    }
+    Ok(())
+}
+
 impl Inventory {
     pub(super) fn verified(
         &self,
