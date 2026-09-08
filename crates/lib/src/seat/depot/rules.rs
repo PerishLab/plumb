@@ -263,7 +263,7 @@ impl Rules {
     }
 }
 
-fn related(running: &str, released: &str) -> Result<bool, String> {
+pub fn related(running: &str, released: &str) -> Result<bool, String> {
     let running = semver::Version::parse(running.trim_start_matches('v'))
         .map_err(|error| format!("cannot parse running Plumb version: {error}"))?;
     let released = semver::Version::parse(released.trim_start_matches('v'))

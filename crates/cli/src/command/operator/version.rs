@@ -13,28 +13,7 @@ pub fn project(root: &Path, line: &str, version: &str, head: &str) -> Result<Str
     if tree.clean()? {
         return Ok(head.to_string());
     }
-    tree.commit(line, version)
-}
-
-pub(super) fn prove(root: &Path, line: &str, version: &str, head: &str) -> Result<String, String> {
-    let body = read(
-        "read release proof",
-        Command::new("git")
-            .arg("-C")
-            .arg(root)
-            .args(["show", "-s", "--format=%B", head])
-            .output(),
-    )?;
-    if !body
-        .lines()
-        .any(|line| line.starts_with(plumb::guard::TRAILER))
-    {
-        return Ok(head.to_string());
-    }
-    if plumb::guard::current(root, head).is_ok() {
-        return Ok(head.to_string());
-    }
-    Tree::open(root, head)?.prove(line, version, head)
+    tree.commit(line, version, head)
 }
 
 pub struct Preparation<'a> {
@@ -88,21 +67,23 @@ pub fn prepared(cut: Preparation<'_>) -> bool {
 
 fn message(body: &str) -> String {
     body.lines()
-        .filter(|line| !line.starts_with(plumb::guard::TRAILER))
+        .filter(|line| {
+            !line.starts_with(plumb::guard::TRAILER) && !line.starts_with(plumb::datum::TRAILER)
+        })
         .collect::<Vec<_>>()
         .join("\n")
         .trim()
         .to_string()
 }
 
-struct Tree {
+pub(super) struct Tree {
     root: PathBuf,
     seat: PathBuf,
     temp: tempfile::TempDir,
 }
 
 impl Tree {
-    fn open(root: &Path, head: &str) -> Result<Self, String> {
+    pub(super) fn open(root: &Path, head: &str) -> Result<Self, String> {
         let temp = tempfile::tempdir()
             .map_err(|error| format!("cannot open release version seat: {error}"))?;
         let seat = temp.path().join("source");
@@ -135,7 +116,87 @@ impl Tree {
         let spec = Spec::controller(&self.seat)?;
         adaptor::registry::registry(&spec).prepare(version)?;
         adaptor::module::module(&spec).prepare(version)?;
-        adaptor::chart::chart(&spec).prepare(version)
+        adaptor::chart::chart(&spec).prepare(version)?;
+        self.retire(version)
+    }
+
+    pub(super) fn resolve(&self, version: &str, head: &str) -> Result<plumb::datum::Datum, String> {
+        super::datum::resolve(&self.seat, version, head)
+    }
+
+    fn retire(&self, version: &str) -> Result<(), String> {
+        if !self.migrated(version)? {
+            let seat = format!("{}/{version}", plumb::datum::SEAT);
+            success("retire legacy datum", self.git(["rm", "-r", "--", &seat]))?;
+        }
+        Ok(())
+    }
+
+    pub(super) fn migrated(&self, version: &str) -> Result<bool, String> {
+        let seat = format!("{}/{version}", plumb::datum::SEAT);
+        read("inspect legacy datum", self.git(["ls-files", "--", &seat]))
+            .map(|paths| paths.is_empty())
+    }
+
+    pub(super) fn proved(&self, head: &str) -> Result<bool, String> {
+        let body = read(
+            "read datum proof",
+            self.git(["show", "-s", "--format=%B", head]),
+        )?;
+        Ok(!body
+            .lines()
+            .any(|line| line.starts_with(plumb::guard::TRAILER))
+            || plumb::guard::current(&self.seat, head).is_ok())
+    }
+
+    pub(super) fn datum(
+        &self,
+        line: &str,
+        head: &str,
+        datum: &plumb::datum::Datum,
+    ) -> Result<String, String> {
+        self.retire(&datum.version)?;
+        let message = format!(
+            "Record the datum {} judges against\n\n{}",
+            datum.version,
+            datum.trailer()?
+        );
+        self.record(line, head, message)
+    }
+
+    fn record(&self, line: &str, head: &str, mut message: String) -> Result<String, String> {
+        let tree = self.tree()?;
+        let parent = read(
+            "read parent proof",
+            self.git(["show", "-s", "--format=%B", head]),
+        )?;
+        let captured = read(
+            "capture the datum for Guard",
+            self.git(["commit-tree", &tree, "-p", head, "-m", &message]),
+        )?;
+        success(
+            "select captured datum",
+            self.git(["checkout", "--detach", &captured]),
+        )?;
+        if parent
+            .lines()
+            .any(|line| line.starts_with(plumb::guard::TRAILER))
+        {
+            let proof = crate::command::precommit::proof(&self.seat)?;
+            if proof.tree != tree {
+                return Err("datum proof differs from the staged tree".into());
+            }
+            message.push_str(&format!("\n{} {}", plumb::guard::TRAILER, proof.encode()?));
+        }
+        let commit = read(
+            "commit the datum",
+            self.git(["commit-tree", &tree, "-p", head, "-m", &message]),
+        )?;
+        success(
+            "push the datum",
+            self.git(["push", "origin", &format!("{commit}:refs/heads/{line}")]),
+        )?;
+        Ok(commit)
     }
 
     fn tree(&self) -> Result<String, String> {
@@ -143,49 +204,13 @@ impl Tree {
         read("write release version tree", self.git(["write-tree"]))
     }
 
-    fn commit(&self, line: &str, version: &str) -> Result<String, String> {
-        success("stage release version", self.git(["add", "-A"]))?;
-        success(
-            "commit release version",
-            self.git(["commit", "-m", &format!("Prepare {version}")]),
-        )?;
-        let commit = read(
-            "resolve release version commit",
-            self.git(["rev-parse", "HEAD"]),
-        )?;
-        success(
-            "push release version",
-            self.git(["push", "origin", &format!("{commit}:refs/heads/{line}")]),
-        )?;
-        Ok(commit)
-    }
-
-    fn prove(&self, line: &str, version: &str, head: &str) -> Result<String, String> {
-        let proof = crate::command::guard::precommit::proof(&self.seat)?;
-        let tree = read(
-            "resolve release proof tree",
-            self.git(["rev-parse", "HEAD^{tree}"]),
-        )?;
-        if proof.tree != tree {
-            return Err(format!(
-                "release proof seals {}, not the standing tree {tree}",
-                proof.tree
-            ));
-        }
-        let message = format!(
-            "Refresh the release proof for {version}\n\n{} {}",
-            plumb::guard::TRAILER,
-            proof.encode()?
-        );
-        let commit = read(
-            "commit refreshed release proof",
-            self.git(["commit-tree", &tree, "-p", head, "-m", &message]),
-        )?;
-        success(
-            "push refreshed release proof",
-            self.git(["push", "origin", &format!("{commit}:refs/heads/{line}")]),
-        )?;
-        Ok(commit)
+    fn commit(&self, line: &str, version: &str, head: &str) -> Result<String, String> {
+        let datum = self.resolve(version, head)?;
+        self.record(
+            line,
+            head,
+            format!("Prepare {version}\n\n{}", datum.trailer()?),
+        )
     }
 
     fn git<const N: usize>(&self, args: [&str; N]) -> Result<Output, std::io::Error> {

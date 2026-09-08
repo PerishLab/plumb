@@ -65,6 +65,7 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     if !course.dry() {
         git::fetch(&root)?;
     }
+    let previous = head.clone();
     let head = course
         .step(super::version::plan(&version, &name), || {
             super::version::project(&root, &name, &version, &head)
@@ -84,7 +85,7 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     let (recorded, moved) = recorded.map_or_else(
         || (String::new(), false),
         |record| {
-            let moved = record.head != head;
+            let moved = record.head != previous;
             (record.report, moved)
         },
     );
@@ -93,7 +94,7 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
             "{name} already stands at {head}; nothing moved; {recorded}"
         ))
     } else if standing {
-        Ok(format!("{name} advanced from {head}; {recorded}"))
+        Ok(format!("{name} advanced from {previous}; {recorded}"))
     } else {
         Ok(format!("prepared {name} from {from} at {head}; {recorded}"))
     }

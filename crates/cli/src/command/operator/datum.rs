@@ -1,9 +1,6 @@
 use crate::command::doctor::dependency;
 use plumb::datum::{self, Datum};
-use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
-
-const INDEX: &str = "plumb-datum-index";
+use std::path::Path;
 
 pub struct Cut<'a> {
     pub root: &'a Path,
@@ -20,216 +17,75 @@ pub struct Record {
 }
 
 pub fn plan(version: &str) -> String {
-    format!("record {} on the release line", datum::leaf(version))
+    format!("record the {version} datum in Git commit metadata")
 }
 
 pub fn record(cut: Cut<'_>) -> Result<Record, String> {
-    let seat = Seat(cut.root);
-    seat.reachable(cut.head)?;
-    let head = super::version::prove(cut.root, cut.name, cut.version, cut.head)?;
-    let datum = Datum::new(cut.version, dependency::answers(cut.root)?);
-    let count = datum.answers.len();
-    if seat.settled(&head, cut.version) {
-        let report = if head == cut.head {
-            format!(
-                "{} already stands on the release line",
-                datum::leaf(cut.version)
-            )
-        } else {
-            format!("refreshed the release proof at {head}")
-        };
-        return Ok(Record { head, report });
+    let git = datum::Git(cut.root);
+    let current = git.at(cut.version, cut.head)?;
+    let tree = super::version::Tree::open(cut.root, cut.head)?;
+    if current.is_some() && tree.migrated(cut.version)? && tree.proved(cut.head)? {
+        return Ok(Record {
+            head: cut.head.to_string(),
+            report: format!(
+                "the {} datum is already recorded in Git metadata",
+                cut.version
+            ),
+        });
     }
-    let object = seat.blob(&datum.encode()?)?;
-    let tree = seat.staged(&head, &object, cut.version)?;
-    let commit = seat.sealed(&tree, &head, cut.version)?;
-    seat.push(&commit, cut.name)?;
+    let datum = tree.resolve(cut.version, cut.head)?;
+    let refreshed = !tree.proved(cut.head)?;
+    let head = tree.datum(cut.name, cut.head, &datum)?;
     Ok(Record {
-        head: commit,
-        report: format!("recorded {} with {count} answers", datum::leaf(cut.version)),
+        head,
+        report: format!(
+            "recorded {} datum in Git metadata with {} answers{}",
+            cut.version,
+            datum.answers.len(),
+            if refreshed {
+                "; refreshed the release proof"
+            } else {
+                ""
+            }
+        ),
     })
+}
+
+pub(super) fn resolve(root: &Path, version: &str, head: &str) -> Result<Datum, String> {
+    let git = datum::Git(root);
+    if let Some(datum) = git.inherited(version, head)? {
+        return Ok(datum);
+    }
+    if let Some(datum) = git.legacy(version, head)? {
+        return Ok(datum);
+    }
+    Ok(Datum::new(version, dependency::answers(root)?))
 }
 
 impl Seat<'_> {
     pub fn carried(&self, commit: &str, version: &str) -> bool {
-        let seat = format!("{}/{version}/", datum::SEAT);
-        let Ok(touched) = read(
-            "inspect datum commit",
-            self.command(["show", "--name-only", "--format=", commit]),
-        ) else {
+        let Ok(output) = std::process::Command::new("git")
+            .arg("-C")
+            .arg(self.0)
+            .args(["diff-tree", "--no-commit-id", "--name-only", "-r", commit])
+            .output()
+        else {
             return false;
         };
-        let mut held = touched
-            .lines()
-            .map(str::trim)
-            .filter(|path| !path.is_empty())
-            .peekable();
-        held.peek().is_some() && held.all(|path| path.starts_with(&seat))
-    }
-
-    fn reachable(&self, head: &str) -> Result<(), String> {
-        let seen = self
-            .command(["cat-file", "-e", &format!("{head}^{{commit}}")])
-            .is_ok_and(|output| output.status.success());
-        if seen {
-            Ok(())
-        } else {
-            Err(format!(
-                "the release line stands at {head}, which this checkout does not hold"
-            ))
+        if !output.status.success() {
+            return false;
         }
-    }
-
-    fn settled(&self, head: &str, version: &str) -> bool {
-        let swept = self.stale(head, version).is_ok_and(|held| held.is_empty());
-        swept && self.decodes(&format!("{head}:{}", datum::leaf(version)), version)
-    }
-
-    fn decodes(&self, object: &str, version: &str) -> bool {
-        self.command(["show", object]).is_ok_and(|output| {
-            output.status.success() && datum::decode(version, &output.stdout).is_ok()
-        })
-    }
-
-    fn blob(&self, text: &str) -> Result<String, String> {
-        let mut child = Command::new("git")
-            .arg("-C")
-            .arg(self.0)
-            .args(["hash-object", "-w", "--stdin"])
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .spawn()
-            .map_err(|error| format!("cannot run git: {error}"))?;
-        let mut sink = child
-            .stdin
-            .take()
-            .ok_or_else(|| "cannot write the datum to git".to_string())?;
-        std::io::Write::write_all(&mut sink, text.as_bytes())
-            .map_err(|error| format!("cannot write the datum to git: {error}"))?;
-        drop(sink);
-        let output = child
-            .wait_with_output()
-            .map_err(|error| format!("cannot run git: {error}"))?;
-        read("write the datum object", Ok(output))
-    }
-
-    fn staged(&self, head: &str, object: &str, version: &str) -> Result<String, String> {
-        let index = self.index()?;
-        let _ = std::fs::remove_file(&index);
-        let stage = |args: Vec<String>| -> Result<Output, String> {
-            Command::new("git")
-                .arg("-C")
-                .arg(self.0)
-                .args(args)
-                .env("GIT_INDEX_FILE", &index)
-                .output()
-                .map_err(|error| format!("cannot run git: {error}"))
-        };
-        success("read the release tree", stage(owned(["read-tree", head])))?;
-        for stale in self.stale(head, version)? {
-            success(
-                "drop a stale datum",
-                stage(owned(["update-index", "--force-remove", &stale])),
-            )?;
+        let seat = format!("{}/{version}/", datum::SEAT);
+        let touched = String::from_utf8_lossy(&output.stdout);
+        if !touched.lines().all(|path| path.starts_with(&seat)) {
+            return false;
         }
-        success(
-            "stage the datum",
-            stage(owned([
-                "update-index",
-                "--add",
-                "--cacheinfo",
-                &format!("100644,{object},{}", datum::leaf(version)),
-            ])),
-        )?;
-        let tree = read("write the datum tree", stage(owned(["write-tree"])));
-        let _ = std::fs::remove_file(&index);
-        tree
-    }
-
-    fn stale(&self, head: &str, version: &str) -> Result<Vec<String>, String> {
-        let seat = format!("{}/{version}", datum::SEAT);
-        let leaf = datum::leaf(version);
-        let listed = read(
-            "list the datum seat",
-            self.command(["ls-tree", "-r", "--name-only", head, "--", &seat]),
-        )?;
-        Ok(listed
-            .lines()
-            .map(str::trim)
-            .filter(|path| !path.is_empty() && *path != leaf)
-            .map(str::to_string)
-            .collect())
-    }
-
-    fn sealed(&self, tree: &str, head: &str, version: &str) -> Result<String, String> {
-        let mut message = format!("Record the datum {version} judges against");
-        let parent = read(
-            "read the release parent message",
-            self.command(["show", "-s", "--format=%B", head]),
-        )?;
-        if parent
-            .lines()
-            .any(|line| line.starts_with(plumb::guard::TRAILER))
-        {
-            let held = plumb::guard::current(self.0, head)?;
-            let proof = plumb::guard::Descriptor::new(self.0, tree.to_string(), held.actions)?;
-            message.push_str("\n\n");
-            message.push_str(plumb::guard::TRAILER);
-            message.push(' ');
-            message.push_str(&proof.encode()?);
-        }
-        read(
-            "commit the datum",
-            self.command(["commit-tree", tree, "-p", head, "-m", &message]),
-        )
-    }
-
-    fn push(&self, commit: &str, name: &str) -> Result<(), String> {
-        success(
-            "push the datum",
-            self.command(["push", "origin", &format!("{commit}:refs/heads/{name}")]),
-        )
-    }
-
-    fn index(&self) -> Result<PathBuf, String> {
-        let dir = read(
-            "resolve git directory",
-            self.command(["rev-parse", "--git-dir"]),
-        )?;
-        let dir = PathBuf::from(&dir);
-        Ok(if dir.is_absolute() {
-            dir.join(INDEX)
-        } else {
-            self.0.join(dir).join(INDEX)
-        })
-    }
-
-    fn command<const N: usize>(&self, args: [&str; N]) -> Result<Output, String> {
-        Command::new("git")
-            .arg("-C")
-            .arg(self.0)
-            .args(args)
-            .output()
-            .map_err(|error| format!("cannot run git: {error}"))
-    }
-}
-
-fn owned<const N: usize>(args: [&str; N]) -> Vec<String> {
-    args.iter().map(|arg| (*arg).to_string()).collect()
-}
-
-fn success(action: &str, output: Result<Output, String>) -> Result<(), String> {
-    read(action, output).map(|_| ())
-}
-
-fn read(action: &str, output: Result<Output, String>) -> Result<String, String> {
-    let output = output?;
-    if output.status.success() {
-        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-    } else {
-        Err(format!(
-            "{action} failed: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
-        ))
+        datum::Git(self.0)
+            .at(version, commit)
+            .is_ok_and(|held| held.is_some())
+            || (!touched.trim().is_empty()
+                && datum::Git(self.0)
+                    .legacy(version, commit)
+                    .is_ok_and(|held| held.is_some()))
     }
 }

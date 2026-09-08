@@ -64,12 +64,9 @@ fn protection() {
         stood.contains("prepared release/v1.2.0 from main"),
         "{stood}"
     );
-    assert!(
-        stood.contains(".plumb/releases/v1.2.0/datum.toml"),
-        "{stood}"
-    );
+    assert!(stood.contains("Git metadata"), "{stood}");
     let shown = Command::new("git")
-        .args(["show", "release/v1.2.0:.plumb/releases/v1.2.0/datum.toml"])
+        .args(["show", "-s", "--format=%B", "release/v1.2.0"])
         .current_dir(bare.path())
         .output()
         .expect("git");
@@ -79,8 +76,9 @@ fn protection() {
         String::from_utf8_lossy(&shown.stderr)
     );
     let datum = String::from_utf8_lossy(&shown.stdout).to_string();
-    assert!(datum.contains("schema = 1"), "{datum}");
-    assert!(datum.contains("version = \"v1.2.0\""), "{datum}");
+    let datum = plumb::datum::carried(&datum).unwrap().unwrap();
+    assert_eq!(datum.schema, 1);
+    assert_eq!(datum.version, "v1.2.0");
 }
 
 #[test]
@@ -123,7 +121,7 @@ fn sweeps() {
         .output()
         .expect("git");
     let listed = String::from_utf8_lossy(&listed.stdout).to_string();
-    assert!(listed.contains("datum.toml"), "{listed}");
+    assert!(listed.trim().is_empty(), "{listed}");
     assert!(
         !listed.contains("datum.json"),
         "the datum commit owns its seat: {listed}"
@@ -192,11 +190,13 @@ fn versions() {
     assert!(chart.contains("version: 1.2.0"), "{chart}");
     assert!(chart.contains("appVersion: \"1.2.0\""), "{chart}");
     let touched = show(bare.path(), "--name-only --format= release/v1.2.0");
-    assert!(
-        touched
-            .lines()
-            .all(|path| path.starts_with(".plumb/releases/")),
-        "datum must remain its own commit: {touched}"
+    assert!(!touched.contains(".plumb/"), "{touched}");
+    assert!(touched.contains("Cargo.toml"), "{touched}");
+    let body = show(bare.path(), "--format=%B --no-patch release/v1.2.0");
+    assert!(body.starts_with("Prepare v1.2.0"), "{body}");
+    assert_eq!(
+        plumb::datum::carried(&body).unwrap().unwrap().version,
+        "v1.2.0"
     );
     let first = show(bare.path(), "--format=%H --no-patch release/v1.2.0")
         .trim()

@@ -175,7 +175,13 @@ fn migrated() {
         .output()
         .expect("git");
     let touched = String::from_utf8_lossy(&shown.stdout).to_string();
-    assert!(touched.contains("datum.toml"), "{touched}");
+    assert!(!touched.contains("datum.toml"), "{touched}");
+    assert!(
+        plumb::datum::Git(bare.path())
+            .at("v1.2.0", &recorded)
+            .unwrap()
+            .is_some()
+    );
     assert!(
         touched.contains("datum.json"),
         "the recording commit drops what it swept, so freeze sees one seat commit: {touched}"

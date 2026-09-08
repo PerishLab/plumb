@@ -6,6 +6,8 @@ Product Profile. Show and verify resolve that complete identity. Stamp creates
 it only from a proved source point; a stable marker additionally refuses unless
 its version line is frozen. Ship owns candidate publication and stable promotion
 validation. Historical marker protocols retain their original proof semantics.
+New markers bind the datum on their exact commit, including in a shallow checkout.
+Historical markers continue to read and verify their original tracked datum bytes.
 
 Release never builds, compiles, publishes, activates, or edits a version line.
 Use version to project repository identity and govern the line. Use ship with the

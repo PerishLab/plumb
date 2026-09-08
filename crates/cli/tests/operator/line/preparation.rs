@@ -112,32 +112,7 @@ fn guarded(root: &Path, cut: &Path) {
         .args(["fetch", "origin", "release/v1.2.0"])
         .current_dir(root));
     let head = text(root, &["rev-parse", "origin/release/v1.2.0"]);
-    let prepared = text(root, &["rev-parse", &format!("{head}^")]);
-    let base = text(root, &["rev-parse", &format!("{prepared}^")]);
-    let tree = text(root, &["rev-parse", &format!("{prepared}^{{tree}}")]);
-    let prepared = text(
-        root,
-        &[
-            "commit-tree",
-            &tree,
-            "-p",
-            &base,
-            "-m",
-            "Prepare v1.2.0\n\nPlumb-Guard-Proof: exact",
-        ],
-    );
     let tree = text(root, &["rev-parse", &format!("{head}^{{tree}}")]);
-    let head = text(
-        root,
-        &[
-            "commit-tree",
-            &tree,
-            "-p",
-            &prepared,
-            "-m",
-            "Record the datum v1.2.0 judges against",
-        ],
-    );
     let remote = text(root, &["remote", "get-url", "origin"]);
     let path = remote.trim_end_matches('/').trim_end_matches(".git");
     let mut parts = path.split('/').rev();
@@ -161,7 +136,6 @@ fn guarded(root: &Path, cut: &Path) {
     run(Command::new("git")
         .args([
             "push",
-            "--force",
             "origin",
             &format!("{head}:refs/heads/release/v1.2.0"),
         ])

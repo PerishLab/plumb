@@ -139,6 +139,21 @@ fn prerelease() {
 }
 
 #[test]
+fn related() {
+    for (running, released, expected) in [
+        ("v1.2.3", "v1.2.3", true),
+        ("v1.2.3", "v1.2.3-beta.1", true),
+        ("v1.2.3-beta.1", "v1.2.3-beta.1", true),
+        ("v1.2.4", "v1.2.3-beta.1", false),
+        ("v1.2.3-beta.1", "v1.2.3", false),
+        ("v1.2.3-beta.1", "v1.2.3-beta.2", false),
+    ] {
+        assert_eq!(plumb::depot::related(running, released).unwrap(), expected);
+    }
+    assert!(plumb::depot::related("invalid", "v1.2.3").is_err());
+}
+
+#[test]
 fn sealed() {
     let held = derivative();
     let text = held.encode().expect("manifest");

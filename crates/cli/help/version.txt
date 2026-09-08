@@ -2,10 +2,14 @@ Project and govern one repository version line.
 
 Version owns changes to version-bearing source files and the stable line that
 carries them. Prepare opens the line, projects one version through every declared
-package carrier, and records the dependency datum. Pick moves one proved change
+package carrier, and records the dependency datum in Git commit metadata. Pick carries
+that datum forward with one proved change
 onto it. Freeze walls the line but creates no distribution marker and does not
 inspect published artifacts. Ship proves candidate publication before stable
 distribution. Rejoin settles a shipped stable commit back into main.
 
 After freeze, use release stamp to create the immutable marker. Distribution
 starts only when ship is invoked with that marker.
+
+No datum file is added to the repository. Preparing a historical line preserves
+its answers while retiring its old tracked datum seat; existing tags stay unchanged.
