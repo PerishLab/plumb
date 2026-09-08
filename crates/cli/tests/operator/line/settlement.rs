@@ -51,6 +51,7 @@ case "$*" in
   "rev-parse --show-toplevel") printf '%s\n' "$COURT_ROOT" ;;
   "remote get-url origin") printf '%s\n' "https://forge.test/test/probe.git" ;;
   "fetch --prune origin") ;;
+  "for-each-ref --format=%(contents) refs/tags/v1.2.0") ;;
   "fetch origin refs/heads/rejoin/v1.2.0") ;;
   "rev-parse FETCH_HEAD^{commit}") printf '%s\n' "dddddddddddddddddddddddddddddddddddddddd" ;;
   "rev-parse origin/main^{commit}") printf '%s\n' "cccccccccccccccccccccccccccccccccccccccc" ;;

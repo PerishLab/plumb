@@ -5,13 +5,32 @@ use std::process::{Command, Output};
 pub struct Seat<'a>(pub &'a Path);
 
 impl Seat<'_> {
-    pub fn marked(&self, version: &str) -> Result<bool, String> {
+    pub fn require(&self, version: &str) -> Result<(), String> {
         let listed = read("list release points", self.git(["tag", "--list", "v*"]))?;
-        Ok(listed.lines().map(str::trim).any(|name| {
-            name != version
-                && Version::parse(name.trim_start_matches('v'))
-                    .is_ok_and(|held| held.pre.is_empty())
-        }))
+        let mut names = listed
+            .lines()
+            .filter_map(|name| {
+                let held = Version::parse(name.trim_start_matches('v')).ok()?;
+                (name != version && held.pre.is_empty()).then_some((held, name))
+            })
+            .collect::<Vec<_>>();
+        names.sort_by(|left, right| right.0.cmp(&left.0));
+        let mut legacy = false;
+        for (_, name) in names {
+            let Some(marker) = crate::command::release::ReleaseMarker::recorded(self.0, name)?
+            else {
+                legacy = true;
+                continue;
+            };
+            if crate::command::ship::completed(&marker)? {
+                return self.rejoined(Some((marker.version, marker.commit)));
+            }
+        }
+        if legacy {
+            let spec = crate::shape::release::Spec::controller(self.0)?;
+            self.rejoined(crate::command::release::Product::new(&spec).activated()?)?;
+        }
+        Ok(())
     }
 
     pub fn rejoined(&self, activated: Option<(String, String)>) -> Result<(), String> {

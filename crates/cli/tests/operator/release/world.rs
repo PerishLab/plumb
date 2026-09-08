@@ -227,12 +227,21 @@ while [ $# -gt 0 ]; do
   esac
 done
 case "$url" in
+  */inventory.json)
+    if [ -n "${FAKE_INVENTORY_STATUS:-}" ]; then
+      printf '%s' "$FAKE_INVENTORY_STATUS"
+      exit "${FAKE_INVENTORY_EXIT:-0}"
+    fi
+    ;;
+esac
+case "$url" in
   https://releases.test/*)
     key=${url#https://releases.test/}
     path="$FAKE_S3_ROOT/perish-probe-releases/$key"
     [ -f "$path" ] || path="$FAKE_S3_ROOT/releases/$key"
     ;;
   https://depot.test/*) path="$FAKE_S3_ROOT/depot/${url#https://depot.test/}" ;;
+  http://127.0.0.1:*/workflow/inventory.json) path="$FAKE_S3_ROOT/depot/inventory.json" ;;
   *) exit 1 ;;
 esac
 if [ -f "$path" ]; then

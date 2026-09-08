@@ -63,9 +63,8 @@ impl Inventory {
         }
         let file = tempfile::NamedTempFile::new()
             .map_err(|error| format!("cannot open an inventory seat: {error}"))?;
-        let status = Command::new("curl")
+        let output = Command::new("curl")
             .args([
-                "--fail",
                 "--silent",
                 "--show-error",
                 "--location",
@@ -75,15 +74,22 @@ impl Inventory {
                 "10",
                 "--retry",
                 "1",
+                "--write-out",
+                "%{http_code}",
                 "--output",
             ])
             .arg(file.path())
             .arg(url)
-            .status();
-        Ok(match status {
-            Ok(status) if status.success() => Self(Some(file)),
-            _ => Self(None),
-        })
+            .output()
+            .map_err(|error| format!("cannot fetch Ship inventory: {error}"))?;
+        if !output.status.success() {
+            return Err("cannot fetch Ship inventory: transport failed".into());
+        }
+        match String::from_utf8_lossy(&output.stdout).trim() {
+            "200" => Ok(Self(Some(file))),
+            "404" => Ok(Self(None)),
+            status => Err(format!("cannot fetch Ship inventory: HTTP {status}")),
+        }
     }
 
     pub(super) fn path(&self) -> Option<&Path> {

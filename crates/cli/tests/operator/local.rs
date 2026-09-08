@@ -5,9 +5,14 @@ use std::process::Command;
 pub const CURL: &str = r#"#!/bin/sh
 set -eu
 destination=
+status=false
 for arg in "$@"; do url=$arg; done
 while [ $# -gt 0 ]; do
-  case "$1" in --output|-o) destination=$2; shift 2 ;; *) shift ;; esac
+  case "$1" in
+    --output|-o) destination=$2; shift 2 ;;
+    --write-out) status=true; shift 2 ;;
+    *) shift ;;
+  esac
 done
 case "$url" in
   */inventory.json)
@@ -17,6 +22,7 @@ case "$url" in
   *) path="$FAKE_CHART_WORKLOAD" ;;
 esac
 if [ -n "$destination" ]; then cp "$path" "$destination"; else cat "$path"; fi
+[ "$status" = false ] || printf '200'
 "#;
 
 pub fn run(root: &Path, command: &impl Fn() -> Command, request: &Value) {
@@ -161,6 +167,7 @@ fn platform() {
     )
     .unwrap();
     crate::marker::prepare(root.path(), home.path(), &manifest, "v1.2.0-beta.1");
+    let inventory = crate::support::Bucket::open(6);
     let command = || {
         let mut command = fixture.command();
         command
@@ -169,7 +176,7 @@ fn platform() {
             .env("PLUMB_RULES_SOURCE", "https://depot.test")
             .env(
                 "PLUMB_WORKFLOW_INVENTORY_URL",
-                "https://depot.test/inventory.json",
+                format!("{}/workflow/inventory.json", inventory.endpoint()),
             )
             .env_remove("PLUMB_RELEASE_VERSION")
             .env_remove("PLUMB_RELEASE_CHANNEL")
@@ -198,4 +205,5 @@ fn platform() {
         !dirty.status.success()
             && String::from_utf8_lossy(&dirty.stderr).contains("tracked tree differs")
     );
+    inventory.finish();
 }

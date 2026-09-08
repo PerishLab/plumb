@@ -7,6 +7,8 @@ mod skill;
 mod smoke;
 mod transport;
 
+pub(in crate::command) use transport::completed;
+
 use super::release::{artifacts, capsule, manager, output, required, verify};
 use clap::Subcommand;
 use plumb::rig::Rig;

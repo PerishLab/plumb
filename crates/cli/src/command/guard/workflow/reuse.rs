@@ -38,6 +38,8 @@ pub struct Verdict {
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Inventory {
+    #[serde(skip)]
+    pub(super) evidence: bool,
     #[serde(default)]
     pub(super) schema: String,
     #[serde(default)]
@@ -107,6 +109,7 @@ impl<'a> Context<'a> {
 impl Inventory {
     pub fn empty() -> Self {
         Self {
+            evidence: false,
             schema: SCHEMA.to_string(),
             records: Vec::new(),
             base: None,

@@ -8,9 +8,8 @@ use plumb::rig::Rig;
 use serde_json::{Value, json};
 use std::path::Path;
 
-pub(super) fn graph(marker: &release::ReleaseMarker) -> Result<String, String> {
+pub(super) fn graph(marker: &release::ReleaseMarker, evidence: bool) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-    let root = &rig.release.root;
     let spec = marker.spec();
     let reference = if marker.channel == "stable" {
         format!("refs/heads/release/{}", marker.version)
@@ -24,11 +23,12 @@ pub(super) fn graph(marker: &release::ReleaseMarker) -> Result<String, String> {
     }
     let inventory = Inventory::fetch(&rig.workflow.inventory.url)?;
     let world = World {
+        evidence,
         marker,
         binding: Binding::new(spec),
         inventory: inventory.path(),
         source: Some(&rig.workflow.inventory.url),
-        root,
+        root: &spec.root,
     };
     let workload = workloads(spec, marker, &world)?;
     let publication = Publish {
@@ -57,13 +57,13 @@ pub(super) fn graph(marker: &release::ReleaseMarker) -> Result<String, String> {
 }
 
 pub(super) struct World<'a> {
+    pub evidence: bool,
     pub marker: &'a release::ReleaseMarker,
     pub binding: Binding<'a>,
     pub inventory: Option<&'a Path>,
     pub source: Option<&'a str>,
     pub root: &'a Path,
 }
-
 struct Workloads {
     matrix: Value,
     missing: bool,
@@ -276,6 +276,7 @@ pub(super) fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String
             .collect()
     };
     let input = crate::command::workflow::plan::Input {
+        evidence: world.evidence,
         base: None,
         world: fields,
         workload,

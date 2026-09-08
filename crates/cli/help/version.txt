@@ -6,7 +6,10 @@ package carrier, and records the dependency datum in Git commit metadata. Pick c
 that datum forward with one proved change
 onto it. Freeze walls the line but creates no distribution marker and does not
 inspect published artifacts. Ship proves candidate publication before stable
-distribution. Rejoin settles a shipped stable commit back into main.
+distribution. Rejoin settles a shipped stable commit back into main. For current
+markers, its gate is the complete Ship graph, not a mutable Depot channel pointer.
+Opening or freezing a successor requires the delivered stable baseline to be held
+by main. Historical markers retain their original publication interpretation.
 
 After freeze, use release stamp to create the immutable marker. Distribution
 starts only when ship is invoked with that marker.

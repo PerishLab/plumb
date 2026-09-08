@@ -133,8 +133,8 @@ pub(super) fn resolve(
 }
 
 impl Annotation {
-    fn resolve(self, root: &Path, marker: &str) -> Result<Identity, String> {
-        let schema = match self.schema.as_str() {
+    fn protocol(&self) -> Result<&'static str, String> {
+        Ok(match self.schema.as_str() {
             "plumb.release-marker/v2" => "plumb.release-marker/v2",
             "plumb.release-marker/v3" => "plumb.release-marker/v3",
             "plumb.release-marker/v4" => "plumb.release-marker/v4",
@@ -144,7 +144,11 @@ impl Annotation {
                     self.schema
                 ));
             }
-        };
+        })
+    }
+
+    fn resolve(self, root: &Path, marker: &str) -> Result<Identity, String> {
+        let schema = self.protocol()?;
         if self.marker != marker {
             return Err(format!(
                 "release marker {marker} annotation names {}",
@@ -219,4 +223,13 @@ impl Annotation {
             spec: Box::new(spec),
         })
     }
+}
+
+pub(super) fn protocol(message: &str) -> Result<Option<&'static str>, String> {
+    if !message.starts_with('{') {
+        return Ok(None);
+    }
+    let annotation: Annotation = serde_json::from_str(message)
+        .map_err(|error| format!("cannot parse release marker annotation: {error}"))?;
+    annotation.protocol().map(Some)
 }

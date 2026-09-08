@@ -9,6 +9,8 @@ use std::path::{Path, PathBuf};
 
 #[derive(Args)]
 pub struct Input {
+    #[arg(skip)]
+    pub(in crate::command) evidence: bool,
     #[arg(long)]
     pub(in crate::command) base: Option<String>,
     #[arg(long = "world")]
@@ -90,8 +92,9 @@ fn render(
     let publication = fields("identity", &input.identity)?;
     let projects = tree::Projects::parse(&input.project)?;
     let roots = roots(&input.roots)?;
-    let inventory =
-        reuse::Inventory::read(input.inventory.as_deref())?.at(input.source.as_deref())?;
+    let inventory = reuse::Inventory::read(input.inventory.as_deref())?
+        .at(input.source.as_deref())?
+        .evidence(input.evidence);
     let before = match base {
         Some(base) => tree::Tree::read(root, Some(base))?,
         None => tree::Tree::default(),

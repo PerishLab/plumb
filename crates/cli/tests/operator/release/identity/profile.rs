@@ -11,11 +11,6 @@ pub(super) fn candidates(
 ) {
     let store = crate::support::Bucket::open(83);
     let source = format!("{}/workflow/inventory.json", store.endpoint());
-    let original = std::fs::read_to_string(fixture.tools.join("curl")).unwrap();
-    std::fs::write(fixture.tools.join("curl"), original.replace(
-        "case \"$url\" in",
-        "case \"$url\" in\n  http://127.0.0.1:*/workflow/*) path=\"$FAKE_S3_ROOT/depot/${url##*/}\" ;;",
-    )).unwrap();
     let command = || {
         let mut held = command();
         held.env("PLUMB_WORKFLOW_INVENTORY_URL", &source);

@@ -1,15 +1,9 @@
 use super::super::course::Course;
-use super::super::value;
 use super::plan;
+use super::published::{Published, read};
 use plumb::forgejo::{Client, Pull, Remote, Strategy, git};
 use serde_json::Value;
 use std::path::Path;
-
-struct Published {
-    version: String,
-    commit: String,
-    url: String,
-}
 
 struct Join<'a> {
     root: &'a Path,
@@ -31,8 +25,8 @@ pub fn settle(course: &mut Course, held: Settle<'_>) -> Result<String, String> {
         version,
         name,
     } = held;
-    let published = pointer(root, version)?;
     git::fetch(root)?;
+    let published = read(root, version)?;
     let client = Client::new(remote)?;
     let branch = client.branch(name)?;
     let current = branch
@@ -202,28 +196,4 @@ fn settled(root: &Path, published: &Published) -> Result<bool, String> {
         Err(error) if error.contains("is not an ancestor") => Ok(false),
         Err(error) => Err(error),
     }
-}
-
-fn pointer(root: &Path, version: &str) -> Result<Published, String> {
-    let authority = super::super::super::release::authority(root)?;
-    let url = format!("{authority}/v1/channels/stable.json");
-    super::super::super::release::inspect(&url)?;
-    let value = plumb::forgejo::public(&url)?;
-    if value.get("schema").and_then(Value::as_u64) != Some(1)
-        || value.get("channel").and_then(Value::as_str) != Some("stable")
-        || value.get("releaseVersion").and_then(Value::as_str) != Some(version)
-    {
-        return Err(format!("stable pointer does not name {version}"));
-    }
-    let commit = value
-        .get("commit")
-        .and_then(Value::as_str)
-        .ok_or_else(|| format!("stable pointer has no commit for {version}"))?;
-    value::commit(commit)
-        .map_err(|_| format!("stable pointer has an invalid commit for {version}"))?;
-    Ok(Published {
-        version: version.to_string(),
-        commit: commit.to_string(),
-        url,
-    })
 }
