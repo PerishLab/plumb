@@ -20,6 +20,28 @@ if [ -n "$destination" ]; then cp "$path" "$destination"; else cat "$path"; fi
 "#;
 
 pub fn run(root: &Path, command: &impl Fn() -> Command, request: &Value) {
+    for (key, value) in [
+        ("PLUMB_RELEASE_REGISTRY_ESCROW", "relative.env".to_string()),
+        (
+            "PLUMB_RELEASE_REGISTRY_ESCROW",
+            root.join("missing.env").display().to_string(),
+        ),
+        (
+            "PLUMB_RELEASE_REGISTRY_TOKEN",
+            "Bearer conflicting-secret".to_string(),
+        ),
+    ] {
+        let refused = command()
+            .env(key, value)
+            .args(["ship", "execute", "--request", &request.to_string()])
+            .output()
+            .unwrap();
+        assert!(!refused.status.success());
+        let error = String::from_utf8_lossy(&refused.stderr);
+        assert!(error.contains("escrow"), "{error}");
+        assert!(!error.contains("conflicting-secret"), "{error}");
+        assert!(!root.join("beta-registry.tgz").exists());
+    }
     let mut record = json!({
         "action":request["action"], "workload":request["keys"]["workload"],
         "proof":request["keys"]["proof"], "source":request["reuse"],
@@ -67,6 +89,17 @@ pub fn run(root: &Path, command: &impl Fn() -> Command, request: &Value) {
     assert_eq!(dry["complete"], false);
     assert!(!root.join("home/tmp").exists());
     assert!(!root.join("beta-registry.tgz").exists());
+    let blind = command()
+        .env("PLUMB_RELEASE_REGISTRY_ESCROW", root.join("missing.env"))
+        .env("PLUMB_WORKFLOW_INVENTORY_ESCROW", root.join("missing.env"))
+        .args(["ship", "local", "--marker", "v2.0.0-beta.1", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        blind.status.success(),
+        "{}",
+        String::from_utf8_lossy(&blind.stderr)
+    );
     let failed = command()
         .env("PLUMB_TEST_REFUSE", "1")
         .args(["ship", "local", "--marker", "v2.0.0-beta.1"])
@@ -87,6 +120,20 @@ pub fn run(root: &Path, command: &impl Fn() -> Command, request: &Value) {
     let repeated = invoke(false);
     assert_eq!(repeated["complete"], true);
     assert_eq!(repeated["executed"], json!([]));
+}
+
+pub fn escrows(root: &Path, endpoint: &str) {
+    let registry = root.join("registry.env");
+    let workflow = root.join("workflow.env");
+    std::fs::write(&registry, "REGISTRY_TOKEN_ID=1\nREGISTRY_TOKEN_NAME=probe-release-registry-v1\nREGISTRY_TOKEN_LAST_EIGHT=t-secret\nRELEASE_REGISTRY_TOKEN=fixture-test-secret\n").unwrap();
+    std::fs::write(&workflow, format!("RELEASE_PUBLISH_S3_ACCESS_KEY=access\nRELEASE_PUBLISH_S3_SECRET_KEY=secret\nRELEASE_PUBLISH_S3_BUCKET=workflow\nRELEASE_PUBLISH_S3_ENDPOINT={endpoint}\n")).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        for path in [registry, workflow] {
+            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        }
+    }
 }
 
 #[test]

@@ -174,10 +174,11 @@ struct Authority {
 
 impl Authority {
     fn read() -> Result<Self, String> {
-        let held = plumb::rig::Rig::resolve(None)
+        let mut held = plumb::rig::Rig::resolve(None)
             .map_err(|error| error.to_string())?
             .workflow
             .inventory;
+        crate::command::release::authority::inventory(&mut held)?;
         let access = field("PLUMB_WORKFLOW_INVENTORY_ACCESS", held.access)?;
         let secret = field("PLUMB_WORKFLOW_INVENTORY_SECRET", held.secret)?;
         let bucket = field("PLUMB_WORKFLOW_INVENTORY_BUCKET", held.bucket)?;

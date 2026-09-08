@@ -25,6 +25,14 @@ Only nodes matching this host's declared runner platform execute. Other nodes,
 or newly recorded work not yet visible in the inventory, leave the transaction
 incomplete. Repeat the same marker to resume; completed work is not rebuilt.
 
+Runseal may inject absolute PLUMB_WORKFLOW_INVENTORY_ESCROW and
+PLUMB_RELEASE_REGISTRY_ESCROW paths to the protected files produced by Plumb
+authority. Plumb validates its own escrow formats; no shell sourcing is needed.
+An escrow selection refuses conflicting inline credentials or secret-file
+inputs. PLUMB_WORKFLOW_INVENTORY_URL still selects the public inventory.
+Registry credentials are read only for registry publication, and inventory
+writer credentials only when recording work. Dry-run needs neither secret.
+
 Only marker-bound plan requests perform immutable publication. Execute requires
 the marker's locked configuration and Product Profile; conflicting repository,
 channel, or commit inputs refuse before publication. Medium-specific exact and

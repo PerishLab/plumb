@@ -4,11 +4,76 @@ use sha2::{Digest, Sha256};
 use std::process::Command;
 
 #[test]
+fn escrow() {
+    use std::os::unix::fs::PermissionsExt;
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("workflow.env");
+    let workload = root.path().join("workload.tgz");
+    std::fs::write(&workload, "workload").unwrap();
+    let valid = "RELEASE_PUBLISH_S3_ACCESS_KEY=access\nRELEASE_PUBLISH_S3_SECRET_KEY=secret-fixture\nRELEASE_PUBLISH_S3_BUCKET=workflow\nRELEASE_PUBLISH_S3_ENDPOINT=https://s3.invalid\n";
+    let command = || {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
+        command
+            .args([
+                "workflow",
+                "record",
+                "ship/chart",
+                "--keys",
+                &serde_json::json!({"workload":"1".repeat(64),"proof":"2".repeat(64)}).to_string(),
+                "--workload",
+                workload.to_str().unwrap(),
+            ])
+            .env_remove("PLUMB_WORKFLOW_INVENTORY_ACCESS")
+            .env_remove("PLUMB_WORKFLOW_INVENTORY_SECRET")
+            .env_remove("PLUMB_WORKFLOW_INVENTORY_SECRET_FILE")
+            .env_remove("PLUMB_WORKFLOW_INVENTORY_BUCKET")
+            .env_remove("PLUMB_WORKFLOW_INVENTORY_ENDPOINT")
+            .env(
+                "PLUMB_WORKFLOW_INVENTORY_URL",
+                "https://inventory.invalid/inventory.json",
+            )
+            .env("PLUMB_WORKFLOW_INVENTORY_ESCROW", &path);
+        command
+    };
+    for (body, mode) in [
+        (valid.to_string(), 0o644),
+        (
+            format!("{valid}RELEASE_PUBLISH_S3_SECRET_KEY=duplicate-secret\n"),
+            0o600,
+        ),
+        ("UNKNOWN=secret-fixture\n".to_string(), 0o600),
+    ] {
+        std::fs::write(&path, body).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode)).unwrap();
+        let output = command().output().unwrap();
+        assert!(!output.status.success());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            error.contains("escrow") || error.contains("mode 600"),
+            "{error}"
+        );
+        assert!(
+            !error.contains("secret-fixture") && !error.contains("duplicate-secret"),
+            "{error}"
+        );
+    }
+    std::fs::write(&path, valid).unwrap();
+    let output = command()
+        .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "conflicting")
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("conflicts"));
+}
+
+#[test]
 fn recorded() {
     let store = crate::support::Bucket::open(24);
     let root = tempfile::tempdir().expect("root");
     let workload = root.path().join("package.tgz");
     std::fs::write(&workload, "workload").expect("workload");
+    let secret = root.path().join("secret");
+    std::fs::write(&secret, "secret").unwrap();
     let keys = serde_json::json!({
         "workload": "1".repeat(64),
         "proof": "2".repeat(64),
@@ -38,7 +103,8 @@ fn recorded() {
                 &depot,
             ])
             .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
-            .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
+            .env_remove("PLUMB_WORKFLOW_INVENTORY_SECRET")
+            .env("PLUMB_WORKFLOW_INVENTORY_SECRET_FILE", &secret)
             .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", "workflow")
             .env("PLUMB_WORKFLOW_INVENTORY_ENDPOINT", store.endpoint())
             .env(

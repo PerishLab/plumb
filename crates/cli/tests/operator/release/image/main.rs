@@ -209,6 +209,7 @@ esac
         request,
         "v2.0.0-beta.1",
     );
+    local::escrows(fixture.root, &inventory.endpoint());
     let command = || {
         let mut command = fixture.command();
         command
@@ -221,11 +222,19 @@ esac
                 fixture.root.join("beta-registry.tgz"),
             )
             .env("PLUMB_RELEASE_VERSION", "v2.0.0-beta.1")
-            .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
-            .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
-            .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
-            .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", "workflow")
-            .env("PLUMB_WORKFLOW_INVENTORY_ENDPOINT", inventory.endpoint())
+            .env_remove("PLUMB_RELEASE_REGISTRY_TOKEN")
+            .env(
+                "PLUMB_RELEASE_REGISTRY_ESCROW",
+                fixture.root.join("registry.env"),
+            )
+            .env_remove("PLUMB_WORKFLOW_INVENTORY_ACCESS")
+            .env_remove("PLUMB_WORKFLOW_INVENTORY_SECRET")
+            .env_remove("PLUMB_WORKFLOW_INVENTORY_BUCKET")
+            .env_remove("PLUMB_WORKFLOW_INVENTORY_ENDPOINT")
+            .env(
+                "PLUMB_WORKFLOW_INVENTORY_ESCROW",
+                fixture.root.join("workflow.env"),
+            )
             .env(
                 "PLUMB_WORKFLOW_INVENTORY_URL",
                 "https://workflow.example/inventory.json",

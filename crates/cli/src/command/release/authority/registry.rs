@@ -1,5 +1,5 @@
 #[path = "profile.rs"]
-mod profile;
+pub(super) mod profile;
 
 use plumb::forgejo::{Client, scopes};
 use serde::Serialize;

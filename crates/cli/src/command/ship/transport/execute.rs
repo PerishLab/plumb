@@ -144,6 +144,14 @@ impl Request {
         {
             return Err("image request production contract differs from its dispatch configuration and implementation".into());
         }
+        let credential = if matches!(
+            self.operation,
+            Operation::Cargo | Operation::Chart | Operation::Npm { .. } | Operation::Oci { .. }
+        ) {
+            crate::command::release::authority::credential(&release.credential)?
+        } else {
+            String::new()
+        };
         let projection = match self.operation {
             Operation::Workload { target, archive } => {
                 super::production::execute(
@@ -186,7 +194,7 @@ impl Request {
             Operation::Cargo => Some(super::super::package::project::cargo(
                 &adaptor::registry::registry(spec),
                 version,
-                &release.credential,
+                &credential,
                 &reuse,
             )?),
             Operation::Cfworker => {
@@ -201,16 +209,11 @@ impl Request {
                 )
             }
             Operation::Chart => {
-                Some(adaptor::chart::chart(spec).exact(version, &release.credential, &reuse)?)
+                Some(adaptor::chart::chart(spec).exact(version, &credential, &reuse)?)
             }
             Operation::Npm { package } => {
                 pnpm(&spec.root, self.reuse.kind == "none")?;
-                Some(adaptor::module::module(spec).exact(
-                    &package,
-                    version,
-                    &release.credential,
-                    &reuse,
-                )?)
+                Some(adaptor::module::module(spec).exact(&package, version, &credential, &reuse)?)
             }
             Operation::Oci { workloads } => {
                 let artifacts = artifacts(release)?;
@@ -223,7 +226,7 @@ impl Request {
                         version,
                         commit: &release.commit,
                         artifacts: &artifacts,
-                        credential: &release.credential,
+                        credential: &credential,
                         reuse: &reuse,
                         proof: super::super::package::production::Proof {
                             contract: production
