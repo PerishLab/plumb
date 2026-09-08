@@ -3,6 +3,10 @@ use crate::command::ship::attachment::Identity;
 use crate::shape::release::Spec;
 use std::path::Path;
 
+#[cfg(all(test, unix))]
+#[path = "../../../../tests/operator/oci.rs"]
+mod tests;
+
 pub(in crate::command::ship) struct Image<'a> {
     session: Session<'a>,
     source: String,

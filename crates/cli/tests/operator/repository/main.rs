@@ -2,6 +2,9 @@
 mod audit;
 mod chart;
 #[cfg(unix)]
+#[path = "../marker.rs"]
+mod marker;
+#[cfg(unix)]
 mod module;
 #[path = "precommit/main.rs"]
 mod precommit;

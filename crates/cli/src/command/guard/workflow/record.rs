@@ -55,13 +55,7 @@ fn execute(
     if input.action.trim().is_empty() {
         return Err("action cannot be empty".into());
     }
-    let keys: Keys = serde_json::from_str(&input.keys)
-        .map_err(|error| format!("cannot parse --keys: {error}"))?;
-    hash(&keys.workload)?;
-    hash(&keys.proof)?;
-    if let Some(publication) = &keys.publication {
-        hash(publication)?;
-    }
+    let keys = keys(&input.keys)?;
     let depot = input
         .depot
         .map(|depot| {
@@ -122,6 +116,17 @@ fn execute(
         authority.record(publication, None)?;
     }
     Ok(())
+}
+
+pub(in crate::command) fn keys(text: &str) -> Result<Keys, String> {
+    let keys: Keys =
+        serde_json::from_str(text).map_err(|error| format!("cannot parse --keys: {error}"))?;
+    hash(&keys.workload)?;
+    hash(&keys.proof)?;
+    if let Some(publication) = &keys.publication {
+        hash(publication)?;
+    }
+    Ok(keys)
 }
 
 pub(in crate::command) struct Project<'a> {

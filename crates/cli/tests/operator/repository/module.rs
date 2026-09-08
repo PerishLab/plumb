@@ -38,23 +38,7 @@ fn direct() {
             .expect("fixture mode");
     }
     let observed = root.join("observed");
-    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args([
-            "ship",
-            "npm",
-            "exact",
-            "--package",
-            "held",
-            "--reuse",
-            r#"{"type":"workload","source":"https://inventory.invalid/held.tgz"}"#,
-        ])
-        .env("PATH", root.join("bin"))
-        .env("PLUMB_TEST_OBSERVED", &observed)
-        .env("PLUMB_RELEASE_ROOT", root)
-        .env("PLUMB_RELEASE_VERSION", "v2.0.0-beta.1")
-        .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
-        .output()
-        .expect("plumb should run");
+    let output = publish(root, "v2.0.0-beta.1", &observed);
     assert!(
         output.status.success(),
         "{}",
@@ -105,23 +89,7 @@ fn held() {
         format!("sha512-{digest}"),
     )
     .expect("registry integrity");
-    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args([
-            "ship",
-            "npm",
-            "exact",
-            "--package",
-            "held",
-            "--reuse",
-            r#"{"type":"workload","source":"https://inventory.invalid/held.tgz"}"#,
-        ])
-        .env("PATH", root.join("bin"))
-        .env("PLUMB_TEST_OBSERVED", &observed)
-        .env("PLUMB_RELEASE_ROOT", root)
-        .env("PLUMB_RELEASE_VERSION", "v1.0.0")
-        .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
-        .output()
-        .expect("plumb should run");
+    let output = publish(root, "v1.0.0-beta.1", &observed);
     assert!(
         output.status.success(),
         "{}",
@@ -144,7 +112,7 @@ fn archive(path: &std::path::Path) {
         .mtime(0)
         .write(file, Compression::default());
     let mut archive = tar::Builder::new(encoder);
-    let body = br#"{"name":"held","version":"1.0.0","main":"index.js"}"#;
+    let body = br#"{"name":"held","version":"1.0.0-beta.1","main":"index.js"}"#;
     let mut header = tar::Header::new_gnu();
     header
         .set_path("package/package.json")
@@ -157,4 +125,56 @@ fn archive(path: &std::path::Path) {
         .into_inner()
         .and_then(flate2::write::GzEncoder::finish)
         .expect("archive");
+}
+
+fn publish(
+    root: &std::path::Path,
+    version: &str,
+    observed: &std::path::Path,
+) -> std::process::Output {
+    let home = tempfile::tempdir().unwrap();
+    let binding = crate::marker::prepare(
+        root,
+        home.path(),
+        "[release]\nproduct='probe'\nauthority='https://releases.test'\n[release.npm]\nregistry='https://registry.invalid'\npackages=['held']\n",
+        version,
+    );
+    let git = root.join("bin/git");
+    std::fs::write(&git, "#!/bin/sh\nexec /usr/bin/git \"$@\"\n").unwrap();
+    std::fs::set_permissions(git, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let inventory = crate::support::Bucket::open(3);
+    let request = serde_json::json!({
+        "schema":"plumb.ship-request/v2", "configuration":binding["configuration"], "profile":binding["profile"],
+        "action":"ship/npm.held", "projections":["packages/held/package.json#/version"], "roots":["packages/held"],
+        "operation":{"type":"npm","package":"held"},
+        "reuse":{"type":"workload","source":"https://inventory.invalid/held.tgz"},
+        "keys":{"workload":"1".repeat(64),"proof":"2".repeat(64),"publication":"3".repeat(64)},
+    });
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .current_dir(root)
+        .args(["ship", "execute", "--request", &request.to_string()])
+        .env("PATH", root.join("bin"))
+        .env("PLUMB_HOME", home.path())
+        .env("PLUMB_RULES_SOURCE", "https://depot.test")
+        .env("PLUMB_TEST_OBSERVED", observed)
+        .env("PLUMB_RELEASE_ROOT", root)
+        .env("PLUMB_RELEASE_VERSION", version)
+        .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
+        .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
+        .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
+        .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", "workflow")
+        .env("PLUMB_WORKFLOW_INVENTORY_ENDPOINT", inventory.endpoint())
+        .env(
+            "PLUMB_WORKFLOW_INVENTORY_URL",
+            "https://inventory.invalid/inventory.json",
+        )
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    inventory.finish();
+    output
 }

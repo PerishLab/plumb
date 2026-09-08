@@ -7,7 +7,7 @@ mod skill;
 mod smoke;
 mod transport;
 
-use super::release::{artifacts, capsule, manager, output, required, storage, verify};
+use super::release::{artifacts, capsule, manager, output, required, verify};
 use clap::Subcommand;
 use plumb::rig::Rig;
 
@@ -81,53 +81,28 @@ pub enum Deed {
 
 #[derive(Subcommand)]
 pub enum Cargo {
-    #[command(about = "Publish every declared crate, in the order the attachment declares")]
-    Publish,
     #[command(about = "Package every declared crate without uploading anything")]
     Rehearse,
 }
 
 #[derive(Subcommand)]
 pub enum Oci {
-    #[command(about = "Publish the exact image from source or a reusable workload")]
-    Exact {
-        #[arg(long, default_value = "{\"type\":\"none\",\"source\":\"\"}")]
-        reuse: String,
-    },
     #[command(
         about = "Build the declared image from the Containerfile with this release's payload"
     )]
     Build,
-    #[command(about = "Push the built image, or accept the identical one already published")]
-    Publish,
 }
 
 #[derive(Subcommand)]
 pub enum Chart {
-    #[command(about = "Publish the exact chart from source or a reusable workload")]
-    Exact {
-        #[arg(long, default_value = "{\"type\":\"none\",\"source\":\"\"}")]
-        reuse: String,
-    },
     #[command(about = "Stamp the chart with this version and package it")]
     Package,
-    #[command(about = "Package the chart and push it to its registry")]
-    Publish,
 }
 
 #[derive(Subcommand)]
 pub enum Npm {
-    #[command(about = "Publish one exact package from source or a reusable workload")]
-    Exact {
-        #[arg(long)]
-        package: String,
-        #[arg(long, default_value = "{\"type\":\"none\",\"source\":\"\"}")]
-        reuse: String,
-    },
     #[command(about = "Stamp and pack every declared package")]
     Pack,
-    #[command(about = "Pack every declared package and publish it")]
-    Publish,
 }
 
 #[derive(Subcommand)]
@@ -142,8 +117,6 @@ pub enum Binary {
     Managers,
     #[command(about = "Print the declared target matrix as one build JSON")]
     Matrix,
-    #[command(about = "Upload every capsule object and its seal, then prove they are reachable")]
-    Publish,
     #[command(about = "Install this version through its published manager, then clean up")]
     Smoke,
     #[command(about = "Prove the capsule's objects are published, and its projection if activated")]
@@ -232,7 +205,6 @@ fn binary(deed: Binary) -> Result<String, String> {
             &output(release)?,
         ),
         Binary::Matrix => package::product(&spec).matrix(),
-        Binary::Publish => storage::publish(&capsule(release)?, &rig.publish),
         Binary::Smoke => smoke::run(
             &spec,
             required("PLUMB_RELEASE_URL", &release.url)?,

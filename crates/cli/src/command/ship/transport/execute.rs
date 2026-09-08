@@ -1,10 +1,10 @@
 use super::super::adaptor;
 use super::production::{Workload, materialize};
+use super::support::pnpm;
 use crate::command::release::{artifacts, capsule, output, required, storage};
 use plumb::rig::Rig;
 use serde::Deserialize;
 use std::path::PathBuf;
-use std::process::Command;
 
 const SCHEMA: &str = "plumb.ship-request/v2";
 #[derive(Deserialize)]
@@ -15,20 +15,17 @@ struct Request {
     projections: Vec<String>,
     roots: Vec<String>,
     operation: Operation,
-    #[serde(default)]
-    configuration: Option<String>,
-    #[serde(default)]
-    profile: Option<String>,
+    configuration: String,
+    profile: String,
     #[serde(default = "Reuse::none")]
     reuse: Reuse,
-    #[serde(default)]
-    keys: Option<serde_json::Value>,
+    keys: serde_json::Value,
     #[serde(default)]
     production: Option<String>,
     #[serde(default)]
     receipt: Option<plumb::rule::Receipt>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, serde::Serialize)]
 #[serde(tag = "type", rename_all = "lowercase", deny_unknown_fields)]
 enum Operation {
     Workload {
@@ -36,6 +33,7 @@ enum Operation {
         archive: String,
     },
     Publication {
+        #[serde(skip_serializing)]
         workloads: Vec<Workload>,
     },
     Cargo,
@@ -45,7 +43,7 @@ enum Operation {
         package: String,
     },
     Oci {
-        #[serde(default)]
+        #[serde(default, skip_serializing)]
         workloads: Vec<Workload>,
     },
 }
@@ -96,19 +94,38 @@ impl Request {
         if self.roots.is_empty() || self.roots.iter().any(|held| held.is_empty()) {
             return Err("ship request must carry at least one non-empty root".into());
         }
-        let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
-        let version = required("PLUMB_RELEASE_VERSION", &rig.release.version)?;
-        let governance = super::binding::Governance::resolve(
-            &rig.release.root,
-            version,
-            self.configuration.is_some() || self.profile.is_some(),
-        )?;
+        if self.configuration.trim().is_empty()
+            || self.profile.trim().is_empty()
+            || !self.keys.is_object()
+        {
+            return Err(
+                "ship request requires marker-bound configuration, profile and inventory keys"
+                    .into(),
+            );
+        }
+        let keys = crate::command::workflow::record::keys(&self.keys.to_string())
+            .map_err(|error| format!("ship request inventory keys: {error}"))?;
+        if !matches!(self.operation, Operation::Workload { .. }) && keys.publication.is_none() {
+            return Err("ship publication request carries no publication key".into());
+        }
+        super::super::package::project::Source::parse(&self.reuse.encode()?)?;
+        let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
+        let governance = super::binding::Governance::resolve(required(
+            "PLUMB_RELEASE_VERSION",
+            &rig.release.version,
+        )?)?;
+        governance.apply(&mut rig.release)?;
+        let version = rig.release.version.as_str();
         let spec = governance.spec();
         super::binding::Binding::new(spec)
-            .verify(self.configuration.as_deref(), self.profile.as_deref())?;
+            .verify(Some(&self.configuration), Some(&self.profile))?;
+        governance.request(&serde_json::json!({
+            "action":self.action, "projections":self.projections,
+            "roots":self.roots, "operation":self.operation,
+        }))?;
         let release = &rig.release;
         let binding = if matches!(self.operation, Operation::Oci { .. }) {
-            let binding = super::super::package::publication::image(governance.marker()?)?;
+            let binding = super::super::package::publication::image(governance.marker())?;
             if let Some(source) = binding.resolve(None, Some(&rig.workflow.inventory.url))? {
                 return result("url", &source, None);
             }
@@ -119,7 +136,7 @@ impl Request {
         let reuse = self.reuse.encode()?;
         let production = binding
             .as_ref()
-            .map(|_| super::super::package::production::contract(governance.marker()?))
+            .map(|_| super::super::package::production::contract(governance.marker()))
             .transpose()?;
         if let Some(contract) = &production
             && self.production.as_deref() != Some(contract.digest()?.as_str())
@@ -129,12 +146,12 @@ impl Request {
         let projection = match self.operation {
             Operation::Workload { target, archive } => {
                 super::production::execute(
-                    governance.marker()?,
+                    governance.marker(),
                     super::production::Input {
                         target: &target,
                         archive: &archive,
                         action: &self.action,
-                        keys: self.keys.as_ref(),
+                        keys: Some(&self.keys),
                         contract: self.production.as_deref(),
                     },
                 )?;
@@ -144,16 +161,14 @@ impl Request {
                 let authority = super::support::authority(&rig.publish, &spec.product)?;
                 crate::command::release::Product::new(spec).promote(release)?;
                 let artifacts = artifacts(release)?;
-                materialize(&artifacts, &workloads, governance.marker()?)?;
+                materialize(&artifacts, &workloads, governance.marker())?;
                 super::super::package::product(spec).assemble(version, &artifacts)?;
                 crate::command::release::Product::new(spec).compile(release)?;
                 let capsule = capsule(release)?;
                 storage::publish(&capsule, &authority)?;
                 let (compiled, _) = crate::command::release::record::Capsule::read(&capsule)?;
                 let publication = compiled.seal.remote.url;
-                let keys = self
-                    .keys
-                    .ok_or_else(|| "an exact ship request carries no inventory keys".to_string())?;
+                let keys = self.keys;
                 crate::command::workflow::record::project(
                     crate::command::workflow::record::Project {
                         action: &self.action,
@@ -199,7 +214,7 @@ impl Request {
             Operation::Oci { workloads } => {
                 let artifacts = artifacts(release)?;
                 if self.reuse.kind == "none" {
-                    materialize(&artifacts, &workloads, governance.marker()?)?;
+                    materialize(&artifacts, &workloads, governance.marker())?;
                 }
                 Some(adaptor::container::run(
                     &adaptor::image::image(spec),
@@ -209,12 +224,12 @@ impl Request {
                         artifacts: &artifacts,
                         credential: &release.credential,
                         reuse: &reuse,
-                        proof: production.as_ref().map(|contract| {
-                            super::super::package::production::Proof {
-                                contract,
-                                receipt: self.receipt.as_ref(),
-                            }
-                        }),
+                        proof: super::super::package::production::Proof {
+                            contract: production
+                                .as_ref()
+                                .ok_or("image request has no production contract")?,
+                            receipt: self.receipt.as_ref(),
+                        },
                     },
                 )?)
             }
@@ -227,9 +242,7 @@ impl Request {
         if let Some(binding) = &binding {
             binding.verify(&projection.publication)?;
         }
-        let keys = self
-            .keys
-            .ok_or_else(|| "an exact ship request carries no inventory keys".to_string())?;
+        let keys = self.keys;
         crate::command::workflow::record::bound(
             crate::command::workflow::record::Project {
                 action: &self.action,
@@ -253,38 +266,6 @@ impl Request {
             binding.as_ref().map(|binding| binding.binding.key.as_str()),
         )?;
         result("url", &projection.publication, projection.depot)
-    }
-}
-
-fn pnpm(root: &std::path::Path, install: bool) -> Result<(), String> {
-    if !install || !root.join("pnpm-lock.yaml").is_file() {
-        return Ok(());
-    }
-    let store = root.join("target/pnpm-store");
-    command(
-        root,
-        "pnpm",
-        &[
-            "install",
-            "--frozen-lockfile",
-            "--store-dir",
-            &store.to_string_lossy(),
-        ],
-    )
-}
-
-fn command(root: &std::path::Path, program: &str, args: &[&str]) -> Result<(), String> {
-    let status = Command::new(program)
-        .args(args)
-        .current_dir(root)
-        .status()
-        .map_err(|error| format!("cannot run {program}: {error}"))?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(format!(
-            "{program} failed while materializing a ship request"
-        ))
     }
 }
 

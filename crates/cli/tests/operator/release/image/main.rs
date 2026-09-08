@@ -176,37 +176,17 @@ case "$1" in
 esac
 "#,
     );
-    let registry = temp.path().join("registry.tgz");
-    let output = super::world::run(
-        fixture
-            .command()
-            .env("FAKE_CHART_WORKLOAD", &source)
-            .env("FAKE_CHART_REGISTRY", &registry)
-            .env("PLUMB_RELEASE_VERSION", "v2.0.0")
-            .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
-            .args([
-                "ship",
-                "chart",
-                "exact",
-                "--reuse",
-                r#"{"type":"workload","source":"https://inventory.example/chart.tgz"}"#,
-            ]),
-    );
-    let projected: serde_json::Value =
-        serde_json::from_slice(&output.stdout).expect("chart projection");
-    assert_eq!(
-        projected["publication"],
-        "https://registry.example/owner/-/packages/container/probe/2.0.0"
-    );
-    let workload = projected["workload"].as_str().expect("workload path");
-    assert_eq!(manifest(Path::new(workload)), manifest(&registry));
-    let chart = manifest(Path::new(workload));
-    assert!(chart.contains("version: 2.0.0"), "{chart}");
-    assert!(chart.contains("appVersion: \"2.0.0\""), "{chart}");
-
     let inventory = crate::support::Bucket::open(3);
+    let binding = crate::marker::prepare(
+        fixture.root,
+        &fixture.root.join("home"),
+        "[release]\nproduct='probe'\nauthority='https://releases.test'\n[release.chart]\nregistry='registry.example'\nchart='owner/probe'\naccount='Example'\n",
+        "v2.0.0-beta.1",
+    );
     let request = serde_json::json!({
         "schema": "plumb.ship-request/v2",
+        "configuration": binding["configuration"],
+        "profile": binding["profile"],
         "action": "ship/chart",
         "projections": [
             "charts/probe/Chart.yaml#/version",
@@ -228,9 +208,15 @@ esac
     let executed = super::world::run(
         fixture
             .command()
+            .current_dir(fixture.root)
+            .env("PLUMB_HOME", fixture.root.join("home"))
+            .env("PLUMB_RULES_SOURCE", "https://depot.test")
             .env("FAKE_CHART_WORKLOAD", &source)
-            .env("FAKE_CHART_REGISTRY", &registry)
-            .env("PLUMB_RELEASE_VERSION", "v2.0.0")
+            .env(
+                "FAKE_CHART_REGISTRY",
+                fixture.root.join("beta-registry.tgz"),
+            )
+            .env("PLUMB_RELEASE_VERSION", "v2.0.0-beta.1")
             .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
             .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
             .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
@@ -246,6 +232,16 @@ esac
         serde_json::from_slice(&executed.stdout).expect("generic ship result");
     assert_eq!(result["schema"], "plumb.ship-result/v1");
     assert_eq!(result["result"]["type"], "url");
+    let registry = fixture.root.join("beta-registry.tgz");
+    let workload = fixture.root.join("target/chart/probe-2.0.0-beta.1.tgz");
+    assert_eq!(manifest(&workload), manifest(&registry));
+    let chart = manifest(&workload);
+    assert!(chart.contains("version: 2.0.0-beta.1"), "{chart}");
+    assert!(chart.contains("appVersion: \"2.0.0-beta.1\""), "{chart}");
+    assert_eq!(
+        result["result"]["source"],
+        "https://registry.example/owner/-/packages/container/probe/2.0.0-beta.1"
+    );
     inventory.finish();
 }
 

@@ -27,25 +27,23 @@ pub fn compile(input: Compile<'_>) {
 }
 
 fn authority(command: &mut Command, capsule: &Path, operation: &str) {
-    let bucket = if operation == "ACTIVATE" {
-        "perish-probe-releases"
-    } else {
-        "releases"
-    };
+    let bucket = "perish-probe-releases";
     command
         .env(format!("PLUMB_{operation}_ACCESS"), "access")
         .env(format!("PLUMB_{operation}_SECRET"), "secret")
         .env(format!("PLUMB_{operation}_BUCKET"), bucket)
         .env(format!("PLUMB_{operation}_ENDPOINT"), "https://s3.test");
     if operation == "PUBLISH" {
-        command.env("PLUMB_RELEASE_CAPSULE", capsule);
+        command.env("PLUMB_RELEASE_CAPSULE", capsule).env(
+            "PLUMB_PUBLISH_FINGERPRINT",
+            plumb::depot::sha(b"https://s3.test"),
+        );
     }
 }
 
 #[test]
 fn cycle() {
     let temp = tempfile::tempdir().expect("temp root");
-    let bare = tempfile::tempdir().expect("bare root");
     let root = temp.path();
     let tools = root.join("tools");
     let artifacts = root.join("artifacts");
@@ -56,36 +54,72 @@ fn cycle() {
         tools: &tools,
     };
     fixture.seed();
-    fixture.origin(bare.path());
-    let candidate = fixture.candidate();
-    fixture.line(&candidate);
-    fixture.marker("v1.2.0-beta.7");
+    let home = tempfile::tempdir().unwrap();
+    let binding = crate::marker::prepare(root, home.path(), SPEC, "v1.2.0-beta.7");
+    let candidate = run(Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["rev-parse", "HEAD"]));
+    let candidate = String::from_utf8(candidate.stdout)
+        .unwrap()
+        .trim()
+        .to_string();
+    super::image::executable(
+        &tools.join("git"),
+        "#!/bin/sh\nfor arg in \"$@\"; do [ \"$arg\" = fetch ] && exit 0; done\nexec /usr/bin/git \"$@\"\n",
+    );
+    let command = || {
+        let mut held = fixture.command();
+        held.current_dir(root)
+            .env("PLUMB_HOME", home.path())
+            .env("PLUMB_RULES_SOURCE", "https://depot.test");
+        held
+    };
+    let inventory = crate::support::Bucket::open(17);
+    let request = |version: &str| {
+        serde_json::json!({
+        "schema":"plumb.ship-request/v2", "configuration":binding["configuration"], "profile":binding["profile"],
+        "action":"ship/binary", "projections":["Cargo.toml#/workspace/package/version"], "roots":["plumb.toml"],
+        "operation":{"type":"publication","workloads":[]},
+        "keys":{"workload":plumb::depot::sha(version.as_bytes()),"proof":"2".repeat(64),"publication":plumb::depot::sha(version.as_bytes())},
+    }).to_string()
+    };
+    let publish = |version: &str, out: &Path| {
+        let mut held = command();
+        held.args(["ship", "execute", "--request", &request(version)])
+            .env("PLUMB_RELEASE_VERSION", version)
+            .env("PLUMB_RELEASE_OUTPUT", out)
+            .env("PLUMB_RELEASE_ARTIFACTS", &artifacts)
+            .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
+            .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
+            .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", "workflow")
+            .env("PLUMB_WORKFLOW_INVENTORY_ENDPOINT", inventory.endpoint())
+            .env(
+                "PLUMB_WORKFLOW_INVENTORY_URL",
+                "https://inventory.invalid/inventory.json",
+            );
+        authority(&mut held, &out.join("capsule.json"), "PUBLISH");
+        held
+    };
     fixture.archive(&artifacts, "v1.2.0-beta.7");
 
     let beta = root.join("beta");
     let stray = root.join("nonstable-must-not-consume-promotion.json");
-    compile(Compile {
-        fixture: &fixture,
-        artifacts: &artifacts,
-        channel: "beta",
-        version: "v1.2.0-beta.7",
-        out: &beta,
-        promotion: Some(&stray),
-        commit: &candidate,
-    });
-    let manifest = beta.join("capsule.json");
     for attempt in 0..2 {
-        let mut held = fixture.command();
-        held.args(["ship", "binary", "publish"]);
-        authority(&mut held, &manifest, "PUBLISH");
+        let output = if attempt == 0 {
+            beta.clone()
+        } else {
+            root.join("beta-retry")
+        };
+        let mut held = publish("v1.2.0-beta.7", &output);
+        held.env("PLUMB_RELEASE_PROMOTION", &stray);
         if attempt == 1 {
             held.env("FAKE_S3_GET_FAILURE", "true");
         }
         run(&mut held);
     }
     let proof = root.join("promotion/nested/seal.json");
-    run(fixture
-        .command()
+    run(command()
         .args(["ship", "promote"])
         .env("PLUMB_RELEASE_CHANNEL", "stable")
         .env("PLUMB_RELEASE_COMMIT", &candidate)
@@ -98,30 +132,31 @@ fn cycle() {
     let manager = seal["managers"]["unix"]["url"]
         .as_str()
         .expect("manager url");
-    run(fixture
-        .command()
+    run(command()
         .args(["ship", "binary", "smoke"])
         .env("PLUMB_RELEASE_URL", manager)
         .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.7"));
 
     fixture.archive(&artifacts, "v1.2.0");
-    fixture.marker("v1.2.0");
-    let stable = root.join("stable");
-    compile(Compile {
-        fixture: &fixture,
-        artifacts: &artifacts,
-        channel: "stable",
-        version: "v1.2.0",
-        out: &stable,
-        promotion: Some(&proof),
-        commit: &candidate,
+    let annotation = serde_json::json!({
+        "schema":"plumb.release-marker/v2","product":"probe","marker":"v1.2.0",
+        "configuration":{"channel":"stable","version":plumb::version!("PLUMB").to_string(),"generation":binding["configuration"]},
+        "profile":binding["profile"],
     });
+    run(Command::new("git").arg("-C").arg(root).args([
+        "tag",
+        "-a",
+        "v1.2.0",
+        "-m",
+        &annotation.to_string(),
+    ]));
+    let stable = root.join("stable");
     let record = stable.join("capsule.json");
-    let mut publish = fixture.command();
-    publish.args(["ship", "binary", "publish"]);
-    authority(&mut publish, &record, "PUBLISH");
-    run(&mut publish);
-    let mut wrong = fixture.command();
+    run(publish("v1.2.0", &stable).env(
+        "PLUMB_RELEASE_PROMOTION",
+        root.join("stable-promotion.json"),
+    ));
+    let mut wrong = command();
     wrong.args(["depot", "managers", "--marker", "v1.2.0"]);
     authority(&mut wrong, &record, "ACTIVATE");
     let wrong = wrong
@@ -133,40 +168,38 @@ fn cycle() {
         "activation authority targets perish-another-releases, not perish-probe-releases"
     ));
     for _ in 0..2 {
-        let mut activate = fixture.command();
+        let mut activate = command();
         activate.args(["depot", "channel", "--marker", "v1.2.0"]);
         authority(&mut activate, &record, "ACTIVATE");
         run(&mut activate);
-        let mut project = fixture.command();
+        let mut project = command();
         project.args(["depot", "managers", "--marker", "v1.2.0"]);
         authority(&mut project, &record, "ACTIVATE");
         run(&mut project);
     }
 
-    let mut verify = fixture.command();
+    let mut verify = command();
     verify
         .args(["ship", "binary", "verify"])
         .env("PLUMB_RELEASE_CAPSULE", &record)
         .env("PLUMB_RELEASE_ACTIVATED", "true");
     run(&mut verify);
-    run(fixture.command().args(["ship", "inspect"]).env(
+    run(command().args(["ship", "inspect"]).env(
         "PLUMB_RELEASE_URL",
         "https://releases.test/v1/releases/beta/v1.2.0-beta.7/seal.json",
     ));
-    run(fixture.command().args(["ship", "binary", "inspect"]).env(
+    run(command().args(["ship", "binary", "inspect"]).env(
         "PLUMB_RELEASE_URL",
         "https://releases.test/v1/releases/beta/v1.2.0-beta.7/seal.json",
     ));
-    run(fixture
-        .command()
+    run(command()
         .args(["ship", "inspect"])
         .env(
             "PLUMB_RELEASE_URL",
             "https://releases.test/v1/channels/stable.json",
         )
         .env("PLUMB_RELEASE_ACTIVATED", "true"));
-    run(fixture
-        .command()
+    run(command()
         .args(["ship", "binary", "inspect"])
         .env(
             "PLUMB_RELEASE_URL",
@@ -178,6 +211,7 @@ fn cycle() {
             .is_file()
     );
     assert!(root.join("perish-probe-releases/manage.sh").is_file());
+    inventory.finish();
 }
 
 #[test]

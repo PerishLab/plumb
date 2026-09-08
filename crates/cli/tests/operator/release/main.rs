@@ -7,6 +7,8 @@ mod identity;
 #[path = "image/main.rs"]
 mod image;
 #[cfg(unix)]
+#[path = "../marker.rs"]
+mod marker;
 #[cfg(unix)]
 mod release;
 #[cfg(unix)]

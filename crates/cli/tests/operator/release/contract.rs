@@ -111,7 +111,7 @@ fn versioned() {
     let execution =
         std::fs::read_to_string(root.join("crates/cli/src/command/ship/transport/execute.rs"))
             .expect("Plumb owns ship request execution");
-    assert!(execution.contains("materialize(&artifacts, &workloads, governance.marker()?)"));
+    assert!(execution.contains("materialize(&artifacts, &workloads, governance.marker())"));
     assert!(!execution.contains("if release.channel == \"stable\""));
 
     let trigger = text("crates/cli/src/command/operator/trigger.rs");

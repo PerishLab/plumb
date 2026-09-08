@@ -67,49 +67,6 @@ impl Module<'_> {
         Ok(format!("packed module attachment for {version}"))
     }
 
-    pub fn publish(&self, version: &str, credential: &str) -> Result<String, String> {
-        let Some(npm) = &self.spec.npm else {
-            return Ok(format!("{} has no module attachment", self.spec.product));
-        };
-        let token = crate::command::ship::attachment::credential(credential)?;
-        self.pack(version)?;
-        let identity = release(version)?;
-        for package in &npm.packages {
-            let archive = self.archive(package, &identity);
-            let name = archive
-                .file_name()
-                .ok_or_else(|| format!("packed module has no name: {}", archive.display()))?
-                .to_string_lossy()
-                .to_string();
-            let seat = tempfile::tempdir()
-                .map_err(|error| format!("cannot open a module projection seat: {error}"))?;
-            std::fs::copy(&archive, seat.path().join(&name))
-                .map_err(|error| format!("cannot stage {}: {error}", archive.display()))?;
-            let spec = format!("{package}@{identity}");
-            let held = integrity(&archive)?;
-            if let Some(carried) = self.carried(npm, &spec, token, seat.path())? {
-                drift(&spec, &carried, &held)?;
-                continue;
-            }
-            let mut publish = vec![
-                "publish",
-                name.as_str(),
-                "--registry",
-                npm.registry.as_str(),
-            ];
-            let channel = channel(&identity);
-            if let Some(channel) = &channel {
-                publish.extend(["--tag", channel]);
-            }
-            self.authenticated(&publish, npm, token, seat.path())?;
-            let carried = self
-                .carried(npm, &spec, token, seat.path())?
-                .ok_or_else(|| format!("{spec} reports no integrity after publishing it"))?;
-            drift(&spec, &carried, &held)?;
-        }
-        Ok(format!("published module attachment for {version}"))
-    }
-
     pub(super) fn stamp(&self, package: &str, version: &Version) -> Result<(), String> {
         let path = self.seat(package).join("package.json");
         let text = std::fs::read_to_string(&path)

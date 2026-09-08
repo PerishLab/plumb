@@ -101,56 +101,6 @@ impl Fixture<'_> {
         .to_string()
     }
 
-    pub fn origin(&self, bare: &Path) {
-        run(Command::new("git").args(["init", "-q", "--bare"]).arg(bare));
-        run(Command::new("git").arg("-C").arg(self.root).args([
-            "remote",
-            "add",
-            "origin",
-            &format!("file://{}", bare.display()),
-        ]));
-        std::fs::create_dir_all(self.root.join(".plumb/releases/v1.2.0")).expect("datum root");
-        std::fs::write(
-            self.root.join(".plumb/releases/v1.2.0/datum.toml"),
-            "schema = 1\nversion = \"v1.2.0\"\n",
-        )
-        .expect("datum");
-        run(Command::new("git")
-            .arg("-C")
-            .arg(self.root)
-            .args(["add", ".plumb"]));
-    }
-
-    pub fn line(&self, commit: &str) {
-        for reference in ["HEAD:refs/heads/main", "HEAD:refs/heads/release/v1.2.0"] {
-            run(Command::new("git")
-                .arg("-C")
-                .arg(self.root)
-                .args(["push", "-q", "origin", reference]));
-        }
-        let actual = run(Command::new("git")
-            .arg("-C")
-            .arg(self.root)
-            .args(["rev-parse", "HEAD"]));
-        assert_eq!(String::from_utf8_lossy(&actual.stdout).trim(), commit);
-    }
-
-    pub fn marker(&self, version: &str) {
-        run(Command::new("git").arg("-C").arg(self.root).args([
-            "tag",
-            "-a",
-            version,
-            "-m",
-            &format!("probe {version}"),
-        ]));
-        run(Command::new("git").arg("-C").arg(self.root).args([
-            "push",
-            "-q",
-            "origin",
-            &format!("refs/tags/{version}"),
-        ]));
-    }
-
     pub fn track(&self, path: &str) {
         run(Command::new("git")
             .arg("-C")

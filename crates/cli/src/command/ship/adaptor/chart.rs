@@ -45,26 +45,6 @@ impl Chart<'_> {
         Ok(format!("packaged chart attachment for {version}"))
     }
 
-    pub fn publish(&self, version: &str, credential: &str) -> Result<String, String> {
-        let Some(chart) = &self.spec.chart else {
-            return Ok(format!("{} has no chart attachment", self.spec.product));
-        };
-        self.package(version)?;
-        let semver = release(version)?;
-        let held = name(chart)?;
-        let archive = self.archive(&held, &semver);
-        crate::command::ship::package::projection::run(
-            self,
-            crate::command::ship::package::projection::Request {
-                chart,
-                version: &semver,
-                credential,
-                archive: &archive,
-            },
-        )?;
-        Ok(format!("published chart attachment for {version}"))
-    }
-
     pub fn exact(&self, version: &str, credential: &str, reuse: &str) -> Result<String, String> {
         crate::command::ship::package::chart::run(self, version, credential, reuse)
     }

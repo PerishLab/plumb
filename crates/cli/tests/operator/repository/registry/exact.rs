@@ -25,6 +25,8 @@ esac
 
 pub fn prove(path: &Path) {
     let inventory = crate::support::Bucket::open(3);
+    let home = tempfile::tempdir().unwrap();
+    let binding = crate::marker::prepare(path, home.path(), super::ATTACHMENT, "v0.10.2-beta.1");
     let reuse = std::fs::File::create(path.join("reuse.tgz")).expect("reuse workload");
     let reuse = flate2::write::GzEncoder::new(reuse, flate2::Compression::default());
     let mut reuse = tar::Builder::new(reuse);
@@ -49,9 +51,11 @@ pub fn prove(path: &Path) {
         .expect("finish reuse workload");
     let request = serde_json::json!({
         "schema": "plumb.ship-request/v2",
+        "configuration": binding["configuration"],
+        "profile": binding["profile"],
         "action": "ship/cargo",
         "projections": [],
-        "roots": ["Cargo.toml", "Cargo.lock", "crates"],
+        "roots": ["Cargo.toml", "crates"],
         "operation": { "type": "cargo" },
         "reuse": {
             "type": "workload",
@@ -65,6 +69,9 @@ pub fn prove(path: &Path) {
     })
     .to_string();
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .current_dir(path)
+        .env("PLUMB_HOME", home.path())
+        .env("PLUMB_RULES_SOURCE", "https://depot.test")
         .args(["ship", "execute", "--request", &request])
         .env(
             "PATH",

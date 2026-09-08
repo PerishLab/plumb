@@ -1,4 +1,4 @@
-use super::{ledger, manifest};
+use super::manifest;
 use crate::command::release::workspace::{Workspace, release};
 use crate::shape::release::{Cargo, Spec};
 use flate2::read::GzDecoder;
@@ -61,74 +61,6 @@ impl Registry<'_> {
             inspect(&self.archive(package, &identity), package, &identity)?;
         }
         Ok(format!("rehearsed Cargo attachment for {version}"))
-    }
-
-    pub fn publish(&self, version: &str, token: &str) -> Result<String, String> {
-        let Some(cargo) = &self.spec.cargo else {
-            return Ok(format!("{} has no Cargo attachment", self.spec.product));
-        };
-        if token.trim().is_empty() {
-            return Err("PLUMB_RELEASE_REGISTRY_TOKEN is required".into());
-        }
-        self.stamp(version)?;
-        let identity = release(version)?;
-        for package in self.ordered(cargo)? {
-            self.command(
-                [
-                    "package",
-                    "--registry",
-                    &cargo.registry,
-                    "--package",
-                    package,
-                    "--allow-dirty",
-                    "--no-verify",
-                ],
-                token,
-            )?;
-            let archive = self.archive(package, &identity);
-            inspect(&archive, package, &identity)?;
-            let checksum = crate::command::release::record::digest(&archive)?.0;
-            let held = ledger::entries(cargo, package, token)?;
-            if ledger::verified(package, &identity, &checksum, &held)? {
-                continue;
-            }
-            self.command(
-                [
-                    "publish",
-                    "--registry",
-                    &cargo.registry,
-                    "--package",
-                    package,
-                    "--allow-dirty",
-                    "--dry-run",
-                ],
-                token,
-            )?;
-            if crate::command::release::record::digest(&archive)?.0 != checksum {
-                return Err(format!(
-                    "Cargo package {package} changed during publisher dry run"
-                ));
-            }
-            self.command(
-                [
-                    "publish",
-                    "--registry",
-                    &cargo.registry,
-                    "--package",
-                    package,
-                    "--allow-dirty",
-                ],
-                token,
-            )?;
-            ledger::readback(ledger::Readback {
-                cargo,
-                package,
-                version: &identity,
-                checksum: &checksum,
-                token,
-            })?;
-        }
-        Ok(format!("published Cargo attachment for {version}"))
     }
 
     pub(in crate::command::ship) fn ordered<'a>(

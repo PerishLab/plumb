@@ -1,3 +1,5 @@
+#[path = "../../boundary.rs"]
+mod boundary;
 mod controller;
 mod datum;
 mod depot;

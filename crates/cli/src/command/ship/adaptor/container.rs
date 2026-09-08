@@ -11,15 +11,14 @@ pub struct Request<'a> {
     pub artifacts: &'a Path,
     pub credential: &'a str,
     pub reuse: &'a str,
-    pub(in crate::command::ship) proof: Option<Proof<'a>>,
+    pub(in crate::command::ship) proof: Proof<'a>,
 }
 
 pub fn run(carrier: &Image<'_>, request: Request<'_>) -> Result<String, String> {
     let source = Source::parse(request.reuse)?;
-    let proof = request.proof.as_ref();
-    let producer = proof
-        .filter(|_| source.kind == "none")
-        .map(|proof| proof.contract.start(&carrier.spec.root))
+    let proof = &request.proof;
+    let producer = (source.kind == "none")
+        .then(|| proof.contract.start(&carrier.spec.root))
         .transpose()?;
     let scoped = Image {
         spec: carrier.spec,
@@ -31,22 +30,13 @@ pub fn run(carrier: &Image<'_>, request: Request<'_>) -> Result<String, String> 
     let workload = scoped.prepare(&request)?;
     let receipt = match producer {
         Some(producer) => Some(producer.finish(&workload)?),
-        None => proof.and_then(|proof| proof.receipt).cloned(),
+        None => proof.receipt.cloned(),
     };
     if let Some(receipt) = &receipt {
-        proof
-            .ok_or("image receipt has no production contract")?
-            .contract
-            .verify(receipt)?;
+        proof.contract.verify(receipt)?;
     }
-    let publisher = proof
-        .map(|_| crate::command::ship::package::registry::publisher(&carrier.spec.root))
-        .transpose()?;
-    let image = oci::Image::read(
-        carrier.spec,
-        &workload,
-        publisher.as_ref().or(carrier.execution),
-    )?;
+    let publisher = crate::command::ship::package::registry::publisher(&carrier.spec.root)?;
+    let image = oci::Image::read(carrier.spec, &workload, Some(&publisher))?;
     let publication = image.publish(carrier.spec, request.credential)?;
     let output = serde_json::json!({
         "format": "plumb.image-project/v1", "version": request.version,
@@ -61,9 +51,8 @@ impl Image<'_> {
         let declared = self.spec.oci.as_ref().ok_or("image declares no registry")?;
         let source = Source::parse(request.reuse)?;
         let reference = reference(declared, request.version);
-        if source.kind == "workload"
-            && let Some(proof) = &request.proof
-        {
+        let proof = &request.proof;
+        if source.kind == "workload" {
             proof.contract.verify(
                 proof
                     .receipt
@@ -85,25 +74,13 @@ impl Image<'_> {
             "url" => return Err("a held publication URL must skip the image action".into()),
             _ => unreachable!(),
         };
-        if source.kind == "workload"
-            && let Some(proof) = &request.proof
-        {
+        if source.kind == "workload" {
             let receipt = proof
                 .receipt
                 .ok_or("reused image has no production receipt")?;
             receipt.verify(&workload)?;
         }
         Ok(workload)
-    }
-
-    pub fn publish(&self, version: &str, credential: &str) -> Result<String, String> {
-        let Some(declared) = &self.spec.oci else {
-            return Ok(format!("{} has no image attachment", self.spec.product));
-        };
-        let archive = self.save(&reference(declared, version))?;
-        let image = oci::Image::read(self.spec, &archive, self.execution)?;
-        let publication = image.publish(self.spec, credential)?;
-        Ok(format!("published {} as {publication}", self.spec.product))
     }
 
     pub(super) fn workload(&self) -> Result<PathBuf, String> {

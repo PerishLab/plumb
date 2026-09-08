@@ -1,4 +1,3 @@
-use sha2::{Digest, Sha256};
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 
@@ -7,9 +6,7 @@ mod exact;
 #[path = "runseal.rs"]
 mod runseal;
 
-const SEALED: [&str; 4] = ["cargo", "chart", "npm", "oci"];
-const PRODUCT: &str = "[release]\nproduct = \"family\"\nauthority = \"https://example.invalid\"\nbinaries = [\"family\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n\n[release.cargo]\nregistry = \"perish\"\npackages = [\"family-macro\", \"family-core\"]\n";
-const ATTACHMENT: &str = "[release]\nproduct = \"family\"\nauthority = \"https://example.invalid\"\n\n[release.cargo]\nregistry = \"perish\"\npackages = [\"family-macro\", \"family-core\"]\n";
+const ATTACHMENT: &str = "[release]\nproduct = \"family\"\nauthority = \"https://releases.family.test\"\n\n[release.cargo]\nregistry = \"perish\"\npackages = [\"family-macro\", \"family-core\"]\n";
 const WORKSPACE: &str = "[workspace]\nmembers = [\"crates/core\", \"crates/macro\", \"crates/helper\"]\nresolver = \"3\"\n\n[workspace.package]\nversion = \"0.10.2\"\nedition = \"2024\"\nlicense = \"MIT\"\nrepository = \"https://example.invalid/family\"\n\n[workspace.dependencies]\ncore-alias = { package = \"family-core\", path = \"crates/core\", version = \"=0.10.2\" }\nhelper = { path = \"crates/helper\", version = \"=9.9.9\" }\nregistry-core = { package = \"family-core\", version = \"=0.10.2\", registry = \"perish\" }\n\n[workspace.dependencies.family-macro]\npath = \"crates/macro\"\nversion = \"=0.10.2\"\n";
 const CORE: &str = "[package]\nname = \"family-core\"\nversion.workspace = true\nedition.workspace = true\nlicense.workspace = true\nrepository.workspace = true\n\n[dependencies]\nmacro-alias = { package = \"family-macro\", path = \"../macro\", version = \"=0.10.2\" }\nhelper = { path = \"../helper\", version = \"=9.9.9\" }\n\n[build-dependencies.family-macro]\npath = \"../macro\"\nversion = \"=0.10.2\"\n\n[dev-dependencies]\ncore-alias = { package = \"family-core\", path = \".\", version = \"=0.10.2\" }\n";
 const MACRO: &str = "[package]\nname = \"family-macro\"\nversion = \"0.10.2\"\nedition.workspace = true\nlicense.workspace = true\nrepository.workspace = true\n\n[dependencies]\nhelper = { path = \"../helper\", version = \"=9.9.9\" }\n\n[dev-dependencies.family-core]\npath = \"../core\"\nversion = \"=0.10.2\"\n\n[dev-dependencies.core-alias]\npackage = \"family-core\"\npath = \"../core\"\nversion = \"=0.10.2\"\n";
@@ -37,6 +34,7 @@ if [ "$1" = publish ]; then touch "published-$name"; fi
 #[test]
 fn cargo() {
     let root = tempfile::tempdir().expect("Cargo fixture");
+    let home = crate::support::depot(&[]);
     let path = root.path();
     for package in ["core", "macro", "helper"] {
         std::fs::create_dir_all(path.join("crates").join(package)).expect("crate root");
@@ -65,6 +63,7 @@ fn cargo() {
             std::env::var("PATH").unwrap_or_default()
         );
         command
+            .env("PLUMB_HOME", home.path())
             .env("PATH", env)
             .env("FAKE_CARGO_ROOT", path)
             .env("PLUMB_RELEASE_ROOT", path);
@@ -98,123 +97,24 @@ fn cargo() {
 }
 
 #[test]
-fn sealed() {
-    let root = tempfile::tempdir().expect("capsule fixture");
-    let path = root.path();
-    std::fs::write(path.join("plumb.toml"), PRODUCT).expect("attachment");
-    let ship = |adaptor: &str, version: &str| {
-        Command::new(env!("CARGO_BIN_EXE_plumb"))
-            .args(["ship", adaptor, "publish"])
-            .env("PLUMB_RELEASE_ROOT", path)
-            .env("PLUMB_RELEASE_OUTPUT", ".plumb-release")
-            .env("PLUMB_RELEASE_VERSION", version)
-            .env("PLUMB_RELEASE_REGISTRY_TOKEN", "secret")
+fn retired() {
+    for args in [
+        vec!["ship", "cargo", "publish"],
+        vec!["ship", "npm", "publish"],
+        vec!["ship", "npm", "exact"],
+        vec!["ship", "chart", "publish"],
+        vec!["ship", "chart", "exact"],
+        vec!["ship", "oci", "exact"],
+        vec!["ship", "oci", "publish"],
+        vec!["ship", "binary", "publish"],
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(args)
             .output()
-            .expect("plumb should run")
-    };
-    for adaptor in SEALED {
-        let bare = ship(adaptor, "v0.10.2-beta.1");
-        let missing = String::from_utf8_lossy(&bare.stderr).to_string();
-        assert!(
-            !bare.status.success() && missing.contains("capsule.json"),
-            "{adaptor}: {missing}"
-        );
+            .unwrap();
+        assert!(!output.status.success());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("unrecognized subcommand"));
     }
-
-    let out = path.join(".plumb-release");
-    std::fs::create_dir_all(&out).expect("release output");
-    let body = b"{}";
-    let record = out.join("seal.json");
-    std::fs::write(&record, body).expect("seal");
-    let served = format!("file://{}", record.display());
-    let digest = format!("{:x}", Sha256::digest(body));
-    let capsule = format!(
-        concat!(
-            r#"{{"schema":1,"product":"family","channel":"beta","#,
-            r#""releaseVersion":"v0.10.2-beta.1","authority":"https://example.invalid","#,
-            r#""objects":[],"seal":{{"source":"seal.json","key":"v1/seal.json","#,
-            r#""remote":{{"name":"seal.json","mime":"application/json","sha256":"{}","#,
-            r#""size":{},"url":"{}"}}}},"#,
-            r#""roots":[],"pointer":null}}"#
-        ),
-        digest,
-        body.len(),
-        served
-    );
-    std::fs::write(out.join("capsule.json"), &capsule).expect("capsule");
-
-    for adaptor in SEALED {
-        let drift = ship(adaptor, "v0.10.2-beta.2");
-        let refused = String::from_utf8_lossy(&drift.stderr).to_string();
-        assert!(
-            !drift.status.success()
-                && refused.contains(
-                    "capsule seals v0.10.2-beta.1 while the projection carries v0.10.2-beta.2"
-                ),
-            "{adaptor}: {refused}"
-        );
-    }
-
-    for (adaptor, medium) in [("chart", "chart"), ("npm", "module"), ("oci", "image")] {
-        let absent = ship(adaptor, "v0.10.2-beta.1");
-        let said = String::from_utf8_lossy(&absent.stdout).to_string();
-        assert!(
-            absent.status.success() && said.contains(&format!("has no {medium} attachment")),
-            "{adaptor}: {said}"
-        );
-    }
-
-    std::fs::create_dir_all(path.join("packages/family")).expect("module seat");
-    std::fs::write(
-        path.join("plumb.toml"),
-        format!(
-            "{PRODUCT}\n[release.npm]\nregistry = \"https://example.invalid/npm/\"\npackages = [\"@family/family\"]\n"
-        ),
-    )
-    .expect("attachment");
-    let malformed = ship("npm", "v0.10.2-beta.1");
-    let refused = String::from_utf8_lossy(&malformed.stderr).to_string();
-    assert!(
-        !malformed.status.success() && refused.contains("must be a Cargo Bearer credential"),
-        "{refused}"
-    );
-
-    let elsewhere = out.join("elsewhere.json");
-    std::fs::write(&elsewhere, b"{\"other\":true}").expect("served");
-    std::fs::write(
-        out.join("capsule.json"),
-        capsule.replace(&served, &format!("file://{}", elsewhere.display())),
-    )
-    .expect("capsule");
-    let drifted = ship("npm", "v0.10.2-beta.1");
-    let said = String::from_utf8_lossy(&drifted.stderr).to_string();
-    assert!(
-        !drifted.status.success() && said.contains("public object drift"),
-        "{said}"
-    );
-}
-
-#[test]
-fn unsealed() {
-    let root = tempfile::tempdir().expect("attachment fixture");
-    let path = root.path();
-    std::fs::write(path.join("plumb.toml"), ATTACHMENT).expect("attachment");
-    let out = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["ship", "cargo", "publish"])
-        .env("PLUMB_RELEASE_ROOT", path)
-        .env_remove("PLUMB_RELEASE_OUTPUT")
-        .env_remove("PLUMB_RELEASE_CAPSULE")
-        .env("PLUMB_RELEASE_VERSION", "v0.10.2-beta.1")
-        .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
-        .output()
-        .expect("plumb should run");
-    let reached = String::from_utf8_lossy(&out.stderr).to_string();
-    assert!(!reached.contains("PLUMB_RELEASE_OUTPUT"), "{reached}");
-    assert!(!reached.contains("capsule"), "{reached}");
-    assert!(
-        reached.contains("cannot read") && reached.contains("Cargo.toml"),
-        "{reached}"
-    );
 }
 
 #[test]
@@ -258,17 +158,26 @@ fn settled() {
         !text.contains("unchanged since"),
         "a product with no authority holds no baseline, so nothing is settled: {text}"
     );
+    let home = tempfile::tempdir().unwrap();
+    let binding = crate::marker::prepare(
+        root,
+        home.path(),
+        "[release]\nproduct='probe'\nauthority='https://releases.test'\n[release.npm]\nregistry='https://registry.invalid'\npackages=['held']\n",
+        "v1.2.0-beta.1",
+    );
     let exact = |package: &str, reuse: &str| {
+        let request = serde_json::json!({
+            "schema":"plumb.ship-request/v2", "configuration":binding["configuration"], "profile":binding["profile"],
+            "action":"ship/npm.held", "projections":["packages/held/package.json#/version"], "roots":["packages/held"],
+            "operation":{"type":"npm","package":package},
+            "reuse":serde_json::from_str::<serde_json::Value>(reuse).unwrap(),
+            "keys":{"workload":"1".repeat(64),"proof":"2".repeat(64),"publication":"3".repeat(64)},
+        });
         std::process::Command::new(env!("CARGO_BIN_EXE_plumb"))
-            .args([
-                "ship",
-                "npm",
-                "exact",
-                "--package",
-                package,
-                "--reuse",
-                reuse,
-            ])
+            .current_dir(root)
+            .env("PLUMB_HOME", home.path())
+            .env("PLUMB_RULES_SOURCE", "https://depot.test")
+            .args(["ship", "execute", "--request", &request.to_string()])
             .env("PLUMB_RELEASE_ROOT", root)
             .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1")
             .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
@@ -279,7 +188,7 @@ fn settled() {
     assert!(
         !unknown.status.success()
             && String::from_utf8_lossy(&unknown.stderr)
-                .contains("other is not a declared module attachment")
+                .contains("not a declared marker-bound Ship request")
     );
     let published = exact(
         "held",

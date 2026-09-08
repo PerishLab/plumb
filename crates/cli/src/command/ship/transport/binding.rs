@@ -1,39 +1,105 @@
 use crate::shape::release::Spec;
 use serde_json::{Value, json};
-use std::path::Path;
 
 pub(super) struct Governance {
-    marker: Option<crate::command::release::ReleaseMarker>,
-    ambient: Option<Spec>,
+    marker: crate::command::release::ReleaseMarker,
 }
 
 impl Governance {
-    pub fn resolve(root: &Path, marker: &str, exact: bool) -> Result<Self, String> {
-        let held = exact
-            .then(|| crate::command::release::snapshot(marker))
-            .transpose()?;
-        if let Some(marker) = &held {
-            super::promotion::verify(marker)?;
-        }
-        let ambient = held.is_none().then(|| Spec::controller(root)).transpose()?;
-        Ok(Self {
-            marker: held,
-            ambient,
-        })
+    pub fn resolve(marker: &str) -> Result<Self, String> {
+        let marker = crate::command::release::snapshot(marker)?;
+        super::promotion::verify(&marker)?;
+        Ok(Self { marker })
     }
 
     pub fn spec(&self) -> &Spec {
-        self.marker
-            .as_ref()
-            .map(crate::command::release::ReleaseMarker::spec)
-            .or(self.ambient.as_ref())
-            .expect("governance always carries one release specification")
+        self.marker.spec()
     }
 
-    pub fn marker(&self) -> Result<&crate::command::release::ReleaseMarker, String> {
-        self.marker
-            .as_ref()
-            .ok_or_else(|| "production requires an exact release marker".into())
+    pub fn marker(&self) -> &crate::command::release::ReleaseMarker {
+        &self.marker
+    }
+
+    pub fn apply(&self, release: &mut plumb::rig::Release) -> Result<(), String> {
+        let root = release
+            .root
+            .canonicalize()
+            .map_err(|error| error.to_string())?;
+        let expected = self
+            .spec()
+            .root
+            .canonicalize()
+            .map_err(|error| error.to_string())?;
+        if root != expected {
+            return Err("ship execution root differs from the marker repository".into());
+        }
+        self.checkout()?;
+        for (name, actual, expected) in [
+            ("channel", &release.channel, &self.marker.channel),
+            ("commit", &release.commit, &self.marker.commit),
+        ] {
+            if !actual.is_empty() && actual != expected {
+                return Err(format!("ship execution {name} differs from its marker"));
+            }
+        }
+        release.channel = self.marker.channel.clone();
+        release.commit = self.marker.commit.clone();
+        release.version = self.marker.version.clone();
+        Ok(())
+    }
+
+    fn checkout(&self) -> Result<(), String> {
+        let output = std::process::Command::new("git")
+            .arg("-C")
+            .arg(&self.spec().root)
+            .args(["rev-parse", "HEAD"])
+            .output()
+            .map_err(|error| format!("cannot inspect ship checkout: {error}"))?;
+        if !output.status.success()
+            || String::from_utf8_lossy(&output.stdout).trim() != self.marker.commit
+        {
+            return Err("ship checkout differs from its marker commit".into());
+        }
+        let status = std::process::Command::new("git")
+            .arg("-C")
+            .arg(&self.spec().root)
+            .args(["diff-index", "--quiet", &self.marker.commit, "--"])
+            .status()
+            .map_err(|error| format!("cannot inspect ship tree: {error}"))?;
+        if !status.success() {
+            return Err("ship tracked tree differs from its marker".into());
+        }
+        Ok(())
+    }
+
+    pub fn request(&self, request: &Value) -> Result<(), String> {
+        let mut operation = request["operation"].clone();
+        operation
+            .as_object_mut()
+            .ok_or("ship request carries no operation")?
+            .remove("workloads");
+        let spec = self.spec();
+        let expected = match operation["type"].as_str() {
+            Some("workload" | "publication") if spec.binary() => binary(spec, &operation)?,
+            _ => {
+                let surface: Value =
+                    serde_json::from_str(&crate::command::release::plan::surface(spec)?)
+                        .map_err(|error| error.to_string())?;
+                surface["publication"]["include"]
+                    .as_array()
+                    .ok_or("ship surface has no publication rows")?
+                    .iter()
+                    .find(|row| row["operation"] == operation)
+                    .cloned()
+                    .ok_or("operation is not a declared marker-bound Ship request")?
+            }
+        };
+        for field in ["action", "roots", "projections"] {
+            if request[field] != expected[field] {
+                return Err(format!("ship request {field} differs from its marker plan"));
+            }
+        }
+        Ok(())
     }
 }
 
@@ -79,4 +145,22 @@ impl<'a> Binding<'a> {
             Err("ship request configuration or product profile differs from its governance".into())
         }
     }
+}
+
+fn binary(spec: &Spec, operation: &Value) -> Result<Value, String> {
+    let action = if operation["type"] == "workload" {
+        let triple = operation["target"]
+            .as_str()
+            .ok_or("binary request has no target")?;
+        if operation["archive"] != spec.target(triple)?.archive {
+            return Err("binary request archive differs from its target".into());
+        }
+        format!("ship/binary.{triple}")
+    } else {
+        "ship/binary".into()
+    };
+    Ok(
+        json!({"action":action,"roots":super::support::sources(spec)?,
+        "projections":[super::support::projection()],"operation":operation}),
+    )
 }

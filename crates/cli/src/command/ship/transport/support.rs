@@ -155,3 +155,35 @@ pub(super) fn carry(request: &mut Map<String, Value>, workloads: &[Value]) -> Re
         .insert("workloads".into(), Value::Array(workloads.to_vec()));
     Ok(())
 }
+
+pub(super) fn pnpm(root: &std::path::Path, install: bool) -> Result<(), String> {
+    if !install || !root.join("pnpm-lock.yaml").is_file() {
+        return Ok(());
+    }
+    let store = root.join("target/pnpm-store");
+    command(
+        root,
+        "pnpm",
+        &[
+            "install",
+            "--frozen-lockfile",
+            "--store-dir",
+            &store.to_string_lossy(),
+        ],
+    )
+}
+
+fn command(root: &std::path::Path, program: &str, args: &[&str]) -> Result<(), String> {
+    let status = Command::new(program)
+        .args(args)
+        .current_dir(root)
+        .status()
+        .map_err(|error| format!("cannot run {program}: {error}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "{program} failed while materializing a ship request"
+        ))
+    }
+}

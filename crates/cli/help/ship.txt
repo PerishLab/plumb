@@ -15,6 +15,10 @@ Recovery repeats the same marker. The workflow plan may reuse a verified
 workload or URL, run missing work, or omit irrelevant work; a successful node
 does not receive another runner merely because a sibling medium is retried.
 
-The remaining medium-shaped verbs are private execution surfaces of the
-canonical transaction. They are hidden from command help and cannot establish
-independent ship intent or select another marker.
+Only marker-bound plan requests perform immutable publication. Execute requires
+the marker's locked configuration and Product Profile; conflicting repository,
+channel, or commit inputs refuse before publication. Medium-specific exact and
+publish commands no longer exist, including binary publish.
+
+The remaining private verbs perform local preparation or read-only diagnostics.
+They cannot establish independent publication intent.

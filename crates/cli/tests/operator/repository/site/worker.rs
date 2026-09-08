@@ -13,12 +13,20 @@ fn exact() {
         "[release.cfworker]\naccount = \"account\"\ndomain = \"site.test\"\n",
     )
     .expect("release manifest");
+    super::file(
+        &root.join("bin/git"),
+        "#!/bin/sh\nexec /usr/bin/git \"$@\"\n",
+    );
+    let manifest = "[release]\nproduct='probe'\nauthority='https://releases.test'\n[release.cfworker]\naccount='account'\ndomain='site.test'\n";
+    let binding = crate::marker::prepare(root, &root.join("home"), manifest, "v1.2.3-beta.1");
     let request = |reuse: serde_json::Value| {
         serde_json::json!({
             "schema": "plumb.ship-request/v2",
+            "configuration": binding["configuration"],
+            "profile": binding["profile"],
             "action": "ship/cfworker",
             "projections": [],
-            "roots": ["Cargo.toml", "apps"],
+            "roots": ["Cargo.toml", "apps", "pnpm-lock.yaml"],
             "operation": { "type": "cfworker" },
             "reuse": reuse,
             "keys": {
@@ -114,6 +122,8 @@ fn run(
         .env("SITE_CALLS", root.join("calls"))
         .env("SITE_CASE", "live")
         .env("PLUMB_RELEASE_ROOT", root)
+        .env("PLUMB_HOME", root.join("home"))
+        .env("PLUMB_RULES_SOURCE", "https://depot.test")
         .env("PLUMB_RELEASE_CHANNEL", "beta")
         .env("PLUMB_RELEASE_VERSION", "v1.2.3-beta.1")
         .env("PLUMB_SITE_API", "https://cloud.test")

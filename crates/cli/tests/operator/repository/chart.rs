@@ -67,7 +67,15 @@ fn reused() {
         "[release.chart]\nregistry = \"example.invalid\"\nchart = \"owner/probe\"\naccount = \"Example\"\n",
     )
     .expect("release manifest");
-    let workload = root.join("probe-1.2.3.tgz");
+    let home = tempfile::tempdir().unwrap();
+    let binding = crate::marker::prepare(
+        root,
+        home.path(),
+        "[release]\nproduct='probe'\nauthority='https://releases.test'\n[release.chart]\nregistry='example.invalid'\nchart='owner/probe'\naccount='Example'\n",
+        "v1.2.3-beta.1",
+    );
+    let inventory = crate::support::Bucket::open(3);
+    let workload = root.join("probe-1.2.3-beta.1.tgz");
     archive(&workload);
     let helm = r#"#!/bin/sh
 set -eu
@@ -77,9 +85,10 @@ while [ $# -gt 0 ]; do
   if [ "$1" = --destination ]; then destination=$2; break; fi
   shift
 done
-/bin/cp "$PLUMB_TEST_CHART" "$destination/probe-1.2.3.tgz"
+/bin/cp "$PLUMB_TEST_CHART" "$destination/probe-1.2.3-beta.1.tgz"
 "#;
     for (name, body) in [
+        ("git", "#!/bin/sh\nexec /usr/bin/git \"$@\"\n".into()),
         ("helm", helm.to_string()),
         ("curl", "#!/bin/sh\n/bin/cat \"$PLUMB_TEST_CHART\"\n".into()),
     ] {
@@ -88,18 +97,30 @@ done
         std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755))
             .expect("fixture mode");
     }
+    let request = serde_json::json!({
+        "schema":"plumb.ship-request/v2", "configuration":binding["configuration"], "profile":binding["profile"],
+        "action":"ship/chart", "projections":["charts/probe/Chart.yaml#/version","charts/probe/Chart.yaml#/appVersion"],
+        "roots":["charts/probe"], "operation":{"type":"chart"},
+        "reuse":{"type":"workload","source":"https://inventory.invalid/probe.tgz"},
+        "keys":{"workload":"1".repeat(64),"proof":"2".repeat(64),"publication":"3".repeat(64)},
+    });
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args([
-            "ship",
-            "chart",
-            "exact",
-            "--reuse",
-            r#"{"type":"workload","source":"https://inventory.invalid/probe.tgz"}"#,
-        ])
+        .current_dir(root)
+        .env("PLUMB_HOME", home.path())
+        .env("PLUMB_RULES_SOURCE", "https://depot.test")
+        .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
+        .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
+        .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", "workflow")
+        .env("PLUMB_WORKFLOW_INVENTORY_ENDPOINT", inventory.endpoint())
+        .env(
+            "PLUMB_WORKFLOW_INVENTORY_URL",
+            "https://inventory.invalid/inventory.json",
+        )
+        .args(["ship", "execute", "--request", &request.to_string()])
         .env("PATH", root.join("bin"))
         .env("PLUMB_TEST_CHART", &workload)
         .env("PLUMB_RELEASE_ROOT", root)
-        .env("PLUMB_RELEASE_VERSION", "v1.2.3")
+        .env("PLUMB_RELEASE_VERSION", "v1.2.3-beta.1")
         .env("PLUMB_RELEASE_REGISTRY_TOKEN", "Bearer secret")
         .output()
         .expect("plumb should run");
@@ -108,6 +129,7 @@ done
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
+    inventory.finish();
 }
 
 fn archive(path: &std::path::Path) {
@@ -116,7 +138,8 @@ fn archive(path: &std::path::Path) {
         .mtime(0)
         .write(file, flate2::Compression::default());
     let mut archive = tar::Builder::new(gzip);
-    let body = b"apiVersion: v2\nname: probe\nversion: 1.2.3\nappVersion: \"1.2.3\"\n";
+    let body =
+        b"apiVersion: v2\nname: probe\nversion: 1.2.3-beta.1\nappVersion: \"1.2.3-beta.1\"\n";
     let mut header = tar::Header::new_gnu();
     header.set_size(body.len() as u64);
     header.set_mode(0o644);
