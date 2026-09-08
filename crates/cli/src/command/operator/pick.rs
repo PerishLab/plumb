@@ -2,6 +2,8 @@ use plumb::forgejo::git::fetch;
 use std::path::Path;
 use std::process::Output;
 
+mod recovery;
+
 pub fn validate(root: &Path, name: &str) -> Result<(), String> {
     fetch(root)?;
     let release = format!("origin/{name}");
@@ -82,6 +84,7 @@ fn provenance(body: &str) -> bool {
 }
 
 pub fn pick(seat: &Path, name: &str, commits: &[String]) -> Result<String, String> {
+    plumb::depot::rules().map_err(|error| format!("pick configuration preflight: {error}"))?;
     controller(seat, name)?;
     let current = text(
         "read current branch",
@@ -97,33 +100,53 @@ pub fn pick(seat: &Path, name: &str, commits: &[String]) -> Result<String, Strin
             }
         ));
     }
-    if !text("inspect worktree", command(seat, ["status", "--short"])?)?.is_empty() {
-        return Err("pick requires a clean worktree".into());
-    }
+    let recovery = recovery::Seat(seat);
+    recovery.clean()?;
     fetch(seat)?;
+    recovery.unmarked(name)?;
     let head = text("resolve local head", command(seat, ["rev-parse", "HEAD"])?)?;
     let remote = text(
         "resolve remote head",
         command(seat, ["rev-parse", &format!("origin/{name}")])?,
     )?;
-    if head != remote {
-        return Err(format!("{name} must equal origin/{name} before pick"));
+    if head == remote {
+        if recovery.delivered(&head, commits)? {
+            return Ok(format!(
+                "{} already picked onto {name}; nothing moved",
+                commits.join(" ")
+            ));
+        }
+        let picked = plumb::config::current("git")
+            .args(["cherry-pick", "-x"])
+            .args(commits)
+            .current_dir(seat)
+            .output()
+            .map_err(|error| format!("cannot run git: {error}"))?;
+        if let Err(error) = success("cherry-pick candidates", picked) {
+            return Err(restore(seat, &head, error));
+        }
     }
-    let picked = plumb::config::current("git")
-        .args(["cherry-pick", "-x"])
-        .args(commits)
-        .current_dir(seat)
-        .output()
-        .map_err(|error| format!("cannot run git: {error}"))?;
-    if let Err(error) = success("cherry-pick candidates", picked) {
-        return Err(restore(seat, &head, error));
-    }
-    if let Err(error) = sealed(seat) {
-        return Err(restore(seat, &head, error));
-    }
+    let applied = text(
+        "resolve applied pick",
+        command(seat, ["rev-parse", "HEAD"])?,
+    )?;
+    recovery.verify(&remote, &applied, commits)?;
+    sealed(seat)?;
+    let prepared = text("resolve proved pick", command(seat, ["rev-parse", "HEAD"])?)?;
+    recovery.unchanged(name, &remote)?;
+    recovery.verify(&remote, &prepared, commits)?;
+    plumb::guard::current(seat, &prepared)?;
     success(
         "push release line",
-        command(seat, ["push", "origin", &format!("HEAD:refs/heads/{name}")])?,
+        command(
+            seat,
+            [
+                "push",
+                &format!("--force-with-lease=refs/heads/{name}:{remote}"),
+                "origin",
+                &format!("{prepared}:refs/heads/{name}"),
+            ],
+        )?,
     )?;
     Ok(format!("picked {} onto {name}", commits.join(" ")))
 }

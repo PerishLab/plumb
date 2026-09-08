@@ -11,6 +11,11 @@ markers, its gate is the complete Ship graph, not a mutable Depot channel pointe
 Opening or freezing a successor requires the delivered stable baseline to be held
 by main. Historical markers retain their original publication interpretation.
 
+Pick checks the active configuration before changing Git history. Repeat the same
+pick after a failed proof or push: only a clean, source-exact local continuation of
+the current remote base may resume. Unknown changes, unfinished Git operations,
+stable markers and remote drift refuse; completed picks return without new work.
+
 After freeze, use release stamp to create the immutable marker. Distribution
 starts only when ship is invoked with that marker.
 
