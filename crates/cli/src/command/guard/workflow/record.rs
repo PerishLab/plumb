@@ -87,10 +87,12 @@ fn execute(
     }
     let authority = Authority::read()?;
     if let Some(receipt) = &receipt {
-        receipt.verify(&input.workload)?;
-        if input.reuse.is_some() {
-            return Err("a producer receipt cannot be assigned to an unverified reused URL".into());
-        }
+        super::inventory::produced(
+            receipt,
+            &input.workload,
+            input.reuse.as_deref(),
+            &authority.public(&format!("workloads/{}.tgz", receipt.artifact))?,
+        )?;
     }
     let source = if let Some(source) = input.reuse {
         if !source.starts_with("https://") {
