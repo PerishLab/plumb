@@ -91,6 +91,27 @@ fn platform() {
 }
 
 #[test]
+fn disagreement() {
+    let mut held = contract();
+    let probe = &mut held.probes.get_mut("rule://fixture/git").unwrap()[0];
+    let observed = probe.stdout.clone();
+    probe.stdout = "required-version\r\n".into();
+    let root = tempfile::tempdir().expect("root");
+    let error = held.start(root.path()).err().expect("refused mismatch");
+    assert_eq!(
+        error,
+        format!(
+            "production probe rule://fixture/git {:?} expected stdout {:?}, observed {:?}",
+            ["git", "--version"],
+            "required-version\r\n",
+            observed
+        )
+    );
+    assert!(!error.contains('\n'));
+    assert!(!error.contains('\r'));
+}
+
+#[test]
 fn bound() {
     let mut held = contract();
     let original = held.digest().unwrap();

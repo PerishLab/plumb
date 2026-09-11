@@ -96,7 +96,8 @@ impl Production {
             let observation = probe.run(execution)?;
             if !observation.matches {
                 return Err(format!(
-                    "production probe {name} disagrees with its contract"
+                    "production probe {name} {:?} expected stdout {:?}, observed {:?}",
+                    probe.argv, probe.stdout, observation.stdout
                 ));
             }
             observations.insert(name.to_string(), observation.stdout);
