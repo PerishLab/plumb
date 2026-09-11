@@ -18,6 +18,11 @@ fn bootstrap() {
         .expect("conditioned proof reuse");
     assert!(mismatch < reuse);
     assert!(action.find(".checks()?").expect("current actions") < reuse);
+    let selection = action
+        .find("configuration.product(root)?")
+        .expect("verified profile");
+    assert!(action.find("Seat::new(").expect("configuration validation") < selection);
+    assert!(selection < action.find(".checks()?").unwrap());
 }
 
 #[test]

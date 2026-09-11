@@ -46,8 +46,16 @@ fn dangling() {
     assert!(!output.status.success());
     let error = String::from_utf8_lossy(&output.stderr);
     assert!(
-        error.contains("cannot resolve Cargo execution path"),
+        error.contains(&format!(
+            "cannot create {}",
+            home.path().join("tmp").display()
+        )),
         "{error}"
+    );
+    assert!(!physical.path().join("absent").exists());
+    assert_eq!(
+        std::fs::read_link(home.path().join("tmp")).unwrap(),
+        physical.path().join("absent")
     );
     assert!(!error.contains("guard guard/rust"), "{error}");
 }

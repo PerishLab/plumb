@@ -4,6 +4,7 @@ mod environment;
 mod graph;
 mod physical;
 mod probe;
+mod profile;
 mod world;
 use serde_json::Value;
 use std::process::{Command, Output};

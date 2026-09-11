@@ -54,17 +54,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         None => false,
     };
     let manifest = captured.text("plumb.toml")?;
-    let product = crate::shape::product::guard(root, manifest.as_deref())?;
-    let prepared = Catalog {
-        root,
-        tree: &captured,
-        product: &product,
-    }
-    .checks()?;
     let index = Index::new(root, &tree)?;
-    if let Some(profile) = &product.profile {
-        index.govern(profile)?;
-    }
     let configuration = mismatched
         .then(|| {
             super::configuration::Seat::new(
@@ -84,6 +74,19 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
             plumb::depot::guard(configuration.path(), target)?;
         }
         crate::catalog::set::guard(configuration.path(), target)?;
+    }
+    let product = match &configuration {
+        Some(configuration) => configuration.product(root)?,
+        None => crate::shape::product::guard(root, manifest.as_deref())?,
+    };
+    let prepared = Catalog {
+        root,
+        tree: &captured,
+        product: &product,
+    }
+    .checks()?;
+    if let Some(profile) = &product.profile {
+        index.govern(profile)?;
     }
     let mut checks = Vec::new();
     for Preparation {

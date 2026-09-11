@@ -26,9 +26,6 @@ pub struct Profile {
 }
 
 pub fn governance(root: &Path) -> Result<Option<Target>, String> {
-    if guarded() {
-        return Ok(None);
-    }
     match git::remote(root, "") {
         Ok(remote) if remote.host == DOMAIN => {
             let rig = plumb::rig::Rig::resolve(None).map_err(|error| error.to_string())?;
@@ -100,20 +97,9 @@ fn configured<C: Configuration>(repository: &Path, seat: &C) -> Result<Target, S
 }
 
 pub fn guard(root: &Path, manifest: Option<&str>) -> Result<Target, String> {
-    if !guarded()
-        && let Ok(remote) = git::remote(root, "")
+    if let Ok(remote) = git::remote(root, "")
         && remote.host == DOMAIN
     {
-        if remote.owner == "PerishLab"
-            && remote.repo == "plumb"
-            && let Some(raw) = manifest
-        {
-            return Root(root).decoded(super::release::Spec::decode(
-                root,
-                raw,
-                "staged plumb.toml",
-            )?);
-        }
         return resolve(root, "");
     }
     let raw = manifest.ok_or_else(|| "staged tree requires plumb.toml".to_string())?;
@@ -133,15 +119,6 @@ pub fn guard(root: &Path, manifest: Option<&str>) -> Result<Target, String> {
         derivatives: Vec::new(),
         profile: None,
     })
-}
-
-fn guarded() -> bool {
-    if plumb::config::value("PLUMB_HOME").is_some() {
-        return false;
-    }
-    let view = plumb::config::value("PLUMB_GUARD_VIEW").is_some();
-    let binding = binding();
-    (view || binding) && !projected()
 }
 
 fn projected() -> bool {

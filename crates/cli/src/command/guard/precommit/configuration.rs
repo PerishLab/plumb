@@ -63,6 +63,15 @@ impl Seat {
         self.manifest.digest()
     }
 
+    pub fn product(&self, root: &Path) -> Result<crate::shape::product::Target, String> {
+        let rules = plumb::depot::Rules::guard(self.path(), self.manifest.target())?;
+        let product = crate::shape::product::at(root, "", &rules)?;
+        if product.profile.is_none() {
+            return Err("guard configuration requires a Product Profile".into());
+        }
+        Ok(product)
+    }
+
     pub fn path(&self) -> &Path {
         self.temporary.path()
     }
