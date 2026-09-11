@@ -30,6 +30,24 @@ fn canonical() -> String {
     std::fs::read_to_string(path).expect("Plumb owns one canonical ship workflow")
 }
 
+#[test]
+fn image() {
+    let held = canonical();
+    let (_, image) = held.split_once("    container:\n      image: ").unwrap();
+    let image = image.lines().next().unwrap();
+    assert!(image.contains("@sha256:"));
+    assert_eq!(
+        held.matches(&format!("    container:\n      image: {image}\n"))
+            .count(),
+        3
+    );
+    let workload = held.split_once("  workload:\n").unwrap().1;
+    let workload = workload.split_once("  publish_plan:\n").unwrap().0;
+    assert!(workload.contains(&format!(
+        "    runs-on: ${{{{ matrix.runner }}}}\n    container:\n      image: ${{{{ matrix.runner == 'linux' && '{image}' || '' }}}}\n"
+    )));
+}
+
 fn transport() -> String {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     std::fs::read_to_string(root.join("crates/cli/src/command/ship/transport/support.rs"))

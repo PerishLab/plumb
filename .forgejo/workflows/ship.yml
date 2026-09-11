@@ -93,6 +93,8 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.resolve.outputs.workload) }}
     runs-on: ${{ matrix.runner }}
+    container:
+      image: ${{ matrix.runner == 'linux' && 'git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73' || '' }}
     env:
       PLUMB_RELEASE_ROOT: .
       PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
