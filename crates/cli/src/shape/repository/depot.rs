@@ -34,9 +34,17 @@ pub struct Draft {
 pub type Held = (Vec<Object>, BTreeMap<String, Vec<u8>>);
 
 pub fn inventory(snapshot: &Snapshot) -> Result<Held, String> {
+    gather(snapshot, configuration(snapshot.root())?)
+}
+
+pub fn governed(snapshot: &Snapshot, manifest: &str) -> Result<Held, String> {
+    gather(snapshot, roots(crate::shape::layout::parse(manifest))?)
+}
+
+fn gather(snapshot: &Snapshot, roots: Vec<(String, String)>) -> Result<Held, String> {
     let mut bodies = BTreeMap::new();
     let mut objects = Vec::new();
-    for (root, seat) in configuration(snapshot.root())? {
+    for (root, seat) in roots {
         for entry in snapshot.seat(&root) {
             let name = entry
                 .path()
@@ -111,7 +119,10 @@ impl Batch {
 }
 
 pub fn configuration(root: &std::path::Path) -> Result<Vec<(String, String)>, String> {
-    let held = crate::shape::layout::stated(root);
+    roots(crate::shape::layout::stated(root))
+}
+
+fn roots(held: crate::shape::layout::Held) -> Result<Vec<(String, String)>, String> {
     let crate::shape::layout::Held::Stated(layout) = held else {
         return Err(match held {
             crate::shape::layout::Held::Wrong(error) => error,

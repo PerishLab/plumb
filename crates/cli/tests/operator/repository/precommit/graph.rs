@@ -15,7 +15,12 @@ fn declaration() {
     Repo::git(root, &["add", "plumb.toml"]);
     let invalid = cache::run(root, home.path());
     assert!(!invalid.status.success());
-    assert!(String::from_utf8_lossy(&invalid.stderr).contains("cannot parse plumb.toml"));
+    let diagnostic = String::from_utf8_lossy(&invalid.stderr);
+    assert!(
+        diagnostic.contains("cannot parse staged plumb.toml"),
+        "{diagnostic}"
+    );
+    assert!(!diagnostic.contains("guard guard/rust"), "{diagnostic}");
 }
 
 #[cfg(unix)]

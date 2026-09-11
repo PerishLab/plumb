@@ -135,3 +135,102 @@ fn bound() {
         );
     }
 }
+
+#[test]
+fn capability() {
+    let root = fixture();
+    super::Repo::git(
+        root.path(),
+        &[
+            "remote",
+            "set-url",
+            "origin",
+            "ssh://git@git.perish.top/PerishFire/probe.git",
+        ],
+    );
+    std::fs::remove_file(root.path().join("plumb.toml")).unwrap();
+    super::Repo::git(root.path(), &["add", "-A"]);
+    super::Repo::git(
+        root.path(),
+        &["symbolic-ref", "HEAD", "refs/heads/release/v9.9.9"],
+    );
+    let profile = super::super::world::profile("probe", "[layout]\n", "").replace(
+        "derivatives = [\"skill\"]",
+        "derivatives = [\"configuration\"]",
+    );
+    let digest = plumb::depot::sha(profile.as_bytes());
+    let path = format!("profiles/{digest}.toml");
+    let catalog = format!(
+        "schema='plumb.products/v2'\n[[product]]\nidentity='git.perish.top/PerishFire/probe'\nprofile='{digest}'\n"
+    );
+    let home = super::support::depot(&[
+        ("rules/products.toml", catalog.as_str()),
+        (path.as_str(), profile.as_str()),
+    ]);
+    refused(
+        command(root.path(), "guard")
+            .env("PLUMB_HOME", home.path())
+            .output()
+            .unwrap(),
+        &format!(
+            "configuration mismatch may bootstrap only on release/v{}, got release/v9.9.9",
+            env!("CARGO_PKG_VERSION")
+        ),
+    );
+    assert!(!root.path().join("plumb.toml").exists());
+}
+
+#[test]
+fn related() {
+    let root = fixture();
+    super::Repo::git(
+        root.path(),
+        &["symbolic-ref", "HEAD", "refs/heads/release/v9.9.9"],
+    );
+    let profile = super::super::world::profile("plumb", "[layout]\n", "").replace(
+        "derivatives = [\"skill\"]",
+        "derivatives = [\"configuration\"]",
+    );
+    let digest = plumb::depot::sha(profile.as_bytes());
+    let path = format!("profiles/{digest}.toml");
+    let catalog = format!(
+        "schema='plumb.products/v2'\n[[product]]\nidentity='git.perish.top/PerishLab/plumb'\nprofile='{digest}'\n"
+    );
+    let source = super::support::depot(&[
+        ("rules/products.toml", catalog.as_str()),
+        (path.as_str(), profile.as_str()),
+    ]);
+    let version = format!("v{}-beta.1", env!("CARGO_PKG_VERSION"));
+    let bundle = plumb::depot::v3::Bundle::read(
+        &source.path().join("configurations/29990101T000000Z"),
+        plumb::depot::v3::Identity {
+            product: "plumb".into(),
+            channel: "beta".into(),
+            version: version.clone(),
+            marker: plumb::depot::v3::Marker {
+                name: version,
+                sha256: "a".repeat(64),
+            },
+            kind: plumb::depot::v3::Kind::Configuration,
+        },
+    )
+    .unwrap();
+    let pointer = plumb::depot::v3::Pointer::new(
+        &bundle.manifest,
+        plumb::depot::v3::Publication {
+            source: "https://depot.test",
+            prior: None,
+            created: "2026-09-11T00:00:00Z".into(),
+        },
+    )
+    .unwrap();
+    let home = tempfile::tempdir().unwrap();
+    plumb::depot::v3::install(&home.path().join("configurations"), &pointer, &bundle).unwrap();
+    refused(
+        command(root.path(), "guard")
+            .env("PLUMB_HOME", home.path())
+            .output()
+            .unwrap(),
+        "must not carry plumb.toml or ectropy.toml",
+    );
+}

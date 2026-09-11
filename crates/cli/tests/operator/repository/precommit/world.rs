@@ -17,12 +17,20 @@ fn bootstrap() {
         .find("if !mismatched")
         .expect("conditioned proof reuse");
     assert!(mismatch < reuse);
+    assert!(action.contains("plumb::depot::related(target, released)"));
     assert!(action.find(".checks()?").expect("current actions") < reuse);
     let selection = action
         .find("configuration.product(root)?")
         .expect("verified profile");
     assert!(action.find("Seat::new(").expect("configuration validation") < selection);
     assert!(selection < action.find(".checks()?").unwrap());
+    assert!(!held.contains("Spec::read"));
+    assert!(!held.contains("product != Some(\"plumb\")"));
+    assert!(held.contains("crate::shape::depot::governed(&snapshot, &profile.manifest)?"));
+    assert!(
+        action.find("crate::shape::product::guard").unwrap()
+            < action.find("configuration::target").unwrap()
+    );
 }
 
 #[test]

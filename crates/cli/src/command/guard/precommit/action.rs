@@ -41,7 +41,9 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
     }
     let tree = tree::git(root, &["write-tree"], "read staged tree")?;
     let captured = Tree::read(root, Some(&tree))?;
-    let target = super::configuration::target(&captured)?;
+    let manifest = captured.text("plumb.toml")?;
+    let product = crate::shape::product::guard(root, manifest.as_deref())?;
+    let target = super::configuration::target(&captured, &product)?;
     let mismatched = match target.as_deref() {
         Some(target) => {
             let root = plumb::depot::root(&PathBuf::new())?;
@@ -49,17 +51,19 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
                 .ok()
                 .and_then(|held| held.version().map(str::to_string))
                 .as_deref()
-                != Some(target)
+                .map(|released| plumb::depot::related(target, released))
+                .transpose()?
+                != Some(true)
         }
         None => false,
     };
-    let manifest = captured.text("plumb.toml")?;
     let index = Index::new(root, &tree)?;
     let configuration = mismatched
         .then(|| {
             super::configuration::Seat::new(
                 root,
                 &index.root,
+                &product,
                 target
                     .as_deref()
                     .expect("a mismatched Plumb version has a target"),
@@ -77,7 +81,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
     }
     let product = match &configuration {
         Some(configuration) => configuration.product(root)?,
-        None => crate::shape::product::guard(root, manifest.as_deref())?,
+        None => product,
     };
     let prepared = Catalog {
         root,
