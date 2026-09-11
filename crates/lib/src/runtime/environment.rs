@@ -40,6 +40,29 @@ impl Contract {
         &self,
         values: impl IntoIterator<Item = (OsString, OsString)>,
     ) -> Result<Environment, String> {
+        let contract = self.canonical()?;
+        contract.captured(values)
+    }
+
+    fn canonical(&self) -> Result<Self, String> {
+        let mut bind = BTreeMap::new();
+        for (key, value) in &self.bind {
+            if bind.insert(name(key), value.clone()).is_some() {
+                return Err(format!("duplicate bound execution input {key}"));
+            }
+        }
+        Ok(Self {
+            inherit: self.inherit.iter().map(|key| name(key)).collect(),
+            managed: self.managed.iter().map(|key| name(key)).collect(),
+            reject: self.reject.iter().map(|key| name(key)).collect(),
+            bind,
+        })
+    }
+
+    fn captured(
+        &self,
+        values: impl IntoIterator<Item = (OsString, OsString)>,
+    ) -> Result<Environment, String> {
         self.validate()?;
         let mut held = self
             .bind
@@ -48,6 +71,8 @@ impl Contract {
             .collect::<BTreeMap<_, _>>();
         for (key, value) in values {
             let Some(key) = key.to_str() else { continue };
+            let key = name(key);
+            let key = key.as_str();
             if let Some(binding) = self.bind.get(key) {
                 let value = value
                     .into_string()
@@ -131,7 +156,7 @@ impl Environment {
     }
 
     pub fn get(&self, key: &str) -> Option<&str> {
-        self.values.get(key).map(String::as_str)
+        self.values.get(&name(key)).map(String::as_str)
     }
 
     pub fn apply(&self, command: &mut Command) {
@@ -157,6 +182,14 @@ fn matches(pattern: &str, key: &str) -> bool {
     match pattern.strip_suffix('*') {
         Some(prefix) => key.starts_with(prefix),
         None => key == pattern,
+    }
+}
+
+fn name(key: &str) -> String {
+    if cfg!(windows) {
+        key.to_ascii_uppercase()
+    } else {
+        key.to_string()
     }
 }
 
