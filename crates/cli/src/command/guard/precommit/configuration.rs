@@ -36,7 +36,7 @@ impl Seat {
             Context::Source => source.latest("stable", true)?,
         };
         let snapshot = Snapshot::read(staged).map_err(|error| error.to_string())?;
-        let held = crate::shape::depot::governed(&snapshot, &profile.manifest)?;
+        let held = crate::shape::depot::governed(&snapshot, profile)?;
         let plan = Batch::validation(
             held,
             Draft {

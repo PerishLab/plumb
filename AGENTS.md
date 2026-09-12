@@ -45,7 +45,10 @@ answers for.
   Plumb owns no authenticated Cloudflare HTTP sender and no raw route dialect.
 - `crates/cli/{rules,assets,cookbook,help}` — Plumb's governed resources. Their
   exact source-to-seat projections are declared on `[layout]` seats and form
-  the configuration derivative; no second inventory owns them. Each is one
+  the implementation resources of the configuration derivative; no second
+  inventory owns them. Domain policy in rules and profiles is inherited from
+  the locked Depot generation, never replaced by source bootstrap. Policy
+  changes consume explicit temporary media through Depot publication. Each is one
   file per addressable thing, and the address is the path: a rule set is its
   name, a cookbook entry is the finding that sends you there, and long help is
   the command path, so `plumb version` reads `help/version.txt`.

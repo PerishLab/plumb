@@ -3,9 +3,11 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use std::path::{Component, Path, PathBuf};
 
+mod policy;
 mod rules;
 pub mod v2;
 pub mod v3;
+pub use policy::policy;
 pub use rules::{Rules, Selection, related};
 
 pub const FORMAT: u32 = 1;

@@ -37,8 +37,32 @@ pub fn inventory(snapshot: &Snapshot) -> Result<Held, String> {
     gather(snapshot, configuration(snapshot.root())?)
 }
 
-pub fn governed(snapshot: &Snapshot, manifest: &str) -> Result<Held, String> {
-    gather(snapshot, roots(crate::shape::layout::parse(manifest))?)
+pub fn governed(
+    snapshot: &Snapshot,
+    profile: &super::super::product::Profile,
+) -> Result<Held, String> {
+    let roots = roots(crate::shape::layout::parse(&profile.manifest))?
+        .into_iter()
+        .filter(|(_, seat)| !plumb::depot::policy(seat))
+        .collect();
+    let (_, resources) = gather(snapshot, roots)?;
+    let seat = match crate::command::depot::held() {
+        crate::command::depot::Held::Seat(seat) => seat,
+        crate::command::depot::Held::Blind(error) => return Err(error),
+        crate::command::depot::Held::Absent => {
+            return Err("guard bootstrap requires locked Depot policy".into());
+        }
+    };
+    let bodies = seat.inherit(&profile.configuration, resources)?;
+    let objects = bodies
+        .iter()
+        .map(|(path, bytes)| Object {
+            path: path.clone(),
+            sha256: sha(bytes),
+            size: bytes.len() as u64,
+        })
+        .collect();
+    Ok((objects, bodies))
 }
 
 fn gather(snapshot: &Snapshot, roots: Vec<(String, String)>) -> Result<Held, String> {

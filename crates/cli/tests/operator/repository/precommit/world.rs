@@ -26,7 +26,7 @@ fn bootstrap() {
     assert!(selection < action.find(".checks()?").unwrap());
     assert!(!held.contains("Spec::read"));
     assert!(!held.contains("product != Some(\"plumb\")"));
-    assert!(held.contains("crate::shape::depot::governed(&snapshot, &profile.manifest)?"));
+    assert!(held.contains("crate::shape::depot::governed(&snapshot, profile)?"));
     assert!(
         action.find("crate::shape::product::guard").unwrap()
             < action.find("configuration::target").unwrap()

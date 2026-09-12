@@ -8,6 +8,8 @@ mod configuration;
 mod exact;
 #[path = "support/generation.rs"]
 mod generation;
+#[path = "support/policy.rs"]
+mod policy;
 
 fn derivative() -> plumb::depot::v2::Manifest {
     use plumb::depot::v2::{FORMAT, Kind, Release, Seal, Snapshot};
