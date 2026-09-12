@@ -116,8 +116,7 @@ fn external() {
 
 #[test]
 fn node() {
-    let rules: toml::Value =
-        toml::from_str(include_str!("../../../../rules/workflow.toml")).unwrap();
+    let rules: toml::Value = toml::from_str(&support::policy("rules/workflow.toml")).unwrap();
     let contract: plumb::config::Contract = rules["execution"]["pnpm"].clone().try_into().unwrap();
     let clean = contract.capture([]).unwrap();
     let metadata = contract

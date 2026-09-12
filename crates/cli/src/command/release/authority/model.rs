@@ -232,7 +232,8 @@ impl Model {
         } else {
             root.join(escrow)
         };
-        let catalog = std::fs::read_to_string(root.join("crates/cli/rules/products.toml"))
+        let catalog = crate::command::depot::held()
+            .read("rules/products.toml", "")
             .map_err(|error| format!("cannot read the ship product catalog: {error}"))?;
         let catalog: toml::Table = catalog
             .parse()

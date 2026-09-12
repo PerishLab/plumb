@@ -45,8 +45,7 @@ fn stock(home: &Path, policy: &str) {
 }
 
 fn source() -> String {
-    std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("rules/policy.toml"))
-        .expect("policy source")
+    super::support::policy("rules/policy.toml")
 }
 
 #[test]

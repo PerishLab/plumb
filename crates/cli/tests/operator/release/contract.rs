@@ -6,6 +6,27 @@ fn text(path: &str) -> String {
 }
 
 #[test]
+fn policy() {
+    let authority = text("crates/cli/src/command/release/authority/model.rs");
+    assert!(authority.contains("let catalog = crate::command::depot::held()"));
+    assert!(authority.contains(".read(\"rules/products.toml\", \"\")"));
+    assert!(!authority.contains("crates/cli/rules/products.toml"));
+    let home = super::support::depot(&[]);
+    let rules = plumb::depot::Rules::at(
+        &home.path().join("configurations"),
+        plumb::version!("PLUMB"),
+    )
+    .unwrap();
+    for path in [
+        "rules/products.toml",
+        "rules/seat.toml",
+        "rules/workflow.toml",
+    ] {
+        assert_eq!(rules.read(path).unwrap(), super::support::policy(path));
+    }
+}
+
+#[test]
 fn recovery() {
     let held = text(".forgejo/scripts/bootstrap-plumb.sh");
     let windows = text(".forgejo/scripts/bootstrap-plumb.ps1");
@@ -199,13 +220,13 @@ fn split() {
     assert!(configuration < ship && ship < channel, "{scenario}");
     assert!(scenario.contains("Neither command invokes the other."));
 
-    let structure = text("crates/cli/rules/structure.toml");
+    let structure = super::support::policy("rules/structure.toml");
     assert!(
         structure.contains("remaining an independent local transaction"),
         "{structure}"
     );
 
-    let catalog = text("crates/cli/rules/catalog.toml");
+    let catalog = super::support::policy("rules/catalog.toml");
     assert!(
         catalog.contains("Each ship dispatch names and resolves one exact Plumb atom"),
         "{catalog}"

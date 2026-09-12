@@ -131,7 +131,7 @@ fn compiler() {
     let root = fixture.path();
     let workflow = format!(
         "{}\n[execution.cargo.bind]\nRUSTC_WRAPPER={{tool='sccache'}}\nCARGO_INCREMENTAL='0'\n",
-        include_str!("../../../../rules/workflow.toml")
+        support::policy("rules/workflow.toml")
     );
     let version = Command::new("sccache").arg("--version").output().unwrap();
     assert!(version.status.success());
