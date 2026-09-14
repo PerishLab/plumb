@@ -73,3 +73,30 @@ fn ordinary() {
     let out = super::run(&["doctor", root.to_str().expect("path should be utf8")]);
     assert!(!out.contains("records no datum"), "{out}");
 }
+
+#[test]
+fn marker() {
+    let fixture = super::fixture();
+    let home = super::super::support::depot(&[]);
+    let root = fixture.path();
+    record(root, "v1.2.0", "schema = 1\nversion = \"v1.2.0\"\n");
+    for version in ["v1.2.0-beta.1", "v1.2.0", "v1.3.0-beta.1"] {
+        let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["doctor", root.to_str().unwrap()])
+            .env("PLUMB_HOME", home.path())
+            .env("PLUMB_RELEASE_VERSION", version)
+            .output()
+            .unwrap();
+        let said = String::from_utf8_lossy(&output.stdout);
+        if version.starts_with("v1.2.0") {
+            assert!(output.status.success(), "{said}");
+            assert!(!said.contains("records no datum"), "{said}");
+        } else {
+            assert!(!output.status.success(), "{said}");
+            assert!(
+                said.contains("release line v1.3.0 records no datum"),
+                "{said}"
+            );
+        }
+    }
+}

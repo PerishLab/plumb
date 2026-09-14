@@ -116,8 +116,11 @@ pub fn decode(version: &str, bytes: &[u8]) -> Result<Datum, String> {
 }
 
 fn named(reference: &str) -> String {
-    reference
+    let reference = reference
         .trim_start_matches("refs/heads/")
-        .trim_start_matches("release/")
-        .to_string()
+        .trim_start_matches("release/");
+    semver::Version::parse(reference.strip_prefix('v').unwrap_or(reference)).map_or_else(
+        |_| reference.to_string(),
+        |version| format!("v{}.{}.{}", version.major, version.minor, version.patch),
+    )
 }
