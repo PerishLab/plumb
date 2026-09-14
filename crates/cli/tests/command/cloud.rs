@@ -1,5 +1,5 @@
-#[path = "../../src/command/release/authority/cloudflare.rs"]
-mod adapter;
+#[path = "../../src/command/release/cloudflare/mod.rs"]
+pub(super) mod adapter;
 
 use adapter::{Bucket, Custom, Factory, Grant, Resource};
 use std::{
@@ -102,7 +102,7 @@ fn serve(answers: Vec<&str>) -> (String, thread::JoinHandle<Vec<String>>) {
                     body.len()
                 );
                 stream.write_all(reply.as_bytes()).expect("reply");
-                request.lines().next().unwrap_or("").to_string()
+                format!("{}\n{}", request.lines().next().unwrap_or(""), request.split_once("\r\n\r\n").map(|(_, body)| body).unwrap_or(""))
             })
             .collect()
     });
@@ -135,4 +135,111 @@ fn request(stream: &mut std::net::TcpStream) -> String {
         }
     }
     String::from_utf8_lossy(&bytes).to_string()
+}
+
+fn writer(resources: serde_json::Value) -> serde_json::Value {
+    serde_json::json!({
+        "id": "writer", "name": "ship:release-buckets", "status": "active",
+        "expires_on": "2030-01-01T00:00:00Z",
+        "condition": {"request.ip": {"in": ["192.0.2.0/24"]}},
+        "policies": [{"effect": "allow", "resources": resources,
+            "permission_groups": [{"id": "permit"}]}]
+    })
+}
+
+#[test]
+fn policy() {
+    let resources = Resource::Set {
+        account: "account".into(),
+        buckets: vec!["one".into(), "two".into()],
+    }
+    .policy();
+    let before =
+        writer(serde_json::json!({"com.cloudflare.edge.r2.bucket.account_default_one": "*"}));
+    let after = writer(resources.clone());
+    let permit = serde_json::json!([{"id":"permit"}]);
+    let responses = [
+        before.clone(),
+        permit.clone(),
+        before.clone(),
+        permit.clone(),
+        after.clone(),
+        after.clone(),
+        permit.clone(),
+        after,
+        permit,
+    ]
+    .into_iter()
+    .map(|value| serde_json::json!({"success":true,"result":value}).to_string())
+    .collect::<Vec<_>>();
+    let (url, handle) = serve(responses.iter().map(String::as_str).collect());
+    let factory = Factory::new("account".into(), url, "factory-value".into());
+    factory
+        .reconcile("writer", &["one".into(), "two".into()])
+        .expect("update policy");
+    factory
+        .reconcile("writer", &["one".into(), "two".into()])
+        .expect("idempotent policy");
+    let seen = handle.join().expect("server");
+    assert_eq!(
+        seen.iter()
+            .filter(|request| request.starts_with("PUT "))
+            .count(),
+        1
+    );
+    assert!(seen[4].starts_with("PUT /client/v4/accounts/account/tokens/writer "));
+    let body: serde_json::Value =
+        serde_json::from_str(seen[4].split_once('\n').unwrap().1).unwrap();
+    assert_eq!(body["policies"][0]["resources"], resources);
+    assert_eq!(body["condition"], before["condition"]);
+    assert_eq!(body["expires_on"], before["expires_on"]);
+    assert!(
+        !seen
+            .iter()
+            .any(|request| request.starts_with("POST ") || request.starts_with("DELETE "))
+    );
+}
+
+#[test]
+fn stale() {
+    let before = writer(serde_json::json!({"one":"*"}));
+    let after = writer(serde_json::json!({"two":"*"}));
+    let permit = serde_json::json!([{"id":"permit"}]);
+    let responses = [before, permit.clone(), after, permit]
+        .into_iter()
+        .map(|value| serde_json::json!({"success":true,"result":value}).to_string())
+        .collect::<Vec<_>>();
+    let (url, handle) = serve(responses.iter().map(String::as_str).collect());
+    let factory = Factory::new("account".into(), url, "factory-value".into());
+    assert!(
+        factory
+            .reconcile("writer", &["three".into()])
+            .unwrap_err()
+            .contains("changed before update")
+    );
+    assert!(
+        handle
+            .join()
+            .unwrap()
+            .iter()
+            .all(|request| request.starts_with("GET "))
+    );
+}
+
+#[test]
+fn refusal() {
+    let resources = serde_json::json!({"one":"*"});
+    let before = writer(resources.clone());
+    assert!(
+        !adapter::Policy::read(before.clone(), resources.clone(), "permit")
+            .unwrap()
+            .pending()
+    );
+    assert!(adapter::Policy::read(before.clone(), resources.clone(), "other").is_err());
+    let mut inactive = before.clone();
+    inactive["status"] = serde_json::json!("disabled");
+    assert!(adapter::Policy::read(inactive, resources.clone(), "permit").is_err());
+    let mut denied = before;
+    denied["policies"][0]["effect"] = serde_json::json!("deny");
+    assert!(adapter::Policy::read(denied, resources, "permit").is_err());
 }

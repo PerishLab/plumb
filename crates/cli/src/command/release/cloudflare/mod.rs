@@ -8,6 +8,10 @@ use std::collections::BTreeMap;
 #[path = "bucket.rs"]
 mod bucket;
 
+#[path = "policy.rs"]
+mod policy;
+pub use policy::Policy;
+
 pub use bucket::{Bucket, Custom};
 
 pub struct Held {

@@ -12,6 +12,7 @@ enum Action {
     Capability,
     Recovery,
     Repository,
+    Policy,
 }
 
 struct Model {
@@ -56,6 +57,7 @@ struct Observation {
     recovery: bool,
     escrow: Option<()>,
     secrets: BTreeSet<String>,
+    policy: Option<super::cloud::adapter::Policy>,
 }
 
 #[path = "../../src/command/release/authority/plan.rs"]
@@ -78,6 +80,7 @@ fn ordered() {
         recovery: false,
         escrow: None,
         secrets: BTreeSet::new(),
+        policy: None,
     };
     assert_eq!(plan::build(&model, &seen).1, Some(Action::Bucket));
 
@@ -125,6 +128,7 @@ fn recovery() {
         recovery: true,
         escrow: None,
         secrets: SECRETS.map(str::to_string).into_iter().collect(),
+        policy: None,
     };
     let (steps, action) = plan::build(&model, &seen);
     assert_eq!(action, Some(Action::Recovery));
@@ -153,6 +157,7 @@ fn workflow() {
         recovery: false,
         escrow: None,
         secrets: SECRETS.map(str::to_string).into_iter().collect(),
+        policy: None,
     };
     let (steps, _) = plan::build(&model, &seen);
     assert_eq!(steps[3].resource, "organization.secrets");
@@ -223,39 +228,7 @@ fn workflow() {
     );
 }
 
-#[test]
-fn ship() {
-    const HELD: [&str; 4] = ["access", "secret", "endpoint", "fingerprint"];
-    let model = Model {
-        profile: "ship",
-        secrets: &HELD,
-        bucket: "perish-plumb-releases".into(),
-        domain: String::new(),
-        zone: String::new(),
-        organization: false,
-    };
-    let mut seen = Observation {
-        bucket: true,
-        domain: None,
-        capability: None,
-        recovery: false,
-        escrow: None,
-        secrets: BTreeSet::new(),
-    };
-    let (steps, action) = plan::build(&model, &seen);
-    assert_eq!(action, Some(Action::Capability));
-    assert_eq!(steps.len(), 2);
-    assert_eq!(steps[0].resource, "ship.capability");
-    assert_eq!(steps[1].resource, "repository.secrets");
-
-    seen.capability = Some("writer".into());
-    seen.escrow = Some(());
-    seen.secrets.extend(HELD.map(str::to_string));
-    let (steps, action) = plan::build(&model, &seen);
-    assert_eq!(action, None);
-    assert_eq!(steps[0].status, plan::Status::Ready);
-    assert_eq!(steps[1].status, plan::Status::Ready);
-}
+mod ship;
 
 #[test]
 fn depot() {
@@ -274,6 +247,7 @@ fn depot() {
         recovery: false,
         escrow: None,
         secrets: BTreeSet::new(),
+        policy: None,
     };
     let (steps, action) = plan::build(&model, &seen);
     assert_eq!(action, Some(Action::Bucket));

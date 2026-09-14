@@ -232,25 +232,10 @@ impl Model {
         } else {
             root.join(escrow)
         };
-        let catalog = std::fs::read_to_string(root.join("crates/cli/rules/products.toml"))
-            .map_err(|error| format!("cannot read the ship product catalog: {error}"))?;
-        let catalog: toml::Table = catalog
-            .parse()
-            .map_err(|error| format!("cannot parse the ship product catalog: {error}"))?;
-        let buckets = catalog
-            .get("product")
-            .and_then(toml::Value::as_array)
-            .ok_or_else(|| "ship product catalog names no products".to_string())?
-            .iter()
-            .map(|product| {
-                product
-                    .get("name")
-                    .and_then(toml::Value::as_str)
-                    .filter(|name| !name.is_empty())
-                    .map(|name| format!("perish-{name}-releases"))
-                    .ok_or_else(|| "ship product catalog carries an unnamed product".to_string())
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let buckets = crate::shape::product::names()?
+            .into_iter()
+            .map(|name| format!("perish-{name}-releases"))
+            .collect();
         Ok(Self {
             profile: "ship",
             product: "release-buckets".into(),

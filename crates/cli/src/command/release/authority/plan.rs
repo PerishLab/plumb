@@ -147,6 +147,10 @@ fn ship(target: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
             "recover the all-release-buckets writer and its local escrow",
             Action::Recovery,
         );
+    } else if let Some(policy) = &seen.policy
+        && policy.pending()
+    {
+        plan.change("ship.capability", policy.detail(), Action::Policy);
     } else if seen.capability.is_some() && seen.escrow.is_some() {
         plan.ready(
             "ship.capability",

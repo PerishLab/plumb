@@ -51,6 +51,7 @@ impl Context {
                 recovery: false,
                 escrow: None,
                 secrets: Default::default(),
+                policy: None,
             });
         }
         let held = self.factory.held()?;
@@ -68,6 +69,14 @@ impl Context {
         let seat = super::escrow::Seat::new(&self.model.escrow);
         let escrow = seat.load()?;
         let recovery = self.writer(&writers, escrow.as_ref())?;
+        let policy = if self.model.profile == "ship" {
+            capability
+                .as_ref()
+                .map(|id| self.factory.policy(id, &self.model.buckets))
+                .transpose()?
+        } else {
+            None
+        };
         let (bucket, domain) = if self.model.profile == "ship" {
             (true, None)
         } else {
@@ -101,6 +110,7 @@ impl Context {
             recovery,
             escrow: escrow.as_ref().map(Escrow::view),
             secrets,
+            policy,
         })
     }
 

@@ -163,6 +163,10 @@ fn matrix() {
     assert!(resolution().contains("{type:\"workload\",source:$source}"));
     let graph = resolver();
     assert!(
+        graph.contains("!pending.is_empty() || (self.spec.binary() && self.workload.missing)"),
+        "cold binary workloads must retain publication intent for publish_plan"
+    );
+    assert!(
         graph.contains("workflow::plan::derive("),
         "ship must resolve only the requested action instead of probing every unrelated action: {graph}"
     );

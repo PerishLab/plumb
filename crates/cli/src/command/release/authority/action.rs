@@ -12,6 +12,7 @@ impl Context {
             Action::Capability => self.capability(),
             Action::Recovery => self.recovery(),
             Action::Repository => self.repository(),
+            Action::Policy => self.policy(),
         }
     }
 
@@ -27,6 +28,15 @@ impl Context {
                 Err("release bucket creation did not verify".into())
             }
         })
+    }
+
+    fn policy(&self) -> Result<(), String> {
+        let held = super::escrow::Seat::new(&self.model.escrow)
+            .load()?
+            .ok_or("ship writer escrow disappeared")?;
+        held.exact(&self.model.bucket, self.factory.id())?;
+        held.verify()?;
+        self.factory.reconcile(&held.access, &self.model.buckets)
     }
 
     fn domain(&self) -> Result<(), String> {

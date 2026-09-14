@@ -163,7 +163,7 @@ impl Publish<'_> {
         let mut pending = Vec::new();
         self.binary(&mut pending)?;
         self.projects(&mut pending)?;
-        let missing = !pending.is_empty();
+        let missing = !pending.is_empty() || (self.spec.binary() && self.workload.missing);
         Ok(Publications {
             matrix: matrix(pending),
             missing,

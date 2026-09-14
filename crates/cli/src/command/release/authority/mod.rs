@@ -1,4 +1,5 @@
 mod action;
+#[path = "../cloudflare/mod.rs"]
 pub(in crate::command) mod cloudflare;
 mod context;
 mod escrow;
@@ -51,6 +52,7 @@ enum Action {
     Capability,
     Recovery,
     Repository,
+    Policy,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -61,6 +63,7 @@ struct Observation {
     recovery: bool,
     escrow: Option<escrow::View>,
     secrets: BTreeSet<String>,
+    policy: Option<cloudflare::Policy>,
 }
 
 struct Plan {

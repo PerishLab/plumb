@@ -1,4 +1,5 @@
 mod authority;
+mod catalog;
 mod cloud;
 mod depot;
 mod registry;
