@@ -69,6 +69,10 @@ fn metadata() {
     assert_eq!(Tree(clone.path()).line(""), Some("v1.2.0".into()));
     assert!(Tree(clone.path()).capture("v9.0.0").is_err());
     assert_eq!(Tree(clone.path()).capture("").unwrap(), Some(datum.clone()));
+    assert_eq!(
+        Tree(clone.path()).capture("v1.2.0-beta.1").unwrap(),
+        Some(datum.clone())
+    );
     assert_eq!(Git(clone.path()).at("v1.2.0", "HEAD").unwrap(), Some(datum));
     assert!(!clone.path().join(".plumb").exists());
 }
@@ -85,4 +89,29 @@ fn strict() {
     assert!(carried(&invalid.trailer().unwrap()).is_err());
     assert!(carried("ordinary message").unwrap().is_none());
     assert_eq!(datum.digest().unwrap().len(), 64);
+}
+
+#[test]
+fn identity() {
+    let temp = tempfile::tempdir().unwrap();
+    let tree = Tree(temp.path());
+    for reference in [
+        "v1.2.0",
+        "v1.2.0-beta.1",
+        "v1.2.0-rc.2+build.7",
+        "refs/heads/release/v1.2.0",
+        "release/v1.2.0-beta.1",
+    ] {
+        assert_eq!(tree.line(reference), Some("v1.2.0".into()));
+    }
+    for reference in ["v1.2", "v1.2.0-beta..1", "v1.2.0-", "broken-beta.1"] {
+        assert_eq!(tree.line(reference), Some(reference.into()));
+    }
+    let datum = Datum::new("v1.2.0", Vec::new());
+    let path = tree.seat("v1.2.0");
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, datum.encode().unwrap()).unwrap();
+    let line = tree.line("v1.2.0-beta.1").unwrap();
+    assert_eq!(tree.read(&line).unwrap(), Some(datum));
+    assert!(tree.read("v1.2.0-beta.1").unwrap().is_none());
 }
