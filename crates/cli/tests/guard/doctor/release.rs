@@ -1,5 +1,30 @@
 const BINARY: &str = "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n";
 
+#[test]
+fn platforms() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    crate::govern(fixture.path());
+    let path = fixture.path().to_str().expect("path");
+    for triple in [
+        "x86_64-unknown-linux-gnu",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc",
+        "x86_64-apple-darwin",
+    ] {
+        std::fs::write(
+            fixture.path().join("plumb.toml"),
+            BINARY.replace("x86_64-unknown-linux-gnu", triple),
+        )
+        .expect("manifest");
+        let report = crate::run(&["doctor", path]);
+        assert_eq!(
+            report.contains("unsupported release target"),
+            triple == "x86_64-apple-darwin",
+            "{triple}: {report}"
+        );
+    }
+}
+
 fn seat(name: &str) -> std::path::PathBuf {
     let dir = std::env::temp_dir().join(name);
     let _ = std::fs::remove_dir_all(&dir);

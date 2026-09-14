@@ -88,6 +88,29 @@ answers for.
   and publishes every immutable medium through one request graph. `depot`
   independently consumes the same marker and moves its mutable projections;
   neither command is a phase inside the other.
+- Artifact reuse and distribution identity are separate domain-wide concerns,
+  across binaries and registry media. Plan must key reusable content by its
+  actual build inputs and tool world, and key publication by that content plus
+  the validated marker and binding implementation. Identity-only changes must
+  not repeat unaffected builds or proofs; binding and installation checks still
+  run when their inputs change. Ignoring a version field is not proof that it
+  cannot affect compiled behavior.
+- Ship must bind reused content to the explicit marker without rewriting its
+  build provenance, mutating cached originals, or replacing published objects.
+  Required metadata projection, packaging, signing, and final digest readback
+  belong to publication. Registry adapters must reuse native content layers
+  where supported; reuse does not imply that a versioned package is byte-identical
+  or that a mutable registry tag proves immutable identity. Moving channel
+  aliases remains Depot's responsibility.
+- Plumb and plumb-lib must absorb the shared identity protocol and each medium's
+  binding mechanics. Applications retain their own commands, but version output,
+  Doctor, dispatch, and Depot consumers must agree on one bound identity. A
+  missing or invalid binding must never masquerade as stable. Downstream repos
+  must not grow identity files, patch scripts, workflow copies, or format knobs.
+  For Rust binaries, the selected direction is a reserved embedded identity
+  region bound after compilation and before final signing. This is a convergence
+  contract, not a claim of completed support: platform retention, optimized
+  runtime reads, signing, and consumer acceptance must be proved before release.
 - Depot generations remain immutable and addressable. Configuration, changelog,
   skill, channel, manager, and provider bindings may move their latest pointer,
   but every movement names the release marker and uses conditional readback.
