@@ -197,26 +197,26 @@ fn cycle() {
         "PLUMB_RELEASE_PROMOTION",
         root.join("stable-promotion.json"),
     ));
-    let mut wrong = command();
-    wrong.args(["depot", "managers", "--marker", "v1.2.0"]);
-    authority(&mut wrong, &record, "ACTIVATE");
-    let wrong = wrong
-        .env("PLUMB_ACTIVATE_BUCKET", "perish-another-releases")
-        .output()
-        .expect("wrong activation target should be inspected");
-    assert!(!wrong.status.success());
-    assert!(String::from_utf8_lossy(&wrong.stderr).contains(
-        "activation authority targets perish-another-releases, not perish-probe-releases"
-    ));
+    for (field, value, refusal) in [
+        ("BUCKET", "wrong", "activation authority targets"),
+        ("SECRET", "", "factory fallback refused"),
+        ("ENDPOINT", "http://wrong.test", "factory fallback refused"),
+    ] {
+        let mut wrong = command();
+        wrong.args(["depot", "managers", "--marker", "v1.2.0"]);
+        authority(&mut wrong, &record, "ACTIVATE");
+        let key = format!("PLUMB_ACTIVATE_{field}");
+        let wrong = wrong.env(key, value).output().unwrap();
+        assert!(!wrong.status.success());
+        assert!(String::from_utf8_lossy(&wrong.stderr).contains(refusal));
+    }
     for _ in 0..2 {
-        let mut activate = command();
-        activate.args(["depot", "channel", "--marker", "v1.2.0"]);
-        authority(&mut activate, &record, "ACTIVATE");
-        run(&mut activate);
-        let mut project = command();
-        project.args(["depot", "managers", "--marker", "v1.2.0"]);
-        authority(&mut project, &record, "ACTIVATE");
-        run(&mut project);
+        for kind in ["channel", "managers"] {
+            let mut project = command();
+            project.args(["depot", kind, "--marker", "v1.2.0"]);
+            authority(&mut project, &record, "ACTIVATE");
+            run(&mut project);
+        }
     }
 
     let mut verify = command();

@@ -52,32 +52,33 @@ pub fn worker(raw: &str, request: &str) -> Result<String, String> {
 }
 
 pub fn project(raw: &str, projection: Kind) -> Result<String, String> {
-    let mut rig = Rig::resolve(None).map_err(|error| error.to_string())?;
+    let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let marker = crate::command::release::ReleaseMarker::bound(&rig.release.root, raw)?;
     let spec = marker.spec();
     let proof = marker.digest()?;
     crate::command::release::knowledge(&spec.product, &spec.authority)
         .binding(&marker.marker, spec.binary())?;
-    rig.activate.load()?;
     let bucket = format!("perish-{}-releases", spec.product);
-    if rig.activate.bucket != bucket {
-        return Err(format!(
-            "activation authority targets {}, not {}",
-            rig.activate.bucket, bucket
-        ));
-    }
-    let result = match projection {
-        Kind::Channel => crate::command::release::projection::channel(spec, &marker, &rig.activate),
-        Kind::Managers => {
-            crate::command::release::projection::managers(spec, &marker, &rig.activate)
+    super::authority::project(rig.activate, &bucket, &proof, |authority| {
+        let fresh =
+            crate::command::release::ReleaseMarker::bound(&rig.release.root, &marker.marker)?;
+        if fresh.digest()? != proof {
+            return Err("release marker drifted before depot projection".into());
         }
-    }?;
-    let after = crate::command::release::ReleaseMarker::bound(&rig.release.root, &marker.marker)?;
-    if after.digest()? != proof {
-        return Err(format!(
-            "release marker {} drifted while depot projected it",
-            marker.marker
-        ));
-    }
-    Ok(result)
+        let result = match projection {
+            Kind::Channel => crate::command::release::projection::channel(spec, &marker, authority),
+            Kind::Managers => {
+                crate::command::release::projection::managers(spec, &marker, authority)
+            }
+        }?;
+        let after =
+            crate::command::release::ReleaseMarker::bound(&rig.release.root, &marker.marker)?;
+        if after.digest()? != proof {
+            return Err(format!(
+                "release marker {} drifted while depot projected it",
+                marker.marker
+            ));
+        }
+        Ok(result)
+    })
 }
