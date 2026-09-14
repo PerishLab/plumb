@@ -1,6 +1,8 @@
 #[path = "../../src/command/release/cloudflare/mod.rs"]
 pub(super) mod adapter;
 
+mod session;
+
 use adapter::{Bucket, Custom, Factory, Grant, Resource};
 use std::{
     io::{Read, Write},

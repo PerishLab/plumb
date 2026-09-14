@@ -12,6 +12,8 @@ mod bucket;
 mod policy;
 pub use policy::Policy;
 
+mod session;
+
 pub use bucket::{Bucket, Custom};
 
 pub struct Held {
@@ -151,7 +153,12 @@ impl Factory {
             .map_err(detail)?;
         let id = field(&reply.value, "id")?;
         if reply.secret().is_none() {
-            return Err("cloudflare token result has no value".into());
+            return match self.revoke(&id) {
+                Ok(()) => Err("cloudflare token result has no value; token revoked".into()),
+                Err(error) => Err(format!(
+                    "cloudflare token result has no value; cannot revoke {id}: {error}"
+                )),
+            };
         }
         Ok(Minted { id, reply })
     }
