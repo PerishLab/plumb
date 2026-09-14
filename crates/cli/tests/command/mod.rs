@@ -2,6 +2,7 @@ mod authority;
 mod catalog;
 mod cloud;
 mod depot;
+mod identity;
 mod registry;
 mod retire;
 

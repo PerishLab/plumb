@@ -13,8 +13,12 @@ fn transport() -> String {
 
 fn resolver() -> String {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    std::fs::read_to_string(root.join("crates/cli/src/command/ship/transport/resolve.rs"))
+    std::fs::read_to_string(root.join("crates/cli/src/command/ship/resolve/mod.rs"))
         .expect("Plumb owns ship graph resolution")
+        + &std::fs::read_to_string(root.join("crates/cli/src/command/ship/resolve/workloads.rs"))
+            .unwrap()
+        + &std::fs::read_to_string(root.join("crates/cli/src/command/ship/resolve/plan.rs"))
+            .unwrap()
 }
 
 fn resolution() -> String {

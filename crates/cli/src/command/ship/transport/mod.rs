@@ -1,5 +1,9 @@
 mod binding;
 mod execute;
+#[path = "../native/mod.rs"]
+mod native;
+mod request;
+#[path = "../resolve/mod.rs"]
 mod resolve;
 mod seal;
 mod sources;

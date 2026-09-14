@@ -1,83 +1,9 @@
 use super::super::adaptor;
-use crate::command::release::{artifacts, capsule, channel, output, required, storage};
+use crate::command::release::{artifacts, capsule, output, required, storage};
 use plumb::rig::Rig;
-use serde::Deserialize;
-use std::path::PathBuf;
 use std::process::Command;
 
-const SCHEMA: &str = "plumb.ship-request/v2";
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Request {
-    schema: String,
-    action: String,
-    projections: Vec<String>,
-    roots: Vec<String>,
-    operation: Operation,
-    #[serde(default)]
-    configuration: Option<String>,
-    #[serde(default)]
-    profile: Option<String>,
-    #[serde(default = "Reuse::none")]
-    reuse: Reuse,
-    #[serde(default)]
-    keys: Option<serde_json::Value>,
-}
-#[derive(Deserialize)]
-#[serde(tag = "type", rename_all = "lowercase", deny_unknown_fields)]
-enum Operation {
-    Workload {
-        target: String,
-        archive: String,
-    },
-    Publication {
-        workloads: Vec<Workload>,
-    },
-    Cargo,
-    Cfworker,
-    Chart,
-    Npm {
-        package: String,
-    },
-    Oci {
-        #[serde(default)]
-        workloads: Vec<Workload>,
-    },
-}
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Workload {
-    target: String,
-    archive: String,
-    url: String,
-}
-#[derive(Deserialize, serde::Serialize)]
-#[serde(deny_unknown_fields)]
-struct Reuse {
-    #[serde(rename = "type")]
-    kind: String,
-    source: String,
-}
-#[derive(Deserialize)]
-struct Projection {
-    workload: PathBuf,
-    publication: String,
-    #[serde(default)]
-    depot: Option<serde_json::Value>,
-}
-
-impl Reuse {
-    fn none() -> Self {
-        Self {
-            kind: "none".into(),
-            source: String::new(),
-        }
-    }
-
-    fn encode(&self) -> Result<String, String> {
-        serde_json::to_string(self).map_err(|error| format!("cannot encode reuse carrier: {error}"))
-    }
-}
+use super::request::{Operation, Projection, Request, SCHEMA, Workload};
 
 pub fn run(text: &str) -> Result<String, String> {
     let request: Request =
@@ -106,25 +32,30 @@ impl Request {
         let spec = governance.spec();
         super::binding::Binding::new(spec)
             .verify(self.configuration.as_deref(), self.profile.as_deref())?;
-        let (release, build) = (&rig.release, channel::base(version)?);
+        let release = &rig.release;
         let reuse = self.reuse.encode()?;
         let projection = match self.operation {
-            Operation::Workload { target, archive } => {
-                super::super::package::product(spec).build(super::super::package::Build {
+            Operation::Bind {
+                target,
+                archive,
+                build,
+            } => {
+                let workload = super::native::run(super::native::Request {
+                    spec,
+                    release,
+                    action: &self.action,
                     target: &target,
-                    version: &build,
-                    channel: "stable",
-                    commit: required("PLUMB_RELEASE_COMMIT", &release.commit)?,
-                    artifacts: &artifacts(release)?,
+                    archive: &archive,
+                    build,
                 })?;
                 let keys = self
                     .keys
-                    .ok_or_else(|| "an exact ship request carries no inventory keys".to_string())?;
+                    .ok_or("identity request carries no inventory keys")?;
                 crate::command::workflow::record::project(
                     crate::command::workflow::record::Project {
                         action: &self.action,
                         keys: &keys.to_string(),
-                        workload: artifacts(release)?.join(archive),
+                        workload,
                         reuse: None,
                         publication: None,
                         depot: None,
@@ -136,7 +67,7 @@ impl Request {
                 let authority = super::support::authority(&rig.publish, &spec.product)?;
                 crate::command::release::Product::new(spec).promote(release)?;
                 let artifacts = artifacts(release)?;
-                materialize(&artifacts, &workloads)?;
+                materialize(spec, version, &artifacts, &workloads)?;
                 super::super::package::product(spec).assemble(version, &artifacts)?;
                 crate::command::release::Product::new(spec).compile(release)?;
                 let capsule = capsule(release)?;
@@ -189,7 +120,7 @@ impl Request {
             }
             Operation::Oci { workloads } => {
                 let artifacts = artifacts(release)?;
-                materialize(&artifacts, &workloads)?;
+                materialize(spec, version, &artifacts, &workloads)?;
                 Some(adaptor::container::run(
                     &adaptor::image::image(spec),
                     adaptor::container::Request {
@@ -222,7 +153,12 @@ impl Request {
     }
 }
 
-fn materialize(root: &std::path::Path, workloads: &[Workload]) -> Result<(), String> {
+fn materialize(
+    spec: &crate::shape::release::Spec,
+    version: &str,
+    root: &std::path::Path,
+    workloads: &[Workload],
+) -> Result<(), String> {
     std::fs::create_dir_all(root)
         .map_err(|error| format!("cannot create {}: {error}", root.display()))?;
     for workload in workloads {
@@ -230,6 +166,9 @@ fn materialize(root: &std::path::Path, workloads: &[Workload]) -> Result<(), Str
             return Err("binary publication carries an incomplete workload".into());
         }
         let target = root.join(&workload.archive);
+        if spec.target(&workload.target)?.archive != workload.archive || target.exists() {
+            return Err("binary workload has an invalid or occupied archive path".into());
+        }
         let status = Command::new("curl")
             .args([
                 "--fail",
@@ -250,6 +189,12 @@ fn materialize(root: &std::path::Path, workloads: &[Workload]) -> Result<(), Str
                 workload.target
             ));
         }
+        super::native::verify(
+            spec,
+            &crate::command::release::snapshot(version)?,
+            &target,
+            &workload.target,
+        )?;
     }
     Ok(())
 }

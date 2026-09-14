@@ -29,7 +29,6 @@ struct Target {
 pub struct Build<'a> {
     pub triple: &'a str,
     pub version: &'a str,
-    pub channel: &'a str,
     pub commit: &'a str,
 }
 
@@ -122,10 +121,8 @@ impl Workspace {
                     format!("{}_BUILD_VERSION", spec.environment()),
                     input.version,
                 )
-                .env(
-                    format!("{}_BUILD_CHANNEL", spec.environment()),
-                    input.channel,
-                )
+                .env(format!("{}_BUILD_CHANNEL", spec.environment()), "unbound")
+                .env(format!("{}_BUILD_TARGET", spec.environment()), input.triple)
                 .env(
                     format!("{}_BUILD_AUTHORITY", spec.environment()),
                     &spec.authority,

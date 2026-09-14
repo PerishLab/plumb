@@ -1,9 +1,12 @@
+mod plan;
+mod workloads;
 use super::binding::Binding;
 use super::support::{
-    Contract, Inventory, carry, contract, embedded, idle, matrix, object, projection, sources,
-    strings, text,
+    Contract, Inventory, carry, contract, embedded, matrix, object, projection, sources, strings,
+    text,
 };
 use crate::command::release;
+use plan::{Plan, planned};
 use plumb::rig::Rig;
 use serde_json::{Value, json};
 use std::path::Path;
@@ -34,7 +37,7 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
         source: Some(&rig.workflow.inventory.url),
         root,
     };
-    let workload = workloads(spec, &marker, &world)?;
+    let workload = workloads::run(spec, &marker, &world)?;
     let publication = Publish {
         spec,
         input: &plan["publication"],
@@ -72,77 +75,6 @@ struct Workloads {
     matrix: Value,
     missing: bool,
     reuse: Vec<Value>,
-}
-
-fn workloads(
-    spec: &crate::shape::release::Spec,
-    marker: &release::ReleaseMarker,
-    world: &World<'_>,
-) -> Result<Workloads, String> {
-    if !spec.binary() {
-        return Ok(Workloads {
-            matrix: idle(),
-            missing: false,
-            reuse: Vec::new(),
-        });
-    }
-    let targets: Value = serde_json::from_str(&super::super::package::product(spec).matrix()?)
-        .map_err(|error| format!("cannot decode binary matrix: {error}"))?;
-    let projection = projection();
-    let roots = sources(spec)?;
-    let listed = roots.iter().map(String::as_str).collect::<Vec<_>>();
-    let mut pending = Vec::new();
-    let mut reuse = Vec::new();
-    let base = marker.base();
-    for target in targets["include"]
-        .as_array()
-        .ok_or("binary matrix has no include array")?
-    {
-        let triple = text(target, "target")?;
-        let runner = text(target, "runner")?;
-        let archive = text(target, "archive")?;
-        let action = format!("ship/binary.{triple}");
-        let node = planned(
-            world,
-            Plan {
-                action: &action,
-                projections: &[projection.as_str()],
-                roots: &listed,
-                runner,
-                workload: Some(base),
-                release: Some(base),
-                target: Some(triple),
-            },
-        )?;
-        if node["reuse"]["type"] == "workload" {
-            reuse.push(json!({
-                "target": triple,
-                "archive": archive,
-                "url": node["reuse"]["source"],
-            }));
-            continue;
-        }
-        let request = Binding::new(spec).apply(json!({
-            "schema": "plumb.ship-request/v2",
-            "action": action,
-            "projections": [projection],
-            "roots": roots,
-            "operation": {
-                "type": "workload",
-                "target": triple,
-                "archive": archive,
-            },
-            "reuse": node["reuse"],
-            "keys": node["keys"],
-        }));
-        pending.push(json!({ "runner": runner, "request": request }));
-    }
-    let missing = !pending.is_empty();
-    Ok(Workloads {
-        matrix: matrix(pending),
-        missing,
-        reuse,
-    })
 }
 
 struct Publications {
@@ -183,6 +115,7 @@ impl Publish<'_> {
         let node = planned(
             self.world,
             Plan {
+                stage: "publication",
                 action: "ship/binary",
                 projections: &[projection.as_str()],
                 roots: &listed,
@@ -221,11 +154,16 @@ impl Publish<'_> {
             let node = planned(
                 self.world,
                 Plan {
+                    stage: "publication",
                     action,
                     projections: &projections,
                     roots: &roots,
                     runner: "docker",
-                    workload: embedded(action).then_some(self.marker.base()),
+                    workload: if action == "ship/oci" && self.spec.binary() {
+                        Some(self.marker.marker.as_str())
+                    } else {
+                        embedded(action).then_some(self.marker.base())
+                    },
                     release: (binding != Contract::Portable)
                         .then_some(self.marker.version.as_str()),
                     target: (binding == Contract::Exact).then_some(self.marker.commit.as_str()),
@@ -245,56 +183,4 @@ impl Publish<'_> {
         }
         Ok(())
     }
-}
-
-struct Plan<'a> {
-    action: &'a str,
-    projections: &'a [&'a str],
-    roots: &'a [&'a str],
-    runner: &'a str,
-    workload: Option<&'a str>,
-    release: Option<&'a str>,
-    target: Option<&'a str>,
-}
-fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String> {
-    let mut fields = vec![format!("runner={}", plan.runner)];
-    if let Some(release) = plan.release {
-        fields.push(format!("release={release}"));
-    }
-    if let Some(target) = plan.target {
-        fields.push(format!("target={target}"));
-    }
-    let workload = plan
-        .workload
-        .map(|value| vec![format!("release={value}")])
-        .unwrap_or_default();
-    let named = |values: &[&str]| {
-        values
-            .iter()
-            .map(|value| format!("{}={value}", plan.action))
-            .collect()
-    };
-    let graph = crate::command::workflow::plan::derive(
-        crate::command::workflow::plan::Input {
-            base: None,
-            world: fields,
-            workload,
-            identity: world.binding.identity(world.marker),
-            project: named(plan.projections),
-            roots: named(plan.roots),
-            inventory: world.inventory.map(Path::to_path_buf),
-            source: world.source.map(str::to_string),
-            target: plumb::cli::Root {
-                root: world.root.display().to_string(),
-            },
-        },
-        Some(plan.action),
-    )?;
-    let graph: Value = serde_json::from_str(&graph)
-        .map_err(|error| format!("cannot decode {} plan: {error}", plan.action))?;
-    graph["actions"]
-        .as_array()
-        .and_then(|actions| actions.iter().find(|held| held["name"] == plan.action))
-        .cloned()
-        .ok_or_else(|| format!("workflow plan omitted {}", plan.action))
 }

@@ -263,8 +263,11 @@ fn execute(command: Command) -> i32 {
         Command::Workflow { deed } => command::workflow::run(deed),
     }
 }
-
 fn main() {
+    if let Err(error) = plumb::identity!("PLUMB") {
+        eprintln!("plumb: {error}");
+        std::process::exit(1);
+    }
     let command = match Cli::try_parse() {
         Ok(cli) => cli.command,
         Err(error) => {
@@ -278,12 +281,15 @@ fn main() {
         }
     };
     let run = command::audit::Run::start(command.name());
-    let code = match consumption::prepare(&command) {
+    let prepared = plumb::identity::ready().and_then(|()| {
+        consumption::prepare(&command).map_err(|error| {
+            format!("cannot read installed rules: {error}\nrun plumb configuration install")
+        })
+    });
+    let code = match prepared {
         Ok(()) => execute(command),
         Err(error) => {
-            eprintln!(
-                "plumb: cannot read installed rules: {error}\nrun plumb configuration install"
-            );
+            eprintln!("plumb: {error}");
             1
         }
     };

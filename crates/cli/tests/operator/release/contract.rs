@@ -112,7 +112,7 @@ fn versioned() {
     let execution =
         std::fs::read_to_string(root.join("crates/cli/src/command/ship/transport/execute.rs"))
             .expect("Plumb owns ship request execution");
-    assert!(execution.contains("materialize(&artifacts, &workloads)"));
+    assert!(execution.contains("materialize(spec, version, &artifacts, &workloads)"));
     assert!(!execution.contains("if release.channel == \"stable\""));
 
     let trigger = text("crates/cli/src/command/operator/trigger.rs");
@@ -136,7 +136,8 @@ fn versioned() {
     assert!(!workflow.contains("PLUMB_PUBLISH_BUCKET:"));
     assert!(support.contains("!held.bucket.is_empty() && held.bucket != bucket"));
     assert!(support.contains("derived.bucket = bucket"));
-    let resolver = text("crates/cli/src/command/ship/transport/resolve.rs");
+    let resolver = text("crates/cli/src/command/ship/resolve/mod.rs")
+        + &text("crates/cli/src/command/ship/resolve/workloads.rs");
     assert!(!resolver.contains("workload: Some(&marker.version)"));
     assert!(!resolver.contains("workload: Some(&marker.commit)"));
     assert!(resolver.contains("workload: Some(base)"));
@@ -148,9 +149,9 @@ fn versioned() {
         1
     );
     assert!(resolver.contains("then_some(self.marker.base())"));
-    let execution = text("crates/cli/src/command/ship/transport/execute.rs");
+    let execution = text("crates/cli/src/command/ship/native/mod.rs");
     assert!(
-        execution.contains("channel::base(version)"),
+        execution.contains("channel::base(&self.release.version)"),
         "binary execution must derive its reusable version instead of trusting the plan"
     );
     assert!(execution.contains("channel: \"stable\""));
