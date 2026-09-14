@@ -147,10 +147,14 @@ fn ship(target: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
             "recover the all-release-buckets writer and its local escrow",
             Action::Recovery,
         );
-    } else if seen.capability.is_some() && seen.escrow.is_some() {
+    } else if let Some(policy) = &seen.policy
+        && policy.pending()
+    {
+        plan.change("ship.capability", policy.detail(), Action::Policy);
+    } else if seen.capability.is_some() {
         plan.ready(
             "ship.capability",
-            "all-release-buckets writer matches its local escrow",
+            "existing writer identity and bucket policy verified independently of local escrow",
         );
     } else {
         plan.change(
@@ -159,16 +163,19 @@ fn ship(target: &Model, seen: &Observation) -> (Vec<Step>, Option<Action>) {
             Action::Capability,
         );
     }
-    if seen.escrow.is_none() {
-        plan.deferred("repository.secrets", "waiting for ship.capability");
-    } else if target
+    if target
         .secrets()
         .iter()
         .all(|name| seen.secrets.contains(*name))
     {
         plan.ready(
             "repository.secrets",
-            "all four opaque central ship publish seats are present",
+            "all four opaque central ship publish seats are present; credential contents are not verified",
+        );
+    } else if seen.escrow.is_none() {
+        plan.deferred(
+            "repository.secrets",
+            "missing publish seats require a verified escrow or explicit recovery",
         );
     } else {
         plan.change(

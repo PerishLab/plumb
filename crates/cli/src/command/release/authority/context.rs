@@ -10,9 +10,11 @@ pub(super) struct Context {
 
 impl Context {
     pub fn open(model: Model) -> Result<Self, String> {
-        let held = Mint::default().merge(Mint::env("PLUMB_AUTHORITY").map_err(|e| e.to_string())?);
+        let mut held =
+            Mint::default().merge(Mint::env("PLUMB_AUTHORITY").map_err(|e| e.to_string())?);
+        held.load()?;
         if held.account.trim().is_empty() || held.token.trim().is_empty() {
-            return Err("missing PLUMB_AUTHORITY_ACCOUNT or PLUMB_AUTHORITY_TOKEN".into());
+            return Err("missing PLUMB_AUTHORITY_ACCOUNT or one of PLUMB_AUTHORITY_TOKEN / PLUMB_AUTHORITY_TOKEN_FILE".into());
         }
         if held.token.contains(['\r', '\n']) {
             return Err("PLUMB_AUTHORITY_TOKEN contains a line break".into());
@@ -51,6 +53,8 @@ impl Context {
                 recovery: false,
                 escrow: None,
                 secrets: Default::default(),
+                policy: None,
+                note: None,
             });
         }
         let held = self.factory.held()?;
@@ -65,9 +69,15 @@ impl Context {
             _ if self.model.recovery => None,
             _ => return Err(format!("duplicate writer {}", self.model.writer())),
         };
-        let seat = super::escrow::Seat::new(&self.model.escrow);
-        let escrow = seat.load()?;
-        let recovery = self.writer(&writers, escrow.as_ref())?;
+        let (escrow, recovery, note) = self.escrow(&writers)?;
+        let policy = if self.model.profile == "ship" {
+            capability
+                .as_ref()
+                .map(|id| self.factory.policy(id, &self.model.buckets))
+                .transpose()?
+        } else {
+            None
+        };
         let (bucket, domain) = if self.model.profile == "ship" {
             (true, None)
         } else {
@@ -101,7 +111,33 @@ impl Context {
             recovery,
             escrow: escrow.as_ref().map(Escrow::view),
             secrets,
+            policy,
+            note,
         })
+    }
+
+    fn escrow(&self, writers: &[String]) -> Result<(Option<Escrow>, bool, Option<String>), String> {
+        if self.model.profile == "ship" && !self.model.recovery && writers.len() == 1 {
+            return match self.binding(&writers[0]) {
+                Ok(held) => Ok((Some(held), false, None)),
+                Err(note) => Ok((None, false, Some(note))),
+            };
+        }
+        let held = super::escrow::Seat::new(&self.model.escrow).load()?;
+        let recovery = self.writer(writers, held.as_ref())?;
+        Ok((held, recovery, None))
+    }
+
+    fn binding(&self, writer: &str) -> Result<Escrow, String> {
+        let held = super::escrow::Seat::new(&self.model.escrow)
+            .load()?
+            .ok_or("local escrow is absent; existing remote credentials remain opaque")?;
+        if held.access != writer {
+            return Err("local escrow does not name the existing writer".into());
+        }
+        held.exact(&self.model.bucket, self.factory.id())?;
+        held.verify()?;
+        Ok(held)
     }
 
     fn writer(&self, writers: &[String], held: Option<&Escrow>) -> Result<bool, String> {

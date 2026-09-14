@@ -1,7 +1,9 @@
+#[path = "../resolve/workloads.rs"]
+mod workloads;
 use super::binding::Binding;
 use super::support::{
-    Contract, Inventory, Plan, carry, contract, embedded, idle, matrix, object, projection,
-    sources, strings, text,
+    Contract, Inventory, Plan, carry, contract, embedded, matrix, object, projection, sources,
+    strings, text,
 };
 use crate::command::release;
 use plumb::rig::Rig;
@@ -30,7 +32,7 @@ pub(super) fn graph(marker: &release::ReleaseMarker, evidence: bool) -> Result<S
         source: Some(&rig.workflow.inventory.url),
         root: &spec.root,
     };
-    let workload = workloads(spec, marker, &world)?;
+    let workload = workloads::run(spec, marker, &world)?;
     let publication = Publish {
         spec,
         input: &plan["publication"],
@@ -70,79 +72,6 @@ struct Workloads {
     reuse: Vec<Value>,
 }
 
-fn workloads(
-    spec: &crate::shape::release::Spec,
-    marker: &release::ReleaseMarker,
-    world: &World<'_>,
-) -> Result<Workloads, String> {
-    if !spec.binary() {
-        return Ok(Workloads {
-            matrix: idle(),
-            missing: false,
-            reuse: Vec::new(),
-        });
-    }
-    let targets: Value = serde_json::from_str(&super::super::package::product(spec).matrix()?)
-        .map_err(|error| format!("cannot decode binary matrix: {error}"))?;
-    let projection = projection();
-    let roots = sources(spec)?;
-    let listed = roots.iter().map(String::as_str).collect::<Vec<_>>();
-    let mut pending = Vec::new();
-    let mut reuse = Vec::new();
-    let base = marker.base();
-    for target in targets["include"]
-        .as_array()
-        .ok_or("binary matrix has no include array")?
-    {
-        let triple = text(target, "target")?;
-        let runner = text(target, "runner")?;
-        let archive = text(target, "archive")?;
-        let action = format!("ship/binary.{triple}");
-        let node = planned(
-            world,
-            Plan {
-                action: &action,
-                projections: &[projection.as_str()],
-                roots: &listed,
-                runner,
-                workload: Some(base),
-                release: Some(base),
-                target: Some(triple),
-            },
-        )?;
-        if super::reuse::workload(&node) {
-            reuse.push(json!({
-                "target": triple,
-                "archive": archive,
-                "url": node["reuse"]["source"],
-                "receipt": node["receipt"],
-            }));
-            continue;
-        }
-        let request = Binding::new(spec).apply(json!({
-            "schema": "plumb.ship-request/v2",
-            "action": action,
-            "projections": [projection],
-            "roots": roots,
-            "operation": {
-                "type": "workload",
-                "target": triple,
-                "archive": archive,
-            },
-            "reuse": node["reuse"],
-            "keys": node["keys"],
-            "production": node["production"],
-        }));
-        pending.push(json!({ "runner": runner, "request": request }));
-    }
-    let missing = !pending.is_empty();
-    Ok(Workloads {
-        matrix: matrix(pending),
-        missing,
-        reuse,
-    })
-}
-
 struct Publications {
     matrix: Value,
     missing: bool,
@@ -161,7 +90,7 @@ impl Publish<'_> {
         let mut pending = Vec::new();
         self.binary(&mut pending)?;
         self.projects(&mut pending)?;
-        let missing = !pending.is_empty();
+        let missing = !pending.is_empty() || (self.spec.binary() && self.workload.missing);
         Ok(Publications {
             matrix: matrix(pending),
             missing,
@@ -181,6 +110,7 @@ impl Publish<'_> {
         let node = planned(
             self.world,
             Plan {
+                stage: "",
                 action: "ship/binary",
                 projections: &[projection.as_str()],
                 roots: &listed,
@@ -220,17 +150,26 @@ impl Publish<'_> {
             {
                 continue;
             }
-            let binding = contract(action);
+            let binding = if action == "ship/oci" && self.spec.binary() {
+                Contract::Exact
+            } else {
+                contract(action)
+            };
             let projections = strings(entry, "projections")?;
             let roots = strings(entry, "roots")?;
             let mut node = planned(
                 self.world,
                 Plan {
+                    stage: "",
                     action,
                     projections: &projections,
                     roots: &roots,
                     runner: "docker",
-                    workload: embedded(action).then_some(self.marker.base()),
+                    workload: if action == "ship/oci" && self.spec.binary() {
+                        Some(self.marker.marker.as_str())
+                    } else {
+                        embedded(action).then_some(self.marker.base())
+                    },
                     release: (binding != Contract::Portable)
                         .then_some(self.marker.version.as_str()),
                     target: (binding == Contract::Exact).then_some(self.marker.commit.as_str()),
@@ -259,6 +198,9 @@ impl Publish<'_> {
 
 pub(super) fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String> {
     let mut fields = vec![format!("runner={}", plan.runner)];
+    if !plan.stage.is_empty() {
+        fields.push(format!("stage={}", plan.stage));
+    }
     if let Some(release) = plan.release {
         fields.push(format!("release={release}"));
     }
@@ -267,7 +209,13 @@ pub(super) fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String
     }
     let workload = plan
         .workload
-        .map(|value| vec![format!("release={value}")])
+        .map(|value| {
+            if plan.stage.is_empty() {
+                vec![format!("release={value}")]
+            } else {
+                vec![format!("release={value}"), format!("stage={}", plan.stage)]
+            }
+        })
         .unwrap_or_default();
     let named = |values: &[&str]| {
         values
@@ -289,7 +237,15 @@ pub(super) fn planned(world: &World<'_>, plan: Plan<'_>) -> Result<Value, String
             root: world.root.display().to_string(),
         },
     };
-    let graph = super::production::plan(input, world.marker, plan.action, plan.target)?;
+    let graph = if plan.stage == "identity/v1" {
+        let contract = super::super::native::proof::contract(
+            world.marker,
+            plan.target.ok_or("binding plan has no target")?,
+        )?;
+        crate::command::workflow::plan::production(input, plan.action, &contract)?
+    } else {
+        super::production::plan(input, world.marker, plan.action, plan.target)?
+    };
     let graph: Value = serde_json::from_str(&graph)
         .map_err(|error| format!("cannot decode {} plan: {error}", plan.action))?;
     graph["actions"]

@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::process::{Command, Output};
 
-const PROFILE: &str = "da8d8a022797190575831d4c44adb70dadc3ef7830b9f83eac027bed1a1e0722";
+const PROFILE: &str = "4664dd2574413c20dc2876f57ef2f1b52b24a48bbf8f87390705a800234e5b48";
 
 #[test]
 fn closed() {

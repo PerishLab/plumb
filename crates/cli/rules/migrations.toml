@@ -2,7 +2,7 @@ schema = "plumb.migrations/v1"
 
 [[product]]
 identity = "git.perish.top/PerishLab/plumb"
-profile = "b202684ffe059e7f14aa6e035730680374daae6f80d24298b6168bb4a471198f"
+profile = "a3e1c1eb24af9f7f0d7fe4eb6b42439cd63a1b22759de7db686dea78f42f5691"
 source = "repository"
 
 [[product]]
@@ -12,5 +12,5 @@ source = "repository"
 
 [[product]]
 identity = "git.perish.top/PerishFire/runseal"
-profile = "da8d8a022797190575831d4c44adb70dadc3ef7830b9f83eac027bed1a1e0722"
+profile = "4664dd2574413c20dc2876f57ef2f1b52b24a48bbf8f87390705a800234e5b48"
 source = "depot"

@@ -1,6 +1,7 @@
 pub(in crate::command) mod adaptor;
 mod archive;
 mod attachment;
+mod native;
 mod package;
 pub(in crate::command) mod site;
 mod skill;

@@ -25,7 +25,10 @@ pub(super) fn plan(
     }
 }
 
-pub(super) fn contract(marker: &ReleaseMarker, triple: &str) -> Result<Production, String> {
+pub(in crate::command::ship) fn contract(
+    marker: &ReleaseMarker,
+    triple: &str,
+) -> Result<Production, String> {
     let governance = crate::shape::product::resolve(&marker.spec().root, "")?;
     let profile = governance
         .profile
@@ -59,7 +62,7 @@ fn implementation() -> String {
     let mut digest = Sha256::new();
     for source in [
         include_str!("production.rs"),
-        include_str!("../package.rs"),
+        include_str!("../package/mod.rs"),
         include_str!("../archive.rs"),
         include_str!("../../release/workspace.rs"),
         include_str!("../../../execution/cargo.rs"),
@@ -80,41 +83,12 @@ fn implementation() -> String {
     format!("{:x}", digest.finalize())
 }
 
-pub(super) struct Input<'a> {
-    pub target: &'a str,
-    pub archive: &'a str,
-    pub action: &'a str,
-    pub keys: Option<&'a serde_json::Value>,
-    pub contract: Option<&'a str>,
-}
-
-pub(super) fn execute(marker: &ReleaseMarker, input: Input<'_>) -> Result<(), String> {
-    let contract = contract(marker, input.target)?;
-    if input.contract != Some(contract.digest()?.as_str()) {
-        return Err(
-            "binary request production contract differs from its dispatch configuration and implementation".into(),
-        );
-    }
-    if input.archive != marker.spec().target(input.target)?.archive {
-        return Err("binary request archive differs from its target".into());
-    }
-    let keys = input
-        .keys
-        .ok_or("an exact ship request carries no inventory keys")?;
-    let receipt = build(marker, input.target, &contract)?;
-    let rig = plumb::rig::Rig::resolve(None).map_err(|error| error.to_string())?;
-    crate::command::workflow::record::project(crate::command::workflow::record::Project {
-        action: input.action,
-        keys: &keys.to_string(),
-        workload: crate::command::release::artifacts(&rig.release)?.join(input.archive),
-        reuse: None,
-        publication: None,
-        depot: None,
-        production: Some((&contract, receipt)),
-    })
-}
-
-fn build(marker: &ReleaseMarker, triple: &str, contract: &Production) -> Result<Receipt, String> {
+pub(in crate::command::ship) fn produce(
+    marker: &ReleaseMarker,
+    triple: &str,
+    artifacts: &std::path::Path,
+) -> Result<Receipt, String> {
+    let contract = contract(marker, triple)?;
     let spec = marker.spec();
     crate::execution::inspect(
         "cargo",
@@ -122,8 +96,6 @@ fn build(marker: &ReleaseMarker, triple: &str, contract: &Production) -> Result<
         &plumb::config::environment(&contract.environment)?,
     )?;
     let producer = contract.start(&spec.root)?;
-    let rig = plumb::rig::Rig::resolve(None).map_err(|error| error.to_string())?;
-    let artifacts = crate::command::release::artifacts(&rig.release)?;
     let version = crate::command::release::channel::base(&marker.version)?;
     super::super::package::product(spec).produce(
         super::super::package::Build {
@@ -131,7 +103,7 @@ fn build(marker: &ReleaseMarker, triple: &str, contract: &Production) -> Result<
             version: &version,
             channel: "stable",
             commit: &marker.commit,
-            artifacts: &artifacts,
+            artifacts,
         },
         Some(producer.execution()),
     )?;

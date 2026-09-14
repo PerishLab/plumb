@@ -91,12 +91,28 @@ answers for.
   and publishes every immutable medium through one request graph. `depot`
   independently consumes the same marker and moves its mutable projections;
   neither command is a phase inside the other.
+- Reusable code and distribution identity are independent. Plan keys reusable
+  workloads by effective source, dependency closure, tool world, target, and
+  build contract; changing only a marker's version or channel must not compile
+  unchanged code. Ship binds that marker to a copy of the proven workload,
+  finalizes the native medium, and verifies the distributed identity.
+  Both reusable production and marker binding retain their own evidence;
+  identity injection never substitutes for environment or tool-chain proofs.
+- Rust binaries consume the embedded identity protocol through plumb-lib.
+  Ship owns post-build binding, platform signing, native execution checks, and
+  archive readback. An unbound workload is not an installed release; published
+  executables are never patched, and no identity sidecar is introduced.
+  Registry media follow the same separation: publication may repackage proven
+  content, but must verify that package metadata and embedded runtimes agree
+  with the selected marker. A tag is not evidence of runtime identity.
 - Version carries its dependency datum in Git commit metadata, not repository
   files. Release binds that datum to the marker; Guard captures it for Doctor
   without invalidating unrelated source actions. Historical tags are never rewritten.
 - Version settlement consumes the stable marker's complete Ship evidence and
   preserves main's tree while joining ancestry. The next line requires that
   delivered baseline in main; mutable Depot channel pointers do not own this gate.
+  Real fixes must be integrated and verified on main before closing a delivery
+  cycle. A topology-only settlement establishes ancestry, not content recovery.
 - Version picks preflight their configuration before changing history. A retry
   replays the requested sources to verify the retained local delta, then proves
   and conditionally pushes it; unrelated work is never adopted as recovery.

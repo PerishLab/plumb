@@ -122,17 +122,11 @@ pub struct Mint {
     pub account: String,
     pub api: String,
     pub token: String,
+    #[cascade(name = "token_file")]
+    pub file: PathBuf,
 }
 
-impl Default for Mint {
-    fn default() -> Self {
-        Self {
-            account: String::new(),
-            api: "https://api.cloudflare.com/client/v4".to_string(),
-            token: String::new(),
-        }
-    }
-}
+mod mint;
 
 #[derive(Debug, PartialEq, Cascade)]
 #[cascade(section)]
@@ -253,17 +247,7 @@ pub struct Authority {
 
 impl Authority {
     pub fn load(&mut self) -> Result<(), String> {
-        if !self.secret.is_empty() || self.file.as_os_str().is_empty() {
-            return Ok(());
-        }
-        let held = std::fs::read_to_string(&self.file)
-            .map_err(|error| format!("cannot read {}: {error}", self.file.display()))?;
-        let held = held.trim();
-        if held.is_empty() {
-            return Err(format!("{} holds no secret", self.file.display()));
-        }
-        self.secret = held.to_string();
-        Ok(())
+        mint::read(&mut self.secret, &self.file)
     }
 }
 

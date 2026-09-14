@@ -1,85 +1,6 @@
-use crate::command::release::ReleaseMarker;
+pub(super) use super::super::native::workload::{Workload, materialize};
 use crate::shape::release::Spec;
-use plumb::rule::Receipt;
 use serde_json::{Value, json};
-
-#[derive(serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(super) struct Workload {
-    target: String,
-    archive: String,
-    url: String,
-    receipt: Receipt,
-}
-
-fn validate(workloads: &[Workload], marker: &ReleaseMarker, image: bool) -> Result<(), String> {
-    let mut held = std::collections::BTreeSet::new();
-    for workload in workloads {
-        if !held.insert(workload.target.as_str()) {
-            return Err("duplicate binary workload target".into());
-        }
-        if workload.archive != marker.spec().target(&workload.target)?.archive {
-            return Err("reused workload archive differs from its target".into());
-        }
-        if !workload.url.starts_with("https://") {
-            return Err("binary workload must use an HTTPS URL".into());
-        }
-        super::production::contract(marker, &workload.target)?.verify(&workload.receipt)?;
-    }
-    let required = marker
-        .spec()
-        .target
-        .iter()
-        .filter(|target| !image || target.triple == "x86_64-unknown-linux-gnu");
-    for target in required {
-        if !held.contains(target.triple.as_str()) {
-            return Err(format!(
-                "ship request has no proven binary workload for {}",
-                target.triple
-            ));
-        }
-    }
-    if image && marker.spec().binary() && !held.contains("x86_64-unknown-linux-gnu") {
-        return Err("image request has no proven Linux binary workload".into());
-    }
-    Ok(())
-}
-
-pub(super) fn materialize(
-    root: &std::path::Path,
-    workloads: &[Workload],
-    marker: &ReleaseMarker,
-    image: bool,
-) -> Result<(), String> {
-    validate(workloads, marker, image)?;
-    std::fs::create_dir_all(root)
-        .map_err(|error| format!("cannot create {}: {error}", root.display()))?;
-    for workload in workloads {
-        let target = root.join(&workload.archive);
-        let status = std::process::Command::new("curl")
-            .args([
-                "--fail",
-                "--silent",
-                "--show-error",
-                "--location",
-                "--retry",
-                "3",
-                "--output",
-            ])
-            .arg(&target)
-            .arg(&workload.url)
-            .status()
-            .map_err(|error| format!("cannot fetch {}: {error}", workload.url))?;
-        if !status.success() {
-            return Err(format!(
-                "cannot fetch binary workload for {}",
-                workload.target
-            ));
-        }
-        workload.receipt.verify(&target)?;
-    }
-    Ok(())
-}
 
 pub(super) struct Governance {
     marker: crate::command::release::ReleaseMarker,
@@ -158,9 +79,13 @@ impl Governance {
             .as_object_mut()
             .ok_or("ship request carries no operation")?
             .remove("workloads");
+        operation
+            .as_object_mut()
+            .ok_or("ship request carries no operation")?
+            .remove("build");
         let spec = self.spec();
         let expected = match operation["type"].as_str() {
-            Some("workload" | "publication") if spec.binary() => binary(spec, &operation)?,
+            Some("bind" | "publication") if spec.binary() => binary(spec, &operation)?,
             _ => {
                 let surface: Value =
                     serde_json::from_str(&crate::command::release::plan::surface(spec)?)
@@ -179,7 +104,19 @@ impl Governance {
                 return Err(format!("ship request {field} differs from its marker plan"));
             }
         }
-        let node = self.planned(&expected)?;
+        let stage = if operation["type"] == "bind" {
+            "identity/v1"
+        } else {
+            ""
+        };
+        let node = self.planned(&expected, stage)?;
+        if stage == "identity/v1" {
+            let build = &request["operation"]["build"];
+            let content = self.planned(&expected, "content/v1")?;
+            if build["keys"] != content["keys"] || build["production"] != content["production"] {
+                return Err("ship build differs from its marker content plan".into());
+            }
+        }
         if request["keys"] != node["keys"] {
             return Err("ship request keys differ from its marker plan".into());
         }
@@ -189,20 +126,28 @@ impl Governance {
         Ok(())
     }
 
-    fn planned(&self, request: &Value) -> Result<Value, String> {
+    fn planned(&self, request: &Value, stage: &str) -> Result<Value, String> {
         use super::support::{Contract, Plan, contract, embedded, strings, text};
         let action = text(request, "action")?;
         let binary = action.starts_with("ship/binary");
-        let workload = request["operation"]["type"] == "workload";
+        let workload = request["operation"]["type"] == "bind";
         let target = if workload {
             Some(self.spec().target(text(&request["operation"], "target")?)?)
         } else {
             None
         };
         let runner = target.map_or("docker", |held| held.runner.as_str());
-        let contract = contract(action);
+        let contract = if action == "ship/oci" && self.spec().binary() {
+            Contract::Exact
+        } else {
+            contract(action)
+        };
         let release = if workload {
-            Some(self.marker.base())
+            Some(if stage == "content/v1" {
+                self.marker.base()
+            } else {
+                self.marker.marker.as_str()
+            })
         } else {
             (binary || contract != Contract::Portable).then_some(self.marker.version.as_str())
         };
@@ -221,11 +166,18 @@ impl Governance {
                 root: &self.spec().root,
             },
             Plan {
+                stage,
                 action,
                 projections: &strings(request, "projections")?,
                 roots: &strings(request, "roots")?,
                 runner,
-                workload: (binary || embedded(action)).then_some(self.marker.base()),
+                workload: if workload {
+                    release
+                } else if action == "ship/oci" && self.spec().binary() {
+                    Some(self.marker.marker.as_str())
+                } else {
+                    (binary || embedded(action)).then_some(self.marker.base())
+                },
                 release,
                 target,
             },
@@ -278,7 +230,7 @@ impl<'a> Binding<'a> {
 }
 
 fn binary(spec: &Spec, operation: &Value) -> Result<Value, String> {
-    let action = if operation["type"] == "workload" {
+    let action = if operation["type"] == "bind" {
         let triple = operation["target"]
             .as_str()
             .ok_or("binary request has no target")?;

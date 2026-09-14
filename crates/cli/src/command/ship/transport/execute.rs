@@ -28,9 +28,10 @@ struct Request {
 #[derive(Deserialize, serde::Serialize)]
 #[serde(tag = "type", rename_all = "lowercase", deny_unknown_fields)]
 enum Operation {
-    Workload {
+    Bind {
         target: String,
         archive: String,
+        build: Box<super::super::native::Build>,
     },
     Publication {
         #[serde(skip_serializing)]
@@ -105,7 +106,7 @@ impl Request {
         }
         let keys = crate::command::workflow::record::keys(&self.keys.to_string())
             .map_err(|error| format!("ship request inventory keys: {error}"))?;
-        if !matches!(self.operation, Operation::Workload { .. }) && keys.publication.is_none() {
+        if !matches!(self.operation, Operation::Bind { .. }) && keys.publication.is_none() {
             return Err("ship publication request carries no publication key".into());
         }
         super::super::package::project::Source::parse(&self.reuse.encode()?)?;
@@ -153,15 +154,30 @@ impl Request {
             String::new()
         };
         let projection = match self.operation {
-            Operation::Workload { target, archive } => {
-                super::production::execute(
-                    governance.marker(),
-                    super::production::Input {
+            Operation::Bind {
+                target,
+                archive,
+                build,
+            } => {
+                let (workload, receipt) =
+                    super::super::native::run(super::super::native::Request {
+                        spec,
+                        release,
+                        action: &self.action,
                         target: &target,
                         archive: &archive,
+                        build: *build,
+                    })?;
+                let contract = super::super::native::proof::contract(governance.marker(), &target)?;
+                crate::command::workflow::record::project(
+                    crate::command::workflow::record::Project {
                         action: &self.action,
-                        keys: Some(&self.keys),
-                        contract: self.production.as_deref(),
+                        keys: &self.keys.to_string(),
+                        workload,
+                        reuse: None,
+                        publication: None,
+                        depot: None,
+                        production: Some((&contract, receipt)),
                     },
                 )?;
                 return result("workload", "", None);

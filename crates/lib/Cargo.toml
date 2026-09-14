@@ -31,6 +31,7 @@ sha2 = "0.10"
 tar = { version = "0.4", optional = true }
 ureq = { version = "3", optional = true }
 pin-project-lite = "0.2"
+object = { version = "0.39", default-features = false, features = ["read_core", "elf", "macho", "pe", "std"] }
 tempfile = "3"
 which = "8"
 plumb-macro = { path = "../macro", version = "=0.37.6", registry = "perish" }
@@ -46,6 +47,14 @@ tar = "0.4"
 serde = { version = "1", features = ["derive"] }
 tempfile = "3"
 toml = "0.9"
+
+[[test]]
+name = "cascade"
+path = "tests/cascade/mod.rs"
+
+[[test]]
+name = "identity"
+path = "tests/runtime/identity/mod.rs"
 
 [[test]]
 name = "skill"

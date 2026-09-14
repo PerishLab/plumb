@@ -47,7 +47,7 @@ fn required() {
         json!({"type":"chart"}),
         json!({"type":"npm","package":"probe"}),
         json!({"type":"oci"}),
-        json!({"type":"workload","target":"target","archive":"archive"}),
+        json!({"type":"bind","target":"target","archive":"archive","build":{"reuse":{"type":"none","source":""},"keys":{},"production":"a".repeat(64),"receipt":null}}),
         json!({"type":"publication","workloads":[]}),
     ] {
         let mut original = request();

@@ -3,6 +3,7 @@ use std::path::Path;
 use std::process::Command;
 
 pub(super) struct Plan<'a> {
+    pub stage: &'a str,
     pub action: &'a str,
     pub projections: &'a [&'a str],
     pub roots: &'a [&'a str],

@@ -1,4 +1,5 @@
 mod action;
+#[path = "../cloudflare/mod.rs"]
 pub(in crate::command) mod cloudflare;
 mod context;
 mod escrow;
@@ -66,6 +67,7 @@ enum Action {
     Capability,
     Recovery,
     Repository,
+    Policy,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -76,6 +78,8 @@ struct Observation {
     recovery: bool,
     escrow: Option<escrow::View>,
     secrets: BTreeSet<String>,
+    policy: Option<cloudflare::Policy>,
+    note: Option<String>,
 }
 
 struct Plan {
@@ -96,6 +100,7 @@ struct Report<'a> {
     state: &'static str,
     steps: &'a [plan::Step],
     next: Option<Action>,
+    note: Option<&'a str>,
 }
 
 impl Model {
@@ -233,13 +238,19 @@ impl Plan {
                 "https://{}.r2.cloudflarestorage.com",
                 self.context.factory.id()
             )),
-            state: if self.action.is_none() {
+            state: if self.action.is_none()
+                && self
+                    .steps
+                    .iter()
+                    .all(|step| step.status == plan::Status::Ready)
+            {
                 "ready"
             } else {
                 "pending"
             },
             steps: &self.steps,
             next: self.action,
+            note: self.seen.note.as_deref(),
         };
         if json {
             println!(
@@ -253,6 +264,9 @@ impl Plan {
                 report.profile, report.product, report.state
             );
             println!("endpoint fingerprint {}", report.fingerprint);
+            if let Some(note) = report.note {
+                println!("escrow unavailable: {note}");
+            }
             for step in report.steps {
                 let state = match step.status {
                     plan::Status::Ready => "observed",
@@ -279,6 +293,6 @@ impl Plan {
                 self.context.model.profile
             ));
         }
-        self.context.apply(action)
+        self.context.apply(action, &self.seen)
     }
 }

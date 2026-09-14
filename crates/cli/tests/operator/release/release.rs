@@ -2,6 +2,8 @@ use super::world::{Fixture, SPEC, run};
 use std::path::Path;
 use std::process::Command;
 
+#[path = "image/binary.rs"]
+mod binary;
 #[path = "../inputs.rs"]
 mod inputs;
 
@@ -88,7 +90,11 @@ fn cycle() {
     let inventory = crate::support::Bucket::open(18);
     let source = root.join("binary");
     std::fs::create_dir_all(&source).unwrap();
-    fixture.archive(&source, "v1.2.0-beta.7");
+    binary::archive(
+        &command,
+        &source.join("probe-x86_64-unknown-linux-gnu.tar.gz"),
+        "v1.2.0-beta.7",
+    );
     let workload = inputs::workload(
         &mut command(),
         &source.join("probe-x86_64-unknown-linux-gnu.tar.gz"),
@@ -168,7 +174,6 @@ fn cycle() {
         .env("PLUMB_RELEASE_URL", manager)
         .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.7"));
 
-    fixture.archive(&source, "v1.2.0");
     let annotation = serde_json::json!({
         "schema":"plumb.release-marker/v2","product":"probe","marker":"v1.2.0",
         "configuration":{"channel":"stable","version":plumb::version!("PLUMB").to_string(),"generation":binding["configuration"]},
@@ -182,6 +187,11 @@ fn cycle() {
         &annotation.to_string(),
     ]));
     let stable = root.join("stable");
+    binary::archive(
+        &command,
+        &source.join("probe-x86_64-unknown-linux-gnu.tar.gz"),
+        "v1.2.0",
+    );
     let record = stable.join("capsule.json");
     run(publish("v1.2.0", &stable, &request("v1.2.0")).env(
         "PLUMB_RELEASE_PROMOTION",

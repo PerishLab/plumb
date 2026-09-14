@@ -8,8 +8,9 @@ fn text(path: &str) -> String {
 #[test]
 fn policy() {
     let authority = text("crates/cli/src/command/release/authority/model.rs");
-    assert!(authority.contains("let catalog = crate::command::depot::held()"));
-    assert!(authority.contains(".read(\"rules/products.toml\", \"\")"));
+    assert!(authority.contains("crate::shape::product::names()?"));
+    let catalog = text("crates/cli/src/shape/repository/product/catalog.rs");
+    assert!(catalog.contains("seat.read(\"rules/products.toml\", FACTORY)"));
     assert!(!authority.contains("crates/cli/rules/products.toml"));
     let home = super::support::depot(&[]);
     let rules = plumb::depot::Rules::at(
@@ -160,7 +161,8 @@ fn versioned() {
     assert!(!workflow.contains("PLUMB_PUBLISH_BUCKET:"));
     assert!(support.contains("!held.bucket.is_empty() && held.bucket != bucket"));
     assert!(support.contains("derived.bucket = bucket"));
-    let resolver = text("crates/cli/src/command/ship/transport/resolve.rs");
+    let resolver = text("crates/cli/src/command/ship/transport/resolve.rs")
+        + &text("crates/cli/src/command/ship/resolve/workloads.rs");
     assert!(!resolver.contains("workload: Some(&marker.version)"));
     assert!(!resolver.contains("workload: Some(&marker.commit)"));
     assert!(resolver.contains("workload: Some(base)"));

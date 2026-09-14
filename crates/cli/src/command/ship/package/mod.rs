@@ -71,7 +71,6 @@ impl Product<'_> {
             crate::command::release::workspace::Build {
                 triple: &target.triple,
                 version: input.version,
-                channel: input.channel,
                 commit: input.commit,
             },
             execution,

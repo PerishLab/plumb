@@ -1,6 +1,6 @@
 mod binding;
 mod execute;
-mod production;
+pub(in crate::command::ship) mod production;
 mod promotion;
 mod resolve;
 mod reuse;

@@ -37,12 +37,6 @@ pub(super) fn resolve(product: &str, triple: &str) -> Result<Target, String> {
             Format::Tar,
             "macos",
         ),
-        "x86_64-apple-darwin" => (
-            "darwin-x64",
-            &["Darwin:x86_64", "Darwin:amd64"][..],
-            Format::Tar,
-            "macos",
-        ),
         "x86_64-pc-windows-msvc" => (
             "windows-x64",
             &["Windows:x86_64", "Windows:amd64"][..],
