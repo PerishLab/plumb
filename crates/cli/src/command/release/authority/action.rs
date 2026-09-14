@@ -5,14 +5,19 @@ use super::cloudflare::{Grant, Resource};
 use super::{Action, ITEM, context::Context, escrow::Escrow};
 
 impl Context {
-    pub fn apply(&self, action: Action) -> Result<(), String> {
+    pub fn apply(&self, action: Action, seen: &super::Observation) -> Result<(), String> {
         match action {
             Action::Bucket => self.bucket(),
             Action::Domain => self.domain(),
             Action::Capability => self.capability(),
             Action::Recovery => self.recovery(),
             Action::Repository => self.repository(),
-            Action::Policy => self.policy(),
+            Action::Policy => self.factory.reconcile(
+                seen.capability
+                    .as_deref()
+                    .ok_or("ship writer identity is absent")?,
+                &self.model.buckets,
+            ),
         }
     }
 
@@ -28,15 +33,6 @@ impl Context {
                 Err("release bucket creation did not verify".into())
             }
         })
-    }
-
-    fn policy(&self) -> Result<(), String> {
-        let held = super::escrow::Seat::new(&self.model.escrow)
-            .load()?
-            .ok_or("ship writer escrow disappeared")?;
-        held.exact(&self.model.bucket, self.factory.id())?;
-        held.verify()?;
-        self.factory.reconcile(&held.access, &self.model.buckets)
     }
 
     fn domain(&self) -> Result<(), String> {

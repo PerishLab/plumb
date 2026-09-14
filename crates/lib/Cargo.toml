@@ -47,6 +47,10 @@ tempfile = "3"
 toml = "0.9"
 
 [[test]]
+name = "cascade"
+path = "tests/cascade/mod.rs"
+
+[[test]]
 name = "skill"
 required-features = ["skill"]
 

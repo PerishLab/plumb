@@ -47,4 +47,19 @@ fn ship() {
     let (steps, action) = plan::build(&model, &seen);
     assert_eq!(action, Some(Action::Policy));
     assert!(steps[0].detail.contains("without rotating"));
+    seen.escrow = None;
+    let (steps, action) = plan::build(&model, &seen);
+    assert_eq!(action, Some(Action::Policy));
+    assert_eq!(steps[1].status, plan::Status::Ready);
+    assert!(steps[1].detail.contains("not verified"));
+    seen.policy = None;
+    let (steps, action) = plan::build(&model, &seen);
+    assert_eq!(action, None);
+    assert_eq!(steps[0].status, plan::Status::Ready);
+    seen.secrets.clear();
+    let (steps, action) = plan::build(&model, &seen);
+    assert_eq!(action, None);
+    assert_eq!(steps[1].status, plan::Status::Deferred);
+    seen.recovery = true;
+    assert_eq!(plan::build(&model, &seen).1, Some(Action::Recovery));
 }

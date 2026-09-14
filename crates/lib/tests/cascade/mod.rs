@@ -1,7 +1,7 @@
 use plumb::config::Cascade;
 use serde::Deserialize;
 use std::collections::BTreeMap;
-
+mod mint;
 #[derive(Debug, Deserialize, PartialEq, plumb::config::Cascade)]
 #[cascade(section, strict)]
 #[serde(default)]

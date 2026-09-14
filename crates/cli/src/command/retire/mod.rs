@@ -221,7 +221,9 @@ fn revoke(factory: &Factory, minted: Option<&Minted>) {
 }
 
 fn open() -> Result<Factory, String> {
-    let held = Mint::default().merge(Mint::env("PLUMB_RETIRE").map_err(|error| error.to_string())?);
+    let mut held =
+        Mint::default().merge(Mint::env("PLUMB_RETIRE").map_err(|error| error.to_string())?);
+    held.load()?;
     if held.account.trim().is_empty() || held.token.trim().is_empty() {
         return Err("missing PLUMB_RETIRE_ACCOUNT, PLUMB_RETIRE_TOKEN".into());
     }

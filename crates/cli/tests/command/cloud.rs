@@ -87,7 +87,7 @@ fn lifecycle() {
     assert!(seen.iter().all(|line| !line.contains("value-from-api")));
 }
 
-fn serve(answers: Vec<&str>) -> (String, thread::JoinHandle<Vec<String>>) {
+pub(super) fn serve(answers: Vec<&str>) -> (String, thread::JoinHandle<Vec<String>>) {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
     let addr = listener.local_addr().expect("address");
     let answers = answers.into_iter().map(str::to_string).collect::<Vec<_>>();
