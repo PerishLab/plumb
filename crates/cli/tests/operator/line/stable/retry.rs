@@ -2,6 +2,22 @@ use super::{Fixture, git};
 use std::os::unix::fs::PermissionsExt as _;
 
 #[test]
+fn controller() {
+    let fixture = Fixture::new();
+    let manifest = fixture.root.path().join("plumb.toml");
+    let text = std::fs::read_to_string(&manifest).unwrap();
+    std::fs::write(
+        &manifest,
+        text.replace("product='probe'", "product='plumb'"),
+    )
+    .unwrap();
+    assert_ne!(plumb::version!("PLUMB"), "v1.0.0");
+    fixture.refused("clean worktree");
+    git(fixture.root.path(), &["switch", "-q", "source"]);
+    fixture.refused("pick must run from release/v1.0.0");
+}
+
+#[test]
 fn historical() {
     let fixture = Fixture::new();
     let home = super::support::depot(&[("help/version.txt", "Earlier version guidance.\n")]);
