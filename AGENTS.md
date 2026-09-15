@@ -141,6 +141,12 @@ answers for.
   Explicit local Ship recovery consumes the same marker and execution graph;
   each node gets a fresh temporary checkout, and unavailable platforms remain
   incomplete. It is an execution backend, not another publication contract.
+- Delivery reuse includes execution preparation, not only business builds.
+  A proven workload must not acquire an unrelated build prerequisite merely
+  because binding uses a native runner. Check available prerequisites before
+  expensive work; recovery preserves completed evidence and retries only the
+  affected work. Measure the complete delivery path, including preparation,
+  queueing, and readback; cache hits alone do not prove efficient delivery.
 
 The verbs are `plumb version --help`, `plumb release --help`, `plumb ship --help`,
 and `plumb depot --help`. The laws are

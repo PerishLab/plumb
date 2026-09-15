@@ -148,7 +148,7 @@ jobs:
         run: .plumb-atom/.forgejo/scripts/fetch-marker.ps1 "$env:PLUMB_RELEASE_MARKER"
 
       - name: Add the requested Rust target
-        if: matrix.control != 'reuse'
+        if: matrix.control != 'reuse' && (matrix.request.operation.type != 'bind' || matrix.request.operation.build.reuse.type != 'workload')
         run: rustup target add ${{ matrix.request.operation.target }}
 
       - name: Execute one workload request
