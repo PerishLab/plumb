@@ -27,6 +27,7 @@ pub(in crate::command) fn completed(
 
 pub(super) fn local(raw: &str, dry: bool) -> Result<String, String> {
     let marker = crate::command::release::snapshot(raw)?;
+    marker.spec().ship()?;
     let digest = marker.digest()?;
     let mut executed = BTreeSet::new();
     loop {
@@ -214,6 +215,7 @@ pub(super) fn resolve(raw: &str, atom: &str) -> Result<String, String> {
         return Err("--atom must be one full Git commit".into());
     }
     let marker = crate::command::release::snapshot(raw)?;
+    marker.spec().ship()?;
     promotion::verify(&marker)?;
     resolve::graph(&marker, false)
 }

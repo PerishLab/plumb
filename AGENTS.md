@@ -122,6 +122,11 @@ answers for.
   of a recoverable distribution. Existing references never change targets.
   A line's audit starts at its verified preparation parent, not main's moving
   merge-base. Its source must be held by main or an exact verified stable marker.
+- Marker identity and current Ship capability are separate. Reading a valid
+  historical marker retains its locked target descriptions and integrity checks;
+  it does not authorize producing those targets today. Depot knowledge consumes
+  that identity without acquiring build requirements. Ship refuses unsupported
+  targets before dispatch or execution, including when workloads are reusable.
 - Depot generations remain immutable and addressable. Configuration, changelog,
   skill, channel, manager, and provider bindings may move their latest pointer,
   but every movement names the release marker and uses conditional readback.

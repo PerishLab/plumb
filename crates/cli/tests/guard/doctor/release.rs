@@ -18,7 +18,7 @@ fn platforms() {
         .expect("manifest");
         let report = crate::run(&["doctor", path]);
         assert_eq!(
-            report.contains("unsupported release target"),
+            report.contains("unsupported Ship target"),
             triple == "x86_64-apple-darwin",
             "{triple}: {report}"
         );

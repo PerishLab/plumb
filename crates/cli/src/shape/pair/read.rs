@@ -46,7 +46,7 @@ impl Root<'_> {
         Release {
             attachments,
             widths: widths(spec),
-            refusal: None,
+            refusal: spec.ship().err(),
             blind: identity::Seat(self.0).blind(&spec.product, plumb::commit!("PLUMB")),
         }
     }

@@ -13,6 +13,9 @@ use std::path::Path;
 pub(super) fn graph(marker: &release::ReleaseMarker, evidence: bool) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let spec = marker.spec();
+    if !evidence {
+        spec.ship()?;
+    }
     let reference = if marker.channel == "stable" {
         format!("refs/heads/release/{}", marker.version)
     } else {

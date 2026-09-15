@@ -173,6 +173,7 @@ enum Carry {
 fn carry(deed: Carry) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let spec = crate::shape::release::Spec::resolve(&rig.release.root)?;
+    spec.ship()?;
     match deed {
         Carry::Compile => super::release::Product::new(&spec).compile(&rig.release),
         Carry::Inspect => verify::inspect(
@@ -192,6 +193,7 @@ fn carry(deed: Carry) -> Result<String, String> {
 fn binary(deed: Binary) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let spec = crate::shape::release::Spec::resolve(&rig.release.root)?;
+    spec.ship()?;
     let release = &rig.release;
     match deed {
         Binary::Assemble => package::product(&spec).assemble(

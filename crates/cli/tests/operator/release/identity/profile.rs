@@ -106,17 +106,21 @@ fn retained() {
         tools: &tools,
     };
     let commit = super::marker::seeded(&fixture, bare.path());
-    let (first, profile) = configuration(home.path(), "old", None);
+    let (first, profile) = install(
+        home.path(),
+        None,
+        "PerishFire/probe",
+        "schema='plumb.product-profile/v1'\n[product]\nname='probe'\nauthority='https://releases.old.perish.uk'\nderivatives=['skill']\n[governance]\nmanifest='''\n[release]\nproduct='probe'\nauthority='https://releases.old.perish.uk'\nbinaries=['probe']\ntargets=['x86_64-apple-darwin']\n'''\nectropy='[comment]'",
+    );
     let (latest, _) = configuration(home.path(), "new", Some(&first));
     assert_ne!(first, latest);
-    let version = plumb::version!("PLUMB").to_string();
     let annotation = serde_json::json!({
         "schema": "plumb.release-marker/v2",
         "product": "probe",
         "marker": "v1.2.0-beta.1",
         "configuration": {
             "channel": "stable",
-            "version": version,
+            "version": plumb::version!("PLUMB").to_string(),
             "generation": first,
         },
         "profile": profile,
@@ -184,6 +188,33 @@ fn retained() {
         "{}",
         String::from_utf8_lossy(&depot.stderr)
     );
+    for args in [
+        vec!["ship", "dispatch", "--marker", "v1.2.0-beta.1", "--dry-run"],
+        vec!["ship", "local", "--marker", "v1.2.0-beta.1", "--dry-run"],
+        vec![
+            "ship",
+            "resolve",
+            "--marker",
+            "v1.2.0-beta.1",
+            "--atom",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        ],
+    ] {
+        let refused = fixture
+            .command()
+            .current_dir(fixture.root)
+            .env("PLUMB_HOME", home.path())
+            .env("PLUMB_RULES_SOURCE", "https://depot.test")
+            .args(args)
+            .output()
+            .expect("Ship refusal");
+        assert!(!refused.status.success());
+        assert!(
+            String::from_utf8_lossy(&refused.stderr)
+                .contains("unsupported Ship target x86_64-apple-darwin"),
+            "{refused:?}"
+        );
+    }
 }
 
 fn annotate(root: &Path, version: &str, commit: &str, message: &str) {
@@ -209,7 +240,6 @@ pub(super) fn catalogued(
     prior: Option<&str>,
     identity: &str,
 ) -> (String, String) {
-    let source = tempfile::tempdir().expect("configuration source");
     let product = identity.rsplit('/').next().expect("product name");
     let profile = format!(
         "schema = \"plumb.product-profile/v1\"\n\n[product]\nname = \"probe\"\nauthority = \"https://releases.{authority}.perish.uk\"\nderivatives = [\"skill\"]\n\n[governance]\nmanifest = '''\n[release]\nproduct = \"probe\"\nauthority = \"https://releases.{authority}.perish.uk\"\n[release.cargo]\nregistry = \"perish\"\npackages = [\"probe\"]\n[release.oci]\nregistry = \"registry.test\"\nimage = \"owner/probe\"\naccount = \"probe\"\n'''\nectropy = \"[comment]\\nallow = false\"\n"
@@ -218,6 +248,11 @@ pub(super) fn catalogued(
         "[release]\n",
         "[[layout.file]]\nname=['Containerfile']\nrule=['rule://seat/docker','rule://seat/regctl']\n[release]\n",
     );
+    install(home, prior, identity, &profile)
+}
+
+fn install(home: &Path, prior: Option<&str>, identity: &str, profile: &str) -> (String, String) {
+    let source = tempfile::tempdir().expect("configuration source");
     let probes = "[member]\n[[member.entry]]\nname='docker'\n[[member.entry.probe]]\nargv=['docker','--version']\nstdout='fixture docker'\n[[member.entry]]\nname='regctl'\n[[member.entry.probe]]\nargv=['regctl','version']\nstdout='fixture regctl'\n";
     let digest = plumb::depot::sha(profile.as_bytes());
     let catalog = format!(
@@ -229,7 +264,7 @@ pub(super) fn catalogued(
         &[
             ("rules/products.toml", &catalog),
             ("rules/seat.toml", probes),
-            (&address, &profile),
+            (&address, profile),
         ],
     );
     let version = plumb::version!("PLUMB").to_string();

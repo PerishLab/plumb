@@ -9,6 +9,7 @@ pub(super) struct Governance {
 impl Governance {
     pub fn resolve(marker: &str) -> Result<Self, String> {
         let marker = crate::command::release::snapshot(marker)?;
+        marker.spec().ship()?;
         super::promotion::verify(&marker)?;
         Ok(Self { marker })
     }
