@@ -70,10 +70,13 @@ fn command(root: &std::path::Path, home: &std::path::Path, url: &str) -> Command
 }
 
 fn home() -> tempfile::TempDir {
-    support::depot(&[(
-        "rules/products.toml",
-        "schema='plumb.products/v1'\n[[product]]\nidentity='git.perish.top/PerishFire/concord'\nname='concord'\nauthority='https://releases.concord.perish.uk'\nderivatives=['skill']\n",
-    )])
+    support::depot(&[
+        (
+            "rules/products.toml",
+            "schema='plumb.products/v1'\n[[product]]\nidentity='git.perish.top/PerishFire/concord'\nname='concord'\nauthority='https://releases.concord.perish.uk'\nderivatives=['skill']\n",
+        ),
+        ("rules/migrations.toml", "schema='plumb.migrations/v1'\n"),
+    ])
 }
 
 #[test]

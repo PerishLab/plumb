@@ -37,7 +37,10 @@ fn probe(home: &std::path::Path) -> String {
 #[test]
 fn inline() {
     let catalog = "schema = 'plumb.products/v1'\n[[product]]\nidentity = 'git.perish.top/PerishFire/concord'\nname = 'concord'\nauthority = 'https://releases.concord.perish.uk'\nderivatives = ['skill']\n";
-    let depot = support::depot(&[("rules/products.toml", catalog)]);
+    let depot = support::depot(&[
+        ("rules/products.toml", catalog),
+        ("rules/migrations.toml", "schema='plumb.migrations/v1'\n"),
+    ]);
     assert!(probe(depot.path()).contains("missing PLUMB_AUTHORITY_ACCOUNT"));
 }
 
