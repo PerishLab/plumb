@@ -94,7 +94,6 @@ fn picked(root: &Path, commit: &str, body: &str) -> Result<bool, String> {
 
 pub fn pick(seat: &Path, name: &str, commits: &[String]) -> Result<String, String> {
     plumb::depot::rules().map_err(|error| format!("pick configuration preflight: {error}"))?;
-    controller(seat, name)?;
     let current = text(
         "read current branch",
         command(seat, ["branch", "--show-current"])?,
@@ -161,36 +160,6 @@ pub fn pick(seat: &Path, name: &str, commits: &[String]) -> Result<String, Strin
         )?,
     )?;
     Ok(format!("picked {} onto {name}", commits.join(" ")))
-}
-
-fn controller(root: &Path, name: &str) -> Result<(), String> {
-    let manifest = root.join("plumb.toml");
-    if !manifest.is_file() && crate::shape::product::governance(root)?.is_none() {
-        return Ok(());
-    }
-    let spec = if manifest.is_file() {
-        crate::shape::release::Spec::read(&manifest)?
-    } else {
-        crate::shape::release::Spec::resolve(root)?
-    };
-    if spec.product != "plumb" {
-        return Ok(());
-    }
-    exact(name, plumb::version!("PLUMB"))
-}
-
-fn exact(name: &str, running: &str) -> Result<(), String> {
-    let target = semver::Version::parse(name.trim_start_matches("release/v"))
-        .map_err(|error| format!("cannot parse Plumb version line {name}: {error}"))?;
-    let running = semver::Version::parse(running.trim_start_matches('v'))
-        .map_err(|error| format!("cannot parse running Plumb version: {error}"))?;
-    if (running.major, running.minor, running.patch) != (target.major, target.minor, target.patch) {
-        return Err(format!(
-            "{name} must be picked by Plumb v{}.{}.{}, not v{running}",
-            target.major, target.minor, target.patch
-        ));
-    }
-    Ok(())
 }
 
 fn restore(seat: &Path, head: &str, error: String) -> String {
