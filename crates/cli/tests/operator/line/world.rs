@@ -150,7 +150,7 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
             if request.contains("POST ") && request.contains("branch_protections") =>
         {
             let mut value = body;
-            value["branch_name"] = json!("release/v1.2.0");
+            value["branch_name"] = value["rule_name"].clone();
             if !exact {
                 value["enable_push"] = json!(false);
             }

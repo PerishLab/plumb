@@ -6,5 +6,20 @@ package carrier, and records the dependency datum. Pick moves one proved change
 onto it. Freeze walls the line and proves the exact promotion source, but creates
 no distribution marker. Rejoin settles a shipped stable commit back into main.
 
+Pick checks the active configuration before changing Git history. Repeat the same
+pick after a failed proof or push: only a clean, source-exact local continuation of
+the current remote base may resume. Unknown changes, unfinished Git operations,
+stable markers and remote drift refuse; completed picks return without new work.
+
+Before publishing a pick, its exact source commit and carried proofs are retained
+under refs/plumb/picks/<commit>. Existing references are never retargeted. Freeze
+reads this remote evidence and replays the source change, even when the source
+already exists locally. Repeat the original pick from a preserved source checkout
+to backfill missing evidence for an already delivered pick without moving the line.
+
+Freeze audits from the verified preparation parent, not main's current merge-base.
+Prepare checks that its source is held by main or an exact verified stable marker;
+an unavailable or drifting source refuses before version projection.
+
 After freeze, use release stamp to create the immutable marker. Distribution
 starts only when ship is invoked with that marker.

@@ -60,7 +60,14 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
         })?;
         head(&client, &name)?
     } else {
-        opened(&mut course, &client, &name, from)?
+        let base = source(&root, from)?;
+        let opened = opened(&mut course, &client, &name, from)?;
+        if !course.dry() && opened != base {
+            return Err(format!(
+                "release source {from} moved from {base} to {opened}; preparation refused"
+            ));
+        }
+        opened
     };
     if !course.dry() {
         git::fetch(&root)?;
@@ -97,6 +104,25 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     } else {
         Ok(format!("prepared {name} from {from} at {head}; {recorded}"))
     }
+}
+
+fn source(root: &std::path::Path, from: &str) -> Result<String, String> {
+    let output = plumb::config::current("git")
+        .arg("-C")
+        .arg(root)
+        .args([
+            "rev-parse",
+            "--verify",
+            &format!("origin/{from}^{{commit}}"),
+        ])
+        .output()
+        .map_err(|error| format!("cannot resolve release source: {error}"))?;
+    if !output.status.success() {
+        return Err(format!("cannot resolve remote release source {from}"));
+    }
+    let base = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    super::pick::base::require(root, &base)?;
+    Ok(base)
 }
 
 fn pick(version: &str, commits: &[String], dry: bool) -> Result<String, String> {

@@ -111,6 +111,15 @@ answers for.
   region bound after compilation and before final signing. This is a convergence
   contract, not a claim of completed support: platform retention, optimized
   runtime reads, signing, and consumer acceptance must be proved before release.
+- Version picks preflight their configuration before changing history. A retry
+  replays the requested sources to verify the retained local delta, then proves
+  and conditionally pushes it; unrelated work is never adopted as recovery.
+  Before publishing the line, Pick retains each exact source commit and its
+  carried proofs under a content-addressed Git reference. Freeze reads that
+  remote evidence and replays the change; a local object alone is not evidence
+  of a recoverable distribution. Existing references never change targets.
+  A line's audit starts at its verified preparation parent, not main's moving
+  merge-base. Its source must be held by main or an exact verified stable marker.
 - Depot generations remain immutable and addressable. Configuration, changelog,
   skill, channel, manager, and provider bindings may move their latest pointer,
   but every movement names the release marker and uses conditional readback.
