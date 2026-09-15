@@ -10,13 +10,24 @@ pub(super) struct Seat {
 }
 
 impl Seat {
-    pub fn new(source: &Path, staged: &Path, target: &str) -> Result<Self, String> {
+    pub fn new(
+        source: &Path,
+        staged: &Path,
+        product: &crate::shape::product::Target,
+        target: &str,
+    ) -> Result<Self, String> {
         let context = Git(source).context(target)?;
         let transaction = context == Context::Line;
-        let spec = Spec::read(&staged.join("plumb.toml"))?;
-        if spec.product != "plumb" {
-            return Err("only Plumb may bootstrap release-line guard configuration".into());
+        let profile = product
+            .profile
+            .as_ref()
+            .ok_or("guard bootstrap requires a Product Profile")?;
+        let mut spec = Spec::decode(staged, &profile.manifest, "guard bootstrap Product Profile")?;
+        if spec.product != product.product || spec.authority != product.authority {
+            return Err("guard bootstrap profile differs from its product identity".into());
         }
+        spec.route = Some(product.depot.clone());
+        spec.derivatives = product.derivatives().to_vec();
         let depot = spec.derivative(plumb::depot::v3::Kind::Configuration)?;
         let product = crate::command::release::Product::new(&spec);
         let source = product.depot();
@@ -25,7 +36,7 @@ impl Seat {
             Context::Source => source.latest("stable", true)?,
         };
         let snapshot = Snapshot::read(staged).map_err(|error| error.to_string())?;
-        let held = crate::shape::depot::inventory(&snapshot)?;
+        let held = crate::shape::depot::governed(&snapshot, profile)?;
         let plan = Batch::validation(
             held,
             Draft {
@@ -63,6 +74,15 @@ impl Seat {
         self.manifest.digest()
     }
 
+    pub fn product(&self, root: &Path) -> Result<crate::shape::product::Target, String> {
+        let rules = plumb::depot::Rules::guard(self.path(), self.manifest.target())?;
+        let product = crate::shape::product::at(root, "", &rules)?;
+        if product.profile.is_none() {
+            return Err("guard configuration requires a Product Profile".into());
+        }
+        Ok(product)
+    }
+
     pub fn path(&self) -> &Path {
         self.temporary.path()
     }
@@ -72,21 +92,20 @@ impl Seat {
     }
 }
 
-pub(super) fn target(root: &Path) -> Result<Option<String>, String> {
-    let Some(governance) = Git(root).optional("plumb.toml")? else {
-        return Ok(None);
-    };
-    let governance: toml::Table = governance
-        .parse()
-        .map_err(|error| format!("cannot parse plumb.toml: {error}"))?;
-    let product = governance
-        .get("release")
-        .and_then(|held| held.get("product"))
-        .and_then(toml::Value::as_str);
-    if product != Some("plumb") {
+pub(super) fn target(
+    tree: &super::super::workflow::tree::Tree,
+    product: &crate::shape::product::Target,
+) -> Result<Option<String>, String> {
+    if product.profile.is_none()
+        || !product
+            .derivatives()
+            .contains(&plumb::depot::v3::Kind::Configuration)
+    {
         return Ok(None);
     }
-    let text = Git(root).file("Cargo.toml")?;
+    let text = tree
+        .text("Cargo.toml")?
+        .ok_or_else(|| "staged tree requires Cargo.toml".to_string())?;
     let doc: toml::Table = text
         .parse()
         .map_err(|error| format!("cannot parse workspace version: {error}"))?;
@@ -134,22 +153,6 @@ impl Git<'_> {
 
     fn commit(&self) -> Result<String, String> {
         self.run(&["rev-parse", "HEAD"], "read staged release commit")
-    }
-
-    fn file(&self, path: &str) -> Result<String, String> {
-        self.run(&["show", &format!(":{path}")], "read staged configuration")
-    }
-
-    fn optional(&self, path: &str) -> Result<Option<String>, String> {
-        let held = self.run(
-            &["ls-files", "--stage", "--", path],
-            "inspect staged configuration",
-        )?;
-        if held.is_empty() {
-            Ok(None)
-        } else {
-            self.file(path).map(Some)
-        }
     }
 
     fn run(&self, args: &[&str], action: &str) -> Result<String, String> {

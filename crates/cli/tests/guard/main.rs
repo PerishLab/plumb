@@ -1,3 +1,4 @@
+mod bootstrap;
 mod changelog;
 mod closure;
 mod doctor;

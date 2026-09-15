@@ -30,7 +30,9 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         return Err("guard depot binding is internal to one isolated guard action".into());
     }
     let tree = tree::git(root, &["write-tree"], "read staged tree")?;
-    let target = super::configuration::target(root)?;
+    let product = crate::shape::product::guard(root, "")?;
+    let captured = Tree::read(root, Some(&tree))?;
+    let target = super::configuration::target(&captured, &product)?;
     let mismatched = match target.as_deref() {
         Some(target) => {
             let root = plumb::depot::root(&PathBuf::new())?;
@@ -38,20 +40,20 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
                 .ok()
                 .and_then(|held| held.version().map(str::to_string))
                 .as_deref()
-                != Some(target)
+                .map(|released| plumb::depot::related(target, released))
+                .transpose()?
+                != Some(true)
         }
         None => false,
     };
-    let product = crate::shape::product::guard(root, "")?;
-    let mut index = mismatched
-        .then(|| isolate(root, &tree, product.profile.as_ref()))
-        .transpose()?;
+    let mut index = mismatched.then(|| Index::new(root, &tree)).transpose()?;
     let configuration = index
         .as_ref()
         .map(|index| {
             super::configuration::Seat::new(
                 root,
                 &index.root,
+                &product,
                 target
                     .as_deref()
                     .expect("a mismatched Plumb version has a target"),
@@ -66,6 +68,15 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
             plumb::depot::guard(configuration.path(), target)?;
         }
         crate::catalog::set::guard(configuration.path(), target)?;
+    }
+    let product = match &configuration {
+        Some(configuration) => configuration.product(root)?,
+        None => product,
+    };
+    if let Some(index) = &index
+        && let Some(profile) = &product.profile
+    {
+        index.govern(profile)?;
     }
     let checks = Catalog {
         root,

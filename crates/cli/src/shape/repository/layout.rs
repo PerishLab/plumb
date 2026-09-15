@@ -1,7 +1,7 @@
 pub(crate) mod affirm;
 mod read;
 
-pub use read::{read, stated};
+pub use read::{parse, read, stated};
 
 pub struct Read {
     pub held: Held,
