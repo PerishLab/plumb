@@ -145,6 +145,10 @@ fn datum() {
 }
 
 fn isolated(root: &Path, home: &Path) -> std::process::Output {
+    let (forge, _) = serve(Court::Resume(root.join("cut")), 16);
+    run(Command::new("git")
+        .args(["config", "plumb.test-forgejo-url", &forge])
+        .current_dir(root));
     let binary = Path::new(env!("CARGO_BIN_EXE_plumb"));
     let path = format!(
         "{}:{}",

@@ -202,6 +202,10 @@ fn versions() {
         .trim()
         .to_string();
     std::fs::write(&cut, &first).expect("current cut");
+    let (forge, _) = serve(Court::Resume(cut.clone()), 16);
+    run(Command::new("git")
+        .args(["config", "plumb.test-forgejo-url", &forge])
+        .current_dir(root));
     let repeated = command(root, &["version", "prepare", "--version", "1.2.0"]);
     assert!(
         repeated.status.success(),

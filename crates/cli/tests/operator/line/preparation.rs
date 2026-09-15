@@ -61,7 +61,7 @@ fn controller() {
 
 pub fn provenance(root: &Path, cut: PathBuf) {
     guarded(root, &cut);
-    let (forge, _) = serve(Court::Freeze(cut.clone()), 1);
+    let (forge, _) = serve(Court::Freeze(cut.clone()), 2);
     run(Command::new("git")
         .args(["config", "plumb.test-forgejo-url", &forge])
         .current_dir(root));
@@ -69,10 +69,10 @@ pub fn provenance(root: &Path, cut: PathBuf) {
         root,
         &["version", "freeze", "--version", "1.2.0", "--dry-run"],
     );
-    let valid = String::from_utf8_lossy(&valid.stderr);
     assert!(
-        !valid.contains("without cherry-pick -x provenance"),
-        "{valid}"
+        valid.status.success(),
+        "{}",
+        String::from_utf8_lossy(&valid.stderr)
     );
 
     run(Command::new("git")
@@ -96,7 +96,7 @@ pub fn provenance(root: &Path, cut: PathBuf) {
         .expect("git");
     assert!(output.status.success());
     std::fs::write(&cut, String::from_utf8_lossy(&output.stdout).trim()).expect("forged cut");
-    let (forge, _) = serve(Court::Freeze(cut), 1);
+    let (forge, _) = serve(Court::Freeze(cut.clone()), 2);
     run(Command::new("git")
         .args(["config", "plumb.test-forgejo-url", &forge])
         .current_dir(root));
@@ -104,6 +104,20 @@ pub fn provenance(root: &Path, cut: PathBuf) {
         root,
         &["version", "freeze", "--version", "1.2.0", "--dry-run"],
     );
+    assert!(String::from_utf8_lossy(&refused.stderr).contains("without cherry-pick -x provenance"));
+
+    run(Command::new("git")
+        .args(["push", "origin", "HEAD:refs/heads/main"])
+        .current_dir(root));
+    let (forge, _) = serve(Court::Freeze(cut), 2);
+    run(Command::new("git")
+        .args(["config", "plumb.test-forgejo-url", &forge])
+        .current_dir(root));
+    let refused = command(
+        root,
+        &["version", "freeze", "--version", "1.2.0", "--dry-run"],
+    );
+    assert!(!refused.status.success());
     assert!(String::from_utf8_lossy(&refused.stderr).contains("without cherry-pick -x provenance"));
 }
 

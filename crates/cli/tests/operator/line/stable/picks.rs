@@ -5,6 +5,9 @@ use std::process::Command;
 #[path = "retry.rs"]
 mod retry;
 
+#[path = "evidence.rs"]
+mod evidence;
+
 struct Fixture {
     root: tempfile::TempDir,
     bare: tempfile::TempDir,
@@ -39,7 +42,7 @@ impl Fixture {
         std::fs::write(root.path().join("plumb.toml"), "[workflow.hash.guard]\ntest=['Cargo.toml','src']\n[release]\nproduct='probe'\nauthority='https://releases.test'\nbinaries=['probe']\ntargets=['x86_64-unknown-linux-gnu']\n").unwrap();
         std::fs::write(
             root.path().join("Cargo.toml"),
-            "[package]\nname = \"pick-fixture\"\nversion = \"1.0.0\"\nedition = \"2024\"\n",
+            "[package]\nname = \"pick-fixture\"\nversion = \"1.0.0\"\nedition = \"2024\"\n\n[workspace.package]\nversion = \"1.0.0\"\n",
         )
         .unwrap();
         std::fs::write(

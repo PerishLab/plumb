@@ -2,15 +2,15 @@ use plumb::forgejo::git::fetch;
 use std::path::Path;
 use std::process::Output;
 
+pub(super) mod base;
+mod evidence;
 mod recovery;
 
 pub fn validate(root: &Path, name: &str) -> Result<(), String> {
     fetch(root)?;
     let release = format!("origin/{name}");
-    let base = text(
-        "resolve release base",
-        command(root, ["merge-base", "origin/main", &release])?,
-    )?;
+    let version = name.strip_prefix("release/").unwrap_or(name);
+    let base = base::resolve(root, &release, version)?;
     let range = format!("{base}..{release}");
     let merges = text(
         "inspect release merges",
@@ -23,20 +23,20 @@ pub fn validate(root: &Path, name: &str) -> Result<(), String> {
         "inspect release provenance",
         command(root, ["log", "--format=%H%x1f%B%x00", &range])?,
     )?;
-    let version = name.strip_prefix("release/").unwrap_or(name);
     let source = Source {
         root,
         version,
         base: &base,
     };
-    let invalid = listed
+    let commits = listed
         .split('\0')
-        .filter_map(|record| record.trim_start().split_once('\u{1f}'))
-        .find(|(commit, body)| !sourced(&source, commit, body));
-    if invalid.is_some() {
-        return Err(format!(
-            "{name} contains a commit without cherry-pick -x provenance"
-        ));
+        .filter_map(|record| record.trim_start().split_once('\u{1f}'));
+    for (commit, body) in commits {
+        if !sourced(&source, commit, body)? {
+            return Err(format!(
+                "{name} contains a commit without cherry-pick -x provenance: {commit}"
+            ));
+        }
     }
     Ok(())
 }
@@ -47,11 +47,8 @@ struct Source<'a> {
     base: &'a str,
 }
 
-fn sourced(source: &Source<'_>, commit: &str, body: &str) -> bool {
+fn sourced(source: &Source<'_>, commit: &str, body: &str) -> Result<bool, String> {
     let body = body.trim();
-    if body.is_empty() {
-        return true;
-    }
     let settled = super::datum::Seat(source.root).carried(commit, source.version)
         || super::version::prepared(super::version::Preparation {
             root: source.root,
@@ -60,7 +57,7 @@ fn sourced(source: &Source<'_>, commit: &str, body: &str) -> bool {
             version: source.version,
             body,
         });
-    provenance(body) || refreshed(source, commit) || settled
+    Ok(settled || refreshed(source, commit) || picked(source.root, commit, body)?)
 }
 
 fn refreshed(source: &Source<'_>, commit: &str) -> bool {
@@ -76,11 +73,23 @@ fn refreshed(source: &Source<'_>, commit: &str) -> bool {
     })
 }
 
-fn provenance(body: &str) -> bool {
-    body.split("(cherry picked from commit ")
-        .skip(1)
-        .filter_map(|tail| tail.split_once(')'))
-        .any(|(commit, _)| super::value::commit(commit).is_ok())
+fn picked(root: &Path, commit: &str, body: &str) -> Result<bool, String> {
+    let source = body
+        .lines()
+        .rev()
+        .find_map(|line| line.strip_prefix("(cherry picked from commit "))
+        .and_then(|line| line.strip_suffix(')'));
+    let Some(source) = source.filter(|source| super::value::commit(source).is_ok()) else {
+        return Ok(false);
+    };
+    let parent = command(root, ["rev-parse", &format!("{commit}^")])
+        .and_then(|output| text("resolve picked parent", output));
+    evidence::Seat(root).load(source)?;
+    Ok(parent.is_ok_and(|parent| {
+        recovery::Seat(root)
+            .verify(&parent, commit, &[source.to_string()])
+            .is_ok()
+    }))
 }
 
 pub fn pick(seat: &Path, name: &str, commits: &[String]) -> Result<String, String> {
@@ -104,6 +113,7 @@ pub fn pick(seat: &Path, name: &str, commits: &[String]) -> Result<String, Strin
     recovery.clean()?;
     fetch(seat)?;
     recovery.unmarked(name)?;
+    evidence::Seat(seat).available(commits)?;
     let head = text("resolve local head", command(seat, ["rev-parse", "HEAD"])?)?;
     let remote = text(
         "resolve remote head",
@@ -111,6 +121,7 @@ pub fn pick(seat: &Path, name: &str, commits: &[String]) -> Result<String, Strin
     )?;
     if head == remote {
         if recovery.delivered(&head, commits)? {
+            evidence::Seat(seat).retain(commits)?;
             return Ok(format!(
                 "{} already picked onto {name}; nothing moved",
                 commits.join(" ")
@@ -136,6 +147,7 @@ pub fn pick(seat: &Path, name: &str, commits: &[String]) -> Result<String, Strin
     recovery.unchanged(name, &remote)?;
     recovery.verify(&remote, &prepared, commits)?;
     plumb::guard::current(seat, &prepared)?;
+    evidence::Seat(seat).retain(commits)?;
     success(
         "push release line",
         command(

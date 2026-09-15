@@ -66,7 +66,7 @@ fn unproved() {
 fn push() {
     let fixture = Fixture::new();
     let hook = fixture.bare.path().join("hooks/pre-receive");
-    std::fs::write(&hook, "#!/bin/sh\nexit 1\n").unwrap();
+    std::fs::write(&hook, "#!/bin/sh\nwhile read old new ref; do\n  case \"$ref\" in refs/heads/release/*) exit 1;; esac\ndone\n").unwrap();
     std::fs::set_permissions(&hook, std::fs::Permissions::from_mode(0o755)).unwrap();
     let output = fixture.command().output().unwrap();
     assert!(!output.status.success());
