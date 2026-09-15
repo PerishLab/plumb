@@ -7,10 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 const MARK: &str = "29990101T000000Z";
-const SOURCES: [(&str, &str); 6] = [
-    ("rules", "rules"),
-    ("profiles", "profiles"),
-    ("../lib/rules", "rules"),
+const SOURCES: [(&str, &str); 3] = [
     ("assets", "assets"),
     ("cookbook", "cookbook"),
     ("help", "help"),
@@ -68,40 +65,30 @@ pub fn guard(overrides: &[(&str, &str)], target: &str) -> tempfile::TempDir {
 
 pub fn stock(root: &Path, overrides: &[(&str, &str)]) {
     let base = root.join(MARK);
-    let mut objects = Vec::new();
+    let rules = plumb::depot::rules().expect("tests require their locked Depot policy");
+    let mut bodies = rules
+        .inherit(rules.mark(), BTreeMap::new())
+        .expect("verified policy");
     for (source, seat) in SOURCES {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join(source);
         for file in walk(&root) {
             let name = file.strip_prefix(&root).expect("relative object");
             let path = format!("{seat}/{}", name.to_string_lossy().replace('\\', "/"));
-            let bytes = overrides
-                .iter()
-                .find(|(held, _)| *held == path)
-                .map(|(_, text)| text.as_bytes().to_vec())
-                .unwrap_or_else(|| std::fs::read(&file).expect("object source"));
-            let target = base.join(&path);
-            std::fs::create_dir_all(target.parent().expect("object parent"))
-                .expect("object parent seat");
-            std::fs::write(target, &bytes).expect("depot object");
-            objects.push(Object {
-                path,
-                sha256: sha(&bytes),
-                size: bytes.len() as u64,
-            });
+            bodies.insert(path, std::fs::read(&file).expect("implementation resource"));
         }
     }
     for (path, text) in overrides {
-        if objects.iter().any(|object| object.path == *path) {
-            continue;
-        }
-        let bytes = text.as_bytes();
-        let target = base.join(path);
+        bodies.insert((*path).into(), text.as_bytes().to_vec());
+    }
+    let mut objects = Vec::new();
+    for (path, bytes) in bodies {
+        let target = base.join(&path);
         std::fs::create_dir_all(target.parent().expect("object parent"))
             .expect("object parent seat");
-        std::fs::write(target, bytes).expect("depot object");
+        std::fs::write(target, &bytes).expect("depot object");
         objects.push(Object {
-            path: (*path).to_string(),
-            sha256: sha(bytes),
+            path,
+            sha256: sha(&bytes),
             size: bytes.len() as u64,
         });
     }
@@ -130,6 +117,14 @@ pub fn stock(root: &Path, overrides: &[(&str, &str)]) {
         Pointer::new(&metadata, "plumb").encode().expect("pointer"),
     )
     .expect("pointer seat");
+}
+
+#[allow(dead_code)]
+pub fn policy(path: &str) -> String {
+    plumb::depot::rules()
+        .expect("tests require their locked Depot policy")
+        .read(path)
+        .expect("verified policy")
 }
 
 #[allow(dead_code)]

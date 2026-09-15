@@ -173,10 +173,14 @@ fn compare(objects: &[Object], manifest: &Manifest) -> Vec<Finding> {
     let carried = manifest
         .objects
         .iter()
+        .filter(|object| !plumb::depot::policy(&object.path))
         .map(|object| (object.path.as_str(), object.sha256.as_str()))
         .collect::<BTreeMap<_, _>>();
     let mut found = Vec::new();
-    for object in objects {
+    for object in objects
+        .iter()
+        .filter(|object| !plumb::depot::policy(&object.path))
+    {
         let evidence = match carried.get(object.path.as_str()) {
             None => format!(
                 "the held depot {} carries no {}",

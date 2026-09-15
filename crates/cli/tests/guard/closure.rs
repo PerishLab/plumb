@@ -109,10 +109,24 @@ fn rule() {
     let report: Value = serde_json::from_slice(&output.stdout).expect("rule list json");
     assert_eq!(report["schema"], "plumb.rule-list/v1");
     assert_eq!(report["rules"].as_array().map(Vec::len), Some(108));
-    assert_eq!(
-        digest(&output.stdout),
-        "4adc3b970512f3618de3a3bcd8e6e79b25cefec89c85a017e2c076bf7e3b771c"
-    );
+    let catalog: toml::Table = super::support::policy("rules/catalog.toml")
+        .parse()
+        .expect("locked catalog");
+    let mut rules = catalog["rule"]
+        .as_array()
+        .expect("catalog rules")
+        .iter()
+        .map(|rule| {
+            let mut rule = serde_json::to_value(rule).expect("catalog rule");
+            let id = rule["id"].as_str().expect("rule identity").to_string();
+            let (namespace, name) = id.split_once('.').expect("qualified identity");
+            rule["namespace"] = namespace.into();
+            rule["name"] = name.into();
+            rule
+        })
+        .collect::<Vec<_>>();
+    rules.sort_by(|left, right| left["id"].as_str().cmp(&right["id"].as_str()));
+    assert_eq!(report["rules"], serde_json::json!(rules));
 }
 
 #[test]
