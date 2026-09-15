@@ -33,7 +33,7 @@ ureq = { version = "3", optional = true }
 pin-project-lite = "0.2"
 object = { version = "0.39", default-features = false, features = ["read_core", "elf", "macho", "pe", "std"] }
 tempfile = "3"
-plumb-macro = { path = "../macro", version = "=0.37.42", registry = "perish" }
+plumb-macro = { path = "../macro", version = "=0.37.43", registry = "perish" }
 runseal = { version = "=0.18.8", registry = "perish", default-features = false, optional = true }
 serde = { version = "1", features = ["derive"] }
 toml = "0.9"
