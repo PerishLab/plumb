@@ -19,6 +19,7 @@ pub fn run(raw: &str, atom: &str) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let root = &rig.release.root;
     let spec = marker.spec();
+    spec.ship()?;
     let reference = if marker.channel == "stable" {
         format!("refs/heads/release/{}", marker.version)
     } else {

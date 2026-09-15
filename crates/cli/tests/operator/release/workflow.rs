@@ -128,6 +128,7 @@ fn matrix() {
         "publication planning must observe the recorded workloads"
     );
     for binding in [
+        "if: matrix.control != 'reuse' && (matrix.request.operation.type != 'bind' || matrix.request.operation.build.reuse.type != 'workload')",
         "needs.resolve.outputs.publication_missing == 'true'",
         "PLUMB_RELEASE_VERSION: ${{ needs.publish_plan.outputs.version }}",
         "atom_handoff: ${{ steps.plan.outputs.atom_handoff }}",

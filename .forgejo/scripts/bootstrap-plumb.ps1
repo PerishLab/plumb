@@ -64,6 +64,7 @@ function Get-AtomPlan {
     --workload "commit=$env:PLUMB_BUILD_COMMIT" `
     --world "compiler=$compiler" `
     --world 'profile=debug' `
+    --world 'debuginfo=0' `
     --root 'ship/atom=*' `
     --inventory-url $env:PLUMB_WORKFLOW_INVENTORY_URL `
     $atom | ConvertFrom-Json
@@ -138,6 +139,7 @@ if ($source) {
 } else {
   $env:CARGO_TARGET_DIR = $target
   $env:PLUMB_BUILD_SOURCE = '1'
+  $env:CARGO_PROFILE_DEV_DEBUG = '0'
   cargo --config (Join-Path $atom '.cargo/config.toml') build --quiet --locked --manifest-path (Join-Path $atom 'Cargo.toml') --bin plumb
   tar -czf $archive -C (Join-Path $target 'debug') plumb.exe
   Write-Output "built exact Plumb atom $env:PLUMB_BUILD_COMMIT for $hostTarget"

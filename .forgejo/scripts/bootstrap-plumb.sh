@@ -56,6 +56,7 @@ atom_plan() {
     --workload "commit=$PLUMB_BUILD_COMMIT" \
     --world "compiler=$compiler" \
     --world 'profile=debug' \
+    --world 'debuginfo=0' \
     --root 'ship/atom=*' \
     --inventory-url "$PLUMB_WORKFLOW_INVENTORY_URL" \
     "$atom"
@@ -107,7 +108,7 @@ if [ -n "$source" ]; then
   install_atom "$source"
   printf 'reused exact Plumb atom %s for %s\n' "$PLUMB_BUILD_COMMIT" "$host"
 else
-  PLUMB_BUILD_SOURCE=1 CARGO_TARGET_DIR="$target" cargo --config "$atom/.cargo/config.toml" build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
+  PLUMB_BUILD_SOURCE=1 CARGO_PROFILE_DEV_DEBUG=0 CARGO_TARGET_DIR="$target" cargo --config "$atom/.cargo/config.toml" build --quiet --locked --manifest-path "$atom/Cargo.toml" --bin plumb
   tar -czf "$archive" -C "$target/debug" plumb
   printf 'built exact Plumb atom %s for %s\n' "$PLUMB_BUILD_COMMIT" "$host"
 fi

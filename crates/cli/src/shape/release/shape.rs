@@ -1,6 +1,18 @@
 use super::Spec;
 
 impl Spec {
+    pub fn ship(&self) -> Result<(), String> {
+        for target in &self.target {
+            if !matches!(
+                target.triple.as_str(),
+                "x86_64-unknown-linux-gnu" | "aarch64-apple-darwin" | "x86_64-pc-windows-msvc"
+            ) {
+                return Err(format!("unsupported Ship target {}", target.triple));
+            }
+        }
+        Ok(())
+    }
+
     pub fn binary(&self) -> bool {
         !self.binaries.is_empty() || !self.target.is_empty()
     }

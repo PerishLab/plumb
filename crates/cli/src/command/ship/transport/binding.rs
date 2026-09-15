@@ -13,10 +13,12 @@ impl Governance {
             .then(|| crate::command::release::snapshot(marker))
             .transpose()?;
         let ambient = held.is_none().then(|| Spec::controller(root)).transpose()?;
-        Ok(Self {
+        let governance = Self {
             marker: held,
             ambient,
-        })
+        };
+        governance.spec().ship()?;
+        Ok(governance)
     }
 
     pub fn spec(&self) -> &Spec {

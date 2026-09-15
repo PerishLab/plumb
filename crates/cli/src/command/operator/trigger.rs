@@ -18,6 +18,7 @@ struct Flight<'a> {
 
 pub fn run(options: Dispatch) -> Result<String, String> {
     let before = super::super::release::marker(&options.marker)?;
+    before.spec().ship()?;
     let digest = before.digest()?;
     let configuration = plumb::version!("PLUMB").to_string();
     let root = git::root()?;
