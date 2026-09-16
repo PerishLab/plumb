@@ -1,6 +1,7 @@
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.parse import urlsplit
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from .blob import Refusal, Unknown, digest, object_fields, sha
 
@@ -18,12 +19,15 @@ def download(reference, destination):
     if address.path != "/v2/blobs/sha256/" + expected:
         raise Refusal("workload address differs from its blob digest")
     try:
-        with urlopen(carrier["source"], timeout=30) as response:
+        request = Request(carrier["source"], headers={"User-Agent": "plumb-workflow/1"})
+        with urlopen(request, timeout=30) as response:
             if urlsplit(response.url).scheme != "https":
                 raise Refusal("workload redirected outside HTTPS")
             body = response.read()
+    except HTTPError as error:
+        raise Unknown(f"workload download unavailable: HTTP {error.code}") from error
     except OSError as error:
-        raise Unknown("workload download unavailable") from error
+        raise Unknown(f"workload download unavailable: {type(error).__name__}") from error
     if digest(body) != expected:
         raise Refusal("downloaded workload differs from its digest")
     path = Path(destination)
