@@ -105,6 +105,8 @@ fn git(root: &Path, args: &[&str]) {
 pub(super) fn candidate(fixture: &super::super::world::Fixture<'_>, source: &Path) {
     use std::os::unix::fs::PermissionsExt as _;
     let manifest = std::fs::read_to_string(fixture.root.join("plumb.toml")).unwrap();
+    let manifest =
+        format!("{manifest}\n[[layout.file]]\nname=['AGENTS.md']\nrule=['rule://seat/affirmed']\n");
     let profile = format!(
         "schema='plumb.product-profile/v1'\n[product]\nname='probe'\nauthority='https://releases.test'\ndepot='https://depot.test'\nderivatives=['configuration']\n[governance]\nmanifest={manifest:?}\nectropy='[comment]'\n"
     );
@@ -115,6 +117,11 @@ pub(super) fn candidate(fixture: &super::super::world::Fixture<'_>, source: &Pat
     );
     write(source, "rules/products.toml", catalog);
     write(source, "rules/migrations.toml", &migration);
+    write(
+        source,
+        "rules/seat.toml",
+        "[[member.entry]]\nname='affirmed'\naffirms=['declaration','seat','lane']\n",
+    );
     write(source, &format!("profiles/{digest}.toml"), &profile);
     super::super::support::stock(
         &fixture.root.join("configurations"),
@@ -135,9 +142,44 @@ pub(super) fn candidate(fixture: &super::super::world::Fixture<'_>, source: &Pat
         "#!/bin/sh\ncase \"$*\" in\n*\"remote get-url origin\") echo https://git.perish.top/PerishLab/probe.git ;;\n*) exec {real:?} \"$@\" ;;\nesac\n"
     )).unwrap();
     std::fs::set_permissions(shim, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let refused = fixture
+        .command()
+        .current_dir(fixture.root)
+        .args([
+            "depot",
+            "configuration",
+            "--marker",
+            "v1.2.0-beta.2",
+            "--from",
+        ])
+        .arg(source)
+        .arg("--dry-run")
+        .output()
+        .unwrap();
+    assert!(
+        !refused.status.success(),
+        "candidate must not automatically affirm"
+    );
+    let confirmed = fixture
+        .command()
+        .current_dir(fixture.root)
+        .args(["affirm", "--configuration"])
+        .arg(source)
+        .arg("--write")
+        .output()
+        .unwrap();
+    assert!(
+        confirmed.status.success(),
+        "{}",
+        String::from_utf8_lossy(&confirmed.stderr)
+    );
 }
 
 pub(super) fn unchanged(fixture: &super::super::world::Fixture<'_>, source: &Path, commit: &str) {
+    assert_eq!(
+        std::fs::read_to_string(fixture.root.join(".plumb/affirmed.toml")).unwrap(),
+        "# frozen confirmation\n"
+    );
     assert_eq!(
         std::fs::read_to_string(fixture.root.join("ectropy.toml")).unwrap(),
         "caller policy"
@@ -154,8 +196,8 @@ pub(super) fn unchanged(fixture: &super::super::world::Fixture<'_>, source: &Pat
     let migration = std::fs::read_to_string(source.join("rules/migrations.toml")).unwrap();
     let path = std::fs::read_dir(source.join("profiles"))
         .unwrap()
-        .next()
-        .unwrap()
+        .filter_map(Result::ok)
+        .find(|entry| entry.path().is_file())
         .unwrap()
         .path();
     let profile = std::fs::read_to_string(&path).unwrap();

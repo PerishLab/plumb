@@ -120,12 +120,7 @@ enum Command {
     #[command(about = "Read what to do about a finding that names an entry")]
     Cookbook { entry: Option<String> },
     #[command(about = "Record that a wayfinder was read against the authorities it points at")]
-    Affirm {
-        #[command(flatten)]
-        target: Root,
-        #[arg(long)]
-        write: bool,
-    },
+    Affirm(command::render::affirm::Request),
     #[command(about = "Publish and project marker-bound mutable resources")]
     Depot {
         #[command(subcommand)]
@@ -179,7 +174,7 @@ impl Command {
             Self::Configuration { .. } => "configuration",
             Self::Layout { .. } => "layout",
             Self::Cookbook { .. } => "cookbook",
-            Self::Affirm { .. } => "affirm",
+            Self::Affirm(_) => "affirm",
             Self::Depot { .. } => "depot",
             Self::Release { .. } => "release",
             Self::Ship { .. } => "ship",
@@ -249,9 +244,7 @@ fn execute(command: Command) -> i32 {
             command::render::Seat::new(PathBuf::from(target.root)).layout()
         }
         Command::Cookbook { entry } => command::cookbook::run(entry),
-        Command::Affirm { target, write } => {
-            command::render::Seat::new(PathBuf::from(target.root)).affirm(write)
-        }
+        Command::Affirm(request) => request.run(),
         Command::Depot { deed } => command::depot::run(deed),
         Command::Release { deed } => command::release::run(deed),
         Command::Ship { deed } => command::ship::run(deed),

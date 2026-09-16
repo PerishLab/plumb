@@ -5,6 +5,36 @@ use std::path::Path;
 
 pub const SEAT: &str = ".plumb/affirmed.toml";
 
+#[path = "candidate.rs"]
+pub(crate) mod candidate;
+#[path = "receipt.rs"]
+mod receipt;
+
+#[derive(clap::Args)]
+pub struct Request {
+    #[command(flatten)]
+    target: crate::Root,
+    #[arg(long)]
+    write: bool,
+    #[arg(
+        long,
+        value_name = "PATH",
+        help = "Review candidate configuration media; --write records its document confirmation"
+    )]
+    pub configuration: Option<std::path::PathBuf>,
+}
+
+impl Request {
+    pub fn run(self) -> i32 {
+        match self.configuration {
+            Some(media) => candidate::Review(Path::new(&self.target.root)).run(&media, self.write),
+            None => super::Seat::new(self.target.root.into()).affirm(self.write),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Owed {
     pub target: String,
     pub rule: String,
@@ -64,18 +94,14 @@ impl Stamp<'_> {
 }
 
 pub fn write(root: &Path, owed: &[Owed]) -> Result<(), String> {
-    let mut body = String::new();
-    for held in owed {
-        body.push_str(&record(&held.target, &held.rule, &held.authority));
-        body.push('\n');
+    #[derive(serde::Serialize)]
+    struct Document<'a> {
+        record: &'a [Owed],
     }
+    let body = toml::to_string(&Document { record: owed }).map_err(|error| error.to_string())?;
     let seat = root.join(SEAT);
     if let Some(base) = seat.parent() {
         std::fs::create_dir_all(base).map_err(|error| error.to_string())?;
     }
     std::fs::write(&seat, body).map_err(|error| error.to_string())
-}
-
-fn record(target: &str, rule: &str, authority: &str) -> String {
-    format!("[[record]]\ntarget = \"{target}\"\nrule = \"{rule}\"\nauthority = \"{authority}\"\n")
 }

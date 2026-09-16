@@ -58,7 +58,16 @@ answers for.
   governance projection. This judges candidate policy without requiring frozen
   governance files to equal a future generation. Ordinary repository Doctor
   still requires exact conformity; release identity and business source remain
-  unchanged. Then prove the released consumer's
+  unchanged. A policy change does not silently reaffirm its documents.
+  Review explicit candidate media with `affirm --configuration PATH`; only
+  `--write` records that review. The content-addressed receipt travels under
+  the configuration's profiles and binds the selected profile, rule definitions,
+  governance faces, and exact reviewed document bytes. Validation may project a
+  matching receipt into its owned temporary source view, never rewrite frozen
+  source or synthesize consent. Guard inherits those receipts as locked policy;
+  unrelated receipts cannot affirm another profile or document view.
+  Ordinary source affirmation remains an independent review, not a fallback
+  that changes a candidate receipt. Then prove the released consumer's
   bootstrap path in an isolated seat. Bundle validation and installation alone
   do not prove that Guard will inherit that policy instead of source copies.
   Configuration candidates use `depot configuration --stage` to upload and

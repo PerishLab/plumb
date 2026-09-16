@@ -1,6 +1,6 @@
 use crate::shape;
 
-mod affirm;
+pub(crate) mod affirm;
 mod policy;
 use std::path::PathBuf;
 
