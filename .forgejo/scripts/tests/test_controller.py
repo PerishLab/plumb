@@ -5,10 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from urllib.error import HTTPError, URLError
 
 import controller
 import ship
-from lib.blob import Refusal, decode, digest, fingerprint
+from lib.blob import Refusal, Unknown, decode, digest, fingerprint
 from lib.material import download
 
 
@@ -114,9 +115,29 @@ class Material(unittest.TestCase):
         response = io.BytesIO(body)
         response.url = url
         reference = {"digest": digest(body), "reuse": {"type": "workload", "source": url}}
-        with tempfile.TemporaryDirectory() as root, patch("lib.material.urlopen", return_value=response):
+        with tempfile.TemporaryDirectory() as root, patch("lib.material.urlopen", return_value=response) as opened:
             path = download(reference, Path(root) / "binary")
             self.assertEqual(path.read_bytes(), body)
+            request = opened.call_args.args[0]
+            self.assertEqual(request.full_url, url)
+            self.assertEqual(request.get_header("User-agent"), "plumb-workflow/1")
+            self.assertEqual(opened.call_args.kwargs, {"timeout": 30})
+
+    def test_transport_failures_remain_unknown_without_materializing_content(self):
+        url = "https://blobs.example/v2/blobs/sha256/" + "a" * 64
+        reference = {"digest": "a" * 64, "reuse": {"type": "workload", "source": url}}
+        failures = [(HTTPError(url, 403, "private response", {}, None), "HTTP 403"),
+                    (URLError("private transport detail"), "URLError"),
+                    (TimeoutError("private transport detail"), "TimeoutError")]
+        for error, diagnostic in failures:
+            with self.subTest(diagnostic=diagnostic), tempfile.TemporaryDirectory() as root:
+                path = Path(root) / "binary"
+                with patch("lib.material.urlopen", side_effect=error):
+                    with self.assertRaises(Unknown) as raised:
+                        download(reference, path)
+                self.assertEqual(str(raised.exception), "workload download unavailable: " + diagnostic)
+                self.assertIs(raised.exception.__cause__, error)
+                self.assertFalse(path.exists())
 
     def test_corruption_never_creates_executable(self):
         url = "https://blobs.example/v2/blobs/sha256/" + "a" * 64
