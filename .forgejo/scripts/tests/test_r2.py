@@ -30,8 +30,21 @@ class Storage(unittest.TestCase):
 
     def test_uncertain_write_is_not_success(self):
         with patch("lib.r2.subprocess.run", side_effect=subprocess.TimeoutExpired("aws", 60)):
-            with self.assertRaises(Unknown):
+            with self.assertRaisesRegex(Unknown, "put-object transport unavailable: TimeoutExpired"):
                 self.store.create(self.key, b"body")
+
+    def test_safe_operation_diagnostics_do_not_expose_raw_transport_output(self):
+        cases = [(self.failure("AccessDenied"), "AccessDenied"),
+                 (self.failure("404"), "404"),
+                 (self.failure("private credential detail"), "exit 1"),
+                 (self.result(7, stderr=b"private credential detail"), "exit 7")]
+        for result, diagnostic in cases:
+            with self.subTest(diagnostic=diagnostic):
+                with patch("lib.r2.subprocess.run", return_value=result):
+                    with self.assertRaises(Unknown) as raised:
+                        self.store.read(self.key)
+                self.assertEqual(str(raised.exception),
+                                 f"inventory get-object failed ({diagnostic}); existence is unknown")
 
     def test_conditional_conflict_requires_readback(self):
         with patch("lib.r2.subprocess.run", return_value=self.failure("PreconditionFailed")):

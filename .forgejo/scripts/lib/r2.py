@@ -46,16 +46,17 @@ class R2:
         try:
             result = subprocess.run(command, env=self.environment, capture_output=True, timeout=60)
         except (OSError, subprocess.TimeoutExpired) as error:
-            raise Unknown("inventory transport unavailable") from error
+            raise Unknown(f"inventory {operation} transport unavailable: {type(error).__name__}") from error
         if result.returncode == 0:
             return result.stdout
-        error = re.search(rb"An error occurred \(([^)]+)\) when calling", result.stderr)
+        error = re.search(rb"An error occurred \(([A-Za-z0-9_-]{1,64})\) when calling", result.stderr)
         code = error[1].decode("ascii", errors="replace") if error else ""
         if operation in ("get-object", "head-object") and code == "NoSuchKey":
             return None
         if operation == "put-object" and code == "PreconditionFailed":
             return None
-        raise Unknown("inventory operation failed; existence is unknown")
+        status = code or f"exit {result.returncode}"
+        raise Unknown(f"inventory {operation} failed ({status}); existence is unknown")
 
     def read(self, key):
         with tempfile.TemporaryDirectory(prefix="plumb-blob-read-") as directory:
