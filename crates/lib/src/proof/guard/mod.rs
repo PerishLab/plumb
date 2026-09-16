@@ -5,11 +5,13 @@ use std::path::{Path, PathBuf};
 
 mod bootstrap;
 mod configuration;
+mod index;
 mod store;
 mod transit;
 
 pub use bootstrap::Bootstrap;
 pub use configuration::{Configuration, Validator};
+pub use index::tree;
 pub use transit::{attach, stage, staged};
 
 pub const SCHEMA: &str = "plumb.guard-proof/v1";

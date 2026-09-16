@@ -39,7 +39,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
     {
         return Err("guard depot binding is internal to one isolated guard action".into());
     }
-    let tree = tree::git(root, &["write-tree"], "read staged tree")?;
+    let tree = plumb::guard::tree(root)?;
     let captured = Tree::read(root, Some(&tree))?;
     let manifest = captured.text("plumb.toml")?;
     let product = crate::shape::product::guard(root, manifest.as_deref())?;
