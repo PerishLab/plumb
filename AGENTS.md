@@ -259,7 +259,11 @@ answers for.
   under one action key refuse rather than replacing evidence.
 - Blob completion records follow readable, verified objects and use conditional
   creation. Unknown storage state is not absence; contradictory evidence is
-  not a cache miss. The generic store does not promise exactly-once external
+  not a cache miss. The central Python transport uses the standard library for
+  three signed S3 object operations, verified TLS, bounded transfers and no
+  redirects; native runners need neither AWS CLI nor a package installer.
+  Conditional creation and server-verified checksums remain mandatory.
+  The generic store does not promise exactly-once external
   publication: an executor must inspect an uncertain destination and reconcile
   its own receipt before recording completion. Superseded blob caches have no
   migration, fallback reader, or backfill path. A cold cache may require work,
