@@ -79,9 +79,9 @@ fn reused() {
         "[release]\nproduct='probe'\nauthority='https://releases.test'\n[release.chart]\nregistry='example.invalid'\nchart='owner/probe'\naccount='Example'\n",
         "v1.2.3-beta.1",
     );
-    let inventory = crate::support::Bucket::open(3);
     let workload = root.join("probe-1.2.3-beta.1.tgz");
     archive(&workload);
+    let digest = plumb::depot::sha(&std::fs::read(&workload).unwrap());
     let helm = r#"#!/bin/sh
 set -eu
 if [ "$1" = registry ]; then /bin/cat >/dev/null; exit 0; fi
@@ -103,25 +103,14 @@ done
             .expect("fixture mode");
     }
     let request = serde_json::json!({
-        "schema":"plumb.ship-request/v2", "configuration":binding["configuration"], "profile":binding["profile"],
-        "action":"ship/chart", "projections":["charts/probe/Chart.yaml#/version","charts/probe/Chart.yaml#/appVersion"],
-        "roots":["charts/probe"], "operation":{"type":"chart"},
-        "reuse":{"type":"workload","source":"https://inventory.invalid/probe.tgz"},
-        "keys":{"workload":"1".repeat(64),"proof":"2".repeat(64),"publication":"3".repeat(64)},
+        "schema":"plumb.ship-request/v3", "marker":"v1.2.3-beta.1", "configuration":binding["configuration"], "profile":binding["profile"],
+        "action":"ship/chart", "operation":{"type":"chart"},
+        "reuse":{"type":"workload","source":format!("https://blob.test/v2/blobs/sha256/{digest}")},
     });
-    let request = crate::marker::planned(root, home.path(), request, "v1.2.3-beta.1");
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .current_dir(root)
         .env("PLUMB_HOME", home.path())
         .env("PLUMB_RULES_SOURCE", "https://depot.test")
-        .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
-        .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
-        .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", "workflow")
-        .env("PLUMB_WORKFLOW_INVENTORY_ENDPOINT", inventory.endpoint())
-        .env(
-            "PLUMB_WORKFLOW_INVENTORY_URL",
-            "https://inventory.invalid/inventory.json",
-        )
         .args(["ship", "execute", "--request", &request.to_string()])
         .env("PATH", root.join("bin"))
         .env("PLUMB_TEST_CHART", &workload)
@@ -135,7 +124,6 @@ done
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    inventory.finish();
 }
 
 fn archive(path: &std::path::Path) {

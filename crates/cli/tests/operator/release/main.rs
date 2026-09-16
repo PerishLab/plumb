@@ -18,6 +18,7 @@ mod topology;
 #[cfg(unix)]
 mod workflow;
 #[cfg(unix)]
+#[path = "identity/world.rs"]
 mod world;
 
 #[path = "../../support.rs"]

@@ -1,12 +1,14 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+mod completion;
 mod probe;
 mod process;
 mod production;
+pub use completion::{Completion, Resource};
 pub use probe::Probe;
 pub use process::Observation;
-pub use production::{Producer, Production, Receipt};
+pub use production::{Producer, Production, Receipt, Source};
 
 #[derive(Default, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]

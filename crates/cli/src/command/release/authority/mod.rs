@@ -17,8 +17,6 @@ use cloudflare::Custom;
 
 const ADMIN: (&str, &str) = ("Workers R2 Storage Write", "com.cloudflare.api.account");
 
-pub(in crate::command) use escrow::inventory;
-
 pub(in crate::command) fn credential(inline: &str) -> Result<String, String> {
     let Some(path) = escrow::selected("PLUMB_RELEASE_REGISTRY_ESCROW")? else {
         return Ok(inline.to_string());

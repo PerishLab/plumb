@@ -30,27 +30,6 @@ pub(super) fn selected(name: &str) -> Result<Option<std::path::PathBuf>, String>
     Ok(Some(path))
 }
 
-pub(in crate::command) fn inventory(held: &mut plumb::rig::Authority) -> Result<(), String> {
-    let Some(path) = selected("PLUMB_WORKFLOW_INVENTORY_ESCROW")? else {
-        return held.load();
-    };
-    if [&held.access, &held.secret, &held.bucket, &held.endpoint]
-        .iter()
-        .any(|value| !value.is_empty())
-        || !held.file.as_os_str().is_empty()
-    {
-        return Err("inventory escrow conflicts with explicit inventory credentials".into());
-    }
-    let escrow = Seat::new(&path)
-        .load()?
-        .ok_or("selected inventory escrow is missing")?;
-    held.access = escrow.access;
-    held.secret = escrow.secret;
-    held.bucket = escrow.bucket;
-    held.endpoint = escrow.endpoint;
-    Ok(())
-}
-
 impl<'a> Seat<'a> {
     pub fn new(path: &'a Path) -> Self {
         Self(path)

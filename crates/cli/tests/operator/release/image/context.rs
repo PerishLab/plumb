@@ -67,11 +67,11 @@ fn context() {
     std::fs::write(root.join("AGENTS.md"), "updated operator").expect("operator edit");
     fixture.track("AGENTS.md");
     let second = plan(&fixture);
-    assert_eq!(first["keys"], second["keys"]);
+    assert_eq!(first, second);
     build(&fixture, &captured);
     assert_eq!(original, std::fs::read(&captured).expect("archive"));
     fixture.track("source/tool");
-    assert_ne!(first["keys"], plan(&fixture)["keys"]);
+    assert_ne!(first, plan(&fixture));
     build(&fixture, &captured);
     assert_ne!(original, std::fs::read(&captured).expect("archive"));
     for path in [
@@ -125,7 +125,7 @@ fn build(fixture: &Fixture<'_>, captured: &Path) {
         .env("PLUMB_TEST_CONTEXT", captured));
 }
 
-fn plan(fixture: &Fixture<'_>) -> serde_json::Value {
+fn plan(fixture: &Fixture<'_>) -> String {
     let surface = run(fixture.command().args(["ship", "surface"]));
     let surface: serde_json::Value = serde_json::from_slice(&surface.stdout).expect("surface");
     let roots = surface["publication"]["include"][0]["roots"]
@@ -138,23 +138,7 @@ fn plan(fixture: &Fixture<'_>) -> serde_json::Value {
             serde_json::json!("source")
         ]
     );
-    let mut command = fixture.command();
-    command.args(["workflow", "plan"]).arg(fixture.root);
-    for root in roots {
-        command.args([
-            "--root",
-            &format!("ship/oci={}", root.as_str().expect("root")),
-        ]);
-    }
-    let output = run(&mut command);
-    let plan: serde_json::Value = serde_json::from_slice(&output.stdout).expect("plan");
-    plan["actions"]
-        .as_array()
-        .expect("actions")
-        .iter()
-        .find(|action| action["name"] == "ship/oci")
-        .expect("image action")
-        .clone()
+    crate::identity::resources::fingerprint(fixture.root, serde_json::json!({"paths":roots}))
 }
 
 fn entries(path: &Path) -> BTreeMap<String, String> {

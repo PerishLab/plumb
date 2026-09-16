@@ -1,5 +1,97 @@
 use super::super::world::{Fixture, run};
 use std::process::Command;
+#[path = "../../../../src/command/ship/request/context.rs"]
+mod context;
+
+fn request() -> serde_json::Value {
+    serde_json::json!({
+        "schema": "plumb.ship-request/v3",
+        "marker": "v1.2.0-beta.1",
+        "action": "ship/produce.aarch64-apple-darwin",
+        "operation": {
+            "type": "produce", "target": "aarch64-apple-darwin", "archive": "probe.tar.gz",
+        },
+        "configuration": "a".repeat(64),
+        "profile": "b".repeat(64),
+    })
+}
+
+fn refuses(request: serde_json::Value, expected: &str) {
+    let root = tempfile::tempdir().expect("isolated root");
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .current_dir(root.path())
+        .env("PLUMB_HOME", root.path())
+        .args(["ship", "execute", "--request", &request.to_string()])
+        .output()
+        .expect("request validation");
+    assert!(!output.status.success());
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(error.contains(expected), "{error}");
+}
+
+#[test]
+fn protocol() {
+    let mut held = request();
+    held["schema"] = serde_json::json!("plumb.ship-request/v2");
+    refuses(held, "requires plumb.ship-request/v3");
+}
+
+#[test]
+fn inventory() {
+    for field in ["keys", "roots", "projections"] {
+        let mut held = request();
+        held[field] = serde_json::json!({});
+        refuses(held, "unknown field");
+    }
+}
+
+#[test]
+fn explicit() {
+    let mut held = request();
+    held.as_object_mut().expect("request").remove("marker");
+    refuses(held, "missing field `marker`");
+}
+
+#[test]
+fn nested() {
+    let mut held = request();
+    held["operation"] = serde_json::json!({
+        "type": "bind", "target": "aarch64-apple-darwin", "archive": "probe.tar.gz",
+        "build": {
+            "reuse": {"type": "workload", "source": "https://blob.example/object"},
+            "production": "c".repeat(64), "receipt": null, "keys": {},
+        },
+    });
+    refuses(held, "unknown field `keys`");
+}
+
+#[test]
+fn input() {
+    refuses(
+        request(),
+        "only production requires an explicit input snapshot",
+    );
+    let mut held = request();
+    held["operation"] = serde_json::json!({"type": "cargo"});
+    held["input"] = serde_json::json!("/unexpected/input");
+    refuses(held, "only production requires an explicit input snapshot");
+}
+
+#[test]
+fn context() {
+    let payload = request();
+    let mut held = serde_json::json!({
+        "node": payload["action"], "payload": payload,
+        "inputs": {"source": {"digest": "a".repeat(64)}},
+        "materialized": {"source": {"key": "a".repeat(64), "root": "/isolated/input"}},
+    });
+    let prepared = context::request(&held).expect("verified input mapping");
+    assert_eq!(prepared["input"], "/isolated/input");
+    held["materialized"]["source"]["key"] = serde_json::json!("b".repeat(64));
+    assert!(context::request(&held).is_err());
+    held["node"] = serde_json::json!("different");
+    assert!(context::request(&held).is_err());
+}
 
 #[test]
 fn local() {

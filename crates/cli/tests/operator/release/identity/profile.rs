@@ -9,13 +9,6 @@ pub(super) fn candidates(
     command: &impl Fn() -> Command,
     annotation: &Value,
 ) {
-    let store = crate::support::Bucket::open(83);
-    let source = format!("{}/workflow/inventory.json", store.endpoint());
-    let command = || {
-        let mut held = command();
-        held.env("PLUMB_WORKFLOW_INVENTORY_URL", &source);
-        held
-    };
     let mut beta = annotation.clone();
     beta["marker"] = serde_json::json!("v1.2.0-beta.1");
     run(Command::new("git").arg("-C").arg(fixture.root).args([
@@ -33,65 +26,11 @@ pub(super) fn candidates(
         "--atom",
         &"a".repeat(40),
     ]));
-    let graph: Value = serde_json::from_slice(&output.stdout).expect("candidate graph");
-    assert_eq!(graph["workload_missing"], false);
-    assert_eq!(graph["publication_missing"], true);
-    super::super::image::evidence::identity(fixture, &command, &graph, &beta);
-    super::super::image::evidence::refuses(fixture, &command, &graph);
-    let records = graph["publication"]["include"]
-        .as_array()
-        .expect("requests")
-        .iter()
-        .map(|row| {
-            let request = &row["request"];
-            let keys = &request["keys"];
-            serde_json::json!({
-                "action": request["action"], "workload": keys["workload"],
-                "proof": keys["proof"], "publication": keys["publication"],
-                "source": { "type": "url", "source": "https://registry.test/probe" },
-            })
-        })
-        .collect::<Vec<_>>();
-    assert_eq!(records.len(), 2);
-    std::fs::create_dir_all(fixture.root.join("depot")).expect("inventory root");
-    let mut cases = (0..=records.len())
-        .map(|count| (records[..count].to_vec(), false))
-        .collect::<Vec<_>>();
-    for field in ["workload", "publication"] {
-        let mut drift = records.clone();
-        drift[0][field] = serde_json::json!("0".repeat(64));
-        cases.push((drift, false));
-    }
-    for (records, complete) in cases {
-        let inventory = serde_json::json!({
-            "schema": "plumb.workflow-inventory/v1",
-            "records": records,
-        });
-        std::fs::write(
-            fixture.root.join("depot/inventory.json"),
-            inventory.to_string(),
-        )
-        .expect("inventory");
-        let stable = command()
-            .args([
-                "ship",
-                "resolve",
-                "--marker",
-                "v1.2.0",
-                "--atom",
-                &"a".repeat(40),
-            ])
-            .output()
-            .expect("stable graph");
-        assert_eq!(
-            stable.status.success(),
-            complete,
-            "{}",
-            String::from_utf8_lossy(&stable.stderr)
-        );
-    }
-    super::held::bound(&command, &graph, &store);
-    store.finish();
+    let graph: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(graph["schema"], "plumb.blob-graph/v1");
+    super::super::image::evidence::identity(fixture, command, &graph, &beta);
+    super::super::image::evidence::refuses(fixture, command, &graph);
+    super::held::bound(command, &graph);
 }
 
 #[test]
@@ -264,6 +203,10 @@ fn install(home: &Path, prior: Option<&str>, identity: &str, profile: &str) -> (
         &[
             ("rules/products.toml", &catalog),
             ("rules/seat.toml", probes),
+            (
+                "rules/workflow.toml",
+                &crate::marker::workflow(identity.rsplit('/').next().unwrap()),
+            ),
             (&address, profile),
         ],
     );

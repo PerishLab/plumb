@@ -48,9 +48,7 @@ pub(super) fn marked(root: &Path, bare: &Path, forge: &str, version: &str) {
     run(Command::new("git")
         .args(["commit", "-qm", "candidate"])
         .current_dir(root));
-    run(Command::new("git")
-        .args(["tag", "-a", version, "-m", &format!("probe {version}")])
-        .current_dir(root));
+    super::marker::line(root, bare, version);
     run(Command::new("git")
         .args(["push", "-q", "origin", "HEAD:refs/heads/main"])
         .current_dir(root));

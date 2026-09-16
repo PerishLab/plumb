@@ -53,6 +53,36 @@ answers for.
   name, a cookbook entry is the finding that sends you there, and long help is
   the command path, so `plumb version` reads `help/version.txt`.
   Prose an agent reads as contract is carried, never inlined in a literal.
+  Before activating changed policy, prove the actual released consumer's
+  candidate validation in an isolated source view carrying the candidate's
+  governance projection. This judges candidate policy without requiring frozen
+  governance files to equal a future generation. Ordinary repository Doctor
+  still requires exact conformity; release identity and business source remain
+  unchanged. Then prove the released consumer's
+  bootstrap path in an isolated seat. Bundle validation and installation alone
+  do not prove that Guard will inherit that policy instead of source copies.
+  Configuration candidates use `depot configuration --stage` to upload and
+  verify immutable bytes without advancing latest. Its receipt carries the
+  generation and expected old pointer digest (or `absent`). Operator-only
+  `configuration install --marker ... --generation ... --path ...` consumes
+  that identity into a new isolated configuration path; its local pointer is
+  a selection, not evidence of remote activation. It projects no Git hooks.
+  Default installation continues to consume latest. Once candidate Guard and
+  repository delivery are proven, `depot configuration --promote ... --expect
+  ...` revalidates the marker and bytes, then conditionally advances latest.
+  Git landing and pointer promotion are separate operations, never an atomic
+  transaction. On uncertainty, read both states before retrying; retain the
+  old generation and candidate. An unchanged successful promotion is
+  idempotent, but another standing pointer refuses stale expectations. A
+  required rollback is another explicit conditional promotion, not deletion.
+  Candidate Guard explicitly selects `--configuration-marker` and
+  `--generation` from an isolated installed seat. Its source-built controller
+  keeps its real version and source commit; its executable digest is bound
+  independently from the exact published configuration validator. The proof
+  carries the marker, generation and derived configuration digest as well.
+  Commit hooks and Land may restore only that same controller's verified
+  pending or committed binding, and revalidate the marker. Normal Doctor and
+  default configuration selection retain their runtime version constraints.
   Rules exist only in a verified synced seat and never fall back to compiled
   bytes. Assets read seat-first; cookbook and help retain compiled copies, and
   help falls back without a word when the seat cannot be read: help is not a
@@ -98,6 +128,12 @@ answers for.
   finalizes the native medium, and verifies the distributed identity.
   Both reusable production and marker binding retain their own evidence;
   identity injection never substitutes for environment or tool-chain proofs.
+  Reusable binary production uses a neutral derived workspace, never the
+  publication's version or commit as compiled identity. Normalize only owned
+  version carriers and internal references; external dependency versions remain
+  real inputs. Actual source commit and tree live in production evidence.
+  Verify byte equality across independent cold builds with different release
+  identities, not merely a successful cache hit.
 - Rust binaries consume the embedded identity protocol through plumb-lib.
   Ship owns post-build binding, platform signing, native execution checks, and
   archive readback. An unbound workload is not an installed release; published
@@ -152,6 +188,59 @@ answers for.
   expensive work; recovery preserves completed evidence and retries only the
   affected work. Measure the complete delivery path, including preparation,
   queueing, and readback; cache hits alone do not prove efficient delivery.
+- Workflow cache control belongs to the central Python scripts, independently
+  of Plumb's business interpretation. Plumb validates markers, declares the
+  required operations, and proves their outputs; it must not become the cold
+  planner's bootstrap prerequisite or a second authority for the same skip.
+  Locked declarations bind each action's effective inputs and implementation.
+  Keys have exactly three definition surfaces: contract version, configuration
+  selection, and resolved configuration references. References bind effective
+  content, not just a path or URL. Marker identity participates only where
+  explicitly selected; provenance is not an implicit invalidation input.
+  Neither a whole configuration generation nor a repository commit belongs in
+  every key merely because it identifies the request.
+- Input hashing and materialization share one Python snapshot contract. Read
+  exact source blobs, apply explicit field projections, and hash the bytes that
+  execution will consume. Git export attributes and uncommitted runner files
+  are not implicit inputs. A projection must produce a usable document, never
+  merely hide a value from hashing. Materialization checks the planned key and
+  reads back content, file kinds, and supported executable modes before work.
+  Plumb owns business operations, not a second source-normalization authority.
+- An action key identifies an invocation contract, not its output bytes.
+  Consumers key the actual output digest; a rebuilt producer yielding the same
+  bytes does not invalidate them. Completion prerequisites are distinct from
+  consumed content: a changed check can hold overall completion without
+  republishing an already proven immutable resource.
+  A cached installation archive never proves a fresh runner is prepared.
+  Execution preparation is a third dependency relation: activate it only after
+  the consumer's resolved inputs miss completion. A hit does not prepare its
+  executor, and unknown producer bytes do not speculate about that need.
+  Preparation artifacts use the same blob records; their installation belongs
+  to the actual runner invocation. Finite jobs execute declared preparation
+  locally before their consumer, never through a second bootstrap planner.
+  Preparation is not an excuse to omit tools that affect output from inputs.
+  Content outputs and execution evidence have distinct names. Both are verified
+  blobs, but volatile proof details do not become consumer content inputs.
+  Identical outputs retain the first valid completion; conflicting output bytes
+  under one action key refuse rather than replacing evidence.
+- Blob completion records follow readable, verified objects and use conditional
+  creation. Unknown storage state is not absence; contradictory evidence is
+  not a cache miss. The generic store does not promise exactly-once external
+  publication: an executor must inspect an uncertain destination and reconcile
+  its own receipt before recording completion. Superseded blob caches have no
+  migration, fallback reader, or backfill path. A cold cache may require work,
+  but never authorizes overwriting an existing immutable publication.
+- Ship completion is a marker-bound business proof in the product's release
+  authority, not a workflow-cache entry or a successful runner status. It binds
+  the exact distribution contract and complete resource set. Version consumes
+  that proof without invoking Python or replaying a Rust workflow planner.
+  Cache retirement must not remove release markers, published resources, or
+  their completion proofs.
+- The workflow is a finite execution backend, not a generated DAG. Its locked
+  job skeleton must express every declared dependency; unsupported graphs
+  refuse. Locked entry-to-job placement is explicit, never inferred by a
+  scheduler. Platform-imposed barriers are reported separately from business
+  dependencies. Keep the blob planner independent of product names and media.
 
 The verbs are `plumb version --help`, `plumb release --help`, `plumb ship --help`,
 and `plumb depot --help`. The laws are
@@ -180,9 +269,9 @@ bag of provider arguments.
 
 The closed workflow profile owns the shared inventory bucket, public domain,
 bucket-scoped writer escrow, and organization Actions-secret binding. The
-`workflow record` transaction owns immutable workload upload and conditional
-inventory merge. Reusable workflows transport that transaction; ordinary
-repositories own neither R2 configuration nor inventory JSON.
+central Python record transaction owns immutable blob upload and conditional
+completion records. The canonical workflow transports that transaction;
+ordinary repositories own neither R2 configuration nor inventory JSON.
 
 The closed depot authority profile derives a product's public delivery domain
 from its Product Profile and binds it to the one shared depot bucket. It creates

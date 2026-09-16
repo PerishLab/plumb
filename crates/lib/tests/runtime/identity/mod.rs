@@ -56,6 +56,27 @@ fn roundtrip() {
 }
 
 #[test]
+fn neutral() {
+    let mut original = executable();
+    let image = object::File::parse(original.as_slice()).unwrap();
+    let section = image
+        .sections()
+        .find(|section| matches!(section.name(), Ok(".plumbid" | "__plumbid")))
+        .unwrap();
+    let offset = section.file_range().unwrap().0 as usize;
+    let region = Region::new("TEST", None, Some("test-target")).read();
+    original[offset..offset + region.len()].copy_from_slice(&region);
+    let (origin, held) = plumb::identity::inspect(&original).unwrap();
+    assert!(origin.commit.is_empty());
+    assert!(held.is_none());
+    let identity = binding();
+    let bound = plumb::identity::bind(&original, &identity).unwrap();
+    let (after, held) = plumb::identity::inspect(&bound).unwrap();
+    assert_eq!(after, origin);
+    assert_eq!(held, Some(identity));
+}
+
+#[test]
 #[cfg(target_os = "linux")]
 fn runs() {
     let original = executable();

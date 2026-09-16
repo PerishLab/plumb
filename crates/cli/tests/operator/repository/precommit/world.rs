@@ -17,7 +17,8 @@ fn bootstrap() {
         .find("if !mismatched")
         .expect("conditioned proof reuse");
     assert!(mismatch < reuse);
-    assert!(action.contains("plumb::depot::related(target, released)"));
+    assert!(action.contains("configuration::mismatched(target.as_deref())?"));
+    assert!(held.contains("plumb::depot::related(target, released)"));
     assert!(action.find(".checks()?").expect("current actions") < reuse);
     let selection = action
         .find("configuration.product(root)?")

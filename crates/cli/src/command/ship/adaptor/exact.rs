@@ -1,8 +1,7 @@
 use super::module::{Module, channel, drift, integrity, publication, release};
+use super::projection::Workload;
 use crate::command::ship::package::project::{Scope, Source, fetch};
-use flate2::{Compression, GzBuilder, read::GzDecoder};
 use semver::Version;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 
 pub struct Request<'a> {
@@ -14,6 +13,10 @@ pub struct Request<'a> {
 
 pub fn run(carrier: &Module<'_>, request: Request<'_>) -> Result<String, String> {
     Exact { carrier }.run(request)
+}
+
+pub(super) fn produce(carrier: &Module<'_>, package: &str) -> Result<PathBuf, String> {
+    Exact { carrier }.package(package, &Version::new(0, 0, 0))
 }
 
 struct Exact<'a, 'b> {
@@ -79,9 +82,13 @@ impl Exact<'_, '_> {
         )
         .map_err(|error| format!("cannot parse {}: {error}", manifest.display()))?;
         if document
-            .pointer("/scripts/build")
+            .pointer("/scripts/prepack")
             .and_then(serde_json::Value::as_str)
-            .is_some()
+            .is_none()
+            && document
+                .pointer("/scripts/build")
+                .and_then(serde_json::Value::as_str)
+                .is_some()
         {
             self.carrier
                 .pnpm(&["--filter", package, "build"], package)?;
@@ -111,7 +118,7 @@ impl Exact<'_, '_> {
             std::fs::create_dir_all(parent)
                 .map_err(|error| format!("cannot open {}: {error}", parent.display()))?;
         }
-        repack(&response, &archive, package, identity)?;
+        Workload::new(&response).bind(&archive, package, identity)?;
         Ok(archive)
     }
 
@@ -143,6 +150,8 @@ impl Exact<'_, '_> {
         let mut command = vec![
             "publish",
             name.as_str(),
+            "--no-git-checks",
+            "--ignore-scripts",
             "--registry",
             projection.npm.registry.as_str(),
         ];
@@ -159,94 +168,4 @@ impl Exact<'_, '_> {
         drift(&spec, &carried, &held)?;
         Ok(publication(projection.npm, projection.package))
     }
-}
-
-fn repack(bytes: &[u8], output: &Path, package: &str, version: &Version) -> Result<(), String> {
-    if current(bytes, package, version)? {
-        return std::fs::write(output, bytes)
-            .map_err(|error| format!("cannot create {}: {error}", output.display()));
-    }
-    let mut source = tar::Archive::new(GzDecoder::new(bytes));
-    let file = std::fs::File::create(output)
-        .map_err(|error| format!("cannot create {}: {error}", output.display()))?;
-    let encoder = GzBuilder::new()
-        .mtime(0)
-        .write(file, Compression::default());
-    let mut target = tar::Builder::new(encoder);
-    let mut manifest = false;
-    for entry in source
-        .entries()
-        .map_err(|error| format!("cannot read reusable module workload: {error}"))?
-    {
-        let mut entry =
-            entry.map_err(|error| format!("cannot read reusable module workload: {error}"))?;
-        let path = entry
-            .path()
-            .map_err(|error| format!("cannot read reusable module path: {error}"))?
-            .into_owned();
-        let mut body = Vec::new();
-        entry
-            .read_to_end(&mut body)
-            .map_err(|error| format!("cannot read reusable module entry: {error}"))?;
-        let mut header = entry.header().clone();
-        if path == Path::new("package/package.json") {
-            let mut document: serde_json::Value = serde_json::from_slice(&body)
-                .map_err(|error| format!("cannot parse reusable package manifest: {error}"))?;
-            if document.get("name").and_then(serde_json::Value::as_str) != Some(package) {
-                return Err(format!(
-                    "reusable workload does not carry package {package}"
-                ));
-            }
-            document["version"] = serde_json::Value::String(version.to_string());
-            body = serde_json::to_vec(&document)
-                .map_err(|error| format!("cannot encode reusable package manifest: {error}"))?;
-            header.set_size(body.len() as u64);
-            manifest = true;
-        }
-        header.set_mtime(0);
-        header.set_cksum();
-        target
-            .append(&header, body.as_slice())
-            .map_err(|error| format!("cannot write {}: {error}", output.display()))?;
-    }
-    if !manifest {
-        return Err("reusable workload carries no package/package.json".into());
-    }
-    target
-        .into_inner()
-        .and_then(flate2::write::GzEncoder::finish)
-        .map_err(|error| format!("cannot finish {}: {error}", output.display()))?;
-    Ok(())
-}
-
-fn current(bytes: &[u8], package: &str, version: &Version) -> Result<bool, String> {
-    let mut source = tar::Archive::new(GzDecoder::new(bytes));
-    for entry in source
-        .entries()
-        .map_err(|error| format!("cannot read reusable module workload: {error}"))?
-    {
-        let mut entry =
-            entry.map_err(|error| format!("cannot read reusable module workload: {error}"))?;
-        if entry
-            .path()
-            .map_err(|error| format!("cannot read reusable module path: {error}"))?
-            != Path::new("package/package.json")
-        {
-            continue;
-        }
-        let mut body = Vec::new();
-        entry
-            .read_to_end(&mut body)
-            .map_err(|error| format!("cannot read reusable module entry: {error}"))?;
-        let document: serde_json::Value = serde_json::from_slice(&body)
-            .map_err(|error| format!("cannot parse reusable package manifest: {error}"))?;
-        if document.get("name").and_then(serde_json::Value::as_str) != Some(package) {
-            return Err(format!(
-                "reusable workload does not carry package {package}"
-            ));
-        }
-        return Ok(document.get("version").and_then(serde_json::Value::as_str)
-            == Some(version.to_string().as_str()));
-    }
-    Ok(false)
 }

@@ -64,6 +64,8 @@ enum Command {
         write: Vec<String>,
         #[arg(long, hide = true, conflicts_with_all = ["base", "head", "write"])]
         attach: Option<PathBuf>,
+        #[command(flatten)]
+        candidate: command::depot::candidate::Selection,
         #[arg(long)]
         json: bool,
     },
@@ -161,11 +163,6 @@ enum Command {
         #[command(flatten)]
         deed: command::retire::Deed,
     },
-    #[command(about = "Ask and record what the canonical workflow may skip")]
-    Workflow {
-        #[command(subcommand)]
-        deed: command::workflow::Deed,
-    },
 }
 impl Command {
     fn name(&self) -> &'static str {
@@ -188,7 +185,6 @@ impl Command {
             Self::Ship { .. } => "ship",
             Self::Version { .. } => "version",
             Self::Retire { .. } => "retire",
-            Self::Workflow { .. } => "workflow",
         }
     }
 }
@@ -220,6 +216,7 @@ fn execute(command: Command) -> i32 {
             write,
             attach,
             json,
+            candidate: _,
         } => command::precommit::run(command::precommit::Input {
             root: PathBuf::from(target.root),
             base,
@@ -260,7 +257,6 @@ fn execute(command: Command) -> i32 {
         Command::Ship { deed } => command::ship::run(deed),
         Command::Version { deed } => command::version::run(deed),
         Command::Retire { deed } => command::retire::run(deed),
-        Command::Workflow { deed } => command::workflow::run(deed),
     }
 }
 fn main() {

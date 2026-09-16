@@ -29,96 +29,17 @@ fn policy() {
 
 #[test]
 fn recovery() {
-    let held = text(".forgejo/scripts/bootstrap-plumb.sh");
-    let windows = text(".forgejo/scripts/bootstrap-plumb.ps1");
-    let installed = held
-        .find("cp \"$target/debug/plumb\" \"$bin/plumb\"")
-        .unwrap();
-    for configured in held
-        .match_indices("  install_configuration")
-        .map(|(at, _)| at)
-    {
-        assert!(
-            installed < configured,
-            "only the exact atom may install configuration"
-        );
-    }
-    assert_eq!(held.matches("  install_configuration").count(), 2);
-    assert!(held.contains("if \"$tool\" configuration --help >/dev/null 2>&1"));
-    assert!(windows.contains("& $tool configuration --help *> $null"));
-
-    let handoff = held
-        .find("if [ -z \"$source\" ] && [ -n \"$handoff\" ]")
-        .unwrap();
-    let manager = held
-        .find("manager=\"$RUNNER_TEMP/manage-plumb.sh\"")
-        .unwrap();
-    assert!(
-        handoff < manager,
-        "an exact handoff must bypass stable bootstrap"
-    );
-    for recovery in [
-        "stable Plumb is unavailable; cold-building the exact atom",
-        "workflow plan --help",
-        "confirmed exact Plumb atom visibility",
-    ] {
-        assert!(held.contains(recovery), "Unix bootstrap omits {recovery}");
-        assert!(
-            windows.contains(recovery),
-            "Windows bootstrap omits {recovery}"
-        );
-    }
-    assert!(held.contains("[ -x \"$tool\" ]"));
-    assert!(windows.contains("if (Test-Path $tool)"));
-    assert!(windows.contains("catch {\n      $managerInstalled = $false"));
-
-    for binding in [
-        "PLUMB_BUILD_VERSION is required",
-        "PLUMB_BUILD_COMMIT is required",
-        "plumb-atom-$PLUMB_BUILD_COMMIT",
-        "PLUMB_BUILD_SOURCE=1 CARGO_PROFILE_DEV_DEBUG=0 CARGO_TARGET_DIR=\"$target\"",
-        "--world 'debuginfo=0'",
-        "--root 'ship/atom=*'",
-        "--workload \"commit=$PLUMB_BUILD_COMMIT\"",
-        "workflow record ship/atom",
-        "PLUMB_ATOM_SOURCE",
-        "PLUMB_ATOM_HANDOFF",
-        "jq -r '.type'",
-        "inventory_base=${inventory_base%/inventory.json}",
-        "--retry 30",
-        "v1/channels/stable.json",
-        "PLUMB_HOME=\"$RUNNER_TEMP/plumb-home-$configuration\"",
-        "install_configuration \"$PLUMB_HOME/configurations\"",
-    ] {
-        assert!(
-            held.contains(binding),
-            "Unix atom bootstrap omits {binding}"
-        );
-    }
-    for binding in [
-        "PLUMB_BUILD_VERSION",
-        "PLUMB_BUILD_COMMIT",
-        "plumb-atom-$env:PLUMB_BUILD_COMMIT",
-        "$env:CARGO_TARGET_DIR = $target",
-        "$env:PLUMB_BUILD_SOURCE = '1'",
-        "$env:CARGO_PROFILE_DEV_DEBUG = '0'",
-        "--world 'debuginfo=0'",
-        "--root 'ship/atom=*'",
-        "--workload \"commit=$env:PLUMB_BUILD_COMMIT\"",
-        "PLUMB_ATOM_SOURCE",
-        "PLUMB_ATOM_HANDOFF",
-        "ConvertFrom-Json",
-        "-replace '/inventory\\.json$', ''",
-        "$env:PLUMB_HOME = Join-Path $env:RUNNER_TEMP",
-        "Join-Path $env:PLUMB_HOME 'configurations'",
-    ] {
-        assert!(
-            windows.contains(binding),
-            "Windows atom bootstrap omits {binding}"
-        );
-    }
-    assert!(!held.contains("PLUMB_RELEASE_"));
-    assert!(!windows.contains("PLUMB_RELEASE_"));
+    let held = text(".forgejo/scripts/lib/runner.py");
+    assert!(held.contains("receipt.exists()"));
+    assert!(held.contains("result = decode(receipt.read_bytes())"));
+    assert!(held.contains("self.retain(receipt, result)"));
+    let completion = text(".forgejo/scripts/lib/inventory.py");
+    assert!(completion.contains("action key has conflicting completion evidence"));
+    assert!(completion.contains("held = self.store.read(route)"));
+    let controller = text(".forgejo/scripts/controller.py");
+    assert!(controller.contains("CARGO_PROFILE_DEV_DEBUG=\"0\""));
+    assert!(controller.contains("PLUMB_BUILD_SOURCE=\"1\""));
+    assert!(!controller.contains("workflow plan"));
 }
 
 #[test]
@@ -127,18 +48,12 @@ fn versioned() {
     let support =
         std::fs::read_to_string(root.join("crates/cli/src/command/ship/transport/support.rs"))
             .expect("Plumb owns ship artifact contracts");
-    assert!(support.contains("\"ship/cargo\" => Contract::Version"));
-    assert!(support.contains("\"ship/oci\" => Contract::Portable"));
-    assert!(
-        support.contains("action == \"ship/cargo\""),
-        "only package workloads embed their projected version"
-    );
     let execution =
-        std::fs::read_to_string(root.join("crates/cli/src/command/ship/transport/execute.rs"))
+        std::fs::read_to_string(root.join("crates/cli/src/command/ship/request/execute.rs"))
             .expect("Plumb owns ship request execution");
     for image in ["false", "true"] {
         assert!(execution.contains(&format!(
-            "materialize(&artifacts, &workloads, governance.marker(), {image})"
+            "materialize(&artifacts, workloads, marker, {image})"
         )));
     }
     assert!(!execution.contains("if release.channel == \"stable\""));
@@ -164,25 +79,11 @@ fn versioned() {
     assert!(!workflow.contains("PLUMB_PUBLISH_BUCKET:"));
     assert!(support.contains("!held.bucket.is_empty() && held.bucket != bucket"));
     assert!(support.contains("derived.bucket = bucket"));
-    let resolver = text("crates/cli/src/command/ship/transport/resolve.rs")
-        + &text("crates/cli/src/command/ship/resolve/workloads.rs");
-    assert!(!resolver.contains("workload: Some(&marker.version)"));
-    assert!(!resolver.contains("workload: Some(&marker.commit)"));
-    assert!(resolver.contains("workload: Some(base)"));
-    assert!(resolver.contains("release: Some(base)"));
-    assert_eq!(
-        resolver
-            .matches("workload: Some(self.marker.base())")
-            .count(),
-        1
-    );
-    assert!(resolver.contains("then_some(self.marker.base())"));
+    let declaration = text("crates/cli/src/command/ship/request/declaration.rs");
+    assert!(declaration.contains("self.implementation(\"produce\")?"));
+    assert!(declaration.contains("\"content\": {\"node\": producer"));
     let execution = text("crates/cli/src/command/ship/transport/production.rs");
-    assert!(
-        execution.contains("channel::base(&marker.version)"),
-        "binary execution must derive its reusable version instead of trusting the plan"
-    );
-    assert!(execution.contains("channel: \"stable\""));
+    assert!(!execution.contains("channel: \"stable\""));
 
     let bootstrap = text("crates/cli/src/command/guard/precommit/configuration.rs");
     assert!(
@@ -196,11 +97,15 @@ fn versioned() {
     let validation = text("crates/cli/src/command/release/truth/depot.rs");
     assert!(validation.contains(".env_remove(\"PLUMB_HOME\")"));
     assert!(validation.contains(".env(\"PLUMB_GUARD_DEPOT\", &seat)"));
+    let public = text("crates/cli/src/command/release/truth/verify.rs");
+    assert!(public.contains("\"--max-time\""));
+    assert!(public.contains("\"--retry-max-time\""));
 
     let configuration = text("crates/cli/src/command/depot/configuration.rs");
     assert!(configuration.contains("release.validator(&marker.version, true)"));
     assert!(!configuration.contains("release.validator(&marker.marker, true)"));
-    assert!(configuration.contains("validate_depot(spec, &binding, &plan, recovery)"));
+    assert!(configuration.contains("crate::command::release::validate_depot("));
+    assert!(configuration.contains("request.recovery.as_deref()"));
 }
 
 #[test]

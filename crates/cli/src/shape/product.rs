@@ -9,8 +9,11 @@ const DOMAIN: &str = "git.perish.top";
 const FACTORY: &str = "schema = \"plumb.products/v1\"\n";
 const MIGRATIONS: &str = "schema = \"plumb.migrations/v1\"\n";
 
+#[path = "repository/product/candidate.rs"]
+mod candidate;
 #[path = "repository/product/catalog.rs"]
 mod catalog;
+pub use candidate::resolve as candidate;
 
 pub fn names() -> Result<Vec<String>, String> {
     catalog::names(&crate::command::depot::held())

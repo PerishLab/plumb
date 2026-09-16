@@ -5,10 +5,12 @@ use super::{Object, Seat, anchored, v2, v3};
 pub mod exact;
 pub use exact::Selection;
 
+#[derive(Clone)]
 pub struct Rules {
     held: Source,
 }
 
+#[derive(Clone)]
 enum Source {
     Guard {
         base: PathBuf,
@@ -36,11 +38,14 @@ enum Width {
 
 static RULES: LazyLock<Result<Rules, String>> = LazyLock::new(Rules::open);
 static GUARD: OnceLock<Rules> = OnceLock::new();
+pub(super) use exact::{candidate, selected};
 
 pub(super) fn held() -> Result<&'static Rules, String> {
     match GUARD.get() {
         Some(rules) => Ok(rules),
-        None => RULES.as_ref().map_err(Clone::clone),
+        None => selected()
+            .map(Ok)
+            .unwrap_or_else(|| RULES.as_ref().map_err(Clone::clone)),
     }
 }
 

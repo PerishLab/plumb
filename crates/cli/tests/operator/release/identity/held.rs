@@ -5,102 +5,68 @@ use serde_json::Value;
 use std::os::unix::fs::PermissionsExt as _;
 use std::process::Command;
 
-pub(super) fn bound(command: &impl Fn() -> Command, graph: &Value, store: &crate::support::Bucket) {
-    use sha2::{Digest, Sha256};
-    let output = run(command().args(["release", "verify", "--marker", "v1.2.0-beta.1", "--held"]));
-    let output = String::from_utf8(output.stdout).unwrap();
-    let marker = output
-        .rsplit_once('(')
-        .unwrap()
-        .1
-        .trim()
-        .trim_end_matches(')');
-    let key = format!(
-        "{:x}",
-        Sha256::digest(serde_json::to_vec(&(marker, "oci://registry.test/owner/probe")).unwrap())
-    );
-    let request = graph["publication"]["include"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|row| &row["request"])
-        .find(|request| request["action"] == "ship/oci")
-        .unwrap();
-    let source = format!(
-        "https://registry.test/v2/owner/probe/manifests/sha256:{}",
-        "a".repeat(64)
-    );
-    let mut record = serde_json::json!({
-        "action": "ship/oci", "workload": "0".repeat(64), "proof": "0".repeat(64),
-        "publication": "0".repeat(64), "binding": key,
-        "source": { "type": "url", "source": source },
-    });
-    let route = format!("records/binding/{key}.json");
-    store.seed(&route, &serde_json::to_vec(&record).unwrap());
-    let resolved = run(command().args([
-        "ship",
-        "resolve",
-        "--marker",
-        "v1.2.0-beta.1",
-        "--atom",
-        &"b".repeat(40),
-    ]));
-    let resolved: Value = serde_json::from_slice(&resolved.stdout).unwrap();
-    let rows = resolved["publication"]["include"].as_array().unwrap();
-    assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0]["request"]["action"], "ship/cargo");
-    let cargo = graph["publication"]["include"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|row| &row["request"])
-        .find(|request| request["action"] == "ship/cargo")
-        .unwrap();
-    let inventory = serde_json::json!({
-        "schema": "plumb.workflow-inventory/v1",
-        "records": [{
-            "action": "ship/cargo", "workload": cargo["keys"]["workload"],
-            "proof": cargo["keys"]["proof"], "publication": cargo["keys"]["publication"],
-            "source": { "type": "url", "source": "https://registry.test/probe" },
-        }],
-    });
-    std::fs::write(
+pub(super) fn bound(command: &impl Fn() -> Command, graph: &Value) {
+    let root = command().get_current_dir().unwrap().to_path_buf();
+    let path = root.join("releases/v1/releases/beta/v1.2.0-beta.1/ship.json");
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let valid = completion(graph);
+    let stable = || {
         command()
-            .get_current_dir()
-            .unwrap()
-            .join("depot/inventory.json"),
-        inventory.to_string(),
-    )
-    .unwrap();
-    let stable = run(command().args([
-        "ship",
-        "resolve",
-        "--marker",
-        "v1.2.0",
-        "--atom",
-        &"a".repeat(40),
-    ]));
-    super::dry::settlement(command, &serde_json::from_slice(&stable.stdout).unwrap());
-    let execute = || {
-        command()
-            .args(["ship", "execute", "--request", &request.to_string()])
-            .env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1")
+            .args([
+                "ship",
+                "resolve",
+                "--marker",
+                "v1.2.0",
+                "--atom",
+                &"a".repeat(40),
+            ])
             .output()
             .unwrap()
     };
-    let output = execute();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let returned: Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(returned["result"]["source"], source);
-    record["source"]["source"] = serde_json::json!("https://registry.test/wrong-resource");
-    store.seed(&route, &serde_json::to_vec(&record).unwrap());
-    let refused = execute();
-    assert!(!refused.status.success());
-    assert!(String::from_utf8_lossy(&refused.stderr).contains("different resource"));
+    for field in ["marker", "contract", "resources"] {
+        let mut wrong = valid.clone();
+        wrong[field] = if field == "resources" {
+            serde_json::json!({})
+        } else {
+            serde_json::json!("0".repeat(64))
+        };
+        std::fs::write(&path, wrong.to_string()).unwrap();
+        let refused = stable();
+        assert!(!refused.status.success());
+        assert!(
+            String::from_utf8_lossy(&refused.stderr).contains("Ship completion"),
+            "{refused:?}"
+        );
+    }
+    std::fs::write(&path, valid.to_string()).unwrap();
+    let resolved = stable();
+    assert!(resolved.status.success(), "{resolved:?}");
+    let graph: Value = serde_json::from_slice(&resolved.stdout).unwrap();
+    super::dry::settlement(command, &graph);
+}
+
+pub(super) fn completion(graph: &Value) -> Value {
+    let node = graph["nodes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|node| node["id"] == "ship/complete")
+        .unwrap();
+    let marker = &node["inputs"]["identity"];
+    let names = node["execution"]["payload"]["operation"]["resources"]
+        .as_object()
+        .unwrap()
+        .keys()
+        .cloned()
+        .collect::<Vec<_>>();
+    let contract =
+        serde_json::json!({"schema":"plumb.ship-contract/v1","marker":marker,"resources":names});
+    let resources = names.iter().map(|name| (name.clone(), serde_json::json!({
+        "source":format!("https://releases.new.perish.uk/proofs/{}.json", "a".repeat(64)),
+        "digest":"a".repeat(64),
+    }))).collect::<serde_json::Map<_,_>>();
+    serde_json::json!({"schema":"plumb.ship-completion/v1","marker":marker,
+        "contract":plumb::depot::sha(&serde_json::to_vec(&contract).unwrap()),"resources":resources})
 }
 
 #[test]

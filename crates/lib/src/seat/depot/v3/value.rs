@@ -7,7 +7,9 @@ impl Value<'_> {
         let secure = self.0.starts_with("https://") && self.0.len() > "https://".len();
         let loopback = ["http://127.0.0.1:", "http://localhost:"]
             .iter()
-            .any(|prefix| self.0.starts_with(prefix) && self.0.len() > prefix.len());
+            .filter_map(|prefix| self.0.strip_prefix(prefix))
+            .filter_map(|rest| rest.split('/').next())
+            .any(|port| port.parse::<u16>().is_ok_and(|port| port != 0));
         if (!secure && !loopback)
             || self.0.ends_with('/')
             || self.0.chars().any(char::is_whitespace)

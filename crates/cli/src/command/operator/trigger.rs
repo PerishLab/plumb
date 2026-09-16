@@ -20,6 +20,8 @@ pub fn run(options: Dispatch) -> Result<String, String> {
     let before = super::super::release::marker(&options.marker)?;
     before.spec().ship()?;
     let digest = before.digest()?;
+    let declaration = serde_json::to_string(&super::super::ship::declaration(&before)?)
+        .map_err(|error| error.to_string())?;
     let configuration = plumb::depot::rules()?
         .version()
         .unwrap_or(plumb::version!("PLUMB"))
@@ -44,6 +46,7 @@ pub fn run(options: Dispatch) -> Result<String, String> {
                 "marker": before.marker,
                 "plumb": plumb::version!("PLUMB"),
                 "repository": format!("{}/{}", product.owner, product.repo),
+                "declaration": declaration,
             }),
             waiting: options.watch,
         },

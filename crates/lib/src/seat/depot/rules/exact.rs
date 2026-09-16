@@ -1,6 +1,23 @@
 use super::{Object, Rules, Source};
 use crate::depot::v3;
 use std::path::Path;
+use std::sync::OnceLock;
+
+static CANDIDATE: OnceLock<Rules> = OnceLock::new();
+
+pub(in super::super) fn selected() -> Option<&'static Rules> {
+    CANDIDATE.get()
+}
+
+pub(in super::super) fn candidate(root: &Path, marker: &str) -> Result<(), String> {
+    let rules = Rules::at(root, marker)?;
+    for object in rules.objects() {
+        rules.read(&object.path)?;
+    }
+    CANDIDATE
+        .set(rules)
+        .map_err(|_| "candidate rules were already selected".into())
+}
 
 pub struct Selection<'a> {
     pub source: &'a str,

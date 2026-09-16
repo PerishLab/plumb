@@ -1,4 +1,5 @@
 mod authority;
+pub(crate) mod candidate;
 mod configuration;
 mod knowledge;
 mod product;
@@ -74,21 +75,7 @@ pub fn held() -> Held {
 #[derive(Subcommand)]
 pub enum Deed {
     #[command(about = "Publish a configuration generation after marker-exact validation")]
-    Configuration {
-        #[arg(default_value = ".")]
-        root: String,
-        #[arg(long)]
-        marker: String,
-        #[arg(long)]
-        from: String,
-        #[arg(
-            long,
-            help = "Use one exact local replacement for the selected released validator"
-        )]
-        recovery_validator: Option<PathBuf>,
-        #[arg(long = "dry-run")]
-        dry: bool,
-    },
+    Configuration(configuration::Request),
     #[command(about = "Move one channel pointer onto the immutable release named by a marker")]
     Channel {
         #[arg(long)]
@@ -150,18 +137,7 @@ fn execute(deed: Deed) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let over = PathBuf::new();
     match deed {
-        Deed::Configuration {
-            root,
-            marker,
-            from,
-            recovery_validator,
-            dry,
-        } => configuration::Tree(&PathBuf::from(root)).publish(
-            &marker,
-            &from,
-            recovery_validator.as_deref(),
-            dry,
-        ),
+        Deed::Configuration(request) => request.run(),
         Deed::Channel { marker } => projection::project(&marker, projection::Kind::Channel),
         Deed::Managers { marker } => projection::project(&marker, projection::Kind::Managers),
         Deed::Worker { marker, request } => projection::worker(&marker, &request),

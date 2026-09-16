@@ -1,31 +1,20 @@
 use std::process::Command;
 
-pub(super) struct Generation<'a> {
-    pub bundle: &'a plumb::depot::v3::Bundle,
-    pub base: &'a str,
-    pub key: &'a str,
-    pub manifest: &'a [u8],
-    pub pointer: &'a plumb::depot::v3::Pointer,
-}
-
-pub(super) fn generation(proof: Generation<'_>) -> Result<(), String> {
-    let source = proof
-        .pointer
-        .manifest
-        .url
-        .strip_suffix(&format!("/{}/{}", proof.base, plumb::depot::v3::LEAF))
-        .ok_or_else(|| "depot pointer manifest URL does not bind its source".to_string())?;
-    for (path, bytes) in &proof.bundle.bodies {
-        public(&format!("{source}/{}/objects/{path}", proof.base), bytes)?;
+pub(super) fn immutable(
+    bundle: &plumb::depot::v3::Bundle,
+    source: &str,
+    base: &str,
+) -> Result<(), String> {
+    for (path, bytes) in &bundle.bodies {
+        public(&format!("{source}/{base}/objects/{path}"), bytes)?;
     }
     public(
-        &format!("{source}/{}/{}", proof.base, plumb::depot::v3::LEAF),
-        proof.manifest,
-    )?;
-    public(&format!("{source}/{}", proof.key), &proof.pointer.encode()?)
+        &format!("{source}/{base}/{}", plumb::depot::v3::LEAF),
+        &bundle.manifest.encode()?,
+    )
 }
 
-fn public(url: &str, expected: &[u8]) -> Result<(), String> {
+pub(super) fn public(url: &str, expected: &[u8]) -> Result<(), String> {
     let output = Command::new("curl")
         .args([
             "--fail",

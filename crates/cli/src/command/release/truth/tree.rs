@@ -33,6 +33,31 @@ impl Seat {
     pub fn path(&self) -> &Path {
         self.staged.path()
     }
+
+    pub fn govern(&self, plan: &crate::shape::depot::Batch) -> Result<(), String> {
+        let target = crate::shape::product::candidate(self.path(), plan)?;
+        let Some(profile) = target.profile else {
+            return Ok(());
+        };
+        for (name, content) in [
+            ("plumb.toml", profile.manifest),
+            ("ectropy.toml", profile.ectropy),
+        ] {
+            let path = self.path().join(name);
+            match std::fs::symlink_metadata(&path) {
+                Ok(held) if !held.is_file() => {
+                    return Err(format!("candidate governance requires a regular {name}"));
+                }
+                Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
+                    return Err(format!("cannot inspect candidate {name}: {error}"));
+                }
+                _ => {}
+            }
+            std::fs::write(&path, content)
+                .map_err(|error| format!("cannot project candidate {name}: {error}"))?;
+        }
+        Ok(())
+    }
 }
 
 impl Drop for Seat {

@@ -69,6 +69,7 @@ impl Product<'_> {
         let binaries = workspace.build(
             self.spec,
             crate::command::release::workspace::Build {
+                root: &self.spec.root,
                 triple: &target.triple,
                 version: input.version,
                 commit: input.commit,

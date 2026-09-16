@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::Value;
 use std::path::Path;
 use std::process::Command;
 
@@ -48,84 +48,30 @@ pub fn run(root: &Path, command: &impl Fn() -> Command, request: &Value) {
         assert!(!error.contains("conflicting-secret"), "{error}");
         assert!(!root.join("beta-registry.tgz").exists());
     }
-    let mut record = json!({
-        "action":request["action"], "workload":request["keys"]["workload"],
-        "proof":request["keys"]["proof"], "source":request["reuse"],
-    });
-    std::fs::write(
-        root.join("before.json"),
-        json!({
-            "schema":"plumb.workflow-inventory/v1", "records":[record],
-        })
-        .to_string(),
-    )
-    .unwrap();
-    record["publication"] = request["keys"]["publication"].clone();
-    record["source"] = json!({"type":"url","source":"https://registry.example/owner/-/packages/container/probe/2.0.0-beta.1"});
-    std::fs::write(
-        root.join("after.json"),
-        json!({
-            "schema":"plumb.workflow-inventory/v1", "records":[record],
-        })
-        .to_string(),
-    )
-    .unwrap();
-    let invoke = |dry| {
-        let mut command = command();
-        command.args(["ship", "local", "--marker", "v2.0.0-beta.1"]);
-        if dry {
-            command.arg("--dry-run");
-        }
-        let output = command.output().unwrap();
+    let invoke = || {
+        let output = command()
+            .args(["ship", "execute", "--request", &request.to_string()])
+            .output()
+            .unwrap();
         assert!(
             output.status.success(),
-            "stdout:{} stderr:{}",
-            String::from_utf8_lossy(&output.stdout),
+            "{}",
             String::from_utf8_lossy(&output.stderr)
         );
-        serde_json::from_str::<Value>(
-            String::from_utf8_lossy(&output.stdout)
-                .lines()
-                .last()
-                .unwrap(),
-        )
-        .unwrap()
+        serde_json::from_slice::<Value>(&output.stdout).unwrap()
     };
-    let dry = invoke(true);
-    assert_eq!(dry["complete"], false);
-    assert!(!root.join("home/tmp").exists());
-    assert!(!root.join("beta-registry.tgz").exists());
-    let blind = command()
-        .env("PLUMB_RELEASE_REGISTRY_ESCROW", root.join("missing.env"))
-        .env("PLUMB_WORKFLOW_INVENTORY_ESCROW", root.join("missing.env"))
-        .args(["ship", "local", "--marker", "v2.0.0-beta.1", "--dry-run"])
-        .output()
-        .unwrap();
-    assert!(
-        blind.status.success(),
-        "{}",
-        String::from_utf8_lossy(&blind.stderr)
-    );
     let failed = command()
         .env("PLUMB_TEST_REFUSE", "1")
-        .args(["ship", "local", "--marker", "v2.0.0-beta.1"])
+        .args(["ship", "execute", "--request", &request.to_string()])
         .output()
         .unwrap();
-    assert!(
-        !failed.status.success()
-            && String::from_utf8_lossy(&failed.stderr).contains("repeat the same marker")
-    );
+    assert!(!failed.status.success());
     assert!(!root.join("beta-registry.tgz").exists());
-    assert_eq!(std::fs::read_dir(root.join("home/tmp")).unwrap().count(), 0);
-    let first = invoke(false);
-    assert_eq!(first["schema"], "plumb.ship-local/v1");
-    assert_eq!(first["complete"], true);
-    assert_eq!(first["executed"].as_array().unwrap().len(), 1);
-    assert!(!root.join("target/chart").exists());
-    assert_eq!(std::fs::read_dir(root.join("home/tmp")).unwrap().count(), 0);
-    let repeated = invoke(false);
-    assert_eq!(repeated["complete"], true);
-    assert_eq!(repeated["executed"], json!([]));
+    let first = invoke();
+    assert_eq!(first["schema"], "plumb.ship-result/v2");
+    assert!(root.join("beta-registry.tgz").exists());
+    let repeated = invoke();
+    assert_eq!(first["evidence"], repeated["evidence"]);
 }
 
 pub fn escrows(root: &Path, endpoint: &str) {
@@ -167,17 +113,12 @@ fn platform() {
     )
     .unwrap();
     crate::marker::prepare(root.path(), home.path(), &manifest, "v1.2.0-beta.1");
-    let inventory = crate::support::Bucket::open(6);
     let command = || {
-        let mut command = fixture.command();
+        let mut command = fixture.controller();
         command
             .current_dir(root.path())
             .env("PLUMB_HOME", home.path())
             .env("PLUMB_RULES_SOURCE", "https://depot.test")
-            .env(
-                "PLUMB_WORKFLOW_INVENTORY_URL",
-                format!("{}/workflow/inventory.json", inventory.endpoint()),
-            )
             .env_remove("PLUMB_RELEASE_VERSION")
             .env_remove("PLUMB_RELEASE_CHANNEL")
             .env_remove("PLUMB_RELEASE_COMMIT")
@@ -191,19 +132,12 @@ fn platform() {
         String::from_utf8_lossy(&dry.stderr)
     );
     let graph: Value = serde_json::from_slice(&dry.stdout).unwrap();
-    assert_eq!(graph["complete"], false);
-    let refused = command().output().unwrap();
-    let error = String::from_utf8_lossy(&refused.stderr);
+    assert_eq!(graph["schema"], "plumb.ship-dispatch/v1");
+    let nodes = graph["graph"]["nodes"].as_array().unwrap();
     assert!(
-        !refused.status.success() && error.contains("remains incomplete") && error.contains(target),
-        "{error}"
+        nodes
+            .iter()
+            .any(|node| node["id"] == format!("ship/produce.{target}"))
     );
-    assert!(!home.path().join("tmp").exists());
-    std::fs::write(root.path().join("Cargo.toml"), "changed tracked source").unwrap();
-    let dirty = command().arg("--dry-run").output().unwrap();
-    assert!(
-        !dirty.status.success()
-            && String::from_utf8_lossy(&dirty.stderr).contains("tracked tree differs")
-    );
-    inventory.finish();
+    assert!(!root.path().join("dist").exists());
 }

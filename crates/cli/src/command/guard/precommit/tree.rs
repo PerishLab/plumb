@@ -227,7 +227,7 @@ pub(super) fn execute(
     }
 }
 
-pub(super) fn git(root: &Path, args: &[&str], action: &str) -> Result<String, String> {
+pub(crate) fn git(root: &Path, args: &[&str], action: &str) -> Result<String, String> {
     let output = plumb::config::detached("git")
         .arg("-C")
         .arg(root)

@@ -14,7 +14,7 @@ const HELPER: &str = "[package]\nname = \"helper\"\nversion = \"9.9.9\"\nedition
 const CARGO: &str = r#"#!/bin/sh
 set -eu
 if [ "$1" = metadata ]; then printf '%s\n' "{\"packages\":[{\"name\":\"family-core\",\"version\":\"0.10.2\",\"manifest_path\":\"$PWD/crates/core/Cargo.toml\",\"targets\":[]},{\"name\":\"family-macro\",\"version\":\"0.10.2\",\"manifest_path\":\"$PWD/crates/macro/Cargo.toml\",\"targets\":[]},{\"name\":\"helper\",\"version\":\"9.9.9\",\"manifest_path\":\"$PWD/crates/helper/Cargo.toml\",\"targets\":[]}],\"target_directory\":\"$PWD/target\"}"; exit 0; fi
-printf '%s\n' "$*" >> cargo-calls
+printf '%s\n' "$*" >> "$FAKE_CARGO_ROOT/cargo-calls"
 [ "$(grep -c 'version = \"=0.10.2-beta.1\"' Cargo.toml)" -eq 3 ] && [ "$(grep -c 'version = \"=0.10.2-beta.1\"' crates/core/Cargo.toml)" -eq 4 ] && [ "$(grep -c 'version = \"=0.10.2-beta.1\"' crates/macro/Cargo.toml)" -eq 3 ] || { printf '%s\n' 'error: failed to select a version for requirement =0.10.2; candidate 0.10.2-beta.1 did not match' >&2; exit 101; }
 grep -F 'version = "0.10.2-beta.1"' Cargo.toml >/dev/null && grep -F 'version = "0.10.2-beta.1"' crates/macro/Cargo.toml >/dev/null
 grep -F 'helper = { path = "crates/helper", version = "=0.10.2-beta.1" }' Cargo.toml >/dev/null && grep -F 'registry-core = { package = "family-core", version = "=0.10.2", registry = "perish" }' Cargo.toml >/dev/null && grep -F 'helper = { path = "../helper", version = "=0.10.2-beta.1" }' crates/core/Cargo.toml >/dev/null && grep -F 'version = "0.10.2-beta.1"' crates/helper/Cargo.toml >/dev/null
@@ -29,7 +29,11 @@ mkdir -p "target/package/$name-0.10.2-beta.1"
 printf 'version = "0.10.2-beta.1"\n' > "target/package/$name-0.10.2-beta.1/Cargo.toml"
 archive="target/package/$name-0.10.2-beta.1.crate"
 if [ ! -f "$archive" ]; then tar -czf "$archive" -C target/package "$name-0.10.2-beta.1"; fi
-if [ "$1" = publish ]; then touch "published-$name"; fi
+if [ "$1" = publish ]; then
+  mkdir -p "$FAKE_CARGO_ROOT/target/package"
+  if [ "$PWD" != "$FAKE_CARGO_ROOT" ]; then cp "$archive" "$FAKE_CARGO_ROOT/$archive"; fi
+  touch "$FAKE_CARGO_ROOT/published-$name"
+fi
 "#;
 #[test]
 fn cargo() {
@@ -167,13 +171,11 @@ fn settled() {
     );
     let exact = |package: &str, reuse: &str| {
         let request = serde_json::json!({
-            "schema":"plumb.ship-request/v2", "configuration":binding["configuration"], "profile":binding["profile"],
-            "action":"ship/npm.held", "projections":["packages/held/package.json#/version"], "roots":["packages/held"],
+            "schema":"plumb.ship-request/v3", "marker":"v1.2.0-beta.1", "configuration":binding["configuration"], "profile":binding["profile"],
+            "action":"ship/npm.held",
             "operation":{"type":"npm","package":package},
             "reuse":serde_json::from_str::<serde_json::Value>(reuse).unwrap(),
-            "keys":{"workload":"1".repeat(64),"proof":"2".repeat(64),"publication":"3".repeat(64)},
         });
-        let request = crate::marker::planned(root, home.path(), request, "v1.2.0-beta.1");
         std::process::Command::new(env!("CARGO_BIN_EXE_plumb"))
             .current_dir(root)
             .env("PLUMB_HOME", home.path())
@@ -198,6 +200,6 @@ fn settled() {
     assert!(
         !published.status.success()
             && String::from_utf8_lossy(&published.stderr)
-                .contains("held publication URL must skip the module action")
+                .contains("publication requires its declared production workload")
     );
 }

@@ -25,6 +25,32 @@ pub struct Receipt {
     pub environment: String,
     pub tools: BTreeMap<String, Tool>,
     pub observations: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<Source>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Source {
+    pub commit: String,
+    pub tree: String,
+}
+
+impl Source {
+    pub fn verify(&self) -> Result<(), String> {
+        for value in [&self.commit, &self.tree] {
+            if value.len() != 40
+                || !value
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+            {
+                return Err(
+                    "source provenance requires exact Git commit and tree identities".into(),
+                );
+            }
+        }
+        Ok(())
+    }
 }
 
 pub struct Producer {
@@ -110,10 +136,14 @@ impl Production {
             environment: execution.imprint()?,
             tools: execution.tools()?,
             observations,
+            source: None,
         })
     }
 
     pub fn verify(&self, receipt: &Receipt) -> Result<(), String> {
+        if let Some(source) = &receipt.source {
+            source.verify()?;
+        }
         if receipt.schema != "plumb.production-receipt/v1"
             || receipt.contract != self.digest()?
             || receipt.platform != self.platform

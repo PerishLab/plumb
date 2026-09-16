@@ -37,6 +37,7 @@ impl Governance {
         }
         self.checkout()?;
         for (name, actual, expected) in [
+            ("version", &release.version, &self.marker.version),
             ("channel", &release.channel, &self.marker.channel),
             ("commit", &release.commit, &self.marker.commit),
         ] {
@@ -75,6 +76,20 @@ impl Governance {
     }
 
     pub fn request(&self, request: &Value) -> Result<(), String> {
+        if request["operation"]["type"] == "package" {
+            let action = request["action"]
+                .as_str()
+                .and_then(|value| value.strip_prefix("ship/produce."))
+                .ok_or("package production has no declared Ship action")?;
+            if !matches!(
+                request["operation"]["operation"]["type"].as_str(),
+                Some("cargo" | "npm" | "chart" | "cfworker")
+            ) {
+                return Err("package production requires one supported medium".into());
+            }
+            return self.request(&json!({"action": format!("ship/{action}"),
+                "operation": request["operation"]["operation"]}));
+        }
         let mut operation = request["operation"].clone();
         operation
             .as_object_mut()
@@ -86,7 +101,8 @@ impl Governance {
             .remove("build");
         let spec = self.spec();
         let expected = match operation["type"].as_str() {
-            Some("bind" | "publication") if spec.binary() => binary(spec, &operation)?,
+            Some("complete") => json!({"action": "ship/complete"}),
+            Some("produce" | "bind" | "publication") if spec.binary() => binary(spec, &operation)?,
             _ => {
                 let surface: Value =
                     serde_json::from_str(&crate::command::release::plan::surface(spec)?)
@@ -100,89 +116,10 @@ impl Governance {
                     .ok_or("operation is not a declared marker-bound Ship request")?
             }
         };
-        for field in ["action", "roots", "projections"] {
-            if request[field] != expected[field] {
-                return Err(format!("ship request {field} differs from its marker plan"));
-            }
-        }
-        let stage = if operation["type"] == "bind" {
-            "identity/v1"
-        } else {
-            ""
-        };
-        let node = self.planned(&expected, stage)?;
-        if stage == "identity/v1" {
-            let build = &request["operation"]["build"];
-            let content = self.planned(&expected, "content/v1")?;
-            if build["keys"] != content["keys"] || build["production"] != content["production"] {
-                return Err("ship build differs from its marker content plan".into());
-            }
-        }
-        if request["keys"] != node["keys"] {
-            return Err("ship request keys differ from its marker plan".into());
-        }
-        if request["production"] != node["production"] {
-            return Err("ship request production differs from its marker plan".into());
+        if request["action"] != expected["action"] {
+            return Err("ship request action differs from its marker contract".into());
         }
         Ok(())
-    }
-
-    fn planned(&self, request: &Value, stage: &str) -> Result<Value, String> {
-        use super::support::{Contract, Plan, contract, embedded, strings, text};
-        let action = text(request, "action")?;
-        let binary = action.starts_with("ship/binary");
-        let workload = request["operation"]["type"] == "bind";
-        let target = if workload {
-            Some(self.spec().target(text(&request["operation"], "target")?)?)
-        } else {
-            None
-        };
-        let runner = target.map_or("docker", |held| held.runner.as_str());
-        let contract = if action == "ship/oci" && self.spec().binary() {
-            Contract::Exact
-        } else {
-            contract(action)
-        };
-        let release = if workload {
-            Some(if stage == "content/v1" {
-                self.marker.base()
-            } else {
-                self.marker.marker.as_str()
-            })
-        } else {
-            (binary || contract != Contract::Portable).then_some(self.marker.version.as_str())
-        };
-        let target = if workload {
-            Some(text(&request["operation"], "target")?)
-        } else {
-            (binary || contract == Contract::Exact).then_some(self.marker.commit.as_str())
-        };
-        super::resolve::planned(
-            &super::resolve::World {
-                evidence: false,
-                marker: &self.marker,
-                binding: Binding::new(self.spec()),
-                inventory: None,
-                source: None,
-                root: &self.spec().root,
-            },
-            Plan {
-                stage,
-                action,
-                projections: &strings(request, "projections")?,
-                roots: &strings(request, "roots")?,
-                runner,
-                workload: if workload {
-                    release
-                } else if action == "ship/oci" && self.spec().binary() {
-                    Some(self.marker.marker.as_str())
-                } else {
-                    (binary || embedded(action)).then_some(self.marker.base())
-                },
-                release,
-                target,
-            },
-        )
     }
 }
 
@@ -200,27 +137,6 @@ impl<'a> Binding<'a> {
         }
     }
 
-    pub fn apply(&self, mut request: Value) -> Value {
-        if let Some(configuration) = self.configuration {
-            request["configuration"] = json!(configuration);
-        }
-        if let Some(profile) = self.profile {
-            request["profile"] = json!(profile);
-        }
-        request
-    }
-
-    pub fn identity(&self, marker: &str) -> Vec<String> {
-        let mut held = vec![format!("marker={marker}")];
-        if let Some(configuration) = self.configuration {
-            held.push(format!("configuration={configuration}"));
-        }
-        if let Some(profile) = self.profile {
-            held.push(format!("profile={profile}"));
-        }
-        held
-    }
-
     pub fn verify(&self, configuration: Option<&str>, profile: Option<&str>) -> Result<(), String> {
         if configuration == self.configuration && profile == self.profile {
             Ok(())
@@ -231,14 +147,18 @@ impl<'a> Binding<'a> {
 }
 
 fn binary(spec: &Spec, operation: &Value) -> Result<Value, String> {
-    let action = if operation["type"] == "bind" {
+    let action = if matches!(operation["type"].as_str(), Some("produce" | "bind")) {
         let triple = operation["target"]
             .as_str()
             .ok_or("binary request has no target")?;
         if operation["archive"] != spec.target(triple)?.archive {
             return Err("binary request archive differs from its target".into());
         }
-        format!("ship/binary.{triple}")
+        if operation["type"] == "produce" {
+            format!("ship/produce.{triple}")
+        } else {
+            format!("ship/binary.{triple}")
+        }
     } else {
         "ship/binary".into()
     };

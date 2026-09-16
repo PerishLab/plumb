@@ -1,6 +1,5 @@
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -33,6 +32,17 @@ impl Source {
 }
 
 pub fn fetch(kind: &str, source: &str) -> Result<Vec<u8>, String> {
+    use sha2::{Digest, Sha256};
+    let expected = source
+        .split_once("/v2/blobs/sha256/")
+        .map(|(_, digest)| digest)
+        .filter(|digest| {
+            digest.len() == 64
+                && digest
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        })
+        .ok_or("reusable workload requires a content-addressed blob URL")?;
     let response = Command::new("curl")
         .args([
             "--fail-with-body",
@@ -46,6 +56,9 @@ pub fn fetch(kind: &str, source: &str) -> Result<Vec<u8>, String> {
         .output()
         .map_err(|error| format!("cannot fetch reusable {kind} workload {source}: {error}"))?;
     if response.status.success() {
+        if format!("{:x}", Sha256::digest(&response.stdout)) != expected {
+            return Err(format!("reusable {kind} workload digest mismatch"));
+        }
         Ok(response.stdout)
     } else {
         Err(format!("cannot fetch reusable {kind} workload {source}"))
@@ -100,16 +113,20 @@ pub fn cargo(
         return Err("PLUMB_RELEASE_REGISTRY_TOKEN is required".into());
     }
     let source = Source::parse(reuse)?;
-    if source.kind == "url" {
-        return Err("a held publication URL must skip the Cargo action".into());
+    if source.kind != "workload" {
+        return Err("Cargo publication requires its prepared source workload".into());
     }
-    carrier.stamp(version)?;
+    let seat = tempfile::Builder::new()
+        .prefix("cargo-publication-")
+        .tempdir()
+        .map_err(|error| error.to_string())?
+        .keep();
+    restore(&fetch("Cargo", &source.source)?, &seat)?;
+    let mut spec = carrier.spec.clone();
+    spec.root = seat;
+    let carrier = crate::command::ship::adaptor::registry::registry(&spec);
+    carrier.prepare(version)?;
     let identity = crate::command::release::workspace::release(version)?;
-    let carried = if source.kind == "workload" {
-        workload(&fetch("Cargo", &source.source)?)?
-    } else {
-        BTreeMap::new()
-    };
     let mut members = BTreeMap::new();
     for package in carrier.ordered(cargo)? {
         carrier.command(
@@ -128,11 +145,8 @@ pub fn cargo(
         crate::command::ship::adaptor::registry::inspect(&archive, package, &identity)?;
         let bytes = std::fs::read(&archive)
             .map_err(|error| format!("cannot read {}: {error}", archive.display()))?;
-        if source.kind == "workload" {
-            verify(package, &carried)?;
-        }
         publish(Publication {
-            carrier,
+            carrier: &carrier,
             cargo,
             package,
             identity: &identity,
@@ -143,9 +157,6 @@ pub fn cargo(
             PathBuf::from(format!("{package}-{identity}.crate")),
             crate::command::ship::archive::Member { bytes, mode: 0o644 },
         );
-    }
-    if source.kind == "workload" && carried.len() != members.len() {
-        return Err("reusable Cargo workload carries an unexpected crate set".into());
     }
     let seat = carrier.spec.root.join("target/cargo");
     std::fs::create_dir_all(&seat)
@@ -211,51 +222,31 @@ fn publish(input: Publication<'_, '_>) -> Result<(), String> {
     )
 }
 
-fn verify(package: &str, carried: &BTreeMap<String, Vec<u8>>) -> Result<(), String> {
-    let prefix = format!("{package}-");
-    let held = carried.keys().filter(|name| {
-        name.strip_prefix(&prefix)
-            .and_then(|held| held.strip_suffix(".crate"))
-            .is_some_and(|held| semver::Version::parse(held).is_ok())
-    });
-    if held.count() == 1 {
-        Ok(())
-    } else {
-        Err(format!(
-            "reusable Cargo workload carries no unique {package} crate"
-        ))
-    }
-}
-
-fn workload(bytes: &[u8]) -> Result<BTreeMap<String, Vec<u8>>, String> {
+fn restore(bytes: &[u8], root: &Path) -> Result<(), String> {
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(bytes));
-    let mut found = BTreeMap::new();
-    for entry in archive
-        .entries()
-        .map_err(|error| format!("cannot read reusable Cargo workload: {error}"))?
-    {
-        let mut entry =
-            entry.map_err(|error| format!("cannot read reusable Cargo workload: {error}"))?;
-        if !entry.header().entry_type().is_file() {
-            return Err("reusable Cargo workload carries a non-file entry".into());
-        }
+    let mut found = std::collections::BTreeSet::new();
+    for entry in archive.entries().map_err(|error| error.to_string())? {
+        let mut entry = entry.map_err(|error| error.to_string())?;
         let path = entry
             .path()
-            .map_err(|error| format!("cannot read reusable Cargo path: {error}"))?;
-        let name = path
-            .file_name()
-            .filter(|_| path.components().count() == 1)
-            .and_then(|name| name.to_str())
-            .filter(|name| name.ends_with(".crate"))
-            .ok_or_else(|| "reusable Cargo workload carries an invalid path".to_string())?
-            .to_string();
-        let mut body = Vec::new();
-        entry
-            .read_to_end(&mut body)
-            .map_err(|error| format!("cannot read reusable Cargo crate: {error}"))?;
-        if found.insert(name.clone(), body).is_some() {
-            return Err(format!("reusable Cargo workload repeats {name}"));
+            .map_err(|error| error.to_string())?
+            .into_owned();
+        if !entry.header().entry_type().is_file() || !relative(&path) || !found.insert(path.clone())
+        {
+            return Err("Cargo source workload has an invalid or repeated path".into());
+        }
+        if !entry.unpack_in(root).map_err(|error| error.to_string())? {
+            return Err("Cargo source workload escapes its materialization root".into());
         }
     }
-    Ok(found)
+    if !root.join("Cargo.toml").is_file() {
+        return Err("Cargo source workload has no native manifest".into());
+    }
+    Ok(())
+}
+
+fn relative(path: &Path) -> bool {
+    path.components()
+        .all(|part| matches!(part, std::path::Component::Normal(_)))
+        && !path.components().any(|part| part.as_os_str() == ".git")
 }

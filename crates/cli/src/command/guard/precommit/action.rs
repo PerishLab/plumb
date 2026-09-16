@@ -1,7 +1,7 @@
 use super::super::workflow::tree::Tree;
 use super::tree::{self, Index};
 use plumb::guard::{Action, Descriptor};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 struct Check {
     proof: Action,
@@ -44,19 +44,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
     let manifest = captured.text("plumb.toml")?;
     let product = crate::shape::product::guard(root, manifest.as_deref())?;
     let target = super::configuration::target(&captured, &product)?;
-    let mismatched = match target.as_deref() {
-        Some(target) => {
-            let root = plumb::depot::root(&PathBuf::new())?;
-            plumb::depot::Rules::at(&root, plumb::version!("PLUMB"))
-                .ok()
-                .and_then(|held| held.version().map(str::to_string))
-                .as_deref()
-                .map(|released| plumb::depot::related(target, released))
-                .transpose()?
-                != Some(true)
-        }
-        None => false,
-    };
+    let mismatched = super::configuration::mismatched(target.as_deref())?;
     let index = Index::new(root, &tree)?;
     let configuration = mismatched
         .then(|| {
@@ -173,6 +161,15 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         tree,
         checks.into_iter().map(|check| check.proof).collect(),
     )?;
+    let proof = match configuration
+        .as_ref()
+        .map(|held| held.evidence())
+        .transpose()?
+        .flatten()
+    {
+        Some(evidence) => proof.bootstrap(evidence)?,
+        None => proof,
+    };
     plumb::guard::stage(root, &proof)?;
     Ok(proof)
 }

@@ -13,6 +13,16 @@ pub struct Seat<'a> {
 }
 
 impl Seat<'_> {
+    pub(in crate::command::ship) fn produce(&self, commit: &str) -> Result<PathBuf, String> {
+        let app = App::read(self.root)?;
+        let marks = super::artifact::Marks {
+            commit: commit.into(),
+            version: self.version.into(),
+        };
+        self.build(&app, &marks)?;
+        bundle(&app)
+    }
+
     pub fn exact(&self, reuse: &str) -> Result<String, String> {
         let held = self
             .spec
@@ -24,7 +34,7 @@ impl Seat<'_> {
         previews(&site, &app.worker)?;
         let source = crate::command::ship::package::project::Source::parse(reuse)?;
         match source.kind.as_str() {
-            "none" => self.build(&app)?,
+            "none" => self.build(&app, &super::artifact::marks(&app)?)?,
             "workload" => restore(
                 &app,
                 &crate::command::ship::package::project::fetch("worker", &source.source)?,
@@ -80,8 +90,7 @@ impl Seat<'_> {
         Ok(Publication { id: version, url })
     }
 
-    fn build(&self, app: &App) -> Result<(), String> {
-        let marks = super::artifact::marks(app)?;
+    fn build(&self, app: &App, marks: &super::artifact::Marks) -> Result<(), String> {
         super::process::run(Call {
             bin: "pnpm",
             args: &["--filter", &app.package, "build"],

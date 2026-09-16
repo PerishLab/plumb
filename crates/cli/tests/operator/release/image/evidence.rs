@@ -27,57 +27,24 @@ pub(crate) fn identity(
     ]));
     let current: Value = serde_json::from_slice(&output.stdout).unwrap();
     let image = |graph: &Value| {
-        graph["publication"]["include"]
+        graph["nodes"]
             .as_array()
             .unwrap()
             .iter()
-            .map(|row| &row["request"])
-            .find(|request| request["action"] == "ship/oci")
+            .find(|node| node["id"] == "ship/oci")
             .unwrap()
             .clone()
     };
     let prior = image(graph);
     let current = image(&current);
-    for field in ["workload", "proof"] {
-        assert_eq!(prior["keys"][field], current["keys"][field], "{field}");
+    for field in ["source", "implementation", "production"] {
+        assert_eq!(prior["inputs"][field], current["inputs"][field], "{field}");
     }
-    assert_eq!(prior["production"], current["production"]);
-    assert_ne!(prior["keys"]["publication"], current["keys"]["publication"]);
-    let held = receipt(&prior);
-    let mut record = json!({
-        "action":"ship/oci", "workload":prior["keys"]["workload"],
-        "proof":prior["keys"]["proof"],
-        "receipt":held, "source":{"type":"workload",
-            "source":format!("https://inventory.test/workloads/{}.tgz", "a".repeat(64))},
-    });
-    std::fs::create_dir_all(fixture.root.join("depot")).unwrap();
-    for kind in ["workload", "none"] {
-        std::fs::write(
-            fixture.root.join("depot/inventory.json"),
-            json!({
-                "schema":"plumb.workflow-inventory/v1", "records":[record],
-            })
-            .to_string(),
-        )
-        .unwrap();
-        let output = super::super::world::run(command().args([
-            "ship",
-            "resolve",
-            "--marker",
-            "v1.2.0-beta.2",
-            "--atom",
-            &"a".repeat(40),
-        ]));
-        let graph: Value = serde_json::from_slice(&output.stdout).unwrap();
-        let request = image(&graph);
-        assert_eq!(request["reuse"]["type"], kind);
-        assert_eq!(request["receipt"].is_null(), kind == "none");
-        assert_eq!(
-            request["operation"]["workloads"].is_null(),
-            kind == "workload"
-        );
-        record["proof"] = json!("0".repeat(64));
-    }
+    assert_ne!(prior["inputs"]["identity"], current["inputs"]["identity"]);
+    assert_eq!(
+        prior["execution"]["payload"]["production"],
+        current["execution"]["payload"]["production"]
+    );
     super::super::world::run(Command::new("git").arg("-C").arg(fixture.root).args([
         "tag",
         "-d",
@@ -86,19 +53,21 @@ pub(crate) fn identity(
 }
 
 pub(crate) fn refuses(fixture: &Fixture<'_>, command: &impl Fn() -> Command, graph: &Value) {
-    let mut request = graph["publication"]["include"]
+    let mut request = graph["nodes"]
         .as_array()
         .unwrap()
         .iter()
-        .map(|row| &row["request"])
+        .map(|row| &row["execution"]["payload"])
         .find(|request| request["action"] == "ship/oci")
         .unwrap()
         .clone();
-    request["reuse"] = json!({"type":"workload","source":"https://inventory.test/reused.tgz"});
+    let archive = fixture.root.join("held.tar");
+    std::fs::write(&archive, "wrong archive").unwrap();
+    request["reuse"] = json!({"type":"workload","source":format!("https://inventory.test/v2/blobs/sha256/{}", plumb::depot::sha(b"wrong archive"))});
     let original = std::fs::read_to_string(fixture.tools.join("curl")).unwrap();
     let curl = original.replace(
         "case \"$url\" in",
-        "case \"$url\" in\n  https://inventory.test/reused.tgz) printf 'wrong archive'; exit 0 ;;",
+        "case \"$url\" in\n  https://inventory.test/v2/blobs/sha256/*) cat \"$FAKE_S3_ROOT/held.tar\"; exit 0 ;;",
     );
     std::fs::write(fixture.tools.join("curl"), curl).unwrap();
     for program in ["docker", "regctl"] {
@@ -129,15 +98,14 @@ pub(crate) fn refuses(fixture: &Fixture<'_>, command: &impl Fn() -> Command, gra
         );
         assert!(!error.contains("unexpected-tool"), "{error}");
     }
-    let archive = fixture.root.join("held.tar");
     super::container::archive(&archive, 1);
     let mut receipt = held;
     receipt["artifact"] = json!(plumb::depot::sha(&std::fs::read(&archive).unwrap()));
+    request["reuse"]["source"] = json!(format!(
+        "https://inventory.test/v2/blobs/sha256/{}",
+        receipt["artifact"].as_str().unwrap()
+    ));
     request["receipt"] = receipt;
-    std::fs::write(fixture.tools.join("curl"), original.replace(
-        "case \"$url\" in",
-        "case \"$url\" in\n  https://inventory.test/reused.tgz) cat \"$FAKE_S3_ROOT/held.tar\"; exit 0 ;;",
-    )).unwrap();
     let scenario = fixture.root.join("scenario");
     let calls = fixture.root.join("calls");
     std::fs::write(&scenario, "login").unwrap();

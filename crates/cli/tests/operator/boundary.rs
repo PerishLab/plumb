@@ -4,11 +4,9 @@ use std::process::Command;
 
 fn request() -> Value {
     json!({
-        "schema":"plumb.ship-request/v2", "action":"ship/chart",
-        "projections":["charts/probe/Chart.yaml#/version","charts/probe/Chart.yaml#/appVersion"],
-        "roots":["charts/probe"], "operation":{"type":"chart"},
+        "schema":"plumb.ship-request/v3", "marker":"v1.2.0-beta.1",
+        "action":"ship/chart", "operation":{"type":"chart"},
         "configuration":"a".repeat(64), "profile":"b".repeat(64),
-        "keys":{"workload":"1".repeat(64),"proof":"2".repeat(64),"publication":"3".repeat(64)},
     })
 }
 
@@ -47,12 +45,12 @@ fn required() {
         json!({"type":"chart"}),
         json!({"type":"npm","package":"probe"}),
         json!({"type":"oci"}),
-        json!({"type":"bind","target":"target","archive":"archive","build":{"reuse":{"type":"none","source":""},"keys":{},"production":"a".repeat(64),"receipt":null}}),
+        json!({"type":"bind","target":"target","archive":"archive","build":{"reuse":{"type":"none","source":""},"production":"a".repeat(64),"receipt":null}}),
         json!({"type":"publication","workloads":[]}),
     ] {
         let mut original = request();
         original["operation"] = operation;
-        for field in ["configuration", "profile", "keys"] {
+        for field in ["configuration", "profile", "marker"] {
             let mut missing = original.clone();
             missing.as_object_mut().unwrap().remove(field);
             refused(
@@ -64,27 +62,18 @@ fn required() {
             refused(
                 &mut command(root.path(), home.path()),
                 &missing,
-                if field == "keys" {
-                    "inventory keys"
-                } else {
-                    "invalid type"
-                },
+                "invalid type",
             );
         }
-        for field in ["configuration", "profile"] {
-            let mut blank = original.clone();
-            blank[field] = json!("  ");
+        for field in ["keys", "roots", "projections"] {
+            let mut retired = original.clone();
+            retired[field] = json!({});
             refused(
                 &mut command(root.path(), home.path()),
-                &blank,
-                "marker-bound configuration",
+                &retired,
+                "unknown field",
             );
         }
-        refused(
-            &mut command(root.path(), home.path()),
-            &original,
-            "PLUMB_RELEASE_VERSION",
-        );
     }
 }
 
@@ -108,7 +97,6 @@ fn identity() {
     let mut request = request();
     request["configuration"] = binding["configuration"].clone();
     request["profile"] = binding["profile"].clone();
-    let request = crate::marker::planned(root.path(), home.path(), request, "v1.2.0-beta.1");
     let bound = || {
         let mut held = command(root.path(), home.path());
         held.env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.1");
@@ -119,19 +107,13 @@ fn identity() {
         drifted[field] = json!("0".repeat(64));
         refused(&mut bound(), &drifted, "differs from its governance");
     }
-    for field in ["action", "roots", "projections"] {
-        let mut drifted = request.clone();
-        drifted[field] = if field == "action" {
-            json!("ship/elsewhere")
-        } else {
-            json!(["elsewhere"])
-        };
-        refused(
-            &mut bound(),
-            &drifted,
-            &format!("{field} differs from its marker plan"),
-        );
-    }
+    let mut drifted = request.clone();
+    drifted["action"] = json!("ship/elsewhere");
+    refused(
+        &mut bound(),
+        &drifted,
+        "action differs from its marker contract",
+    );
     let mut drifted = request.clone();
     drifted["operation"] = json!({"type":"cargo"});
     refused(
@@ -139,29 +121,13 @@ fn identity() {
         &drifted,
         "not a declared marker-bound Ship request",
     );
-    for field in ["workload", "proof", "publication"] {
-        let mut drifted = request.clone();
-        drifted["keys"][field] = json!("invalid");
-        refused(&mut bound(), &drifted, "invalid hash");
-    }
-    let mut missing = request.clone();
-    for field in ["workload", "proof", "publication"] {
-        let mut drifted = request.clone();
-        drifted["keys"][field] = json!("0".repeat(64));
-        refused(&mut bound(), &drifted, "keys differ from its marker plan");
-    }
     let mut drifted = request.clone();
     drifted["production"] = json!("0".repeat(64));
     refused(
         &mut bound(),
         &drifted,
-        "production differs from its marker plan",
+        "production contract differs from its marker and implementation",
     );
-    missing["keys"]
-        .as_object_mut()
-        .unwrap()
-        .remove("publication");
-    refused(&mut bound(), &missing, "no publication key");
     let mut malformed = request.clone();
     malformed["reuse"] = json!({"type":"none","source":"https://unexpected.test"});
     refused(&mut bound(), &malformed, "source does not match its type");
@@ -183,7 +149,7 @@ fn identity() {
     refused(
         bound().env("PLUMB_RELEASE_VERSION", "v1.2.0-beta.99"),
         &request,
-        "v1.2.0-beta.99",
+        "version differs",
     );
     let chart = root.path().join("charts/probe/Chart.yaml");
     let original = std::fs::read(&chart).unwrap();

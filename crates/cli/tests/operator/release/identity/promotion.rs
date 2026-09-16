@@ -2,6 +2,34 @@ use super::super::world::Fixture;
 use std::path::Path;
 use std::process::Output;
 
+pub(super) fn seal(root: &Path, commit: &str) {
+    let version = "v1.2.0-beta.1";
+    let path = root
+        .join("releases/v1/releases/beta")
+        .join(version)
+        .join("seal.json");
+    std::fs::create_dir_all(path.parent().expect("seal parent")).expect("seal root");
+    let value = serde_json::json!({
+        "schema": 1,
+        "product": "probe",
+        "channel": "beta",
+        "releaseVersion": version,
+        "commit": commit,
+        "url": format!("https://releases.test/v1/releases/beta/{version}/seal.json"),
+        "generator": { "version": "v0.37.6", "template": "0" },
+        "artifacts": {},
+        "managers": {}
+    });
+    std::fs::write(
+        path,
+        format!(
+            "{}\n",
+            serde_json::to_string_pretty(&value).expect("seal json")
+        ),
+    )
+    .expect("seal");
+}
+
 fn promote(fixture: &Fixture<'_>, commit: &str, proof: &Path, artifacts: &Path) -> Output {
     fixture
         .command()

@@ -1,6 +1,5 @@
 use crate::catalog::set;
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::Path;
 
 pub struct Key {
     pub segments: Vec<String>,
@@ -13,24 +12,6 @@ const PLANES: [&str; 2] = ["guard", "ship"];
 impl Key {
     pub fn lane(&self) -> String {
         self.segments.first().cloned().unwrap_or_default()
-    }
-
-    pub fn output(&self) -> String {
-        self.segments
-            .iter()
-            .skip(1)
-            .cloned()
-            .collect::<Vec<_>>()
-            .join("_")
-            .chars()
-            .map(|held| {
-                if held.is_ascii_alphanumeric() {
-                    held
-                } else {
-                    '_'
-                }
-            })
-            .collect()
     }
 
     pub fn name(&self) -> String {
@@ -46,31 +27,6 @@ impl Key {
 pub struct Held {
     pub keys: Vec<Key>,
     pub refusal: Option<String>,
-}
-
-impl Held {
-    pub fn contribution(&self, root: &str) -> Vec<String> {
-        if let Some(name) = root.strip_prefix("key://") {
-            return self
-                .keys
-                .iter()
-                .find(|key| key.name() == name)
-                .map(|key| key.paths.clone())
-                .unwrap_or_default();
-        }
-        if let Some(name) = root.strip_prefix("suite://") {
-            return set::current().suites.get(name).cloned().unwrap_or_default();
-        }
-        vec![root.to_string()]
-    }
-}
-
-pub fn read(root: &Path) -> Held {
-    let path = root.join("plumb.toml");
-    let Ok(text) = std::fs::read_to_string(&path) else {
-        return Held::default();
-    };
-    parse(&text)
 }
 
 pub fn parse(text: &str) -> Held {

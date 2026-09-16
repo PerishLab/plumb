@@ -12,6 +12,9 @@ pub fn root(over: &Path) -> Result<PathBuf, String> {
 }
 
 pub fn held(over: &Path) -> Held {
+    if let Some(rules) = plumb::depot::selected() {
+        return Held::Seat(Box::new(rules.clone()));
+    }
     if plumb::config::value("PLUMB_HOME").is_none()
         && let Some(path) = plumb::config::value("PLUMB_GUARD_CONFIGURATION")
     {

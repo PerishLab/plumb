@@ -3,8 +3,17 @@ use std::path::Path;
 use std::process::Command;
 
 pub fn workload(command: &mut Command, archive: &Path, targets: usize) -> Value {
-    let graph = graph(command, "v1.2.0-beta.7", targets);
-    let request = &graph["workload"]["include"][0]["request"];
+    let graph = graph(command, "v1.2.0-beta.7");
+    assert_eq!(
+        graph["nodes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|node| node["execution"]["payload"]["operation"]["type"] == "bind")
+            .count(),
+        targets
+    );
+    let request = &node(&graph, "ship/binary.x86_64-unknown-linux-gnu")["execution"]["payload"];
     assert_eq!(request["operation"]["type"], "bind");
     let tools = json!({"cargo":{"path":"/fixture/cargo","digest":"c".repeat(64)}});
     json!({
@@ -23,13 +32,8 @@ pub fn workload(command: &mut Command, archive: &Path, targets: usize) -> Value 
     })
 }
 
-fn graph(command: &mut Command, marker: &str, targets: usize) -> Value {
-    let inventory = crate::support::Bucket::open(targets * 6);
+fn graph(command: &mut Command, marker: &str) -> Value {
     let output = command
-        .env(
-            "PLUMB_WORKFLOW_INVENTORY_URL",
-            format!("{}/workflow/inventory.json", inventory.endpoint()),
-        )
         .args([
             "ship",
             "resolve",
@@ -46,8 +50,25 @@ fn graph(command: &mut Command, marker: &str, targets: usize) -> Value {
         String::from_utf8_lossy(&output.stderr)
     );
     let graph: Value = serde_json::from_slice(&output.stdout).unwrap();
-    inventory.finish();
+    assert_eq!(graph["schema"], "plumb.blob-graph/v1");
+    for node in graph["nodes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|node| node["id"].as_str().unwrap().starts_with("prepare/"))
+    {
+        assert_eq!(node["execution"]["payload"]["commit"], "a".repeat(40));
+    }
     graph
+}
+
+fn node<'a>(graph: &'a Value, name: &str) -> &'a Value {
+    graph["nodes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|node| node["id"] == name)
+        .unwrap()
 }
 
 #[test]
@@ -103,25 +124,29 @@ fn binding() {
             .env_remove("PLUMB_RELEASE_COMMIT");
         held
     };
-    let first = graph(&mut command(), "v1.2.0-beta.7", 1);
-    let next = graph(&mut command(), "v1.2.0-beta.8", 1);
-    assert_eq!(first["publication_missing"], true);
-    assert_eq!(first["publication_ready"], false);
-    let first = &first["workload"]["include"][0]["request"];
-    let next = &next["workload"]["include"][0]["request"];
+    let first = graph(&mut command(), "v1.2.0-beta.7");
+    let next = graph(&mut command(), "v1.2.0-beta.8");
+    let produce = "ship/produce.x86_64-unknown-linux-gnu";
+    let bind = "ship/binary.x86_64-unknown-linux-gnu";
+    assert_eq!(
+        node(&first, produce)["inputs"],
+        node(&next, produce)["inputs"]
+    );
+    assert_ne!(
+        node(&first, bind)["inputs"]["identity"],
+        node(&next, bind)["inputs"]["identity"]
+    );
+    assert_eq!(
+        node(&first, bind)["inputs"]["content"],
+        node(&next, bind)["inputs"]["content"]
+    );
+    let first = &node(&first, bind)["execution"]["payload"];
     let content = &first["operation"]["build"];
-    for key in ["workload", "proof"] {
-        assert_eq!(
-            content["keys"][key], next["operation"]["build"]["keys"][key],
-            "unchanged code must keep {key}"
-        );
-        assert_ne!(
-            first["keys"][key], next["keys"][key],
-            "marker binding must change {key}"
-        );
-    }
     assert_ne!(content["production"], first["production"]);
-    for field in ["keys", "production"] {
+    for (field, expected) in [
+        ("keys", "unknown field"),
+        ("production", "reusable production contract differs"),
+    ] {
         let mut drift = first.clone();
         drift["operation"]["build"][field] = json!("wrong");
         let output = command()
@@ -131,7 +156,7 @@ fn binding() {
             .unwrap();
         assert!(!output.status.success());
         assert!(
-            String::from_utf8_lossy(&output.stderr).contains("ship build differs"),
+            String::from_utf8_lossy(&output.stderr).contains(expected),
             "{}",
             String::from_utf8_lossy(&output.stderr)
         );
@@ -234,12 +259,10 @@ fn partial() {
     std::fs::write(&artifact, "untrusted archive").unwrap();
     let workload = workload(&mut command(), &artifact, 2);
     let request = json!({
-        "schema":"plumb.ship-request/v2", "configuration":binding["configuration"], "profile":binding["profile"],
-        "action":"ship/binary", "roots":["Cargo.toml","plumb.toml"],
-        "projections":["Cargo.toml#/workspace/package/version"],
+        "schema":"plumb.ship-request/v3", "marker":"v1.2.0-beta.7", "configuration":binding["configuration"], "profile":binding["profile"],
+        "action":"ship/binary",
         "operation":{"type":"publication","workloads":[workload]},
     });
-    let request = crate::marker::planned(root.path(), home.path(), request, "v1.2.0-beta.7");
     let output = command()
         .args(["ship", "execute", "--request", &request.to_string()])
         .env("PLUMB_PUBLISH_ENDPOINT", "https://s3.test")

@@ -10,6 +10,12 @@ mod transport;
 
 pub(in crate::command) use transport::completed;
 
+pub(in crate::command) fn declaration(
+    marker: &super::release::ReleaseMarker,
+) -> Result<serde_json::Value, String> {
+    transport::dispatch(marker)
+}
+
 use super::release::{artifacts, capsule, manager, output, required, verify};
 use clap::Subcommand;
 use plumb::rig::Rig;
@@ -31,8 +37,12 @@ pub enum Deed {
     #[command(about = "Execute one closed request emitted by the ship plan")]
     #[command(hide = true)]
     Execute {
+        #[arg(long, conflicts_with = "file", required_unless_present = "file")]
+        request: Option<String>,
+        #[arg(long = "request-file", conflicts_with = "request")]
+        file: Option<std::path::PathBuf>,
         #[arg(long)]
-        request: String,
+        output: Option<std::path::PathBuf>,
     },
     #[command(about = "Resolve one marker into the exact ship execution graph")]
     #[command(hide = true)]
@@ -137,7 +147,11 @@ pub fn run(deed: Deed) -> i32 {
     let result = match deed {
         Deed::Local { marker, dry } => transport::local(&marker, dry),
         Deed::Dispatch { options } => super::operator::dispatch(options),
-        Deed::Execute { request } => transport::execute(&request),
+        Deed::Execute {
+            request,
+            file,
+            output,
+        } => execute(request, file, output),
         Deed::Resolve { marker, atom } => transport::resolve(&marker, &atom),
         Deed::Compile => carry(Carry::Compile),
         Deed::Plan => carry(Carry::Plan),
@@ -168,6 +182,25 @@ enum Carry {
     Plan,
     Promote,
     Surface,
+}
+
+fn execute(
+    request: Option<String>,
+    file: Option<std::path::PathBuf>,
+    output: Option<std::path::PathBuf>,
+) -> Result<String, String> {
+    let request = match (request, file) {
+        (Some(request), None) => request,
+        (None, Some(file)) => std::fs::read_to_string(file).map_err(|error| error.to_string())?,
+        _ => return Err("execute requires exactly one request source".into()),
+    };
+    let result = transport::execute(&request)?;
+    if let Some(path) = output {
+        std::fs::write(path, result).map_err(|error| error.to_string())?;
+        Ok("wrote Ship execution result".into())
+    } else {
+        Ok(result)
+    }
 }
 
 fn carry(deed: Carry) -> Result<String, String> {

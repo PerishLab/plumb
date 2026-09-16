@@ -3,6 +3,43 @@ use std::path::Path;
 use std::process::Command;
 
 #[allow(dead_code)]
+pub fn line(root: &Path, bare: &Path, version: &str) {
+    use std::os::unix::fs::PermissionsExt as _;
+    let home = tempfile::tempdir().unwrap().keep();
+    let manifest = format!(
+        "[[layout.file]]\nname=['Cargo.toml']\nrule=['rule://seat/compiler']\n{}",
+        std::fs::read_to_string(root.join("plumb.toml")).unwrap()
+    );
+    std::fs::write(root.join("plumb.toml"), &manifest).unwrap();
+    std::fs::write(
+        root.join("Cargo.toml"),
+        "[workspace]\n[workspace.package]\nversion='1.2.0'\n",
+    )
+    .unwrap();
+    let ssh = home.join("ssh");
+    std::fs::write(
+        &ssh,
+        format!("#!/bin/sh\nexec git-upload-pack '{}'\n", bare.display()),
+    )
+    .unwrap();
+    std::fs::set_permissions(&ssh, std::fs::Permissions::from_mode(0o755)).unwrap();
+    git(root, &["config", "core.sshCommand", ssh.to_str().unwrap()]);
+    git(root, &["config", "ssh.variant", "simple"]);
+    git(
+        root,
+        &[
+            "remote",
+            "set-url",
+            "--push",
+            "origin",
+            bare.to_str().unwrap(),
+        ],
+    );
+    prepare(root, &home, &manifest, version);
+    git(root, &["config", "plumb.test-home", home.to_str().unwrap()]);
+}
+
+#[allow(dead_code)]
 pub fn prepare(root: &Path, home: &Path, manifest: &str, version: &str) -> Value {
     let binding = configuration(home, manifest);
     let product = binding["product"].as_str().unwrap();
@@ -67,7 +104,7 @@ pub fn prepare(root: &Path, home: &Path, manifest: &str, version: &str) -> Value
     binding
 }
 
-fn configuration(home: &Path, manifest: &str) -> Value {
+pub fn configuration(home: &Path, manifest: &str) -> Value {
     let source = tempfile::tempdir().unwrap();
     let document: toml::Value = toml::from_str(manifest).unwrap();
     let product = document["release"]["product"].as_str().unwrap();
@@ -80,11 +117,13 @@ fn configuration(home: &Path, manifest: &str) -> Value {
         "schema='plumb.products/v2'\n[[product]]\nidentity='git.perish.top/PerishFire/{product}'\nprofile='{digest}'\n"
     );
     let address = format!("profiles/{digest}.toml");
+    let workflow = workflow(product);
     crate::support::stock(
         &source.path().join("configurations"),
         &[
             ("rules/products.toml", &catalog),
             (&address, &profile),
+            ("rules/workflow.toml", &workflow),
             (
                 "rules/seat.toml",
                 "[member]\n[[member.entry]]\nname='compiler'\n[[member.entry.probe]]\nargv=['cargo','--version']\nstdout='fixture cargo'\n",
@@ -120,56 +159,20 @@ fn configuration(home: &Path, manifest: &str) -> Value {
 }
 
 #[allow(dead_code)]
-pub fn planned(root: &Path, home: &Path, mut request: Value, version: &str) -> Value {
-    let action = request["action"].as_str().unwrap();
-    let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
-    command
-        .current_dir(root)
-        .env("PLUMB_HOME", home)
-        .env("PLUMB_RULES_SOURCE", "https://depot.test")
-        .args(["workflow", "plan", "--world", "runner=docker"]);
-    for (field, flag) in [("roots", "--root"), ("projections", "--project")] {
-        for entry in request[field].as_array().unwrap() {
-            command.args([flag, &format!("{action}={}", entry.as_str().unwrap())]);
-        }
-    }
-    for field in ["configuration", "profile"] {
-        command.args([
-            "--identity",
-            &format!("{field}={}", request[field].as_str().unwrap()),
-        ]);
-    }
-    command.args(["--identity", &format!("marker={version}")]);
-    if matches!(action, "ship/binary" | "ship/cargo") {
-        command.args([
-            "--workload",
-            &format!("release={}", version.split('-').next().unwrap()),
-        ]);
-    }
-    if matches!(action, "ship/binary" | "ship/cargo" | "ship/cfworker") {
-        command.args(["--world", &format!("release={version}")]);
-    }
-    if matches!(action, "ship/binary" | "ship/cfworker") {
-        command.args([
-            "--world",
-            &format!("target={}", git(root, &["rev-parse", "HEAD"])),
-        ]);
-    }
-    let output = command.output().unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let graph: Value = serde_json::from_slice(&output.stdout).unwrap();
-    let node = graph["actions"]
-        .as_array()
+pub fn workflow(product: &str) -> String {
+    let mut workflow: toml::Value =
+        toml::from_str(&crate::support::policy("rules/workflow.toml")).unwrap();
+    let inputs: toml::Value = toml::from_str(
+        "[binary]\nsource='product'\npaths=['Cargo.toml','Cargo.lock','crates']\n['ship/cargo']\nsource='product'\npaths=['Cargo.toml','Cargo.lock','crates']\n['ship/chart']\nsource='product'\npaths=['charts']\n['ship/oci']\nsource='product'\npaths=['Containerfile']\n",
+    ).unwrap();
+    let table = workflow.as_table_mut().unwrap();
+    table
+        .entry("inputs")
+        .or_insert_with(|| toml::Value::Table(toml::Table::new()))
+        .as_table_mut()
         .unwrap()
-        .iter()
-        .find(|node| node["name"] == action)
-        .unwrap();
-    request["keys"] = node["keys"].clone();
-    request
+        .insert(product.into(), inputs);
+    toml::to_string(&workflow).unwrap()
 }
 
 fn proof(tree: &str, repository: &str) -> String {
@@ -202,6 +205,7 @@ fn proof(tree: &str, repository: &str) -> String {
     };
     let digest = plumb::depot::sha(&serde_json::to_vec(&claim).unwrap());
     plumb::guard::Descriptor {
+        bootstrap: None,
         schema: plumb::guard::SCHEMA.into(),
         repository: repository.into(),
         tree: tree.into(),
@@ -228,4 +232,42 @@ fn git(root: &Path, args: &[&str]) -> String {
         String::from_utf8_lossy(&output.stderr)
     );
     String::from_utf8(output.stdout).unwrap().trim().to_string()
+}
+#[allow(dead_code)]
+pub fn controller() -> &'static Path {
+    static HELD: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+    HELD.get_or_init(|| {
+        let source = env!("CARGO_BIN_EXE_plumb");
+        let original = std::fs::read(source).unwrap();
+        let binding = plumb::identity::Binding {
+            product: "plumb".into(),
+            marker: plumb::version!("PLUMB").into(),
+            digest: "2".repeat(64),
+            commit: "3".repeat(40),
+            workload: "4".repeat(64),
+        };
+        let bound = plumb::identity::bind(&original, &binding).unwrap();
+        let root = tempfile::Builder::new()
+            .prefix("plumb-test-controller-")
+            .tempdir()
+            .unwrap()
+            .keep();
+        let path = root.join("plumb");
+        std::fs::write(&path, bound).unwrap();
+        std::fs::set_permissions(&path, std::fs::metadata(source).unwrap().permissions()).unwrap();
+        if cfg!(target_os = "macos") {
+            assert!(
+                std::process::Command::new("codesign")
+                    .args(["--force", "--sign", "-"])
+                    .arg(&path)
+                    .status()
+                    .unwrap()
+                    .success()
+            );
+        }
+        let actual = std::fs::read(&path).unwrap();
+        assert_eq!(plumb::identity::inspect(&actual).unwrap().1, Some(binding));
+        assert_eq!(std::fs::read(source).unwrap(), original);
+        path
+    })
 }

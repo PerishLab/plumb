@@ -4,27 +4,34 @@ on:
   workflow_dispatch:
     inputs:
       configuration:
-        description: Exact Plumb configuration selected by the dispatcher
+        description: Exact controller configuration
+        required: true
+        type: string
+      declaration:
+        description: Locked marker-bound blob graph and finite backend
         required: true
         type: string
       marker:
-        description: Immutable release marker shared by every publication
+        description: Immutable marker shared by every publication
         required: true
         type: string
       plumb:
-        description: Exact Plumb atom version selected by the dispatcher
+        description: Exact dispatching Plumb identity
         required: true
         type: string
       repository:
-        description: Product repository identity selected by the dispatching Plumb
+        description: Product repository
         required: true
         type: string
+
 permissions:
   contents: read
 
 env:
-  PLUMB_BUILD_VERSION: ${{ inputs.plumb }}
-  PLUMB_BUILD_COMMIT: ${{ github.sha }}
+  PLUMB_BUILD_CONFIGURATION: ${{ inputs.configuration }}
+  PLUMB_RELEASE_ROOT: .
+  PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
+  PLUMB_SHIP_DECLARATION: ${{ inputs.declaration }}
   PLUMB_WORKFLOW_INVENTORY_ACCESS: ${{ secrets.WORKFLOW_INVENTORY_S3_ACCESS_KEY }}
   PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
   PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
@@ -41,145 +48,14 @@ jobs:
     container:
       image: git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73
     outputs:
-      atom_handoff: ${{ steps.plan.outputs.atom_handoff }}
-      channel: ${{ steps.plan.outputs.channel }}
-      commit: ${{ steps.plan.outputs.commit }}
-      version: ${{ steps.plan.outputs.version }}
-      workload: ${{ steps.plan.outputs.workload }}
-      workload_missing: ${{ steps.plan.outputs.workload_missing }}
-      publication: ${{ steps.plan.outputs.publication }}
-      publication_missing: ${{ steps.plan.outputs.publication_missing }}
-      publication_ready: ${{ steps.plan.outputs.publication_ready }}
-    env:
-      PLUMB_RELEASE_ROOT: .
-      PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-          repository: ${{ github.repository }}
-          ref: ${{ github.sha }}
-          path: .plumb-atom
-          token: ${{ github.token }}
-
-      - name: Check out the release marker
-        shell: bash
-        env:
-          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
-        run: |
-          set -eu
-          test -n "$PLUMB_RELEASE_MARKER"
-          remote="${{ github.server_url }}/${{ inputs.repository }}.git"
-          reference="refs/tags/$PLUMB_RELEASE_MARKER"
-          git init .
-          git remote add origin "$remote"
-          bash .plumb-atom/.forgejo/scripts/fetch-marker.sh "$PLUMB_RELEASE_MARKER"
-          git checkout --detach "$reference^{commit}"
-
-      - name: Install the exact atom Plumb
-        shell: bash
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact '${{ inputs.configuration }}'
-
-      - name: Resolve missing workloads
-        id: plan
-        shell: bash
-        run: bash .plumb-atom/.forgejo/scripts/resolve-ship.sh '${{ github.sha }}'
-
-  workload:
-    needs: resolve
-    if: needs.resolve.outputs.workload_missing == 'true'
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.resolve.outputs.workload) }}
-    runs-on: ${{ matrix.runner }}
-    container:
-      image: ${{ matrix.runner == 'linux' && 'git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73' || '' }}
-    env:
-      PLUMB_RELEASE_ROOT: .
-      PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
-      PLUMB_RELEASE_CHANNEL: ${{ needs.resolve.outputs.channel }}
-      PLUMB_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
-      PLUMB_RELEASE_COMMIT: ${{ needs.resolve.outputs.commit }}
-      PLUMB_RELEASE_ARTIFACTS: dist/${{ needs.resolve.outputs.version }}
-    steps:
-      - uses: actions/checkout@v6
-        if: matrix.control != 'reuse'
-        with:
-          persist-credentials: false
-          repository: ${{ inputs.repository }}
-          ref: ${{ needs.resolve.outputs.commit }}
-          token: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
-
-      - uses: actions/checkout@v6
-        if: matrix.control != 'reuse'
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-          repository: ${{ github.repository }}
-          ref: ${{ github.sha }}
-          path: .plumb-atom
-          token: ${{ github.token }}
-
-      - name: Install the exact atom Plumb
-        if: matrix.control != 'reuse' && runner.os != 'Windows'
-        shell: bash
-        env:
-          PLUMB_ATOM_HANDOFF: ${{ runner.os == 'Linux' && needs.resolve.outputs.atom_handoff || '' }}
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact '${{ inputs.configuration }}'
-
-      - name: Install the exact atom Plumb on Windows
-        if: matrix.control != 'reuse' && runner.os == 'Windows'
-        shell: pwsh
-        run: .plumb-atom/.forgejo/scripts/bootstrap-plumb.ps1 .plumb-atom exact '${{ inputs.configuration }}'
-
-      - name: Fetch the exact release marker
-        if: matrix.control != 'reuse' && runner.os != 'Windows'
-        shell: bash
-        env:
-          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
-        run: bash .plumb-atom/.forgejo/scripts/fetch-marker.sh "$PLUMB_RELEASE_MARKER"
-
-      - name: Fetch the exact release marker on Windows
-        if: matrix.control != 'reuse' && runner.os == 'Windows'
-        shell: pwsh
-        env:
-          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
-        run: .plumb-atom/.forgejo/scripts/fetch-marker.ps1 "$env:PLUMB_RELEASE_MARKER"
-
-      - name: Add the requested Rust target
-        if: matrix.control != 'reuse' && (matrix.request.operation.type != 'bind' || matrix.request.operation.build.reuse.type != 'workload')
-        run: rustup target add ${{ matrix.request.operation.target }}
-
-      - name: Execute one workload request
-        if: matrix.control != 'reuse' && runner.os != 'Windows'
-        shell: bash
-        env:
-          PLUMB_SHIP_REQUEST: ${{ toJSON(matrix.request) }}
-        run: bash .plumb-atom/.forgejo/scripts/execute-ship.sh
-
-      - name: Execute one workload request on Windows
-        if: matrix.control != 'reuse' && runner.os == 'Windows'
-        shell: pwsh
-        env:
-          PLUMB_SHIP_REQUEST: ${{ toJSON(matrix.request) }}
-        run: .plumb-atom/.forgejo/scripts/execute-ship.ps1
-
-  publish_plan:
-    needs: [resolve, workload]
-    if: always() && needs.resolve.result == 'success' && needs.resolve.outputs.publication_missing == 'true' && (needs.workload.result == 'success' || needs.workload.result == 'skipped')
-    runs-on: docker
-    container:
-      image: git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73
-    outputs:
-      channel: ${{ steps.plan.outputs.channel }}
-      commit: ${{ steps.plan.outputs.commit }}
-      version: ${{ steps.plan.outputs.version }}
-      publication: ${{ steps.plan.outputs.publication }}
-      publication_missing: ${{ steps.plan.outputs.publication_missing }}
-    env:
-      PLUMB_RELEASE_ROOT: .
-      PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
+      produce: ${{ steps.plan.outputs.produce }}
+      produce_needed: ${{ steps.plan.outputs.produce_needed }}
+      bind: ${{ steps.plan.outputs.bind }}
+      bind_needed: ${{ steps.plan.outputs.bind_needed }}
+      publish: ${{ steps.plan.outputs.publish }}
+      publish_needed: ${{ steps.plan.outputs.publish_needed }}
+      complete: ${{ steps.plan.outputs.complete }}
+      complete_needed: ${{ steps.plan.outputs.complete_needed }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -198,37 +74,121 @@ jobs:
           path: .plumb-atom
           token: ${{ github.token }}
 
-      - name: Install the exact atom Plumb
-        shell: bash
-        env:
-          PLUMB_ATOM_HANDOFF: ${{ needs.resolve.outputs.atom_handoff }}
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact '${{ inputs.configuration }}'
-
-      - name: Resolve missing publications
+      - name: Cold plan without Plumb
         id: plan
-        shell: bash
-        run: bash .plumb-atom/.forgejo/scripts/resolve-ship.sh '${{ github.sha }}' ready
+        run: python3 .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom
 
-  publication:
-    needs: [resolve, publish_plan]
-    if: always() && needs.resolve.result == 'success' && needs.publish_plan.result == 'success' && needs.publish_plan.outputs.publication_missing == 'true'
+  produce:
+    needs: [resolve]
+    if: always() && needs.resolve.result == 'success' && needs.resolve.outputs.produce_needed == 'true'
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.publish_plan.outputs.publication) }}
+      matrix: ${{ fromJSON(needs.resolve.outputs.produce) }}
     runs-on: ${{ matrix.runner }}
     container:
-      image: git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73
+      image: ${{ (matrix.runner == 'linux' || matrix.runner == 'docker') && 'git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73' || '' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.marker }}
+          token: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          path: .plumb-atom
+          token: ${{ github.token }}
+
+      - name: Fetch marker evidence
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+        run: bash .plumb-atom/.forgejo/scripts/fetch-marker.sh "$PLUMB_RELEASE_MARKER"
+
+      - name: Fetch marker evidence on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+        run: .plumb-atom/.forgejo/scripts/fetch-marker.ps1 "$env:PLUMB_RELEASE_MARKER"
+
+      - name: Execute only unresolved declared work
+        if: runner.os != 'Windows'
+        run: python3 .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job produce --node '${{ matrix.node }}' --execute
+
+      - name: Execute only unresolved declared work on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: python .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job produce --node '${{ matrix.node }}' --execute
+
+  bind:
+    needs: [resolve, produce]
+    if: always() && needs.resolve.result == 'success' && needs.resolve.outputs.bind_needed == 'true' && (needs.produce.result == 'success' || needs.produce.result == 'skipped')
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve.outputs.bind) }}
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ${{ (matrix.runner == 'linux' || matrix.runner == 'docker') && 'git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73' || '' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.marker }}
+          token: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          path: .plumb-atom
+          token: ${{ github.token }}
+
+      - name: Fetch marker evidence
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+        run: bash .plumb-atom/.forgejo/scripts/fetch-marker.sh "$PLUMB_RELEASE_MARKER"
+
+      - name: Fetch marker evidence on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+        run: .plumb-atom/.forgejo/scripts/fetch-marker.ps1 "$env:PLUMB_RELEASE_MARKER"
+
+      - name: Execute only unresolved declared work
+        if: runner.os != 'Windows'
+        run: python3 .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job bind --node '${{ matrix.node }}' --execute
+
+      - name: Execute only unresolved declared work on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: python .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job bind --node '${{ matrix.node }}' --execute
+
+  publish:
+    needs: [resolve, produce, bind]
+    if: always() && needs.resolve.result == 'success' && needs.resolve.outputs.publish_needed == 'true' && (needs.produce.result == 'success' || needs.produce.result == 'skipped') && (needs.bind.result == 'success' || needs.bind.result == 'skipped')
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve.outputs.publish) }}
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ${{ (matrix.runner == 'linux' || matrix.runner == 'docker') && 'git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73' || '' }}
     env:
       DOCKER_HOST: tcp://172.17.0.1:2375
-      PLUMB_RELEASE_ROOT: .
-      PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
-      PLUMB_RELEASE_CHANNEL: ${{ needs.publish_plan.outputs.channel }}
-      PLUMB_RELEASE_VERSION: ${{ needs.publish_plan.outputs.version }}
-      PLUMB_RELEASE_COMMIT: ${{ needs.publish_plan.outputs.commit }}
-      PLUMB_RELEASE_ARTIFACTS: dist/${{ needs.publish_plan.outputs.version }}
-      PLUMB_RELEASE_OUTPUT: .plumb-release/capsule
-      PLUMB_RELEASE_CAPSULE: .plumb-release/capsule/capsule.json
-      PLUMB_RELEASE_PROMOTION: .plumb-release/promotion.json
       PLUMB_RELEASE_TOOLCHAIN: git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73
       PLUMB_RELEASE_REGISTRY_TOKEN: ${{ secrets.RELEASE_REGISTRY_TOKEN }}
       PLUMB_SITE_TOKEN: ${{ secrets.PLUMB_SITE_TOKEN }}
@@ -238,16 +198,14 @@ jobs:
       PLUMB_PUBLISH_FINGERPRINT: ${{ secrets.SHIP_PUBLISH_FINGERPRINT }}
     steps:
       - uses: actions/checkout@v6
-        if: matrix.control != 'reuse'
         with:
           fetch-depth: 1
           persist-credentials: false
           repository: ${{ inputs.repository }}
-          ref: ${{ needs.publish_plan.outputs.commit }}
+          ref: ${{ inputs.marker }}
           token: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
 
       - uses: actions/checkout@v6
-        if: matrix.control != 'reuse'
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -256,23 +214,84 @@ jobs:
           path: .plumb-atom
           token: ${{ github.token }}
 
-      - name: Install the exact atom Plumb
-        if: matrix.control != 'reuse'
-        shell: bash
-        env:
-          PLUMB_ATOM_HANDOFF: ${{ needs.resolve.outputs.atom_handoff }}
-        run: bash .plumb-atom/.forgejo/scripts/bootstrap-plumb.sh .plumb-atom exact '${{ inputs.configuration }}'
-
-      - name: Fetch the exact release marker
-        if: matrix.control != 'reuse'
+      - name: Fetch marker evidence
+        if: runner.os != 'Windows'
         shell: bash
         env:
           PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
         run: bash .plumb-atom/.forgejo/scripts/fetch-marker.sh "$PLUMB_RELEASE_MARKER"
 
-      - name: Execute one publication request
-        if: matrix.control != 'reuse'
+      - name: Fetch marker evidence on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+        run: .plumb-atom/.forgejo/scripts/fetch-marker.ps1 "$env:PLUMB_RELEASE_MARKER"
+
+      - name: Execute only unresolved declared work
+        if: runner.os != 'Windows'
+        run: python3 .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job publish --node '${{ matrix.node }}' --execute
+
+      - name: Execute only unresolved declared work on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: python .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job publish --node '${{ matrix.node }}' --execute
+
+  complete:
+    needs: [resolve, produce, bind, publish]
+    if: always() && needs.resolve.result == 'success' && needs.resolve.outputs.complete_needed == 'true' && (needs.produce.result == 'success' || needs.produce.result == 'skipped') && (needs.bind.result == 'success' || needs.bind.result == 'skipped') && (needs.publish.result == 'success' || needs.publish.result == 'skipped')
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve.outputs.complete) }}
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ${{ (matrix.runner == 'linux' || matrix.runner == 'docker') && 'git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73' || '' }}
+    env:
+      DOCKER_HOST: tcp://172.17.0.1:2375
+      PLUMB_RELEASE_TOOLCHAIN: git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73
+      PLUMB_RELEASE_REGISTRY_TOKEN: ${{ secrets.RELEASE_REGISTRY_TOKEN }}
+      PLUMB_SITE_TOKEN: ${{ secrets.PLUMB_SITE_TOKEN }}
+      PLUMB_PUBLISH_ACCESS: ${{ secrets.SHIP_PUBLISH_S3_ACCESS_KEY }}
+      PLUMB_PUBLISH_SECRET: ${{ secrets.SHIP_PUBLISH_S3_SECRET_KEY }}
+      PLUMB_PUBLISH_ENDPOINT: ${{ secrets.SHIP_PUBLISH_S3_ENDPOINT }}
+      PLUMB_PUBLISH_FINGERPRINT: ${{ secrets.SHIP_PUBLISH_FINGERPRINT }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.marker }}
+          token: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+          path: .plumb-atom
+          token: ${{ github.token }}
+
+      - name: Fetch marker evidence
+        if: runner.os != 'Windows'
         shell: bash
         env:
-          PLUMB_SHIP_REQUEST: ${{ toJSON(matrix.request) }}
-        run: bash .plumb-atom/.forgejo/scripts/execute-ship.sh
+          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+        run: bash .plumb-atom/.forgejo/scripts/fetch-marker.sh "$PLUMB_RELEASE_MARKER"
+
+      - name: Fetch marker evidence on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          PLUMB_CHECKOUT_TOKEN: ${{ secrets.SHIP_FORGEJO_TOKEN || github.token }}
+        run: .plumb-atom/.forgejo/scripts/fetch-marker.ps1 "$env:PLUMB_RELEASE_MARKER"
+
+      - name: Execute only unresolved declared work
+        if: runner.os != 'Windows'
+        run: python3 .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job complete --node '${{ matrix.node }}' --execute
+
+      - name: Execute only unresolved declared work on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: python .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job complete --node '${{ matrix.node }}' --execute

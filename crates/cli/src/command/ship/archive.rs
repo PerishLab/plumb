@@ -10,6 +10,54 @@ pub(super) struct Member {
     pub mode: u32,
 }
 
+pub(super) fn tree(root: &Path, output: &Path) -> Result<(), String> {
+    let mut members = BTreeMap::new();
+    collect(root, root, &mut members)?;
+    bundle(output, &members)
+}
+
+fn collect(root: &Path, at: &Path, members: &mut BTreeMap<PathBuf, Member>) -> Result<(), String> {
+    for entry in std::fs::read_dir(at).map_err(|error| error.to_string())? {
+        let entry = entry.map_err(|error| error.to_string())?;
+        let path = entry.path();
+        let kind = entry.file_type().map_err(|error| error.to_string())?;
+        if kind.is_dir() {
+            collect(root, &path, members)?;
+        } else if kind.is_file() {
+            let name = path
+                .strip_prefix(root)
+                .map_err(|error| error.to_string())?
+                .to_path_buf();
+            let bytes = std::fs::read(&path).map_err(|error| error.to_string())?;
+            let metadata = entry.metadata().map_err(|error| error.to_string())?;
+            members.insert(
+                name,
+                Member {
+                    bytes,
+                    mode: mode(&metadata),
+                },
+            );
+        } else {
+            return Err(format!(
+                "source archive refuses special file {}",
+                path.display()
+            ));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn mode(metadata: &std::fs::Metadata) -> u32 {
+    use std::os::unix::fs::PermissionsExt;
+    metadata.permissions().mode() & 0o777
+}
+
+#[cfg(not(unix))]
+fn mode(_: &std::fs::Metadata) -> u32 {
+    0o644
+}
+
 pub fn write(
     format: Format,
     path: &Path,

@@ -3,7 +3,7 @@ use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-const COMMANDS: [&str; 19] = [
+const COMMANDS: [&str; 18] = [
     "authority",
     "doctor",
     "land",
@@ -22,7 +22,6 @@ const COMMANDS: [&str; 19] = [
     "ship",
     "version",
     "retire",
-    "workflow",
 ];
 
 fn root() -> PathBuf {
@@ -99,7 +98,7 @@ fn command() {
     capture(Vec::new(), &mut held);
     assert_eq!(
         digest(&held),
-        "61be3323dda520274566240897a46f6727ca6ddc2ccfb3a726649952ae2579ea"
+        "a60af752b50064d030a56f1a0d887d9a558906c5c66d2d58d1cb7a5df99ca32f"
     );
 }
 
@@ -150,6 +149,10 @@ fn doctor() {
 fn policy() {
     let root = root();
     let output = success(&["policy", root.to_str().expect("utf8 root")]);
-    let recorded = std::fs::read(root.join("ectropy.toml")).expect("recorded policy");
-    assert_eq!(output.stdout, recorded);
+    let recorded = std::fs::read_to_string(root.join("ectropy.toml"))
+        .expect("recorded policy")
+        .parse::<toml::Table>()
+        .expect("policy table");
+    let canonical = toml::to_string_pretty(&recorded).expect("canonical policy");
+    assert_eq!(String::from_utf8(output.stdout).unwrap(), canonical);
 }

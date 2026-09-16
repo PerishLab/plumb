@@ -2,29 +2,6 @@ use crate::command::release::ReleaseMarker;
 use plumb::rule::{Production, Receipt};
 use sha2::{Digest, Sha256};
 
-pub(super) fn reuse(action: &str, node: &mut serde_json::Value) {
-    if action == "ship/oci" && node["receipt"].is_null() && node["reuse"]["type"] == "workload" {
-        node["reuse"] = serde_json::json!({ "type": "none", "source": "" });
-    }
-}
-
-pub(super) fn plan(
-    input: crate::command::workflow::plan::Input,
-    marker: &ReleaseMarker,
-    action: &str,
-    target: Option<&str>,
-) -> Result<String, String> {
-    if action.starts_with("ship/binary.") {
-        let contract = contract(marker, target.ok_or("binary plan has no target")?)?;
-        crate::command::workflow::plan::production(input, action, &contract)
-    } else if action == "ship/oci" {
-        let contract = super::super::package::production::contract(marker)?;
-        crate::command::workflow::plan::production(input, action, &contract)
-    } else {
-        crate::command::workflow::plan::derive(input, Some(action))
-    }
-}
-
 pub(in crate::command::ship) fn contract(
     marker: &ReleaseMarker,
     triple: &str,
@@ -87,27 +64,51 @@ pub(in crate::command::ship) fn produce(
     marker: &ReleaseMarker,
     triple: &str,
     artifacts: &std::path::Path,
+    input: &std::path::Path,
 ) -> Result<Receipt, String> {
     let contract = contract(marker, triple)?;
     let spec = marker.spec();
+    let input = input.canonicalize().map_err(|error| error.to_string())?;
+    if !input.is_dir()
+        || input.join(".git").exists()
+        || input
+            == spec
+                .root
+                .canonicalize()
+                .map_err(|error| error.to_string())?
+    {
+        return Err("production requires an isolated materialized input directory".into());
+    }
     crate::execution::inspect(
         "cargo",
-        &spec.root,
+        &input,
         &plumb::config::environment(&contract.environment)?,
     )?;
-    let producer = contract.start(&spec.root)?;
-    let version = crate::command::release::channel::base(&marker.version)?;
-    super::super::package::product(spec).produce(
-        super::super::package::Build {
-            target: triple,
-            version: &version,
-            channel: "stable",
-            commit: &marker.commit,
-            artifacts,
+    let producer = contract.start(&input)?;
+    let workspace =
+        crate::command::release::workspace::Workspace::bound(producer.execution(), &input)?;
+    let binaries = workspace.build(
+        spec,
+        crate::command::release::workspace::Build {
+            root: &input,
+            triple,
+            version: "v0.0.0",
+            commit: "",
         },
         Some(producer.execution()),
     )?;
-    let receipt = producer.finish(&artifacts.join(&spec.target(triple)?.archive))?;
+    std::fs::create_dir_all(artifacts).map_err(|error| error.to_string())?;
+    let target = spec.target(triple)?;
+    let path = artifacts.join(&target.archive);
+    if path.exists() {
+        return Err("production output already exists".into());
+    }
+    super::super::archive::write(target.format, &path, &binaries)?;
+    let mut receipt = producer.finish(&path)?;
+    receipt.source = Some(plumb::rule::Source {
+        commit: marker.commit.clone(),
+        tree: marker.tree.clone(),
+    });
     contract.verify(&receipt)?;
     Ok(receipt)
 }

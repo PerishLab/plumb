@@ -103,6 +103,10 @@ impl Configuration {
         &self.target
     }
 
+    pub fn validator(&self) -> &Validator {
+        &self.validator
+    }
+
     pub fn objects(&self) -> &[crate::depot::Object] {
         &self.objects
     }

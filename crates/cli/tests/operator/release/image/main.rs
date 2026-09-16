@@ -175,7 +175,6 @@ case "$1" in
 esac
 "#,
     );
-    let inventory = crate::support::Bucket::open(3);
     let binding = crate::marker::prepare(
         fixture.root,
         &fixture.root.join("home"),
@@ -183,33 +182,18 @@ esac
         "v2.0.0-beta.1",
     );
     let request = serde_json::json!({
-        "schema": "plumb.ship-request/v2",
+        "schema": "plumb.ship-request/v3",
+        "marker": "v2.0.0-beta.1",
         "configuration": binding["configuration"],
         "profile": binding["profile"],
         "action": "ship/chart",
-        "projections": [
-            "charts/probe/Chart.yaml#/version",
-            "charts/probe/Chart.yaml#/appVersion"
-        ],
-        "roots": ["charts/probe"],
         "operation": { "type": "chart" },
         "reuse": {
             "type": "workload",
-            "source": "https://inventory.example/chart.tgz"
-        },
-        "keys": {
-            "workload": "1".repeat(64),
-            "proof": "2".repeat(64),
-            "publication": "3".repeat(64)
+            "source": format!("https://inventory.example/v2/blobs/sha256/{}", plumb::depot::sha(&std::fs::read(&source).unwrap()))
         }
     });
-    let request = crate::marker::planned(
-        fixture.root,
-        &fixture.root.join("home"),
-        request,
-        "v2.0.0-beta.1",
-    );
-    local::escrows(fixture.root, &inventory.endpoint());
+    local::escrows(fixture.root, "http://127.0.0.1:9");
     let command = || {
         let mut command = fixture.command();
         command
@@ -246,7 +230,6 @@ esac
     let chart = manifest(&registry);
     assert!(chart.contains("version: 2.0.0-beta.1"), "{chart}");
     assert!(chart.contains("appVersion: \"2.0.0-beta.1\""), "{chart}");
-    inventory.finish();
 }
 
 fn packed(path: &Path, version: &str) {

@@ -1,7 +1,6 @@
 use crate::command::release::{self, ReleaseMarker};
 use plumb::forgejo::git;
 use semver::Version;
-use serde_json::Value;
 
 pub(super) fn verify(marker: &ReleaseMarker) -> Result<(), String> {
     if !marker.independent() || marker.channel != "stable" {
@@ -42,7 +41,5 @@ pub(super) fn verify(marker: &ReleaseMarker) -> Result<(), String> {
 }
 
 pub(super) fn completed(marker: &ReleaseMarker) -> Result<bool, String> {
-    let graph: Value = serde_json::from_str(&super::resolve::graph(marker, true)?)
-        .map_err(|error| format!("cannot read ship proof: {error}"))?;
-    Ok(graph["workload_missing"] == false && graph["publication_missing"] == false)
+    super::receipt::completed(marker)
 }

@@ -58,6 +58,7 @@ pub struct Pointer {
     pub commit: String,
 }
 
+#[derive(Clone)]
 pub struct Seat {
     base: PathBuf,
     manifest: Manifest,
@@ -69,6 +70,14 @@ pub fn rules() -> Result<&'static Rules, String> {
 
 pub fn guard(root: &Path, running: &str) -> Result<(), String> {
     rules::bind(root, running)
+}
+
+pub fn candidate(root: &Path, marker: &str) -> Result<(), String> {
+    rules::candidate(root, marker)
+}
+
+pub fn selected() -> Option<&'static Rules> {
+    rules::selected()
 }
 
 impl Seat {

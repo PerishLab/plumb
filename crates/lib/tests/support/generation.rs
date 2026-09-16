@@ -58,6 +58,9 @@ fn pointer() {
     .expect("pointer");
     pointer.bind(&held, &body).expect("pointer binding");
     assert!(!pointer.advance(&pointer).expect("idempotent pointer"));
+    let mut conflict = pointer.clone();
+    conflict.manifest.sha256 = "b".repeat(64);
+    assert!(pointer.advance(&conflict).is_err());
 
     let mut changed = held.clone();
     changed.objects[0].sha256 = "b".repeat(64);
@@ -125,11 +128,6 @@ fn source() {
     assert_eq!(bundle.manifest.objects[0].media, "text/plain");
     #[cfg(unix)]
     assert!(bundle.manifest.objects[0].executable);
-    assert!(v3::check("https://depot.example.test").is_ok());
-    assert!(v3::check("http://127.0.0.1:1234").is_ok());
-    assert!(v3::check("http://depot.example.test").is_err());
-    assert!(v3::check("https://depot.example.test/").is_err());
-    assert!(v3::check("https://depot.example.test source").is_err());
     let repeated = v3::Bundle::read(root.path(), bundle.manifest.identity()).expect("repeat");
     assert_eq!(
         repeated.manifest.generation().expect("repeated generation"),

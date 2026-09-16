@@ -2,18 +2,21 @@ use plumb::depot::v3;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-fn install(root: &Path, version: &str) {
-    let stock = super::super::command::support::depot(&[]);
-    let seat = plumb::depot::Seat::at(&stock.path().join("configurations")).unwrap();
+fn install(root: &Path, version: &str, repository: &Path) {
+    let source = std::fs::read_to_string(repository.join("plumb.toml")).unwrap();
+    let binding = super::super::marker::configuration(root, &source);
+    let base = root
+        .join("configurations/generations")
+        .join(binding["configuration"].as_str().unwrap());
+    let source = v3::Manifest::parse(&std::fs::read(base.join(v3::LEAF)).unwrap()).unwrap();
     let mut bodies = BTreeMap::new();
-    let objects = seat
-        .manifest()
+    let objects = source
         .objects
         .iter()
         .map(|object| {
             bodies.insert(
                 object.path.clone(),
-                seat.read(&object.path).unwrap().into_bytes(),
+                std::fs::read(base.join(&object.path)).unwrap(),
             );
             v3::Object {
                 path: object.path.clone(),
@@ -62,13 +65,13 @@ fn related() {
     let home = tempfile::tempdir().unwrap();
     let running = plumb::version!("PLUMB").to_string();
     let version = format!("{}-beta.1", running.split('-').next().unwrap());
-    install(home.path(), &version);
     super::marked(
         fixture.path(),
         bare.path(),
         "https://git.perish.top",
         "v1.2.0-nightly.9",
     );
+    install(home.path(), &version, fixture.path());
     let output = super::super::command::plumb(
         fixture.path(),
         &[
@@ -101,13 +104,13 @@ fn unrelated() {
     let fixture = tempfile::tempdir().unwrap();
     let bare = tempfile::tempdir().unwrap();
     let home = tempfile::tempdir().unwrap();
-    install(home.path(), "v99.0.0-beta.1");
     super::marked(
         fixture.path(),
         bare.path(),
         "https://git.perish.top",
         "v1.2.0-nightly.9",
     );
+    install(home.path(), "v99.0.0-beta.1", fixture.path());
     let output = super::super::command::plumb(
         fixture.path(),
         &[

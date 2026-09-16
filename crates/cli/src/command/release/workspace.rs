@@ -27,6 +27,7 @@ struct Target {
 }
 
 pub struct Build<'a> {
+    pub root: &'a Path,
     pub triple: &'a str,
     pub version: &'a str,
     pub commit: &'a str,
@@ -64,7 +65,7 @@ impl Workspace {
 
     fn inspect(root: &Path, mut command: std::process::Command) -> Result<Self, String> {
         let output = command
-            .args(["metadata", "--no-deps", "--format-version", "1"])
+            .args(["metadata", "--locked", "--no-deps", "--format-version", "1"])
             .current_dir(root)
             .output()
             .map_err(|error| format!("cannot run cargo metadata: {error}"))?;
@@ -135,7 +136,7 @@ impl Workspace {
                     "--bin",
                     binary,
                 ])
-                .current_dir(&spec.root)
+                .current_dir(input.root)
                 .env(
                     format!("{}_BUILD_VERSION", spec.environment()),
                     input.version,
@@ -146,7 +147,11 @@ impl Workspace {
                     format!("{}_BUILD_AUTHORITY", spec.environment()),
                     &spec.authority,
                 )
-                .env(format!("{}_BUILD_COMMIT", spec.environment()), input.commit);
+                .env_remove(format!("{}_BUILD_COMMIT", spec.environment()));
+            if !input.commit.is_empty() {
+                command.env(format!("{}_BUILD_COMMIT", spec.environment()), input.commit);
+            }
+            paths(&mut command, input.root);
             if msvc {
                 command.args(["--", "-C", "link-arg=/Brepro"]);
             }
@@ -194,4 +199,29 @@ pub fn release(value: &str) -> Result<Version, String> {
         .strip_prefix('v')
         .ok_or_else(|| format!("release version must begin with v: {value}"))?;
     Version::parse(raw).map_err(|error| format!("invalid release version: {error}"))
+}
+
+fn paths(command: &mut std::process::Command, root: &Path) {
+    let held = |name: &str| {
+        command
+            .get_envs()
+            .find(|(key, _)| *key == name)
+            .and_then(|(_, value)| value)
+            .map(|value| value.to_string_lossy().into_owned())
+    };
+    let mut flags = held("CARGO_ENCODED_RUSTFLAGS").unwrap_or_else(|| {
+        held("RUSTFLAGS")
+            .unwrap_or_default()
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join("\u{1f}")
+    });
+    if !flags.is_empty() {
+        flags.push('\u{1f}');
+    }
+    flags.push_str(&format!(
+        "--remap-path-prefix={}=/plumb/source",
+        root.display()
+    ));
+    command.env("CARGO_ENCODED_RUSTFLAGS", flags);
 }

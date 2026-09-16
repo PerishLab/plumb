@@ -1,9 +1,6 @@
 use crate::command::release::ReleaseMarker;
-use crate::command::workflow::record::Binding;
-use std::path::Path;
 
 pub(in crate::command::ship) struct Image {
-    pub binding: Binding,
     prefix: String,
 }
 
@@ -13,12 +10,7 @@ pub(in crate::command::ship) fn image(marker: &ReleaseMarker) -> Result<Image, S
         .oci
         .as_ref()
         .ok_or("marker declares no OCI resource")?;
-    let binding = Binding::new(
-        &marker.digest()?,
-        &format!("oci://{}/{}", oci.registry, oci.image),
-    )?;
     Ok(Image {
-        binding,
         prefix: format!(
             "https://{}/v2/{}/manifests/sha256:",
             oci.registry, oci.image
@@ -27,18 +19,6 @@ pub(in crate::command::ship) fn image(marker: &ReleaseMarker) -> Result<Image, S
 }
 
 impl Image {
-    pub fn resolve(
-        &self,
-        path: Option<&Path>,
-        source: Option<&str>,
-    ) -> Result<Option<String>, String> {
-        let held = self.binding.resolve(path, source)?;
-        if let Some(source) = &held {
-            self.verify(source)?;
-        }
-        Ok(held)
-    }
-
     pub fn verify(&self, source: &str) -> Result<(), String> {
         let digest = source
             .strip_prefix(&self.prefix)

@@ -61,6 +61,29 @@ fn receipt() {
 }
 
 #[test]
+fn provenance() {
+    let contract = contract();
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("artifact");
+    std::fs::write(&path, b"neutral artifact").unwrap();
+    let mut receipt = contract.start(root.path()).unwrap().finish(&path).unwrap();
+    let artifact = receipt.artifact.clone();
+    let identity = receipt.contract.clone();
+    for value in ["a", "b"] {
+        receipt.source = Some(plumb::rule::Source {
+            commit: value.repeat(40),
+            tree: "c".repeat(40),
+        });
+        contract.verify(&receipt).unwrap();
+        receipt.verify(&path).unwrap();
+        assert_eq!(receipt.artifact, artifact);
+        assert_eq!(receipt.contract, identity);
+    }
+    receipt.source.as_mut().unwrap().commit = "not-a-commit".into();
+    assert!(contract.verify(&receipt).is_err());
+}
+
+#[test]
 fn identity() {
     let mut held = contract();
     let original = held.digest().expect("identity");

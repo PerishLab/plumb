@@ -95,6 +95,9 @@ impl Pointer {
             return Ok(true);
         }
         if self.generation == next.generation {
+            if self.manifest != next.manifest {
+                return Err("depot generation pointer has a conflicting manifest reference".into());
+            }
             return Ok(false);
         }
         if next.prior.as_deref() != Some(&self.generation) {

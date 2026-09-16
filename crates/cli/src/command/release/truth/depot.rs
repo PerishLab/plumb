@@ -149,6 +149,7 @@ impl Validation<'_> {
             pointer.encode()?.as_bytes(),
         )?;
         let source = super::tree::Seat::open(&self.spec.root, &self.binding.release.commit)?;
+        source.govern(self.plan)?;
         let mut validator = plumb::config::detached(executable);
         validator
             .args(depot.validator.iter().skip(1))
@@ -170,7 +171,9 @@ impl Validation<'_> {
         }
         let output = validator
             .env_remove("PLUMB_HOME")
+            .env_remove("PLUMB_GUARD_CONFIGURATION")
             .env("PLUMB_GUARD_DEPOT", &seat)
+            .env("PLUMB_GUARD_VIEW", source.path())
             .env(
                 format!("{}_RELEASE_VERSION", self.spec.environment()),
                 &self.binding.release.version,

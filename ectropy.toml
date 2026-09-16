@@ -71,3 +71,7 @@ include = [
 
 [word]
 single = true
+
+[[vocabulary.term]]
+name = "visit_map"
+description = "Serde Visitor's required map deserialization method; validates unique Ship resource identities before collection."

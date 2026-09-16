@@ -2,10 +2,11 @@
 mod boundary;
 mod controller;
 mod datum;
+#[path = "../depot/mod.rs"]
 mod depot;
 mod dry;
 mod held;
 mod marker;
 mod profile;
 mod promotion;
-mod resources;
+pub(crate) mod resources;

@@ -52,6 +52,12 @@ impl Seat {
     }
 
     pub(super) fn staged(&self, tree: &str) -> Result<Descriptor, String> {
+        let proof = self.inspect(tree)?;
+        proof.current(&self.root)?;
+        Ok(proof)
+    }
+
+    pub(super) fn inspect(&self, tree: &str) -> Result<Descriptor, String> {
         let path = self.pending(tree)?;
         let bytes = std::fs::read(&path).map_err(|error| {
             format!("cannot read staged guard proof {}: {error}", path.display())
@@ -63,7 +69,7 @@ impl Seat {
             )
         })?;
         proof.validate()?;
-        proof.current(&self.root)?;
+        proof.witness(&self.root)?;
         if proof.tree != tree {
             return Err(format!(
                 "staged guard proof seals {}, not {tree}",

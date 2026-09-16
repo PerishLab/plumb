@@ -14,6 +14,9 @@ pub fn module(spec: &Spec) -> Module<'_> {
 }
 
 impl Module<'_> {
+    pub(in crate::command::ship) fn produce(&self, package: &str) -> Result<PathBuf, String> {
+        super::exact::produce(self, package)
+    }
     pub fn exact(
         &self,
         package: &str,
@@ -98,12 +101,12 @@ impl Module<'_> {
             .split_once("://")
             .map(|(_, rest)| rest)
             .unwrap_or(&npm.registry);
-        let output = Command::new("npm")
+        let output = Command::new("pnpm")
             .args(["view", spec, "dist.integrity", "--registry", &npm.registry])
             .current_dir(cwd)
             .env(format!("npm_config_//{seat}:_authToken"), token)
             .output()
-            .map_err(|error| format!("cannot run npm: {error}"))?;
+            .map_err(|error| format!("cannot run pnpm: {error}"))?;
         if !output.status.success() {
             return Ok(None);
         }
@@ -123,12 +126,12 @@ impl Module<'_> {
             .split_once("://")
             .map(|(_, rest)| rest)
             .unwrap_or(&npm.registry);
-        let mut command = Command::new("npm");
+        let mut command = Command::new("pnpm");
         command
             .args(args)
             .current_dir(cwd)
             .env(format!("npm_config_//{seat}:_authToken"), token);
-        self.run("npm", &mut command)
+        self.run("pnpm", &mut command)
     }
 
     fn run(&self, program: &str, command: &mut Command) -> Result<(), String> {

@@ -87,7 +87,6 @@ fn cycle() {
             .env("PLUMB_RULES_SOURCE", "https://depot.test");
         held
     };
-    let inventory = crate::support::Bucket::open(18);
     let source = root.join("binary");
     std::fs::create_dir_all(&source).unwrap();
     binary::archive(
@@ -108,13 +107,11 @@ fn cycle() {
         workload["receipt"]["artifact"] = serde_json::json!(plumb::depot::sha(
             &std::fs::read(source.join("probe-x86_64-unknown-linux-gnu.tar.gz")).unwrap()
         ));
-        let request = serde_json::json!({
-            "schema":"plumb.ship-request/v2", "configuration":binding["configuration"], "profile":binding["profile"],
-            "action":"ship/binary", "projections":["Cargo.toml#/workspace/package/version"], "roots":["Cargo.toml","plumb.toml"],
+        serde_json::json!({
+            "schema":"plumb.ship-request/v3", "marker":version, "configuration":binding["configuration"], "profile":binding["profile"],
+            "action":"ship/binary",
         "operation":{"type":"publication","workloads":[workload]},
-            "keys":{"workload":plumb::depot::sha(version.as_bytes()),"proof":"2".repeat(64),"publication":plumb::depot::sha(version.as_bytes())},
-        });
-        crate::marker::planned(root, home.path(), request, version)
+        })
     };
     let publish = |version: &str, out: &Path, request: &serde_json::Value| {
         let mut held = command();
@@ -125,7 +122,7 @@ fn cycle() {
             .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", "access")
             .env("PLUMB_WORKFLOW_INVENTORY_SECRET", "secret")
             .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", "workflow")
-            .env("PLUMB_WORKFLOW_INVENTORY_ENDPOINT", inventory.endpoint())
+            .env("PLUMB_WORKFLOW_INVENTORY_ENDPOINT", "http://127.0.0.1:9")
             .env(
                 "PLUMB_WORKFLOW_INVENTORY_URL",
                 "https://inventory.invalid/inventory.json",
@@ -252,7 +249,6 @@ fn cycle() {
             .is_file()
     );
     assert!(root.join("perish-probe-releases/manage.sh").is_file());
-    inventory.finish();
 }
 
 #[test]

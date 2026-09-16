@@ -20,16 +20,16 @@ Default dispatch remains unchanged. Local execution requires the marker's
 clean tracked checkout and consumes the same plan, configuration, tool contracts
 and inventory as the workflow. Each node runs in a fresh temporary clone below
 PLUMB_HOME; the caller's checkout is not a build or artifact destination.
---dry-run reports the shared graph without running nodes or creating clones.
+--dry-run reports the shared declaration without reading inventory, running nodes
+or creating clones. Local recovery needs Python and the inventory transport tools;
+it uses the central scripts at the dispatching controller's exact source commit.
 Only nodes matching this host's declared runner platform execute. Other nodes,
 or newly recorded work not yet visible in the inventory, leave the transaction
 incomplete. Repeat the same marker to resume; completed work is not rebuilt.
 
-Runseal may inject absolute PLUMB_WORKFLOW_INVENTORY_ESCROW and
-PLUMB_RELEASE_REGISTRY_ESCROW paths to the protected files produced by Plumb
-authority. Plumb validates its own escrow formats; no shell sourcing is needed.
-An escrow selection refuses conflicting inline credentials or secret-file
-inputs. PLUMB_WORKFLOW_INVENTORY_URL still selects the public inventory.
+Credentials use Plumb's normal Cascade, regardless of whether a shell, CI, or
+Runseal injects them. Direct values take precedence over secret-file inputs.
+PLUMB_WORKFLOW_INVENTORY_URL selects the public blob origin.
 Registry credentials are read only for registry publication, and inventory
 writer credentials only when recording work. Dry-run needs neither secret.
 
@@ -37,6 +37,17 @@ Only marker-bound plan requests perform immutable publication. Execute requires
 the marker's locked configuration and Product Profile; conflicting repository,
 channel, or commit inputs refuse before publication. Medium-specific exact and
 publish commands no longer exist, including binary publish.
+
+Execute consumes plumb.ship-request/v3 through --request JSON or --request-file
+PATH. --output PATH writes its plumb.ship-result/v2 separately from build logs.
+Requests name the marker explicitly and carry no blob cache keys. Binary
+production and identity binding are separate operations; binding requires a
+proven unbound workload and never starts a fallback build. The Python control
+plane owns action keys, execution selection, and completion-record storage.
+Package production is separately reusable: npm and Chart publication bind a
+version to prepared content; Cargo publication packages its prepared source
+without compiling it. Worker production explicitly binds the version and commit
+embedded in its page, rather than hiding them from the input key.
 
 The remaining private verbs perform local preparation or read-only diagnostics.
 They cannot establish independent publication intent.

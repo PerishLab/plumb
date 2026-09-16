@@ -95,6 +95,7 @@ pub(super) fn proof(root: &Path, tree: &str) -> String {
         Sha256::digest(serde_json::to_vec(&claim).expect("claim"))
     );
     let held = plumb::guard::Descriptor {
+        bootstrap: None,
         schema: claim.schema.into(),
         repository,
         tree: tree.into(),

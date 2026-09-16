@@ -4,10 +4,7 @@ pub(super) struct Value<'a>(pub &'a str);
 
 impl Value<'_> {
     pub fn source(&self) -> Result<(), String> {
-        if !self.0.starts_with("https://") || self.0.len() <= "https://".len() {
-            return Err(format!("depot source must be an https URL: {}", self.0));
-        }
-        Ok(())
+        super::super::v3::check(self.0)
     }
 
     pub fn digest(&self, name: &str) -> Result<(), String> {

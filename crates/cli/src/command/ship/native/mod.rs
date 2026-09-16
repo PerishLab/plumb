@@ -16,7 +16,6 @@ use std::{
 #[serde(deny_unknown_fields)]
 pub(super) struct Build {
     reuse: crate::command::ship::package::project::Source,
-    keys: serde_json::Value,
     production: String,
     receipt: Option<plumb::rule::Receipt>,
 }
@@ -24,10 +23,9 @@ pub(super) struct Build {
 pub(super) struct Request<'a> {
     pub spec: &'a Spec,
     pub release: &'a plumb::rig::Release,
-    pub action: &'a str,
     pub target: &'a str,
     pub archive: &'a str,
-    pub build: Build,
+    pub build: &'a Build,
 }
 
 pub(super) fn run(request: Request<'_>) -> Result<(PathBuf, plumb::rule::Receipt), String> {
@@ -101,7 +99,7 @@ impl Request<'_> {
             let filename = format!("{name}{suffix}");
             let bytes = archive::read(target.format, &original, &filename)?;
             let (origin, held) = plumb::identity::inspect(&bytes)?;
-            if origin.target != self.target || origin.commit.is_empty() || held.is_some() {
+            if origin.target != self.target || !origin.commit.is_empty() || held.is_some() {
                 return Err("reusable binary has no matching unbound build provenance".into());
             }
             let bound = plumb::identity::bind(&bytes, &binding)?;
@@ -141,21 +139,6 @@ impl Request<'_> {
         }
         let path = temporary.join(self.archive);
         match self.build.reuse.kind.as_str() {
-            "none" if self.build.reuse.source.is_empty() => {
-                let receipt =
-                    super::transport::production::produce(marker, self.target, temporary)?;
-                crate::command::workflow::record::project(
-                    crate::command::workflow::record::Project {
-                        action: self.action,
-                        keys: &self.build.keys.to_string(),
-                        workload: path.clone(),
-                        reuse: None,
-                        publication: None,
-                        depot: None,
-                        production: Some((&contract, receipt)),
-                    },
-                )?;
-            }
             "workload" => {
                 let receipt = self
                     .build
@@ -163,11 +146,13 @@ impl Request<'_> {
                     .as_ref()
                     .ok_or("reused binary has no production receipt")?;
                 contract.verify(receipt)?;
+                if receipt.source.is_none() {
+                    return Err("reused binary has no source provenance".into());
+                }
                 let source = &self.build.reuse.source;
                 let digest = source
                     .rsplit('/')
                     .next()
-                    .and_then(|name| name.strip_suffix(".tgz"))
                     .filter(|value| {
                         value.len() == 64 && value.bytes().all(|b| b.is_ascii_hexdigit())
                     })
@@ -184,7 +169,7 @@ impl Request<'_> {
                 println!("reused unbound binary workload for {}", self.target);
             }
             _ => {
-                return Err("identity binding requires an unbound workload or a cold build".into());
+                return Err("identity binding requires a proven unbound workload; production is a separate action".into());
             }
         }
         Ok(path)

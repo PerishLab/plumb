@@ -4,6 +4,27 @@ pub mod configuration;
 pub mod skill;
 
 pub fn prepare(command: &Command) -> Result<(), String> {
+    match command {
+        Command::Guard {
+            target,
+            candidate:
+                crate::command::depot::candidate::Selection {
+                    marker: Some(marker),
+                    generation: Some(generation),
+                },
+            ..
+        } => {
+            crate::command::depot::candidate::select(
+                std::path::Path::new(&target.root),
+                marker,
+                generation,
+            )?;
+        }
+        Command::Guard { target, .. } | Command::Land { target, .. } => {
+            crate::command::depot::candidate::restore(std::path::Path::new(&target.root))?;
+        }
+        _ => (),
+    }
     if matches!(
         command,
         Command::Authority { .. }

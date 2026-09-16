@@ -5,9 +5,9 @@ use std::{env, os::unix::fs::PermissionsExt};
 #[path = "../../support.rs"]
 pub(super) mod support;
 
-fn forge(root: &Path) -> Option<String> {
+fn setting(root: &Path, key: &str) -> Option<String> {
     let output = Command::new("git")
-        .args(["config", "--get", "plumb.test-forgejo-url"])
+        .args(["config", "--get", key])
         .current_dir(root)
         .output()
         .ok()?;
@@ -18,7 +18,12 @@ fn forge(root: &Path) -> Option<String> {
 }
 
 pub fn plumb(root: &Path, args: &[&str]) -> Command {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
+    let binary = if args.starts_with(&["ship", "dispatch"]) {
+        super::marker::controller()
+    } else {
+        Path::new(env!("CARGO_BIN_EXE_plumb"))
+    };
+    let mut command = Command::new(binary);
     command
         .args(args)
         .current_dir(root)
@@ -30,8 +35,11 @@ pub fn plumb(root: &Path, args: &[&str]) -> Command {
     ] {
         command.env(name, value);
     }
-    if let Some(forge) = forge(root) {
+    if let Some(forge) = setting(root, "plumb.test-forgejo-url") {
         command.env("FORGEJO_URL", forge);
+    }
+    if let Some(home) = setting(root, "plumb.test-home") {
+        command.env("PLUMB_HOME", home);
     }
     command
 }

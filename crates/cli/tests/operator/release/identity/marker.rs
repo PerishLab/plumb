@@ -13,8 +13,29 @@ fn exact() {
         root: temp.path(),
         tools: &tools,
     };
-    let commit = seeded(&fixture, bare.path());
-    stamp(temp.path(), "v1.2.0-beta.1", &commit, true);
+    seeded(&fixture, bare.path());
+    crate::marker::line(fixture.root, bare.path(), "v1.2.0-beta.1");
+    crate::marker::configuration(
+        fixture.root,
+        &std::fs::read_to_string(fixture.root.join("plumb.toml")).unwrap(),
+    );
+    run(Command::new("git").arg("-C").arg(fixture.root).args([
+        "push",
+        "-q",
+        "origin",
+        "HEAD:refs/heads/release/v1.2.0",
+        "refs/tags/v1.2.0-beta.1",
+    ]));
+    let commit = String::from_utf8(
+        run(Command::new("git")
+            .arg("-C")
+            .arg(fixture.root)
+            .args(["rev-parse", "HEAD"]))
+        .stdout,
+    )
+    .unwrap()
+    .trim()
+    .to_string();
     assert!(!fixture.root.join(".forgejo").exists());
 
     let shown = marker(&fixture, "show", "v1.2.0-beta.1");
@@ -24,7 +45,7 @@ fn exact() {
         String::from_utf8_lossy(&shown.stderr)
     );
     let value: Value = serde_json::from_slice(&shown.stdout).expect("marker json");
-    assert_eq!(value["schema"], "plumb.release-marker/v1");
+    assert_eq!(value["schema"], "plumb.release-marker/v3");
     assert_eq!(value["product"], "probe");
     assert!(
         value["repository"]
@@ -41,7 +62,7 @@ fn exact() {
     assert!(verified.status.success());
     assert!(String::from_utf8_lossy(&verified.stdout).contains("verified release marker"));
     let shipped = fixture
-        .command()
+        .controller()
         .current_dir(fixture.root)
         .env("FORGEJO_TOKEN", "fixture")
         .args(["ship", "dispatch", "--marker", "v1.2.0-beta.1", "--dry-run"])
@@ -55,16 +76,16 @@ fn exact() {
     let plan = String::from_utf8_lossy(&shipped.stdout);
     assert!(plan.contains("ship.yml"), "{plan}");
     assert!(plan.contains("/repos/PerishLab/plumb/"), "{plan}");
-    assert!(
-        plan.contains(&format!("refs/tags/v{}", env!("CARGO_PKG_VERSION"))),
-        "{plan}"
-    );
+    assert!(plan.contains(&format!("ref={}", "3".repeat(40))), "{plan}");
     assert!(plan.contains(r#""marker":"v1.2.0-beta.1""#), "{plan}");
     assert!(
         plan.contains(&format!(r#""plumb":"v{}""#, env!("CARGO_PKG_VERSION"))),
         "{plan}"
     );
-    assert!(plan.contains(r#""repository":"tmp/"#), "{plan}");
+    assert!(
+        plan.contains(r#""repository":"PerishFire/probe""#),
+        "{plan}"
+    );
 
     let manifest = std::fs::read_to_string(fixture.root.join("plumb.toml")).expect("manifest");
     std::fs::write(
@@ -269,30 +290,4 @@ pub(super) fn stamp(root: &Path, version: &str, commit: &str, annotated: bool) {
     ]));
 }
 
-pub(super) fn seal(root: &Path, commit: &str) {
-    let version = "v1.2.0-beta.1";
-    let path = root
-        .join("releases/v1/releases/beta")
-        .join(version)
-        .join("seal.json");
-    std::fs::create_dir_all(path.parent().expect("seal parent")).expect("seal root");
-    let value = serde_json::json!({
-        "schema": 1,
-        "product": "probe",
-        "channel": "beta",
-        "releaseVersion": version,
-        "commit": commit,
-        "url": format!("https://releases.test/v1/releases/beta/{version}/seal.json"),
-        "generator": { "version": "v0.37.6", "template": "0" },
-        "artifacts": {},
-        "managers": {}
-    });
-    std::fs::write(
-        path,
-        format!(
-            "{}\n",
-            serde_json::to_string_pretty(&value).expect("seal json")
-        ),
-    )
-    .expect("seal");
-}
+pub(super) use super::promotion::seal;
