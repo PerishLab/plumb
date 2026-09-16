@@ -43,7 +43,8 @@ if ($Phase -eq "probe") {
     if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne "X64") {
         throw "No compatible Python found and no bootstrap archive is declared for this Windows architecture"
     }
-    @("needed=true", "archive=$archive", "key=$contract-$checksum") |
+    $relative = [System.IO.Path]::GetRelativePath($env:GITHUB_WORKSPACE, $archive).Replace('\', '/')
+    @("needed=true", "archive=$relative", "key=$contract-$checksum") |
         Out-File $env:GITHUB_OUTPUT -Encoding utf8 -Append
     exit 0
 }
