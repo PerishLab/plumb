@@ -4,6 +4,7 @@ from pathlib import PurePosixPath
 
 from .blob import Refusal, fingerprint, object_fields
 from .document import project
+from .patch import apply
 from .snapshot import Snapshot
 
 
@@ -62,13 +63,16 @@ class Source:
         return self.snapshot(recipe).key
 
     def snapshot(self, recipe):
-        object_fields(recipe, ("paths",), ("projects", "source"))
+        object_fields(recipe, ("paths",), ("projects", "source", "patches"))
         if not isinstance(recipe["paths"], list) or not recipe["paths"]:
             raise Refusal("source input needs explicit paths")
         roots = [relative(path) for path in recipe["paths"]]
         projects = recipe.get("projects", {})
         if not isinstance(projects, dict):
             raise Refusal("source projects must be a path map")
+        patches = recipe.get("patches", {})
+        if not isinstance(patches, dict) or set(patches) - set(projects):
+            raise Refusal("prepared patches require declared source projections")
         self.load()
         paths = sorted(path for path in self.leaves if any(
             path == root or path.startswith(root.rstrip("/") + "/") for root in roots))
@@ -86,7 +90,7 @@ class Source:
             if path in projects:
                 if mode not in ("100644", "100755"):
                     raise Refusal("cannot project a symlink")
-                body = project(body, projects[path])
+                body = apply(body, patches[path]) if path in patches else project(body, projects[path])
             files[path] = (mode, body)
         configuration = {"paths": sorted(set(roots)), "projects": copy.deepcopy(projects)}
         if "source" in recipe:

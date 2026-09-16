@@ -25,10 +25,10 @@ class Projection(unittest.TestCase):
         self.assertEqual(project(b'{"version":"1","code":"same"}', recipe),
                          project(b'{"version":"2","code":"same"}', recipe))
 
-    def test_toml_version_only_changes_have_equal_content(self):
+    def test_toml_is_not_interpreted_by_the_blob_control_plane(self):
         recipe = {"format": "toml", "set": {"/workspace/package/version": "0.0.0"}}
-        self.assertEqual(project(b'[workspace.package]\nversion="1"\nlicense="MIT"\n', recipe),
-                         project(b'[workspace.package]\nversion="2"\nlicense="MIT"\n', recipe))
+        with self.assertRaises(Refusal):
+            project(b'[workspace.package]\nversion="1"\nlicense="MIT"\n', recipe)
 
     def test_actual_content_change_invalidates(self):
         recipe = {"format": "json", "set": {"/version": "0.0.0"}}

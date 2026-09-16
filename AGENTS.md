@@ -229,12 +229,17 @@ answers for.
   Neither a whole configuration generation nor a repository commit belongs in
   every key merely because it identifies the request.
 - Input hashing and materialization share one Python snapshot contract. Read
-  exact source blobs, apply explicit field projections, and hash the bytes that
+  exact source blobs, apply verified byte edits, and hash the bytes that
   execution will consume. Git export attributes and uncommitted runner files
   are not implicit inputs. A projection must produce a usable document, never
   merely hide a value from hashing. Materialization checks the planned key and
   reads back content, file kinds, and supported executable modes before work.
-  Plumb owns business operations, not a second source-normalization authority.
+  Plumb resolves format-aware source projections before dispatch against the
+  marker's exact Git blobs. Python receives bounded byte edits with source and
+  result digests, never a Cargo parser or a cold-start Plumb build. Those
+  transport preconditions do not invalidate a key: the declared projection
+  configuration and resulting bytes do. JSON projections remain generic JSON
+  operations; Cargo and other business formats belong to Plumb.
 - An action key identifies an invocation contract, not its output bytes.
   Consumers key the actual output digest; a rebuilt producer yielding the same
   bytes does not invalidate them. Completion prerequisites are distinct from

@@ -10,6 +10,8 @@ mod media;
 #[path = "../request/model.rs"]
 mod model;
 pub(in crate::command::ship) mod production;
+#[path = "../request/projection.rs"]
+mod projection;
 mod promotion;
 mod receipt;
 mod sources;

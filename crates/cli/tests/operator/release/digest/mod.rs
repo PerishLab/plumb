@@ -1,3 +1,5 @@
+mod projection;
+
 use super::release::{Compile, compile};
 use super::world::{Fixture, SPEC};
 

@@ -1,6 +1,5 @@
 import os
 import tempfile
-import tomllib
 import unittest
 from pathlib import Path
 
@@ -70,17 +69,10 @@ class Materialization(unittest.TestCase):
 
 
 class Documents(unittest.TestCase):
-    def test_toml_projection_remains_toml_and_preserves_other_values(self):
-        original = b'[package]\nname="fixture"\nversion="1.2.3"\n[dependencies]\nexternal="9"\n'
-        body = project(original, {"format": "toml", "set": {"/package/version": "0.0.0"}})
-        value = tomllib.loads(body.decode())
-        self.assertEqual(value, {"package": {"name": "fixture", "version": "0.0.0"},
-                                 "dependencies": {"external": "9"}})
-
-    def test_nested_arrays_and_unicode_roundtrip(self):
-        original = '[[package]]\nname="🦀"\nversion="1"\ndependencies=["a", "b"]\n'.encode()
-        body = project(original, {"format": "toml", "set": {"/package/0/version": "0"}})
-        self.assertEqual(tomllib.loads(body.decode())["package"][0]["name"], "🦀")
+    def test_business_formats_require_prepared_bytes(self):
+        with self.assertRaises(Refusal):
+            project(b'[package]\nversion="1"\n',
+                    {"format": "toml", "set": {"/package/version": "0.0.0"}})
 
     def test_hash_only_omit_contract_is_retired(self):
         with self.assertRaises(Refusal):
