@@ -87,11 +87,13 @@ fn interpreter() {
     let workflow = text(".forgejo/workflows/ship.yml");
     assert_eq!(workflow.matches("python.ps1 -Phase probe").count(), 4);
     assert_eq!(workflow.matches("python.ps1 -Phase install").count(), 4);
-    assert_eq!(
-        workflow.matches("uses: actions/cache/restore@v5").count(),
-        4
-    );
-    assert_eq!(workflow.matches("uses: actions/cache/save@v5").count(), 4);
+    for action in ["restore", "save"] {
+        let origin = format!(
+            "uses: https://github.com/actions/cache/{action}@caa296126883cff596d87d8935842f9db880ef25"
+        );
+        assert_eq!(workflow.matches(&origin).count(), 4);
+    }
+    assert!(!workflow.contains("uses: actions/cache/"));
     assert_eq!(
         workflow.matches("& \"$env:PLUMB_WORKFLOW_PYTHON\"").count(),
         4

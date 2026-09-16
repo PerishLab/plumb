@@ -128,7 +128,7 @@ jobs:
         if: runner.os == 'Windows' && steps.python.outputs.needed == 'true'
         id: python-cache
         continue-on-error: true
-        uses: actions/cache/restore@v5
+        uses: https://github.com/actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
         with:
           path: ${{ steps.python.outputs.archive }}
           key: ${{ steps.python.outputs.key }}
@@ -141,7 +141,7 @@ jobs:
       - name: Retain verified Python archive before business execution
         if: runner.os == 'Windows' && steps.python.outputs.needed == 'true' && steps.python-cache.outputs.cache-hit != 'true'
         continue-on-error: true
-        uses: actions/cache/save@v5
+        uses: https://github.com/actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
         with:
           path: ${{ steps.python.outputs.archive }}
           key: ${{ steps.python.outputs.key }}
@@ -206,7 +206,7 @@ jobs:
         if: runner.os == 'Windows' && steps.python.outputs.needed == 'true'
         id: python-cache
         continue-on-error: true
-        uses: actions/cache/restore@v5
+        uses: https://github.com/actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
         with:
           path: ${{ steps.python.outputs.archive }}
           key: ${{ steps.python.outputs.key }}
@@ -219,7 +219,7 @@ jobs:
       - name: Retain verified Python archive before business execution
         if: runner.os == 'Windows' && steps.python.outputs.needed == 'true' && steps.python-cache.outputs.cache-hit != 'true'
         continue-on-error: true
-        uses: actions/cache/save@v5
+        uses: https://github.com/actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
         with:
           path: ${{ steps.python.outputs.archive }}
           key: ${{ steps.python.outputs.key }}
@@ -293,7 +293,7 @@ jobs:
         if: runner.os == 'Windows' && steps.python.outputs.needed == 'true'
         id: python-cache
         continue-on-error: true
-        uses: actions/cache/restore@v5
+        uses: https://github.com/actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
         with:
           path: ${{ steps.python.outputs.archive }}
           key: ${{ steps.python.outputs.key }}
@@ -306,7 +306,7 @@ jobs:
       - name: Retain verified Python archive before business execution
         if: runner.os == 'Windows' && steps.python.outputs.needed == 'true' && steps.python-cache.outputs.cache-hit != 'true'
         continue-on-error: true
-        uses: actions/cache/save@v5
+        uses: https://github.com/actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
         with:
           path: ${{ steps.python.outputs.archive }}
           key: ${{ steps.python.outputs.key }}
@@ -380,7 +380,7 @@ jobs:
         if: runner.os == 'Windows' && steps.python.outputs.needed == 'true'
         id: python-cache
         continue-on-error: true
-        uses: actions/cache/restore@v5
+        uses: https://github.com/actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
         with:
           path: ${{ steps.python.outputs.archive }}
           key: ${{ steps.python.outputs.key }}
@@ -393,7 +393,7 @@ jobs:
       - name: Retain verified Python archive before business execution
         if: runner.os == 'Windows' && steps.python.outputs.needed == 'true' && steps.python-cache.outputs.cache-hit != 'true'
         continue-on-error: true
-        uses: actions/cache/save@v5
+        uses: https://github.com/actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
         with:
           path: ${{ steps.python.outputs.archive }}
           key: ${{ steps.python.outputs.key }}
