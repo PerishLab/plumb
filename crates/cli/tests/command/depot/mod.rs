@@ -1,7 +1,8 @@
 use std::path::Path;
 use std::process::Command;
 
-#[path = "../support.rs"]
+mod affirm;
+#[path = "../../support.rs"]
 pub(super) mod support;
 
 fn repository(name: &str) -> tempfile::TempDir {

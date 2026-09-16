@@ -14,6 +14,7 @@ mod candidate;
 #[path = "repository/product/catalog.rs"]
 mod catalog;
 pub use candidate::resolve as candidate;
+pub use candidate::review;
 
 pub fn names() -> Result<Vec<String>, String> {
     catalog::names(&crate::command::depot::held())

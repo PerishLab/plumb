@@ -35,6 +35,18 @@ pub(crate) fn parse(held: &str) -> Result<Reference, String> {
 
 pub(crate) fn member(reference: &Reference) -> Result<Member, String> {
     let doc = crate::catalog::set::read(&reference.set)?;
+    decode(reference, &doc)
+}
+
+pub(crate) fn decode(reference: &Reference, doc: &toml::Table) -> Result<Member, String> {
+    let entry = definition(reference, doc)?;
+    fields(entry)
+}
+
+pub(crate) fn definition<'a>(
+    reference: &Reference,
+    doc: &'a toml::Table,
+) -> Result<&'a toml::Value, String> {
     let slug = reference
         .slug
         .as_deref()
@@ -43,12 +55,15 @@ pub(crate) fn member(reference: &Reference) -> Result<Member, String> {
         .get("member")
         .and_then(|value| value.get("entry"))
         .and_then(toml::Value::as_array)
-        .cloned()
+        .map(Vec::as_slice)
         .unwrap_or_default();
-    let entry = listed
+    listed
         .iter()
         .find(|entry| entry.get("name").and_then(toml::Value::as_str) == Some(slug))
-        .ok_or_else(|| format!("rule://{}/{slug} names no rule", reference.set))?;
+        .ok_or_else(|| format!("rule://{}/{slug} names no rule", reference.set))
+}
+
+fn fields(entry: &toml::Value) -> Result<Member, String> {
     Ok(Member {
         probe: entry
             .get("probe")

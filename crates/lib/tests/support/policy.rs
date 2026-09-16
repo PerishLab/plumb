@@ -7,6 +7,10 @@ fn fixture() -> (tempfile::TempDir, Rules) {
         ("rules/products.toml", b"locked catalog".to_vec()),
         ("rules/seat.toml", b"locked probes".to_vec()),
         ("profiles/identity.toml", b"locked profile".to_vec()),
+        (
+            "profiles/affirmed/identity/receipt.toml",
+            b"locked confirmation".to_vec(),
+        ),
         ("assets/retired.bin", vec![255]),
     ]
     .into_iter()
@@ -40,10 +44,14 @@ fn inherited() {
     let (_root, rules) = fixture();
     let resources = BTreeMap::from([("assets/current.bin".into(), vec![254])]);
     let bodies = rules.inherit(rules.mark(), resources).unwrap();
-    assert_eq!(bodies.len(), 4);
+    assert_eq!(bodies.len(), 5);
     assert_eq!(bodies["rules/products.toml"], b"locked catalog");
     assert_eq!(bodies["rules/seat.toml"], b"locked probes");
     assert_eq!(bodies["profiles/identity.toml"], b"locked profile");
+    assert_eq!(
+        bodies["profiles/affirmed/identity/receipt.toml"],
+        b"locked confirmation"
+    );
     assert_eq!(bodies["assets/current.bin"], [254]);
     assert!(!bodies.contains_key("assets/retired.bin"));
 }
@@ -54,6 +62,7 @@ fn refused() {
     for path in [
         "rules/seat.toml",
         "profiles/identity.toml",
+        "profiles/affirmed/identity/receipt.toml",
         "rules/new.toml",
     ] {
         let resources = BTreeMap::from([(path.into(), b"source policy".to_vec())]);
@@ -97,7 +106,9 @@ fn path() {
 
 #[test]
 fn drift() {
-    let (root, rules) = fixture();
-    std::fs::write(root.path().join("rules/seat.toml"), "changed probes").unwrap();
-    assert!(rules.inherit(rules.mark(), BTreeMap::new()).is_err());
+    for path in ["rules/seat.toml", "profiles/affirmed/identity/receipt.toml"] {
+        let (root, rules) = fixture();
+        std::fs::write(root.path().join(path), "changed policy").unwrap();
+        assert!(rules.inherit(rules.mark(), BTreeMap::new()).is_err());
+    }
 }

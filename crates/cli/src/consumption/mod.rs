@@ -39,6 +39,10 @@ pub fn prepare(command: &Command) -> Result<(), String> {
     if matches!(
         command,
         Command::Authority { .. }
+            | Command::Affirm(crate::command::render::affirm::Request {
+                configuration: Some(_),
+                ..
+            })
             | Command::Depot { .. }
             | Command::Configuration { .. }
             | Command::Release { .. }
