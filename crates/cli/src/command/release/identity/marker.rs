@@ -49,6 +49,7 @@ struct Seal {
 pub(super) struct Seat {
     pub(super) root: PathBuf,
     pub(super) repository: String,
+    specification: Option<Spec>,
 }
 
 pub fn run(deed: Deed) -> Result<String, String> {
@@ -79,6 +80,16 @@ pub(in crate::command) fn resolve(raw: &str, refresh: bool) -> Result<Descriptor
 
 pub(in crate::command) fn bound(root: &Path, raw: &str) -> Result<Descriptor, String> {
     Seat::new(root.to_path_buf())?.resolve(raw, true, None)
+}
+
+pub(in crate::command) fn configured(
+    root: &Path,
+    raw: &str,
+    spec: Spec,
+) -> Result<Descriptor, String> {
+    let mut seat = Seat::new(root.to_path_buf())?;
+    seat.specification = Some(spec);
+    seat.resolve(raw, true, None)
 }
 
 impl Descriptor {
@@ -128,6 +139,7 @@ impl Seat {
         Ok(Self {
             root,
             repository: format!("{}/{}", remote.owner, remote.repo),
+            specification: None,
         })
     }
 
@@ -137,7 +149,7 @@ impl Seat {
         refresh: bool,
         standing: Option<&str>,
     ) -> Result<Descriptor, String> {
-        let marker = named(raw);
+        let marker = binding::named(raw);
         let channel = channel::channel(&marker)
             .map_err(|error| format!("invalid release marker {marker}: {error}"))?;
         refresh.then(|| self.fetch()).transpose()?;
@@ -156,7 +168,7 @@ impl Seat {
                 if matches!(
                     identity.schema,
                     "plumb.release-marker/v3" | "plumb.release-marker/v4"
-                ) || guarded(&identity.product, &marker) =>
+                ) || binding::guarded(&identity.product, &marker) =>
             {
                 return Err(format!(
                     "release marker {marker} has no valid guard proof: {error}"
@@ -202,10 +214,15 @@ impl Seat {
             return Err(format!("release marker {marker} is not an annotated tag"));
         }
         let message = self.read(["for-each-ref", "--format=%(contents)", &reference])?;
-        if let Some(identity) = binding::resolve(message.trim(), &self.root, marker)? {
+        if let Some(identity) = binding::resolve(
+            message.trim(),
+            &self.root,
+            marker,
+            self.specification.as_ref(),
+        )? {
             return Ok(identity);
         }
-        let spec = Spec::resolve(&self.root)?;
+        let spec = binding::specification(&self.root, self.specification.as_ref())?;
         let product = spec.product.clone();
         let authority = spec.authority.clone();
         let wanted = format!("{product} {marker}");
@@ -279,19 +296,4 @@ pub(in crate::command) fn annotation(
     head: &str,
 ) -> Result<String, String> {
     binding::annotation(spec, marker, head)
-}
-fn guarded(product: &str, marker: &str) -> bool {
-    product == "plumb"
-        && marker
-            .trim_start_matches('v')
-            .parse::<semver::Version>()
-            .is_ok_and(|version| (version.major, version.minor, version.patch) >= (0, 37, 8))
-}
-
-fn named(raw: &str) -> String {
-    if raw.starts_with('v') {
-        raw.to_string()
-    } else {
-        format!("v{raw}")
-    }
 }

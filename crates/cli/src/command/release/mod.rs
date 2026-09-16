@@ -90,6 +90,14 @@ pub(in crate::command) fn annotation(
 }
 
 impl ReleaseMarker {
+    pub(in crate::command) fn configured(
+        root: &Path,
+        raw: &str,
+        spec: Spec,
+    ) -> Result<Self, String> {
+        markers::configured(root, raw, spec)
+    }
+
     pub(in crate::command) fn bound(root: &Path, raw: &str) -> Result<Self, String> {
         markers::bound(root, raw)
     }

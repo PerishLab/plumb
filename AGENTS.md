@@ -72,10 +72,19 @@ answers for.
   do not prove that Guard will inherit that policy instead of source copies.
   Configuration candidates use `depot configuration --stage` to upload and
   verify immutable bytes without advancing latest. Its receipt carries the
-  generation and expected old pointer digest (or `absent`). Operator-only
+  generation and expected old pointer digest (or `absent`). Explicit
   `configuration install --marker ... --generation ... --path ...` consumes
   that identity into a new isolated configuration path; its local pointer is
   a selection, not evidence of remote activation. It projects no Git hooks.
+  Both installation paths bootstrap from the existing configuration source,
+  without requiring a previously installed catalog or changing runtime identity.
+  Exact installation verifies the requested generation in memory, supplies its
+  product declaration to historical marker validation, and installs only after
+  the complete marker and source binding agree. A marker carrying its own exact
+  profile continues to resolve that profile independently; candidate policy does
+  not replace it. No provisional catalog becomes process-global policy.
+  Cold-start acceptance executes the real CLI from an empty home, including the
+  Python worker bridge; mocked command arguments alone prove no installation.
   Default installation continues to consume latest. Once candidate Guard and
   repository delivery are proven, `depot configuration --promote ... --expect
   ...` revalidates the marker and bytes, then conditionally advances latest.

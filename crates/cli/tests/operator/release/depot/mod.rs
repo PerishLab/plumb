@@ -2,6 +2,7 @@ use super::super::world::{Fixture, run};
 use super::marker::{seal, seeded, stamp};
 use std::process::Command;
 mod bootstrap;
+mod cold;
 mod lifecycle;
 #[test]
 fn generation() {
