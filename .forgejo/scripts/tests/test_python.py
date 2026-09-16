@@ -16,6 +16,7 @@ class PythonBootstrap(unittest.TestCase):
         self.shell = shutil.which("pwsh")
         self.script = Path(__file__).resolve().parents[1] / "python.ps1"
         self.environment = dict(os.environ, RUNNER_TEMP=str(self.root),
+                                GITHUB_WORKSPACE=str(self.root / "workspace"),
                                 GITHUB_ENV=str(self.root / "environment"),
                                 GITHUB_OUTPUT=str(self.root / "outputs"), PATH=str(self.root))
 
@@ -52,3 +53,19 @@ class PythonBootstrap(unittest.TestCase):
         self.assertIn("checksum mismatch", result.stderr)
         self.assertEqual(archive.read_bytes(), b"corrupt")
         self.assertFalse((self.root / "environment").exists())
+
+    def test_archive_cache_identity_does_not_include_the_job_root(self):
+        outputs = []
+        for name in ("first-job", "second-job"):
+            seat = self.root / name
+            temporary = seat / "tmp"
+            temporary.mkdir(parents=True)
+            self.environment.update(RUNNER_TEMP=str(temporary),
+                                    GITHUB_WORKSPACE=str(seat / "workspace"),
+                                    GITHUB_OUTPUT=str(temporary / "outputs"))
+            result = self.run_script("probe")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            outputs.append((temporary / "outputs").read_text())
+        self.assertEqual(outputs[0], outputs[1])
+        self.assertIn("archive=../tmp/windows-x64-python-3.13.15-v1/python.zip", outputs[0])
+        self.assertNotIn(str(self.root), outputs[0])
