@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from lib.blob import decode, encode
+from lib.blob import decode, digest, encode
 from lib.source import Source
 
 
@@ -33,10 +33,20 @@ class Input(unittest.TestCase):
                          "-c", "commit.gpgsign=false", "commit", "-qm", "fixture")
         return root
 
-    def recipe(self):
-        return {"paths": ["Cargo.toml", "Cargo.lock", "src"], "projects": {
+    def recipe(self, root):
+        recipe = {"paths": ["Cargo.toml", "Cargo.lock", "src"], "projects": {
             "Cargo.toml": {"format": "toml", "set": {"/package/version": "0.0.0"}},
             "Cargo.lock": {"format": "toml", "set": {"/package/0/version": "0.0.0"}}}}
+        recipe["patches"] = {}
+        for name in recipe["projects"]:
+            body = (root / name).read_bytes()
+            line = next(line for line in body.splitlines() if line.startswith(b"version") and b'"' in line)
+            start = body.index(line) + line.index(b'"')
+            end = body.index(b'"', start + 1) + 1
+            result = body[:start] + b'"0.0.0"' + body[end:]
+            recipe["patches"][name] = {"source": digest(body), "result": digest(result),
+                                       "edits": [[start, end, '"0.0.0"']]}
+        return recipe
 
     def build(self, root):
         environment = dict(os.environ, CARGO_TARGET_DIR=str(root / "target"), CARGO_INCREMENTAL="0",
@@ -50,8 +60,8 @@ class Input(unittest.TestCase):
     def test_independent_cold_builds_use_the_same_hashed_materialization(self):
         first = self.fixture("first", "1.2.3")
         second = self.fixture("second", "4.5.6-beta.2")
-        left = Source(first).snapshot(self.recipe())
-        right = Source(second).snapshot(self.recipe())
+        left = Source(first).snapshot(self.recipe(first))
+        right = Source(second).snapshot(self.recipe(second))
         self.assertEqual(left.key, right.key)
         left.materialize(self.root / "left")
         right.materialize(self.root / "right")
@@ -61,7 +71,7 @@ class Input(unittest.TestCase):
     def test_cli_checks_planned_key_before_creating_destination(self):
         root = self.fixture("fixture", "1.2.3")
         recipe = self.root / "recipe.json"
-        recipe.write_bytes(encode(self.recipe()))
+        recipe.write_bytes(encode(self.recipe(root)))
         script = Path(__file__).resolve().parents[1] / "input.py"
         command = [sys.executable, "-B", str(script), "--root", str(root), "--recipe", str(recipe)]
         planned = decode(self.run_command(root, *command))

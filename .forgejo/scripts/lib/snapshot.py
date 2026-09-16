@@ -9,7 +9,7 @@ class Snapshot:
     def __init__(self, configuration, files):
         self.files = dict(files)
         self.manifest = {
-            "contract": "plumb.blob-source/v3",
+            "contract": "plumb.blob-source/v4",
             "configuration": configuration,
             "references": [{"path": path, "mode": mode, "digest": digest(body)}
                            for path, (mode, body) in sorted(self.files.items())]}

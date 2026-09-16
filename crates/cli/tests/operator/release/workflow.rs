@@ -83,6 +83,28 @@ fn preparation() {
 }
 
 #[test]
+fn interpreter() {
+    let workflow = text(".forgejo/workflows/ship.yml");
+    assert_eq!(workflow.matches("python.ps1 -Phase probe").count(), 4);
+    assert_eq!(workflow.matches("python.ps1 -Phase install").count(), 4);
+    assert_eq!(
+        workflow.matches("uses: actions/cache/restore@v5").count(),
+        4
+    );
+    assert_eq!(workflow.matches("uses: actions/cache/save@v5").count(), 4);
+    assert_eq!(
+        workflow.matches("& \"$env:PLUMB_WORKFLOW_PYTHON\"").count(),
+        4
+    );
+    assert!(!workflow.contains("run: python .plumb-atom"));
+    let bootstrap = text(".forgejo/scripts/python.ps1");
+    assert!(bootstrap.contains("Get-FileHash"));
+    assert!(bootstrap.contains("WindowsApps"));
+    assert!(!bootstrap.contains("SetEnvironmentVariable"));
+    assert!(!bootstrap.contains("GITHUB_PATH"));
+}
+
+#[test]
 fn marker() {
     let held = text(".forgejo/scripts/fetch-marker.sh");
     assert!(held.contains("bounded_fetch()"));

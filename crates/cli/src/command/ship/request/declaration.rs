@@ -22,11 +22,13 @@ pub(super) fn graph(marker: &ReleaseMarker, atom: &str) -> Result<Value, String>
     }
     graph.publications(inputs)?;
     graph.complete()?;
-    super::controllers::attach(
+    let mut graph = super::controllers::attach(
         json!({"schema": "plumb.blob-graph/v1", "nodes": graph.nodes, "targets": graph.targets}),
         &workflow,
         atom,
-    )
+    )?;
+    super::projection::resolve(&mut graph, &marker.spec().root, &marker.commit)?;
+    Ok(graph)
 }
 
 struct Graph<'a> {

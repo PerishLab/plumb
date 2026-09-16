@@ -118,10 +118,38 @@ jobs:
         if: runner.os != 'Windows'
         run: python3 .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job produce --node '${{ matrix.node }}' --execute
 
+      - name: Probe control interpreter on Windows
+        if: runner.os == 'Windows'
+        id: python
+        shell: pwsh
+        run: .plumb-atom/.forgejo/scripts/python.ps1 -Phase probe
+
+      - name: Reuse verified Python archive
+        if: runner.os == 'Windows' && steps.python.outputs.needed == 'true'
+        id: python-cache
+        continue-on-error: true
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ steps.python.outputs.archive }}
+          key: ${{ steps.python.outputs.key }}
+
+      - name: Install isolated control interpreter
+        if: runner.os == 'Windows' && steps.python.outputs.needed == 'true'
+        shell: pwsh
+        run: .plumb-atom/.forgejo/scripts/python.ps1 -Phase install
+
+      - name: Retain verified Python archive before business execution
+        if: runner.os == 'Windows' && steps.python.outputs.needed == 'true' && steps.python-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ steps.python.outputs.archive }}
+          key: ${{ steps.python.outputs.key }}
+
       - name: Execute only unresolved declared work on Windows
         if: runner.os == 'Windows'
         shell: pwsh
-        run: python .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job produce --node '${{ matrix.node }}' --execute
+        run: '& "$env:PLUMB_WORKFLOW_PYTHON" .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job produce --node ''${{ matrix.node }}'' --execute'
 
   bind:
     needs: [resolve, produce]
@@ -168,10 +196,38 @@ jobs:
         if: runner.os != 'Windows'
         run: python3 .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job bind --node '${{ matrix.node }}' --execute
 
+      - name: Probe control interpreter on Windows
+        if: runner.os == 'Windows'
+        id: python
+        shell: pwsh
+        run: .plumb-atom/.forgejo/scripts/python.ps1 -Phase probe
+
+      - name: Reuse verified Python archive
+        if: runner.os == 'Windows' && steps.python.outputs.needed == 'true'
+        id: python-cache
+        continue-on-error: true
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ steps.python.outputs.archive }}
+          key: ${{ steps.python.outputs.key }}
+
+      - name: Install isolated control interpreter
+        if: runner.os == 'Windows' && steps.python.outputs.needed == 'true'
+        shell: pwsh
+        run: .plumb-atom/.forgejo/scripts/python.ps1 -Phase install
+
+      - name: Retain verified Python archive before business execution
+        if: runner.os == 'Windows' && steps.python.outputs.needed == 'true' && steps.python-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ steps.python.outputs.archive }}
+          key: ${{ steps.python.outputs.key }}
+
       - name: Execute only unresolved declared work on Windows
         if: runner.os == 'Windows'
         shell: pwsh
-        run: python .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job bind --node '${{ matrix.node }}' --execute
+        run: '& "$env:PLUMB_WORKFLOW_PYTHON" .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job bind --node ''${{ matrix.node }}'' --execute'
 
   publish:
     needs: [resolve, produce, bind]
@@ -227,10 +283,38 @@ jobs:
         if: runner.os != 'Windows'
         run: python3 .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job publish --node '${{ matrix.node }}' --execute
 
+      - name: Probe control interpreter on Windows
+        if: runner.os == 'Windows'
+        id: python
+        shell: pwsh
+        run: .plumb-atom/.forgejo/scripts/python.ps1 -Phase probe
+
+      - name: Reuse verified Python archive
+        if: runner.os == 'Windows' && steps.python.outputs.needed == 'true'
+        id: python-cache
+        continue-on-error: true
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ steps.python.outputs.archive }}
+          key: ${{ steps.python.outputs.key }}
+
+      - name: Install isolated control interpreter
+        if: runner.os == 'Windows' && steps.python.outputs.needed == 'true'
+        shell: pwsh
+        run: .plumb-atom/.forgejo/scripts/python.ps1 -Phase install
+
+      - name: Retain verified Python archive before business execution
+        if: runner.os == 'Windows' && steps.python.outputs.needed == 'true' && steps.python-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ steps.python.outputs.archive }}
+          key: ${{ steps.python.outputs.key }}
+
       - name: Execute only unresolved declared work on Windows
         if: runner.os == 'Windows'
         shell: pwsh
-        run: python .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job publish --node '${{ matrix.node }}' --execute
+        run: '& "$env:PLUMB_WORKFLOW_PYTHON" .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job publish --node ''${{ matrix.node }}'' --execute'
 
   complete:
     needs: [resolve, produce, bind, publish]
@@ -286,7 +370,35 @@ jobs:
         if: runner.os != 'Windows'
         run: python3 .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job complete --node '${{ matrix.node }}' --execute
 
+      - name: Probe control interpreter on Windows
+        if: runner.os == 'Windows'
+        id: python
+        shell: pwsh
+        run: .plumb-atom/.forgejo/scripts/python.ps1 -Phase probe
+
+      - name: Reuse verified Python archive
+        if: runner.os == 'Windows' && steps.python.outputs.needed == 'true'
+        id: python-cache
+        continue-on-error: true
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ steps.python.outputs.archive }}
+          key: ${{ steps.python.outputs.key }}
+
+      - name: Install isolated control interpreter
+        if: runner.os == 'Windows' && steps.python.outputs.needed == 'true'
+        shell: pwsh
+        run: .plumb-atom/.forgejo/scripts/python.ps1 -Phase install
+
+      - name: Retain verified Python archive before business execution
+        if: runner.os == 'Windows' && steps.python.outputs.needed == 'true' && steps.python-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ steps.python.outputs.archive }}
+          key: ${{ steps.python.outputs.key }}
+
       - name: Execute only unresolved declared work on Windows
         if: runner.os == 'Windows'
         shell: pwsh
-        run: python .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job complete --node '${{ matrix.node }}' --execute
+        run: '& "$env:PLUMB_WORKFLOW_PYTHON" .plumb-atom/.forgejo/scripts/dispatch.py --control .plumb-atom --job complete --node ''${{ matrix.node }}'' --execute'
