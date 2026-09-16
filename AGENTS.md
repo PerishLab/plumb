@@ -80,10 +80,12 @@ answers for.
   keeps its real version and source commit; its executable digest is bound
   independently from the exact published configuration validator. The proof
   carries the marker, generation and derived configuration digest as well.
-  Commit hooks, Land, Version, Release, and Ship dispatch or local recovery
+  Commit hooks, Land, Version, Release, Depot, and Ship dispatch or local recovery
   may restore only that same controller's verified pending or committed
   binding, and revalidate the marker. Workflow execution does not inherit an
-  operator's local binding. Version preparation proves its local projection
+  operator's local binding. Depot restores the operator binding from the calling
+  checkout, independently of its explicit target root and marker; target HEAD
+  and published-validator checks remain mandatory. Version preparation proves its local projection
   and datum before creating or changing remote release-line state. Each Ship
   business request carries the controller configuration marker and generation;
   workers install that exact selection in an isolated home and revalidate it

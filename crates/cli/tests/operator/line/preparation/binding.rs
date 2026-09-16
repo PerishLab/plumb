@@ -79,6 +79,37 @@ fn restored() {
         vec!["release", "stamp", "--version", "v1.0.0", "--dry-run"],
         vec!["ship", "dispatch", "--marker", "v1.0.0", "--dry-run"],
         vec!["ship", "local", "--marker", "v1.0.0", "--dry-run"],
+        vec![
+            "depot",
+            "configuration",
+            "--marker",
+            "v1.0.0",
+            "--from",
+            "media",
+            "--stage",
+            "--dry-run",
+            "independent-target",
+        ],
+        vec![
+            "depot",
+            "skill",
+            "--marker",
+            "v1.0.0",
+            "--from",
+            "media",
+            "--dry-run",
+            "independent-target",
+        ],
+        vec![
+            "depot",
+            "changelog",
+            "--marker",
+            "v1.0.0",
+            "--from",
+            "media",
+            "--dry-run",
+            "independent-target",
+        ],
     ] {
         let output = Command::new(binary)
             .args(&args)

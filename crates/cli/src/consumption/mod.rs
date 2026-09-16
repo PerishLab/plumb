@@ -25,6 +25,7 @@ pub fn prepare(command: &Command) -> Result<(), String> {
         }
         Command::Version { .. }
         | Command::Release { .. }
+        | Command::Depot { .. }
         | Command::Ship {
             deed:
                 crate::command::ship::Deed::Dispatch { .. } | crate::command::ship::Deed::Local { .. },
