@@ -3,10 +3,6 @@ name: ship
 on:
   workflow_dispatch:
     inputs:
-      configuration:
-        description: Exact controller configuration
-        required: true
-        type: string
       declaration:
         description: Locked marker-bound blob graph and finite backend
         required: true
@@ -28,7 +24,6 @@ permissions:
   contents: read
 
 env:
-  PLUMB_BUILD_CONFIGURATION: ${{ inputs.configuration }}
   PLUMB_RELEASE_ROOT: .
   PLUMB_RELEASE_MARKER: ${{ inputs.marker }}
   PLUMB_SHIP_DECLARATION: ${{ inputs.declaration }}

@@ -22,10 +22,6 @@ pub fn run(options: Dispatch) -> Result<String, String> {
     let digest = before.digest()?;
     let declaration = serde_json::to_string(&super::super::ship::declaration(&before)?)
         .map_err(|error| error.to_string())?;
-    let configuration = plumb::depot::rules()?
-        .version()
-        .unwrap_or(plumb::version!("PLUMB"))
-        .to_string();
     let root = git::root()?;
     let product = git::remote(&root, &options.repo)?;
     let remote = git::remote(&root, "PerishLab/plumb")?;
@@ -42,7 +38,6 @@ pub fn run(options: Dispatch) -> Result<String, String> {
             workflow,
             reference: &reference,
             inputs: json!({
-                "configuration": configuration,
                 "marker": before.marker,
                 "plumb": plumb::version!("PLUMB"),
                 "repository": format!("{}/{}", product.owner, product.repo),

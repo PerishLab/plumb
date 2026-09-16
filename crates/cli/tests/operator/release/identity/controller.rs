@@ -78,6 +78,21 @@ fn input() {
 }
 
 #[test]
+fn configuration() {
+    let mut held = request();
+    held["controller"] = serde_json::json!({
+        "marker": {"name": "v9.9.9", "sha256": "c".repeat(64)},
+        "generation": "d".repeat(64),
+    });
+    refuses(
+        held.clone(),
+        "controller configuration requires its exact control checkout",
+    );
+    held["controller"]["path"] = serde_json::json!("/unverified/configuration");
+    refuses(held, "unknown field `path`");
+}
+
+#[test]
 fn context() {
     let payload = request();
     let mut held = serde_json::json!({

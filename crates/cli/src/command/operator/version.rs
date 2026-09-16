@@ -7,13 +7,24 @@ pub fn plan(version: &str, line: &str) -> String {
     format!("project repository version {version} on {line}")
 }
 
-pub fn project(root: &Path, line: &str, version: &str, head: &str) -> Result<String, String> {
+pub fn project(root: &Path, version: &str, head: &str) -> Result<String, String> {
     let tree = Tree::open(root, head)?;
     tree.prepare(version)?;
     if tree.clean()? {
         return Ok(head.to_string());
     }
-    tree.commit(line, version, head)
+    tree.commit(version, head)
+}
+
+pub fn publish(root: &Path, line: &str, head: &str) -> Result<(), String> {
+    success(
+        "push the proved version projection",
+        plumb::config::current("git")
+            .arg("-C")
+            .arg(root)
+            .args(["push", "origin", &format!("{head}:refs/heads/{line}")])
+            .output(),
+    )
 }
 
 pub struct Preparation<'a> {
@@ -149,22 +160,17 @@ impl Tree {
             || plumb::guard::current(&self.seat, head).is_ok())
     }
 
-    pub(super) fn datum(
-        &self,
-        line: &str,
-        head: &str,
-        datum: &plumb::datum::Datum,
-    ) -> Result<String, String> {
+    pub(super) fn datum(&self, head: &str, datum: &plumb::datum::Datum) -> Result<String, String> {
         self.retire(&datum.version)?;
         let message = format!(
             "Record the datum {} judges against\n\n{}",
             datum.version,
             datum.trailer()?
         );
-        self.record(line, head, message)
+        self.record(head, message)
     }
 
-    fn record(&self, line: &str, head: &str, mut message: String) -> Result<String, String> {
+    fn record(&self, head: &str, mut message: String) -> Result<String, String> {
         let tree = self.tree()?;
         let parent = read(
             "read parent proof",
@@ -192,10 +198,6 @@ impl Tree {
             "commit the datum",
             self.git(["commit-tree", &tree, "-p", head, "-m", &message]),
         )?;
-        success(
-            "push the datum",
-            self.git(["push", "origin", &format!("{commit}:refs/heads/{line}")]),
-        )?;
         Ok(commit)
     }
 
@@ -204,13 +206,9 @@ impl Tree {
         read("write release version tree", self.git(["write-tree"]))
     }
 
-    fn commit(&self, line: &str, version: &str, head: &str) -> Result<String, String> {
+    fn commit(&self, version: &str, head: &str) -> Result<String, String> {
         let datum = self.resolve(version, head)?;
-        self.record(
-            line,
-            head,
-            format!("Prepare {version}\n\n{}", datum.trailer()?),
-        )
+        self.record(head, format!("Prepare {version}\n\n{}", datum.trailer()?))
     }
 
     fn git<const N: usize>(&self, args: [&str; N]) -> Result<Output, std::io::Error> {

@@ -91,10 +91,20 @@ fn related() {
         String::from_utf8_lossy(&output.stderr)
     );
     let text = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        text.contains(&format!(r#""configuration":"{version}""#)),
-        "{text}"
-    );
+    let inputs: serde_json::Value = serde_json::from_str(
+        text.split_once("inputs=")
+            .unwrap()
+            .1
+            .trim()
+            .trim_end_matches(')'),
+    )
+    .unwrap();
+    let declaration: serde_json::Value =
+        serde_json::from_str(inputs["declaration"].as_str().unwrap()).unwrap();
+    let controller = &declaration["graph"]["nodes"][0]["execution"]["payload"]["controller"];
+    assert_eq!(controller["marker"]["name"], version);
+    assert_eq!(controller["generation"].as_str().unwrap().len(), 64);
+    assert!(inputs.get("configuration").is_none());
     assert!(text.contains(&format!(r#""plumb":"{running}""#)), "{text}");
     assert!(text.contains(r#""marker":"v1.2.0-nightly.9""#), "{text}");
 }

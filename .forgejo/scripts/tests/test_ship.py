@@ -27,7 +27,8 @@ class Bridge(unittest.TestCase):
     def invoke(self, command, **options):
         self.calls.append((command, options))
         self.assertEqual(command[:3], ["plumb", "ship", "execute"])
-        output = Path(command[-1])
+        output = Path(command[command.index("--output") + 1])
+        self.assertTrue(output.is_relative_to(self.root), "fixture output escaped its temporary root")
         content = output.parent / "content"
         content.write_bytes(b"opaque workload")
         output.write_bytes(encode({"schema": "plumb.ship-result/v2", "marker": "b" * 64,

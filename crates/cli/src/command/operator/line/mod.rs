@@ -35,6 +35,7 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     let version = value::version(version, "stable")?;
     let name = value::branch(&version);
     let root = git::root()?;
+    plumb::depot::rules().map_err(|error| format!("prepare configuration preflight: {error}"))?;
     let remote = git::remote(&root, repo)?;
     let mut course = Course::new(dry);
     git::fetch(&root)?;
@@ -42,43 +43,50 @@ fn prepare(version: &str, from: &str, repo: &str, dry: bool) -> Result<String, S
     seat.require(&version)?;
     let client = Client::new(remote)?;
     let standing = client.branch(&name)?.is_some();
-    let head = if standing {
+    let previous = if standing {
         if super::mark::point(&root).seen(&version)?.is_some() {
             return Err(format!(
                 "release marker {version} already stands; markers are immutable, prepare a new version instead of reopening {name}"
             ));
         }
-        course.step(plan(client.remote(), &name, "preparing"), || {
-            client.protect(&name, "preparing")
-        })?;
         head(&client, &name)?
     } else {
-        let base = source(&root, from)?;
-        let opened = opened(&mut course, &client, &name, from)?;
-        if !course.dry() && opened != base {
-            return Err(format!(
-                "release source {from} moved from {base} to {opened}; preparation refused"
-            ));
-        }
-        opened
+        source(&root, from)?
     };
-    if !course.dry() {
-        git::fetch(&root)?;
-    }
-    let previous = head.clone();
     let head = course
         .step(super::version::plan(&version, &name), || {
-            super::version::project(&root, &name, &version, &head)
+            super::version::project(&root, &version, &previous)
         })?
-        .unwrap_or(head);
+        .unwrap_or_else(|| previous.clone());
     let recorded = course.step(super::datum::plan(&version), || {
         super::datum::record(super::datum::Cut {
             root: &root,
-            name: &name,
             version: &version,
             head: &head,
         })
     })?;
+    let head = recorded.as_ref().map_or(head, |record| record.head.clone());
+    if standing {
+        course.step(plan(client.remote(), &name, "preparing"), || {
+            client.protect(&name, "preparing")
+        })?;
+    } else {
+        let opened = opened(&mut course, &client, &name, from)?;
+        if !course.dry() && opened != previous {
+            return Err(format!(
+                "release source {from} moved from {previous} to {opened}; preparation refused"
+            ));
+        }
+    }
+    if head != previous {
+        course.step(
+            format!("publish proved projection {head} on {name}"),
+            || super::version::publish(&root, &name, &head),
+        )?;
+    }
+    if !course.dry() {
+        git::fetch(&root)?;
+    }
     if course.dry() {
         return Ok(course.plan());
     }

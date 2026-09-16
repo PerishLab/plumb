@@ -75,6 +75,7 @@ class Controller(unittest.TestCase):
 
     def test_cached_controller_still_installs_into_actual_runner_seat(self):
         request = {"preparation": [{"node": "controller", "output": "content"}],
+                   "payload": {"controller": {"marker": {"name": "v1.0.0", "sha256": "a" * 64}, "generation": "b" * 64}},
                    "producers": {"controller": {"outputs": {"content": {"digest": "d" * 64}}}}}
 
         def materialize(reference, path):
@@ -83,11 +84,27 @@ class Controller(unittest.TestCase):
 
         environment = {}
         with patch.object(ship, "download", materialize), patch.object(ship.subprocess, "run") as run:
-            with patch.dict(ship.os.environ, {"PLUMB_BUILD_CONFIGURATION": "v1.0.0"}):
+            with patch.dict(ship.os.environ, {"PLUMB_BUILD_CONFIGURATION": "v99.0.0"}):
                 tool = ship.controller(request, self.root, environment)
         self.assertTrue(Path(tool).is_file())
         self.assertEqual(environment["PLUMB_HOME"], str(self.root / "home"))
-        self.assertEqual(run.call_args.args[0][1:], ["configuration", "install", "--version", "v1.0.0"])
+        self.assertEqual(run.call_args.args[0][1:], ["configuration", "install", str(Path(ship.__file__).resolve().parents[2]),
+                         "--marker", "v1.0.0", "--generation", "b" * 64, "--path", str(self.root / "home/configurations")])
+
+    def test_missing_binding_refuses_before_download_or_install(self):
+        with patch.object(ship, "download") as download, patch.object(ship.subprocess, "run") as run:
+            with self.assertRaises(Refusal):
+                ship.controller({}, self.root, {})
+        download.assert_not_called()
+        run.assert_not_called()
+
+    def test_bad_generation_refuses_before_download_or_install(self):
+        request = {"payload": {"controller": {"marker": {"name": "v1.0.0", "sha256": "a" * 64}, "generation": "latest"}}}
+        with patch.object(ship, "download") as download, patch.object(ship.subprocess, "run") as run:
+            with self.assertRaises(Refusal):
+                ship.controller(request, self.root, {})
+        download.assert_not_called()
+        run.assert_not_called()
 
 
 class Material(unittest.TestCase):

@@ -7,11 +7,17 @@ import sys
 import tempfile
 from pathlib import Path
 
-from lib.blob import Refusal, decode, encode
+from lib.blob import Refusal, decode, encode, object_fields, sha, name
 from lib.material import download
 
 
 def controller(request, seat, environment):
+    configuration = request.get("payload", {}).get("controller")
+    object_fields(configuration, ("marker", "generation"))
+    object_fields(configuration["marker"], ("name", "sha256"))
+    name(configuration["marker"]["name"])
+    sha(configuration["marker"]["sha256"])
+    sha(configuration["generation"])
     preparation = request.get("preparation", [])
     if len(preparation) != 1:
         raise Refusal("Ship requires one declared controller preparation")
@@ -22,11 +28,11 @@ def controller(request, seat, environment):
     with gzip.open(archive, "rb") as source, tool.open("xb") as output:
         shutil.copyfileobj(source, output)
     tool.chmod(0o755)
-    configuration = os.environ.get("PLUMB_BUILD_CONFIGURATION")
-    if not configuration:
-        raise Refusal("Ship controller configuration is absent")
     environment["PLUMB_HOME"] = str(seat / "home")
-    subprocess.run([str(tool), "configuration", "install", "--version", configuration],
+    (seat / "home").mkdir()
+    subprocess.run([str(tool), "configuration", "install", str(Path(__file__).resolve().parents[2]),
+                    "--marker", configuration["marker"]["name"], "--generation", configuration["generation"],
+                    "--path", str(seat / "home/configurations")],
                    env=environment, timeout=300, check=True)
     return str(tool)
 
@@ -44,7 +50,8 @@ def execute(source, destination):
                        PLUMB_RELEASE_PROMOTION=str(seat / "promotion.json"))
     tool = controller(request, seat, environment)
     status = subprocess.run([tool, "ship", "execute", "--request-file", str(source.resolve()),
-                             "--output", str(result)], env=environment, timeout=3600)
+                             "--output", str(result), "--control", str(Path(__file__).resolve().parents[2])],
+                            env=environment, timeout=3600)
     if status.returncode:
         raise Refusal("Ship business execution failed; reconcile its destination before retry")
     held = decode(result.read_bytes())

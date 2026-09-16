@@ -64,16 +64,17 @@ fn versioned() {
         "Plumb must not bind controller configuration to the product marker: {trigger}"
     );
     assert!(
-        trigger.contains("let configuration = plumb::depot::rules()?"),
-        "every ship must use the dispatching Plumb atom's configuration: {trigger}"
+        text("crates/cli/src/command/ship/request/controllers.rs")
+            .contains("Configuration::held()?"),
+        "every Ship request must carry its exact controller configuration"
     );
     assert!(
         trigger.contains("\"plumb\": plumb::version!(\"PLUMB\")"),
         "{trigger}"
     );
     let workflow = text(".forgejo/workflows/ship.yml");
-    assert!(workflow.contains("configuration:"), "{workflow}");
-    assert!(workflow.contains("inputs.configuration"), "{workflow}");
+    assert!(!workflow.contains("inputs.configuration"), "{workflow}");
+    assert!(text(".forgejo/scripts/ship.py").contains("\"--generation\""));
     assert!(workflow.contains("secrets.SHIP_PUBLISH_S3_ACCESS_KEY"));
     assert!(workflow.contains("secrets.SHIP_PUBLISH_FINGERPRINT"));
     assert!(!workflow.contains("PLUMB_PUBLISH_BUCKET:"));

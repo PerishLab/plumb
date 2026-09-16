@@ -14,7 +14,7 @@ fn cold() {
     assert!(!first.contains("bootstrap-plumb"));
     assert!(!first.contains("cargo build"));
     assert!(held.contains("PLUMB_SHIP_DECLARATION: ${{ inputs.declaration }}"));
-    assert!(held.contains("PLUMB_BUILD_CONFIGURATION: ${{ inputs.configuration }}"));
+    assert!(!held.contains("PLUMB_BUILD_CONFIGURATION"));
 }
 
 #[test]
@@ -65,7 +65,9 @@ fn preparation() {
     assert!(!controller.contains("workflow plan"));
     assert!(!controller.contains("workflow record"));
     let bridge = text(".forgejo/scripts/ship.py");
-    assert!(bridge.contains("configuration\", \"install\", \"--version\", configuration"));
+    assert!(bridge.contains("\"--marker\", configuration[\"marker\"][\"name\"]"));
+    assert!(bridge.contains("\"--generation\", configuration[\"generation\"]"));
+    assert!(!bridge.contains("PLUMB_BUILD_CONFIGURATION"));
     assert!(bridge.contains("tool = controller(request, seat, environment)"));
 }
 

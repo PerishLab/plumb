@@ -38,8 +38,8 @@ pub(super) fn local(raw: &str, dry: bool) -> Result<String, String> {
     local::run(raw, dry)
 }
 
-pub(super) fn execute(request: &str) -> Result<String, String> {
-    execute::run(request)
+pub(super) fn execute(request: &str, control: Option<&std::path::Path>) -> Result<String, String> {
+    execute::run(request, control)
 }
 
 pub(super) fn resolve(raw: &str, atom: &str) -> Result<String, String> {

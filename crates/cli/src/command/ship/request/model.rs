@@ -12,6 +12,8 @@ pub(super) struct Request {
     pub(super) configuration: String,
     pub(super) profile: String,
     #[serde(default)]
+    pub(super) controller: Option<super::controllers::Configuration>,
+    #[serde(default)]
     pub(super) input: Option<PathBuf>,
     #[serde(default = "Reuse::none")]
     pub(super) reuse: Reuse,
