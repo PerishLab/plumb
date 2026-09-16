@@ -31,7 +31,7 @@ env:
   PLUMB_WORKFLOW_INVENTORY_SECRET: ${{ secrets.WORKFLOW_INVENTORY_S3_SECRET_KEY }}
   PLUMB_WORKFLOW_INVENTORY_BUCKET: ${{ secrets.WORKFLOW_INVENTORY_S3_BUCKET }}
   PLUMB_WORKFLOW_INVENTORY_ENDPOINT: ${{ secrets.WORKFLOW_INVENTORY_S3_ENDPOINT }}
-  PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_URL }}
+  PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_ORIGIN }}
 
 concurrency:
   group: ${{ inputs.repository }}-ship-${{ inputs.marker }}
@@ -41,7 +41,7 @@ jobs:
   resolve:
     runs-on: docker
     container:
-      image: git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73
+      image: git.perish.top/perishfire/images/forge@sha256:e4d482921c753e337ba5bd1f5b83281451b07982856603d148daea86a0197bea
     outputs:
       produce: ${{ steps.plan.outputs.produce }}
       produce_needed: ${{ steps.plan.outputs.produce_needed }}
@@ -81,7 +81,7 @@ jobs:
       matrix: ${{ fromJSON(needs.resolve.outputs.produce) }}
     runs-on: ${{ matrix.runner }}
     container:
-      image: ${{ (matrix.runner == 'linux' || matrix.runner == 'docker') && 'git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73' || '' }}
+      image: ${{ (matrix.runner == 'linux' || matrix.runner == 'docker') && 'git.perish.top/perishfire/images/forge@sha256:e4d482921c753e337ba5bd1f5b83281451b07982856603d148daea86a0197bea' || '' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -131,7 +131,7 @@ jobs:
       matrix: ${{ fromJSON(needs.resolve.outputs.bind) }}
     runs-on: ${{ matrix.runner }}
     container:
-      image: ${{ (matrix.runner == 'linux' || matrix.runner == 'docker') && 'git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73' || '' }}
+      image: ${{ (matrix.runner == 'linux' || matrix.runner == 'docker') && 'git.perish.top/perishfire/images/forge@sha256:e4d482921c753e337ba5bd1f5b83281451b07982856603d148daea86a0197bea' || '' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -181,10 +181,10 @@ jobs:
       matrix: ${{ fromJSON(needs.resolve.outputs.publish) }}
     runs-on: ${{ matrix.runner }}
     container:
-      image: ${{ (matrix.runner == 'linux' || matrix.runner == 'docker') && 'git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73' || '' }}
+      image: ${{ (matrix.runner == 'linux' || matrix.runner == 'docker') && 'git.perish.top/perishfire/images/forge@sha256:e4d482921c753e337ba5bd1f5b83281451b07982856603d148daea86a0197bea' || '' }}
     env:
       DOCKER_HOST: tcp://172.17.0.1:2375
-      PLUMB_RELEASE_TOOLCHAIN: git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73
+      PLUMB_RELEASE_TOOLCHAIN: git.perish.top/perishfire/images/forge@sha256:e4d482921c753e337ba5bd1f5b83281451b07982856603d148daea86a0197bea
       PLUMB_RELEASE_REGISTRY_TOKEN: ${{ secrets.RELEASE_REGISTRY_TOKEN }}
       PLUMB_SITE_TOKEN: ${{ secrets.PLUMB_SITE_TOKEN }}
       PLUMB_PUBLISH_ACCESS: ${{ secrets.SHIP_PUBLISH_S3_ACCESS_KEY }}
@@ -240,10 +240,10 @@ jobs:
       matrix: ${{ fromJSON(needs.resolve.outputs.complete) }}
     runs-on: ${{ matrix.runner }}
     container:
-      image: ${{ (matrix.runner == 'linux' || matrix.runner == 'docker') && 'git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73' || '' }}
+      image: ${{ (matrix.runner == 'linux' || matrix.runner == 'docker') && 'git.perish.top/perishfire/images/forge@sha256:e4d482921c753e337ba5bd1f5b83281451b07982856603d148daea86a0197bea' || '' }}
     env:
       DOCKER_HOST: tcp://172.17.0.1:2375
-      PLUMB_RELEASE_TOOLCHAIN: git.perish.top/perishfire/images/forge@sha256:e07cd20edac134a9e76742c9d4562459b7372f4cdb229c5e4fb0303499f1cb73
+      PLUMB_RELEASE_TOOLCHAIN: git.perish.top/perishfire/images/forge@sha256:e4d482921c753e337ba5bd1f5b83281451b07982856603d148daea86a0197bea
       PLUMB_RELEASE_REGISTRY_TOKEN: ${{ secrets.RELEASE_REGISTRY_TOKEN }}
       PLUMB_SITE_TOKEN: ${{ secrets.PLUMB_SITE_TOKEN }}
       PLUMB_PUBLISH_ACCESS: ${{ secrets.SHIP_PUBLISH_S3_ACCESS_KEY }}

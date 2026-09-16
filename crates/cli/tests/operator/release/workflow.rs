@@ -15,6 +15,17 @@ fn cold() {
     assert!(!first.contains("cargo build"));
     assert!(held.contains("PLUMB_SHIP_DECLARATION: ${{ inputs.declaration }}"));
     assert!(!held.contains("PLUMB_BUILD_CONFIGURATION"));
+    assert!(
+        held.contains("PLUMB_WORKFLOW_INVENTORY_URL: ${{ secrets.WORKFLOW_INVENTORY_ORIGIN }}")
+    );
+    assert!(!held.contains("secrets.WORKFLOW_INVENTORY_URL"));
+    assert_eq!(
+        held.matches(
+            "forge@sha256:e4d482921c753e337ba5bd1f5b83281451b07982856603d148daea86a0197bea"
+        )
+        .count(),
+        7
+    );
 }
 
 #[test]

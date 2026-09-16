@@ -114,7 +114,7 @@ impl Model {
     }
 
     pub fn inventory(&self) -> String {
-        format!("https://{}/inventory.json", self.domain)
+        format!("https://{}", self.domain)
     }
 
     pub fn secrets(&self) -> &'static [&'static str] {
