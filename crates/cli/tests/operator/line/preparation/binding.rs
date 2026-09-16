@@ -74,6 +74,8 @@ fn restored() {
             &format!("Fixture\n\nPlumb-Guard-Proof: {}", proof.encode().unwrap()),
         ],
     );
+    let index = std::fs::read(root.join(".git/index")).unwrap();
+    std::fs::write(root.join(".git/index.lock"), "held by another operation").unwrap();
     for args in [
         vec!["version", "prepare", "--version", "v1.0.0", "--dry-run"],
         vec!["release", "stamp", "--version", "v1.0.0", "--dry-run"],
@@ -133,6 +135,11 @@ fn restored() {
         .output()
         .unwrap();
     assert!(!String::from_utf8_lossy(&output.stderr).contains("candidate selection"));
+    assert_eq!(std::fs::read(root.join(".git/index")).unwrap(), index);
+    assert_eq!(
+        std::fs::read_to_string(root.join(".git/index.lock")).unwrap(),
+        "held by another operation"
+    );
 }
 
 #[test]

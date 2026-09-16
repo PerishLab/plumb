@@ -1,3 +1,5 @@
+mod index;
+
 use plumb::boundary::{Request, check};
 use std::path::Path;
 use std::process::{Command, Output};

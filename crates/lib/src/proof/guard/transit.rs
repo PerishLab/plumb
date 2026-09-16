@@ -1,4 +1,4 @@
-use super::store::{self, Seat};
+use super::store::Seat;
 use super::{Descriptor, TRAILER};
 use std::path::{Path, PathBuf};
 
@@ -25,7 +25,7 @@ pub fn staged(root: &Path, tree: &str) -> Result<Descriptor, String> {
 }
 
 pub fn attach(root: &Path, message: &Path) -> Result<Descriptor, String> {
-    let tree = store::git(root, &["write-tree"], "read staged tree")?;
+    let tree = super::tree(root)?;
     let proof = staged(root, &tree)?;
     let token = proof.encode()?;
     let mut text = std::fs::read_to_string(message)

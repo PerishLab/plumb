@@ -46,7 +46,7 @@ pub fn restore(root: &Path) -> Result<(), String> {
     if plumb::config::value("PLUMB_HOME").is_none() {
         return Ok(());
     }
-    let tree = crate::command::precommit::tree::git(root, &["write-tree"], "read staged tree")?;
+    let tree = plumb::guard::tree(root)?;
     let held = plumb::guard::inspect(root, &tree).or_else(|_| {
         let proof = plumb::guard::commit(root, "HEAD")?;
         proof.witness(root)?;
