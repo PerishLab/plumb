@@ -79,6 +79,9 @@ impl Review<'_> {
         if !present(seat.objects().iter().map(|object| object.path.as_str())) {
             return Ok(None);
         }
+        if crate::shape::product::governance(self.0)?.is_none() {
+            return Ok(None);
+        }
         let bodies = seat
             .objects()
             .iter()

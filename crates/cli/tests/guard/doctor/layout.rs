@@ -61,11 +61,7 @@ fn track(root: &std::path::Path) {
 }
 
 fn report(root: &std::path::Path) -> String {
-    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["doctor", root.to_str().expect("utf8")])
-        .output()
-        .expect("plumb");
-    String::from_utf8_lossy(&output.stdout).to_string()
+    super::run(&["doctor", root.to_str().expect("utf8")])
 }
 
 #[test]
@@ -92,6 +88,21 @@ fn stray() {
         held.contains("file stray.json sits in no declared seat"),
         "{held}"
     );
+}
+
+#[test]
+fn unrelated() {
+    let seat = seated(DECLARED);
+    let home = crate::support::depot(&[("profiles/affirmed/unrelated/receipt.toml", "")]);
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["doctor", seat.path().to_str().expect("utf8")])
+        .env_remove("PLUMB_RELEASE_VERSION")
+        .env("PLUMB_HOME", home.path())
+        .output()
+        .expect("plumb");
+    let held = String::from_utf8_lossy(&output.stdout);
+    assert!(!held.contains("blind:"), "{held}");
+    assert!(!held.contains("read origin failed"), "{held}");
 }
 
 #[test]
@@ -251,8 +262,11 @@ fn recorded() {
         "rule = [\"rule://seat/named-after-repository\", \"rule://seat/wayfinder\"]",
         "rule = [\"rule://seat/affirmed\"]",
     ));
+    let home = crate::support::depot(&[]);
     let done = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["affirm", seat.path().to_str().expect("utf8"), "--write"])
+        .env_remove("PLUMB_RELEASE_VERSION")
+        .env("PLUMB_HOME", home.path())
         .output()
         .expect("plumb");
     assert!(

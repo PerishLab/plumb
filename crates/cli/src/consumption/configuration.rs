@@ -1,6 +1,5 @@
 use clap::Subcommand;
 use plumb::rig::Rig;
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 #[derive(Subcommand)]
@@ -73,15 +72,9 @@ fn install(root: &Path, version: Option<&str>, over: Option<&Path>) -> Result<St
         kind: plumb::depot::v3::Kind::Configuration,
     })?
     .ok_or_else(|| format!("depot carries no plumb configuration {version}"))?;
-    let mut bodies = BTreeMap::new();
-    for object in &generation.manifest.objects {
-        bodies.insert(object.path.clone(), generation.read(&object.path)?);
-    }
-    let pointer = generation.pointer;
-    let bundle = plumb::depot::v3::Bundle {
-        manifest: generation.manifest,
-        bodies,
-    };
+    let pointer = generation.pointer.clone();
+    let bundle =
+        crate::command::depot::contents(&generation.manifest, |path| generation.read(path))?;
     let seat = match over {
         Some(path) => path.to_path_buf(),
         None => plumb::depot::root(Path::new(""))?,

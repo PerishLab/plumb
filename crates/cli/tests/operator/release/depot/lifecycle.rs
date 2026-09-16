@@ -153,6 +153,9 @@ pub fn exercise(fixture: &Fixture<'_>, source: &Path) {
 }
 
 fn isolation(fixture: &Fixture<'_>, generation: &str) {
+    let manifest: toml::Value =
+        toml::from_str(&std::fs::read_to_string(fixture.root.join("plumb.toml")).unwrap()).unwrap();
+    let source = manifest["release"]["depot"]["source"].as_str().unwrap();
     let path = fixture.root.join("candidate");
     let absent = fixture
         .command()
@@ -171,6 +174,7 @@ fn isolation(fixture: &Fixture<'_>, generation: &str) {
     assert!(String::from_utf8_lossy(&absent.stderr).contains("--path"));
     let foreign = fixture
         .command()
+        .env("PLUMB_RULES_SOURCE", source)
         .current_dir(fixture.root)
         .args([
             "configuration",
@@ -185,7 +189,9 @@ fn isolation(fixture: &Fixture<'_>, generation: &str) {
         .output()
         .unwrap();
     assert!(!foreign.status.success());
-    assert!(String::from_utf8_lossy(&foreign.stderr).contains("requires a Plumb release marker"));
+    assert!(
+        String::from_utf8_lossy(&foreign.stderr).contains("does not bind the requested projection")
+    );
     assert!(!path.exists());
     std::fs::create_dir(&path).unwrap();
     let existing = fixture

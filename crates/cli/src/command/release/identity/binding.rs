@@ -2,6 +2,22 @@ use crate::shape::release::Spec;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
+pub(super) fn guarded(product: &str, marker: &str) -> bool {
+    product == "plumb"
+        && marker
+            .trim_start_matches('v')
+            .parse::<semver::Version>()
+            .is_ok_and(|version| (version.major, version.minor, version.patch) >= (0, 37, 8))
+}
+
+pub(super) fn named(raw: &str) -> String {
+    if raw.starts_with('v') {
+        raw.to_string()
+    } else {
+        format!("v{raw}")
+    }
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct Datum {
@@ -123,13 +139,18 @@ pub(super) fn resolve(
     message: &str,
     root: &Path,
     marker: &str,
+    spec: Option<&Spec>,
 ) -> Result<Option<Identity>, String> {
     if !message.starts_with('{') {
         return Ok(None);
     }
     let held: Annotation = serde_json::from_str(message)
         .map_err(|error| format!("cannot parse release marker annotation: {error}"))?;
-    held.resolve(root, marker).map(Some)
+    held.resolve(root, marker, spec).map(Some)
+}
+
+pub(super) fn specification(root: &Path, spec: Option<&Spec>) -> Result<Spec, String> {
+    spec.cloned().map(Ok).unwrap_or_else(|| Spec::resolve(root))
 }
 
 impl Annotation {
@@ -147,7 +168,7 @@ impl Annotation {
         })
     }
 
-    fn resolve(self, root: &Path, marker: &str) -> Result<Identity, String> {
+    fn resolve(self, root: &Path, marker: &str, spec: Option<&Spec>) -> Result<Identity, String> {
         let schema = self.protocol()?;
         if self.marker != marker {
             return Err(format!(
@@ -162,7 +183,7 @@ impl Annotation {
             if schema != "plumb.release-marker/v4" || self.profile.is_some() {
                 return Err("release marker has incomplete configuration identity".into());
             }
-            let spec = Spec::resolve(root)?;
+            let spec = specification(root, spec)?;
             if spec.product != self.product || spec.profile.is_some() {
                 return Err("release marker omitted its Product Profile binding".into());
             }

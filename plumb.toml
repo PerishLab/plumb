@@ -92,14 +92,17 @@ note = "A root <tool>.toml is legal where <tool> names a perish.code tool. That 
 
 [[layout.file]]
 name = ["Cargo.toml", "Cargo.lock"]
+rule = ["rule://seat/rustup", "rule://seat/rustc", "rule://seat/cargo"]
 note = "Workspace anchors."
 
 [[layout.file]]
 name = ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "biome.json", ".npmrc"]
+rule = ["rule://seat/node", "rule://seat/pnpm"]
 note = "The pnpm workspace anchors."
 
 [[layout.file]]
 name = ["Containerfile"]
+rule = ["rule://seat/docker-client", "rule://seat/docker-engine", "rule://seat/docker-buildx", "rule://seat/regctl"]
 note = "The image carrier the ship adaptor projects onto."
 
 [release]

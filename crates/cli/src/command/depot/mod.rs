@@ -15,6 +15,7 @@ use std::path::{Path, PathBuf};
 use crate::shape::depot::{self as record, Evidence};
 
 pub use seat::Held;
+pub(crate) use seat::contents;
 
 pub fn observe(snapshot: &Result<Snapshot, Refusal>) -> Evidence {
     let manifest = match manifest() {

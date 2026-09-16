@@ -1,5 +1,4 @@
 use plumb::depot::v3::{Bundle, Generation, Identity, Query};
-use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::OnceLock;
 
@@ -77,12 +76,29 @@ pub fn evidence(
 }
 
 pub fn install(root: &Path, marker: &str, generation: &str, path: &Path) -> Result<String, String> {
+    let marker = format!("v{}", marker.strip_prefix('v').unwrap_or(marker));
+    let marker = marker.as_str();
     match std::fs::symlink_metadata(path) {
         Ok(_) => return Err("candidate configuration requires a new isolated --path".into()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
         Err(error) => return Err(format!("cannot inspect candidate path: {error}")),
     }
-    let marker = crate::command::release::ReleaseMarker::bound(root, marker)?;
+    let rig = plumb::rig::Rig::resolve(None).map_err(|error| error.to_string())?;
+    let channel = crate::command::release::channel(marker)?;
+    let held = Generation::named(
+        Query {
+            source: &rig.rules.source,
+            product: "plumb",
+            channel: &channel,
+            version: marker,
+            kind: plumb::depot::v3::Kind::Configuration,
+        },
+        generation,
+    )?;
+    let bundle = super::contents(&held.manifest, |path| held.read(path))?;
+    let target = crate::shape::product::review(root, &bundle.bodies)?;
+    let spec = crate::shape::release::Spec::governed(root, target)?;
+    let marker = crate::command::release::ReleaseMarker::configured(root, marker, spec.clone())?;
     if marker.product != "plumb" {
         return Err("plumb configuration requires a Plumb release marker".into());
     }
@@ -91,21 +107,26 @@ pub fn install(root: &Path, marker: &str, generation: &str, path: &Path) -> Resu
         .spec()
         .derivative(plumb::depot::v3::Kind::Configuration)?
         .source;
-    let bundle = crate::command::depot::candidate::read(
-        source,
-        plumb::depot::v3::Identity {
-            product: marker.product.clone(),
-            channel: marker.channel.clone(),
-            version: marker.marker.clone(),
-            marker: plumb::depot::v3::Marker {
-                name: marker.marker.clone(),
-                sha256: proof.clone(),
-            },
-            kind: plumb::depot::v3::Kind::Configuration,
+    let identity = plumb::depot::v3::Identity {
+        product: marker.product.clone(),
+        channel: marker.channel.clone(),
+        version: marker.marker.clone(),
+        marker: plumb::depot::v3::Marker {
+            name: marker.marker.clone(),
+            sha256: proof.clone(),
         },
-        generation,
-    )?;
-    if crate::command::release::ReleaseMarker::bound(root, &marker.marker)?.digest()? != proof {
+        kind: plumb::depot::v3::Kind::Configuration,
+    };
+    if source.trim_end_matches('/') != rig.rules.source.trim_end_matches('/')
+        || bundle.manifest.identity() != identity
+    {
+        return Err(
+            "candidate generation does not bind the selected release marker and source".into(),
+        );
+    }
+    if crate::command::release::ReleaseMarker::configured(root, &marker.marker, spec)?.digest()?
+        != proof
+    {
         return Err("release marker drifted while reading candidate configuration".into());
     }
     let pointer = plumb::depot::v3::Pointer::new(
@@ -140,12 +161,5 @@ pub fn read(source: &str, identity: Identity, generation: &str) -> Result<Bundle
     if held.manifest.identity() != identity {
         return Err("candidate generation does not bind the selected release marker".into());
     }
-    let mut bodies = BTreeMap::new();
-    for object in &held.manifest.objects {
-        bodies.insert(object.path.clone(), held.read(&object.path)?);
-    }
-    Ok(Bundle {
-        manifest: held.manifest,
-        bodies,
-    })
+    super::contents(&held.manifest, |path| held.read(path))
 }
