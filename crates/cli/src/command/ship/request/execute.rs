@@ -4,7 +4,7 @@ use super::model::{Operation, Projection, Request};
 use crate::command::release::{artifacts, capsule, storage};
 use plumb::rig::Rig;
 
-pub fn run(text: &str) -> Result<String, String> {
+pub fn run(text: &str, control: Option<&std::path::Path>) -> Result<String, String> {
     let value: serde_json::Value =
         serde_json::from_str(text).map_err(|error| format!("cannot parse --request: {error}"))?;
     let context = (value["schema"] == "plumb.blob-execution/v1").then_some(value);
@@ -16,6 +16,11 @@ pub fn run(text: &str) -> Result<String, String> {
     .map_err(|error| format!("cannot parse --request: {error}"))?;
     if request.schema != "plumb.ship-request/v3" {
         return Err("ship request requires plumb.ship-request/v3".into());
+    }
+    match (&request.controller, control) {
+        (Some(configuration), Some(root)) => configuration.select(root)?,
+        (None, None) => (),
+        _ => return Err("controller configuration requires its exact control checkout".into()),
     }
     request.run(context.as_ref())
 }

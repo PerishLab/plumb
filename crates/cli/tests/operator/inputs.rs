@@ -140,7 +140,8 @@ fn binding() {
         node(&first, bind)["inputs"]["content"],
         node(&next, bind)["inputs"]["content"]
     );
-    let first = &node(&first, bind)["execution"]["payload"];
+    let mut first = node(&first, bind)["execution"]["payload"].clone();
+    first.as_object_mut().unwrap().remove("controller");
     let content = &first["operation"]["build"];
     assert_ne!(content["production"], first["production"]);
     for (field, expected) in [

@@ -43,6 +43,8 @@ pub enum Deed {
         file: Option<std::path::PathBuf>,
         #[arg(long)]
         output: Option<std::path::PathBuf>,
+        #[arg(long)]
+        control: Option<std::path::PathBuf>,
     },
     #[command(about = "Resolve one marker into the exact ship execution graph")]
     #[command(hide = true)]
@@ -151,7 +153,8 @@ pub fn run(deed: Deed) -> i32 {
             request,
             file,
             output,
-        } => execute(request, file, output),
+            control,
+        } => execute(request, file, output, control),
         Deed::Resolve { marker, atom } => transport::resolve(&marker, &atom),
         Deed::Compile => carry(Carry::Compile),
         Deed::Plan => carry(Carry::Plan),
@@ -188,13 +191,14 @@ fn execute(
     request: Option<String>,
     file: Option<std::path::PathBuf>,
     output: Option<std::path::PathBuf>,
+    control: Option<std::path::PathBuf>,
 ) -> Result<String, String> {
     let request = match (request, file) {
         (Some(request), None) => request,
         (None, Some(file)) => std::fs::read_to_string(file).map_err(|error| error.to_string())?,
         _ => return Err("execute requires exactly one request source".into()),
     };
-    let result = transport::execute(&request)?;
+    let result = transport::execute(&request, control.as_deref())?;
     if let Some(path) = output {
         std::fs::write(path, result).map_err(|error| error.to_string())?;
         Ok("wrote Ship execution result".into())

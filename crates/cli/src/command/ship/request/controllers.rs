@@ -1,5 +1,43 @@
 use serde_json::{Value, json};
 
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Configuration {
+    marker: plumb::depot::v3::Marker,
+    generation: String,
+}
+
+impl Configuration {
+    pub(super) fn held() -> Result<Option<Self>, String> {
+        let root = plumb::depot::root(std::path::Path::new(""))?;
+        let path = root.join(plumb::depot::v3::POINTER);
+        let bytes = std::fs::read(&path)
+            .map_err(|error| format!("cannot read controller configuration: {error}"))?;
+        let value: Value = serde_json::from_slice(&bytes).map_err(|error| error.to_string())?;
+        if value["format"] != 3 {
+            return Ok(None);
+        }
+        let pointer = plumb::depot::v3::Pointer::parse(&bytes)?;
+        if pointer.generation != plumb::depot::rules()?.mark() {
+            return Err("controller configuration differs from the selected generation".into());
+        }
+        Ok(Some(Self {
+            marker: pointer.marker,
+            generation: pointer.generation,
+        }))
+    }
+
+    pub(super) fn select(&self, root: &std::path::Path) -> Result<(), String> {
+        crate::command::depot::candidate::select(root, &self.marker.name, &self.generation)?;
+        if crate::command::depot::candidate::selected().map(|pointer| &pointer.marker)
+            != Some(&self.marker)
+        {
+            return Err("controller configuration marker differs from its request".into());
+        }
+        Ok(())
+    }
+}
+
 pub(super) fn attach(
     mut graph: Value,
     workflow: &toml::Table,
@@ -12,10 +50,15 @@ pub(super) fn attach(
         .get("targets")
         .ok_or("controller preparation has no tool worlds")?;
     let mut preparations = std::collections::BTreeMap::new();
+    let configuration = Configuration::held()?;
     let nodes = graph["nodes"]
         .as_array_mut()
         .ok_or("Ship declaration has no nodes")?;
     for node in nodes.iter_mut() {
+        if let Some(configuration) = &configuration {
+            node["execution"]["payload"]["controller"] =
+                serde_json::to_value(configuration).map_err(|error| error.to_string())?;
+        }
         let entry = node["execution"]["entry"]
             .as_str()
             .ok_or("Ship node has no entry")?

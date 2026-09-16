@@ -4,7 +4,6 @@ use std::path::Path;
 
 pub struct Cut<'a> {
     pub root: &'a Path,
-    pub name: &'a str,
     pub version: &'a str,
     pub head: &'a str,
 }
@@ -35,7 +34,7 @@ pub fn record(cut: Cut<'_>) -> Result<Record, String> {
     }
     let datum = tree.resolve(cut.version, cut.head)?;
     let refreshed = !tree.proved(cut.head)?;
-    let head = tree.datum(cut.name, cut.head, &datum)?;
+    let head = tree.datum(cut.head, &datum)?;
     Ok(Record {
         head,
         report: format!(

@@ -23,6 +23,16 @@ pub fn prepare(command: &Command) -> Result<(), String> {
         Command::Guard { target, .. } | Command::Land { target, .. } => {
             crate::command::depot::candidate::restore(std::path::Path::new(&target.root))?;
         }
+        Command::Version { .. }
+        | Command::Release { .. }
+        | Command::Ship {
+            deed:
+                crate::command::ship::Deed::Dispatch { .. } | crate::command::ship::Deed::Local { .. },
+        } => {
+            if let Ok(root) = plumb::forgejo::git::root() {
+                crate::command::depot::candidate::restore(&root)?;
+            }
+        }
         _ => (),
     }
     if matches!(

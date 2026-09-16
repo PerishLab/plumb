@@ -10,6 +10,8 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod binding;
+
 #[test]
 fn controller() {
     let fixture = tempfile::tempdir().expect("fixture");

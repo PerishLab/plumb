@@ -80,8 +80,17 @@ answers for.
   keeps its real version and source commit; its executable digest is bound
   independently from the exact published configuration validator. The proof
   carries the marker, generation and derived configuration digest as well.
-  Commit hooks and Land may restore only that same controller's verified
-  pending or committed binding, and revalidate the marker. Normal Doctor and
+  Commit hooks, Land, Version, Release, and Ship dispatch or local recovery
+  may restore only that same controller's verified pending or committed
+  binding, and revalidate the marker. Workflow execution does not inherit an
+  operator's local binding. Version preparation proves its local projection
+  and datum before creating or changing remote release-line state. Each Ship
+  business request carries the controller configuration marker and generation;
+  workers install that exact selection in an isolated home and revalidate it
+  against the Plumb control checkout, independently of the product marker.
+  Neither latest lookup nor a runner environment variable selects it again.
+  This transport binding is not an implicit input to every blob key.
+  Normal Doctor and
   default configuration selection retain their runtime version constraints.
   Rules exist only in a verified synced seat and never fall back to compiled
   bytes. Assets read seat-first; cookbook and help retain compiled copies, and

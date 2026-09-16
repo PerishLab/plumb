@@ -61,6 +61,7 @@ pub(crate) fn refuses(fixture: &Fixture<'_>, command: &impl Fn() -> Command, gra
         .find(|request| request["action"] == "ship/oci")
         .unwrap()
         .clone();
+    request.as_object_mut().unwrap().remove("controller");
     let archive = fixture.root.join("held.tar");
     std::fs::write(&archive, "wrong archive").unwrap();
     request["reuse"] = json!({"type":"workload","source":format!("https://inventory.test/v2/blobs/sha256/{}", plumb::depot::sha(b"wrong archive"))});

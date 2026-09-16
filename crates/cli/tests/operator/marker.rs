@@ -175,7 +175,7 @@ pub fn workflow(product: &str) -> String {
     toml::to_string(&workflow).unwrap()
 }
 
-fn proof(tree: &str, repository: &str) -> String {
+pub fn proof(tree: &str, repository: &str) -> String {
     #[derive(serde::Serialize)]
     struct Claim<'a> {
         schema: &'a str,

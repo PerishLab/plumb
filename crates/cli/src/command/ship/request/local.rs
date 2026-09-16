@@ -15,10 +15,6 @@ pub(super) fn run(raw: &str, dry: bool) -> Result<String, String> {
     let control = control(&marker.spec().root, &seat)?;
     let input = seat.join("declaration.json");
     std::fs::write(&input, declaration.to_string()).map_err(|error| error.to_string())?;
-    let configuration = plumb::depot::rules()?
-        .version()
-        .unwrap_or(plumb::version!("PLUMB"))
-        .to_string();
     let inventory = &rig.workflow.inventory;
     let python = if cfg!(windows) { "python" } else { "python3" };
     let status = Command::new(python)
@@ -37,7 +33,6 @@ pub(super) fn run(raw: &str, dry: bool) -> Result<String, String> {
         .env("RUNNER_TEMP", &seat)
         .env("PLUMB_RELEASE_ROOT", ".")
         .env("PLUMB_RELEASE_MARKER", &marker.marker)
-        .env("PLUMB_BUILD_CONFIGURATION", configuration)
         .env("PLUMB_WORKFLOW_INVENTORY_ACCESS", &inventory.access)
         .env("PLUMB_WORKFLOW_INVENTORY_SECRET", &inventory.secret)
         .env("PLUMB_WORKFLOW_INVENTORY_BUCKET", &inventory.bucket)
