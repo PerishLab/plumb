@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/cli", "crates/lib", "crates/macro"]
 
 [workspace.package]
-version = "0.37.43"
+version = "0.0.0"
 edition = "2024"
 license = "MIT"
 repository = "https://git.perish.top/PerishLab/plumb"
