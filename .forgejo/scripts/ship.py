@@ -9,6 +9,7 @@ from pathlib import Path
 
 from lib.blob import Refusal, decode, encode, object_fields, sha, name
 from lib.material import download
+from lib.runtime import activate
 
 
 def controller(request, seat, environment):
@@ -18,7 +19,7 @@ def controller(request, seat, environment):
     name(configuration["marker"]["name"])
     sha(configuration["marker"]["sha256"])
     sha(configuration["generation"])
-    preparation = request.get("preparation", [])
+    preparation = [ref for ref in request.get("preparation", []) if not ref["node"].startswith("runtime/")]
     if len(preparation) != 1:
         raise Refusal("Ship requires one declared controller preparation")
     reference = preparation[0]
@@ -48,6 +49,7 @@ def execute(source, destination):
                        PLUMB_RELEASE_OUTPUT=str(seat / "capsule"),
                        PLUMB_RELEASE_CAPSULE=str(seat / "capsule/capsule.json"),
                        PLUMB_RELEASE_PROMOTION=str(seat / "promotion.json"))
+    environment.update(activate(request, seat, environment))
     tool = controller(request, seat, environment)
     status = subprocess.run([tool, "ship", "execute", "--request-file", str(source.resolve()),
                              "--output", str(result), "--control", str(Path(__file__).resolve().parents[2])],

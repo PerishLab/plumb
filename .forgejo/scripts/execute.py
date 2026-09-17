@@ -2,6 +2,7 @@ import argparse
 import json
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from lib.backend import Backend
@@ -25,6 +26,7 @@ class Executor:
         self.inputs = inputs or Inputs({})
 
     def __call__(self, request, seat):
+        seat = Path(tempfile.mkdtemp(prefix="exec-", dir=seat.parent))
         source = seat / "request.json"
         result = seat / "candidate.json"
         result.unlink(missing_ok=True)
@@ -74,6 +76,8 @@ def perform(args, declaration, graph, inventory):
         script = args.executor
         if graph.nodes[identity]["execution"]["entry"].startswith("controller."):
             script = Path(__file__).with_name("controller.py")
+        elif graph.nodes[identity]["execution"]["entry"].startswith("runtime."):
+            script = Path(__file__).with_name("runtime.py")
         return Executor(script, args.root, args.timeout, Inputs.select(declaration, identity, source))
 
     return Runner(execution, args.state).run(args.node, executor(args.node), executor)

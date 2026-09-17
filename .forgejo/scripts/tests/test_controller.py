@@ -27,12 +27,17 @@ class Controller(unittest.TestCase):
                                    "source": {"digest": "c" * 64}},
                         "materialized": {"source": {"key": "c" * 64, "root": str(self.root)}}}
         self.result = self.root / "result.json"
-        probe = patch.object(controller.subprocess, "check_output", side_effect=lambda argv, **kwargs: (argv[0] + " fixture").encode())
+        probe = patch.object(controller.subprocess, "check_output", side_effect=lambda argv, **kwargs: (Path(argv[0]).stem + " fixture").encode())
         probe.start()
         self.addCleanup(probe.stop)
+        locate = patch.object(controller.shutil, "which", side_effect=lambda tool, **kwargs: str(self.root / "declared" / tool))
+        locate.start()
+        self.addCleanup(locate.stop)
 
     def build(self, command, **options):
-        self.assertEqual(command[:4], ["cargo", "build", "--locked", "--bin"])
+        self.assertTrue(Path(command[0]).is_absolute())
+        self.assertEqual(Path(command[0]).stem, "cargo")
+        self.assertEqual(command[1:4], ["build", "--locked", "--bin"])
         self.assertEqual(options["env"]["PLUMB_BUILD_COMMIT"], "a" * 40)
         target = Path(options["env"]["CARGO_TARGET_DIR"])
         binary = target / self.contract["target"] / "debug/plumb"

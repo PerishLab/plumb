@@ -108,3 +108,35 @@ class Preparation(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             with self.assertRaises(Refusal):
                 Runner(execution, root).run("bind", lambda *args: self.fail("business invoked"))
+
+    def test_nested_runtime_prepares_once_for_controller_and_business(self):
+        self.fixture.value["nodes"].append(node("runtime", {"world": digest(b"tool world")}, "tool"))
+        self.fixture.value["nodes"][-2]["prepare"] = [reference("runtime", "tool")]
+        binding = next(value for value in self.fixture.value["nodes"] if value["id"] == "bind")
+        binding["prepare"].append(reference("runtime", "tool"))
+        self.fixture.change("bind", "identity", b"new-marker")
+        calls = []
+        def invoke(request, seat):
+            calls.append(request["node"])
+            path = seat / "artifact"
+            path.write_bytes(request["node"].encode())
+            label = "bound" if request["node"] == "bind" else "tool"
+            return {"key": request["key"], "outputs": {label: str(path)}}
+        execution = Execution(Declaration(self.fixture.value), self.fixture.inventory, "https://blob.example")
+        with tempfile.TemporaryDirectory() as root:
+            runner = Runner(execution, root)
+            runner.run("bind", invoke, lambda identity: invoke)
+            runner.run("bind", invoke, lambda identity: self.fail("warm runtime"))
+        self.assertEqual(calls, ["runtime", "controller", "bind"])
+
+    def test_cached_controller_does_not_install_its_compiler_for_binding(self):
+        self.fixture.value["nodes"].append(node("runtime", {}, "tool"))
+        self.fixture.value["nodes"][-2]["prepare"] = [reference("runtime", "tool")]
+        self.fixture.change("bind", "identity", b"new-marker")
+        self.fixture.finish("runtime")
+        self.fixture.finish("controller")
+        self.fixture.change("runtime", "implementation", b"new-installer")
+        self.fixture.change("bind", "identity", b"new-marker")
+        held = self.fixture.plan()
+        self.assertEqual(held["nodes"]["runtime"]["state"], "skip")
+        self.assertEqual(held["run"], ["bind"])
