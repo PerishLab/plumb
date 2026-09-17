@@ -38,13 +38,13 @@ fn locate(bytes: &[u8]) -> Result<Range<usize>, String> {
     let mut found = None;
     for section in file.sections() {
         let name = section.name().map_err(|error| error.to_string())?;
-        if name != ".plumbid" && name != "__plumbid" {
+        if name != ".releaseid" && name != "__releaseid" {
             continue;
         }
         if found.is_some() {
             return Err("executable has multiple identity regions".into());
         }
-        if name == "__plumbid"
+        if name == "__releaseid"
             && section.segment_name().map_err(|error| error.to_string())? != Some("__DATA")
         {
             return Err("Mach-O identity must reside in its reserved data segment".into());
@@ -63,5 +63,5 @@ fn locate(bytes: &[u8]) -> Result<Range<usize>, String> {
         }
         found = Some(start..end);
     }
-    found.ok_or_else(|| "executable has no Plumb identity region".into())
+    found.ok_or_else(|| "executable has no release identity region".into())
 }
