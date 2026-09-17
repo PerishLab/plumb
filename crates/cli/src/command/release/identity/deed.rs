@@ -27,6 +27,8 @@ pub enum Deed {
     Stamp {
         #[arg(long)]
         version: String,
+        #[arg(long, default_value = "github")]
+        remote: String,
         #[arg(long = "dry-run")]
         dry: bool,
     },

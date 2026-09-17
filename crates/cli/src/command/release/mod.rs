@@ -111,7 +111,11 @@ pub fn run(deed: Deed) -> i32 {
 
 fn execute(deed: Deed) -> Result<String, String> {
     match deed {
-        Deed::Stamp { version, dry } => super::operator::stamp(&version, dry),
+        Deed::Stamp {
+            version,
+            remote,
+            dry,
+        } => super::operator::stamp(&version, &remote, dry),
         Deed::Retract { version, dry } => super::operator::retract(&version, dry),
         deed => markers::run(deed),
     }
