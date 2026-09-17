@@ -8,6 +8,7 @@ from pathlib import Path
 
 from lib.blob import Refusal, decode, encode, fingerprint, object_fields
 from lib.process import environment
+from lib.runtime import activate
 
 
 def execute(request, destination):
@@ -21,10 +22,6 @@ def execute(request, destination):
     if materialized["key"] != request["inputs"]["source"]["digest"]:
         raise Refusal("controller source differs from its planned snapshot")
     source = Path(materialized["root"]).resolve()
-    for tool in ("rustc", "cargo"):
-        actual = subprocess.check_output([tool, "--version"], cwd=source, timeout=30).decode().strip()
-        if actual != contract[tool]:
-            raise Refusal("controller tool differs from its declared world: " + tool)
     seat = Path(tempfile.mkdtemp(prefix="controller-", dir=destination.parent)).resolve()
     target = seat / "target"
     managed = dict(PLUMB_BUILD_VERSION=contract["version"],
@@ -33,8 +30,18 @@ def execute(request, destination):
                        CARGO_PROFILE_DEV_DEBUG="0", CARGO_INCREMENTAL="0",
                        CARGO_TARGET_DIR=str(target),
                        RUSTFLAGS=f"--remap-path-prefix={source}=/plumb/source --remap-path-prefix={target}=/plumb/target")
-    command = ["cargo", "build", "--locked", "--bin", "plumb", "--target", contract["target"]]
-    subprocess.run(command, cwd=source, env=environment(contract["environment"], managed), timeout=3600, check=True)
+    active = environment(contract["environment"], managed)
+    active.update(activate(request, seat, active))
+    tools = {}
+    for tool in ("rustc", "cargo"):
+        tools[tool] = shutil.which(tool, path=active.get("PATH", ""))
+        if tools[tool] is None:
+            raise Refusal("declared controller tool is unavailable: " + tool)
+        actual = subprocess.check_output([tools[tool], "--version"], cwd=source, env=active, timeout=30).decode().strip()
+        if actual != contract[tool]:
+            raise Refusal(f"controller tool differs from its declared world: {tool}; expected {contract[tool]!r}, got {actual!r}")
+    command = [tools["cargo"], "build", "--locked", "--bin", "plumb", "--target", contract["target"]]
+    subprocess.run(command, cwd=source, env={**active, **managed}, timeout=3600, check=True)
     executable = "plumb.exe" if "windows" in contract["target"] else "plumb"
     content = target / contract["target"] / "debug" / executable
     if not content.is_file():

@@ -6,11 +6,12 @@ $ErrorActionPreference = "Stop"
 $contract = "windows-x64-python-3.13.15-v1"
 $checksum = "6479223746cdfb79d25865110d6f524ac98de081324e119af1dc3ae36bddc7a5"
 $address = "https://www.python.org/ftp/python/3.13.15/python-3.13.15-amd64.zip"
-$cache = Join-Path $env:RUNNER_TEMP $contract
+$relative = ".plumb-runtime/$contract/python.zip"
+$cache = Join-Path $env:GITHUB_WORKSPACE ".plumb-runtime/$contract"
 $archive = Join-Path $cache "python.zip"
 
 function Confirm-Python([string]$Executable) {
-    $probe = "import sys,json,pathlib,ssl,hashlib,subprocess; assert sys.version_info >= (3,9); print(json.dumps(sys.executable))"
+    $probe = "import sys,json,pathlib,ssl,hashlib,subprocess,lzma,tarfile,zipfile; assert sys.version_info >= (3,9); print(json.dumps(sys.executable))"
     try {
         $result = & $Executable -I -c $probe 2>$null
         if ($LASTEXITCODE -eq 0) {
@@ -43,7 +44,6 @@ if ($Phase -eq "probe") {
     if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne "X64") {
         throw "No compatible Python found and no bootstrap archive is declared for this Windows architecture"
     }
-    $relative = [System.IO.Path]::GetRelativePath($env:GITHUB_WORKSPACE, $archive).Replace('\', '/')
     @("needed=true", "archive=$relative", "key=$contract-$checksum") |
         Out-File $env:GITHUB_OUTPUT -Encoding utf8 -Append
     exit 0

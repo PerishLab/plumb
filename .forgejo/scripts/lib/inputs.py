@@ -1,7 +1,7 @@
 import tempfile
 from pathlib import Path
 
-from .blob import Refusal, digest
+from .blob import Refusal
 
 
 class Inputs:
@@ -29,8 +29,8 @@ class Inputs:
             return {}
         attempt = Path(tempfile.mkdtemp(prefix="inputs-", dir=seat))
         result = {}
-        for label, snapshot in self.snapshots.items():
-            destination = attempt / digest(label.encode())
+        for index, (label, snapshot) in enumerate(self.snapshots.items()):
+            destination = attempt / str(index)
             snapshot.materialize(destination)
             result[label] = {"key": snapshot.key, "root": str(destination.resolve())}
         return result

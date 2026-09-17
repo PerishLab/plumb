@@ -73,14 +73,67 @@ pub(super) fn attach(
             "environment": workflow.get("execution").and_then(|value| value.get("cargo"))
                 .ok_or("controller requires the declared Cargo environment")?});
         let identity = format!("prepare/{entry}");
-        preparations.insert(
-            identity.clone(),
-            preparation(&entry, &identity, contract, controller)?,
-        );
+        let mut prepared = preparation(&entry, &identity, contract, controller)?;
         node["prepare"] = json!([{"node": identity, "output": "content"}]);
+        if let Some(runtime) = workflow.get("runtime") {
+            let bundle = runtime
+                .get("targets")
+                .and_then(|value| value.get(text(world, "target").ok()?))
+                .ok_or("runtime preparation has no matching target")?;
+            let dependency = format!("runtime/{entry}");
+            activate(&mut prepared, &dependency, bundle)?;
+            let operation = &node["execution"]["payload"]["operation"];
+            let operation = if operation["type"] == "package" {
+                &operation["operation"]
+            } else {
+                operation
+            };
+            let required = runtime
+                .get("operations")
+                .and_then(toml::Value::as_array)
+                .ok_or("runtime requires explicit operation selection")?;
+            if required
+                .iter()
+                .any(|value| value.as_str() == operation["type"].as_str())
+            {
+                activate(node, &dependency, bundle)?;
+            }
+            preparations.insert(
+                dependency.clone(),
+                requirement(&entry, &dependency, bundle, runtime)?,
+            );
+        }
+        preparations.insert(identity, prepared);
     }
     nodes.extend(preparations.into_values());
     Ok(graph)
+}
+
+fn activate(node: &mut Value, identity: &str, bundle: &toml::Value) -> Result<(), String> {
+    node["inputs"]["runtime"] = json!({"value": bundle});
+    if node.get("prepare").is_none() {
+        node["prepare"] = json!([]);
+    }
+    node["prepare"]
+        .as_array_mut()
+        .ok_or("runtime requires a preparation list")?
+        .push(json!({"node": identity, "output": "content"}));
+    Ok(())
+}
+
+fn requirement(
+    entry: &str,
+    identity: &str,
+    bundle: &toml::Value,
+    runtime: &toml::Value,
+) -> Result<Value, String> {
+    let implementation = runtime
+        .get("implementation")
+        .ok_or("runtime preparation has no implementation declaration")?;
+    Ok(json!({"id": identity,
+        "inputs": {"implementation": {"tree": implementation}, "contract": {"value": bundle}},
+        "outputs": ["content"], "evidence": ["receipt"],
+        "execution": {"entry": format!("runtime.{entry}"), "capability": entry, "payload": bundle}}))
 }
 
 fn preparation(

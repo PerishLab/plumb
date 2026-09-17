@@ -44,8 +44,8 @@ class PythonBootstrap(unittest.TestCase):
         self.assertFalse(any(self.root.rglob("*.zip")))
 
     def test_invalid_cached_archive_refuses_before_execution(self):
-        cache = self.root / "windows-x64-python-3.13.15-v1"
-        cache.mkdir()
+        cache = self.root / "workspace/.plumb-runtime/windows-x64-python-3.13.15-v1"
+        cache.mkdir(parents=True)
         archive = cache / "python.zip"
         archive.write_bytes(b"corrupt")
         result = self.run_script("install")
@@ -67,5 +67,9 @@ class PythonBootstrap(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             outputs.append((temporary / "outputs").read_text())
         self.assertEqual(outputs[0], outputs[1])
-        self.assertIn("archive=../tmp/windows-x64-python-3.13.15-v1/python.zip", outputs[0])
+        self.assertIn("archive=.plumb-runtime/windows-x64-python-3.13.15-v1/python.zip", outputs[0])
+        archive = next(line.split("=", 1)[1] for line in outputs[0].splitlines()
+                       if line.startswith("archive="))
+        self.assertFalse(Path(archive).is_absolute())
+        self.assertTrue(all(part not in (".", "..") for part in archive.split("/")))
         self.assertNotIn(str(self.root), outputs[0])
