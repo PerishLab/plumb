@@ -80,6 +80,15 @@ fn preparation() {
     assert!(bridge.contains("\"--generation\", configuration[\"generation\"]"));
     assert!(!bridge.contains("PLUMB_BUILD_CONFIGURATION"));
     assert!(bridge.contains("tool = controller(request, seat, environment)"));
+    let workspace = text("crates/cli/src/command/release/workspace.rs");
+    for binding in [
+        "(\"CARGO_HOME\", \"cargo\")",
+        "(\"RUSTUP_HOME\", \"rustup\")",
+        "(\"RUSTUP_TOOLCHAIN\", \"toolchain\")",
+    ] {
+        assert!(workspace.contains(binding));
+    }
+    assert!(workspace.contains("command.env(\"CARGO_ENCODED_RUSTFLAGS\", flags)"));
 }
 
 #[test]
