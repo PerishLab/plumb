@@ -216,6 +216,18 @@ fn paths(command: &mut std::process::Command, root: &Path) {
             .collect::<Vec<_>>()
             .join("\u{1f}")
     });
+    for (name, seat) in [
+        ("CARGO_HOME", "cargo"),
+        ("RUSTUP_HOME", "rustup"),
+        ("RUSTUP_TOOLCHAIN", "toolchain"),
+    ] {
+        if let Some(path) = held(name).filter(|path| !path.is_empty()) {
+            if !flags.is_empty() {
+                flags.push('\u{1f}');
+            }
+            flags.push_str(&format!("--remap-path-prefix={path}=/plumb/{seat}"));
+        }
+    }
     if !flags.is_empty() {
         flags.push('\u{1f}');
     }

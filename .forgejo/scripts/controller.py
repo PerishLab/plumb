@@ -11,6 +11,14 @@ from lib.process import environment
 from lib.runtime import activate
 
 
+def flags(source, target, active):
+    roots = [(source, "/plumb/source"), (target, "/plumb/target")]
+    roots += [(active[name], "/plumb/" + seat) for name, seat in
+              (("CARGO_HOME", "cargo"), ("RUSTUP_HOME", "rustup"), ("RUSTUP_TOOLCHAIN", "toolchain"))
+              if active.get(name)]
+    return "\x1f".join(f"--remap-path-prefix={root}={seat}" for root, seat in roots)
+
+
 def execute(request, destination):
     contract = request.get("payload")
     object_fields(contract, ("schema", "version", "channel", "commit", "target", "rustc", "cargo", "environment", "format"))
@@ -29,9 +37,10 @@ def execute(request, destination):
                        PLUMB_BUILD_COMMIT=contract["commit"], PLUMB_BUILD_SOURCE="1",
                        CARGO_PROFILE_DEV_DEBUG="0", CARGO_INCREMENTAL="0",
                        CARGO_TARGET_DIR=str(target),
-                       RUSTFLAGS=f"--remap-path-prefix={source}=/plumb/source --remap-path-prefix={target}=/plumb/target")
+                       RUSTFLAGS="", CARGO_ENCODED_RUSTFLAGS="")
     active = environment(contract["environment"], managed)
     active.update(activate(request, seat, active))
+    active["CARGO_ENCODED_RUSTFLAGS"] = flags(source, target, active)
     tools = {}
     for tool in ("rustc", "cargo"):
         tools[tool] = shutil.which(tool, path=active.get("PATH", ""))
@@ -41,7 +50,7 @@ def execute(request, destination):
         if actual != contract[tool]:
             raise Refusal(f"controller tool differs from its declared world: {tool}; expected {contract[tool]!r}, got {actual!r}")
     command = [tools["cargo"], "build", "--locked", "--bin", "plumb", "--target", contract["target"]]
-    subprocess.run(command, cwd=source, env={**active, **managed}, timeout=3600, check=True)
+    subprocess.run(command, cwd=source, env=active, timeout=3600, check=True)
     executable = "plumb.exe" if "windows" in contract["target"] else "plumb"
     content = target / contract["target"] / "debug" / executable
     if not content.is_file():
