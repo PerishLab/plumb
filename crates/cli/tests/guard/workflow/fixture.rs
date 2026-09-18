@@ -1,6 +1,24 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
+
+const LANES: &str = "[dir]\n\n[lane]\n\n[[lane.member]]\nname = \"ship\"\nnote = \"fixture\"\n";
+const SUITES: &str = r#"
+[suite]
+cargo = ["Cargo.lock", "Cargo.toml", "crates"]
+pnpm = ["apps", "package.json", "packages", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
+"#;
+
+pub fn home() -> &'static Path {
+    static HOME: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    HOME.get_or_init(|| {
+        crate::support::depot(&[
+            ("rules/structure.toml", LANES),
+            ("rules/workflow.toml", SUITES),
+        ])
+        .keep()
+    })
+}
 
 pub struct Seat(PathBuf);
 
@@ -27,6 +45,16 @@ impl Seat {
     pub fn declared(&self, body: &str) {
         fs::write(self.0.join("plumb.toml"), body).expect("manifest");
         self.git(&["add", "-A"]);
+    }
+
+    pub fn shown(&self) -> (String, bool) {
+        let out = plumb(&["workflow", "status", self.0.to_str().expect("path")])
+            .output()
+            .expect("run");
+        (
+            String::from_utf8_lossy(&out.stdout).to_string(),
+            out.status.success(),
+        )
     }
 
     pub fn verb(&self, deed: &str, key: &str, forced: bool) -> (String, bool) {
@@ -58,6 +86,10 @@ impl Seat {
 
     pub fn remote(&self, input: Plan<'_>, inventory: Option<&str>) -> (String, bool) {
         self.invoke(input, inventory, &[])
+    }
+
+    pub fn workload(&self, input: Plan<'_>, workload: &[&str]) -> (String, bool) {
+        self.invoke(input, None, workload)
     }
 
     fn invoke(
@@ -110,6 +142,21 @@ impl Seat {
             out.status.success(),
         )
     }
+
+    pub fn inventory(&self, body: &str) -> String {
+        let path = self.0.join(".workflow-inventory.json");
+        fs::write(&path, body).expect("inventory");
+        path.to_string_lossy().to_string()
+    }
+
+    pub fn wrote(&self, path: &str, body: &str) {
+        let path = self.0.join(path);
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).expect("leaf parent");
+        }
+        fs::write(path, body).expect("leaf");
+        self.git(&["add", "-A"]);
+    }
 }
 
 pub fn seat(name: &str) -> Seat {
@@ -129,7 +176,7 @@ pub fn seat(name: &str) -> Seat {
 
 fn plumb(args: &[&str]) -> Command {
     let mut held = Command::new(env!("CARGO_BIN_EXE_plumb"));
-    held.args(args);
+    held.args(args).env("PLUMB_HOME", home());
     for name in [
         "PLUMB_LOCK_ACCESS",
         "PLUMB_LOCK_SECRET",
@@ -141,4 +188,12 @@ fn plumb(args: &[&str]) -> Command {
         held.env_remove(name);
     }
     held
+}
+
+pub fn digest(text: &str, key: &str) -> String {
+    text.lines()
+        .find(|line| line.trim_start().starts_with(key))
+        .and_then(|line| line.split_whitespace().nth(1))
+        .expect("digest")
+        .to_string()
 }

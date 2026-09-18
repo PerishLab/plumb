@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use std::io::{Read as _, Write as _};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -24,6 +25,12 @@ pub fn depot(overrides: &[(&str, &str)]) -> tempfile::TempDir {
 pub fn seat() -> &'static Path {
     static SEAT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
     SEAT.get_or_init(|| depot(&[]).keep())
+}
+
+#[allow(dead_code)]
+pub fn object(depot: &Path, path: &str) -> String {
+    std::fs::read_to_string(depot.join("configurations").join(MARK).join(path))
+        .expect("seat object")
 }
 
 #[allow(dead_code)]
@@ -188,24 +195,29 @@ fn mechanisms() -> Vec<String> {
 pub struct Bucket {
     address: std::net::SocketAddr,
     objects: Arc<Mutex<BTreeMap<String, Vec<u8>>>>,
-    server: thread::JoinHandle<()>,
+    done: Arc<AtomicBool>,
+    requests: usize,
+    server: thread::JoinHandle<usize>,
 }
 
 #[allow(dead_code)]
 impl Bucket {
     pub fn open(requests: usize) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+        listener
+            .set_nonblocking(true)
+            .expect("nonblocking listener");
         let address = listener.local_addr().expect("address");
         let objects = Arc::new(Mutex::new(BTreeMap::new()));
+        let done = Arc::new(AtomicBool::new(false));
         let shared = Arc::clone(&objects);
-        let server = thread::spawn(move || {
-            for stream in listener.incoming().take(requests) {
-                bucket(stream.expect("stream"), &shared);
-            }
-        });
+        let finished = Arc::clone(&done);
+        let server = thread::spawn(move || serve(&listener, requests, &shared, &finished));
         Self {
             address,
             objects,
+            done,
+            requests,
             server,
         }
     }
@@ -239,8 +251,40 @@ impl Bucket {
     }
 
     pub fn finish(self) {
-        self.server.join().expect("server");
+        self.done.store(true, Ordering::SeqCst);
+        let served = self.server.join().expect("server");
+        assert_eq!(
+            served, self.requests,
+            "bucket served {served} of {} requests",
+            self.requests
+        );
     }
+}
+
+fn serve(
+    listener: &TcpListener,
+    requests: usize,
+    objects: &Mutex<BTreeMap<String, Vec<u8>>>,
+    done: &AtomicBool,
+) -> usize {
+    let mut served = 0;
+    while served < requests {
+        match listener.accept() {
+            Ok((stream, _)) => {
+                stream.set_nonblocking(false).expect("blocking stream");
+                bucket(stream, objects);
+                served += 1;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                if done.load(Ordering::SeqCst) {
+                    break;
+                }
+                thread::sleep(std::time::Duration::from_millis(5));
+            }
+            Err(error) => panic!("accept: {error}"),
+        }
+    }
+    served
 }
 
 fn bucket(mut stream: TcpStream, objects: &Mutex<BTreeMap<String, Vec<u8>>>) {
