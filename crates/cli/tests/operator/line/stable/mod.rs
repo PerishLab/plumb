@@ -2,6 +2,9 @@ use super::world::{Court, serve};
 use std::path::Path;
 use std::process::{Command, Output};
 
+mod picks;
+mod proof;
+
 pub fn repo(root: &Path, origin: &str) {
     std::fs::write(
         root.join("plumb.toml"),
