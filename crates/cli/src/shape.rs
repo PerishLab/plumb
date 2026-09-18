@@ -4,6 +4,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 pub mod lane;
+pub(crate) mod manifest;
 pub mod pair;
 pub(crate) mod product;
 pub(crate) mod release;

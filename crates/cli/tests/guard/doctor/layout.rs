@@ -293,3 +293,26 @@ fn recorded() {
     let held = report(seat.path());
     assert!(!held.contains("was affirmed against a different"), "{held}");
 }
+
+#[test]
+fn layered() {
+    let seat = seated(DECLARED);
+    std::fs::write(seat.path().join("LICENSE"), "held\n").expect("license");
+    track(seat.path());
+    let bare = report(seat.path());
+    assert!(
+        bare.contains("file LICENSE sits in no declared seat"),
+        "{bare}"
+    );
+
+    let defaults = "[[layout.file]]\nname = [\"LICENSE\"]\n\n[[layout.seat]]\npath = \"charts/*\"\nanchor = [\"Chart.yaml\"]\n";
+    let home = crate::support::depot(&[("rules/seat.toml", SEAT), ("rules/plumb.toml", defaults)]);
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["doctor", seat.path().to_str().expect("utf8")])
+        .env("PLUMB_HOME", home.path())
+        .output()
+        .expect("plumb");
+    let layered = String::from_utf8_lossy(&output.stdout);
+    assert!(!layered.contains("sits in no declared seat"), "{layered}");
+    assert!(!layered.contains("carries none of"), "{layered}");
+}

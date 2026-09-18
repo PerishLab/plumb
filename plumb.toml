@@ -32,48 +32,12 @@ anchor = []
 note = "The anchor set is undecided. codehull/apps/web and ensign/apps/web each hold one index.html and nothing else, which points at a surface not yet discussed. Until then this level is governed and its members are not judged."
 
 [[layout.seat]]
-path = "charts/*"
-rule = ["rule://seat/named-after-repository"]
-note = "Helm chart carriers. Three of three across the domain."
-
-[[layout.seat]]
-path = "skills/*"
-rule = [
-  "rule://seat/named-after-repository",
-  "rule://seat/wayfinder",
-  "rule://seat/affirmed",
-]
-note = "Operating briefs. Six of six. Rejudged when the skills line is decided."
-
-[[layout.seat]]
-path = "docs/CHANGELOG/*"
-kind = "retired"
-note = "Release notes live in the depot; this tombstone keeps the retired source seat absent."
-
-[[layout.seat]]
 path = ".forgejo"
 note = "Plumb's private canonical ship atom. Product repositories dispatch it and are forbidden from carrying this namespace."
 
 [[layout.seat]]
 path = ".cargo"
 note = "The cargo namespace."
-
-[[layout.seat]]
-path = ".plumb"
-note = "Plumb's own seat inside a repository. Today it carries release datum alone."
-
-[[layout.file]]
-name = ["AGENTS.md"]
-rule = ["rule://seat/affirmed"]
-note = "The one entrypoint a coding agent reads as authority for this repository. It is affirmed against the faces its rule names, not against the source tree."
-
-[[layout.file]]
-name = ["LICENSE", ".gitignore"]
-note = "Carried by every governed repository."
-
-[[layout.file]]
-name = ["plumb.toml", "ectropy.toml", "runseal.toml", "locus.toml", "sidecar.toml"]
-note = "A root <tool>.toml is legal where <tool> names a perish.code tool. That roster is hardcoded in shape/lane.rs today and holds two names; a rule naming it is owed."
 
 [[layout.file]]
 name = ["Cargo.toml", "Cargo.lock"]
