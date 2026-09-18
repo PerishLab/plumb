@@ -26,7 +26,13 @@ pub fn stated(root: &Path) -> Held {
         Err(error) => return Held::Wrong(format!("cannot parse plumb.toml: {error}")),
     };
     match crate::shape::manifest::layered(doc) {
-        Ok(doc) => declared(&doc),
+        Ok((doc, overrides)) => match declared(&doc) {
+            Held::Stated(mut held) => {
+                held.overrides = overrides;
+                Held::Stated(held)
+            }
+            other => other,
+        },
         Err(error) => Held::Wrong(error),
     }
 }

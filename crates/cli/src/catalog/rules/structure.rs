@@ -10,6 +10,7 @@ rule!(
 rule!(ECTROPY_POLICY_READABLE, "structure.ectropy-policy-readable");
 rule!(ECTROPY_POLICY, "structure.ectropy-policy");
 rule!(KNOWN_FILE, "structure.known-file");
+rule!(DEFAULT_OVERRIDDEN, "structure.default-overridden");
 rule!(SEAT_ANCHORED, "structure.seat-anchored");
 rule!(SEAT_MEMBER, "structure.seat-member");
 rule!(SEAT_AFFIRMED, "structure.seat-affirmed");
@@ -29,7 +30,7 @@ rule!(CARGO_TARGET_IGNORED, "structure.cargo-target-ignored");
 pub fn mechanisms() -> Vec<&'static Mechanism> {
     vec![
         &ANCHOR_PRESENT, &ANCHOR_UNIQUE, &API_ENTRYPOINT, &BOUNDARY_EXISTS,
-        &CARGO_TARGET_IGNORED, &CASCADE_DERIVES_IN_ANCHOR, &ECTROPY_POLICY,
+        &CARGO_TARGET_IGNORED, &CASCADE_DERIVES_IN_ANCHOR, &DEFAULT_OVERRIDDEN, &ECTROPY_POLICY,
         &ECTROPY_POLICY_PRESENT, &ECTROPY_POLICY_READABLE,
         &KNOWN_DIRECTORY, &KNOWN_FILE, &KNOWN_WORKFLOW,
         &SEAT_AFFIRMED, &SEAT_ANCHORED, &SEAT_MEMBER,

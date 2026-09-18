@@ -26,6 +26,7 @@ pub enum Held {
 pub struct Declared {
     pub seats: Vec<Seat>,
     pub groups: Vec<Group>,
+    pub overrides: Vec<String>,
 }
 
 #[derive(Clone)]
