@@ -50,7 +50,7 @@ impl Kit {
     }
 
     fn installing(&self, source: &impl source::Source, ask: &Ask) -> Result<Done, Error> {
-        managed(ask)?;
+        managed(source, ask)?;
         let seats = match &ask.path {
             Some(path) => self.chosen(path)?,
             None => agent::seats(&self.home, &self.name),
@@ -66,7 +66,7 @@ impl Kit {
     }
 
     fn upgrading(&self, source: &impl source::Source, ask: &Ask) -> Result<Done, Error> {
-        managed(ask)?;
+        managed(source, ask)?;
         let grant = source.resolve(ask)?;
         let ledger = state::read(&self.state)?;
         if ledger.records.is_empty() {
@@ -116,7 +116,7 @@ impl Kit {
     }
 
     fn inspecting(&self, source: &impl source::Source, ask: &Ask) -> Result<Report, Error> {
-        managed(ask)?;
+        managed(source, ask)?;
         let grant = source.resolve(ask)?;
         let ledger = state::read(&self.state)?;
         survey::inspect(self, ask, &grant, &ledger)
@@ -216,9 +216,9 @@ impl Kit {
     }
 }
 
-fn managed(ask: &Ask) -> Result<(), Error> {
+fn managed(source: &impl source::Source, ask: &Ask) -> Result<(), Error> {
     let channel = ask.channel.trim();
-    if channel != "stable" {
+    if !source.admits(channel) {
         return Err(Error::Managed(channel.to_string()));
     }
     Ok(())

@@ -9,6 +9,7 @@ pub struct Depot<'a> {
 
 pub(super) trait Source {
     fn resolve(&self, ask: &Ask) -> Result<fetch::Grant, Error>;
+    fn admits(&self, channel: &str) -> bool;
 }
 
 pub(super) struct Release<'a>(pub &'a str);
@@ -25,6 +26,10 @@ impl Kit {
 }
 
 impl Depot<'_> {
+    pub fn channel(&self) -> String {
+        fetch::channel(self.version)
+    }
+
     pub fn install(&self, ask: &Ask) -> Result<Done, Error> {
         self.kit.installing(self, ask)
     }
@@ -54,6 +59,10 @@ impl Source for Release<'_> {
     fn resolve(&self, ask: &Ask) -> Result<fetch::Grant, Error> {
         fetch::resolve(self.0, &ask.channel, ask.version.as_deref())
     }
+
+    fn admits(&self, channel: &str) -> bool {
+        channel == "stable"
+    }
 }
 
 impl Source for Depot<'_> {
@@ -67,5 +76,9 @@ impl Source for Depot<'_> {
                 version: ask.version.as_deref(),
             },
         )
+    }
+
+    fn admits(&self, channel: &str) -> bool {
+        channel == "stable" || fetch::belongs(channel, self.version)
     }
 }

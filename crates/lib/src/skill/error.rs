@@ -40,7 +40,10 @@ impl std::fmt::Display for Error {
                 write!(f, "non-stable channel {channel} requires an exact version")
             }
             Self::Managed(channel) => {
-                write!(f, "managed skills only admit stable, not {channel}")
+                write!(
+                    f,
+                    "managed skills only admit stable or this binary's own channel, not {channel}"
+                )
             }
             Self::Stage => write!(f, "stable belongs in managed skill seats, not staging"),
             Self::Version(version) => write!(f, "invalid release version: {version}"),

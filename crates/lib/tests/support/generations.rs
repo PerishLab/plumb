@@ -66,6 +66,37 @@ fn upgrades() {
     );
 }
 
+#[test]
+fn admits_its_own_prerelease_channel() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let home = fixture.path().join("home");
+    std::fs::create_dir_all(home.join(".claude/skills")).expect("agent");
+    let kit = Kit {
+        name: "probe".into(),
+        home,
+        state: fixture.path().join("skills.json"),
+        url: "http://127.0.0.1:9".into(),
+    };
+    let beta = kit.depot("http://127.0.0.1:9", "probe", "v1.2.3-beta.1");
+    assert_eq!(beta.channel(), "beta");
+    assert_eq!(
+        kit.depot("http://127.0.0.1:9", "probe", "v1.2.3").channel(),
+        "stable"
+    );
+    let asked = |channel: &str| Ask {
+        channel: channel.into(),
+        ..Ask::default()
+    };
+    assert!(matches!(
+        beta.install(&asked("alpha")),
+        Err(plumb::skill::Error::Managed(_))
+    ));
+    assert!(matches!(
+        beta.status(&asked("beta")),
+        Err(plumb::skill::Error::Fetch(..))
+    ));
+}
+
 fn manifest(body: &[u8]) -> v3::Manifest {
     v3::Manifest::new(
         v3::Identity {
