@@ -47,7 +47,7 @@ pub(super) fn fixture() -> tempfile::TempDir {
 }
 
 pub(super) fn run(root: &Path, home: &Path) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_plumb"))
+    super::support::plumb()
         .args(["guard", ".", "--json"])
         .current_dir(root)
         .env("PLUMB_HOME", home)

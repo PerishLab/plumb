@@ -1,9 +1,9 @@
 use super::{Repo, cache};
 use std::path::Path;
-use std::process::{Command, Output};
+use std::process::Output;
 
 fn run(root: &Path, home: &Path, input: (&str, &str)) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_plumb"))
+    super::support::plumb()
         .args(["guard", ".", "--json"])
         .current_dir(root)
         .env("PLUMB_HOME", home)

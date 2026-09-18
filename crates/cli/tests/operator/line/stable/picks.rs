@@ -84,11 +84,10 @@ impl Fixture {
     }
 
     fn command(&self) -> Command {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
+        let mut command = support::plumb();
         command
             .current_dir(self.root.path())
             .env("PLUMB_HOME", self.home.path())
-            .env_remove("RUSTFLAGS")
             .args([
                 "version",
                 "pick",

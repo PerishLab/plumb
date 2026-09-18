@@ -65,7 +65,7 @@ impl Repo {
 
     pub fn plumb(&self, write: &str) -> Output {
         let depot = seat();
-        Command::new(env!("CARGO_BIN_EXE_plumb"))
+        support::plumb()
             .args(["guard", "--json"])
             .arg(self.fixture.path())
             .args(["--base", &self.base, "--head", &self.head, "--write", write])
@@ -159,7 +159,7 @@ fn governed() {
         std::env::var("PATH").unwrap_or_default()
     );
     let run = || {
-        Command::new(env!("CARGO_BIN_EXE_plumb"))
+        support::plumb()
             .args(["guard", "."])
             .current_dir(root)
             .env_remove("PLUMB_HOME")
@@ -242,7 +242,7 @@ fn staged() {
     Repo::git(root, &["add", "Cargo.lock"]);
 
     let run = || {
-        Command::new(env!("CARGO_BIN_EXE_plumb"))
+        support::plumb()
             .args(["guard", ".", "--json"])
             .current_dir(root)
             .env("PLUMB_HOME", depot.path())
@@ -263,7 +263,7 @@ fn staged() {
     assert!(String::from_utf8_lossy(&first.stderr).contains("guard guard/rust"));
     let message = root.join("message");
     std::fs::write(&message, "candidate\n").expect("message");
-    let attached = Command::new(env!("CARGO_BIN_EXE_plumb"))
+    let attached = support::plumb()
         .args(["guard", ".", "--attach"])
         .arg(&message)
         .current_dir(root)

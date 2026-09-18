@@ -54,7 +54,7 @@ fn unread() {
             std::fs::write(root.join("NOTES"), "unrelated\n").expect("unrelated");
             Repo::git(root, &["add", "NOTES"]);
         }
-        let mut guard = std::process::Command::new(env!("CARGO_BIN_EXE_plumb"));
+        let mut guard = super::support::plumb();
         guard
             .args(["guard", ".", "--json"])
             .current_dir(root)

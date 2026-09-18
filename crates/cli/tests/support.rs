@@ -22,6 +22,18 @@ pub fn depot(overrides: &[(&str, &str)]) -> tempfile::TempDir {
 }
 
 #[allow(dead_code)]
+pub fn plumb() -> std::process::Command {
+    let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_plumb"));
+    for (name, _) in std::env::vars() {
+        let ambient = name.starts_with("CARGO_") || name.starts_with("RUST");
+        if ambient && !["CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"].contains(&name.as_str()) {
+            command.env_remove(name);
+        }
+    }
+    command
+}
+
+#[allow(dead_code)]
 pub fn seat() -> &'static Path {
     static SEAT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
     SEAT.get_or_init(|| depot(&[]).keep())
