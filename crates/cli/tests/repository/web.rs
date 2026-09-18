@@ -3,6 +3,7 @@ use std::process::Command;
 
 fn run(root: &Path) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .env("PLUMB_HOME", super::support::seat())
         .args(["doctor", root.to_str().expect("path should be utf8")])
         .output()
         .expect("plumb should run");
@@ -74,4 +75,32 @@ fn hosted() {
     let out = run(&root);
     std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(!out.contains("[web]"), "{out}");
+}
+
+#[test]
+fn roles() {
+    let root = fixture("plumb-web-roles");
+    std::fs::write(root.join("apps/web/src/views/helper.ts"), "")
+        .expect("helper should be written");
+    std::fs::write(root.join("apps/web/src/lib/Panel.svelte"), "")
+        .expect("component should be written");
+    std::fs::write(root.join("apps/web/src/lib/hooks/Hush.ts"), "")
+        .expect("hook should be written");
+    std::fs::write(root.join("apps/web/src/lib/hooks/hush.tsx"), "")
+        .expect("hook should be written");
+    std::fs::write(root.join("apps/web/src/lib/components/card.ts"), "")
+        .expect("component should be written");
+    std::fs::write(root.join("apps/web/src/lib/components/card.scss"), "")
+        .expect("style should be written");
+    let out = run(&root);
+    std::fs::remove_dir_all(&root).expect("fixture should be swept");
+    for line in [
+        "web views only hold route svelte files",
+        "web lib svelte must live under lib/components",
+        "web convention paths must be lowercase",
+        "web hooks must be lowercase .ts files",
+        "web components only hold lowercase svelte files",
+    ] {
+        assert!(out.contains(&format!("{line} [web]")), "{out}");
+    }
 }
