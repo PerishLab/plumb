@@ -1,5 +1,5 @@
 {
-	"name": "@perish/plumb",
+	"name": "@perishlab/plumb",
 	"description": "plumb carrier — the npm adaptor holds no export yet",
 	"version": "0.0.0",
 	"type": "module",
