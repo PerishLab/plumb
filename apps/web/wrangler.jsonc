@@ -1,6 +1,7 @@
 {
 	"$schema": "../../node_modules/wrangler/config-schema.json",
 	"name": "plumb",
+	"account_id": "a6776d8a453d1b84d01576245a9c4f8d",
 	"compatibility_date": "2026-07-08",
 	"send_metrics": false,
 	"routes": [{ "pattern": "plumb.perish.uk", "custom_domain": true }],
