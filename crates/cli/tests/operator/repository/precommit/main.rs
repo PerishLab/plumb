@@ -153,8 +153,21 @@ fn governed() {
     ]);
     super::world::hooks(root);
     let binary = std::path::Path::new(env!("CARGO_BIN_EXE_plumb"));
+    let tools = fixture.path().join("tools");
+    std::fs::create_dir(&tools).expect("tool root");
+    std::fs::write(
+        tools.join("ectropy"),
+        "#!/bin/sh\n[ \"$1\" = --version ] && echo \"ectropy 0.0.0\"\nexit 0\n",
+    )
+    .expect("ectropy stub");
+    std::fs::set_permissions(
+        tools.join("ectropy"),
+        std::os::unix::fs::PermissionsExt::from_mode(0o755),
+    )
+    .expect("ectropy stub mode");
     let path = format!(
-        "{}:{}",
+        "{}:{}:{}",
+        tools.display(),
         binary.parent().expect("Plumb binary directory").display(),
         std::env::var("PATH").unwrap_or_default()
     );
