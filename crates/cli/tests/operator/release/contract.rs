@@ -120,21 +120,4 @@ fn split() {
         .expect("stable activation is explicit");
     assert!(configuration < ship && ship < channel, "{scenario}");
     assert!(scenario.contains("Neither command invokes the other."));
-
-    let structure = text("crates/cli/rules/structure.toml");
-    assert!(
-        structure.contains("remaining an independent local transaction"),
-        "{structure}"
-    );
-
-    let catalog = text("crates/cli/rules/catalog.toml");
-    assert!(
-        catalog.contains("Each ship dispatch names and resolves one exact Plumb atom"),
-        "{catalog}"
-    );
-    assert!(
-        catalog.contains("changing that atom neither mutates the product marker"),
-        "{catalog}"
-    );
-    assert!(!catalog.contains("A release marker records the exact Plumb atom"));
 }

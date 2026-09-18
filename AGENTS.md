@@ -43,9 +43,11 @@ answers for.
   and orchestration over Runseal's structured Cloudflare operations. Ship owns
   immutable Worker Versions; marker-bound depot projection owns Deployments.
   Plumb owns no authenticated Cloudflare HTTP sender and no raw route dialect.
-- `crates/cli/{rules,assets,cookbook,help}` — Plumb's governed resources. Their
-  exact source-to-seat projections are declared on `[layout]` seats and form
-  the configuration derivative; no second inventory owns them. Each is one
+- `crates/cli/{assets,cookbook,help}` — Plumb's compiled resources. Their
+  exact source-to-seat projections are declared on `[layout]` seats; the
+  configuration generation on Depot overrides the entries they name. Rules and
+  product profiles have no repository copy: the standing Depot generation is
+  their only source, edited through wharf's depot path. Each is one
   file per addressable thing, and the address is the path: a rule set is its
   name, a cookbook entry is the finding that sends you there, and long help is
   the command path, so `plumb version` reads `help/version.txt`.

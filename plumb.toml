@@ -7,21 +7,6 @@ anchor = ["Cargo.toml"]
 note = "Rust members. The anchor is also the identity, and a cargo rule set naming what that means is owed."
 
 [[layout.seat]]
-path = "crates/cli/rules"
-depot = "rules"
-note = "CLI rules projected into the configuration derivative."
-
-[[layout.seat]]
-path = "crates/cli/profiles"
-depot = "profiles"
-note = "Digest-addressed product governance profiles and their centrally controlled migration state targets."
-
-[[layout.seat]]
-path = "crates/lib/rules"
-depot = "rules"
-note = "Library rules projected into the configuration derivative."
-
-[[layout.seat]]
 path = "crates/cli/assets"
 depot = "assets"
 note = "Runtime manager sources and Git guard hooks projected into the configuration derivative. Workflow templates are retired."
