@@ -1,7 +1,148 @@
 use std::path::Path;
 use std::process::{Command, Output};
 
-const PROFILE: &str = "4664dd2574413c20dc2876f57ef2f1b52b24a48bbf8f87390705a800234e5b48";
+const PROFILE: &str = r#"schema = "plumb.product-profile/v1"
+
+[product]
+name = "runseal"
+authority = "https://releases.runseal.perish.uk"
+depot = "https://depot.runseal.perish.uk"
+derivatives = ["changelog", "skill"]
+
+[governance]
+manifest = '''
+[layout]
+
+[[layout.seat]]
+path = "crates/*"
+anchor = ["Cargo.toml"]
+rule = ["rule://seat/rust-roles"]
+note = "Rust packages occupy the closed cli, api, or lib product roles."
+
+[[layout.file]]
+name = ["AGENTS.md"]
+note = "The only product-specific operating entrypoint."
+
+[[layout.file]]
+name = ["LICENSE"]
+note = "Repository identity."
+
+[[layout.file]]
+name = [".gitignore"]
+rule = ["rule://seat/rust-ignore"]
+note = "The shared Rust ignore policy."
+
+[[layout.file]]
+name = [".gitattributes"]
+rule = ["rule://seat/text-attributes"]
+note = "The shared text normalization policy."
+
+[[layout.file]]
+name = ["Cargo.toml", "Cargo.lock"]
+note = "Rust workspace anchors."
+
+[release]
+product = "runseal"
+authority = "https://releases.runseal.perish.uk"
+binaries = ["runseal"]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-apple-darwin",
+  "x86_64-pc-windows-msvc",
+]
+
+[release.cargo]
+registry = "perish"
+packages = ["runseal"]
+'''
+ectropy = '''
+[comment]
+allow = false
+
+[[grant]]
+paths = ["crates/*/tests/**/*.rs"]
+syntax = "test"
+
+[[grant]]
+paths = [
+    "crates/cli/src/main.rs",
+    "crates/cli/src/skill.rs",
+    "crates/*/tests/**/*.rs",
+    "crates/lib/src/core/config.rs",
+]
+syntax = "environment"
+
+[limit]
+block = 4
+fanout = 10
+file = 300
+markup = 8
+param = 4
+path = 3
+
+[module]
+roots = [
+    "crates/*/src",
+    "crates/*/tests",
+]
+
+[scan]
+exclude = ["**/target/**"]
+include = ["crates/**/*.rs"]
+
+[vocabulary]
+
+[word]
+single = true
+'''
+"#;
+const POLICY: &str = r#"
+[limit]
+block = 4
+fanout = 10
+file = 300
+markup = 8
+param = 4
+path = 3
+
+[comment]
+allow = false
+
+[word]
+single = true
+
+[[shape]]
+when = ["crates"]
+include = ["crates/**/*.rs"]
+exclude = ["**/target/**"]
+roots = ["crates/*/src", "crates/*/tests"]
+tests = ["crates/*/tests/**/*.rs"]
+
+[[web]]
+seat = "fixture-absent"
+"#;
+const SEAT: &str = r#"
+[member]
+
+[[member.entry]]
+name = "rust-roles"
+allow = ["cli", "api", "lib"]
+note = "fixture"
+
+[[member.entry]]
+name = "rust-ignore"
+note = "fixture"
+[member.entry.lines]
+allow = ["/.task/", "/.local/", "target/"]
+required = ["/.task/", "/.local/", "target/"]
+
+[[member.entry]]
+name = "text-attributes"
+note = "fixture"
+[member.entry.lines]
+allow = ["* text=auto eol=lf"]
+required = ["* text=auto eol=lf"]
+"#;
 
 #[test]
 fn closed() {
@@ -10,6 +151,8 @@ fn closed() {
     std::fs::create_dir_all(root.join("crates/cli/src")).expect("CLI source");
     std::fs::create_dir_all(root.join("crates/lib/src")).expect("library source");
     git(&root, &["init", "-q"]);
+    git(&root, &["config", "user.name", "Plumb Test"]);
+    git(&root, &["config", "user.email", "plumb@example.invalid"]);
     git(
         &root,
         &[
@@ -47,11 +190,21 @@ fn closed() {
     git(&root, &["add", "-A"]);
     super::super::world::hooks(&root);
 
-    let depot = super::super::support::depot(&[]);
+    let digest = plumb::depot::sha(PROFILE.as_bytes());
+    let catalog = format!(
+        "schema = \"plumb.products/v2\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/runseal\"\nprofile = \"{digest}\"\n"
+    );
+    let path = format!("profiles/{digest}.toml");
+    let depot = super::super::support::depot(&[
+        ("rules/products.toml", &catalog),
+        (&path, PROFILE),
+        ("rules/seat.toml", SEAT),
+        ("rules/policy.toml", POLICY),
+    ]);
     let output = plumb(&root, depot.path(), &["doctor", ".", "--json"]);
     assert!(output.status.success(), "{}", text(&output));
     let report: serde_json::Value = serde_json::from_slice(&output.stdout).expect("report");
-    assert_eq!(report["profile"], PROFILE);
+    assert_eq!(report["profile"], digest);
     assert_eq!(report["ok"], true);
     assert!(!root.join("plumb.toml").exists());
     assert!(!root.join("ectropy.toml").exists());

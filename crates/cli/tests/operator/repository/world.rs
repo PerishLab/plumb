@@ -56,6 +56,8 @@ fn doctor() {
     std::fs::create_dir(&root).expect("repository");
     let repo = Fixture(&root);
     repo.git(&["init", "-q"]);
+    repo.git(&["config", "user.name", "Plumb Test"]);
+    repo.git(&["config", "user.email", "plumb@example.invalid"]);
     repo.git(&[
         "remote",
         "add",
@@ -163,6 +165,8 @@ fn migration() {
     std::fs::create_dir(&root).expect("repository");
     let repo = Fixture(&root);
     repo.git(&["init", "-q"]);
+    repo.git(&["config", "user.name", "Plumb Test"]);
+    repo.git(&["config", "user.email", "plumb@example.invalid"]);
     repo.git(&[
         "remote",
         "add",

@@ -1,4 +1,4 @@
-use super::{Repo, cache, support};
+use super::{Repo, cache};
 
 #[test]
 fn bootstrap() {
@@ -23,7 +23,7 @@ fn bootstrap() {
 #[test]
 fn unchanged() {
     let fixture = cache::fixture();
-    let home = support::depot(&[]);
+    let home = super::seat();
     let first = cache::run(fixture.path(), home.path());
     cache::success(&first);
     let second = cache::run(fixture.path(), home.path());
@@ -38,7 +38,7 @@ fn unread() {
     use std::os::unix::fs::PermissionsExt as _;
     let fixture = cache::fixture();
     let root = fixture.path();
-    let home = support::depot(&[]);
+    let home = super::seat();
     cache::success(&cache::run(root, home.path()));
     let tools = tempfile::tempdir().expect("tools");
     let rustc = tools.path().join("rustc");

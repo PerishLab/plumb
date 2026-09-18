@@ -64,8 +64,13 @@ pub fn prove(path: &Path) {
         }
     })
     .to_string();
+    let seat = super::super::support::depot(&[(
+        "rules/deps.toml",
+        "blacklist = []\n\n[stable.cargo]\nregistry = \"perish\"\nindex = \"sparse+https://registry.invalid/\"\n",
+    )]);
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["ship", "execute", "--request", &request])
+        .env("PLUMB_HOME", seat.path())
         .env(
             "PATH",
             format!(

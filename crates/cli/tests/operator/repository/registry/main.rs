@@ -66,6 +66,7 @@ fn cargo() {
         );
         command
             .env("PATH", env)
+            .env("PLUMB_HOME", super::support::seat())
             .env("FAKE_CARGO_ROOT", path)
             .env("PLUMB_RELEASE_ROOT", path);
         command

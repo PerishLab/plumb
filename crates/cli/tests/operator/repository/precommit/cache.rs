@@ -1,4 +1,4 @@
-use super::{Repo, support};
+use super::Repo;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
@@ -76,7 +76,7 @@ pub(super) fn success(output: &Output) {
 fn retained() {
     let fixture = fixture();
     let root = fixture.path();
-    let home = support::depot(&[]);
+    let home = super::seat();
     success(&run(root, home.path()));
     let held = seats(home.path());
     assert_eq!(held.len(), 1);
@@ -112,7 +112,7 @@ fn retained() {
 fn isolated() {
     let first = fixture();
     let second = fixture();
-    let home = support::depot(&[]);
+    let home = super::seat();
     success(&run(first.path(), home.path()));
     std::fs::write(
         second.path().join("src/lib.rs"),

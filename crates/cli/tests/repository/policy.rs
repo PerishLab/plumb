@@ -46,7 +46,7 @@ svelte-include = ["packages/**/*.svelte"]
 svelte-exclude = ["**/.svelte-kit/**"]
 tsx-include = ["packages/**/*.tsx"]
 "#;
-const DEPS: &str = "blacklist = [\"@stylexjs/stylex\"]\n\n[stable.cargo]\nregistry = \"fixture\"\nindex = \"sparse+http://127.0.0.1:9/\"\n";
+const DEPS: &str = "blacklist = [\"@stylexjs/stylex\"]\n\n[stable.cargo]\nregistry = \"fixture\"\nindex = \"sparse+https://registry.invalid/\"\n";
 
 fn govern(root: &Path) {
     let status = Command::new("git")

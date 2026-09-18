@@ -5,6 +5,20 @@ mod physical;
 mod world;
 use serde_json::Value;
 use std::process::{Command, Output};
+
+const WORKFLOW: &str = r#"
+[suite]
+cargo = ["Cargo.lock", "Cargo.toml", "crates"]
+
+[execution.cargo]
+inherit = ["PATH", "HOME", "TMPDIR", "LANG", "TZ", "CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"]
+managed = ["CARGO", "CARGO_TARGET_DIR", "CARGO_MANIFEST_*", "CARGO_PKG_*", "CARGO_BIN_EXE_*", "CARGO_CFG_*", "CARGO_PRIMARY_PACKAGE", "CARGO_MAKEFLAGS", "RUST_RECURSION_COUNT", "RUSTUP_TOOLCHAIN_SOURCE"]
+reject = ["CARGO_*", "RUST*", "CC", "CC_*", "LD_PRELOAD", "DYLD_*"]
+"#;
+
+fn seat() -> tempfile::TempDir {
+    support::depot(&[("rules/workflow.toml", WORKFLOW)])
+}
 pub(super) struct Repo {
     fixture: tempfile::TempDir,
     pub base: String,
@@ -50,7 +64,7 @@ impl Repo {
     }
 
     pub fn plumb(&self, write: &str) -> Output {
-        let depot = support::depot(&[]);
+        let depot = seat();
         Command::new(env!("CARGO_BIN_EXE_plumb"))
             .args(["guard", "--json"])
             .arg(self.fixture.path())
@@ -132,7 +146,11 @@ fn governed() {
         "schema = \"plumb.products/v2\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/probe\"\nprofile = \"{digest}\"\n"
     );
     let path = format!("profiles/{digest}.toml");
-    let home = support::home(&[("rules/products.toml", &catalog), (&path, &profile)]);
+    let home = support::home(&[
+        ("rules/products.toml", &catalog),
+        (&path, &profile),
+        ("rules/workflow.toml", WORKFLOW),
+    ]);
     super::world::hooks(root);
     let binary = std::path::Path::new(env!("CARGO_BIN_EXE_plumb"));
     let path = format!(
@@ -180,7 +198,7 @@ fn governed() {
 fn staged() {
     let fixture = tempfile::tempdir().expect("fixture");
     let home = tempfile::tempdir().expect("home");
-    let depot = support::depot(&[]);
+    let depot = seat();
     let root = fixture.path();
     Repo::git(root, &["init", "-q"]);
     Repo::git(root, &["config", "user.name", "Plumb Test"]);

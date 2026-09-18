@@ -123,12 +123,12 @@ pub fn stock(root: &Path, overrides: &[(&str, &str)]) {
 }
 
 const TAXONOMY: &str = "[[owner]]\nid = \"fixture\"\nsummary = \"fixture\"\n\n[[tag]]\nid = \"fixture\"\nsummary = \"fixture\"\n";
-const POLICY: &str =
-    "[limit]\n\n[comment]\nallow = false\n\n[word]\nsingle = false\n\n[[shape]]\nwhen = [\"fixture-absent\"]\n\n[[web]]\nseat = \"fixture-absent\"\n";
+const POLICY: &str = "[limit]\n\n[comment]\nallow = false\n\n[word]\nsingle = true\n\n[[shape]]\nwhen = [\"fixture-absent\"]\n\n[[web]]\nseat = \"fixture-absent\"\n";
 const STRUCTURE: &str = "[dir]\n\n[lane]\n";
 const WORKFLOW: &str = "[suite]\n";
-const DEPS: &str = "blacklist = []\n\n[stable.cargo]\nregistry = \"fixture\"\nindex = \"sparse+http://127.0.0.1:9/\"\n";
-const RELEASE: &str = "ceiling = 0\n\n[forge]\nimage = \"fixture\"\n\n[permitted]\n\n[exercised]\n";
+const DEPS: &str = "blacklist = []\n\n[stable.cargo]\nregistry = \"fixture\"\nindex = \"sparse+https://registry.invalid/\"\n";
+const RELEASE: &str =
+    "ceiling = 1000\n\n[forge]\nimage = \"fixture\"\n\n[permitted]\n\n[exercised]\n";
 const SEAT: &str = "[member]\n";
 const VOCABULARY: &str = "schema = 1\ncodec = \"p64-v1\"\nretired = []\n";
 

@@ -1,4 +1,4 @@
-use super::{Repo, cache, support};
+use super::{Repo, cache};
 use std::path::Path;
 use std::process::{Command, Output};
 
@@ -16,7 +16,7 @@ fn run(root: &Path, home: &Path, input: (&str, &str)) -> Output {
 fn refused() {
     let fixture = cache::fixture();
     let root = fixture.path();
-    let home = support::depot(&[]);
+    let home = super::seat();
     cache::success(&cache::run(root, home.path()));
     for changed in [false, true] {
         if changed {
@@ -43,7 +43,7 @@ fn refused() {
 fn bound() {
     let fixture = cache::fixture();
     let root = fixture.path();
-    let home = support::depot(&[]);
+    let home = super::seat();
     let first = run(root, home.path(), ("TZ", "UTC"));
     cache::success(&first);
     let changed = run(root, home.path(), ("TZ", "Etc/GMT+1"));
@@ -60,7 +60,7 @@ fn bound() {
 fn isolated() {
     let fixture = cache::fixture();
     let root = fixture.path();
-    let home = support::depot(&[]);
+    let home = super::seat();
     std::fs::write(
         root.join("build.rs"),
         "fn main() {\n    assert!(std::env::var_os(\"PLUMB_PROBE_SECRET\").is_none());\n}\n",
@@ -87,7 +87,7 @@ fn isolated() {
 fn external() {
     let fixture = cache::fixture();
     let root = fixture.path();
-    let home = support::depot(&[]);
+    let home = super::seat();
     let cargo = tempfile::tempdir().expect("cargo home");
     let path = cargo.path().to_str().expect("path");
     cache::success(&run(root, home.path(), ("CARGO_HOME", path)));
