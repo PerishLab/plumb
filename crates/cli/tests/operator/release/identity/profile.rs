@@ -98,6 +98,27 @@ fn retained() {
         "{}",
         String::from_utf8_lossy(&depot.stderr)
     );
+    let refused = fixture
+        .command()
+        .current_dir(fixture.root)
+        .env("PLUMB_HOME", home.path())
+        .env("PLUMB_RULES_SOURCE", "https://depot.test")
+        .args([
+            "ship",
+            "resolve",
+            "--marker",
+            "v1.2.0-beta.1",
+            "--atom",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        ])
+        .output()
+        .expect("Ship refusal");
+    assert!(!refused.status.success());
+    assert!(
+        String::from_utf8_lossy(&refused.stderr)
+            .contains("unsupported Ship target x86_64-apple-darwin"),
+        "{refused:?}"
+    );
 }
 
 fn annotate(root: &Path, version: &str, commit: &str, message: &str) {
