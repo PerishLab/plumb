@@ -14,8 +14,8 @@ pub use running::{Reader, install, ready};
 macro_rules! identity {
     ($prefix:literal) => {{
         #[used]
-        #[cfg_attr(target_vendor = "apple", unsafe(link_section = "__DATA,__releaseid"))]
-        #[cfg_attr(not(target_vendor = "apple"), unsafe(link_section = ".releaseid"))]
+        #[cfg_attr(target_vendor = "apple", unsafe(link_section = "__DATA,__relid"))]
+        #[cfg_attr(not(target_vendor = "apple"), unsafe(link_section = ".relid"))]
         static REGION: $crate::identity::Region = $crate::identity::Region::new(
             $prefix,
             option_env!(concat!($prefix, "_BUILD_COMMIT")),
