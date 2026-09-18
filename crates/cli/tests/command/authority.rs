@@ -2,6 +2,8 @@ use serde::Serialize;
 use std::collections::BTreeSet;
 use std::process::Command;
 
+mod transport;
+
 const SECRETS: [&str; 4] = ["access", "secret", "bucket", "endpoint"];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]

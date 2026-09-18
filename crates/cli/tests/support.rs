@@ -65,10 +65,7 @@ pub fn guard(overrides: &[(&str, &str)], target: &str) -> tempfile::TempDir {
 
 pub fn stock(root: &Path, overrides: &[(&str, &str)]) {
     let base = root.join(MARK);
-    let rules = plumb::depot::rules().expect("tests require their locked Depot policy");
-    let mut bodies = rules
-        .inherit(rules.mark(), BTreeMap::new())
-        .expect("verified policy");
+    let mut bodies = skeleton();
     for (source, seat) in SOURCES {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join(source);
         for file in walk(&root) {
@@ -102,7 +99,7 @@ pub fn stock(root: &Path, overrides: &[(&str, &str)]) {
     let manifest = Manifest {
         schema: Schema {
             format: FORMAT,
-            version: "v0.0.1".to_string(),
+            version: concat!("v", env!("CARGO_PKG_VERSION")).to_string(),
         },
         metadata: metadata.clone(),
         objects,
@@ -119,12 +116,66 @@ pub fn stock(root: &Path, overrides: &[(&str, &str)]) {
     .expect("pointer seat");
 }
 
-#[allow(dead_code)]
-pub fn policy(path: &str) -> String {
-    plumb::depot::rules()
-        .expect("tests require their locked Depot policy")
-        .read(path)
-        .expect("verified policy")
+const TAXONOMY: &str = "[[owner]]\nid = \"fixture\"\nsummary = \"fixture\"\n\n[[tag]]\nid = \"fixture\"\nsummary = \"fixture\"\n";
+const POLICY: &str =
+    "[limit]\n\n[[shape]]\nwhen = [\"fixture-absent\"]\n\n[[web]]\nseat = \"fixture-absent\"\n";
+const STRUCTURE: &str = "[dir]\n\n[lane]\n";
+const WORKFLOW: &str = "[suite]\n";
+const DEPS: &str = "blacklist = []\n\n[stable.cargo]\nregistry = \"fixture\"\nindex = \"sparse+http://127.0.0.1:9/\"\n";
+const RELEASE: &str = "ceiling = 0\n\n[forge]\nimage = \"fixture\"\n\n[permitted]\n\n[exercised]\n";
+const SEAT: &str = "[member]\n";
+const VOCABULARY: &str = "schema = 1\ncodec = \"p64-v1\"\nretired = []\n";
+
+fn skeleton() -> BTreeMap<String, Vec<u8>> {
+    let ids = mechanisms();
+    let mut namespaces: Vec<&str> = ids
+        .iter()
+        .map(|id| id.split('.').next().expect("namespaced mechanism"))
+        .collect();
+    namespaces.dedup();
+    let mut words = TAXONOMY.to_string();
+    for namespace in namespaces {
+        words.push_str(&format!(
+            "\n[[namespace]]\nid = \"{namespace}\"\nsummary = \"fixture\"\nowner = \"fixture\"\n"
+        ));
+    }
+    let mut law = String::new();
+    for id in &ids {
+        law.push_str(&format!(
+            "[[rule]]\nid = \"{id}\"\nsummary = \"fixture\"\nlaw = \"fixture\"\nevidence = \"fixture\"\nstanding = \"mechanized\"\nowner = \"fixture\"\ntags = [\"fixture\"]\n\n"
+        ));
+    }
+    [
+        ("rules/taxonomy.toml", words),
+        ("rules/catalog.toml", law),
+        ("rules/policy.toml", POLICY.to_string()),
+        ("rules/structure.toml", STRUCTURE.to_string()),
+        ("rules/workflow.toml", WORKFLOW.to_string()),
+        ("rules/deps.toml", DEPS.to_string()),
+        ("rules/release.toml", RELEASE.to_string()),
+        ("rules/seat.toml", SEAT.to_string()),
+        ("rules/vocabulary.toml", VOCABULARY.to_string()),
+    ]
+    .into_iter()
+    .map(|(path, text)| (path.to_string(), text.into_bytes()))
+    .collect()
+}
+
+fn mechanisms() -> Vec<String> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/catalog/rules");
+    let mut ids = Vec::new();
+    for file in walk(&root) {
+        let text = std::fs::read_to_string(&file).expect("mechanism source");
+        for call in text.split("rule!(").skip(1) {
+            let args = call.split(')').next().unwrap_or_default();
+            if let Some(id) = args.split('"').nth(1) {
+                ids.push(id.to_string());
+            }
+        }
+    }
+    ids.sort();
+    ids.dedup();
+    ids
 }
 
 #[allow(dead_code)]
