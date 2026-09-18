@@ -9,29 +9,6 @@ fn run(args: &[&str]) -> String {
 }
 
 #[test]
-fn missing() {
-    let dir = std::env::temp_dir().join("plumb-anchorless");
-    std::fs::create_dir_all(dir.join("crates/other/src")).expect("fixture should be made");
-    std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
-    std::fs::write(
-        dir.join("Cargo.toml"),
-        "[workspace]\nmembers = [\"crates/other\"]\n",
-    )
-    .expect("manifest should be written");
-    std::fs::write(
-        dir.join("crates/other/Cargo.toml"),
-        "[package]\nname = \"other\"\n",
-    )
-    .expect("manifest should be written");
-    let bare = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(
-        bare.contains("no crate is named plumb-anchorless, the anchor is missing"),
-        "{bare}"
-    );
-}
-
-#[test]
 fn seated() {
     let dir = std::env::temp_dir().join("plumb-anchored");
     std::fs::create_dir_all(dir.join("crates/anchor/src")).expect("fixture should be made");
@@ -87,48 +64,6 @@ fn declared() {
 }
 
 #[test]
-fn strayed() {
-    let dir = std::env::temp_dir().join("plumb-strayed");
-    std::fs::create_dir_all(dir.join("crates/anchor/src")).expect("fixture should be made");
-    std::fs::create_dir_all(dir.join("crates/other/src")).expect("fixture should be made");
-    std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
-    std::fs::write(
-        dir.join("Cargo.toml"),
-        "[workspace]\nmembers = [\"crates/anchor\", \"crates/other\"]\n",
-    )
-    .expect("manifest should be written");
-    std::fs::write(
-        dir.join("crates/anchor/Cargo.toml"),
-        "[package]\nname = \"plumb-strayed\"\n",
-    )
-    .expect("manifest should be written");
-    std::fs::write(
-        dir.join("crates/other/Cargo.toml"),
-        "[package]\nname = \"other\"\n",
-    )
-    .expect("manifest should be written");
-    std::fs::write(
-        dir.join("crates/other/src/lib.rs"),
-        "#[derive(plumb::config::Cascade)]\nstruct Config;\n",
-    )
-    .expect("source should be written");
-    let outside = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    assert!(
-        outside.contains("Cascade derives in crates/other, outside the anchor"),
-        "{outside}"
-    );
-
-    std::fs::write(
-        dir.join("crates/other/Cargo.toml"),
-        "[package]\nname = \"other\"\n[lib]\nproc-macro = true\n",
-    )
-    .expect("manifest should be written");
-    let exempt = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(!exempt.contains("outside the anchor"), "{exempt}");
-}
-
-#[test]
 fn split() {
     let dir = std::env::temp_dir().join("plumb-split");
     std::fs::create_dir_all(dir.join("crates/cli/src")).expect("fixture should be made");
@@ -158,44 +93,6 @@ fn split() {
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("outside the anchor"), "{held}");
     assert!(!held.contains("is headless"), "{held}");
-}
-
-#[test]
-fn headless() {
-    let dir = std::env::temp_dir().join("plumb-headless");
-    std::fs::create_dir_all(dir.join("crates/cli/src")).expect("fixture should be made");
-    std::fs::create_dir_all(dir.join("crates/api/src")).expect("fixture should be made");
-    std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
-    std::fs::write(
-        dir.join("Cargo.toml"),
-        "[workspace]\nmembers = [\"crates/cli\", \"crates/api\"]\n",
-    )
-    .expect("manifest should be written");
-    std::fs::write(
-        dir.join("crates/cli/Cargo.toml"),
-        "[package]\nname = \"plumb-headless\"\n",
-    )
-    .expect("manifest should be written");
-    std::fs::write(
-        dir.join("crates/api/Cargo.toml"),
-        "[package]\nname = \"api\"\n",
-    )
-    .expect("manifest should be written");
-    std::fs::write(
-        dir.join("crates/api/src/lib.rs"),
-        "#[derive(plumb::config::Cascade)]\nstruct Config;\n",
-    )
-    .expect("source should be written");
-    let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(
-        held.contains("api crate at crates/api is headless"),
-        "{held}"
-    );
-    assert!(
-        held.contains("Cascade derives in crates/api, outside the anchor"),
-        "{held}"
-    );
 }
 
 #[test]

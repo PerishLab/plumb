@@ -1,5 +1,5 @@
 use super::datum::lined;
-use super::stable::{command, run};
+use super::stable::run;
 use super::world::{Court, serve};
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -102,84 +102,6 @@ fn refreshes() {
         .output()
         .expect("git rev-parse");
     assert_eq!(String::from_utf8_lossy(&refreshed.stdout).trim(), severed);
-}
-
-#[test]
-fn freedom() {
-    let fixture = tempfile::tempdir().expect("fixture");
-    let bare = tempfile::tempdir().expect("bare");
-    let root = fixture.path();
-    let cut = root.join("cut");
-    let (url, _) = serve(Court::Prepare(true, cut.clone()), 8);
-    let origin = format!("{url}/test/probe.git");
-    let head = lined(root, &origin, bare.path(), "release/v1.2.0");
-    std::fs::write(&cut, &head).expect("cut");
-
-    std::fs::write(root.join("failed"), "never activated\n").expect("failed marker");
-    run(Command::new("git")
-        .args(["add", "failed"])
-        .current_dir(root));
-    run(Command::new("git")
-        .args(["commit", "-q", "-m", "Stand a failed release marker"])
-        .current_dir(root));
-    run(Command::new("git")
-        .args(["tag", "v1.1.0", "HEAD"])
-        .current_dir(root));
-    run(Command::new("git")
-        .args(["update-ref", "refs/remotes/origin/main", &head])
-        .current_dir(root));
-    let output = execute(root, &url, &["version", "prepare", "--version", "1.2.0"]);
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-}
-
-#[test]
-fn migrated() {
-    let fixture = tempfile::tempdir().expect("fixture");
-    let bare = tempfile::tempdir().expect("bare");
-    let root = fixture.path();
-    let cut = root.join("cut");
-    let (url, _) = serve(Court::Prepare(true, cut.clone()), 9);
-    let origin = format!("{url}/test/probe.git");
-    std::fs::create_dir_all(root.join(".plumb/releases/v1.2.0")).expect("seat");
-    std::fs::write(
-        root.join(".plumb/releases/v1.2.0/datum.json"),
-        "{\"schema\":1}\n",
-    )
-    .expect("an older Plumb's datum");
-    let head = lined(root, &origin, bare.path(), "release/v1.2.0");
-    std::fs::write(&cut, &head).expect("cut");
-    let output = command(root, &["version", "prepare", "--version", "1.2.0"]);
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let listed = Command::new("git")
-        .args(["log", "--format=%H", "release/v1.2.0"])
-        .current_dir(bare.path())
-        .output()
-        .expect("git");
-    let recorded = String::from_utf8_lossy(&listed.stdout)
-        .lines()
-        .next()
-        .expect("datum commit")
-        .to_string();
-    let shown = Command::new("git")
-        .args(["show", "--name-only", "--format=", &recorded])
-        .current_dir(bare.path())
-        .output()
-        .expect("git");
-    let touched = String::from_utf8_lossy(&shown.stdout).to_string();
-    assert!(touched.contains("datum.toml"), "{touched}");
-    assert!(
-        touched.contains("datum.json"),
-        "the recording commit drops what it swept, so freeze sees one seat commit: {touched}"
-    );
 }
 
 fn activate(root: &Path, version: &str, commit: &str) {

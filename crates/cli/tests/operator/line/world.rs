@@ -2,18 +2,10 @@ use serde_json::{Value, json};
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 pub enum Court {
-    Dispatch,
-    Expanding(AtomicUsize),
-    Flight,
-    Failed,
-    Nested(bool),
     Prepare(bool, PathBuf),
-    Resume(PathBuf),
-    Freeze(PathBuf),
     Rejoin(PathBuf),
 }
 
@@ -78,55 +70,8 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
         Court::Prepare(_, root) if request.contains("GET /v1/releases/stable/") => {
             release(root, "seal.json")
         }
-        Court::Dispatch
-        | Court::Expanding(_)
-        | Court::Failed
-        | Court::Flight
-        | Court::Nested(_)
-            if request.contains("/dispatches ") =>
-        {
-            ("201 Created", json!({"id": 88, "run_number": 7}))
-        }
-        Court::Dispatch | Court::Flight if request.contains("/actions/runs/88 ") => (
-            "200 OK",
-            json!({"id": 88, "index_in_repo": 7, "status": "success"}),
-        ),
-        Court::Dispatch if request.contains("/actions/runs/7/jobs/0/attempt/1 ") => {
-            ("200 OK", jobs("success"))
-        }
-        Court::Expanding(turn) if request.contains("/actions/runs/7/jobs/0/attempt/1 ") => {
-            let status = if turn.fetch_add(1, Ordering::SeqCst) == 1 {
-                "running"
-            } else {
-                "success"
-            };
-            ("200 OK", jobs(status))
-        }
-        Court::Flight if request.contains("/actions/runs/7/jobs/0/attempt/1 ") => {
-            ("200 OK", jobs("running"))
-        }
-        Court::Failed if request.contains("/actions/runs/88 ") => (
-            "200 OK",
-            json!({"id": 88, "index_in_repo": 7, "status": "failure"}),
-        ),
-        Court::Nested(_) if request.contains("/actions/runs/88 ") => (
-            "200 OK",
-            json!({"id": 88, "index_in_repo": 7, "status": "blocked"}),
-        ),
-        Court::Nested(success) if request.contains("/actions/runs/7/jobs/0/attempt/1 ") => {
-            let status = if *success { "success" } else { "failure" };
-            ("200 OK", jobs(status))
-        }
-        Court::Failed if request.contains("/actions/runs/7/jobs/0/attempt/1 ") => {
-            ("200 OK", jobs("failure"))
-        }
-        Court::Prepare(..) | Court::Resume(_) | Court::Rejoin(_)
-            if request.contains("GET /api/v1/user ") =>
-        {
+        Court::Prepare(..) | Court::Rejoin(_) if request.contains("GET /api/v1/user ") => {
             ("200 OK", json!({"login": "operator"}))
-        }
-        Court::Freeze(head) if request.contains("GET ") && request.contains("/branches/") => {
-            ("200 OK", cut(head))
         }
         Court::Prepare(..) | Court::Rejoin(_)
             if request.contains("GET ") && request.contains("branch_protections") =>
@@ -135,16 +80,6 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
                 "404 Not Found",
                 json!({"message": "The target couldn't be found."}),
             )
-        }
-        Court::Resume(_) if request.contains("GET ") && request.contains("branch_protections") => {
-            ("200 OK", json!({"branch_name": "release/v1.2.0"}))
-        }
-        Court::Resume(_)
-            if request.contains("PATCH ") && request.contains("branch_protections") =>
-        {
-            let mut value = body;
-            value["branch_name"] = json!("release/v1.2.0");
-            ("200 OK", value)
         }
         Court::Prepare(exact, _)
             if request.contains("POST ") && request.contains("branch_protections") =>
@@ -191,9 +126,6 @@ fn answer(court: &Court, request: &str, body: Value) -> (&'static str, Value) {
             "404 Not Found",
             json!({"message": "The target couldn't be found."}),
         ),
-        Court::Resume(head) if request.contains("GET ") && request.contains("/branches/") => {
-            ("200 OK", cut(head))
-        }
         Court::Prepare(_, head)
             if request.contains("POST ") && request.ends_with("/branches HTTP/1.1") =>
         {
@@ -261,12 +193,4 @@ fn pulls(settled: &Path) -> Value {
 fn cut(head: &PathBuf) -> Value {
     let commit = std::fs::read_to_string(head).unwrap_or_default();
     json!({"name": "release/v1.2.0", "commit": {"id": commit.trim()}})
-}
-
-fn jobs(status: &str) -> Value {
-    let rows = [
-        json!({"name": "build", "status": status}),
-        json!({"name": "release", "status": "success"}),
-    ];
-    json!({"state": {"run": {"jobs": rows}}})
 }

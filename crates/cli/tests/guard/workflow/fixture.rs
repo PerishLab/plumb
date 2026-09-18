@@ -29,16 +29,6 @@ impl Seat {
         self.git(&["add", "-A"]);
     }
 
-    pub fn shown(&self) -> (String, bool) {
-        let out = plumb(&["workflow", "status", self.0.to_str().expect("path")])
-            .output()
-            .expect("run");
-        (
-            String::from_utf8_lossy(&out.stdout).to_string(),
-            out.status.success(),
-        )
-    }
-
     pub fn verb(&self, deed: &str, key: &str, forced: bool) -> (String, bool) {
         let mut held = plumb(&["workflow", deed, key, self.0.to_str().expect("path")]);
         if forced {
@@ -68,10 +58,6 @@ impl Seat {
 
     pub fn remote(&self, input: Plan<'_>, inventory: Option<&str>) -> (String, bool) {
         self.invoke(input, inventory, &[])
-    }
-
-    pub fn workload(&self, input: Plan<'_>, workload: &[&str]) -> (String, bool) {
-        self.invoke(input, None, workload)
     }
 
     fn invoke(
@@ -124,21 +110,6 @@ impl Seat {
             out.status.success(),
         )
     }
-
-    pub fn inventory(&self, body: &str) -> String {
-        let path = self.0.join(".workflow-inventory.json");
-        fs::write(&path, body).expect("inventory");
-        path.to_string_lossy().to_string()
-    }
-
-    pub fn wrote(&self, path: &str, body: &str) {
-        let path = self.0.join(path);
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).expect("leaf parent");
-        }
-        fs::write(path, body).expect("leaf");
-        self.git(&["add", "-A"]);
-    }
 }
 
 pub fn seat(name: &str) -> Seat {
@@ -170,12 +141,4 @@ fn plumb(args: &[&str]) -> Command {
         held.env_remove(name);
     }
     held
-}
-
-pub fn digest(text: &str, key: &str) -> String {
-    text.lines()
-        .find(|line| line.trim_start().starts_with(key))
-        .and_then(|line| line.split_whitespace().nth(1))
-        .expect("digest")
-        .to_string()
 }
