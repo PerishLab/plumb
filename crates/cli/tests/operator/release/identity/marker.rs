@@ -135,12 +135,15 @@ fn refusal() {
     let stable = fixture
         .command()
         .current_dir(fixture.root)
-        .args(["release", "stamp", "--version", "v1.2.0", "--dry-run"])
+        .args(["release", "stamp", "--version", "v1.2.0-alpha.1", "--dry-run"])
         .output()
         .expect("plumb should run");
     assert!(!stable.status.success());
     let error = String::from_utf8_lossy(&stable.stderr);
-    assert!(error.contains("v1.2.0 is not a beta marker"), "{error}");
+    assert!(
+        error.contains("v1.2.0-alpha.1 is neither a beta nor a stable marker"),
+        "{error}"
+    );
 
     std::fs::write(
         fixture.root.join("plumb.toml"),
