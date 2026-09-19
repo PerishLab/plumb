@@ -52,6 +52,28 @@ impl Seat {
         }
     }
 
+    pub fn proven(&self, version: Option<String>, home: &std::path::Path) -> i32 {
+        let Some(held) = version.filter(|held| !held.trim().is_empty()) else {
+            eprintln!("plumb changelog: --prove needs the --version the note describes");
+            return 1;
+        };
+        match crate::command::changelog::prove(&self.0, home, &held) {
+            Ok(proof) => {
+                for (tongue, language) in &proof.languages {
+                    println!(
+                        "{tongue}: {} lines within a budget of {} for {} units",
+                        language.lines, language.budget, proof.units
+                    );
+                }
+                0
+            }
+            Err(error) => {
+                eprintln!("plumb changelog: {error}");
+                1
+            }
+        }
+    }
+
     pub fn policy(&self, write: bool) -> i32 {
         let path = self.0.join("ectropy.toml");
         let text = match std::fs::read_to_string(&path) {

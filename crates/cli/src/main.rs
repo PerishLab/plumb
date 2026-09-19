@@ -100,6 +100,12 @@ enum Command {
         target: Root,
         #[arg(long)]
         version: Option<String>,
+        #[arg(
+            long,
+            value_name = "DIR",
+            help = "Prove a prepared release note against the diff budget of --version"
+        )]
+        prove: Option<PathBuf>,
     },
     #[command(about = "Install the marker-exact configuration Plumb carries")]
     Configuration {
@@ -244,9 +250,14 @@ fn execute(command: Command) -> i32 {
         }
         Command::Skill { deed } => consumption::skill::run(deed),
         Command::Rule { deed } => catalog::query::run(deed),
-        Command::Changelog { target, version } => {
-            command::render::Seat::new(PathBuf::from(target.root)).changelog(version)
-        }
+        Command::Changelog {
+            target,
+            version,
+            prove: Some(home),
+        } => command::render::Seat::new(PathBuf::from(target.root)).proven(version, &home),
+        Command::Changelog {
+            target, version, ..
+        } => command::render::Seat::new(PathBuf::from(target.root)).changelog(version),
         Command::Configuration { deed } => consumption::configuration::run(deed),
         Command::Layout { target } => {
             command::render::Seat::new(PathBuf::from(target.root)).layout()
