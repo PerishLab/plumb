@@ -117,6 +117,10 @@ fn execute(deed: Deed) -> Result<String, String> {
             dry,
         } => super::operator::stamp(&version, &remote, dry),
         Deed::Retract { version, dry } => super::operator::retract(&version, dry),
+        Deed::Managers { version, out } => {
+            let spec = Spec::read(Path::new("plumb.toml"))?;
+            manager::write(&spec, &channel::channel(&version)?, &version, &out)
+        }
         deed => markers::run(deed),
     }
 }

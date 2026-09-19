@@ -63,7 +63,7 @@ pub fn run(deed: Deed) -> Result<String, String> {
     let (name, show, held) = match deed {
         Deed::Show { marker, held } => (marker, true, held),
         Deed::Verify { marker, held } => (marker, false, held),
-        Deed::Retract { .. } | Deed::Stamp { .. } => {
+        Deed::Retract { .. } | Deed::Stamp { .. } | Deed::Managers { .. } => {
             return Err("a marker mutation reached marker inspection".into());
         }
     };
