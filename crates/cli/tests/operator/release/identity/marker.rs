@@ -141,7 +141,7 @@ fn refusal() {
     assert!(!stable.status.success());
     let error = String::from_utf8_lossy(&stable.stderr);
     assert!(
-        error.contains("v1.2.0-alpha.1 is neither a beta nor a stable marker"),
+        error.contains("v1.2.0-alpha.1 is not an rc, beta or stable marker"),
         "{error}"
     );
 

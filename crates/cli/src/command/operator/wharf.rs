@@ -6,14 +6,14 @@ use std::process::{Command, Output, Stdio};
 
 const HUB: &str = "PerishLab/wharf";
 const WORKFLOW: &str = "ship.yml";
-const CHANNEL: &str = "beta";
+const PRERELEASES: [&str; 2] = ["rc", "beta"];
 const STABLE: &str = "stable";
 
 pub(super) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<String, String> {
     let held = if raw.starts_with('v') { raw.to_string() } else { format!("v{raw}") };
     let channel = super::super::release::channel(&held)?;
-    if channel != CHANNEL && channel != STABLE {
-        return Err(format!("{held} is neither a {CHANNEL} nor a {STABLE} marker; wharf distribution stamps only those"));
+    if channel != STABLE && !PRERELEASES.contains(&channel.as_str()) {
+        return Err(format!("{held} is not an rc, beta or {STABLE} marker; wharf distribution stamps only those"));
     }
     let version = value::version(&held, &channel)?;
     let base = version.split('-').next().unwrap_or(&version).to_string();
@@ -29,14 +29,14 @@ pub(super) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<String, String
             return Err(format!("{version} already stands; a stable marker never moves"));
         }
         let authority = super::super::release::authority(&root)?;
-        let promoted = promoted(&listing, &base, &head, |beta| {
-            plumb::bucket::fetch(&format!("{}/v1/releases/{CHANNEL}/{beta}/seal.json", authority.trim_end_matches('/')))
+        let promoted = promoted(&listing, &base, &head, |channel, marker| {
+            plumb::bucket::fetch(&format!("{}/v1/releases/{channel}/{marker}/seal.json", authority.trim_end_matches('/')))
         })?;
         format!("{version}\n\npromotes {promoted}")
     } else {
-        let expected = next(&listing, &base);
-        if version != format!("{base}-{CHANNEL}.{expected}") {
-            return Err(format!("{version} skips the line; the next {CHANNEL} marker on {branch} is {base}-{CHANNEL}.{expected}"));
+        let expected = next(&listing, &base, &channel);
+        if version != format!("{base}-{channel}.{expected}") {
+            return Err(format!("{version} skips the line; the next {channel} marker on {branch} is {base}-{channel}.{expected}"));
         }
         version.clone()
     };
@@ -61,30 +61,33 @@ fn promoted(
     listing: &str,
     base: &str,
     head: &str,
-    seal: impl Fn(&str) -> Result<Option<Vec<u8>>, String>,
+    seal: impl Fn(&str, &str) -> Result<Option<Vec<u8>>, String>,
 ) -> Result<String, String> {
-    let prefix = format!("refs/tags/{base}-{CHANNEL}.");
-    let mut held = listing
-        .lines()
-        .filter_map(|line| {
-            let (object, name) = line.split_once('\t')?;
-            let number = name.strip_prefix(&prefix)?.strip_suffix("^{}")?.parse::<u64>().ok()?;
-            (object == head).then_some(number)
-        })
-        .collect::<Vec<_>>();
-    held.sort_unstable_by(|left, right| right.cmp(left));
-    if held.is_empty() {
-        return Err(format!("no {CHANNEL} marker stands at {head}; a stable marker promotes a shipped {CHANNEL}"));
+    let mut held = Vec::new();
+    for channel in PRERELEASES {
+        let prefix = format!("refs/tags/{base}-{channel}.");
+        let mut numbers = listing
+            .lines()
+            .filter_map(|line| {
+                let (object, name) = line.split_once('\t')?;
+                let number = name.strip_prefix(&prefix)?.strip_suffix("^{}")?.parse::<u64>().ok()?;
+                (object == head).then_some(number)
+            })
+            .collect::<Vec<_>>();
+        numbers.sort_unstable_by(|left, right| right.cmp(left));
+        held.extend(numbers.into_iter().map(|number| (channel, format!("{base}-{channel}.{number}"))));
     }
-    for number in held {
-        let beta = format!("{base}-{CHANNEL}.{number}");
-        let Some(body) = seal(&beta)? else { continue };
-        let document: serde_json::Value = serde_json::from_slice(&body).map_err(|error| format!("{beta} seal does not parse: {error}"))?;
-        if document["releaseVersion"] == beta.as_str() && document["channel"] == CHANNEL && document["commit"] == head {
-            return Ok(beta);
+    if held.is_empty() {
+        return Err(format!("no rc or beta marker stands at {head}; a stable marker promotes a shipped prerelease"));
+    }
+    for (channel, marker) in held {
+        let Some(body) = seal(channel, &marker)? else { continue };
+        let document: serde_json::Value = serde_json::from_slice(&body).map_err(|error| format!("{marker} seal does not parse: {error}"))?;
+        if document["releaseVersion"] == marker.as_str() && document["channel"] == channel && document["commit"] == head {
+            return Ok(marker);
         }
     }
-    Err(format!("no {CHANNEL} marker at {head} has a published seal; ship one before promoting it"))
+    Err(format!("no prerelease marker at {head} has a published seal; ship one before promoting it"))
 }
 
 pub(super) fn dispatch(options: Dispatch) -> Result<String, String> {
@@ -131,8 +134,8 @@ fn reference(listing: &str, name: &str) -> Option<String> {
     })
 }
 
-fn next(listing: &str, base: &str) -> u64 {
-    let prefix = format!("refs/tags/{base}-{CHANNEL}.");
+fn next(listing: &str, base: &str, channel: &str) -> u64 {
+    let prefix = format!("refs/tags/{base}-{channel}.");
     listing
         .lines()
         .filter_map(|line| line.split_once('\t')?.1.strip_prefix(&prefix)?.parse::<u64>().ok())
@@ -165,8 +168,9 @@ mod tests {
 
     #[test]
     fn next_beta_follows_the_highest_on_the_line() {
-        assert_eq!(next(LISTING, "v0.38.0"), 4);
-        assert_eq!(next(LISTING, "v0.39.0"), 1);
+        assert_eq!(next(LISTING, "v0.38.0", "beta"), 4);
+        assert_eq!(next(LISTING, "v0.39.0", "beta"), 1);
+        assert_eq!(next(LISTING, "v0.38.0", "rc"), 1);
     }
 
     #[test]
@@ -191,7 +195,7 @@ mod tests {
 
     #[test]
     fn stable_promotes_the_highest_shipped_beta_at_the_head() {
-        let found = promoted(PROMOTION, "v0.38.0", "aaa", |beta| {
+        let found = promoted(PROMOTION, "v0.38.0", "aaa", |_, beta| {
             Ok((beta == "v0.38.0-beta.16").then(|| seal(beta, "aaa")))
         });
         assert_eq!(found.as_deref(), Ok("v0.38.0-beta.16"));
@@ -199,9 +203,18 @@ mod tests {
 
     #[test]
     fn stable_refuses_without_a_shipped_beta_at_the_head() {
-        assert!(promoted(PROMOTION, "v0.38.0", "ccc", |_| Ok(None)).unwrap_err().contains("no beta marker stands"));
-        assert!(promoted(PROMOTION, "v0.38.0", "aaa", |_| Ok(None)).unwrap_err().contains("has a published seal"));
-        let moved = promoted(PROMOTION, "v0.38.0", "aaa", |beta| Ok(Some(seal(beta, "bbb"))));
+        assert!(promoted(PROMOTION, "v0.38.0", "ccc", |_, _| Ok(None)).unwrap_err().contains("no rc or beta marker stands"));
+        assert!(promoted(PROMOTION, "v0.38.0", "aaa", |_, _| Ok(None)).unwrap_err().contains("has a published seal"));
+        let moved = promoted(PROMOTION, "v0.38.0", "aaa", |_, beta| Ok(Some(seal(beta, "bbb"))));
         assert!(moved.unwrap_err().contains("has a published seal"));
+    }
+
+    #[test]
+    fn stable_prefers_a_shipped_rc_over_betas() {
+        let listing = format!("{PROMOTION}t4\trefs/tags/v0.38.0-rc.1\naaa\trefs/tags/v0.38.0-rc.1^{{}}\n");
+        let found = promoted(&listing, "v0.38.0", "aaa", |channel, marker| {
+            Ok(Some(format!(r#"{{"releaseVersion":"{marker}","channel":"{channel}","commit":"aaa"}}"#).into_bytes()))
+        });
+        assert_eq!(found.as_deref(), Ok("v0.38.0-rc.1"));
     }
 }
