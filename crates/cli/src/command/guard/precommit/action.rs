@@ -199,9 +199,6 @@ impl Catalog<'_> {
             ],
             "guard/test" => vec![cargo(&["test", "--locked"])],
             "guard/web" => self.web()?,
-            "guard/plumb" if product == "plumb" => vec![cargo(&[
-                "run", "--quiet", "--locked", "--bin", "plumb", "--", "doctor", ".",
-            ])],
             "guard/plumb" => vec![vec!["plumb".into(), "doctor".into(), ".".into()]],
             "guard/ectropy" if product == "ectropy" => vec![cargo(&[
                 "run", "--quiet", "--locked", "--bin", "ectropy", "--", ".",
