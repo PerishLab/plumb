@@ -39,10 +39,10 @@ answers for.
 
 - `crates/lib/src/forgejo` — Plumb orchestration and Git adaptors over Runseal's
   structured Forgejo operations. It owns no HTTP sender and reads no `tea.yml`.
-- `crates/cli/src/command/ship/site` and `retire` — Cloudflare interpretation
-  and orchestration over Runseal's structured Cloudflare operations. Ship owns
-  immutable Worker Versions; marker-bound depot projection owns Deployments.
-  Plumb owns no authenticated Cloudflare HTTP sender and no raw route dialect.
+- `crates/cli/src/command/retire` — Cloudflare interpretation and orchestration
+  over Runseal's structured Cloudflare operations. Worker versions and their
+  deployments are wharf's to publish. Plumb owns no authenticated Cloudflare
+  HTTP sender and no raw route dialect.
 - `crates/cli/{assets,cookbook,help}` — Plumb's compiled resources. Their
   exact source-to-seat projections are declared on `[layout]` seats; the
   configuration generation on Depot overrides the entries they name. Rules and
@@ -97,13 +97,11 @@ answers for.
   not repeat unaffected builds or proofs; binding and installation checks still
   run when their inputs change. Ignoring a version field is not proof that it
   cannot affect compiled behavior.
-- Ship must bind reused content to the explicit marker without rewriting its
-  build provenance, mutating cached originals, or replacing published objects.
-  Required metadata projection, packaging, signing, and final digest readback
-  belong to publication. Registry adapters must reuse native content layers
-  where supported; reuse does not imply that a versioned package is byte-identical
-  or that a mutable registry tag proves immutable identity. Moving channel
-  aliases remains Depot's responsibility.
+- Distribution is wharf's. It binds reused content to the explicit marker
+  without rewriting its build provenance, mutating cached originals, or
+  replacing published objects, and it owns packaging, signing, readback and the
+  channel pointers. Reuse does not imply that a versioned package is
+  byte-identical or that a mutable registry tag proves immutable identity.
 - Plumb and plumb-lib must absorb the shared identity protocol and each medium's
   binding mechanics. Applications retain their own commands, but version output,
   Doctor, dispatch, and Depot consumers must agree on one bound identity. A
@@ -113,20 +111,9 @@ answers for.
   region bound after compilation and before final signing. This is a convergence
   contract, not a claim of completed support: platform retention, optimized
   runtime reads, signing, and consumer acceptance must be proved before release.
-- Version picks preflight their configuration before changing history. A retry
-  replays the requested sources to verify the retained local delta, then proves
-  and conditionally pushes it; unrelated work is never adopted as recovery.
-  Before publishing the line, Pick retains each exact source commit and its
-  carried proofs under a content-addressed Git reference. Freeze reads that
-  remote evidence and replays the change; a local object alone is not evidence
-  of a recoverable distribution. Existing references never change targets.
-  A line's audit starts at its verified preparation parent, not main's moving
-  merge-base. Its source must be held by main or an exact verified stable marker.
-- Marker identity and current Ship capability are separate. Reading a valid
-  historical marker retains its locked target descriptions and integrity checks;
-  it does not authorize producing those targets today. Depot knowledge consumes
-  that identity without acquiring build requirements. Ship refuses unsupported
-  targets before dispatch or execution, including when workloads are reusable.
+- A marker names identity, not capability. Reading a historical marker does not
+  authorize producing its targets today; wharf refuses what the product's own
+  manifests no longer support.
 - Depot generations remain immutable and addressable. Configuration, changelog,
   skill, channel, manager, and provider bindings may move their latest pointer,
   but every movement names the release marker and uses conditional readback.
@@ -139,10 +126,9 @@ answers for.
   media passed explicitly, never repository or `PLUMB_HOME` seats. Products
   consume a skill through their own command surface while delegating its exact
   generation and digest binding to `plumb` the library.
-- This repository carries the one canonical `ship.yml` atom. Its only execution
-  classes are reusable workload and marker-bound publication requests. Product
-  repositories dispatch its exact Plumb-owned revision and carry neither a
-  workflow copy nor a rendered derivative.
+- The distribution workflow lives in wharf, which sits above Plumb. This
+  repository carries no workflow copy and no distribution secret: `plumb ship
+  dispatch` hands wharf a marker, and wharf is the only writer.
 
 - Delivery reuse includes execution preparation, not only business builds.
   A proven workload must not acquire an unrelated build prerequisite merely
@@ -151,8 +137,8 @@ answers for.
   affected work. Measure the complete delivery path, including preparation,
   queueing, and readback; cache hits alone do not prove efficient delivery.
 
-The verbs are `plumb version --help`, `plumb release --help`, `plumb ship --help`,
-and `plumb depot --help`. The laws are
+The verbs are `plumb release --help`, `plumb ship --help`, and
+`plumb depot --help`. The laws are
 `plumb rule list --namespace release`; they state the product surface, marker
 and ship boundary, the seats a stable label may take, and the isolation every
 non-stable release owes. Why the contract has this shape, and

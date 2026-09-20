@@ -1,10 +1,10 @@
 [[record]]
 target = "skills/plumb/SKILL.md"
 rule = "rule://seat/affirmed"
-authority = "0fc2999b95b907f03d47bab6f65172676182ffeabd3f3acc0c3a5ae89beda795"
+authority = "30f45ae7e10f51c677dfd0a841d62a6041791ce22ea414eb2341062334aa38f9"
 
 [[record]]
 target = "AGENTS.md"
 rule = "rule://seat/affirmed"
-authority = "0fc2999b95b907f03d47bab6f65172676182ffeabd3f3acc0c3a5ae89beda795"
+authority = "30f45ae7e10f51c677dfd0a841d62a6041791ce22ea414eb2341062334aa38f9"
 

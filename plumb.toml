@@ -32,10 +32,6 @@ anchor = []
 note = "The anchor set is undecided. codehull/apps/web and ensign/apps/web each hold one index.html and nothing else, which points at a surface not yet discussed. Until then this level is governed and its members are not judged."
 
 [[layout.seat]]
-path = ".forgejo"
-note = "Plumb's private canonical ship atom. Product repositories dispatch it and are forbidden from carrying this namespace."
-
-[[layout.seat]]
 path = ".cargo"
 note = "The cargo namespace."
 
