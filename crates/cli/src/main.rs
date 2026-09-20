@@ -164,31 +164,6 @@ enum Command {
         deed: command::workflow::Deed,
     },
 }
-impl Command {
-    fn name(&self) -> &'static str {
-        match self {
-            Self::Authority { .. } => "authority",
-            Self::Doctor { .. } => "doctor",
-            Self::Land { .. } => "land",
-            Self::Guard { .. } => "guard",
-            Self::Radius { .. } => "radius",
-            Self::Policy { .. } => "policy",
-            Self::Skill { .. } => "skill",
-            Self::Rule { .. } => "rule",
-            Self::Changelog { .. } => "changelog",
-            Self::Configuration { .. } => "configuration",
-            Self::Layout { .. } => "layout",
-            Self::Cookbook { .. } => "cookbook",
-            Self::Affirm { .. } => "affirm",
-            Self::Depot { .. } => "depot",
-            Self::Release { .. } => "release",
-            Self::Ship { .. } => "ship",
-            Self::Retire { .. } => "retire",
-            Self::Workflow { .. } => "workflow",
-        }
-    }
-}
-
 fn execute(command: Command) -> i32 {
     match command {
         Command::Authority { deed } => command::authority::run(deed),
