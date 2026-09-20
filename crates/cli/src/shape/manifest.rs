@@ -25,6 +25,13 @@ fn defaults() -> Result<Option<Table>, String> {
         .map_err(|error| format!("cannot parse Depot {DEFAULTS}: {error}"))
 }
 
+fn taken(before: Value, stated: Value, path: String, overrides: &mut Vec<String>) -> Value {
+    if before != stated {
+        overrides.push(path);
+    }
+    stated
+}
+
 pub fn merge(mut held: Table, stated: Table, at: &str, overrides: &mut Vec<String>) -> Table {
     for (key, value) in stated {
         let path = if at.is_empty() {
@@ -39,12 +46,7 @@ pub fn merge(mut held: Table, stated: Table, at: &str, overrides: &mut Vec<Strin
             (Some(Value::Array(held)), Value::Array(stated), Some(field)) => {
                 Value::Array(keyed(held, stated, field, overrides))
             }
-            (Some(before), stated, _) => {
-                if before != stated {
-                    overrides.push(path);
-                }
-                stated
-            }
+            (Some(before), stated, _) => taken(before, stated, path, overrides),
             (None, stated, _) => stated,
         };
         held.insert(key, merged);

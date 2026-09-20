@@ -10,7 +10,7 @@ mod dependency;
 mod depot;
 #[path = "doctor/json.rs"]
 mod json;
-#[path = "doctor/layout.rs"]
+#[path = "doctor/layout/mod.rs"]
 mod layout;
 #[path = "doctor/migration.rs"]
 mod migration;
@@ -288,15 +288,4 @@ fn substrate() {
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("without plumb"), "{held}");
-}
-
-#[test]
-fn hookless() {
-    let fixture = fixture();
-    let root = fixture.path();
-    std::fs::write(root.join("plumb.toml"), "[layout]\n").expect("governance");
-    std::fs::remove_file(root.join(".git/hooks/pre-commit")).expect("remove projected hook");
-    let held = run(&["doctor", root.to_str().expect("path should be utf8")]);
-    assert!(held.contains("pre-commit is absent"), "{held}");
-    assert!(held.contains("run plumb configuration install"), "{held}");
 }

@@ -44,8 +44,8 @@ pub fn render(root: &Path, text: &str) -> Result<String, String> {
             toml::Value::Boolean(crate::catalog::set::setting("word", "single")),
         )])),
     );
-    merge(&mut doc, ("grant", "test"), want.tests.clone(), false);
-    merge(&mut doc, ("grant", "environment"), want.tests, true);
+    merge(&mut doc, ("grant", "test"), want.tests, false);
+    merge(&mut doc, ("grant", "environment"), want.environment, true);
     merge(&mut doc, ("ban", "style"), want.bans, true);
     toml::to_string_pretty(&doc).map_err(|error| error.to_string())
 }

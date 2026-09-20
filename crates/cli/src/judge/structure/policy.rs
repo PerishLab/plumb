@@ -45,7 +45,7 @@ pub fn judge(evidence: &Evidence) -> Found {
     require(
         "environment grant",
         policy.syntax("grant", "environment"),
-        want.tests.clone(),
+        want.environment.clone(),
         &mut found,
     );
     require(

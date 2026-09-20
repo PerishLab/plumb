@@ -2,7 +2,7 @@ use std::env;
 use std::path::Path;
 use std::process::Command;
 
-#[path = "../../support.rs"]
+#[path = "../../support/mod.rs"]
 pub(super) mod support;
 
 fn forge(root: &Path) -> Option<String> {

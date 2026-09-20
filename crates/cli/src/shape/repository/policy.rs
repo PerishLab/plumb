@@ -41,6 +41,7 @@ pub(crate) struct Expected {
     pub exclude: BTreeSet<String>,
     pub roots: BTreeSet<String>,
     pub tests: BTreeSet<String>,
+    pub environment: BTreeSet<String>,
     pub bans: BTreeSet<String>,
 }
 
@@ -58,6 +59,7 @@ impl Expected {
             exclude: BTreeSet::new(),
             roots: BTreeSet::new(),
             tests: BTreeSet::new(),
+            environment: BTreeSet::new(),
             bans: BTreeSet::new(),
         };
         for row in rows(policy, "shape") {
@@ -72,6 +74,7 @@ impl Expected {
                 held.apply(table, "exclude", Part::Exclude);
                 held.apply(table, "roots", Part::Root);
                 held.apply(table, "tests", Part::Test);
+                held.reads(table, "tests");
                 held.apply(table, "bans", Part::Ban);
             }
         }
@@ -91,6 +94,7 @@ impl Expected {
             held.apply(table, "exclude", Part::Exclude);
             held.apply(table, "roots", Part::Root);
             held.apply(table, "tests", Part::Test);
+            held.reads(table, "tests");
             let svelte = extension(&base, "svelte");
             let tsx = extension(&base, "tsx");
             if svelte {
@@ -100,9 +104,15 @@ impl Expected {
             if !svelte || tsx {
                 held.apply(table, "tsx-include", Part::Include);
                 held.apply(table, "tsx-tests", Part::Test);
+                held.reads(table, "tsx-tests");
             }
         }
         held
+    }
+
+    fn reads(&mut self, table: &toml::Table, fallback: &str) {
+        let key = table.contains_key("environment").then_some("environment");
+        self.apply(table, key.unwrap_or(fallback), Part::Environment);
     }
 
     fn apply(&mut self, table: &toml::Table, key: &str, part: Part) {
@@ -111,6 +121,7 @@ impl Expected {
             Part::Exclude => &mut self.exclude,
             Part::Root => &mut self.roots,
             Part::Test => &mut self.tests,
+            Part::Environment => &mut self.environment,
             Part::Ban => &mut self.bans,
         };
         target.extend(list(table, key));
@@ -122,6 +133,7 @@ enum Part {
     Exclude,
     Root,
     Test,
+    Environment,
     Ban,
 }
 

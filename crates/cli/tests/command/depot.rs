@@ -1,6 +1,6 @@
 use std::process::Command;
 
-#[path = "../support.rs"]
+#[path = "../support/mod.rs"]
 pub(super) mod support;
 
 #[test]

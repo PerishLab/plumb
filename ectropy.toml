@@ -8,6 +8,7 @@ allow = false
 [[grant]]
 paths = [
     "apps/*/tests/**/*.test.ts",
+    "crates/*/src/**/*.rs",
     "crates/*/tests/**/*.rs",
     "packages/*/tests/**/*.test.ts",
     "packages/*/tests/**/*.test.tsx",
@@ -69,9 +70,9 @@ include = [
     "skills/**/*.md",
 ]
 
+[[vocabulary.term]]
+description = "Serde Visitor's required map deserialization method; validates unique Ship resource identities before collection."
+name = "visit_map"
+
 [word]
 single = true
-
-[[vocabulary.term]]
-name = "visit_map"
-description = "Serde Visitor's required map deserialization method; validates unique Ship resource identities before collection."
