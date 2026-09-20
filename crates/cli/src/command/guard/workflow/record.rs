@@ -104,26 +104,6 @@ fn execute(input: Input) -> Result<(), String> {
     Ok(())
 }
 
-pub(in crate::command) struct Project<'a> {
-    pub action: &'a str,
-    pub keys: &'a str,
-    pub workload: PathBuf,
-    pub reuse: Option<&'a str>,
-    pub publication: Option<String>,
-    pub depot: Option<serde_json::Value>,
-}
-
-pub(in crate::command) fn project(input: Project<'_>) -> Result<(), String> {
-    execute(Input {
-        action: input.action.to_string(),
-        keys: input.keys.to_string(),
-        workload: input.workload,
-        reuse: input.reuse.map(str::to_string),
-        publication: input.publication,
-        depot: input.depot.map(|held| held.to_string()),
-    })
-}
-
 struct Authority {
     control: plumb::bucket::Control,
     public: String,

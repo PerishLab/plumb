@@ -112,24 +112,6 @@ fn doctor() {
     assert!(!root.join("plumb.toml").exists());
     assert!(!root.join("ectropy.toml").exists());
     assert_eq!(repo.git(&["write-tree"]), tree);
-    let surface = repo.surface(depot.path());
-    assert!(
-        surface.status.success(),
-        "{}",
-        String::from_utf8_lossy(&surface.stderr)
-    );
-    let surface: serde_json::Value = serde_json::from_slice(&surface.stdout).expect("surface");
-    assert_eq!(
-        surface["publication"]["include"][0]["operation"]["type"],
-        "cargo"
-    );
-    assert_eq!(surface["publication"]["include"][0]["profile"], digest);
-    assert!(
-        surface["publication"]["include"][0]["configuration"]
-            .as_str()
-            .is_some()
-    );
-
     std::fs::write(root.join("plumb.toml"), "").expect("second expression");
     let refusal = repo.inspect(depot.path());
     assert!(!refusal.status.success());
@@ -140,20 +122,6 @@ fn doctor() {
             .is_some_and(|findings| findings.iter().any(|finding| finding["evidence"]
                 .as_str()
                 .is_some_and(|held| held.contains("must not carry plumb.toml or ectropy.toml"))))
-    );
-
-    let drifted = document.replacen("product = \"probe\"", "product = \"other\"", 1);
-    let wrong = plumb::depot::sha(drifted.as_bytes());
-    let catalog = format!(
-        "schema = \"plumb.products/v2\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/probe\"\nprofile = \"{wrong}\"\n"
-    );
-    let path = format!("profiles/{wrong}.toml");
-    let depot = super::support::depot(&[("rules/products.toml", &catalog), (&path, &drifted)]);
-    let refusal = repo.surface(depot.path());
-    assert!(!refusal.status.success());
-    assert!(
-        String::from_utf8_lossy(&refusal.stderr)
-            .contains("release identity differs from its product definition")
     );
 }
 
@@ -271,15 +239,6 @@ impl Fixture<'_> {
             .env("PLUMB_GUARD_DEPOT", depot)
             .output()
             .expect("guarded doctor")
-    }
-
-    fn surface(&self, home: &Path) -> std::process::Output {
-        Command::new(env!("CARGO_BIN_EXE_plumb"))
-            .args(["ship", "surface"])
-            .env("PLUMB_HOME", home)
-            .env("PLUMB_RELEASE_ROOT", self.0)
-            .output()
-            .expect("surface")
     }
 }
 

@@ -29,10 +29,6 @@ pub struct Input {
     pub(in crate::command) target: Root,
 }
 
-pub(in crate::command) fn derive(input: Input, wanted: Option<&str>) -> Result<String, String> {
-    render(Path::new(&input.target.root), &input, wanted)
-}
-
 pub fn run(input: Input) -> i32 {
     let root = Path::new(&input.target.root);
     match render(root, &input, None) {

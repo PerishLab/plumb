@@ -1,6 +1,5 @@
 mod course;
 mod mark;
-pub(in crate::command) mod topology;
 mod value;
 mod wharf;
 

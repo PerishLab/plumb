@@ -1,10 +1,4 @@
-mod authority;
-mod configuration;
-mod knowledge;
-mod product;
-mod projection;
 mod seat;
-mod store;
 
 use clap::Subcommand;
 use plumb::rig::Rig;
@@ -73,62 +67,6 @@ pub fn held() -> Held {
 
 #[derive(Subcommand)]
 pub enum Deed {
-    #[command(about = "Publish a configuration generation after marker-exact validation")]
-    Configuration {
-        #[arg(default_value = ".")]
-        root: String,
-        #[arg(long)]
-        marker: String,
-        #[arg(long)]
-        from: String,
-        #[arg(
-            long,
-            help = "Use one exact local replacement for the selected released validator"
-        )]
-        recovery_validator: Option<PathBuf>,
-        #[arg(long = "dry-run")]
-        dry: bool,
-    },
-    #[command(about = "Move one channel pointer onto the immutable release named by a marker")]
-    Channel {
-        #[arg(long)]
-        marker: String,
-    },
-    #[command(about = "Move the stable manager roots onto the immutable release named by a marker")]
-    Managers {
-        #[arg(long)]
-        marker: String,
-    },
-    #[command(about = "Deploy one immutable worker version bound to a release marker")]
-    #[command(hide = true)]
-    Worker {
-        #[arg(long)]
-        marker: String,
-        #[arg(long)]
-        request: String,
-    },
-    #[command(about = "Publish the changelog generation bound to a stable Release marker")]
-    Changelog {
-        #[arg(default_value = ".")]
-        root: String,
-        #[arg(long)]
-        marker: String,
-        #[arg(long)]
-        from: String,
-        #[arg(long = "dry-run")]
-        dry: bool,
-    },
-    #[command(about = "Publish the skill generation one product version carries")]
-    Skill {
-        #[arg(default_value = ".")]
-        root: String,
-        #[arg(long)]
-        marker: String,
-        #[arg(long)]
-        from: String,
-        #[arg(long = "dry-run")]
-        dry: bool,
-    },
     #[command(about = "Report the Plumb rules source, local seat, and held version")]
     Show,
 }
@@ -150,47 +88,6 @@ fn execute(deed: Deed) -> Result<String, String> {
     let rig = Rig::resolve(None).map_err(|error| error.to_string())?;
     let over = PathBuf::new();
     match deed {
-        Deed::Configuration {
-            root,
-            marker,
-            from,
-            recovery_validator,
-            dry,
-        } => configuration::Tree(&PathBuf::from(root)).publish(
-            &marker,
-            &from,
-            recovery_validator.as_deref(),
-            dry,
-        ),
-        Deed::Channel { marker } => projection::project(&marker, projection::Kind::Channel),
-        Deed::Managers { marker } => projection::project(&marker, projection::Kind::Managers),
-        Deed::Worker { marker, request } => projection::worker(&marker, &request),
-        Deed::Changelog {
-            root,
-            marker,
-            from,
-            dry,
-        } => knowledge::changelog(
-            &PathBuf::from(root),
-            knowledge::Wanted {
-                marker: &marker,
-                from: &from,
-                dry,
-            },
-        ),
-        Deed::Skill {
-            root,
-            marker,
-            from,
-            dry,
-        } => knowledge::skill(
-            &PathBuf::from(root),
-            knowledge::Wanted {
-                marker: &marker,
-                from: &from,
-                dry,
-            },
-        ),
         Deed::Show => show(&rig, &over),
     }
 }
