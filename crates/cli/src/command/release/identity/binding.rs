@@ -28,34 +28,6 @@ pub(super) struct Identity {
     pub spec: Box<Spec>,
 }
 
-pub(super) fn annotation(spec: &Spec, marker: &str) -> Result<String, String> {
-    let (Some(configuration), Some(profile)) = (&spec.configuration, &spec.profile) else {
-        return Ok(format!("{} {marker}", spec.product));
-    };
-    let rules = plumb::depot::rules()?;
-    if rules.mark() != configuration {
-        return Err("release marker configuration changed while it was being stamped".into());
-    }
-    let version = rules
-        .version()
-        .ok_or_else(|| "a Product Profile requires version-related configuration".to_string())?;
-    let channel = rules
-        .channel()
-        .ok_or_else(|| "a Product Profile requires a v3 configuration generation".to_string())?;
-    serde_json::to_string(&Annotation {
-        schema: "plumb.release-marker/v2".into(),
-        product: spec.product.clone(),
-        marker: marker.to_string(),
-        configuration: Configuration {
-            channel: channel.to_string(),
-            version: version.to_string(),
-            generation: configuration.clone(),
-        },
-        profile: profile.clone(),
-    })
-    .map_err(|error| format!("cannot encode release marker annotation: {error}"))
-}
-
 pub(super) fn resolve(
     message: &str,
     root: &Path,

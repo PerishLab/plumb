@@ -261,9 +261,6 @@ impl Seat {
     }
 }
 
-pub(in crate::command) fn annotation(spec: &Spec, marker: &str) -> Result<String, String> {
-    binding::annotation(spec, marker)
-}
 fn guarded(product: &str, marker: &str) -> bool {
     product == "plumb"
         && marker
