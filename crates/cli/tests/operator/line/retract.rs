@@ -1,4 +1,4 @@
-use super::stable::{command, repo};
+use super::probe::{command, repo};
 #[test]
 fn retraction() {
     let fixture = tempfile::tempdir().expect("fixture");

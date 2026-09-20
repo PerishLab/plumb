@@ -15,13 +15,6 @@ pub fn chart(spec: &Spec) -> Chart<'_> {
 }
 
 impl Chart<'_> {
-    pub(in crate::command) fn prepare(&self, version: &str) -> Result<(), String> {
-        let Some(chart) = &self.spec.chart else {
-            return Ok(());
-        };
-        self.stamp(&name(chart)?, &release(version)?)
-    }
-
     pub fn package(&self, version: &str) -> Result<String, String> {
         let Some(chart) = &self.spec.chart else {
             return Ok(format!("{} has no chart attachment", self.spec.product));

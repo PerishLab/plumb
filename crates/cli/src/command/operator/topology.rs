@@ -56,36 +56,6 @@ pub fn bind(input: Source<'_>) -> Result<String, String> {
     ))
 }
 
-pub fn rejoin(root: &Path, version: &str, commit: &str, base_ref: &str) -> Result<String, String> {
-    channel::intent("stable", version)?;
-    proof::commit(commit)?;
-    let base = text(
-        "resolve rejoin base",
-        git(root, ["rev-parse", &format!("{base_ref}^{{commit}}")])?,
-    )?;
-    if ancestor(root, commit, &base)? {
-        Ok(format!(
-            "stable {version} at {commit} is rejoined into {base_ref} at {base}"
-        ))
-    } else {
-        Err(format!(
-            "stable {version} at {commit} is not an ancestor of {base_ref} at {base}"
-        ))
-    }
-}
-
-pub fn ancestor(root: &Path, point: &str, base: &str) -> Result<bool, String> {
-    let output = git(root, ["merge-base", "--is-ancestor", point, base])?;
-    match output.status.code() {
-        Some(0) => Ok(true),
-        Some(1) => Ok(false),
-        _ => Err(format!(
-            "cannot inspect rejoin topology: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
-        )),
-    }
-}
-
 fn git<const N: usize>(root: &Path, args: [&str; N]) -> Result<Output, String> {
     Command::new("git")
         .args(args)

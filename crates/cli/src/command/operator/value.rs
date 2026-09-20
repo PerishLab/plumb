@@ -48,15 +48,3 @@ pub fn exact(channel: &str) -> Result<(), String> {
 pub fn branch(version: &str) -> String {
     format!("release/{version}")
 }
-
-pub fn commit(value: &str) -> Result<(), String> {
-    if (40..=64).contains(&value.len())
-        && value
-            .bytes()
-            .all(|held| held.is_ascii_hexdigit() && !held.is_ascii_uppercase())
-    {
-        Ok(())
-    } else {
-        Err("pick requires one full lowercase --commit SHA".into())
-    }
-}

@@ -11,7 +11,6 @@ pub fn prepare(command: &Command) -> Result<(), String> {
             | Command::Configuration { .. }
             | Command::Release { .. }
             | Command::Ship { .. }
-            | Command::Version { .. }
     ) {
         return Ok(());
     }

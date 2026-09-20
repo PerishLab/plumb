@@ -32,17 +32,6 @@ impl Module<'_> {
         )
     }
 
-    pub(in crate::command) fn prepare(&self, version: &str) -> Result<(), String> {
-        let Some(npm) = &self.spec.npm else {
-            return Ok(());
-        };
-        let identity = release(version)?;
-        for package in &npm.packages {
-            self.stamp(package, &identity)?;
-        }
-        Ok(())
-    }
-
     pub fn pack(&self, version: &str) -> Result<String, String> {
         let Some(npm) = &self.spec.npm else {
             return Ok(format!("{} has no module attachment", self.spec.product));

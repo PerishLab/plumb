@@ -151,14 +151,6 @@ enum Command {
         deed: command::ship::Deed,
     },
     #[command(
-        about = "Project and govern the repository's version line",
-        long_about = command::depot::carried("help/version.txt", plumb::seat::resource!("help/version.txt"))
-    )]
-    Version {
-        #[command(subcommand)]
-        deed: command::version::Deed,
-    },
-    #[command(
         about = "Destroy one declared delivery chain in a fixed order",
         long_about = command::depot::carried("help/retire.txt", plumb::seat::resource!("help/retire.txt"))
     )]
@@ -191,7 +183,6 @@ impl Command {
             Self::Depot { .. } => "depot",
             Self::Release { .. } => "release",
             Self::Ship { .. } => "ship",
-            Self::Version { .. } => "version",
             Self::Retire { .. } => "retire",
             Self::Workflow { .. } => "workflow",
         }
@@ -269,7 +260,6 @@ fn execute(command: Command) -> i32 {
         Command::Depot { deed } => command::depot::run(deed),
         Command::Release { deed } => command::release::run(deed),
         Command::Ship { deed } => command::ship::run(deed),
-        Command::Version { deed } => command::version::run(deed),
         Command::Retire { deed } => command::retire::run(deed),
         Command::Workflow { deed } => command::workflow::run(deed),
     }

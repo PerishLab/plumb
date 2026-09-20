@@ -62,19 +62,6 @@ impl<'a> Product<'a> {
             authority: &self.0.authority,
         }
     }
-
-    pub fn activated(&self) -> Result<Option<(String, String)>, String> {
-        let url = format!("{}/v1/channels/stable.json", self.0.authority);
-        if verify::optional(&url)?.is_none() {
-            return Ok(None);
-        }
-        let binding = self.depot().latest("stable", false)?;
-        Ok(Some((binding.release.version, binding.release.commit)))
-    }
-
-    pub fn promotion(&self, commit: &str, version: &str) -> Result<promotion::Exact, String> {
-        promotion::Promotion::new(self.0).derive(commit, version)
-    }
 }
 
 pub(in crate::command) fn snapshot(raw: &str) -> Result<ReleaseMarker, String> {
@@ -170,14 +157,6 @@ pub(in crate::command) fn knowledge<'a>(
 
 pub(super) fn authority(root: &Path) -> Result<String, String> {
     Spec::controller(root).map(|spec| spec.authority)
-}
-
-pub(super) fn inspect(url: &str) -> Result<String, String> {
-    verify::inspect(url, true)
-}
-
-pub(super) fn settled(root: &Path, version: &str, commit: &str) -> Result<String, String> {
-    crate::command::operator::topology::rejoin(root, version, commit, "origin/main")
 }
 
 impl storage::Authority for Authority {

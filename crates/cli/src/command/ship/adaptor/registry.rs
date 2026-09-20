@@ -16,14 +16,6 @@ pub fn registry(spec: &Spec) -> Registry<'_> {
 }
 
 impl Registry<'_> {
-    pub(in crate::command) fn prepare(&self, version: &str) -> Result<(), String> {
-        if !self.spec.root.join("Cargo.toml").is_file() {
-            return Ok(());
-        }
-        let identity = release(version)?;
-        self.project(&identity)
-    }
-
     pub fn rehearse(&self, version: &str, token: &str) -> Result<String, String> {
         let Some(cargo) = &self.spec.cargo else {
             return Ok(format!("{} has no Cargo attachment", self.spec.product));
