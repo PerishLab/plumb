@@ -130,6 +130,10 @@ fn exact() {
         )),
         "{out}"
     );
+    assert!(
+        out.contains("noted: the held configuration") && out.contains("a source build reads it"),
+        "a source build is told what it holds, not refused: {out}"
+    );
 }
 
 #[test]

@@ -113,7 +113,7 @@ impl Rules {
         if pointer.product != "plumb" || pointer.kind != v3::Kind::Configuration {
             return Err("the installed depot generation is not plumb configuration".into());
         }
-        if !related(running, &pointer.version)? {
+        if !sourced(running) && !related(running, &pointer.version)? {
             return Err(format!(
                 "depot configuration for {} requires that marker binary or its release base, got {running}",
                 pointer.version
@@ -261,6 +261,10 @@ impl Rules {
             _ => None,
         }
     }
+}
+
+pub fn sourced(running: &str) -> bool {
+    running.trim_start_matches('v') == "0.0.0"
 }
 
 pub fn related(running: &str, released: &str) -> Result<bool, String> {
