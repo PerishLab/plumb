@@ -135,7 +135,13 @@ fn refusal() {
     let stable = fixture
         .command()
         .current_dir(fixture.root)
-        .args(["release", "stamp", "--version", "v1.2.0-alpha.1", "--dry-run"])
+        .args([
+            "release",
+            "stamp",
+            "--version",
+            "v1.2.0-alpha.1",
+            "--dry-run",
+        ])
         .output()
         .expect("plumb should run");
     assert!(!stable.status.success());

@@ -10,50 +10,84 @@ const PRERELEASES: [&str; 2] = ["rc", "beta"];
 const STABLE: &str = "stable";
 
 pub(super) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<String, String> {
-    let held = if raw.starts_with('v') { raw.to_string() } else { format!("v{raw}") };
+    let held = if raw.starts_with('v') {
+        raw.to_string()
+    } else {
+        format!("v{raw}")
+    };
     let channel = super::super::release::channel(&held)?;
     if channel != STABLE && !PRERELEASES.contains(&channel.as_str()) {
-        return Err(format!("{held} is not an rc, beta or {STABLE} marker; wharf distribution stamps only those"));
+        return Err(format!(
+            "{held} is not an rc, beta or {STABLE} marker; wharf distribution stamps only those"
+        ));
     }
     let version = value::version(&held, &channel)?;
     let base = version.split('-').next().unwrap_or(&version).to_string();
     let branch = value::branch(&base);
     let root = plumb::forgejo::git::root()?;
-    let url = text("read the remote", git(&root, &["remote", "get-url", remote])?)?;
+    let url = text(
+        "read the remote",
+        git(&root, &["remote", "get-url", remote])?,
+    )?;
     repository(&url)?;
-    let listing = text("list the remote", git(&root, &["ls-remote", "--heads", "--tags", remote])?)?;
-    let head = reference(&listing, &format!("refs/heads/{branch}"))
-        .ok_or_else(|| format!("{remote} has no {branch}; a marker stands only on its release line"))?;
+    let listing = text(
+        "list the remote",
+        git(&root, &["ls-remote", "--heads", "--tags", remote])?,
+    )?;
+    let head = reference(&listing, &format!("refs/heads/{branch}")).ok_or_else(|| {
+        format!("{remote} has no {branch}; a marker stands only on its release line")
+    })?;
     let message = if channel == STABLE {
         if reference(&listing, &format!("refs/tags/{version}")).is_some() {
-            return Err(format!("{version} already stands; a stable marker never moves"));
+            return Err(format!(
+                "{version} already stands; a stable marker never moves"
+            ));
         }
         let authority = super::super::release::authority(&root)?;
         let promoted = promoted(&listing, &base, &head, |channel, marker| {
-            plumb::bucket::fetch(&format!("{}/v1/releases/{channel}/{marker}/seal.json", authority.trim_end_matches('/')))
+            plumb::bucket::fetch(&format!(
+                "{}/v1/releases/{channel}/{marker}/seal.json",
+                authority.trim_end_matches('/')
+            ))
         })?;
         format!("{version}\n\npromotes {promoted}")
     } else {
         let expected = next(&listing, &base, &channel);
         if version != format!("{base}-{channel}.{expected}") {
-            return Err(format!("{version} skips the line; the next {channel} marker on {branch} is {base}-{channel}.{expected}"));
+            return Err(format!(
+                "{version} skips the line; the next {channel} marker on {branch} is {base}-{channel}.{expected}"
+            ));
         }
         version.clone()
     };
     let mut course = Course::new(dry);
     course.step(format!("fetch {branch} from {remote}"), || {
-        text("fetch the release line", git(&root, &["fetch", remote, &format!("refs/heads/{branch}")])?)
+        text(
+            "fetch the release line",
+            git(&root, &["fetch", remote, &format!("refs/heads/{branch}")])?,
+        )
     })?;
     course.step(format!("git tag -a {version} {head}"), || {
-        text("stamp the marker", git(&root, &["tag", "-a", &version, &head, "-m", &message])?)
+        text(
+            "stamp the marker",
+            git(&root, &["tag", "-a", &version, &head, "-m", &message])?,
+        )
     })?;
     course.step(format!("git push {remote} refs/tags/{version}"), || {
-        text("publish the marker", git(&root, &["push", remote, &format!("refs/tags/{version}")])?)
+        text(
+            "publish the marker",
+            git(&root, &["push", remote, &format!("refs/tags/{version}")])?,
+        )
     })?;
     if course.dry() {
         return Ok(course.plan());
     }
-    let promotes = message.lines().last().filter(|line| line.starts_with("promotes ")).map(|line| format!(", {line}")).unwrap_or_default();
+    let promotes = message
+        .lines()
+        .last()
+        .filter(|line| line.starts_with("promotes "))
+        .map(|line| format!(", {line}"))
+        .unwrap_or_default();
     Ok(format!("stamped {version} at {head} on {branch}{promotes}"))
 }
 
@@ -70,24 +104,42 @@ fn promoted(
             .lines()
             .filter_map(|line| {
                 let (object, name) = line.split_once('\t')?;
-                let number = name.strip_prefix(&prefix)?.strip_suffix("^{}")?.parse::<u64>().ok()?;
+                let number = name
+                    .strip_prefix(&prefix)?
+                    .strip_suffix("^{}")?
+                    .parse::<u64>()
+                    .ok()?;
                 (object == head).then_some(number)
             })
             .collect::<Vec<_>>();
         numbers.sort_unstable_by(|left, right| right.cmp(left));
-        held.extend(numbers.into_iter().map(|number| (channel, format!("{base}-{channel}.{number}"))));
+        held.extend(
+            numbers
+                .into_iter()
+                .map(|number| (channel, format!("{base}-{channel}.{number}"))),
+        );
     }
     if held.is_empty() {
-        return Err(format!("no rc or beta marker stands at {head}; a stable marker promotes a shipped prerelease"));
+        return Err(format!(
+            "no rc or beta marker stands at {head}; a stable marker promotes a shipped prerelease"
+        ));
     }
     for (channel, marker) in held {
-        let Some(body) = seal(channel, &marker)? else { continue };
-        let document: serde_json::Value = serde_json::from_slice(&body).map_err(|error| format!("{marker} seal does not parse: {error}"))?;
-        if document["releaseVersion"] == marker.as_str() && document["channel"] == channel && document["commit"] == head {
+        let Some(body) = seal(channel, &marker)? else {
+            continue;
+        };
+        let document: serde_json::Value = serde_json::from_slice(&body)
+            .map_err(|error| format!("{marker} seal does not parse: {error}"))?;
+        if document["releaseVersion"] == marker.as_str()
+            && document["channel"] == channel
+            && document["commit"] == head
+        {
             return Ok(marker);
         }
     }
-    Err(format!("no prerelease marker at {head} has a published seal; ship one before promoting it"))
+    Err(format!(
+        "no prerelease marker at {head} has a published seal; ship one before promoting it"
+    ))
 }
 
 pub(super) fn dispatch(options: Dispatch) -> Result<String, String> {
@@ -97,25 +149,56 @@ pub(super) fn dispatch(options: Dispatch) -> Result<String, String> {
     }
     let product = format!("https://github.com/{}", options.repo);
     let marker = format!("refs/tags/{}", options.marker);
-    let listing = text("read the product marker", run(Command::new("git").args(["ls-remote", &product, &marker]))?)?;
+    let listing = text(
+        "read the product marker",
+        run(Command::new("git").args(["ls-remote", &product, &marker]))?,
+    )?;
     if reference(&listing, &marker).is_none() {
         return Err(format!("{} has no marker {}", options.repo, options.marker));
     }
     let mut course = Course::new(options.dry);
-    let launched = course.step(format!("gh workflow run {WORKFLOW} -R {HUB} -f repository={} -f marker={}", options.repo, options.marker), || {
-        let fields = [format!("repository={}", options.repo), format!("marker={}", options.marker)];
-        text("dispatch wharf", run(Command::new("gh").args(["workflow", "run", WORKFLOW, "-R", HUB, "-f", &fields[0], "-f", &fields[1]]))?)
-    })?;
+    let launched = course.step(
+        format!(
+            "gh workflow run {WORKFLOW} -R {HUB} -f repository={} -f marker={}",
+            options.repo, options.marker
+        ),
+        || {
+            let fields = [
+                format!("repository={}", options.repo),
+                format!("marker={}", options.marker),
+            ];
+            text(
+                "dispatch wharf",
+                run(Command::new("gh").args([
+                    "workflow", "run", WORKFLOW, "-R", HUB, "-f", &fields[0], "-f", &fields[1],
+                ]))?,
+            )
+        },
+    )?;
     let Some(said) = launched else {
         return Ok(course.plan());
     };
-    let url = said.lines().find(|line| line.contains("/actions/runs/")).ok_or_else(|| format!("wharf dispatch named no run: {said}"))?.trim().to_string();
+    let url = said
+        .lines()
+        .find(|line| line.contains("/actions/runs/"))
+        .ok_or_else(|| format!("wharf dispatch named no run: {said}"))?
+        .trim()
+        .to_string();
     if !options.watch {
         return Ok(url);
     }
     let id = url.rsplit('/').next().unwrap_or_default().to_string();
-    let status = Command::new("gh").args(["run", "watch", &id, "-R", HUB, "--exit-status"]).stdout(Stdio::inherit()).stderr(Stdio::inherit()).status().map_err(|error| format!("cannot run gh: {error}"))?;
-    if status.success() { Ok(format!("{url} succeeded")) } else { Err(format!("{url} did not succeed")) }
+    let status = Command::new("gh")
+        .args(["run", "watch", &id, "-R", HUB, "--exit-status"])
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .map_err(|error| format!("cannot run gh: {error}"))?;
+    if status.success() {
+        Ok(format!("{url} succeeded"))
+    } else {
+        Err(format!("{url} did not succeed"))
+    }
 }
 
 fn repository(url: &str) -> Result<String, String> {
@@ -123,7 +206,11 @@ fn repository(url: &str) -> Result<String, String> {
         .strip_prefix("https://github.com/")
         .or_else(|| url.strip_prefix("git@github.com:"))
         .or_else(|| url.strip_prefix("ssh://git@github.com/"))
-        .ok_or_else(|| format!("{url} is not a GitHub remote; markers are stamped where wharf distributes from"))?;
+        .ok_or_else(|| {
+            format!(
+                "{url} is not a GitHub remote; markers are stamped where wharf distributes from"
+            )
+        })?;
     Ok(path.trim_end_matches(".git").to_string())
 }
 
@@ -138,7 +225,13 @@ fn next(listing: &str, base: &str, channel: &str) -> u64 {
     let prefix = format!("refs/tags/{base}-{channel}.");
     listing
         .lines()
-        .filter_map(|line| line.split_once('\t')?.1.strip_prefix(&prefix)?.parse::<u64>().ok())
+        .filter_map(|line| {
+            line.split_once('\t')?
+                .1
+                .strip_prefix(&prefix)?
+                .parse::<u64>()
+                .ok()
+        })
         .max()
         .unwrap_or(0)
         + 1
@@ -149,14 +242,19 @@ fn git(root: &Path, args: &[&str]) -> Result<Output, String> {
 }
 
 fn run(command: &mut Command) -> Result<Output, String> {
-    command.output().map_err(|error| format!("cannot run {:?}: {error}", command.get_program()))
+    command
+        .output()
+        .map_err(|error| format!("cannot run {:?}: {error}", command.get_program()))
 }
 
 fn text(deed: &str, output: Output) -> Result<String, String> {
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
     } else {
-        Err(format!("cannot {deed}: {}", String::from_utf8_lossy(&output.stderr).trim()))
+        Err(format!(
+            "cannot {deed}: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ))
     }
 }
 
@@ -175,22 +273,35 @@ mod tests {
 
     #[test]
     fn reference_reads_exact_names() {
-        assert_eq!(reference(LISTING, "refs/heads/release/v0.38.0").as_deref(), Some("aaa"));
-        assert_eq!(reference(LISTING, "refs/tags/v0.38.0-beta.1").as_deref(), Some("bbb"));
+        assert_eq!(
+            reference(LISTING, "refs/heads/release/v0.38.0").as_deref(),
+            Some("aaa")
+        );
+        assert_eq!(
+            reference(LISTING, "refs/tags/v0.38.0-beta.1").as_deref(),
+            Some("bbb")
+        );
         assert_eq!(reference(LISTING, "refs/heads/release/v0.37.0"), None);
     }
 
     #[test]
     fn repository_accepts_only_github_remotes() {
-        assert_eq!(repository("https://github.com/PerishLab/plumb.git").unwrap(), "PerishLab/plumb");
-        assert_eq!(repository("git@github.com:PerishLab/plumb.git").unwrap(), "PerishLab/plumb");
+        assert_eq!(
+            repository("https://github.com/PerishLab/plumb.git").unwrap(),
+            "PerishLab/plumb"
+        );
+        assert_eq!(
+            repository("git@github.com:PerishLab/plumb.git").unwrap(),
+            "PerishLab/plumb"
+        );
         assert!(repository("ssh://git@git.perish.top/PerishLab/plumb.git").is_err());
     }
 
     const PROMOTION: &str = "aaa\trefs/heads/release/v0.38.0\nt1\trefs/tags/v0.38.0-beta.15\nbbb\trefs/tags/v0.38.0-beta.15^{}\nt2\trefs/tags/v0.38.0-beta.16\naaa\trefs/tags/v0.38.0-beta.16^{}\nt3\trefs/tags/v0.38.0-beta.17\naaa\trefs/tags/v0.38.0-beta.17^{}\n";
 
     fn seal(beta: &str, commit: &str) -> Vec<u8> {
-        format!(r#"{{"releaseVersion":"{beta}","channel":"beta","commit":"{commit}"}}"#).into_bytes()
+        format!(r#"{{"releaseVersion":"{beta}","channel":"beta","commit":"{commit}"}}"#)
+            .into_bytes()
     }
 
     #[test]
@@ -203,17 +314,31 @@ mod tests {
 
     #[test]
     fn stable_refuses_without_a_shipped_beta_at_the_head() {
-        assert!(promoted(PROMOTION, "v0.38.0", "ccc", |_, _| Ok(None)).unwrap_err().contains("no rc or beta marker stands"));
-        assert!(promoted(PROMOTION, "v0.38.0", "aaa", |_, _| Ok(None)).unwrap_err().contains("has a published seal"));
-        let moved = promoted(PROMOTION, "v0.38.0", "aaa", |_, beta| Ok(Some(seal(beta, "bbb"))));
+        assert!(
+            promoted(PROMOTION, "v0.38.0", "ccc", |_, _| Ok(None))
+                .unwrap_err()
+                .contains("no rc or beta marker stands")
+        );
+        assert!(
+            promoted(PROMOTION, "v0.38.0", "aaa", |_, _| Ok(None))
+                .unwrap_err()
+                .contains("has a published seal")
+        );
+        let moved = promoted(PROMOTION, "v0.38.0", "aaa", |_, beta| {
+            Ok(Some(seal(beta, "bbb")))
+        });
         assert!(moved.unwrap_err().contains("has a published seal"));
     }
 
     #[test]
     fn stable_prefers_a_shipped_rc_over_betas() {
-        let listing = format!("{PROMOTION}t4\trefs/tags/v0.38.0-rc.1\naaa\trefs/tags/v0.38.0-rc.1^{{}}\n");
+        let listing =
+            format!("{PROMOTION}t4\trefs/tags/v0.38.0-rc.1\naaa\trefs/tags/v0.38.0-rc.1^{{}}\n");
         let found = promoted(&listing, "v0.38.0", "aaa", |channel, marker| {
-            Ok(Some(format!(r#"{{"releaseVersion":"{marker}","channel":"{channel}","commit":"aaa"}}"#).into_bytes()))
+            Ok(Some(
+                format!(r#"{{"releaseVersion":"{marker}","channel":"{channel}","commit":"aaa"}}"#)
+                    .into_bytes(),
+            ))
         });
         assert_eq!(found.as_deref(), Ok("v0.38.0-rc.1"));
     }
