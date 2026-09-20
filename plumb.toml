@@ -64,22 +64,22 @@ derivatives = ["configuration", "changelog", "skill"]
 validator = ["plumb", "doctor"]
 
 [release.oci]
-registry = "git.perish.top"
+registry = "ghcr.io"
 image = "perishlab/plumb"
-account = "PerishFire"
+account = "PerishLab"
 
 [release.chart]
-registry = "git.perish.top"
+registry = "ghcr.io"
 chart = "perishlab/plumb"
-account = "PerishFire"
+account = "PerishLab"
 
 [release.cargo]
 registry = "perish"
 packages = ["plumb-macro", "plumb"]
 
 [release.npm]
-registry = "https://git.perish.top/api/packages/PerishLab/npm/"
-packages = ["@perish/plumb"]
+registry = "https://npm.pkg.github.com/"
+packages = ["@perishlab/plumb"]
 
 [release.cfworker]
 account = "a6776d8a453d1b84d01576245a9c4f8d"
