@@ -1,3 +1,4 @@
+mod fixtures;
 use object::{Object, ObjectSection};
 use plumb::identity::{Binding, Region};
 use std::{fs, process::Command};

@@ -112,6 +112,21 @@ fn doctor() {
     assert!(!root.join("plumb.toml").exists());
     assert!(!root.join("ectropy.toml").exists());
     assert_eq!(repo.git(&["write-tree"]), tree);
+
+    let drifted = document.replacen("product = \"probe\"", "product = \"other\"", 1);
+    let wrong = plumb::depot::sha(drifted.as_bytes());
+    let catalog = format!(
+        "schema = \"plumb.products/v2\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/probe\"\nprofile = \"{wrong}\"\n"
+    );
+    let path = format!("profiles/{wrong}.toml");
+    let seat = super::support::depot(&[("rules/products.toml", &catalog), (&path, &drifted)]);
+    let refusal = repo.noted(seat.path());
+    let shown = String::from_utf8_lossy(&refusal.stdout).to_string();
+    assert!(!refusal.status.success(), "{shown}");
+    assert!(
+        shown.contains("release identity differs from its product definition"),
+        "{shown}"
+    );
     std::fs::write(root.join("plumb.toml"), "").expect("second expression");
     let refusal = repo.inspect(depot.path());
     assert!(!refusal.status.success());
@@ -209,6 +224,15 @@ impl Fixture<'_> {
             .env("PLUMB_HOME", home)
             .output()
             .expect("doctor")
+    }
+
+    fn noted(&self, home: &Path) -> std::process::Output {
+        Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["changelog", ".", "--version", "1.0.0"])
+            .current_dir(self.0)
+            .env("PLUMB_HOME", home)
+            .output()
+            .expect("changelog")
     }
 
     fn git(&self, args: &[&str]) -> String {

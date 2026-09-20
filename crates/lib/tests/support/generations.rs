@@ -67,7 +67,7 @@ fn upgrades() {
 }
 
 #[test]
-fn admits_its_own_prerelease_channel() {
+fn prerelease() {
     let fixture = tempfile::tempdir().expect("fixture");
     let home = fixture.path().join("home");
     std::fs::create_dir_all(home.join(".claude/skills")).expect("agent");

@@ -1,4 +1,4 @@
-use super::codec::{Binding, Codec, Origin};
+use plumb::identity::{Binding, Codec, Origin};
 use serde_json::Value;
 use std::{fs, path::PathBuf};
 
@@ -11,7 +11,7 @@ fn text(value: &Value, field: &str) -> String {
 }
 
 #[test]
-fn release_identity_fixtures() {
+fn fixtures() {
     let manifest: Value =
         serde_json::from_slice(&fs::read(directory().join("manifest.json")).unwrap()).unwrap();
     let cases = manifest.as_object().unwrap();

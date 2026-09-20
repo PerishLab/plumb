@@ -126,7 +126,7 @@ mod tests {
     }
 
     #[test]
-    fn project_scalars_and_tables_win_key_by_key() {
+    fn scalars() {
         let held = table("[release]\nproduct = \"base\"\nskill = true\n[other]\nkept = 1\n");
         let stated = table("[release]\nproduct = \"probe\"\ntargets = [\"a\"]\n");
         let merged = merge(held, stated, "", &mut Vec::new());
@@ -136,7 +136,7 @@ mod tests {
     }
 
     #[test]
-    fn seats_merge_by_path() {
+    fn seats() {
         let held = table(
             "[[layout.seat]]\npath = \"skills/*\"\nrule = [\"a\"]\n[[layout.seat]]\npath = \"charts/*\"\n",
         );
@@ -154,7 +154,7 @@ mod tests {
     }
 
     #[test]
-    fn file_groups_release_names_the_project_claims() {
+    fn groups() {
         let held = table(
             "[[layout.file]]\nname = [\"LICENSE\", \".gitignore\"]\n[[layout.file]]\nname = [\"AGENTS.md\"]\nrule = [\"affirmed\"]\n",
         );
@@ -167,7 +167,7 @@ mod tests {
     }
 
     #[test]
-    fn plain_arrays_replace() {
+    fn arrays() {
         let held = table("[release]\ntargets = [\"a\", \"b\"]\n");
         let stated = table("[release]\ntargets = [\"c\"]\n");
         let merged = merge(held, stated, "", &mut Vec::new());
@@ -178,7 +178,7 @@ mod tests {
     }
 
     #[test]
-    fn overrides_name_what_the_project_took() {
+    fn overrides() {
         let held = table(
             "[[layout.seat]]\npath = \"skills/*\"\n[[layout.file]]\nname = [\"LICENSE\", \"AGENTS.md\"]\n[release]\nskill = true\n",
         );

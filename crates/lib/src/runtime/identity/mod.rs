@@ -1,11 +1,9 @@
 mod codec;
-#[cfg(test)]
-mod fixtures;
 mod image;
 mod region;
 mod running;
 
-pub use codec::{Binding, Origin};
+pub use codec::{Binding, Codec, Origin};
 pub use image::{bind, inspect};
 pub use region::{Region, SIZE};
 pub use running::{Reader, install, ready};
