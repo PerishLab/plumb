@@ -1,20 +1,16 @@
-Dispatch one release marker as one distribution transaction.
+Dispatch one release marker to wharf.
 
-Ship accepts an immutable marker created by release and dispatches the single
-ship workflow carried by Plumb. Binary, Cargo, npm, OCI, chart and worker
-versions are immutable plan nodes inside that transaction. Ship neither
-publishes nor advances Depot projections; those independently consume the same
-marker through plumb depot and cannot select another version.
+Ship is the thin entry point of distribution. It confirms the marker stands on
+the product repository, dispatches wharf's ship workflow with the repository and
+the marker, and can watch the run to completion. Everything else happens in
+wharf: it derives the channel and version from the marker, reads what to build
+from the product's own manifests, binds each binary to the marker, publishes
+every declared medium, and records the run.
 
-The marker is verified before dispatch and again after the run is submitted or
-watched. It binds product identity, repository, release-line commit and tree,
-datum digest, channel, and the stable promotion seal when applicable. A missing,
-lightweight, displaced, or changed marker refuses the transaction.
+Ship carries no credentials and holds no plan of its own. A product repository
+keeps no distribution secret; wharf is the only writer.
 
-Recovery repeats the same marker. The workflow plan may reuse a verified
-workload or URL, run missing work, or omit irrelevant work; a successful node
-does not receive another runner merely because a sibling medium is retried.
-
-The remaining medium-shaped verbs are private execution surfaces of the
-canonical transaction. They are hidden from command help and cannot establish
-independent ship intent or select another marker.
+Recovery repeats the same marker. Wharf reuses the work whose inputs are
+unchanged, runs what is missing, and refuses to publish different bytes under a
+marker that already stands. Depot generations travel the same marker on their own
+path; ship never calls Depot, and Depot never waits for a ship run.
