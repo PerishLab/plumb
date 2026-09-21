@@ -56,7 +56,7 @@ impl Seat {
             std::fs::write(&path, content)
                 .map_err(|error| format!("cannot project candidate {name}: {error}"))?;
         }
-        crate::command::render::affirm::candidate::Review(self.path()).project(plan)
+        Ok(())
     }
 }
 

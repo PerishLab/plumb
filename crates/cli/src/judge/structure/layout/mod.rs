@@ -17,9 +17,6 @@ pub fn judge(read: &Read, rooted: bool) -> Vec<Seed> {
     let Some(evidence) = &read.evidence else {
         return Vec::new();
     };
-    if let Some(error) = evidence.affirmed.refusal() {
-        return vec![blind(&law::SEAT_AFFIRMED, error)];
-    }
     verdict(
         &read.held,
         Tree(&evidence.snapshot, &evidence.repository, &evidence.affirmed),

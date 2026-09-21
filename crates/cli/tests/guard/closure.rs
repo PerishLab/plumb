@@ -2,7 +2,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::process::{Command, Output};
 
-const COMMANDS: [&str; 18] = [
+const COMMANDS: [&str; 17] = [
     "authority",
     "doctor",
     "land",
@@ -19,7 +19,6 @@ const COMMANDS: [&str; 18] = [
     "depot",
     "release",
     "ship",
-    "version",
     "retire",
 ];
 
@@ -89,7 +88,7 @@ fn command() {
     capture(Vec::new(), &mut held);
     assert_eq!(
         digest(&held),
-        "3d1adc4c859738f888c9c7615753bd423b9b79ec10765bb8d5c1b0884733bcde"
+        "f59b252b3495f0046e8f9339cd0fb69bb5a1984218443b1db5a9a3eb2af98ce8"
     );
 }
 

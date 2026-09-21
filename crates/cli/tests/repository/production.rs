@@ -62,6 +62,7 @@ fn sites() {
 
 fn doctor(root: &Path) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .env("PLUMB_HOME", super::support::seat())
         .args(["doctor", root.to_str().expect("path should be utf8")])
         .output()
         .expect("plumb should run");

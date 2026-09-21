@@ -108,38 +108,6 @@ impl Batch {
         manifest.encode()?;
         Ok(Self { manifest, bodies })
     }
-
-    pub fn compatibility(bundle: &plumb::depot::v3::Bundle, draft: Draft) -> Result<Self, String> {
-        if bundle.manifest.kind != plumb::depot::v3::Kind::Configuration {
-            return Err("configuration validation received another depot kind".into());
-        }
-        let objects = bundle
-            .manifest
-            .objects
-            .iter()
-            .map(|held| Object {
-                path: held.path.clone(),
-                sha256: held.sha256.clone(),
-                size: held.size,
-            })
-            .collect();
-        let manifest = plumb::depot::v2::Manifest {
-            format: plumb::depot::v2::FORMAT,
-            source: draft.source,
-            derivative: plumb::depot::v2::Kind::Configuration,
-            release: draft.release,
-            snapshot: plumb::depot::v2::Snapshot {
-                timestamp: draft.timestamp,
-                commit: draft.commit,
-            },
-            objects,
-        };
-        manifest.encode()?;
-        Ok(Self {
-            manifest,
-            bodies: bundle.bodies.clone(),
-        })
-    }
 }
 
 pub fn configuration(root: &std::path::Path) -> Result<Vec<(String, String)>, String> {

@@ -28,15 +28,15 @@ says what none of those can. Ask the one that owns the question.
 - A **guard proof** binds checks to one staged tree. Depot projects its Git
   hooks; Doctor requires them.
 - A **landing** projects that exact proved tree onto its base.
-- A **version** is repository identity projected through every package carrier.
-  A **release** is its immutable marker. **Ship** publishes immutable media;
-  **depot** moves mutable projections. Both bind that marker. A locked Product
-  Profile owns depot routes; only Plumb's `[release.depot]` binds its
-  configuration validator. Runseal profiles hold write authority.
+- A **release** is an immutable marker on the head of its release line. **Ship**
+  hands that marker to wharf, which builds, binds identity and publishes every
+  medium; **depot** generations travel the same marker on their own path. A
+  locked Product Profile owns depot routes. Runseal profiles hold write
+  authority; the product repository holds none.
 - Plumb's **rules seat** consumes configuration. Rules are never compiled or
   fetched while reading; an invalid seat names `plumb configuration install`.
-  Publishing validates with the released binary. Skill consumes its Depot
-  generation, not a release artifact.
+  Wharf validates a release by loading its configuration with that release's own
+  binary. Skill consumes its Depot generation, not a release artifact.
 
 ## Authorities
 

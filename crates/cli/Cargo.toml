@@ -27,10 +27,6 @@ name = "operator-line"
 path = "tests/operator/line/main.rs"
 
 [[test]]
-name = "operator-release"
-path = "tests/operator/release/main.rs"
-
-[[test]]
 name = "operator-repository"
 path = "tests/operator/repository/main.rs"
 

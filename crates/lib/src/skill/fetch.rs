@@ -211,7 +211,23 @@ fn valid(channel: &str) -> bool {
         && bytes.all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
 }
 
-fn belongs(channel: &str, release: &str) -> bool {
+pub(super) fn channel(release: &str) -> String {
+    let version = release
+        .strip_prefix('v')
+        .and_then(|raw| semver::Version::parse(raw).ok());
+    match version {
+        Some(version) if !version.pre.is_empty() => version
+            .pre
+            .as_str()
+            .split('.')
+            .next()
+            .unwrap_or("stable")
+            .to_string(),
+        _ => "stable".to_string(),
+    }
+}
+
+pub(super) fn belongs(channel: &str, release: &str) -> bool {
     let Some(raw) = release.strip_prefix('v') else {
         return false;
     };

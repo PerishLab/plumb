@@ -16,5 +16,23 @@
 		"rules": {
 			"preset": "recommended"
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["**/*.svelte"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUnusedImports": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["crates/lib/tests/fixtures/identity/**"],
+			"formatter": {
+				"enabled": false
+			}
+		}
+	]
 }

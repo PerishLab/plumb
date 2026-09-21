@@ -14,10 +14,6 @@ pub(super) fn digest(
     sponge.update(serde_json::to_vec(commands).map_err(|error| error.to_string())?);
     sponge.update([0]);
     sponge.update(plumb::version!("PLUMB").as_bytes());
-    if crate::command::depot::candidate::selected().is_some() {
-        sponge.update([0]);
-        sponge.update(plumb::guard::Bootstrap::executable()?.as_bytes());
-    }
     if let Some(commit) = plumb::commit!("PLUMB") {
         sponge.update([0]);
         sponge.update(commit.as_bytes());
@@ -28,11 +24,6 @@ pub(super) fn digest(
         None => plumb::depot::rules()?.mark().to_string(),
     };
     sponge.update(rules.as_bytes());
-    if name == "guard/plumb" {
-        let datum = plumb::datum::Git(binding.root).current("HEAD")?;
-        sponge.update([0]);
-        sponge.update(serde_json::to_vec(&datum).map_err(|error| error.to_string())?);
-    }
     if name == "guard/plumb"
         && let Some(configuration) = binding.configuration
     {

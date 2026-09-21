@@ -11,24 +11,6 @@ pub struct Bundle {
 
 impl Bundle {
     pub fn read(root: &Path, identity: Identity) -> Result<Self, String> {
-        let bodies = Self::contents(root)?;
-        let objects = bodies
-            .iter()
-            .map(|(path, body)| {
-                Ok(Object {
-                    path: path.clone(),
-                    sha256: super::super::sha(body),
-                    size: body.len() as u64,
-                    media: media(path).to_string(),
-                    executable: executable(&root.join(path))?,
-                })
-            })
-            .collect::<Result<Vec<_>, String>>()?;
-        let manifest = Manifest::new(identity, objects)?;
-        Ok(Self { manifest, bodies })
-    }
-
-    pub fn contents(root: &Path) -> Result<BTreeMap<String, Vec<u8>>, String> {
         let metadata = std::fs::symlink_metadata(root)
             .map_err(|error| format!("cannot inspect depot source {}: {error}", root.display()))?;
         if metadata.file_type().is_symlink() {
@@ -48,7 +30,21 @@ impl Bundle {
         }
         let mut bodies = BTreeMap::new();
         walk(&base, &base, &mut bodies)?;
-        Ok(bodies)
+        let objects = bodies
+            .iter()
+            .map(|(path, body)| {
+                let file = base.join(path);
+                Ok(Object {
+                    path: path.clone(),
+                    sha256: super::super::sha(body),
+                    size: body.len() as u64,
+                    media: media(path).to_string(),
+                    executable: executable(&file)?,
+                })
+            })
+            .collect::<Result<Vec<_>, String>>()?;
+        let manifest = Manifest::new(identity, objects)?;
+        Ok(Self { manifest, bodies })
     }
 }
 
