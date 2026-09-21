@@ -1,35 +1,12 @@
 mod registry;
 
 use crate::catalog::set;
-use crate::shape::{Dependencies, dependency};
+use crate::shape::Dependencies;
 use plumb::datum::Datum;
 use std::path::Path;
 
 pub fn observe(dependencies: &mut Dependencies, root: &Path, line: Option<&str>) {
     Observer(dependencies).read(root, line);
-}
-
-pub fn answers(root: &Path) -> Result<Vec<plumb::datum::Answer>, String> {
-    let mut found = dependency::read(root);
-    Observer(&mut found).current();
-    found.normalize();
-    if let Some(error) = found.blind.first() {
-        return Err(error.clone());
-    }
-    Ok(found
-        .held
-        .iter()
-        .filter_map(|dependency| {
-            dependency
-                .latest
-                .as_ref()
-                .map(|latest| plumb::datum::Answer {
-                    ecosystem: dependency.ecosystem.name().to_string(),
-                    name: dependency.name.clone(),
-                    latest: latest.clone(),
-                })
-        })
-        .collect())
 }
 
 struct Observer<'a>(&'a mut Dependencies);

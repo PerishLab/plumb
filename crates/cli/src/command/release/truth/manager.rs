@@ -2,25 +2,6 @@ use crate::shape::release::Spec;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-pub fn template() -> Result<String, String> {
-    let mut bytes = Vec::new();
-    bytes.extend_from_slice(
-        source(
-            "assets/manager/unix.sh.in",
-            plumb::seat::resource!("assets/manager/unix.sh.in"),
-        )
-        .as_bytes(),
-    );
-    bytes.extend_from_slice(
-        source(
-            "assets/manager/windows.ps1.in",
-            plumb::seat::resource!("assets/manager/windows.ps1.in"),
-        )
-        .as_bytes(),
-    );
-    Ok(super::record::sha(&bytes))
-}
-
 pub fn write(spec: &Spec, channel: &str, version: &str, out: &Path) -> Result<String, String> {
     super::super::channel::intent(channel, version)?;
     if out.exists() {

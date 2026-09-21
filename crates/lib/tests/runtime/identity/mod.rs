@@ -1,10 +1,11 @@
+mod fixtures;
 use object::{Object, ObjectSection};
 use plumb::identity::{Binding, Region};
 use std::{fs, process::Command};
 
 #[used]
-#[cfg_attr(target_vendor = "apple", unsafe(link_section = "__DATA,__plumbid"))]
-#[cfg_attr(not(target_vendor = "apple"), unsafe(link_section = ".plumbid"))]
+#[cfg_attr(target_vendor = "apple", unsafe(link_section = "__DATA,__relid"))]
+#[cfg_attr(not(target_vendor = "apple"), unsafe(link_section = ".relid"))]
 static REGION: Region = Region::new(
     "TEST",
     Some("1111111111111111111111111111111111111111"),
@@ -61,7 +62,7 @@ fn neutral() {
     let image = object::File::parse(original.as_slice()).unwrap();
     let section = image
         .sections()
-        .find(|section| matches!(section.name(), Ok(".plumbid" | "__plumbid")))
+        .find(|section| matches!(section.name(), Ok(".relid" | "__relid")))
         .unwrap();
     let offset = section.file_range().unwrap().0 as usize;
     let region = Region::new("TEST", None, Some("test-target")).read();
@@ -131,7 +132,7 @@ fn refuses() {
     let image = object::File::parse(bound.as_slice()).unwrap();
     let section = image
         .sections()
-        .find(|section| matches!(section.name(), Ok(".plumbid" | "__plumbid")))
+        .find(|section| matches!(section.name(), Ok(".relid" | "__relid")))
         .unwrap();
     let location = section.file_range().unwrap().0 as usize;
     bound[location + 288] ^= 1;

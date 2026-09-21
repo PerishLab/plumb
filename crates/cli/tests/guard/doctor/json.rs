@@ -2,8 +2,11 @@ use serde_json::Value;
 use std::path::Path;
 use std::process::{Command, Output};
 
+const VOCABULARY: &str =
+    "schema = 1\ncodec = \"p64-v1\"\nretired = [\"~c2VhbGtpdA\", \"~cGFja3BvcnQ\"]\n";
+
 fn run(root: &Path) -> Output {
-    let home = crate::support::depot(&[]);
+    let home = crate::support::depot(&[("rules/vocabulary.toml", VOCABULARY)]);
     Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", "--json", root.to_str().expect("utf8 root")])
         .env_remove("PLUMB_RELEASE_VERSION")
@@ -32,7 +35,9 @@ fn clean() {
         .iter()
         .map(|standing| coverage[standing].as_u64().expect("coverage count"))
         .sum::<u64>();
-    assert_eq!(classified, 108);
+    let seat = crate::support::depot(&[]);
+    let law = crate::support::object(seat.path(), "rules/catalog.toml");
+    assert_eq!(classified, law.matches("[[rule]]").count() as u64);
     assert!(report["shape"]["wrappers"].is_array());
     assert!(report["shape"]["layout"].is_array());
     assert_eq!(report["vocabulary"]["schema"], "plumb.vocabulary/v2");

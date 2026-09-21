@@ -57,6 +57,7 @@ fn ambient() {
     let output = std::process::Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("path should be utf8")])
         .env("PLUMB_RELEASE_VERSION", "release/v9.9.9")
+        .env("PLUMB_HOME", crate::support::seat())
         .output()
         .expect("plumb should run");
     let said = String::from_utf8_lossy(&output.stdout).to_string();

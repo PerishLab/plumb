@@ -47,10 +47,6 @@ pub fn run(input: Input) -> i32 {
     }
 }
 
-pub(crate) fn proof(root: &Path) -> Result<plumb::guard::Descriptor, String> {
-    action::prove(root)
-}
-
 pub(crate) fn hooks(root: &Path) -> Vec<hook::Finding> {
     hook::audit(root)
 }

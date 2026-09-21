@@ -30,7 +30,6 @@ pub struct Spec {
     pub chart: Option<Chart>,
     pub npm: Option<Npm>,
     pub cfworker: Option<Cfworker>,
-    pub depends: std::collections::BTreeMap<String, Vec<PathBuf>>,
     pub deb: Option<Deb>,
     pub retire: Option<Retire>,
     pub depot: Option<Depot>,
@@ -54,12 +53,22 @@ struct Raw {
     chart: Option<Chart>,
     npm: Option<Npm>,
     cfworker: Option<Cfworker>,
-    depends: std::collections::BTreeMap<String, Vec<PathBuf>>,
     deb: Option<Deb>,
     retire: Option<Retire>,
     depot: Option<Depot>,
 }
 impl Spec {
+    pub(crate) fn controller(root: &Path) -> Result<Self, String> {
+        let manifest = root.join("plumb.toml");
+        if manifest.is_file()
+            && let Ok(spec) = Self::read(&manifest)
+            && spec.product == "plumb"
+        {
+            return Ok(spec);
+        }
+        Self::resolve(root)
+    }
+
     pub fn resolve(root: &Path) -> Result<Self, String> {
         let Some(target) = super::product::governance(root)? else {
             return Self::read(&root.join("plumb.toml"));
@@ -110,7 +119,6 @@ impl Spec {
             chart,
             npm,
             cfworker,
-            depends,
             deb,
             retire,
             depot,
@@ -136,7 +144,6 @@ impl Spec {
             chart,
             npm,
             cfworker,
-            depends,
             deb,
             retire,
             depot,

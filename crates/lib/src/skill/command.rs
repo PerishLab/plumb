@@ -6,8 +6,8 @@ use std::path::PathBuf;
 pub enum Deed {
     #[command(about = "Install this binary's marker-bound skill generation into every agent seat")]
     Install {
-        #[arg(long, default_value = "stable")]
-        channel: String,
+        #[arg(long, help = "Release channel [default: this binary's channel]")]
+        channel: Option<String>,
         #[arg(long)]
         version: Option<String>,
         #[arg(long)]
@@ -17,8 +17,8 @@ pub enum Deed {
     },
     #[command(about = "Restore installed briefs to the generation this binary carries")]
     Upgrade {
-        #[arg(long, default_value = "stable")]
-        channel: String,
+        #[arg(long, help = "Release channel [default: this binary's channel]")]
+        channel: Option<String>,
         #[arg(long)]
         version: Option<String>,
         #[arg(long)]
@@ -28,8 +28,8 @@ pub enum Deed {
     },
     #[command(about = "Report which brief each agent seat holds and against which binary")]
     Status {
-        #[arg(long, default_value = "stable")]
-        channel: String,
+        #[arg(long, help = "Release channel [default: this binary's channel]")]
+        channel: Option<String>,
         #[arg(long)]
         version: Option<String>,
         #[arg(long)]
@@ -63,7 +63,7 @@ impl Command<'_> {
             } => self.told(
                 "installed",
                 kit.install(&Ask {
-                    channel,
+                    channel: channel.unwrap_or_else(|| kit.channel()),
                     version,
                     path,
                     force,
@@ -77,7 +77,7 @@ impl Command<'_> {
                 json,
             } => {
                 let ask = Ask {
-                    channel,
+                    channel: channel.unwrap_or_else(|| kit.channel()),
                     version,
                     ..Ask::default()
                 };
@@ -94,7 +94,7 @@ impl Command<'_> {
             } => self.report(
                 "status",
                 kit.status(&Ask {
-                    channel,
+                    channel: channel.unwrap_or_else(|| kit.channel()),
                     version,
                     ..Ask::default()
                 }),

@@ -23,6 +23,7 @@ fn marked(workspace: &Path, extra: &[&str]) -> (String, bool) {
     args.extend_from_slice(extra);
     let out = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(&args)
+        .env("PLUMB_HOME", crate::support::seat())
         .output()
         .expect("run");
     let shown = String::from_utf8_lossy(&out.stdout).to_string();
@@ -119,4 +120,78 @@ derivatives = ["changelog"]
     assert!(shown.contains(&pointer.generation), "{shown}");
     assert!(shown.contains("CHANGELOG.md"), "{shown}");
     assert!(shown.contains("Generation-backed notes."), "{shown}");
+}
+
+fn git(root: &Path, args: &[&str]) {
+    let out = Command::new("git")
+        .current_dir(root)
+        .args(["-c", "user.name=probe", "-c", "user.email=probe@test"])
+        .args(args)
+        .output()
+        .expect("git");
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+fn note(lines: usize) -> tempfile::TempDir {
+    let home = tempfile::tempdir().expect("note");
+    for tongue in ["en", "zh"] {
+        fs::create_dir_all(home.path().join(tongue)).expect("tongue");
+        fs::write(
+            home.path().join(tongue).join("INDEX.md"),
+            "line\n".repeat(lines),
+        )
+        .expect("index");
+        fs::write(
+            home.path().join(tongue).join("MIGRATION.md"),
+            "# Migration\n",
+        )
+        .expect("migration");
+    }
+    home
+}
+
+#[test]
+fn prove() {
+    let root = seat("prove", None);
+    git(&root, &["init", "-q"]);
+    fs::write(root.join("a.txt"), "one\n").expect("first");
+    git(&root, &["add", "."]);
+    git(&root, &["commit", "-qm", "first"]);
+    git(&root, &["tag", "v1.0.0"]);
+    fs::write(root.join("a.txt"), "one\ntwo\n").expect("second");
+    git(&root, &["commit", "-qam", "second"]);
+    git(&root, &["tag", "-a", "v1.1.0", "-m", "v1.1.0"]);
+    let prove = |home: &Path| {
+        Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args([
+                "changelog",
+                root.to_str().expect("path"),
+                "--version",
+                "1.1.0",
+                "--prove",
+            ])
+            .arg(home)
+            .env("PLUMB_HOME", crate::support::seat())
+            .output()
+            .expect("run")
+    };
+    let within = prove(note(10).path());
+    let above = prove(note(200).path());
+    let _ = fs::remove_dir_all(&root);
+    let shown = String::from_utf8_lossy(&within.stdout);
+    assert!(
+        within.status.success(),
+        "{shown}{}",
+        String::from_utf8_lossy(&within.stderr)
+    );
+    assert!(
+        shown.contains("en: 11 lines within a budget of 120 for 2 units"),
+        "{shown}"
+    );
+    assert!(!above.status.success());
+    assert!(String::from_utf8_lossy(&above.stderr).contains("above diff budget 120"));
 }

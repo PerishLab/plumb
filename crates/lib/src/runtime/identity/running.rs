@@ -25,7 +25,7 @@ pub fn ready() -> Result<(), String> {
         .get()
         .is_some_and(|held| held.unbound && held.binding.is_none())
     {
-        Err("unbound build: Ship must bind a release marker before this executable is used".into())
+        Err("unbound build: bind a release identity before using this executable".into())
     } else {
         Ok(())
     }

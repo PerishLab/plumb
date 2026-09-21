@@ -1,4 +1,4 @@
-use super::identity;
+use super::{identity, rejoin};
 use crate::shape::release::Spec;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -9,6 +9,7 @@ pub struct Release {
     pub widths: BTreeMap<String, usize>,
     pub refusal: Option<String>,
     pub blind: Option<String>,
+    pub unsettled: Option<String>,
 }
 
 pub struct Root<'a>(pub &'a Path);
@@ -48,6 +49,7 @@ impl Root<'_> {
             widths: widths(spec),
             refusal: spec.ship().err(),
             blind: identity::Seat(self.0).blind(&spec.product, plumb::commit!("PLUMB")),
+            unsettled: rejoin::unsettled(self.0),
         }
     }
 }

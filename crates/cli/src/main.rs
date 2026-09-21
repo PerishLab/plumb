@@ -64,8 +64,6 @@ enum Command {
         write: Vec<String>,
         #[arg(long, hide = true, conflicts_with_all = ["base", "head", "write"])]
         attach: Option<PathBuf>,
-        #[command(flatten)]
-        candidate: command::depot::candidate::Selection,
         #[arg(long)]
         json: bool,
     },
@@ -103,6 +101,12 @@ enum Command {
         target: Root,
         #[arg(long)]
         version: Option<String>,
+        #[arg(
+            long,
+            value_name = "DIR",
+            help = "Prove a prepared release note against the diff budget of --version"
+        )]
+        prove: Option<PathBuf>,
     },
     #[command(about = "Install the marker-exact configuration Plumb carries")]
     Configuration {
@@ -120,8 +124,13 @@ enum Command {
     #[command(about = "Read what to do about a finding that names an entry")]
     Cookbook { entry: Option<String> },
     #[command(about = "Record that a wayfinder was read against the authorities it points at")]
-    Affirm(command::render::affirm::Request),
-    #[command(about = "Publish and project marker-bound mutable resources")]
+    Affirm {
+        #[command(flatten)]
+        target: Root,
+        #[arg(long)]
+        write: bool,
+    },
+    #[command(about = "Report the configuration seat this binary reads")]
     Depot {
         #[command(subcommand)]
         deed: command::depot::Deed,
@@ -143,14 +152,6 @@ enum Command {
         deed: command::ship::Deed,
     },
     #[command(
-        about = "Project and govern the repository's version line",
-        long_about = command::depot::carried("help/version.txt", plumb::seat::resource!("help/version.txt"))
-    )]
-    Version {
-        #[command(subcommand)]
-        deed: command::version::Deed,
-    },
-    #[command(
         about = "Destroy one declared delivery chain in a fixed order",
         long_about = command::depot::carried("help/retire.txt", plumb::seat::resource!("help/retire.txt"))
     )]
@@ -158,30 +159,6 @@ enum Command {
         #[command(flatten)]
         deed: command::retire::Deed,
     },
-}
-impl Command {
-    fn name(&self) -> &'static str {
-        match self {
-            Self::Authority { .. } => "authority",
-            Self::Doctor { .. } => "doctor",
-            Self::Land { .. } => "land",
-            Self::Guard { .. } => "guard",
-            Self::Radius { .. } => "radius",
-            Self::Policy { .. } => "policy",
-            Self::Skill { .. } => "skill",
-            Self::Rule { .. } => "rule",
-            Self::Changelog { .. } => "changelog",
-            Self::Configuration { .. } => "configuration",
-            Self::Layout { .. } => "layout",
-            Self::Cookbook { .. } => "cookbook",
-            Self::Affirm(_) => "affirm",
-            Self::Depot { .. } => "depot",
-            Self::Release { .. } => "release",
-            Self::Ship { .. } => "ship",
-            Self::Version { .. } => "version",
-            Self::Retire { .. } => "retire",
-        }
-    }
 }
 fn execute(command: Command) -> i32 {
     match command {
@@ -211,7 +188,6 @@ fn execute(command: Command) -> i32 {
             write,
             attach,
             json,
-            candidate: _,
         } => command::precommit::run(command::precommit::Input {
             root: PathBuf::from(target.root),
             base,
@@ -236,19 +212,25 @@ fn execute(command: Command) -> i32 {
         }
         Command::Skill { deed } => consumption::skill::run(deed),
         Command::Rule { deed } => catalog::query::run(deed),
-        Command::Changelog { target, version } => {
-            command::render::Seat::new(PathBuf::from(target.root)).changelog(version)
-        }
+        Command::Changelog {
+            target,
+            version,
+            prove: Some(home),
+        } => command::render::Seat::new(PathBuf::from(target.root)).proven(version, &home),
+        Command::Changelog {
+            target, version, ..
+        } => command::render::Seat::new(PathBuf::from(target.root)).changelog(version),
         Command::Configuration { deed } => consumption::configuration::run(deed),
         Command::Layout { target } => {
             command::render::Seat::new(PathBuf::from(target.root)).layout()
         }
         Command::Cookbook { entry } => command::cookbook::run(entry),
-        Command::Affirm(request) => request.run(),
+        Command::Affirm { target, write } => {
+            command::render::Seat::new(PathBuf::from(target.root)).affirm(write)
+        }
         Command::Depot { deed } => command::depot::run(deed),
         Command::Release { deed } => command::release::run(deed),
         Command::Ship { deed } => command::ship::run(deed),
-        Command::Version { deed } => command::version::run(deed),
         Command::Retire { deed } => command::retire::run(deed),
     }
 }

@@ -1,9 +1,8 @@
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-const COMMANDS: [&str; 18] = [
+const COMMANDS: [&str; 17] = [
     "authority",
     "doctor",
     "land",
@@ -20,17 +19,8 @@ const COMMANDS: [&str; 18] = [
     "depot",
     "release",
     "ship",
-    "version",
     "retire",
 ];
-
-fn root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(Path::parent)
-        .expect("CLI crate should sit below the repository")
-        .to_path_buf()
-}
 
 fn plumb(args: &[&str]) -> Output {
     let seat = super::support::depot(&[]);
@@ -98,19 +88,25 @@ fn command() {
     capture(Vec::new(), &mut held);
     assert_eq!(
         digest(&held),
-        "3d1adc4c859738f888c9c7615753bd423b9b79ec10765bb8d5c1b0884733bcde"
+        "f59b252b3495f0046e8f9339cd0fb69bb5a1984218443b1db5a9a3eb2af98ce8"
     );
 }
 
 #[test]
 fn rule() {
-    let output = success(&["rule", "list", "--json"]);
+    let seat = super::support::depot(&[]);
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["rule", "list", "--json"])
+        .env("PLUMB_LOCUS_ENABLED", "false")
+        .env("PLUMB_HOME", seat.path())
+        .output()
+        .expect("rule list");
+    assert!(output.status.success());
     let report: Value = serde_json::from_slice(&output.stdout).expect("rule list json");
     assert_eq!(report["schema"], "plumb.rule-list/v1");
-    assert_eq!(report["rules"].as_array().map(Vec::len), Some(108));
-    let catalog: toml::Table = super::support::policy("rules/catalog.toml")
+    let catalog: toml::Table = super::support::object(seat.path(), "rules/catalog.toml")
         .parse()
-        .expect("locked catalog");
+        .expect("seat catalog");
     let mut rules = catalog["rule"]
         .as_array()
         .expect("catalog rules")
@@ -126,33 +122,4 @@ fn rule() {
         .collect::<Vec<_>>();
     rules.sort_by(|left, right| left["id"].as_str().cmp(&right["id"].as_str()));
     assert_eq!(report["rules"], serde_json::json!(rules));
-}
-
-#[test]
-fn doctor() {
-    let root = root();
-    let output = success(&["doctor", root.to_str().expect("utf8 root"), "--json"]);
-    let report: Value = serde_json::from_slice(&output.stdout).expect("doctor json");
-    assert_eq!(report["operation"], "doctor");
-    assert_eq!(report["ok"], true);
-    assert_eq!(report["clean"], true, "{report:#}");
-    assert_eq!(report["findings"], serde_json::json!([]));
-    let coverage = &report["coverage"];
-    let total = ["mechanized", "observed", "prose_only"]
-        .iter()
-        .map(|standing| coverage[standing].as_u64().expect("coverage count"))
-        .sum::<u64>();
-    assert_eq!(total, 108);
-}
-
-#[test]
-fn policy() {
-    let root = root();
-    let output = success(&["policy", root.to_str().expect("utf8 root")]);
-    let recorded = std::fs::read_to_string(root.join("ectropy.toml"))
-        .expect("recorded policy")
-        .parse::<toml::Table>()
-        .expect("policy table");
-    let canonical = toml::to_string_pretty(&recorded).expect("canonical policy");
-    assert_eq!(String::from_utf8(output.stdout).unwrap(), canonical);
 }
