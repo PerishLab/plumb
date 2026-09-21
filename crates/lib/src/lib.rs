@@ -4,7 +4,9 @@ pub mod cli;
 pub mod config;
 pub mod fill;
 #[cfg(feature = "vendor")]
-pub mod forgejo;
+mod forge;
+#[cfg(feature = "vendor")]
+pub use forge::{forgejo, land};
 mod proof;
 mod runtime;
 pub mod seat;
@@ -15,9 +17,6 @@ pub use seat::depot;
 pub mod skill;
 #[cfg(feature = "vendor")]
 pub mod vendor;
-
-#[cfg(feature = "vendor")]
-pub use forgejo::land;
 
 #[cfg(feature = "radius")]
 pub use proof::radius;
