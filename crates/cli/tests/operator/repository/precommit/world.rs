@@ -23,7 +23,7 @@ fn unrelated() {
     paths.extend(std::env::split_paths(
         &std::env::var_os("PATH").expect("PATH"),
     ));
-    let second = std::process::Command::new(env!("CARGO_BIN_EXE_plumb"))
+    let second = super::support::plumb()
         .args(["guard", ".", "--json"])
         .current_dir(fixture.path())
         .env("PLUMB_HOME", home.path())
@@ -56,7 +56,7 @@ fn bounded() {
     ] {
         std::fs::write(&rustc, format!("#!/bin/sh\n{body}\n")).expect("probe tool");
         std::fs::set_permissions(&rustc, std::fs::Permissions::from_mode(0o755)).unwrap();
-        let output = std::process::Command::new(env!("CARGO_BIN_EXE_plumb"))
+        let output = super::support::plumb()
             .args(["guard", ".", "--json"])
             .current_dir(fixture.path())
             .env("PLUMB_HOME", home.path())
@@ -98,7 +98,7 @@ fn unread() {
             std::fs::write(root.join("NOTES"), "unrelated\n").expect("unrelated");
             Repo::git(root, &["add", "NOTES"]);
         }
-        let mut guard = std::process::Command::new(env!("CARGO_BIN_EXE_plumb"));
+        let mut guard = super::support::plumb();
         guard
             .args(["guard", ".", "--json"])
             .current_dir(root)
