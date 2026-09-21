@@ -32,8 +32,8 @@ tags = ["configuration", "ownership"]
 [[rule]]
 id = "depot.roots-published"
 summary = "Depot publication lag is visible"
-law = "Differences between configuration roots this repository records and the held depot version remain visible until automatic publication converges them."
-evidence = "Git-recorded root objects compared with the manifest of the held depot version."
+law = "Differences between declared source-owned implementation resources and the held depot remain visible. Rules and profiles belong to the locked Depot generation, not repository copies."
+evidence = "Git-recorded implementation objects compared with the verified held manifest; policy integrity is checked against its locked generation."
 standing = "observed"
 owner = "plumb"
 tags = ["configuration", "repository"]
@@ -357,7 +357,7 @@ tags = ["release"]
 id = "release.datum-recorded"
 summary = "Release lines judge against a recorded datum"
 law = "A release line carries the stable answers its judgement rests on, recorded once when the line is cut, so every later judgement measures the frozen candidate against that datum instead of a registry that moves under it."
-evidence = "The version-owned Git commit datum and marker-bound digest; historical markers retain their original tracked bytes."
+evidence = "The datum leaf under the mechanism seat in the release line's own tree."
 standing = "mechanized"
 owner = "release"
 tags = ["dependency", "release"]
@@ -991,3 +991,12 @@ evidence = "Recognized Vite configuration files."
 standing = "mechanized"
 owner = "web"
 tags = ["dispatch", "web"]
+
+[[rule]]
+id = "structure.default-overridden"
+summary = "A project plumb.toml departs from a Depot layout default"
+law = "A key the project's plumb.toml states over the Depot defaults in rules/plumb.toml takes precedence; each such departure is reported so it stays visible."
+evidence = "The layered layout's overridden seat paths, file names and keys."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]

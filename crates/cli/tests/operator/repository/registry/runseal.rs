@@ -1,8 +1,6 @@
 use std::path::Path;
 use std::process::{Command, Output};
 
-const PROFILE: &str = "4664dd2574413c20dc2876f57ef2f1b52b24a48bbf8f87390705a800234e5b48";
-
 #[test]
 fn closed() {
     let fixture = tempfile::tempdir().expect("fixture");
@@ -47,11 +45,24 @@ fn closed() {
     git(&root, &["add", "-A"]);
     super::super::world::hooks(&root);
 
-    let depot = super::super::support::depot(&[]);
+    let profile = include_str!("../../../fixtures/profiles/runseal.toml");
+    let expected = plumb::depot::sha(profile.as_bytes());
+    let catalog = format!(
+        "schema = \"plumb.products/v2\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/runseal\"\nprofile = \"{expected}\"\n"
+    );
+    let seat = format!("profiles/{expected}.toml");
+    let held = super::super::support::rules(&["policy.toml", "seat.toml", "structure.toml"]);
+    let mut overrides = held
+        .iter()
+        .map(|(path, body)| (path.as_str(), body.as_str()))
+        .collect::<Vec<_>>();
+    overrides.push(("rules/products.toml", &catalog));
+    overrides.push((&seat, profile));
+    let depot = super::super::support::depot(&overrides);
     let output = plumb(&root, depot.path(), &["doctor", ".", "--json"]);
     assert!(output.status.success(), "{}", text(&output));
     let report: serde_json::Value = serde_json::from_slice(&output.stdout).expect("report");
-    assert_eq!(report["profile"], PROFILE);
+    assert_eq!(report["profile"], expected);
     assert_eq!(report["ok"], true);
     assert!(!root.join("plumb.toml").exists());
     assert!(!root.join("ectropy.toml").exists());

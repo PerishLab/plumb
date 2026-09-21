@@ -85,7 +85,7 @@ fn deliverable() {
         ),
     )
     .expect("manifest should be written");
-    let held = crate::run(&["doctor", path]);
+    let held = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
     assert!(held.contains("publishes binary oci"), "{held}");
     assert!(!held.contains("attachment is declared"), "{held}");
 
@@ -102,7 +102,7 @@ fn carried() {
         "[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n",
     )
     .expect("manifest should be written");
-    let held = crate::run(&["doctor", path]);
+    let held = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
     assert!(held.contains("publishes cargo"), "{held}");
     assert!(!held.contains("the current Plumb refuses"), "{held}");
     assert!(!held.contains("cargo attachment is declared"), "{held}");
@@ -122,7 +122,7 @@ fn depot() {
         ),
     )
     .expect("manifest should be written");
-    let held = crate::run(&["doctor", path]);
+    let held = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
     assert!(!held.contains("the current Plumb refuses"), "{held}");
 
     std::fs::write(
@@ -180,6 +180,9 @@ fn attached() {
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
 
+const RELEASE: &str =
+    "ceiling = 10\n\n[forge]\nimage = \"fixture\"\n\n[permitted]\n\n[exercised]\nnpm = 1\n";
+
 #[test]
 fn width() {
     let dir = seat("plumb-release-width");
@@ -207,15 +210,15 @@ fn width() {
     };
 
     declare(&list(1));
-    let held = crate::run(&["doctor", path]);
+    let held = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
     assert!(!held.contains("attachment declares"), "{held}");
 
     declare(&list(10));
-    let edge = crate::run(&["doctor", path]);
+    let edge = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
     assert!(!edge.contains("and Plumb permits"), "{edge}");
 
     declare(&list(11));
-    let wide = crate::run(&["doctor", path]);
+    let wide = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
     assert!(
         wide.contains("the npm attachment declares 11 packages and Plumb permits 10"),
         "{wide}"

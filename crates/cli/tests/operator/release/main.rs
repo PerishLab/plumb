@@ -21,5 +21,5 @@ mod workflow;
 #[path = "identity/world.rs"]
 mod world;
 
-#[path = "../../support.rs"]
+#[path = "../../support/mod.rs"]
 mod support;

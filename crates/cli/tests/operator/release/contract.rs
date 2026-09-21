@@ -18,12 +18,11 @@ fn policy() {
         plumb::version!("PLUMB"),
     )
     .unwrap();
-    for path in [
-        "rules/products.toml",
-        "rules/seat.toml",
-        "rules/workflow.toml",
-    ] {
-        assert_eq!(rules.read(path).unwrap(), super::support::policy(path));
+    for path in ["rules/seat.toml", "rules/workflow.toml"] {
+        assert_eq!(
+            rules.read(path).unwrap(),
+            super::support::object(home.path(), path)
+        );
     }
 }
 

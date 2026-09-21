@@ -1,9 +1,14 @@
 schema = "plumb.migrations/v1"
 
 [[product]]
-identity = "git.perish.top/PerishLab/plumb"
-profile = "a3e1c1eb24af9f7f0d7fe4eb6b42439cd63a1b22759de7db686dea78f42f5691"
+identity = "git.perish.top/PerishFire/concord"
+profile = "2f492ec68240eb7686daff490445b8c25a959b9bd9ae45f43ddd10b3a082cfe8"
 source = "repository"
+
+[[product]]
+identity = "git.perish.top/PerishFire/images"
+profile = "5af70b596990f66d7ed23aea2b209c39d9ebcbb8a96e633df40df5bf3ee370d7"
+source = "depot"
 
 [[product]]
 identity = "git.perish.top/PerishFire/ectropy"

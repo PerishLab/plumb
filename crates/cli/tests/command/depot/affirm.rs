@@ -5,6 +5,7 @@ use std::process::{Command, Output};
 struct World {
     root: tempfile::TempDir,
     media: tempfile::TempDir,
+    home: tempfile::TempDir,
     profile: String,
 }
 
@@ -59,9 +60,17 @@ impl World {
                     .success()
             );
         }
+        let bodies = plumb::depot::v3::Bundle::contents(media.path()).unwrap();
+        let texts = bodies
+            .iter()
+            .map(|(path, bytes)| (path.as_str(), std::str::from_utf8(bytes).unwrap()))
+            .collect::<Vec<_>>();
+        let home = support::depot(&texts);
+        drop(bodies);
         Self {
             root,
             media,
+            home,
             profile: digest,
         }
     }
@@ -72,7 +81,7 @@ impl World {
             .current_dir(self.root.path())
             .args(["affirm", "--configuration"])
             .arg(self.media.path())
-            .env_remove("PLUMB_HOME");
+            .env("PLUMB_HOME", self.home.path());
         if write {
             command.arg("--write");
         }
@@ -153,7 +162,7 @@ fn explicit() {
         std::fs::read(world.root.path().join(".plumb/affirmed.toml")).unwrap(),
         before
     );
-    assert!(world.verdict().is_empty());
+    assert!(world.verdict().is_empty(), "{:#?}", world.verdict());
 }
 
 #[test]
@@ -161,11 +170,11 @@ fn drift() {
     let world = World::new();
     assert!(!world.verdict().is_empty());
     world.confirm();
-    assert!(world.verdict().is_empty());
+    assert!(world.verdict().is_empty(), "{:#?}", world.verdict());
     write(world.root.path(), "AGENTS.md", "# Changed operations\n");
     assert!(!world.verdict().is_empty());
     world.confirm();
-    assert!(world.verdict().is_empty());
+    assert!(world.verdict().is_empty(), "{:#?}", world.verdict());
     write(
         world.root.path(),
         "skills/probe/SKILL.md",
@@ -185,7 +194,7 @@ fn rules() {
         format!("{old}\n[[member.entry]]\nname='unrelated'\n"),
     )
     .unwrap();
-    assert!(world.verdict().is_empty());
+    assert!(world.verdict().is_empty(), "{:#?}", world.verdict());
     std::fs::write(
         &path,
         old.replace("name='affirmed'", "name='affirmed'\nbytes=999"),

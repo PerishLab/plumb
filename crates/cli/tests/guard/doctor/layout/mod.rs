@@ -1,6 +1,33 @@
 use std::process::Command;
 
-const DECLARED: &str = r#"
+pub(super) const SEAT: &str = r#"
+[member]
+
+[[member.entry]]
+name = "named-after-repository"
+holds = "repository"
+count = 1
+note = "fixture"
+
+[[member.entry]]
+name = "wayfinder"
+leaf = "SKILL.md"
+bytes = 3072
+note = "fixture"
+
+[[member.entry]]
+name = "affirmed"
+leaf = "SKILL.md"
+affirms = ["declaration", "seat", "lane"]
+note = "fixture"
+"#;
+
+pub(super) fn home() -> &'static std::path::Path {
+    static HOME: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+    HOME.get_or_init(|| crate::support::depot(&[("rules/seat.toml", SEAT)]).keep())
+}
+
+pub(super) const DECLARED: &str = r#"
 [[document]]
 strategy = "agent"
 source = [{ path = ".", seal = "0" }]
@@ -28,7 +55,7 @@ name = ["plumb.toml", "AGENTS.md"]
 note = "the governance pair"
 "#;
 
-fn seated(held: &str) -> tempfile::TempDir {
+pub(super) fn seated(held: &str) -> tempfile::TempDir {
     let seat = super::fixture();
     std::fs::write(seat.path().join("plumb.toml"), held).expect("plumb.toml");
     std::fs::write(seat.path().join("AGENTS.md"), "# Agents\n").expect("AGENTS.md");
@@ -52,7 +79,7 @@ fn seated(held: &str) -> tempfile::TempDir {
     seat
 }
 
-fn track(root: &std::path::Path) {
+pub(super) fn track(root: &std::path::Path) {
     let status = Command::new("git")
         .args(["-C", root.to_str().expect("utf8"), "add", "."])
         .status()
@@ -60,8 +87,13 @@ fn track(root: &std::path::Path) {
     assert!(status.success(), "fixture should be tracked");
 }
 
-fn report(root: &std::path::Path) -> String {
-    super::run(&["doctor", root.to_str().expect("utf8")])
+pub(super) fn report(root: &std::path::Path) -> String {
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["doctor", root.to_str().expect("utf8")])
+        .env("PLUMB_HOME", home())
+        .output()
+        .expect("plumb");
+    String::from_utf8_lossy(&output.stdout).to_string()
 }
 
 #[test]
@@ -88,21 +120,6 @@ fn stray() {
         held.contains("file stray.json sits in no declared seat"),
         "{held}"
     );
-}
-
-#[test]
-fn unrelated() {
-    let seat = seated(DECLARED);
-    let home = crate::support::depot(&[("profiles/affirmed/unrelated/receipt.toml", "")]);
-    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["doctor", seat.path().to_str().expect("utf8")])
-        .env_remove("PLUMB_RELEASE_VERSION")
-        .env("PLUMB_HOME", home.path())
-        .output()
-        .expect("plumb");
-    let held = String::from_utf8_lossy(&output.stdout);
-    assert!(!held.contains("blind:"), "{held}");
-    assert!(!held.contains("read origin failed"), "{held}");
 }
 
 #[test]
@@ -246,35 +263,21 @@ fn absent() {
 }
 
 #[test]
-fn affirmed() {
-    let seat = seated(&DECLARED.replace(
-        "rule = [\"rule://seat/named-after-repository\", \"rule://seat/wayfinder\"]",
-        "rule = [\"rule://seat/affirmed\"]",
-    ));
-    let held = report(seat.path());
-    assert!(held.contains("was affirmed against a different"), "{held}");
-    assert!(held.contains("plumb cookbook affirmed"), "{held}");
-}
-
-#[test]
-fn recorded() {
-    let seat = seated(&DECLARED.replace(
-        "rule = [\"rule://seat/named-after-repository\", \"rule://seat/wayfinder\"]",
-        "rule = [\"rule://seat/affirmed\"]",
-    ));
-    let home = crate::support::depot(&[]);
-    let done = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["affirm", seat.path().to_str().expect("utf8"), "--write"])
+fn unrelated() {
+    let seat = seated(DECLARED);
+    let home = crate::support::depot(&[
+        ("rules/seat.toml", SEAT),
+        ("profiles/affirmed/unrelated/receipt.toml", ""),
+    ]);
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["doctor", seat.path().to_str().expect("utf8")])
         .env_remove("PLUMB_RELEASE_VERSION")
         .env("PLUMB_HOME", home.path())
         .output()
         .expect("plumb");
-    assert!(
-        done.status.success(),
-        "{}",
-        String::from_utf8_lossy(&done.stderr)
-    );
-    track(seat.path());
-    let held = report(seat.path());
-    assert!(!held.contains("was affirmed against a different"), "{held}");
+    let held = String::from_utf8_lossy(&output.stdout);
+    assert!(!held.contains("blind:"), "{held}");
+    assert!(!held.contains("read origin failed"), "{held}");
 }
+
+mod affirmed;

@@ -16,7 +16,7 @@ mod site;
 mod surface;
 mod world;
 
-#[path = "../../support.rs"]
+#[path = "../../support/mod.rs"]
 mod support;
 
 use world::{govern, run};

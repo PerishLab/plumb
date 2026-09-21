@@ -1,11 +1,25 @@
 schema = "plumb.products/v1"
 
 [[product]]
+identity = "git.perish.top/PerishFire/concord"
+name = "concord"
+authority = "https://releases.concord.perish.uk"
+depot = "https://depot.concord.perish.uk"
+derivatives = ["skill", "changelog"]
+
+[[product]]
+identity = "git.perish.top/PerishFire/images"
+name = "images"
+authority = "https://releases.images.perish.uk"
+depot = "https://depot.images.perish.uk"
+derivatives = ["changelog"]
+
+[[product]]
 identity = "git.perish.top/PerishLab/plumb"
 name = "plumb"
 authority = "https://releases.plumb.perish.uk"
 depot = "https://depot.plumb.perish.uk"
-derivatives = ["changelog", "skill"]
+derivatives = ["configuration", "changelog", "skill"]
 
 [[product]]
 identity = "git.perish.top/PerishFire/ectropy"

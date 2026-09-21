@@ -118,9 +118,11 @@ pub fn configuration(home: &Path, manifest: &str) -> Value {
     );
     let address = format!("profiles/{digest}.toml");
     let workflow = workflow(product);
+    let deps = crate::support::rules(&["deps.toml"]);
     crate::support::stock(
         &source.path().join("configurations"),
         &[
+            ("rules/deps.toml", &deps[0].1),
             ("rules/products.toml", &catalog),
             (&address, &profile),
             ("rules/workflow.toml", &workflow),

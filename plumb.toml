@@ -92,13 +92,11 @@ note = "A root <tool>.toml is legal where <tool> names a perish.code tool. That 
 
 [[layout.file]]
 name = ["Cargo.toml", "Cargo.lock"]
-rule = ["rule://seat/rustup", "rule://seat/rustc", "rule://seat/cargo"]
-note = "Workspace anchors."
+note = "Workspace anchors. These named rule://seat/rustup, rustc and cargo, which no rule set carries; a reference to a rule nobody wrote reads blind rather than strict, so the rules are owed here instead."
 
 [[layout.file]]
 name = ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "biome.json", ".npmrc"]
-rule = ["rule://seat/node", "rule://seat/pnpm"]
-note = "The pnpm workspace anchors."
+note = "The pnpm workspace anchors. These named rule://seat/node and pnpm, which no rule set carries; the rules are owed here for the same reason."
 
 [[layout.file]]
 name = ["Containerfile"]

@@ -134,11 +134,16 @@ fn unrelated() {
     .env("PLUMB_HOME", home.path())
     .output()
     .unwrap();
-    assert!(!output.status.success());
-    let error = String::from_utf8_lossy(&output.stderr);
     assert!(
-        error.contains("requires that marker binary or its release base"),
-        "{error}"
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
     );
-    assert!(!String::from_utf8_lossy(&output.stdout).contains("/dispatches"));
+    let held = String::from_utf8_lossy(&output.stdout);
+    assert!(held.contains("/dispatches"), "{held}");
+    assert!(held.contains("v99.0.0-beta.1"), "{held}");
+    assert!(
+        held.contains(&format!(r#""plumb":"{}""#, plumb::version!("PLUMB"))),
+        "{held}"
+    );
 }

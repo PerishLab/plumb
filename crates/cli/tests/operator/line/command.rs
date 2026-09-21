@@ -2,7 +2,7 @@ use std::path::Path;
 use std::process::Command;
 use std::{env, os::unix::fs::PermissionsExt};
 
-#[path = "../../support.rs"]
+#[path = "../../support/mod.rs"]
 pub(super) mod support;
 
 fn setting(root: &Path, key: &str) -> Option<String> {

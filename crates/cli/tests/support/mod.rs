@@ -1,4 +1,8 @@
 use plumb::depot::{FORMAT, Manifest, Metadata, Object, Pointer, Schema, sha};
+
+#[path = "skeleton.rs"]
+mod skeleton;
+use skeleton::skeleton;
 use std::collections::BTreeMap;
 use std::io::{Read as _, Write as _};
 use std::net::{TcpListener, TcpStream};
@@ -18,6 +22,26 @@ pub fn depot(overrides: &[(&str, &str)]) -> tempfile::TempDir {
     let fixture = tempfile::tempdir().expect("depot fixture");
     stock(&fixture.path().join("configurations"), overrides);
     fixture
+}
+
+#[allow(dead_code)]
+pub fn rules(names: &[&str]) -> Vec<(String, String)> {
+    names
+        .iter()
+        .map(|name| {
+            let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("rules")
+                .join(name);
+            let body = std::fs::read_to_string(&path).expect("repository rule source");
+            (format!("rules/{name}"), body)
+        })
+        .collect()
+}
+
+#[allow(dead_code)]
+pub fn object(depot: &Path, path: &str) -> String {
+    std::fs::read_to_string(depot.join("configurations").join(MARK).join(path))
+        .expect("seat object")
 }
 
 #[allow(dead_code)]
@@ -65,10 +89,7 @@ pub fn guard(overrides: &[(&str, &str)], target: &str) -> tempfile::TempDir {
 
 pub fn stock(root: &Path, overrides: &[(&str, &str)]) {
     let base = root.join(MARK);
-    let rules = plumb::depot::rules().expect("tests require their locked Depot policy");
-    let mut bodies = rules
-        .inherit(rules.mark(), BTreeMap::new())
-        .expect("verified policy");
+    let mut bodies = skeleton();
     for (source, seat) in SOURCES {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join(source);
         for file in walk(&root) {
@@ -102,7 +123,7 @@ pub fn stock(root: &Path, overrides: &[(&str, &str)]) {
     let manifest = Manifest {
         schema: Schema {
             format: FORMAT,
-            version: "v0.0.1".to_string(),
+            version: concat!("v", env!("CARGO_PKG_VERSION")).to_string(),
         },
         metadata: metadata.clone(),
         objects,
@@ -121,10 +142,8 @@ pub fn stock(root: &Path, overrides: &[(&str, &str)]) {
 
 #[allow(dead_code)]
 pub fn policy(path: &str) -> String {
-    plumb::depot::rules()
-        .expect("tests require their locked Depot policy")
-        .read(path)
-        .expect("verified policy")
+    let name = path.strip_prefix("rules/").unwrap_or(path);
+    rules(&[name])[0].1.clone()
 }
 
 #[allow(dead_code)]
@@ -266,7 +285,7 @@ fn header<'a>(headers: &'a str, name: &str) -> Option<&'a str> {
     })
 }
 
-fn walk(root: &Path) -> Vec<PathBuf> {
+pub(super) fn walk(root: &Path) -> Vec<PathBuf> {
     let mut found = Vec::new();
     for entry in std::fs::read_dir(root).expect("source root") {
         let path = entry.expect("source entry").path();

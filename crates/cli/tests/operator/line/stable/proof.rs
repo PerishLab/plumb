@@ -62,7 +62,8 @@ fn refresh() {
     let refreshed = isolated(root, home.path());
     assert!(
         refreshed.status.success(),
-        "{}",
+        "{}{}",
+        String::from_utf8_lossy(&refreshed.stdout),
         String::from_utf8_lossy(&refreshed.stderr)
     );
     let report = String::from_utf8_lossy(&refreshed.stdout);

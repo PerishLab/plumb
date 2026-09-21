@@ -5,6 +5,7 @@ mod graph;
 mod physical;
 mod probe;
 mod profile;
+mod rules;
 mod world;
 use serde_json::Value;
 use std::process::{Command, Output};
@@ -135,7 +136,11 @@ fn governed() {
         "schema = \"plumb.products/v2\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/probe\"\nprofile = \"{digest}\"\n"
     );
     let path = format!("profiles/{digest}.toml");
-    let home = support::home(&[("rules/products.toml", &catalog), (&path, &profile)]);
+    let home = support::home(&[
+        ("rules/products.toml", &catalog),
+        (&path, &profile),
+        ("rules/workflow.toml", rules::WORKFLOW),
+    ]);
     super::world::hooks(root);
     let binary = std::path::Path::new(env!("CARGO_BIN_EXE_plumb"));
     let path = format!(

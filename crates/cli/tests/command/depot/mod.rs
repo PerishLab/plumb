@@ -2,7 +2,7 @@ use std::path::Path;
 use std::process::Command;
 
 mod affirm;
-#[path = "../../support.rs"]
+#[path = "../../support/mod.rs"]
 pub(super) mod support;
 
 fn repository(name: &str) -> tempfile::TempDir {
@@ -40,28 +40,7 @@ fn publish(root: &Path, home: &Path) -> (bool, String) {
     (output.status.success(), held)
 }
 
-#[test]
-fn mapped() {
-    let depot = support::depot(&[]);
-    let ectropy = repository("ectropy");
-    let (ok, held) = publish(ectropy.path(), depot.path());
-    assert!(!ok, "{held}");
-    assert!(held.contains("invalid release marker vinvalid"), "{held}");
-    assert!(!held.contains("plumb.toml"), "{held}");
-
-    let unknown = repository("unknown");
-    let (ok, held) = publish(unknown.path(), depot.path());
-    assert!(!ok, "{held}");
-    assert!(
-        held.contains(
-            "perish.code product identity git.perish.top/PerishFire/unknown is absent from the Plumb depot"
-        ),
-        "{held}"
-    );
-}
-
-#[test]
-fn profiled() {
+fn seeded() -> tempfile::TempDir {
     let profile = r#"schema = "plumb.product-profile/v1"
 
 [product]
@@ -86,7 +65,32 @@ allow = false
         "schema = \"plumb.products/v2\"\n\n[[product]]\nidentity = \"git.perish.top/PerishFire/ectropy\"\nprofile = \"{digest}\"\n"
     );
     let path = format!("profiles/{digest}.toml");
-    let depot = support::depot(&[("rules/products.toml", &catalog), (&path, profile)]);
+    support::depot(&[("rules/products.toml", &catalog), (&path, profile)])
+}
+
+#[test]
+fn mapped() {
+    let depot = seeded();
+    let ectropy = repository("ectropy");
+    let (ok, held) = publish(ectropy.path(), depot.path());
+    assert!(!ok, "{held}");
+    assert!(held.contains("invalid release marker vinvalid"), "{held}");
+    assert!(!held.contains("plumb.toml"), "{held}");
+
+    let unknown = repository("unknown");
+    let (ok, held) = publish(unknown.path(), depot.path());
+    assert!(!ok, "{held}");
+    assert!(
+        held.contains(
+            "perish.code product identity git.perish.top/PerishFire/unknown is absent from the Plumb depot"
+        ),
+        "{held}"
+    );
+}
+
+#[test]
+fn profiled() {
+    let depot = seeded();
     let ectropy = repository("ectropy");
     let (ok, held) = publish(ectropy.path(), depot.path());
     assert!(!ok, "{held}");

@@ -25,7 +25,6 @@ struct Record {
 
 struct Review<'a> {
     snapshot: &'a Snapshot,
-    profile: &'a Profile,
     declared: &'a Declared,
     bodies: &'a BTreeMap<String, Vec<u8>>,
 }
@@ -42,7 +41,6 @@ impl Receipt {
         let snapshot = Snapshot::read(root).map_err(|error| error.to_string())?;
         let review = Review {
             snapshot: &snapshot,
-            profile,
             declared: &declared,
             bodies,
         };
@@ -165,13 +163,7 @@ impl Review<'_> {
         if member.affirms.iter().any(|name| !rule::face(name)) {
             return Err(format!("{reference} names an unread affirmation face"));
         }
-        let mut faces = Faces(self.snapshot).taken(self.declared, &member.affirms);
-        if faces.contains_key("declaration") {
-            faces.insert(
-                "declaration".into(),
-                plumb::depot::sha(self.profile.manifest.as_bytes()),
-            );
-        }
+        let faces = Faces(self.snapshot).taken(self.declared, &member.affirms);
         let authority = authority(&faces);
         targets
             .iter()
