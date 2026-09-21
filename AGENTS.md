@@ -37,8 +37,13 @@ These are the nodes `[layout]` has not converged on. Each leaves this list when 
 seat can state it; nothing belongs here that a seat, a rule, or a verb already
 answers for.
 
-- `crates/lib/src/forgejo` — Plumb orchestration and Git adaptors over Runseal's
-  structured Forgejo operations. It owns no HTTP sender and reads no `tea.yml`.
+- `crates/lib/src/forge/forgejo` — the archived Forgejo adaptors over Runseal's
+  structured Forgejo operations, still read by authority and retire. Nothing
+  lands through it; it owns no HTTP sender and reads no `tea.yml`.
+- `crates/lib/src/forge/{land,github.rs}` — land projects a guarded candidate
+  onto GitHub through the `gh` CLI the caller's Runseal profile authorizes.
+  Plumb holds no GitHub credential. The required `guard` status is Plumb's
+  verified Guard proof, and the merge must match that exact candidate.
 - `crates/cli/src/command/retire` — Cloudflare interpretation and orchestration
   over Runseal's structured Cloudflare operations. Worker versions and their
   deployments are wharf's to publish. Plumb owns no authenticated Cloudflare

@@ -32,7 +32,7 @@ impl Repo {
                 "remote",
                 "set-url",
                 "origin",
-                "ssh://git@git.test/PerishLab/fixture.git",
+                "git@github.com:PerishLab/fixture.git",
             ],
         );
         held
@@ -154,7 +154,8 @@ fn planned() {
     assert!(
         plan.steps
             .iter()
-            .any(|step| step.contains("delete_branch_after_merge=false")),
+            .any(|step| step.contains("--merge --match-head-commit")
+                && step.contains("no branch deleted")),
         "the plan must state that no branch is deleted: {:?}",
         plan.steps
     );
@@ -188,4 +189,24 @@ fn refusal() {
     assert_eq!(refusal.kind, "onbase");
     assert!(refusal.message.contains("topic branch"));
     assert!(!refusal.to_string().is_empty());
+}
+
+#[test]
+fn archived() {
+    let repo = Repo::new();
+    repo.branch("topic");
+    repo.write("topic.md", "work\n");
+    repo.commit("topic: add work");
+    git(
+        repo.root(),
+        &[
+            "remote",
+            "set-url",
+            "origin",
+            "ssh://git@git.perish.top/PerishLab/fixture.git",
+        ],
+    );
+    let refusal = plan(repo.request()).expect_err("a Forgejo origin is not landable");
+    assert_eq!(refusal.kind, "remote");
+    assert!(refusal.message.contains("Forgejo is archived"), "{refusal}");
 }

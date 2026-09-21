@@ -69,13 +69,13 @@ plumb land . --base main --dry-run
 plumb land . --base main --title "TITLE" --body "BODY"
 ```
 
-Forgejo operations use the published Runseal library dialect in-process.
-Provide `FORGEJO_URL` and either `FORGEJO_TOKEN_FILE` or `FORGEJO_TOKEN`.
-Plumb does not discover or parse `tea.yml`.
+Forgejo is archived; origin must be the GitHub repository. Land drives `gh`,
+so run it under the Runseal profile that authorizes it, such as
+`runseal :liberte plumb land .`. Plumb holds no GitHub credential.
 
 Keep the source branch. Plumb creates the one-commit projection, requires its
-tree to equal the carried proof, advances the base only if the observed
-revisions still match, and syncs the separate base worktree.
+tree to equal the carried proof, merges with a merge commit only if the pull
+still stands at that candidate and the base has not moved, and syncs the separate base worktree.
 
 ## Inspect and affirm a document
 
