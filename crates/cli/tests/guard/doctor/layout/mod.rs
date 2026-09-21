@@ -1,30 +1,8 @@
 use std::process::Command;
 
-pub(super) const SEAT: &str = r#"
-[member]
-
-[[member.entry]]
-name = "named-after-repository"
-holds = "repository"
-count = 1
-note = "fixture"
-
-[[member.entry]]
-name = "wayfinder"
-leaf = "SKILL.md"
-bytes = 3072
-note = "fixture"
-
-[[member.entry]]
-name = "affirmed"
-leaf = "SKILL.md"
-affirms = ["declaration", "seat", "lane"]
-note = "fixture"
-"#;
-
 pub(super) fn home() -> &'static std::path::Path {
     static HOME: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
-    HOME.get_or_init(|| crate::support::depot(&[("rules/seat.toml", SEAT)]).keep())
+    HOME.get_or_init(|| crate::support::home().keep())
 }
 
 pub(super) const DECLARED: &str = r#"
@@ -260,24 +238,6 @@ fn absent() {
     track(seat.path());
     let held = report(seat.path());
     assert!(held.contains("SKILL.md is not a tracked leaf"), "{held}");
-}
-
-#[test]
-fn unrelated() {
-    let seat = seated(DECLARED);
-    let home = crate::support::depot(&[
-        ("rules/seat.toml", SEAT),
-        ("profiles/affirmed/unrelated/receipt.toml", ""),
-    ]);
-    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["doctor", seat.path().to_str().expect("utf8")])
-        .env_remove("PLUMB_RELEASE_VERSION")
-        .env("PLUMB_HOME", home.path())
-        .output()
-        .expect("plumb");
-    let held = String::from_utf8_lossy(&output.stdout);
-    assert!(!held.contains("blind:"), "{held}");
-    assert!(!held.contains("read origin failed"), "{held}");
 }
 
 mod affirmed;

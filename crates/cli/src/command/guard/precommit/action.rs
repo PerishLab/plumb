@@ -21,64 +21,26 @@ struct Preparation {
 struct Catalog<'a> {
     root: &'a Path,
     tree: &'a Tree,
-    product: &'a crate::shape::product::Target,
+    product: &'a str,
 }
 
 pub(super) struct Binding<'a> {
-    pub configuration: Option<&'a str>,
-    pub profile: Option<&'a crate::shape::product::Profile>,
     pub execution: Option<&'a plumb::config::Execution>,
     pub probes: &'a std::collections::BTreeMap<String, Vec<plumb::rule::Probe>>,
 }
 
 pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
-    if plumb::config::value("PLUMB_HOME").is_none()
-        && (plumb::config::value("PLUMB_GUARD_CONFIGURATION").is_some()
-            || plumb::config::value("PLUMB_GUARD_DEPOT").is_some())
-    {
-        return Err("guard depot binding is internal to one isolated guard action".into());
-    }
     let tree = plumb::guard::tree(root)?;
     let captured = Tree::read(root, Some(&tree))?;
     let manifest = captured.text("plumb.toml")?;
-    let product = crate::shape::product::guard(root, manifest.as_deref())?;
-    let target = super::configuration::target(&captured, &product)?;
-    let mismatched = super::configuration::mismatched(target.as_deref())?;
+    let product = crate::shape::product::named(manifest.as_deref())?;
     let index = Index::new(root, &tree)?;
-    let configuration = mismatched
-        .then(|| {
-            super::configuration::Seat::new(
-                root,
-                &index.root,
-                &product,
-                target
-                    .as_deref()
-                    .expect("a mismatched Plumb version has a target"),
-            )
-        })
-        .transpose()?;
-    if let Some(configuration) = &configuration {
-        let target = target
-            .as_deref()
-            .expect("a temporary configuration has a target");
-        if configuration.transaction() {
-            plumb::depot::guard(configuration.path(), target)?;
-        }
-        crate::catalog::set::guard(configuration.path(), target)?;
-    }
-    let product = match &configuration {
-        Some(configuration) => configuration.product(root)?,
-        None => product,
-    };
     let prepared = Catalog {
         root,
         tree: &captured,
         product: &product,
     }
     .checks()?;
-    if let Some(profile) = &product.profile {
-        index.govern(profile)?;
-    }
     let mut checks = Vec::new();
     for Preparation {
         name,
@@ -89,7 +51,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         paths,
     } in prepared
     {
-        let environment = super::world::environment(&commands, environment, root, mismatched)?;
+        let environment = super::world::environment(&commands, environment)?;
         let probes = manifest
             .as_deref()
             .map(|manifest| crate::catalog::probe::read(manifest, paths.iter().map(String::as_str)))
@@ -111,8 +73,6 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
             &programs,
         )?);
         let binding = Binding {
-            configuration: configuration.as_ref().map(|held| held.mark()),
-            profile: product.profile.as_ref(),
             execution: execution.as_ref(),
             probes: &probes,
         };
@@ -123,8 +83,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
             execution,
         });
     }
-    if !mismatched
-        && let Ok(proof) = plumb::guard::staged(root, &tree)
+    if let Ok(proof) = plumb::guard::staged(root, &tree)
         && proof
             .actions
             .iter()
@@ -140,13 +99,10 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         for check in pending {
             eprintln!("guard {}", check.proof.name);
             for command in &check.commands {
-                let seat = configuration.as_ref().map(|held| held.path());
                 tree::execute(
                     &index.root,
                     command,
                     &tree::Execution {
-                        seat,
-                        governed: product.profile.is_some(),
                         execution: check.execution.as_ref(),
                     },
                 )?;
@@ -166,12 +122,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
 impl Catalog<'_> {
     fn checks(&self) -> Result<Vec<Preparation>, String> {
         let tree = self.tree;
-        let governed = self.product.profile.is_some();
-        profile(tree, self.product.profile.as_ref())?;
-        let manifest = match &self.product.profile {
-            Some(profile) => Some(profile.manifest.clone()),
-            None => tree.text("plumb.toml")?,
-        };
+        let manifest = tree.text("plumb.toml")?;
         let mut held = manifest
             .as_deref()
             .map(crate::shape::workflow::parse)
@@ -183,14 +134,14 @@ impl Catalog<'_> {
             held = crate::shape::workflow::inferred(
                 tree.has("Cargo.toml"),
                 tree.has("pnpm-lock.yaml"),
-                tree.has("plumb.toml") || governed,
-                tree.has("ectropy.toml") || governed,
+                tree.has("plumb.toml"),
+                tree.has("ectropy.toml"),
             );
         }
         let mut checks = Vec::new();
         for key in held.keys.iter().filter(|key| key.lane() == "guard") {
             let name = key.name();
-            let commands = self.commands(tree, &self.product.product, &name)?;
+            let commands = self.commands(tree, self.product, &name)?;
             if commands.is_empty() {
                 continue;
             }
@@ -250,36 +201,4 @@ impl Catalog<'_> {
             _ => Vec::new(),
         })
     }
-}
-
-fn profile(tree: &Tree, profile: Option<&crate::shape::product::Profile>) -> Result<(), String> {
-    let Some(profile) = profile else {
-        return Ok(());
-    };
-    match profile.source {
-        crate::shape::product::Source::Repository => exact(tree, profile),
-        crate::shape::product::Source::Depot => {
-            if tree.has("plumb.toml") || tree.has("ectropy.toml") {
-                return Err(
-                    "a Depot-governed product must not carry plumb.toml or ectropy.toml".into(),
-                );
-            }
-            Ok(())
-        }
-    }
-}
-
-fn exact(tree: &Tree, profile: &crate::shape::product::Profile) -> Result<(), String> {
-    for (name, expected) in [
-        ("plumb.toml", profile.manifest.as_str()),
-        ("ectropy.toml", profile.ectropy.as_str()),
-    ] {
-        let actual = tree
-            .text(name)?
-            .ok_or_else(|| format!("{name} is required by its repository migration state"))?;
-        if actual != expected {
-            return Err(format!("{name} differs from its exact Depot profile"));
-        }
-    }
-    Ok(())
 }

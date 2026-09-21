@@ -2,8 +2,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::process::{Command, Output};
 
-const COMMANDS: [&str; 17] = [
-    "authority",
+const COMMANDS: [&str; 15] = [
     "doctor",
     "land",
     "guard",
@@ -16,14 +15,13 @@ const COMMANDS: [&str; 17] = [
     "layout",
     "cookbook",
     "affirm",
-    "depot",
     "release",
     "ship",
     "retire",
 ];
 
 fn plumb(args: &[&str]) -> Output {
-    let seat = super::support::depot(&[]);
+    let seat = super::support::home();
     Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(args)
         .env("PLUMB_LOCUS_ENABLED", "false")
@@ -88,13 +86,13 @@ fn command() {
     capture(Vec::new(), &mut held);
     assert_eq!(
         digest(&held),
-        "d3f3091f0830d92ae6c08c8667c31b83f32364b876de4ef1cbfbe83d0fa53e58"
+        "579225f6fa85ba7e4c1cfb0ca69c94e2d300a884fb8413c6f4a5319d61d2df75"
     );
 }
 
 #[test]
 fn rule() {
-    let seat = super::support::depot(&[]);
+    let seat = super::support::home();
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["rule", "list", "--json"])
         .env("PLUMB_LOCUS_ENABLED", "false")
@@ -104,7 +102,7 @@ fn rule() {
     assert!(output.status.success());
     let report: Value = serde_json::from_slice(&output.stdout).expect("rule list json");
     assert_eq!(report["schema"], "plumb.rule-list/v1");
-    let catalog: toml::Table = super::support::object(seat.path(), "rules/catalog.toml")
+    let catalog: toml::Table = super::support::policy("rules/catalog.toml")
         .parse()
         .expect("seat catalog");
     let mut rules = catalog["rule"]

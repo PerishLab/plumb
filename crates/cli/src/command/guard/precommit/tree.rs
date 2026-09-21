@@ -70,73 +70,6 @@ impl Index {
             source: source.to_path_buf(),
         })
     }
-
-    pub(crate) fn working(source: &Path) -> Result<Self, String> {
-        let base = temporary()?;
-        let index = base.path().join("index");
-        let mut read = plumb::config::detached("git");
-        let read = read
-            .arg("-C")
-            .arg(source)
-            .args(["read-tree", "HEAD"])
-            .env("GIT_INDEX_FILE", &index)
-            .output()
-            .map_err(|error| format!("cannot run git to prepare governed view: {error}"))?;
-        if !read.status.success() {
-            let output = plumb::config::detached("git")
-                .arg("-C")
-                .arg(source)
-                .args(["read-tree", "--empty"])
-                .env("GIT_INDEX_FILE", &index)
-                .output()
-                .map_err(|error| {
-                    format!("cannot run git to prepare empty governed view: {error}")
-                })?;
-            text(output, "prepare empty governed view")?;
-        }
-        let output = plumb::config::detached("git")
-            .arg("-C")
-            .arg(source)
-            .args(["add", "--all"])
-            .env("GIT_INDEX_FILE", &index)
-            .output()
-            .map_err(|error| format!("cannot run git to capture governed view: {error}"))?;
-        text(output, "capture governed view")?;
-        let output = plumb::config::detached("git")
-            .arg("-C")
-            .arg(source)
-            .args(["write-tree"])
-            .env("GIT_INDEX_FILE", &index)
-            .output()
-            .map_err(|error| format!("cannot run git to write governed view: {error}"))?;
-        let tree = text(output, "write governed view")?;
-        Self::new(source, &tree)
-    }
-
-    pub(crate) fn govern(&self, profile: &crate::shape::product::Profile) -> Result<(), String> {
-        for (name, body) in [
-            ("plumb.toml", &profile.manifest),
-            ("ectropy.toml", &profile.ectropy),
-        ] {
-            std::fs::write(self.root.join(name), body)
-                .map_err(|error| format!("cannot stage profile {name}: {error}"))?;
-        }
-        Ok(())
-    }
-}
-
-fn temporary() -> Result<tempfile::TempDir, String> {
-    let base = plumb::config::value("PLUMB_HOME")
-        .map(PathBuf::from)
-        .or_else(|| plumb::config::data("plumb"))
-        .ok_or_else(|| "cannot prepare governed view: no PLUMB_HOME".to_string())?
-        .join("tmp");
-    std::fs::create_dir_all(&base)
-        .map_err(|error| format!("cannot create {}: {error}", base.display()))?;
-    tempfile::Builder::new()
-        .prefix("view-")
-        .tempdir_in(&base)
-        .map_err(|error| format!("cannot reserve governed view: {error}"))
 }
 
 impl Drop for Index {
@@ -151,8 +84,6 @@ impl Drop for Index {
 }
 
 pub(super) struct Execution<'a> {
-    pub seat: Option<&'a Path>,
-    pub governed: bool,
     pub execution: Option<&'a plumb::config::Execution>,
 }
 
@@ -161,11 +92,7 @@ pub(super) fn execute(
     argv: &[String],
     execution: &Execution<'_>,
 ) -> Result<(), String> {
-    let Execution {
-        seat,
-        governed,
-        execution: context,
-    } = *execution;
+    let Execution { execution: context } = *execution;
     let (program, args) = argv
         .split_first()
         .ok_or_else(|| "guard action has no command".to_string())?;
@@ -195,7 +122,6 @@ pub(super) fn execute(
     if let Some(compiler) = &compiler {
         compiler.apply(&mut command);
     }
-    let depot = plumb::depot::root(&PathBuf::new()).ok();
     command
         .args(args)
         .current_dir(root)
@@ -203,17 +129,6 @@ pub(super) fn execute(
         .env_remove("PLUMB_GUARD_CONFIGURATION")
         .env_remove("PLUMB_GUARD_DEPOT")
         .env_remove("PLUMB_GUARD_VIEW");
-    if governed || seat.is_some() {
-        command.env_remove("PLUMB_HOME");
-    }
-    if governed {
-        command.env("PLUMB_GUARD_VIEW", "true");
-    }
-    if let Some(seat) = seat {
-        command.env("PLUMB_GUARD_CONFIGURATION", seat);
-    } else if governed && let Some(depot) = depot {
-        command.env("PLUMB_GUARD_DEPOT", depot);
-    }
     let status = command
         .status()
         .map_err(|error| format!("cannot run {}: {error}", argv.join(" ")))?;

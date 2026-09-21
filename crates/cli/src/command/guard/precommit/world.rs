@@ -19,21 +19,7 @@ pub(super) fn digest(
         sponge.update(commit.as_bytes());
     }
     sponge.update([0]);
-    let rules = match binding.configuration {
-        Some(configuration) => configuration.to_string(),
-        None => plumb::depot::rules()?.mark().to_string(),
-    };
-    sponge.update(rules.as_bytes());
-    if name == "guard/plumb"
-        && let Some(configuration) = binding.configuration
-    {
-        sponge.update([0]);
-        sponge.update(configuration.as_bytes());
-    }
-    if let Some(profile) = binding.profile {
-        sponge.update([0]);
-        sponge.update(profile.digest.as_bytes());
-    }
+    sponge.update(plumb::depot::rules()?.mark().as_bytes());
     sponge.update([0]);
     sponge.update(plumb::config::platform().as_bytes());
     if let Some(execution) = binding.execution {
@@ -85,15 +71,9 @@ pub(super) fn execution(
 pub(super) fn environment(
     commands: &[Vec<String>],
     captured: Option<plumb::config::Environment>,
-    root: &std::path::Path,
-    mismatched: bool,
 ) -> Result<plumb::config::Environment, String> {
     if let Some(captured) = captured {
-        return if mismatched {
-            super::environment::cargo(root)
-        } else {
-            Ok(captured)
-        };
+        return Ok(captured);
     }
     let name = if commands
         .iter()

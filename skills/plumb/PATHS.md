@@ -4,10 +4,10 @@
 
 1. Resolve the repository root by its `plumb.toml`.
 2. Read the repository's own instructions.
-3. Run `plumb doctor .` before changing shape. If Plumb reports an absent or
-   unreadable rule seat, run `plumb configuration install` and repeat Doctor.
+3. Run `plumb doctor .` before changing shape. If Doctor reports absent guard
+   hooks, run `plumb configuration install` and repeat Doctor.
 4. Inspect the relevant files and make the smallest coherent change.
-5. Run Doctor again; the depot-projected pre-commit hook proves the exact staged tree.
+5. Run Doctor again; the pre-commit hook Plumb projects proves the exact staged tree.
 
 Doctor's human report is for immediate work. Use JSON when another command
 needs stable fields:
@@ -46,7 +46,7 @@ path outside the boundary refuses.
 
 ## Prove a staged tree
 
-Project the active depot's untracked Git hooks, then commit normally:
+Project the Git hooks this Plumb carries, then commit normally:
 
 ```bash
 plumb configuration install
@@ -55,7 +55,7 @@ git commit
 
 The pre-commit hook checks out the index as an isolated exact tree and runs only
 actions whose input and tool world have no held proof. The commit-msg hook
-carries the resulting proof into the commit. The depot owns and replaces both
+carries the resulting proof into the commit. Plumb owns and replaces both
 guard hooks. Run `plumb guard .` directly to inspect or refresh the staged proof
 before committing.
 

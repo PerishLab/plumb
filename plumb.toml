@@ -8,33 +8,19 @@ note = "Rust members. The anchor is also the identity, and a cargo rule set nami
 
 [[layout.seat]]
 path = "crates/cli/rules"
-depot = "rules"
-note = "CLI rules projected into the configuration derivative."
-
-[[layout.seat]]
-path = "crates/cli/profiles"
-depot = "profiles"
-note = "Digest-addressed product governance profiles and their centrally controlled migration state targets."
-
-[[layout.seat]]
-path = "crates/lib/rules"
-depot = "rules"
-note = "Library rules projected into the configuration derivative."
+note = "The rules this binary carries. Each release is its own rule set; nothing is fetched."
 
 [[layout.seat]]
 path = "crates/cli/assets"
-depot = "assets"
-note = "Runtime manager sources and Git guard hooks projected into the configuration derivative. Workflow templates are retired."
+note = "Runtime manager sources and the Git guard hooks this binary carries."
 
 [[layout.seat]]
 path = "crates/cli/cookbook"
-depot = "cookbook"
-note = "Cookbook entries projected into the configuration derivative."
+note = "Cookbook entries this binary carries."
 
 [[layout.seat]]
 path = "crates/cli/help"
-depot = "help"
-note = "Help entries projected into the configuration derivative."
+note = "Long help this binary carries."
 
 [[layout.seat]]
 path = "packages/*"
@@ -75,8 +61,7 @@ skill = true
 
 [release.depot]
 source = "https://depot.plumb.perish.uk"
-derivatives = ["configuration", "changelog", "skill"]
-validator = ["plumb", "doctor"]
+derivatives = ["changelog", "skill"]
 
 [release.oci]
 registry = "ghcr.io"

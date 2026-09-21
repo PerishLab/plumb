@@ -8,21 +8,6 @@ pub fn ahead(minutes: u64) -> Result<String, String> {
     Ok(stamp(now + minutes * 60))
 }
 
-pub fn mark() -> Result<String, String> {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|error| format!("cannot read the clock: {error}"))?
-        .as_secs();
-    let rest = now % 86_400;
-    let (year, month, day) = civil((now / 86_400) as i64);
-    Ok(format!(
-        "{year:04}{month:02}{day:02}T{:02}{:02}{:02}Z",
-        rest / 3600,
-        (rest % 3600) / 60,
-        rest % 60
-    ))
-}
-
 fn stamp(seconds: u64) -> String {
     let rest = seconds % 86_400;
     let (year, month, day) = civil((seconds / 86_400) as i64);

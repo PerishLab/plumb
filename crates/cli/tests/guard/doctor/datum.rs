@@ -57,7 +57,7 @@ fn ambient() {
     let output = std::process::Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("path should be utf8")])
         .env("PLUMB_RELEASE_VERSION", "release/v9.9.9")
-        .env("PLUMB_HOME", crate::support::seat())
+        .env("PLUMB_HOME", crate::support::home().keep())
         .output()
         .expect("plumb should run");
     let said = String::from_utf8_lossy(&output.stdout).to_string();
@@ -78,7 +78,7 @@ fn ordinary() {
 #[test]
 fn marker() {
     let fixture = super::fixture();
-    let home = super::super::support::depot(&[]);
+    let home = super::super::support::home();
     let root = fixture.path();
     record(root, "v1.2.0", "schema = 1\nversion = \"v1.2.0\"\n");
     for version in ["v1.2.0-beta.1", "v1.2.0", "v1.3.0-beta.1"] {

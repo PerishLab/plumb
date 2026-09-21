@@ -41,7 +41,7 @@ fn render(name: Option<&str>) -> Result<String, String> {
         .iter()
         .find(|entry| entry.name == name)
         .ok_or_else(|| format!("unknown cookbook entry `{name}`; available: {}", names()))?;
-    super::depot::held().read(&format!("cookbook/{name}.txt"), entry.body)
+    Ok(entry.body.to_string())
 }
 
 fn ledger() -> String {

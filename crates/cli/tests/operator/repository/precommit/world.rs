@@ -1,43 +1,9 @@
 use super::{Repo, cache, support};
 
 #[test]
-fn bootstrap() {
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let held = std::fs::read_to_string(
-        root.join("crates/cli/src/command/guard/precommit/configuration.rs"),
-    )
-    .expect("configuration bootstrap");
-    assert!(held.contains("Context::Source => source.latest(\"stable\", true)?"));
-    assert!(held.contains("Ok(branch) if branch.starts_with(\"release/\")"));
-    let action =
-        std::fs::read_to_string(root.join("crates/cli/src/command/guard/precommit/action.rs"))
-            .expect("precommit action");
-    let mismatch = action.find("let mismatched").expect("mismatch decision");
-    let reuse = action
-        .find("if !mismatched")
-        .expect("conditioned proof reuse");
-    assert!(mismatch < reuse);
-    assert!(action.contains("configuration::mismatched(target.as_deref())?"));
-    assert!(held.contains("plumb::depot::related(target, released)"));
-    assert!(action.find(".checks()?").expect("current actions") < reuse);
-    let selection = action
-        .find("configuration.product(root)?")
-        .expect("verified profile");
-    assert!(action.find("Seat::new(").expect("configuration validation") < selection);
-    assert!(selection < action.find(".checks()?").unwrap());
-    assert!(!held.contains("Spec::read"));
-    assert!(!held.contains("product != Some(\"plumb\")"));
-    assert!(held.contains("crate::shape::depot::governed(&snapshot, profile)?"));
-    assert!(
-        action.find("crate::shape::product::guard").unwrap()
-            < action.find("configuration::target").unwrap()
-    );
-}
-
-#[test]
 fn unchanged() {
     let fixture = cache::fixture();
-    let home = support::depot(&[]);
+    let home = support::home();
     let first = cache::run(fixture.path(), home.path());
     cache::success(&first);
     let second = cache::run(fixture.path(), home.path());
@@ -49,7 +15,7 @@ fn unchanged() {
 #[test]
 fn unrelated() {
     let fixture = cache::fixture();
-    let home = support::depot(&[]);
+    let home = support::home();
     let first = cache::run(fixture.path(), home.path());
     cache::success(&first);
     let extra = tempfile::tempdir().expect("unrelated tools");
@@ -74,7 +40,7 @@ fn unrelated() {
 fn bounded() {
     use std::os::unix::fs::PermissionsExt as _;
     let fixture = cache::fixture();
-    let home = support::depot(&[]);
+    let home = support::home();
     cache::success(&cache::run(fixture.path(), home.path()));
     let tools = tempfile::tempdir().expect("tools");
     let rustc = tools.path().join("rustc");
@@ -116,7 +82,7 @@ fn unread() {
     let version = String::from_utf8(version.stdout).expect("version");
     let fixture = cache::fixture();
     let root = fixture.path();
-    let home = support::depot(&[]);
+    let home = support::home();
     cache::success(&cache::run(root, home.path()));
     let tools = tempfile::tempdir().expect("tools");
     let rustc = tools.path().join("rustc");

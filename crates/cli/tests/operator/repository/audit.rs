@@ -252,7 +252,7 @@ impl Plumb {
 }
 
 fn plumb() -> Plumb {
-    let home = crate::support::depot(&[]);
+    let home = crate::support::home();
     let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
     command
         .env_remove("CODEX_THREAD_ID")

@@ -16,8 +16,6 @@ use std::path::{Path, PathBuf};
 #[derive(Clone, Debug)]
 pub struct Spec {
     pub root: PathBuf,
-    pub configuration: Option<String>,
-    pub profile: Option<String>,
     pub product: String,
     pub authority: String,
     pub route: Option<String>,
@@ -70,30 +68,7 @@ impl Spec {
     }
 
     pub fn resolve(root: &Path) -> Result<Self, String> {
-        let Some(target) = super::product::governance(root)? else {
-            return Self::read(&root.join("plumb.toml"));
-        };
-        Self::governed(root, target)
-    }
-
-    pub(crate) fn governed(root: &Path, target: super::product::Target) -> Result<Self, String> {
-        let route = target.depot.clone();
-        let derivatives = target.derivatives().to_vec();
-        let Some(profile) = target.profile else {
-            return Self::read(&root.join("plumb.toml"));
-        };
-        let subject = format!("product profile {}", profile.digest);
-        let mut spec = Self::decode(root, &profile.manifest, &subject)?;
-        if spec.product != target.product || spec.authority != target.authority {
-            return Err(format!(
-                "{subject} release identity differs from its product definition"
-            ));
-        }
-        spec.configuration = Some(profile.configuration);
-        spec.profile = Some(profile.digest);
-        spec.route = Some(route);
-        spec.derivatives = derivatives;
-        Ok(spec)
+        Self::read(&root.join("plumb.toml"))
     }
 
     pub fn read(path: &Path) -> Result<Self, String> {
@@ -125,8 +100,6 @@ impl Spec {
         } = held.release;
         let mut spec = Self {
             root: root.to_path_buf(),
-            configuration: None,
-            profile: None,
             target: targets
                 .iter()
                 .map(|triple| target::resolve(&product, triple))
@@ -225,7 +198,7 @@ impl Spec {
             if self.authority.is_empty() {
                 return Err("a depot declaration requires release authority".into());
             }
-            depot.validate(&self.binaries)?;
+            depot.validate()?;
         }
         for held in self.attachments() {
             held?;
@@ -256,13 +229,6 @@ impl Spec {
         self.target
             .iter()
             .find(|target| target.format == Format::Zip)
-    }
-
-    pub fn target(&self, triple: &str) -> Result<&Target, String> {
-        self.target
-            .iter()
-            .find(|target| target.triple == triple)
-            .ok_or_else(|| format!("release does not declare target {triple}"))
     }
 }
 

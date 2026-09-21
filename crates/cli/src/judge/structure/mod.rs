@@ -54,7 +54,7 @@ impl Structure<'_> {
             found.extend(policy::judge(policy));
         }
         if self.declared() {
-            found.extend(layout::judge(&held.layout, held.rooted));
+            found.extend(layout::judge(&held.layout));
         } else {
             for name in &held.dirs {
                 if !set::current().dirs.contains(name) {
@@ -68,7 +68,7 @@ impl Structure<'_> {
         found.extend(release::judge(held));
         self.matched(&mut found);
         self.anchored(&mut found);
-        for name in held.lanes.iter().filter(|_| !held.rooted) {
+        for name in &held.lanes {
             if !set::current().lanes.contains(name) {
                 found.push(unknown(
                     &rule::KNOWN_WORKFLOW,

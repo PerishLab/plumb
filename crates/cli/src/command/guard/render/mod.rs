@@ -29,7 +29,7 @@ impl Seat {
                 return 1;
             }
         };
-        match super::depot::changelog(&self.0, &stamped) {
+        match changelog(&self.0, &stamped) {
             Err(error) => {
                 println!("  {error}");
                 1
@@ -190,4 +190,20 @@ fn show(stamped: &str, generation: &plumb::depot::v3::Generation) -> Result<(), 
         }
     }
     Ok(())
+}
+
+fn changelog(
+    root: &std::path::Path,
+    version: &str,
+) -> Result<Option<plumb::depot::v3::Generation>, String> {
+    let spec = crate::shape::release::Spec::controller(root)?;
+    let depot = spec.route(plumb::depot::v3::Kind::Changelog)?;
+    let channel = crate::command::release::channel(version)?;
+    plumb::depot::v3::Generation::latest(plumb::depot::v3::Query {
+        source: depot,
+        product: &spec.product,
+        channel: &channel,
+        version,
+        kind: plumb::depot::v3::Kind::Changelog,
+    })
 }

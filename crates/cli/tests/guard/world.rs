@@ -42,11 +42,7 @@ pub(crate) fn fixture() -> tempfile::TempDir {
 }
 
 pub(crate) fn run(args: &[&str]) -> String {
-    ruled(&[], args)
-}
-
-pub(crate) fn ruled(overrides: &[(&str, &str)], args: &[&str]) -> String {
-    let home = super::support::depot(overrides);
+    let home = super::support::home();
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(args)
         .env_remove("PLUMB_RELEASE_VERSION")

@@ -7,5 +7,3 @@ pub mod precommit;
 pub mod radius;
 pub mod render;
 pub mod workflow;
-
-use super::depot;

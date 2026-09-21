@@ -6,12 +6,10 @@ use std::collections::BTreeSet;
 pub struct Depot {
     pub source: String,
     pub derivatives: Vec<plumb::depot::v3::Kind>,
-    #[serde(default)]
-    pub validator: Vec<String>,
 }
 
 impl Depot {
-    pub(super) fn validate(&self, binaries: &[String]) -> Result<(), String> {
+    pub(super) fn validate(&self) -> Result<(), String> {
         plumb::depot::v3::check(&self.source)?;
         if self.derivatives.is_empty() {
             return Err("depot must declare at least one derivative".into());
@@ -24,22 +22,12 @@ impl Depot {
                     derivative.label()
                 ));
             }
-            if *derivative == plumb::depot::v3::Kind::Configuration && binaries.is_empty() {
+            if *derivative == plumb::depot::v3::Kind::Configuration {
                 return Err(
-                    "the configuration derivative requires an exact released binary".into(),
+                    "configuration travels inside the Plumb binary; a depot carries only changelog and skill"
+                        .into(),
                 );
             }
-        }
-        if derivatives.contains(&plumb::depot::v3::Kind::Configuration) {
-            let Some(binary) = self.validator.first() else {
-                return Err("the configuration derivative requires a validator command".into());
-            };
-            super::token("depot validator binary", binary, false)?;
-            if !binaries.contains(binary) {
-                return Err(format!("depot validator {binary} is not a released binary"));
-            }
-        } else if !self.validator.is_empty() {
-            return Err("a knowledge-only depot cannot declare a validator command".into());
         }
         Ok(())
     }
@@ -56,19 +44,5 @@ impl super::Spec {
         self.route
             .as_deref()
             .ok_or_else(|| "release identity carries no depot authority".to_string())
-    }
-
-    pub fn derivative(&self, kind: plumb::depot::v3::Kind) -> Result<&Depot, String> {
-        let depot = self
-            .depot
-            .as_ref()
-            .ok_or_else(|| "release declares no depot".to_string())?;
-        if !depot.derivatives.contains(&kind) {
-            return Err(format!(
-                "release depot does not declare the {} derivative",
-                kind.label()
-            ));
-        }
-        Ok(depot)
     }
 }

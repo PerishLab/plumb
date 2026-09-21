@@ -1,6 +1,5 @@
 use crate::catalog::model::Coverage;
 use crate::catalog::rules::depot::DEPOT_SCHEMA;
-use crate::command::depot;
 use crate::command::precommit;
 use crate::judge::{self, finding};
 use crate::shape;
@@ -8,7 +7,6 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 
 pub(crate) mod dependency;
-mod governance;
 mod human;
 
 #[derive(Serialize)]
@@ -17,8 +15,6 @@ struct Report {
     target: String,
     ok: bool,
     clean: bool,
-    configuration: Option<String>,
-    profile: Option<String>,
     shape: Shape,
     vocabulary: Vocabulary,
     findings: Vec<finding::Finding>,
@@ -79,27 +75,14 @@ struct Summary {
 
 pub fn run(root: PathBuf, json: bool) -> i32 {
     let snapshot = plumb::snapshot::Snapshot::read(&root);
-    let governance::Read {
-        configuration,
-        profile,
-        rooted,
-        view,
-        findings: governance,
-    } = governance::inspect(&root);
-    let observed = view
-        .as_ref()
-        .map_or(root.as_path(), |index| index.root.as_path());
-    let mut held = shape::capture(observed, &snapshot);
-    held.rooted = rooted;
-    dependency::observe(&mut held.dependencies, observed, line(observed).as_deref());
+    let mut held = shape::capture(&root, &snapshot);
+    dependency::observe(&mut held.dependencies, &root, line(&root).as_deref());
     let vocabulary = match &snapshot {
         Ok(snapshot) => plumb::vocabulary::observe(snapshot),
         Err(error) => Err(error.clone()),
     };
-    let depot = depot::observe(&snapshot);
-    let mut findings = governance;
-    findings.extend(judge::judge(&held));
-    if profile.is_some() || root.join("plumb.toml").is_file() {
+    let mut findings = judge::judge(&held);
+    if root.join("plumb.toml").is_file() {
         findings.extend(precommit::hooks(&root).into_iter().map(|held| match held {
             precommit::hook::Finding::Wrong(evidence) => {
                 finding::Finding::new(finding::Seed::wrong(&DEPOT_SCHEMA, evidence))
@@ -110,7 +93,6 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
         }));
     }
     findings.extend(judge::vocabulary::judge(&vocabulary));
-    findings.extend(judge::depot::judge(&depot));
     findings.extend(judge::depot::runtime());
     let summary = Summary::new(&findings);
     let ok = summary.wrong == 0 && summary.blind == 0;
@@ -120,8 +102,6 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
             target: root.display().to_string(),
             ok,
             clean: findings.is_empty(),
-            configuration: configuration.clone(),
-            profile: profile.clone(),
             shape: Shape::new(&held),
             vocabulary: Vocabulary::new(vocabulary),
             findings,
@@ -140,8 +120,6 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
             vocabulary: &vocabulary,
             findings: &findings,
             briefs: &briefs(),
-            configuration: configuration.as_deref(),
-            profile: profile.as_deref(),
         });
     }
     i32::from(!ok)

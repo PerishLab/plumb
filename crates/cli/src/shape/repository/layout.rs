@@ -36,7 +36,6 @@ pub struct Seat {
     pub anchor: Option<Vec<String>>,
     pub rule: Vec<String>,
     pub retired: bool,
-    pub depot: Option<String>,
 }
 
 #[derive(Clone)]
