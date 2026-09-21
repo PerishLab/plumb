@@ -262,3 +262,36 @@ fn token(value: &str) -> bool {
                     .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
         })
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn mechanized() {
+        let law: toml::Table = include_str!("../../rules/catalog.toml")
+            .parse()
+            .expect("catalogue source");
+        let declared = law["rule"]
+            .as_array()
+            .expect("catalogue rules")
+            .iter()
+            .filter(|rule| rule["standing"].as_str() == Some("mechanized"))
+            .map(|rule| rule["id"].as_str().expect("rule id").to_string())
+            .collect::<BTreeSet<_>>();
+        let implemented = super::rules::mechanisms()
+            .iter()
+            .map(|mechanism| mechanism.0.to_string())
+            .collect::<BTreeSet<_>>();
+        assert_eq!(
+            declared.difference(&implemented).collect::<Vec<_>>(),
+            Vec::<&String>::new(),
+            "mechanized in the catalogue without a mechanism"
+        );
+        assert_eq!(
+            implemented.difference(&declared).collect::<Vec<_>>(),
+            Vec::<&String>::new(),
+            "a mechanism whose rule the catalogue does not call mechanized"
+        );
+    }
+}

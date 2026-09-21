@@ -4,6 +4,8 @@ use super::value;
 use std::path::Path;
 use std::process::{Command, Output, Stdio};
 
+mod settle;
+
 const HUB: &str = "PerishLab/wharf";
 const WORKFLOW: &str = "ship.yml";
 const PRERELEASES: [&str; 2] = ["rc", "beta"];
@@ -43,6 +45,7 @@ pub(super) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<String, String
                 "{version} already stands; a stable marker never moves"
             ));
         }
+        settle::require(&root, remote, &listing)?;
         let authority = super::super::release::authority(&root)?;
         let promoted = promoted(&listing, &base, &head, |channel, marker| {
             plumb::bucket::fetch(&format!(

@@ -36,6 +36,9 @@ fn spec(release: &Release, found: &mut Found) {
     if let Some(blind) = &release.blind {
         found.push(Seed::blind(&release_rule::SPEC_DECLARED, blind));
     }
+    if let Some(evidence) = &release.unsettled {
+        found.push(Seed::noted(&release_rule::STABLE_REJOIN, evidence));
+    }
 }
 
 fn measured(release: &Release, found: &mut Found) {

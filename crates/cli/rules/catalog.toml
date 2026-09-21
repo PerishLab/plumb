@@ -34,7 +34,7 @@ id = "depot.roots-published"
 summary = "Depot publication lag is visible"
 law = "Differences between declared source-owned implementation resources and the held depot remain visible. Rules and profiles belong to the locked Depot generation, not repository copies."
 evidence = "Git-recorded implementation objects compared with the verified held manifest; policy integrity is checked against its locked generation."
-standing = "observed"
+standing = "mechanized"
 owner = "plumb"
 tags = ["configuration", "repository"]
 
@@ -465,7 +465,7 @@ tags = ["ownership", "release"]
 id = "release.stable-rejoin"
 summary = "Stable settles back into main"
 law = "After stable activation a topology-preserving merge makes its published commit an ancestor of main before another stable activation; exact release and ordinary main movement remain independent."
-evidence = "Stable pointer commit, main ancestry, release-line merge topology, and the next stable activation gate."
+evidence = "The highest stable marker's commit against main's ancestry: Doctor notes a stable marker main does not yet hold, and release stamp refuses the next stable marker until the remote main holds the last."
 standing = "mechanized"
 owner = "release"
 tags = ["ownership", "release", "state"]
