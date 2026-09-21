@@ -103,7 +103,7 @@ fn once() {
     paths.extend(std::env::split_paths(&std::env::var_os("PATH").unwrap()));
     let path = std::env::join_paths(paths).unwrap();
     let run = || {
-        std::process::Command::new(env!("CARGO_BIN_EXE_plumb"))
+        super::support::plumb()
             .args(["guard", ".", "--json"])
             .current_dir(root)
             .env("PLUMB_HOME", home.path())
