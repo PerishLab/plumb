@@ -8,13 +8,7 @@ use std::collections::BTreeMap;
 #[path = "bucket.rs"]
 mod bucket;
 
-#[path = "policy.rs"]
-mod policy;
-pub use policy::Policy;
-
-mod session;
-
-pub use bucket::{Bucket, Custom};
+pub use bucket::Bucket;
 
 pub struct Held {
     pub id: String,
@@ -35,27 +29,12 @@ pub struct Grant {
 
 pub enum Resource {
     Exact(String),
-    Set {
-        account: String,
-        buckets: Vec<String>,
-    },
 }
 
 impl Resource {
     pub fn policy(&self) -> Value {
         match self {
             Self::Exact(resource) => json!({ resource.clone(): "*" }),
-            Self::Set { account, buckets } => Value::Object(
-                buckets
-                    .iter()
-                    .map(|bucket| {
-                        (
-                            format!("com.cloudflare.edge.r2.bucket.{account}_default_{bucket}"),
-                            Value::String("*".into()),
-                        )
-                    })
-                    .collect(),
-            ),
         }
     }
 }

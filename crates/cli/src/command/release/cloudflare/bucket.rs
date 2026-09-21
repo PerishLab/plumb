@@ -1,5 +1,5 @@
 use runseal::tool::Reply;
-use serde_json::{Value, json};
+use serde_json::Value;
 
 use super::{Factory, Failure, Minted, detail, field, status};
 
@@ -36,12 +36,6 @@ impl<'a> Bucket<'a> {
         }
     }
 
-    pub fn create(&self) -> Result<(), String> {
-        self.call(&["r2", "bucket", "create", self.name])
-            .map(|_| ())
-            .map_err(detail)
-    }
-
     pub fn custom(&self) -> Result<Vec<Custom>, String> {
         let reply = self
             .call(&["r2", "bucket", "domain", "list", self.name])
@@ -52,33 +46,6 @@ impl<'a> Bucket<'a> {
             .and_then(Value::as_array)
             .ok_or_else(|| "cloudflare returned no custom domain list".to_string())?;
         listed.iter().map(Custom::read).collect()
-    }
-
-    pub fn bind(&self, domain: &str, zone: &str) -> Result<(), String> {
-        match self.find(domain)? {
-            None => self.attach(domain, zone)?,
-            Some(held) if held.zone != zone => {
-                return Err(format!("custom domain belongs to zone {}", held.zone));
-            }
-            Some(held) if !held.delivery() => self.normalize(domain)?,
-            Some(_) => {}
-        }
-        Ok(())
-    }
-
-    pub fn find(&self, domain: &str) -> Result<Option<Custom>, String> {
-        let mut found = self
-            .custom()?
-            .into_iter()
-            .filter(|held| held.domain == domain)
-            .collect::<Vec<_>>();
-        match found.len() {
-            0 => Ok(None),
-            1 => Ok(found.pop()),
-            count => Err(format!(
-                "cloudflare returned {count} custom domains named {domain}"
-            )),
-        }
     }
 
     pub fn detach(&self, domain: &str) -> Result<(), String> {
@@ -93,29 +60,6 @@ impl<'a> Bucket<'a> {
             .map_err(detail)
     }
 
-    fn attach(&self, domain: &str, zone: &str) -> Result<(), String> {
-        self.send(
-            &["r2", "bucket", "domain", "create", self.name],
-            Some(json!({
-                "domain": domain,
-                "enabled": true,
-                "zoneId": zone,
-                "minTLS": "1.2",
-            })),
-        )
-        .map(|_| ())
-        .map_err(detail)
-    }
-
-    fn normalize(&self, domain: &str) -> Result<(), String> {
-        self.send(
-            &["r2", "bucket", "domain", "edit", self.name, domain],
-            Some(json!({ "enabled": true, "minTLS": "1.2" })),
-        )
-        .map(|_| ())
-        .map_err(detail)
-    }
-
     fn call(&self, args: &[&str]) -> Result<Reply, Failure> {
         self.send(args, None)
     }
@@ -126,21 +70,6 @@ impl<'a> Bucket<'a> {
 }
 
 impl Custom {
-    pub fn ready(&self) -> bool {
-        self.delivery() && self.ownership == "active" && self.certificate == "active"
-    }
-
-    pub fn state(&self) -> String {
-        format!(
-            "ownership={}, certificate={}, enabled={}, minimum-tls={}",
-            self.ownership, self.certificate, self.enabled, self.tls
-        )
-    }
-
-    fn delivery(&self) -> bool {
-        self.enabled && self.tls == "1.2"
-    }
-
     fn read(entry: &Value) -> Result<Self, String> {
         Ok(Self {
             domain: field(entry, "domain")?,

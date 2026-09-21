@@ -2,7 +2,6 @@ pub mod depot;
 pub mod doctor;
 mod guard;
 pub mod operator;
-pub use release::authority;
 pub mod release;
 pub mod retire;
 pub mod ship;
@@ -13,7 +12,6 @@ pub use guard::{clock, cookbook, land, precommit, radius, render};
 impl crate::Command {
     pub(crate) fn name(&self) -> &'static str {
         match self {
-            crate::Command::Authority { .. } => "authority",
             crate::Command::Doctor { .. } => "doctor",
             crate::Command::Land { .. } => "land",
             crate::Command::Guard { .. } => "guard",

@@ -2,7 +2,7 @@ mod forge;
 mod store;
 mod target;
 
-use super::release::authority::cloudflare::{Bucket, Factory, Grant, Minted, Resource};
+use super::release::cloudflare::{Bucket, Factory, Grant, Minted, Resource};
 use clap::Args;
 use plumb::config::Cascade as _;
 use plumb::forgejo::Client;

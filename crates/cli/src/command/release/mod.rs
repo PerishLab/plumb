@@ -1,5 +1,5 @@
-pub mod authority;
 pub(in crate::command) mod channel;
+pub(in crate::command) mod cloudflare;
 mod identity;
 pub(in crate::command) mod output;
 mod truth;

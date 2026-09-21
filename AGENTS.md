@@ -152,30 +152,13 @@ and ship boundary, the seats a stable label may take, and the isolation every
 non-stable release owes. Why the contract has this shape, and
 every decision that put it there, is `perish.code/plumb-release-contract`.
 
-## Authority convergence
+## Retirement
 
 Retirement is the mirror of release, not a foreign errand, and it lives here
 because everything it destroys is something Plumb declared, published, or
 protected.
 
-Plumb may cold-start and converge an external authority only through a closed,
-named profile whose model, order, verification, and retirement semantics are a
-mature convention. The profile derives every conventional name and exposes only
-irreducible operator choices. It reinspects before each mutation and reports the
-same ordered plan whether observing or applying.
-
-Runseal owns each authenticated provider atom. Plumb composes those atoms but
-owns no raw provider route, credential store, or private instance state. Generic
-provisioning remains refused: a new external resource kind first needs a closed
-profile with an explicit lifecycle, not another downstream schema or an open
-bag of provider arguments.
-
-The closed workflow profile owns the shared inventory bucket, public domain,
-bucket-scoped writer escrow, and organization Actions-secret binding. The
-`workflow record` transaction owns immutable workload upload and conditional
-inventory merge. Reusable workflows transport that transaction; ordinary
-repositories own neither R2 configuration nor inventory JSON.
-
-The closed depot authority profile derives a product's public delivery domain
-from its Product Profile and binds it to the one shared depot bucket. It creates
-no product writer, repository secret, workflow, or second storage namespace.
+Plumb converges no external authority. Buckets, domains, writers and secrets
+that distribution needs are wharf's to provision and hold. Runseal owns each
+authenticated provider atom; retire composes those atoms but owns no raw
+provider route, credential store, or private instance state.
