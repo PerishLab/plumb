@@ -46,14 +46,8 @@ fn render(spec: &Spec, channel: &str, version: &str) -> Result<(String, Option<S
         ("windows_key", String::new()),
         ("windows_root", String::new()),
     ]);
-    let unix = plumb::fill::fill(
-        &source(
-            "assets/manager/unix.sh.in",
-            plumb::seat::resource!("assets/manager/unix.sh.in"),
-        ),
-        &vars,
-    )
-    .map_err(|error| error.to_string())?;
+    let unix = plumb::fill::fill(plumb::seat::resource!("assets/manager/unix.sh.in"), &vars)
+        .map_err(|error| error.to_string())?;
     let windows = match spec.windows() {
         Some(target) => {
             vars.insert("windows_archive", target.archive.clone());
@@ -61,10 +55,7 @@ fn render(spec: &Spec, channel: &str, version: &str) -> Result<(String, Option<S
             vars.insert("windows_root", String::new());
             Some(
                 plumb::fill::fill(
-                    &source(
-                        "assets/manager/windows.ps1.in",
-                        plumb::seat::resource!("assets/manager/windows.ps1.in"),
-                    ),
+                    plumb::seat::resource!("assets/manager/windows.ps1.in"),
                     &vars,
                 )
                 .map_err(|error| error.to_string())?,
@@ -73,10 +64,6 @@ fn render(spec: &Spec, channel: &str, version: &str) -> Result<(String, Option<S
         None => None,
     };
     Ok((unix, windows))
-}
-
-fn source(path: &str, factory: &'static str) -> String {
-    crate::command::depot::carried(path, factory)
 }
 
 fn unix(spec: &Spec) -> String {

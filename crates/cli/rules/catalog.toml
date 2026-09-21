@@ -30,19 +30,10 @@ owner = "product"
 tags = ["configuration", "ownership"]
 
 [[rule]]
-id = "depot.roots-published"
-summary = "Depot publication lag is visible"
-law = "Differences between declared source-owned implementation resources and the held depot remain visible. Rules and profiles belong to the locked Depot generation, not repository copies."
-evidence = "Git-recorded implementation objects compared with the verified held manifest; policy integrity is checked against its locked generation."
-standing = "mechanized"
-owner = "plumb"
-tags = ["configuration", "repository"]
-
-[[rule]]
 id = "depot.schema-supported"
-summary = "Plumb and its depot are stable-current"
-law = "A manager-installed Plumb is stable latest, a v2 configuration depot belongs to that exact product version, and governed worktrees carry its Git guard projections; legacy manifests retain only their schema-floor check during migration."
-evidence = "The managed binary identity and stable channel pointer, the running version and held depot release identity, plus effective pre-commit and commit-msg hooks."
+summary = "Plumb is stable-current and guards its worktrees"
+law = "A manager-installed Plumb is stable latest, and governed worktrees carry the Git guard hooks the running Plumb carries."
+evidence = "The managed binary identity and stable channel pointer, the running version, plus effective pre-commit and commit-msg hooks."
 standing = "mechanized"
 owner = "plumb"
 tags = ["configuration", "adoption"]

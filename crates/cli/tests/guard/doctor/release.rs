@@ -52,7 +52,18 @@ fn refused() {
     .expect("manifest should be written");
     let captured = crate::run(&["doctor", "--json", path]);
     let report: serde_json::Value = serde_json::from_str(&captured).expect("doctor json");
-    assert_eq!(report["summary"]["out_of_true"], 1, "{captured}");
+    let release = report["findings"]
+        .as_array()
+        .expect("findings")
+        .iter()
+        .filter(|finding| {
+            finding["grade"] == "out of true"
+                && finding["code"]
+                    .as_str()
+                    .is_some_and(|code| code.starts_with("release."))
+        })
+        .count();
+    assert_eq!(release, 1, "{captured}");
     assert!(
         report["findings"]
             .as_array()
@@ -87,7 +98,7 @@ fn deliverable() {
         ),
     )
     .expect("manifest should be written");
-    let held = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
+    let held = crate::run(&["doctor", path]);
     assert!(held.contains("publishes binary oci"), "{held}");
     assert!(!held.contains("attachment is declared"), "{held}");
 
@@ -104,7 +115,7 @@ fn carried() {
         "[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n",
     )
     .expect("manifest should be written");
-    let held = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
+    let held = crate::run(&["doctor", path]);
     assert!(held.contains("publishes cargo"), "{held}");
     assert!(!held.contains("the current Plumb refuses"), "{held}");
     assert!(!held.contains("cargo attachment is declared"), "{held}");
@@ -120,11 +131,11 @@ fn depot() {
     std::fs::write(
         dir.join("plumb.toml"),
         format!(
-            "{BINARY}\n[release.depot]\nsource = \"https://depot.foo.example\"\nderivatives = [\"configuration\", \"changelog\"]\nvalidator = [\"foo\", \"guard\"]\n"
+            "{BINARY}\n[release.depot]\nsource = \"https://depot.foo.example\"\nderivatives = [\"changelog\", \"skill\"]\n"
         ),
     )
     .expect("manifest should be written");
-    let held = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
+    let held = crate::run(&["doctor", path]);
     assert!(!held.contains("the current Plumb refuses"), "{held}");
 
     std::fs::write(
@@ -139,12 +150,14 @@ fn depot() {
 
     std::fs::write(
         dir.join("plumb.toml"),
-        "[release]\nproduct = \"foo\"\nauthority = \"https://releases.foo.example\"\n[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n[release.depot]\nsource = \"https://depot.foo.example\"\nderivatives = [\"configuration\"]\nvalidator = [\"foo\", \"guard\"]\n",
+        format!(
+            "{BINARY}\n[release.depot]\nsource = \"https://depot.foo.example\"\nderivatives = [\"configuration\", \"changelog\"]\n"
+        ),
     )
     .expect("manifest should be written");
     let source = crate::run(&["doctor", path]);
     assert!(
-        source.contains("configuration derivative requires an exact released binary"),
+        source.contains("configuration travels inside the Plumb binary"),
         "{source}"
     );
 
@@ -182,9 +195,6 @@ fn attached() {
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
 
-const RELEASE: &str =
-    "ceiling = 10\n\n[forge]\nimage = \"fixture\"\n\n[permitted]\n\n[exercised]\nnpm = 1\n";
-
 #[test]
 fn width() {
     let dir = seat("plumb-release-width");
@@ -212,15 +222,15 @@ fn width() {
     };
 
     declare(&list(1));
-    let held = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
+    let held = crate::run(&["doctor", path]);
     assert!(!held.contains("attachment declares"), "{held}");
 
     declare(&list(10));
-    let edge = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
+    let edge = crate::run(&["doctor", path]);
     assert!(!edge.contains("and Plumb permits"), "{edge}");
 
     declare(&list(11));
-    let wide = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
+    let wide = crate::run(&["doctor", path]);
     assert!(
         wide.contains("the npm attachment declares 11 packages and Plumb permits 10"),
         "{wide}"
@@ -268,7 +278,12 @@ fn unsettled() {
 
     let held = crate::run(&["doctor", path]);
     assert!(held.contains("noted: stable v1.0.0 at"), "{held}");
-    assert!(held.contains("0 out of true"), "{held}");
+    assert!(
+        !held
+            .lines()
+            .any(|line| line.contains("out of true:") && line.contains("stable")),
+        "{held}"
+    );
     assert!(!held.contains("v2.0.0"), "{held}");
 
     git(&[

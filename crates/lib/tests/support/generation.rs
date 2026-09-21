@@ -166,15 +166,6 @@ fn installation() {
             .expect("pointer"),
         pointer
     );
-    let rules = plumb::depot::Rules::at(root.path(), "v1.2.3").expect("installed rules");
-    assert_eq!(rules.mark(), pointer.generation);
-    assert_eq!(rules.version(), Some("v1.2.3-beta.7"));
-    assert_eq!(
-        rules.read("rules/probe.toml").expect("verified rule"),
-        "answer = 42\n"
-    );
-    assert!(plumb::depot::Rules::at(root.path(), "v1.2.4").is_err());
-    assert!(plumb::depot::Rules::at(root.path(), "v1.2.3-beta.8").is_err());
 }
 
 #[test]

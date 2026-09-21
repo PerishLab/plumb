@@ -10,7 +10,7 @@ fn known() {
             .expect("public atom should be written");
     }
 
-    let depot = super::super::support::depot(&[]);
+    let depot = super::super::support::home();
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", seat.path().to_str().expect("path should be utf8")])
         .env_remove("PLUMB_RELEASE_VERSION")

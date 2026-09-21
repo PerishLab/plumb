@@ -1,4 +1,4 @@
-use super::{DECLARED, SEAT, home, report, seated, track};
+use super::{DECLARED, home, report, seated, track};
 use std::process::Command;
 
 #[test]
@@ -38,24 +38,10 @@ fn layered() {
     let seat = seated(DECLARED);
     std::fs::write(seat.path().join("LICENSE"), "held\n").expect("license");
     track(seat.path());
-    let bare = report(seat.path());
-    assert!(
-        bare.contains("file LICENSE sits in no declared seat"),
-        "{bare}"
-    );
-
-    let defaults = "[[layout.file]]\nname = [\"LICENSE\"]\n\n[[layout.seat]]\npath = \"charts/*\"\nanchor = [\"Chart.yaml\"]\n";
-    let home = crate::support::depot(&[("rules/seat.toml", SEAT), ("rules/plumb.toml", defaults)]);
-    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["doctor", seat.path().to_str().expect("utf8")])
-        .env("PLUMB_HOME", home.path())
-        .output()
-        .expect("plumb");
-    let layered = String::from_utf8_lossy(&output.stdout);
+    let layered = report(seat.path());
     assert!(!layered.contains("sits in no declared seat"), "{layered}");
-    assert!(!layered.contains("carries none of"), "{layered}");
     assert!(
-        layered.contains("plumb.toml overrides the Depot default path charts/*"),
+        layered.contains("plumb.toml overrides the Plumb default path charts/*"),
         "{layered}"
     );
     assert!(!layered.contains("default name LICENSE"), "{layered}");

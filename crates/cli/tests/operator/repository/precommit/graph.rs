@@ -4,7 +4,7 @@ use super::{Repo, cache, support};
 fn declaration() {
     let fixture = cache::fixture();
     let root = fixture.path();
-    let home = support::depot(&[]);
+    let home = support::home();
     let first = cache::run(root, home.path());
     cache::success(&first);
     std::fs::write(root.join("plumb.toml"), "invalid [ unstaged").expect("working policy");
@@ -36,7 +36,7 @@ impl Web {
         use std::os::unix::fs::PermissionsExt as _;
         let held = Self {
             root: cache::fixture(),
-            home: support::depot(&[]),
+            home: support::home(),
             tools: tempfile::tempdir().expect("tools"),
         };
         let root = held.root.path();

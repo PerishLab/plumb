@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::{LazyLock, OnceLock};
+use std::sync::LazyLock;
 
 pub struct Rules {
     pub suites: BTreeMap<String, Vec<String>>,
@@ -33,16 +33,6 @@ static POLICY: LazyLock<Result<toml::Table, String>> =
     LazyLock::new(|| table("rules/policy.toml").and_then(shaped));
 
 static RULES: LazyLock<Result<Rules, String>> = LazyLock::new(build);
-static GUARD: OnceLock<plumb::depot::Rules> = OnceLock::new();
-
-pub fn guard(root: &std::path::Path, version: &str) -> Result<(), String> {
-    let rules = plumb::depot::Rules::guard(root, version)?;
-    GUARD
-        .set(rules)
-        .map_err(|_| "guard rules were already prepared".to_string())?;
-    prepare()
-}
-
 pub fn prepare() -> Result<(), String> {
     policy()?;
     rules()?;
@@ -115,10 +105,7 @@ pub fn current() -> &'static Rules {
 }
 
 fn table(path: &str) -> Result<toml::Table, String> {
-    let text = match GUARD.get() {
-        Some(rules) => rules.read(path)?,
-        None => plumb::depot::rules()?.read(path)?,
-    };
+    let text = plumb::depot::rules()?.read(path)?;
     text.parse()
         .map_err(|error| format!("{path} does not parse: {error}"))
 }

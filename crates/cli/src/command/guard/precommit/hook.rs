@@ -3,8 +3,14 @@ use std::path::{Path, PathBuf};
 use super::tree;
 
 const HOOKS: [(&str, &str); 2] = [
-    ("pre-commit", "assets/git/hooks/pre-commit"),
-    ("commit-msg", "assets/git/hooks/commit-msg"),
+    (
+        "pre-commit",
+        plumb::seat::resource!("assets/git/hooks/pre-commit"),
+    ),
+    (
+        "commit-msg",
+        plumb::seat::resource!("assets/git/hooks/commit-msg"),
+    ),
 ];
 
 pub(crate) enum Finding {
@@ -27,22 +33,14 @@ impl Hooks<'_> {
         if !self.governed()? {
             return Ok(None);
         }
-        let bodies = HOOKS
-            .into_iter()
-            .map(|(name, source)| carried(source).map(|body| (name, body)))
-            .collect::<Result<Vec<_>, _>>()?;
-        self.write(&bodies).map(Some)
+        self.write(&HOOKS).map(Some)
     }
 
     fn governed(&self) -> Result<bool, String> {
-        if self.0.join("plumb.toml").is_file() {
-            return Ok(true);
-        }
-        crate::shape::product::governance(self.0)
-            .map(|target| target.is_some_and(|target| target.profile.is_some()))
+        Ok(self.0.join("plumb.toml").is_file())
     }
 
-    fn write(&self, bodies: &[(&str, String)]) -> Result<String, String> {
+    fn write(&self, bodies: &[(&str, &str)]) -> Result<String, String> {
         let hooks = self.locate()?;
         std::fs::create_dir_all(&hooks)
             .map_err(|error| format!("cannot create {}: {error}", hooks.display()))?;
@@ -59,18 +57,6 @@ impl Hooks<'_> {
     }
 
     fn audit(&self) -> Vec<Finding> {
-        if plumb::config::value("PLUMB_DEPOT_SNAPSHOT").is_some() {
-            return HOOKS
-                .into_iter()
-                .filter_map(|(_, source)| match carried(source) {
-                    Ok(body) if !body.is_empty() => None,
-                    Ok(_) => Some(Finding::Wrong(format!(
-                        "the staged depot snapshot carries empty {source}"
-                    ))),
-                    Err(error) => Some(Finding::Wrong(error)),
-                })
-                .collect();
-        }
         let hooks = match self.locate() {
             Ok(hooks) => hooks,
             Err(error) => return vec![Finding::Blind(error)],
@@ -92,15 +78,6 @@ impl Hooks<'_> {
         } else {
             self.0.join(located)
         })
-    }
-}
-
-fn carried(path: &str) -> Result<String, String> {
-    let body = plumb::depot::rules()?.read(path)?;
-    if body.is_empty() {
-        Err(format!("the active depot carries no {path}"))
-    } else {
-        Ok(body)
     }
 }
 

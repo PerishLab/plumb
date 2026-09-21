@@ -2,7 +2,7 @@ use std::process::Command;
 
 fn run(args: &[&str]) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .env("PLUMB_HOME", super::support::seat())
+        .env("PLUMB_HOME", super::support::home().keep())
         .args(args)
         .output()
         .expect("plumb should run");

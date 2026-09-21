@@ -22,7 +22,7 @@ pub fn plumb(root: &Path, args: &[&str]) -> Command {
     command
         .args(args)
         .current_dir(root)
-        .env("PLUMB_HOME", support::seat())
+        .env("PLUMB_HOME", support::home().keep())
         .env_remove("FORGEJO_URL");
     for (name, value) in [
         ("FORGEJO_TOKEN", "test-token"),
@@ -40,7 +40,7 @@ pub fn plumb(root: &Path, args: &[&str]) -> Command {
 #[test]
 fn release() {
     let fixture = tempfile::tempdir().expect("fixture");
-    let home = support::guard(&[], "v9.9.9");
+    let home = support::home();
     let output = plumb(
         fixture.path(),
         &["release", "stamp", "--version", "v1.0.0", "--dry-run"],
@@ -57,7 +57,7 @@ fn release() {
 #[test]
 fn ship() {
     let fixture = tempfile::tempdir().expect("fixture");
-    let home = support::guard(&[], "v9.9.9");
+    let home = support::home();
     let output = plumb(
         fixture.path(),
         &["ship", "dispatch", "--marker", "v1.0.0", "--dry-run"],

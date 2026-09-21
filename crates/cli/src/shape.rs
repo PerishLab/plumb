@@ -12,11 +12,10 @@ pub mod workflow;
 
 pub use repository::dependency::{Dependencies, Dependency};
 pub use repository::layout;
-pub(crate) use repository::{dependency, depot, policy};
+pub(crate) use repository::{dependency, policy};
 use repository::{node, pack};
 
 pub struct Shape {
-    pub rooted: bool,
     pub wrappers: BTreeSet<String>,
     pub dirs: BTreeSet<String>,
     pub block: Option<i64>,
@@ -214,7 +213,6 @@ pub fn capture(
         })
         .collect();
     Shape {
-        rooted: false,
         wrappers: seat.names(".runseal/wrappers", ".ts"),
         dirs: snapshot.as_ref().map(Root::dirs).unwrap_or_default(),
         block: limit("block"),

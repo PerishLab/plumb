@@ -5,7 +5,7 @@ use super::{Repo, cache, support};
 fn ancestor() {
     let fixture = cache::fixture();
     let root = fixture.path();
-    let home = support::depot(&[]);
+    let home = support::home();
     let physical = tempfile::tempdir().expect("physical seat");
     let target = physical.path().join("parent/seat");
     std::fs::create_dir_all(&target).expect("physical parent");
@@ -38,7 +38,7 @@ fn ancestor() {
 #[cfg(unix)]
 fn dangling() {
     let fixture = cache::fixture();
-    let home = support::depot(&[]);
+    let home = support::home();
     let physical = tempfile::tempdir().expect("physical seat");
     std::os::unix::fs::symlink(physical.path().join("absent"), home.path().join("tmp"))
         .expect("broken alias");
