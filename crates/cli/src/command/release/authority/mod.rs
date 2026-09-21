@@ -17,18 +17,6 @@ use cloudflare::Custom;
 
 const ADMIN: (&str, &str) = ("Workers R2 Storage Write", "com.cloudflare.api.account");
 
-pub(in crate::command) fn credential(inline: &str) -> Result<String, String> {
-    let Some(path) = escrow::selected("PLUMB_RELEASE_REGISTRY_ESCROW")? else {
-        return Ok(inline.to_string());
-    };
-    if !inline.is_empty() {
-        return Err("registry escrow conflicts with PLUMB_RELEASE_REGISTRY_TOKEN".into());
-    }
-    let held = registry::profile::Seat::new(&path)
-        .load()?
-        .ok_or("selected registry escrow is missing")?;
-    Ok(held.credential())
-}
 const ITEM: (&str, &str) = (
     "Workers R2 Storage Bucket Item Write",
     "com.cloudflare.edge.r2.bucket",

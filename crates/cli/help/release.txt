@@ -1,20 +1,15 @@
-Define and verify one immutable distribution marker.
+Define one immutable distribution marker.
 
-Release owns identity, not distribution. A marker is one annotated Git tag that
-binds the product, repository, version, channel, commit, tree, datum digest, and
-Product Profile. Show and verify resolve that complete identity. Stamp creates
-it only from a proved source point; a stable marker additionally refuses unless
-its version line is frozen. Ship owns candidate publication and stable promotion
-validation. Historical marker protocols retain their original proof semantics.
-New markers bind the datum on their exact commit, including in a shallow checkout.
-Historical markers continue to read and verify their original tracked datum bytes.
+Release owns identity, not distribution. A marker is one annotated Git tag on the
+head of its release line, naming the version and, for a stable marker, the
+prerelease it promotes. Stamp creates it: a beta or rc marker takes the next
+number on the line, and a stable marker takes the version of an rc or beta that
+already shipped from the same commit, preferring the rc. Retract removes only an
+unpublished marker. Managers renders the scripts a version installs with.
 
-Release never builds, compiles, publishes, activates, or edits a version line.
-Use version to project repository identity and govern the line. Use ship with the
-resulting marker to distribute immutable resources. Use depot separately with
-the same marker to publish or move its mutable projections. Ship never invokes
-depot, and depot never selects or waits for a ship transaction.
+Release never builds, compiles, publishes, or edits a version line. Wharf decides
+release identity at distribution time, so sources declare version 0.0.0 and a
+binary is bound to its marker after it is built. Use ship with the marker to hand
+the distribution to wharf.
 
-A marker never moves or retracts. Every ship and depot retry names the same
-marker and revalidates it before and after mutation. Correct an identity by
-preparing a new marker or version, never by deleting or replacing an existing tag.
+A marker never moves. A stable marker refuses a version that already stands.

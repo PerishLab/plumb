@@ -1,3 +1,5 @@
+use std::process::Command;
+
 const BINARY: &str = "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n";
 
 #[test]
@@ -85,7 +87,7 @@ fn deliverable() {
         ),
     )
     .expect("manifest should be written");
-    let held = crate::run(&["doctor", path]);
+    let held = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
     assert!(held.contains("publishes binary oci"), "{held}");
     assert!(!held.contains("attachment is declared"), "{held}");
 
@@ -102,7 +104,7 @@ fn carried() {
         "[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n",
     )
     .expect("manifest should be written");
-    let held = crate::run(&["doctor", path]);
+    let held = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
     assert!(held.contains("publishes cargo"), "{held}");
     assert!(!held.contains("the current Plumb refuses"), "{held}");
     assert!(!held.contains("cargo attachment is declared"), "{held}");
@@ -122,7 +124,7 @@ fn depot() {
         ),
     )
     .expect("manifest should be written");
-    let held = crate::run(&["doctor", path]);
+    let held = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
     assert!(!held.contains("the current Plumb refuses"), "{held}");
 
     std::fs::write(
@@ -180,6 +182,9 @@ fn attached() {
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
 
+const RELEASE: &str =
+    "ceiling = 10\n\n[forge]\nimage = \"fixture\"\n\n[permitted]\n\n[exercised]\nnpm = 1\n";
+
 #[test]
 fn width() {
     let dir = seat("plumb-release-width");
@@ -207,17 +212,74 @@ fn width() {
     };
 
     declare(&list(1));
-    let held = crate::run(&["doctor", path]);
+    let held = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
     assert!(!held.contains("attachment declares"), "{held}");
 
     declare(&list(10));
-    let edge = crate::run(&["doctor", path]);
+    let edge = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
     assert!(!edge.contains("and Plumb permits"), "{edge}");
 
     declare(&list(11));
-    let wide = crate::run(&["doctor", path]);
+    let wide = crate::ruled(&[("rules/release.toml", RELEASE)], &["doctor", path]);
     assert!(
         wide.contains("the npm attachment declares 11 packages and Plumb permits 10"),
         "{wide}"
     );
+}
+
+#[test]
+fn unsettled() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let root = fixture.path();
+    crate::govern(root);
+    std::fs::write(root.join("plumb.toml"), BINARY).expect("manifest");
+    let git = |args: &[&str]| {
+        let status = Command::new("git")
+            .arg("-C")
+            .arg(root)
+            .args([
+                "-c",
+                "user.name=Plumb",
+                "-c",
+                "user.email=plumb@example.invalid",
+            ])
+            .args(args)
+            .status()
+            .expect("git should run");
+        assert!(status.success(), "git {args:?}");
+    };
+    git(&["symbolic-ref", "HEAD", "refs/heads/main"]);
+    git(&["commit", "-q", "--no-verify", "--allow-empty", "-m", "base"]);
+    git(&["checkout", "-q", "-b", "release/v1.0.0"]);
+    git(&["commit", "-q", "--no-verify", "--allow-empty", "-m", "line"]);
+    git(&["tag", "-a", "v1.0.0", "-m", "v1.0.0"]);
+    git(&["checkout", "-q", "-b", "release/v2.0.0", "main"]);
+    git(&[
+        "commit",
+        "-q",
+        "--no-verify",
+        "--allow-empty",
+        "-m",
+        "candidate",
+    ]);
+    git(&["tag", "-a", "v2.0.0-rc.1", "-m", "v2.0.0-rc.1"]);
+    git(&["checkout", "-q", "main"]);
+    let path = root.to_str().expect("path");
+
+    let held = crate::run(&["doctor", path]);
+    assert!(held.contains("noted: stable v1.0.0 at"), "{held}");
+    assert!(held.contains("0 out of true"), "{held}");
+    assert!(!held.contains("v2.0.0"), "{held}");
+
+    git(&[
+        "merge",
+        "-q",
+        "--no-verify",
+        "--no-ff",
+        "release/v1.0.0",
+        "-m",
+        "settle v1.0.0",
+    ]);
+    let held = crate::run(&["doctor", path]);
+    assert!(!held.contains("is not an ancestor of main"), "{held}");
 }

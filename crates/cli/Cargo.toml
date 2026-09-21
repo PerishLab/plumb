@@ -27,10 +27,6 @@ name = "operator-line"
 path = "tests/operator/line/main.rs"
 
 [[test]]
-name = "operator-release"
-path = "tests/operator/release/main.rs"
-
-[[test]]
 name = "operator-repository"
 path = "tests/operator/repository/main.rs"
 
@@ -39,7 +35,7 @@ name = "repository"
 path = "tests/repository/main.rs"
 
 [dependencies]
-plumb = { path = "../lib", features = ["radius", "skill", "vendor"] , version = "=0.37.6" }
+plumb = { path = "../lib", features = ["radius", "skill", "vendor"] , version = "=0.0.0" }
 runseal = { version = "=0.18.8", registry = "perish", default-features = false }
 locus = { version = "0", registry = "perish" }
 base64 = "0.22"

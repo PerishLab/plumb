@@ -1,53 +1,16 @@
-Dispatch one release marker as one distribution transaction.
+Dispatch one release marker to wharf.
 
-Ship accepts an immutable marker created by release and dispatches the single
-ship workflow carried by Plumb. Binary, Cargo, npm, OCI, chart and worker
-versions are immutable plan nodes inside that transaction. Ship neither
-publishes nor advances Depot projections; those independently consume the same
-marker through plumb depot and cannot select another version.
+Ship is the thin entry point of distribution. It confirms the marker stands on
+the product repository, dispatches wharf's ship workflow with the repository and
+the marker, and can watch the run to completion. Everything else happens in
+wharf: it derives the channel and version from the marker, reads what to build
+from the product's own manifests, binds each binary to the marker, publishes
+every declared medium, and records the run.
 
-The marker is verified before dispatch and again after the run is submitted or
-watched. It binds product identity, repository, release-line commit and tree,
-datum digest, channel, and the stable promotion seal when applicable. A missing,
-lightweight, displaced, or changed marker refuses the transaction.
+Ship carries no credentials and holds no plan of its own. A product repository
+keeps no distribution secret; wharf is the only writer.
 
-Recovery repeats the same marker. The workflow plan may reuse a verified
-workload or URL, run missing work, or omit irrelevant work; a successful node
-does not receive another runner merely because a sibling medium is retried.
-
-Use plumb ship local --marker MARKER for explicit local bootstrap or recovery.
-Default dispatch remains unchanged. Local execution requires the marker's
-clean tracked checkout and consumes the same plan, configuration, tool contracts
-and inventory as the workflow. Each node runs in a fresh temporary clone below
-PLUMB_HOME; the caller's checkout is not a build or artifact destination.
---dry-run reports the shared declaration without reading inventory, running nodes
-or creating clones. Local recovery needs Python and the inventory transport tools;
-it uses the central scripts at the dispatching controller's exact source commit.
-Only nodes matching this host's declared runner platform execute. Other nodes,
-or newly recorded work not yet visible in the inventory, leave the transaction
-incomplete. Repeat the same marker to resume; completed work is not rebuilt.
-
-Credentials use Plumb's normal Cascade, regardless of whether a shell, CI, or
-Runseal injects them. Direct values take precedence over secret-file inputs.
-PLUMB_WORKFLOW_INVENTORY_URL selects the public blob origin.
-Registry credentials are read only for registry publication, and inventory
-writer credentials only when recording work. Dry-run needs neither secret.
-
-Only marker-bound plan requests perform immutable publication. Execute requires
-the marker's locked configuration and Product Profile; conflicting repository,
-channel, or commit inputs refuse before publication. Medium-specific exact and
-publish commands no longer exist, including binary publish.
-
-Execute consumes plumb.ship-request/v3 through --request JSON or --request-file
-PATH. --output PATH writes its plumb.ship-result/v2 separately from build logs.
-Requests name the marker explicitly and carry no blob cache keys. Binary
-production and identity binding are separate operations; binding requires a
-proven unbound workload and never starts a fallback build. The Python control
-plane owns action keys, execution selection, and completion-record storage.
-Package production is separately reusable: npm and Chart publication bind a
-version to prepared content; Cargo publication packages its prepared source
-without compiling it. Worker production explicitly binds the version and commit
-embedded in its page, rather than hiding them from the input key.
-
-The remaining private verbs perform local preparation or read-only diagnostics.
-They cannot establish independent publication intent.
+Recovery repeats the same marker. Wharf reuses the work whose inputs are
+unchanged, runs what is missing, and refuses to publish different bytes under a
+marker that already stands. Depot generations travel the same marker on their own
+path; ship never calls Depot, and Depot never waits for a ship run.

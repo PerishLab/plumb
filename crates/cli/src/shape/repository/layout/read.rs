@@ -21,14 +21,30 @@ pub fn stated(root: &Path) -> Held {
         Ok(text) => text,
         Err(error) => return Held::Wrong(format!("cannot read plumb.toml: {error}")),
     };
-    parse(&text)
-}
-
-pub fn parse(text: &str) -> Held {
     let doc = match text.parse::<toml::Table>() {
         Ok(doc) => doc,
         Err(error) => return Held::Wrong(format!("cannot parse plumb.toml: {error}")),
     };
+    match super::manifest::layered(doc) {
+        Ok((doc, overrides)) => match declared(&doc) {
+            Held::Stated(mut held) => {
+                held.overrides = overrides;
+                Held::Stated(held)
+            }
+            other => other,
+        },
+        Err(error) => Held::Wrong(error),
+    }
+}
+
+pub fn parse(text: &str) -> Held {
+    match text.parse::<toml::Table>() {
+        Ok(doc) => declared(&doc),
+        Err(error) => Held::Wrong(format!("cannot parse plumb.toml: {error}")),
+    }
+}
+
+fn declared(doc: &toml::Table) -> Held {
     let Some(value) = doc.get("layout") else {
         return Held::Absent;
     };

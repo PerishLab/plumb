@@ -7,5 +7,5 @@ mod roles;
 mod skill;
 mod web;
 
-#[path = "../support.rs"]
+#[path = "../support/mod.rs"]
 mod support;

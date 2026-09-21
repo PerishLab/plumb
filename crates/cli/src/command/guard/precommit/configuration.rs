@@ -31,12 +31,9 @@ impl Seat {
         let depot = spec.derivative(plumb::depot::v3::Kind::Configuration)?;
         let product = crate::command::release::Product::new(&spec);
         let source = product.depot();
-        let binding = match crate::command::depot::candidate::selected() {
-            Some(pointer) => source.binding(&pointer.marker.name, true)?,
-            None => match context {
-                Context::Line => source.validator(target, true)?,
-                Context::Source => source.latest("stable", true)?,
-            },
+        let binding = match context {
+            Context::Line => source.validator(target, true)?,
+            Context::Source => source.latest("stable", true)?,
         };
         let snapshot = Snapshot::read(staged).map_err(|error| error.to_string())?;
         let held = crate::shape::depot::governed(&snapshot, profile)?;
@@ -75,10 +72,6 @@ impl Seat {
 
     pub fn mark(&self) -> &str {
         self.manifest.digest()
-    }
-
-    pub fn evidence(&self) -> Result<Option<plumb::guard::Bootstrap>, String> {
-        crate::command::depot::candidate::evidence(&self.manifest)
     }
 
     pub fn product(&self, root: &Path) -> Result<crate::shape::product::Target, String> {
@@ -128,11 +121,6 @@ pub(super) fn target(
 struct Git<'a>(&'a Path);
 
 pub(super) fn mismatched(target: Option<&str>) -> Result<bool, String> {
-    if crate::command::depot::candidate::selected().is_some() {
-        return target
-            .map(|_| true)
-            .ok_or("candidate Guard requires a governed source target".into());
-    }
     let Some(target) = target else {
         return Ok(false);
     };

@@ -19,17 +19,6 @@ pub struct Escrow {
 
 pub struct Seat<'a>(&'a Path);
 
-pub(super) fn selected(name: &str) -> Result<Option<std::path::PathBuf>, String> {
-    let Some(raw) = plumb::config::value(name) else {
-        return Ok(None);
-    };
-    let path = std::path::PathBuf::from(raw);
-    if !path.is_absolute() {
-        return Err(format!("{name} must name an absolute escrow path"));
-    }
-    Ok(Some(path))
-}
-
 impl<'a> Seat<'a> {
     pub fn new(path: &'a Path) -> Self {
         Self(path)

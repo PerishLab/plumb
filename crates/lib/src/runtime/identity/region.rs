@@ -1,5 +1,5 @@
 pub const SIZE: usize = 4096;
-pub(super) const MAGIC: &[u8; 16] = b"PLUMB.IDENTITY.1";
+pub(super) const MAGIC: &[u8; 16] = b"RELEASE.IDENT.V2";
 pub(super) const PAYLOAD: usize = 288;
 
 #[repr(transparent)]

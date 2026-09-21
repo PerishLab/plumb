@@ -10,7 +10,7 @@ impl Faces<'_> {
         let mut found = BTreeMap::new();
         for name in held {
             let body = match name.as_str() {
-                "declaration" => self.declaration(),
+                "declaration" => declaration(declared),
                 "seat" => seats(declared),
                 "lane" => self.lanes(),
                 _ => continue,
@@ -29,15 +29,6 @@ impl Faces<'_> {
             }
         }
         found
-    }
-
-    fn declaration(&self) -> String {
-        self.0
-            .entries()
-            .iter()
-            .find(|entry| entry.path() == "plumb.toml")
-            .map(|entry| String::from_utf8_lossy(entry.bytes()).to_string())
-            .unwrap_or_default()
     }
 
     fn lanes(&self) -> String {
@@ -79,6 +70,38 @@ fn seats(declared: &Declared) -> String {
             .filter(|group| !group.retired)
             .flat_map(|group| group.names.clone()),
     );
+    held.sort();
+    held.join("\n")
+}
+
+fn declaration(declared: &Declared) -> String {
+    let sorted = |held: &[String]| {
+        let mut held = held.to_vec();
+        held.sort();
+        held.join(",")
+    };
+    let mut held = declared
+        .seats
+        .iter()
+        .map(|seat| {
+            format!(
+                "seat {} anchor={} rule={} retired={} depot={}",
+                seat.path,
+                seat.anchor.as_deref().map_or("-".to_string(), sorted),
+                sorted(&seat.rule),
+                seat.retired,
+                seat.depot.as_deref().unwrap_or("-"),
+            )
+        })
+        .collect::<Vec<_>>();
+    held.extend(declared.groups.iter().map(|group| {
+        format!(
+            "file {} rule={} retired={}",
+            sorted(&group.names),
+            sorted(&group.rule),
+            group.retired,
+        )
+    }));
     held.sort();
     held.join("\n")
 }

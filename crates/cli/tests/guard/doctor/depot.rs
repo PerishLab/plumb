@@ -126,26 +126,19 @@ fn stage(home: &tempfile::TempDir, version: &str) -> std::path::PathBuf {
 fn exact() {
     let fixture = super::fixture();
     let home = super::super::support::depot(&[]);
-    stage(&home, "v0.0.1");
+    stage(&home, "v0.0.0-rc.1");
     let out = run(fixture.path(), home.path());
     assert!(
         out.contains(&format!(
-            "belongs to Plumb v0.0.1, not the running v{}",
+            "belongs to Plumb v0.0.0-rc.1, not the running v{}",
             env!("CARGO_PKG_VERSION")
         )),
         "{out}"
     );
-}
-
-#[test]
-fn related() {
-    let fixture = super::fixture();
-    let home = super::super::support::depot(&[]);
-    let version = format!("v{}-beta.1", env!("CARGO_PKG_VERSION"));
-    stage(&home, &version);
-    let out = run(fixture.path(), home.path());
-    assert!(!out.contains("cannot read installed rules"), "{out}");
-    assert!(!out.contains("belongs to Plumb"), "{out}");
+    assert!(
+        out.contains("noted: the held configuration") && out.contains("a source build reads it"),
+        "a source build is told what it holds, not refused: {out}"
+    );
 }
 
 #[test]
@@ -283,4 +276,15 @@ fn managed() {
         )),
         "{out}"
     );
+}
+
+#[test]
+fn hookless() {
+    let fixture = super::fixture();
+    let root = fixture.path();
+    std::fs::write(root.join("plumb.toml"), "[layout]\n").expect("governance");
+    std::fs::remove_file(root.join(".git/hooks/pre-commit")).expect("remove projected hook");
+    let held = super::run(&["doctor", root.to_str().expect("path should be utf8")]);
+    assert!(held.contains("pre-commit is absent"), "{held}");
+    assert!(held.contains("run plumb configuration install"), "{held}");
 }

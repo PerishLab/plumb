@@ -1,20 +1,6 @@
 use crate::shape::depot::POINTER;
 use std::path::{Path, PathBuf};
 
-pub(crate) fn contents(
-    manifest: &plumb::depot::v3::Manifest,
-    read: impl Fn(&str) -> Result<Vec<u8>, String>,
-) -> Result<plumb::depot::v3::Bundle, String> {
-    let mut bodies = std::collections::BTreeMap::new();
-    for object in &manifest.objects {
-        bodies.insert(object.path.clone(), read(&object.path)?);
-    }
-    Ok(plumb::depot::v3::Bundle {
-        manifest: manifest.clone(),
-        bodies,
-    })
-}
-
 pub enum Held {
     Absent,
     Seat(Box<plumb::depot::Rules>),

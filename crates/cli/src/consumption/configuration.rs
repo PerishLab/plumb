@@ -1,5 +1,6 @@
 use clap::Subcommand;
 use plumb::rig::Rig;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 #[derive(Subcommand)]
@@ -12,10 +13,6 @@ pub enum Deed {
         version: Option<String>,
         #[arg(long)]
         path: Option<PathBuf>,
-        #[arg(long, requires = "generation", conflicts_with = "version")]
-        marker: Option<String>,
-        #[arg(long, requires_all = ["marker", "path"], help = "Consume a marker-bound candidate into a new isolated --path; never move remote latest")]
-        generation: Option<String>,
     },
 }
 
@@ -25,22 +22,7 @@ pub fn run(deed: Deed) -> i32 {
             root,
             version,
             path,
-            marker,
-            generation,
-        } => match (marker, generation, path.as_deref()) {
-            (Some(marker), Some(generation), Some(path)) => {
-                crate::command::depot::candidate::install(
-                    Path::new(&root),
-                    &marker,
-                    &generation,
-                    path,
-                )
-            }
-            (None, None, _) => install(Path::new(&root), version.as_deref(), path.as_deref()),
-            _ => Err(
-                "candidate configuration requires --marker, --generation and a new --path".into(),
-            ),
-        },
+        } => install(Path::new(&root), version.as_deref(), path.as_deref()),
     };
     match held {
         Ok(message) => {
@@ -72,9 +54,15 @@ fn install(root: &Path, version: Option<&str>, over: Option<&Path>) -> Result<St
         kind: plumb::depot::v3::Kind::Configuration,
     })?
     .ok_or_else(|| format!("depot carries no plumb configuration {version}"))?;
-    let pointer = generation.pointer.clone();
-    let bundle =
-        crate::command::depot::contents(&generation.manifest, |path| generation.read(path))?;
+    let mut bodies = BTreeMap::new();
+    for object in &generation.manifest.objects {
+        bodies.insert(object.path.clone(), generation.read(&object.path)?);
+    }
+    let pointer = generation.pointer;
+    let bundle = plumb::depot::v3::Bundle {
+        manifest: generation.manifest,
+        bodies,
+    };
     let seat = match over {
         Some(path) => path.to_path_buf(),
         None => plumb::depot::root(Path::new(""))?,

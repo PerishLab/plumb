@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use super::depot::support;
+
 const ZONE: &str = "0123456789abcdef0123456789abcdef";
 const BASE: &str = "[release]\nproduct = \"foo\"\nauthority = \"https://releases.foo.example\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n";
 
@@ -36,7 +38,9 @@ fn declare(root: &Path, retire: &str) {
 }
 
 fn run(root: &Path, args: &[&str]) -> (bool, String) {
+    let home = support::depot(&[]);
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .env("PLUMB_HOME", home.path())
         .arg("retire")
         .arg("--root")
         .arg(root)

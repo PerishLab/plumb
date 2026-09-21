@@ -140,14 +140,21 @@ fn managed() -> Option<std::path::PathBuf> {
 fn floor(manifest: &Manifest) -> Vec<Finding> {
     let running = plumb::version!("PLUMB");
     if let Some(exact) = &manifest.version
-        && !plumb::depot::related(running, exact).unwrap_or(false)
+        && parse(running) != parse(exact)
     {
+        let evidence = format!(
+            "the held configuration {} belongs to Plumb {exact}, not the running {running}",
+            manifest.mark
+        );
+        if plumb::depot::sourced(running) {
+            return vec![Finding::new(Seed::noted(
+                &DEPOT_SCHEMA,
+                format!("{evidence}; a source build reads it as it stands"),
+            ))];
+        }
         return vec![Finding::new(Seed::wrong(
             &DEPOT_SCHEMA,
-            format!(
-                "the held configuration {} belongs to Plumb {exact}, not the running {running}; install stable latest and run plumb configuration install",
-                manifest.mark
-            ),
+            format!("{evidence}; install stable latest and run plumb configuration install"),
         ))];
     }
     let declared = &manifest.floor;

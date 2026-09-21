@@ -56,9 +56,9 @@ impl Binding {
     }
 }
 
-pub(super) struct Codec<'a>(pub &'a [u8]);
+pub struct Codec<'a>(pub &'a [u8]);
 impl Codec<'_> {
-    pub(super) fn decode(&self) -> Result<(Origin, Option<Binding>), String> {
+    pub fn decode(&self) -> Result<(Origin, Option<Binding>), String> {
         let bytes = self.0;
         if bytes.len() != SIZE || &bytes[..16] != MAGIC {
             return Err("identity region has an unknown format or size".into());
@@ -100,7 +100,7 @@ impl Codec<'_> {
         Ok((origin, Some(binding)))
     }
 
-    pub(super) fn encode(&self, binding: &Binding) -> Result<Vec<u8>, String> {
+    pub fn encode(&self, binding: &Binding) -> Result<Vec<u8>, String> {
         let bytes = self.0;
         let (origin, held) = self.decode()?;
         binding.verify(&origin)?;

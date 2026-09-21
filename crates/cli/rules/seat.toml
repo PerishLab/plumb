@@ -15,6 +15,38 @@
 rule = "structure.seat-member"
 
 [[member.entry]]
+name = "docker-client"
+note = "OCI production uses the declared Docker client."
+[[member.entry.probe]]
+platform = ["linux-x86_64"]
+argv = ["docker", "version", "--format", "{{.Client.Version}}"]
+stdout = "29.6.1"
+
+[[member.entry]]
+name = "docker-engine"
+note = "OCI production binds the actual Docker engine version."
+[[member.entry.probe]]
+platform = ["linux-x86_64"]
+argv = ["docker", "version", "--format", "{{.Server.Version}}"]
+stdout = "29.6.1"
+
+[[member.entry]]
+name = "docker-buildx"
+note = "The Docker build frontend is a production input."
+[[member.entry.probe]]
+platform = ["linux-x86_64"]
+argv = ["docker", "buildx", "version"]
+stdout = "github.com/docker/buildx v0.35.0 a319e5b15052cf6557ceb666eb8ff6e32380b782"
+
+[[member.entry]]
+name = "regctl"
+note = "Archive-native OCI publication uses the shared registry client."
+[[member.entry.probe]]
+platform = ["linux-x86_64"]
+argv = ["regctl", "version", "--format", "{{.VCSTag}}"]
+stdout = "v0.11.6"
+
+[[member.entry]]
 name = "rust-roles"
 allow = ["cli", "api", "lib"]
 note = "Rust workspace members occupy only established product roles. Optional roles remain absent until the product needs them."

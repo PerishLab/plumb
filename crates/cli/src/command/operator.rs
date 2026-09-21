@@ -1,12 +1,7 @@
 mod course;
-mod datum;
-mod line;
 mod mark;
-mod pick;
-pub(in crate::command) mod topology;
-mod trigger;
 mod value;
-mod version;
+mod wharf;
 
 use clap::Args;
 
@@ -24,13 +19,13 @@ pub struct Dispatch {
 }
 
 pub fn dispatch(options: Dispatch) -> Result<String, String> {
-    trigger::run(options)
+    wharf::dispatch(options)
 }
 
-pub(super) fn line(deed: super::version::Deed) -> Result<String, String> {
-    line::run(deed)
+pub(super) fn stamp(version: &str, remote: &str, dry: bool) -> Result<String, String> {
+    wharf::stamp(version, remote, dry)
 }
 
-pub(super) fn stamp(version: &str, dry: bool) -> Result<String, String> {
-    mark::stamp(version, dry)
+pub(super) fn retract(version: &str, dry: bool) -> Result<String, String> {
+    mark::retract(version, dry)
 }

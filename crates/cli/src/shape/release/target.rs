@@ -20,11 +20,10 @@ pub struct Target {
     pub systems: Vec<String>,
     pub archive: String,
     pub format: Format,
-    pub runner: String,
 }
 
 pub(super) fn resolve(product: &str, triple: &str) -> Result<Target, String> {
-    let (key, systems, format, runner) = match triple {
+    let (key, systems, format, _runner) = match triple {
         "x86_64-unknown-linux-gnu" => (
             "linux-x64",
             &["Linux:x86_64", "Linux:amd64"][..],
@@ -57,6 +56,5 @@ pub(super) fn resolve(product: &str, triple: &str) -> Result<Target, String> {
         systems: systems.iter().map(|system| (*system).into()).collect(),
         archive: format!("{product}-{triple}.{}", format.name()),
         format,
-        runner: runner.into(),
     })
 }

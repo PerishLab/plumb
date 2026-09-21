@@ -25,7 +25,6 @@ struct Catalog<'a> {
 }
 
 pub(super) struct Binding<'a> {
-    pub root: &'a Path,
     pub configuration: Option<&'a str>,
     pub profile: Option<&'a crate::shape::product::Profile>,
     pub execution: Option<&'a plumb::config::Execution>,
@@ -112,7 +111,6 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
             &programs,
         )?);
         let binding = Binding {
-            root: &index.root,
             configuration: configuration.as_ref().map(|held| held.mark()),
             profile: product.profile.as_ref(),
             execution: execution.as_ref(),
@@ -161,15 +159,6 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         tree,
         checks.into_iter().map(|check| check.proof).collect(),
     )?;
-    let proof = match configuration
-        .as_ref()
-        .map(|held| held.evidence())
-        .transpose()?
-        .flatten()
-    {
-        Some(evidence) => proof.bootstrap(evidence)?,
-        None => proof,
-    };
     plumb::guard::stage(root, &proof)?;
     Ok(proof)
 }

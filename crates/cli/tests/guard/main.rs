@@ -3,7 +3,8 @@ mod closure;
 mod doctor;
 mod workflow;
 
-#[path = "../support.rs"]
+#[path = "../support/mod.rs"]
 mod support;
 
-pub(crate) use doctor::{fixture, govern, run};
+mod world;
+pub(crate) use world::{fixture, govern, ruled, run};
