@@ -47,7 +47,7 @@ impl Tree<'_> {
         found.extend(declared.overrides.iter().map(|item| {
             Seed::noted(
                 &law::DEFAULT_OVERRIDDEN,
-                format!("plumb.toml overrides the Depot default {item}"),
+                format!("plumb.toml overrides the Plumb default {item}"),
             )
         }));
         found

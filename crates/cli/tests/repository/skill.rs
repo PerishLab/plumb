@@ -94,7 +94,6 @@ fn managed(root: &Path, version: &str, url: &str, sha: &str) -> (PathBuf, PathBu
 }
 
 fn plumb(home: &Path, depot: &str, arguments: &[&str]) -> Output {
-    super::support::stock(&home.join("configurations"), &[]);
     Command::new(env!("CARGO_BIN_EXE_plumb"))
         .env("PLUMB_HOME", home)
         .env("PLUMB_RULES_SOURCE", depot)

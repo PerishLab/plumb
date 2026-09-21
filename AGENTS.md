@@ -19,9 +19,9 @@ plumb holds to the constitution ectropy enforces, and inherits it for shapes.
 If a repository in this ecosystem has no shadow here, plumb owes the shape:
 divergence is an error in the skeleton, never an exception in the repository.
 
-Guard is a staged-tree proof, not a repository workflow. Plumb owns the
-pre-commit and commit-message hooks through its configuration depot;
-`configuration install` projects them and Doctor requires their presence.
+Guard is a staged-tree proof, not a repository workflow. Plumb carries the
+pre-commit and commit-message hooks in its binary; `configuration install`
+projects them and Doctor requires their presence.
 Guard stages proof state below `PLUMB_HOME` and carries the compact proof in Git history. Land and
 release marker creation refuse a tree without that exact proof; an unchanged
 action world is reused and never starts a process.
@@ -48,21 +48,18 @@ answers for.
   over Runseal's structured Cloudflare operations. Worker versions and their
   deployments are wharf's to publish. Plumb owns no authenticated Cloudflare
   HTTP sender and no raw route dialect.
-- `crates/cli/{rules,assets,cookbook,help}` and `crates/lib/rules` —
-  Plumb's governed resources. Their exact source-to-seat projections are
-  declared on `[layout]` seats; the configuration generation on Depot overrides
-  the entries they name. The repository copies of rules
-  are their source and must equal the standing Depot generation; they are
-  being absorbed into the binary, after which Depot no longer carries them.
-  Each is one file per addressable thing, and the address is the path: a rule
-  set is its name, a cookbook entry is the finding that sends you there, and
-  long help is the command path, so `plumb release` reads `help/release.txt`.
-  Prose an agent reads as contract is carried, never inlined in a literal.
-  Rules exist only in a verified synced seat and never fall back to compiled
-  bytes. Assets read seat-first; cookbook and help retain compiled copies, and
-  help falls back without a word when the seat cannot be read: help is not a
-  verdict, and a tool whose `--help` fails when a store is unreachable fails
-  exactly where it is needed most.
+- `crates/cli/{rules,assets,cookbook,help}` — Plumb's governed resources,
+  carried inside the binary. A release is its own rule set: nothing is fetched,
+  installed or overlaid at run time, and changing a rule is a change to Plumb.
+  `catalog/carried.rs` names every rule file, and a test holds it to the
+  directory. Each is one file per addressable thing, and the address is the
+  path: a rule set is its name, a cookbook entry is the finding that sends you
+  there, and long help is the command path, so `plumb release` reads
+  `help/release.txt`. Prose an agent reads as contract is carried, never
+  inlined in a literal. A debug build alone reads a rule overlay below an
+  explicit `PLUMB_HOME`, so tests can exercise a mechanism with rules of their
+  own; the overlay moves the rule digest, so a proof made under it never
+  verifies against a released binary.
 - `apps/web` — the Svelte specimen the web shape checks. Its seat declares no
   anchor, so nothing yet states what an app must carry to earn one.
 
@@ -122,16 +119,13 @@ answers for.
 - A marker names identity, not capability. Reading a historical marker does not
   authorize producing its targets today; wharf refuses what the product's own
   manifests no longer support.
-- Depot generations remain immutable and addressable. Configuration, changelog,
-  skill, channel, manager, and provider bindings may move their latest pointer,
-  but every movement names the release marker and uses conditional readback.
-  A product's own `plumb.toml` declares its depot derivatives and their
-  authority; there is no central product catalogue.
-  A marker-exact configuration generation validates against the marker's
-  published binary. It moves no channel pointer; depot consensus advances only
-  after the immutable publication it consumes reads back.
-  Configuration, changelog, and skill source trees are caller-owned temporary
-  media passed explicitly, never repository or `PLUMB_HOME` seats. Products
+- Depot carries changelog and skill generations and nothing else;
+  configuration travels inside the binary. Generations remain immutable and
+  addressable. A latest pointer may move, but every movement names the release
+  marker and uses conditional readback. A product's own `plumb.toml` declares
+  its depot derivatives and their authority; there is no central product
+  catalogue. Changelog and skill source trees are caller-owned temporary media
+  passed explicitly, never repository or `PLUMB_HOME` seats. Products
   consume a skill through their own command surface while delegating its exact
   generation and digest binding to `plumb` the library.
 - The distribution workflow lives in wharf, which sits above Plumb. This

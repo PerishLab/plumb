@@ -198,7 +198,7 @@ impl Spec {
             if self.authority.is_empty() {
                 return Err("a depot declaration requires release authority".into());
             }
-            depot.validate(&self.binaries)?;
+            depot.validate()?;
         }
         for held in self.attachments() {
             held?;

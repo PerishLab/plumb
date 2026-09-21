@@ -1,74 +1,8 @@
 use serde_json::Value;
 use std::process::{Command, Output};
 
-const WORDS: &str = r#"
-[[owner]]
-id = "release"
-summary = "fixture"
-
-[[owner]]
-id = "skill"
-summary = "fixture"
-
-[[tag]]
-id = "site"
-summary = "fixture"
-
-[[tag]]
-id = "cargo"
-summary = "fixture"
-
-[[namespace]]
-id = "site"
-summary = "fixture"
-owner = "release"
-
-[[namespace]]
-id = "skill"
-summary = "fixture"
-owner = "skill"
-"#;
-const RULES: &str = r#"
-[[rule]]
-id = "site.notes-published"
-summary = "fixture"
-law = "fixture"
-evidence = "fixture"
-standing = "prose-only"
-owner = "release"
-tags = ["site"]
-
-[[rule]]
-id = "site.crate-documented"
-summary = "fixture"
-law = "fixture"
-evidence = "fixture"
-standing = "prose-only"
-owner = "release"
-tags = ["site", "cargo"]
-
-[[rule]]
-id = "skill.seat-matches-binary"
-summary = "fixture"
-law = "fixture"
-evidence = "fixture"
-standing = "observed"
-owner = "skill"
-tags = ["site"]
-"#;
-
-fn seat() -> tempfile::TempDir {
-    let base = crate::support::depot(&[]);
-    let words = crate::support::object(base.path(), "rules/taxonomy.toml") + WORDS;
-    let law = crate::support::object(base.path(), "rules/catalog.toml") + RULES;
-    crate::support::depot(&[
-        ("rules/taxonomy.toml", &words),
-        ("rules/catalog.toml", &law),
-    ])
-}
-
 fn run(args: &[&str]) -> Output {
-    let home = seat();
+    let home = crate::support::home();
     Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(args)
         .env_remove("PLUMB_RELEASE_VERSION")
@@ -96,7 +30,7 @@ fn show() {
     assert_eq!(rule["namespace"], "structure");
     assert_eq!(rule["name"], "anchor-present");
     assert_eq!(rule["standing"], "mechanized");
-    assert_eq!(rule["owner"], "fixture");
+    assert_eq!(rule["owner"], "plumb");
     assert!(rule["law"].as_str().is_some_and(|value| !value.is_empty()));
     assert!(
         rule["evidence"]
@@ -127,35 +61,59 @@ fn invalid() {
 
 #[test]
 fn select() {
+    let law: toml::Table = crate::support::policy("rules/catalog.toml")
+        .parse()
+        .expect("catalog source");
+    let held = law["rule"].as_array().expect("catalog rules");
+    let field = |rule: &toml::Value, key: &str| rule[key].as_str().expect(key).to_string();
+    let tags = |rule: &toml::Value| {
+        rule["tags"]
+            .as_array()
+            .expect("tags")
+            .iter()
+            .map(|tag| tag.as_str().expect("tag").to_string())
+            .collect::<Vec<_>>()
+    };
+    let pick = &held[0];
+    let id = field(pick, "id");
+    let namespace = id
+        .split_once('.')
+        .expect("qualified identity")
+        .0
+        .to_string();
+    let standing = field(pick, "standing");
+    let owner = field(pick, "owner");
+    let tag = tags(pick)[0].clone();
+    let mut expected = held
+        .iter()
+        .filter(|rule| field(rule, "id").starts_with(&format!("{namespace}.")))
+        .filter(|rule| field(rule, "standing") == standing)
+        .filter(|rule| field(rule, "owner") == owner)
+        .filter(|rule| tags(rule).contains(&tag))
+        .map(|rule| field(rule, "id"))
+        .collect::<Vec<_>>();
+    expected.sort();
     let report = json(&[
         "rule",
         "list",
         "--namespace",
-        "site",
+        &namespace,
         "--standing",
-        "prose-only",
+        &standing,
         "--tag",
-        "site",
+        &tag,
         "--owner",
-        "release",
-        "--without-tag",
-        "cargo",
+        &owner,
         "--json",
     ]);
-    let rules = report["rules"].as_array().expect("rules");
-    assert_eq!(rules.len(), 1, "{rules:?}");
-    assert_eq!(rules[0]["id"], "site.notes-published");
-    for rule in rules {
-        assert_eq!(rule["namespace"], "site");
-        assert_eq!(rule["standing"], "prose-only");
-        assert_eq!(rule["owner"], "release");
-        assert!(
-            rule["tags"]
-                .as_array()
-                .expect("tags")
-                .contains(&Value::String("site".to_string()))
-        );
-    }
+    let mut listed = report["rules"]
+        .as_array()
+        .expect("rules")
+        .iter()
+        .map(|rule| rule["id"].as_str().expect("id").to_string())
+        .collect::<Vec<_>>();
+    listed.sort();
+    assert_eq!(listed, expected);
 }
 
 #[test]
@@ -166,8 +124,7 @@ fn catalog() {
     let prose = json(&["rule", "list", "--standing", "prose-only", "--json"]);
     assert_eq!(all["schema"], "plumb.rule-list/v1");
     let total = all["rules"].as_array().map(Vec::len).expect("all rules");
-    let home = seat();
-    let law = crate::support::object(home.path(), "rules/catalog.toml");
+    let law = crate::support::policy("rules/catalog.toml");
     assert_eq!(total, law.matches("[[rule]]").count());
     let classified = [&mechanized, &observed, &prose]
         .iter()

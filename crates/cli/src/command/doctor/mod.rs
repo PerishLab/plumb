@@ -1,6 +1,5 @@
 use crate::catalog::model::Coverage;
 use crate::catalog::rules::depot::DEPOT_SCHEMA;
-use crate::command::depot;
 use crate::command::precommit;
 use crate::judge::{self, finding};
 use crate::shape;
@@ -82,7 +81,6 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
         Ok(snapshot) => plumb::vocabulary::observe(snapshot),
         Err(error) => Err(error.clone()),
     };
-    let depot = depot::observe(&snapshot);
     let mut findings = judge::judge(&held);
     if root.join("plumb.toml").is_file() {
         findings.extend(precommit::hooks(&root).into_iter().map(|held| match held {
@@ -95,7 +93,6 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
         }));
     }
     findings.extend(judge::vocabulary::judge(&vocabulary));
-    findings.extend(judge::depot::judge(&depot));
     findings.extend(judge::depot::runtime());
     let summary = Summary::new(&findings);
     let ok = summary.wrong == 0 && summary.blind == 0;

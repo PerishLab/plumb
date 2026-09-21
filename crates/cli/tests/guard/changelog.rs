@@ -23,7 +23,7 @@ fn marked(workspace: &Path, extra: &[&str]) -> (String, bool) {
     args.extend_from_slice(extra);
     let out = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(&args)
-        .env("PLUMB_HOME", crate::support::seat())
+        .env("PLUMB_HOME", crate::support::home().keep())
         .output()
         .expect("run");
     let shown = String::from_utf8_lossy(&out.stdout).to_string();
@@ -175,7 +175,7 @@ fn prove() {
                 "--prove",
             ])
             .arg(home)
-            .env("PLUMB_HOME", crate::support::seat())
+            .env("PLUMB_HOME", crate::support::home().keep())
             .output()
             .expect("run")
     };

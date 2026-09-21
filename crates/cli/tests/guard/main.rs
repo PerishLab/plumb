@@ -7,4 +7,4 @@ mod workflow;
 mod support;
 
 mod world;
-pub(crate) use world::{fixture, govern, ruled, run};
+pub(crate) use world::{fixture, govern, run};

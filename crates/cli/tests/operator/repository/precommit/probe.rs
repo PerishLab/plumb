@@ -25,7 +25,7 @@ fn staged() {
     let root = fixture.path();
     manifest(root, "good");
     Repo::git(root, &["add", "plumb.toml"]);
-    let home = support::depot(&[("rules/seat.toml", &rules())]);
+    let home = support::overlay(&[("rules/seat.toml", &rules())]);
     let first = cache::run(root, home.path());
     cache::success(&first);
     manifest(root, "bad");
@@ -55,7 +55,7 @@ fn scope() {
     let root = fixture.path();
     manifest(root, "good");
     Repo::git(root, &["add", "plumb.toml"]);
-    let home = support::depot(&[("rules/seat.toml", &rules())]);
+    let home = support::overlay(&[("rules/seat.toml", &rules())]);
     let first = cache::run(root, home.path());
     cache::success(&first);
     std::fs::write(root.join("package.json"), "{}\n").unwrap();
@@ -87,7 +87,7 @@ fn once() {
     let rules = format!(
         "[member]\n[[member.entry]]\nname='good'\n[[member.entry.probe]]\nargv=['cargo','--version']\nstdout={version:?}\n"
     );
-    let home = support::depot(&[("rules/seat.toml", &rules)]);
+    let home = support::overlay(&[("rules/seat.toml", &rules)]);
     let tools = tempfile::tempdir().unwrap();
     let counter = tools.path().join("counter");
     let cargo = tools.path().join("cargo");

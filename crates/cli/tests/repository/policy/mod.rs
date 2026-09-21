@@ -85,10 +85,11 @@ pub(super) fn policy(root: &Path, write: bool) -> std::process::Output {
 }
 
 pub(super) fn stock(home: &Path, policy: &str) {
-    super::support::stock(
-        &home.join("configurations"),
-        &[("rules/policy.toml", policy), ("rules/deps.toml", DEPS)],
-    );
+    for (path, body) in [("rules/policy.toml", policy), ("rules/deps.toml", DEPS)] {
+        let target = home.join("overlay").join(path);
+        std::fs::create_dir_all(target.parent().expect("overlay parent")).expect("overlay seat");
+        std::fs::write(target, body).expect("overlay rule");
+    }
 }
 
 #[test]

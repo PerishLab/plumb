@@ -4,7 +4,6 @@ mod environment;
 mod graph;
 mod physical;
 mod probe;
-mod rules;
 mod world;
 use serde_json::Value;
 use std::process::{Command, Output};
@@ -53,7 +52,7 @@ impl Repo {
     }
 
     pub fn plumb(&self, write: &str) -> Output {
-        let depot = support::depot(&[]);
+        let depot = support::home();
         Command::new(env!("CARGO_BIN_EXE_plumb"))
             .args(["guard", "--json"])
             .arg(self.fixture.path())
@@ -78,7 +77,7 @@ fn accepts() {
 fn staged() {
     let fixture = tempfile::tempdir().expect("fixture");
     let home = tempfile::tempdir().expect("home");
-    let depot = support::depot(&[]);
+    let depot = support::home();
     let root = fixture.path();
     Repo::git(root, &["init", "-q"]);
     Repo::git(root, &["config", "user.name", "Plumb Test"]);

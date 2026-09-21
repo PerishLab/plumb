@@ -3,14 +3,10 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use std::path::{Path, PathBuf};
 
-mod bootstrap;
-mod configuration;
 mod index;
 mod store;
 mod transit;
 
-pub use bootstrap::Bootstrap;
-pub use configuration::{Configuration, Validator};
 pub use index::tree;
 pub use transit::{attach, stage, staged};
 
@@ -27,8 +23,6 @@ pub struct Descriptor {
     pub depot: String,
     pub platform: String,
     pub actions: Vec<Action>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub bootstrap: Option<Bootstrap>,
     pub digest: String,
 }
 
@@ -49,8 +43,6 @@ struct Claim<'a> {
     depot: &'a str,
     platform: &'a str,
     actions: &'a [Action],
-    #[serde(skip_serializing_if = "Option::is_none")]
-    bootstrap: &'a Option<Bootstrap>,
 }
 
 impl Descriptor {
@@ -66,7 +58,6 @@ impl Descriptor {
             depot: crate::depot::rules()?.mark().to_string(),
             platform: crate::config::platform(),
             actions,
-            bootstrap: None,
             digest: String::new(),
         };
         held.digest = held.seal()?;
@@ -79,14 +70,6 @@ impl Descriptor {
         serde_json::to_vec(self)
             .map(|bytes| base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes))
             .map_err(|error| format!("cannot encode guard proof: {error}"))
-    }
-
-    pub fn bootstrap(mut self, evidence: Bootstrap) -> Result<Self, String> {
-        evidence.validate()?;
-        self.bootstrap = Some(evidence);
-        self.digest = self.seal()?;
-        self.validate()?;
-        Ok(self)
     }
 
     pub fn decode(text: &str) -> Result<Self, String> {
@@ -106,9 +89,6 @@ impl Descriptor {
         hash(&self.tree, "tree")?;
         hash(&self.digest, "digest")?;
         self.identities()?;
-        if let Some(bootstrap) = &self.bootstrap {
-            bootstrap.validate()?;
-        }
         for action in &self.actions {
             if action.name.trim().is_empty() {
                 return Err("guard proof contains an unnamed action".into());
@@ -141,9 +121,6 @@ impl Descriptor {
 
     fn subject(&self, root: &Path) -> Result<(), String> {
         store::Seat::new(root)?.matches(self)?;
-        if let Some(bootstrap) = &self.bootstrap {
-            bootstrap.current()?;
-        }
         let plumb = identity();
         if self.plumb != plumb {
             return Err(format!(
@@ -191,7 +168,6 @@ impl Descriptor {
             depot: &self.depot,
             platform: &self.platform,
             actions: &self.actions,
-            bootstrap: &self.bootstrap,
         };
         serde_json::to_vec(&claim)
             .map(|bytes| format!("{:x}", Sha256::digest(bytes)))

@@ -1,4 +1,3 @@
-pub mod depot;
 pub mod doctor;
 mod guard;
 pub mod operator;
@@ -24,7 +23,6 @@ impl crate::Command {
             crate::Command::Layout { .. } => "layout",
             crate::Command::Cookbook { .. } => "cookbook",
             crate::Command::Affirm { .. } => "affirm",
-            crate::Command::Depot { .. } => "depot",
             crate::Command::Release { .. } => "release",
             crate::Command::Ship { .. } => "ship",
             crate::Command::Retire { .. } => "retire",

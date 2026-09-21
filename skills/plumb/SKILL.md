@@ -25,18 +25,18 @@ says what none of those can. Ask the one that owns the question.
 - A **seat** is where something may sit. `[layout]` declares its anchors and
   rules. Without a layout, released name sets apply.
 - A **boundary** proves one committed delta stays inside declared write paths.
-- A **guard proof** binds checks to one staged tree. Depot projects its Git
+- A **guard proof** binds checks to one staged tree. Plumb projects its Git
   hooks; Doctor requires them.
 - A **landing** projects that exact proved tree onto its base.
 - A **release** is an immutable marker on the head of its release line. **Ship**
   hands that marker to wharf, which builds, binds identity and publishes every
-  medium; **depot** generations travel the same marker on their own path. The
+  medium; changelog and skill **depot** generations travel the same marker on
+  their own path. The
   product's own `plumb.toml` declares its depot routes. Runseal profiles hold write
   authority; the product repository holds none.
-- Plumb's **rules seat** consumes configuration. Rules are never compiled or
-  fetched while reading; an invalid seat names `plumb configuration install`.
-  Wharf validates a release by loading its configuration with that release's own
-  binary. Skill consumes its Depot generation, not a release artifact.
+- Plumb's **rules** travel inside its binary; a release is its own rule set and
+  nothing is fetched. Skill consumes its Depot generation, not a release
+  artifact.
 
 ## Authorities
 

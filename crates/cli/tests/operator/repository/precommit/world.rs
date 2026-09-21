@@ -3,7 +3,7 @@ use super::{Repo, cache, support};
 #[test]
 fn unchanged() {
     let fixture = cache::fixture();
-    let home = support::depot(&[]);
+    let home = support::home();
     let first = cache::run(fixture.path(), home.path());
     cache::success(&first);
     let second = cache::run(fixture.path(), home.path());
@@ -15,7 +15,7 @@ fn unchanged() {
 #[test]
 fn unrelated() {
     let fixture = cache::fixture();
-    let home = support::depot(&[]);
+    let home = support::home();
     let first = cache::run(fixture.path(), home.path());
     cache::success(&first);
     let extra = tempfile::tempdir().expect("unrelated tools");
@@ -40,7 +40,7 @@ fn unrelated() {
 fn bounded() {
     use std::os::unix::fs::PermissionsExt as _;
     let fixture = cache::fixture();
-    let home = support::depot(&[]);
+    let home = support::home();
     cache::success(&cache::run(fixture.path(), home.path()));
     let tools = tempfile::tempdir().expect("tools");
     let rustc = tools.path().join("rustc");
@@ -82,7 +82,7 @@ fn unread() {
     let version = String::from_utf8(version.stdout).expect("version");
     let fixture = cache::fixture();
     let root = fixture.path();
-    let home = support::depot(&[]);
+    let home = support::home();
     cache::success(&cache::run(root, home.path()));
     let tools = tempfile::tempdir().expect("tools");
     let rustc = tools.path().join("rustc");

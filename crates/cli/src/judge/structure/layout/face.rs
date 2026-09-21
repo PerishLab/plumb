@@ -1,5 +1,5 @@
-use crate::shape::depot::sha;
 use crate::shape::layout::Declared;
+use plumb::depot::sha;
 use plumb::snapshot::Snapshot;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -85,12 +85,11 @@ fn declaration(declared: &Declared) -> String {
         .iter()
         .map(|seat| {
             format!(
-                "seat {} anchor={} rule={} retired={} depot={}",
+                "seat {} anchor={} rule={} retired={}",
                 seat.path,
                 seat.anchor.as_deref().map_or("-".to_string(), sorted),
                 sorted(&seat.rule),
                 seat.retired,
-                seat.depot.as_deref().unwrap_or("-"),
             )
         })
         .collect::<Vec<_>>();

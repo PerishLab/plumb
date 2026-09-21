@@ -29,7 +29,7 @@ enum Command {
     },
     #[command(
         about = "Project a clean topic branch onto its base and wait for its guard",
-        long_about = command::depot::carried("help/land.txt", plumb::seat::resource!("help/land.txt"))
+        long_about = plumb::seat::resource!("help/land.txt")
     )]
     Land {
         #[command(flatten)]
@@ -103,14 +103,14 @@ enum Command {
         )]
         prove: Option<PathBuf>,
     },
-    #[command(about = "Install the marker-exact configuration Plumb carries")]
+    #[command(about = "Project the repository side of the configuration Plumb carries")]
     Configuration {
         #[command(subcommand)]
         deed: consumption::configuration::Deed,
     },
     #[command(
         about = "Render the seats and file groups this repository declares",
-        long_about = command::depot::carried("help/layout.txt", plumb::seat::resource!("help/layout.txt"))
+        long_about = plumb::seat::resource!("help/layout.txt")
     )]
     Layout {
         #[command(flatten)]
@@ -125,14 +125,9 @@ enum Command {
         #[arg(long)]
         write: bool,
     },
-    #[command(about = "Report the configuration seat this binary reads")]
-    Depot {
-        #[command(subcommand)]
-        deed: command::depot::Deed,
-    },
     #[command(
         about = "Define and verify one immutable distribution marker",
-        long_about = command::depot::carried("help/release.txt", plumb::seat::resource!("help/release.txt"))
+        long_about = plumb::seat::resource!("help/release.txt")
     )]
     Release {
         #[command(subcommand)]
@@ -140,7 +135,7 @@ enum Command {
     },
     #[command(
         about = "Dispatch every declared medium for one immutable release marker",
-        long_about = command::depot::carried("help/ship.txt", plumb::seat::resource!("help/ship.txt"))
+        long_about = plumb::seat::resource!("help/ship.txt")
     )]
     Ship {
         #[command(subcommand)]
@@ -148,7 +143,7 @@ enum Command {
     },
     #[command(
         about = "Destroy one declared delivery chain in a fixed order",
-        long_about = command::depot::carried("help/retire.txt", plumb::seat::resource!("help/retire.txt"))
+        long_about = plumb::seat::resource!("help/retire.txt")
     )]
     Retire {
         #[command(flatten)]
@@ -222,13 +217,13 @@ fn execute(command: Command) -> i32 {
         Command::Affirm { target, write } => {
             command::render::Seat::new(PathBuf::from(target.root)).affirm(write)
         }
-        Command::Depot { deed } => command::depot::run(deed),
         Command::Release { deed } => command::release::run(deed),
         Command::Ship { deed } => command::ship::run(deed),
         Command::Retire { deed } => command::retire::run(deed),
     }
 }
 fn main() {
+    plumb::depot::carry(catalog::carried::FILES);
     if let Err(error) = plumb::identity!("PLUMB") {
         eprintln!("plumb: {error}");
         std::process::exit(1);

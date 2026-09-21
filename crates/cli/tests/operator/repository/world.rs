@@ -15,7 +15,7 @@ pub fn govern(root: &Path) {
 }
 
 pub fn run(root: &Path) -> String {
-    let home = super::support::depot(&[]);
+    let home = super::support::home();
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("path should be utf8")])
         .env_remove("PLUMB_RELEASE_VERSION")

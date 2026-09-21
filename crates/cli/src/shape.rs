@@ -12,7 +12,7 @@ pub mod workflow;
 
 pub use repository::dependency::{Dependencies, Dependency};
 pub use repository::layout;
-pub(crate) use repository::{dependency, depot, policy};
+pub(crate) use repository::{dependency, policy};
 use repository::{node, pack};
 
 pub struct Shape {

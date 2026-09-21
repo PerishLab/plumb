@@ -15,14 +15,11 @@ fn defaults() -> Result<Option<Table>, String> {
     let Ok(rules) = plumb::depot::rules() else {
         return Ok(None);
     };
-    if !rules.objects().iter().any(|object| object.path == DEFAULTS) {
-        return Ok(None);
-    }
     rules
         .read(DEFAULTS)?
         .parse()
         .map(Some)
-        .map_err(|error| format!("cannot parse Depot {DEFAULTS}: {error}"))
+        .map_err(|error| format!("cannot parse the carried {DEFAULTS}: {error}"))
 }
 
 fn taken(before: Value, stated: Value, path: String, overrides: &mut Vec<String>) -> Value {

@@ -1,5 +1,5 @@
 mod cloud;
-mod depot;
+mod configuration;
 mod identity;
 mod retire;
 
@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn run(root: &Path) -> (bool, String) {
-    let home = depot::support::depot(&[]);
+    let home = configuration::support::home();
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("path should be utf8")])
         .env("PLUMB_HOME", home.path())
