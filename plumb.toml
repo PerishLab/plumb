@@ -12,11 +12,6 @@ depot = "rules"
 note = "CLI rules projected into the configuration derivative."
 
 [[layout.seat]]
-path = "crates/cli/profiles"
-depot = "profiles"
-note = "Digest-addressed product governance profiles and their centrally controlled migration state targets."
-
-[[layout.seat]]
 path = "crates/lib/rules"
 depot = "rules"
 note = "Library rules projected into the configuration derivative."

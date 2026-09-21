@@ -19,50 +19,10 @@ pub(crate) enum Evidence {
     },
 }
 
-pub struct Batch {
-    pub manifest: plumb::depot::v2::Manifest,
-    pub bodies: BTreeMap<String, Vec<u8>>,
-}
-
-pub struct Draft {
-    pub source: String,
-    pub release: plumb::depot::v2::Release,
-    pub timestamp: String,
-    pub commit: String,
-}
-
 pub type Held = (Vec<Object>, BTreeMap<String, Vec<u8>>);
 
 pub fn inventory(snapshot: &Snapshot) -> Result<Held, String> {
     gather(snapshot, configuration(snapshot.root())?)
-}
-
-pub fn governed(
-    snapshot: &Snapshot,
-    profile: &super::super::product::Profile,
-) -> Result<Held, String> {
-    let roots = roots(crate::shape::layout::parse(&profile.manifest))?
-        .into_iter()
-        .filter(|(_, seat)| !plumb::depot::policy(seat))
-        .collect();
-    let (_, resources) = gather(snapshot, roots)?;
-    let seat = match crate::command::depot::held() {
-        crate::command::depot::Held::Seat(seat) => seat,
-        crate::command::depot::Held::Blind(error) => return Err(error),
-        crate::command::depot::Held::Absent => {
-            return Err("guard bootstrap requires locked Depot policy".into());
-        }
-    };
-    let bodies = seat.inherit(&profile.configuration, resources)?;
-    let objects = bodies
-        .iter()
-        .map(|(path, bytes)| Object {
-            path: path.clone(),
-            sha256: sha(bytes),
-            size: bytes.len() as u64,
-        })
-        .collect();
-    Ok((objects, bodies))
 }
 
 fn gather(snapshot: &Snapshot, roots: Vec<(String, String)>) -> Result<Held, String> {
@@ -89,25 +49,6 @@ fn gather(snapshot: &Snapshot, roots: Vec<(String, String)>) -> Result<Held, Str
     }
     objects.sort();
     Ok((objects, bodies))
-}
-
-impl Batch {
-    pub fn validation(held: Held, draft: Draft) -> Result<Self, String> {
-        let (objects, bodies) = held;
-        let manifest = plumb::depot::v2::Manifest {
-            format: plumb::depot::v2::FORMAT,
-            source: draft.source,
-            derivative: plumb::depot::v2::Kind::Configuration,
-            release: draft.release,
-            snapshot: plumb::depot::v2::Snapshot {
-                timestamp: draft.timestamp,
-                commit: draft.commit,
-            },
-            objects,
-        };
-        manifest.encode()?;
-        Ok(Self { manifest, bodies })
-    }
 }
 
 pub fn configuration(root: &std::path::Path) -> Result<Vec<(String, String)>, String> {

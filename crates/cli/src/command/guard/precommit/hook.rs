@@ -35,11 +35,7 @@ impl Hooks<'_> {
     }
 
     fn governed(&self) -> Result<bool, String> {
-        if self.0.join("plumb.toml").is_file() {
-            return Ok(true);
-        }
-        crate::shape::product::governance(self.0)
-            .map(|target| target.is_some_and(|target| target.profile.is_some()))
+        Ok(self.0.join("plumb.toml").is_file())
     }
 
     fn write(&self, bodies: &[(&str, String)]) -> Result<String, String> {

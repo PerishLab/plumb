@@ -57,18 +57,4 @@ impl super::Spec {
             .as_deref()
             .ok_or_else(|| "release identity carries no depot authority".to_string())
     }
-
-    pub fn derivative(&self, kind: plumb::depot::v3::Kind) -> Result<&Depot, String> {
-        let depot = self
-            .depot
-            .as_ref()
-            .ok_or_else(|| "release declares no depot".to_string())?;
-        if !depot.derivatives.contains(&kind) {
-            return Err(format!(
-                "release depot does not declare the {} derivative",
-                kind.label()
-            ));
-        }
-        Ok(depot)
-    }
 }

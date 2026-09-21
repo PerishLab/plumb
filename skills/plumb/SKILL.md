@@ -30,8 +30,8 @@ says what none of those can. Ask the one that owns the question.
 - A **landing** projects that exact proved tree onto its base.
 - A **release** is an immutable marker on the head of its release line. **Ship**
   hands that marker to wharf, which builds, binds identity and publishes every
-  medium; **depot** generations travel the same marker on their own path. A
-  locked Product Profile owns depot routes. Runseal profiles hold write
+  medium; **depot** generations travel the same marker on their own path. The
+  product's own `plumb.toml` declares its depot routes. Runseal profiles hold write
   authority; the product repository holds none.
 - Plumb's **rules seat** consumes configuration. Rules are never compiled or
   fetched while reading; an invalid seat names `plumb configuration install`.

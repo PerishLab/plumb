@@ -1,29 +1,13 @@
 pub(in crate::command) mod channel;
 pub(in crate::command) mod cloudflare;
 mod identity;
-pub(in crate::command) mod output;
 mod truth;
 
 pub use identity::deed::Deed;
 use std::path::Path;
-pub(super) use truth::{manager, record};
+pub(super) use truth::manager;
 
 use crate::shape::release::Spec;
-
-pub(in crate::command) struct Product<'a>(&'a Spec);
-
-impl<'a> Product<'a> {
-    pub fn new(spec: &'a Spec) -> Self {
-        Self(spec)
-    }
-
-    pub fn depot(&self) -> truth::depot::Source<'_> {
-        truth::depot::Source {
-            product: &self.0.product,
-            authority: &self.0.authority,
-        }
-    }
-}
 
 pub fn run(deed: Deed) -> i32 {
     let result = execute(deed);
@@ -57,8 +41,6 @@ fn execute(deed: Deed) -> Result<String, String> {
 pub(crate) fn channel(version: &str) -> Result<String, String> {
     channel::channel(version)
 }
-
-pub(in crate::command) use truth::depot::validate as validate_depot;
 
 pub(super) fn authority(root: &Path) -> Result<String, String> {
     Spec::controller(root).map(|spec| spec.authority)

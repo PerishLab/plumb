@@ -48,10 +48,10 @@ answers for.
   over Runseal's structured Cloudflare operations. Worker versions and their
   deployments are wharf's to publish. Plumb owns no authenticated Cloudflare
   HTTP sender and no raw route dialect.
-- `crates/cli/{rules,profiles,assets,cookbook,help}` and `crates/lib/rules` —
+- `crates/cli/{rules,assets,cookbook,help}` and `crates/lib/rules` —
   Plumb's governed resources. Their exact source-to-seat projections are
   declared on `[layout]` seats; the configuration generation on Depot overrides
-  the entries they name. The repository copies of rules and product profiles
+  the entries they name. The repository copies of rules
   are their source and must equal the standing Depot generation; they are
   being absorbed into the binary, after which Depot no longer carries them.
   Each is one file per addressable thing, and the address is the path: a rule
@@ -125,8 +125,8 @@ answers for.
 - Depot generations remain immutable and addressable. Configuration, changelog,
   skill, channel, manager, and provider bindings may move their latest pointer,
   but every movement names the release marker and uses conditional readback.
-  A marker locks its Product Profile, which alone declares the product's depot
-  derivatives and their authority; product repositories repeat neither.
+  A product's own `plumb.toml` declares its depot derivatives and their
+  authority; there is no central product catalogue.
   A marker-exact configuration generation validates against the marker's
   published binary. It moves no channel pointer; depot consensus advances only
   after the immutable publication it consumes reads back.

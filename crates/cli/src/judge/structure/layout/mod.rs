@@ -13,21 +13,20 @@ use crate::shape::layout::{Declared, Group, Held, Read, Seat, affirm};
 use plumb::snapshot::Snapshot;
 use std::collections::BTreeSet;
 
-pub fn judge(read: &Read, rooted: bool) -> Vec<Seed> {
+pub fn judge(read: &Read) -> Vec<Seed> {
     let Some(evidence) = &read.evidence else {
         return Vec::new();
     };
     verdict(
         &read.held,
         Tree(&evidence.snapshot, &evidence.repository, &evidence.affirmed),
-        rooted,
     )
 }
 
-fn verdict(held: &Held, tree: Tree<'_>, rooted: bool) -> Vec<Seed> {
+fn verdict(held: &Held, tree: Tree<'_>) -> Vec<Seed> {
     match held {
         Held::Wrong(error) => vec![blind(&law::KNOWN_DIRECTORY, error.clone())],
-        Held::Stated(declared) => tree.judge(declared, rooted),
+        Held::Stated(declared) => tree.judge(declared),
         _ => Vec::new(),
     }
 }
@@ -39,12 +38,10 @@ fn named(group: &Group) -> Vec<String> {
 }
 
 impl Tree<'_> {
-    fn judge(&self, declared: &Declared, rooted: bool) -> Vec<Seed> {
+    fn judge(&self, declared: &Declared) -> Vec<Seed> {
         let mut found = retired::judge(self.0, declared);
         found.extend(self.covered(declared));
-        if !rooted {
-            found.extend(private::judge(self.0, self.1));
-        }
+        found.extend(private::judge(self.0, self.1));
         found.extend(self.anchored(declared));
         found.extend(self.ruled(declared));
         found.extend(declared.overrides.iter().map(|item| {
