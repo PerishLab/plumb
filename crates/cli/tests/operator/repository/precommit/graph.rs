@@ -71,7 +71,7 @@ impl Web {
         paths.extend(std::env::split_paths(
             &std::env::var_os("PATH").expect("PATH"),
         ));
-        std::process::Command::new(env!("CARGO_BIN_EXE_plumb"))
+        super::support::plumb()
             .args(["guard", ".", "--json"])
             .current_dir(self.root.path())
             .env("PLUMB_HOME", self.home.path())
