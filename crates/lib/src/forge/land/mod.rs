@@ -1,4 +1,4 @@
-use super::{Client, Strategy, git};
+use super::github::{self, Client};
 use serde::Serialize;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
@@ -67,11 +67,8 @@ pub(crate) fn refuse(kind: &'static str, message: impl Into<String>) -> Refusal 
 pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {
     let landing = Landing::open(request.root, request.base)?;
     landing.landable(false)?;
-    let remote = git::remote(&landing.repo.root, "").map_err(|error| refuse("remote", error))?;
-    let seat = format!(
-        "{}://{}/api/v1/repos/{}/{}",
-        remote.scheme, remote.host, remote.owner, remote.repo
-    );
+    let remote = github::remote(&landing.repo.root).map_err(|error| refuse("remote", error))?;
+    let seat = format!("{}/{}", remote.owner, remote.repo);
     let base = &landing.base;
     let branch = &landing.branch;
     let projection = landing.projection();
@@ -81,14 +78,14 @@ pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {
         format!("derive one commit at {projection} from origin/{base} plus {branch}"),
         format!("git push -u origin {branch}"),
         format!("git push --force-with-lease origin <candidate>:refs/heads/{projection}"),
-        format!("GET {seat}/pulls?state=open"),
-        format!("POST {seat}/pulls (base={base}, head={projection}) if missing"),
-        format!("verify <candidate> carries the staged-tree guard proof"),
+        format!("gh pr list -R {seat} --state open --base {base} --head {projection}"),
+        format!("gh pr create -R {seat} --base {base} --head {projection} if missing"),
+        "verify <candidate> carries the staged-tree guard proof".to_string(),
         format!(
-            "POST {seat}/statuses/<candidate> (context=guard / guard (pull_request), state=success)"
+            "gh api -X POST repos/{seat}/statuses/<candidate> (context=guard / guard (pull_request), state=success)"
         ),
         format!(
-            "POST {seat}/pulls/<n>/merge (Do=fast-forward-only, head_commit_id=<candidate>, delete_branch_after_merge=false)"
+            "gh pr merge <n> -R {seat} --merge --match-head-commit <candidate> (no branch deleted)"
         ),
         format!("git pull --ff-only origin {base} in the worktree holding {base}"),
     ];
@@ -105,8 +102,8 @@ pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {
 pub fn run(request: Request<'_>) -> Result<Report, Refusal> {
     let landing = Landing::open(request.root, request.base)?;
     landing.landable(true)?;
-    let remote = git::remote(&landing.repo.root, "").map_err(|error| refuse("remote", error))?;
-    let client = Client::new(remote).map_err(|error| refuse("forge", error))?;
+    let remote = github::remote(&landing.repo.root).map_err(|error| refuse("remote", error))?;
+    let client = Client::new(&remote);
     let projection = landing.projection();
     let standing = client
         .opened(&landing.base, &projection)
@@ -155,7 +152,7 @@ pub fn run(request: Request<'_>) -> Result<Report, Refusal> {
         )
         .map_err(|error| refuse("forge", error))?;
     client
-        .settle(pull.number, &candidate.head, Strategy::Forward)
+        .settle(pull.number, &candidate.head)
         .map_err(|error| refuse("forge", error))?;
     report.merged = true;
     report.synced = landing.sync()?;

@@ -1,9 +1,11 @@
 Project a clean topic branch onto its base and wait for its guard.
 
-Forgejo authority enters through FORGEJO_URL with either FORGEJO_TOKEN_FILE or
-FORGEJO_TOKEN. Plumb neither discovers nor parses tea.yml, and it owns no HTTP
-sender of its own: every operation goes through Runseal's published dialect.
+Forgejo is archived; land speaks to the GitHub repository origin names. It drives
+the gh CLI, whose authority comes from the caller's Runseal profile
+(runseal :liberte plumb land); Plumb holds no GitHub credential and owns no HTTP
+sender of its own.
 
 The source branch is kept. What lands is a one-commit projection at
-land/<branch>, and the merge is fast-forward-only against the exact candidate
-the guard passed.
+land/<branch>. Plumb verifies the projection carries the staged-tree Guard proof,
+posts that as the required guard status, and merges the pull with a merge commit
+that must match the exact candidate the guard passed.
