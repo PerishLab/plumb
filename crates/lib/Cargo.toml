@@ -12,9 +12,7 @@ depot = [
 ]
 radius = [
 ]
-vendor = [
-  "dep:runseal",
-]
+vendor = []
 skill = [
   "depot",
   "dep:flate2",
@@ -35,7 +33,6 @@ object = { version = "0.39", default-features = false, features = ["read_core", 
 tempfile = "3"
 which = "8"
 plumb-macro = { path = "../macro", version = "=0.0.0", registry = "perish" }
-runseal = { version = "=0.18.8", registry = "perish", default-features = false, optional = true }
 serde = { version = "1", features = ["derive"] }
 toml = "0.9"
 

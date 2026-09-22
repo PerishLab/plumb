@@ -6,7 +6,7 @@ pub mod fill;
 #[cfg(feature = "vendor")]
 mod forge;
 #[cfg(feature = "vendor")]
-pub use forge::{forgejo, land};
+pub use forge::land;
 mod proof;
 mod runtime;
 pub mod seat;

@@ -1,5 +1,4 @@
 pub(in crate::command) mod channel;
-pub(in crate::command) mod cloudflare;
 mod identity;
 mod truth;
 

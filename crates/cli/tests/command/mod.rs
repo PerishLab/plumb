@@ -1,7 +1,5 @@
-mod cloud;
 mod configuration;
 mod identity;
-mod retire;
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
