@@ -107,8 +107,10 @@ answers for.
   contract, not a claim of completed support: platform retention, optimized
   runtime reads, signing, and consumer acceptance must be proved before release.
 - A stable marker comes home by a real merge into main before the next stable
-  marker. Doctor notes a stable marker main does not yet hold; `release stamp`
-  refuses the next stable marker until the remote main holds the last.
+  marker. `release rejoin` makes that merge, Doctor notes a stable marker main
+  does not yet hold, and `release stamp` refuses the next stable marker until
+  the remote main holds the last. Each obligation a release step leaves owns
+  both its settlement and its detection here.
 - A marker names identity, not capability. Reading a historical marker does not
   authorize producing its targets today; wharf refuses what the product's own
   manifests no longer support.

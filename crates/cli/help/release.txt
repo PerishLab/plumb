@@ -7,6 +7,14 @@ number on the line, and a stable marker takes the version of an rc or beta that
 already shipped from the same commit, preferring the rc. Retract removes only an
 unpublished marker. Managers renders the scripts a version installs with.
 
+Rejoin settles the standing stable marker into main. It names no version: the
+debt is the highest stable marker origin holds, and it is owed until main holds
+that commit. Rejoin records only the topology, a commit with main's own tree
+whose second parent is the stable commit, so it carries the Guard proof main
+already holds and lands through a pull with that proof as its guard status. A
+release line that carries changes main lacks is refused; land them into main
+first. Stamp refuses the next stable marker while the last one is owed.
+
 Release never builds, compiles, publishes, or edits a version line. Wharf decides
 release identity at distribution time, so sources declare version 0.0.0 and a
 binary is bound to its marker after it is built. Use ship with the marker to hand

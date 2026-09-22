@@ -34,8 +34,13 @@ impl Repository {
 
     pub fn record(&self, seed: &Seed<'_>) -> Result<String, Refusal> {
         use std::io::Write as _;
+        let mut args = vec!["commit-tree", seed.tree];
+        for parent in seed.parents {
+            args.extend(["-p", parent]);
+        }
+        args.extend(["-F", "-"]);
         let mut child = Command::new("git")
-            .args(["commit-tree", seed.tree, "-p", seed.parent, "-F", "-"])
+            .args(&args)
             .current_dir(&self.root)
             .envs(seed.identity)
             .stdin(Stdio::piped())
@@ -141,7 +146,7 @@ impl Repository {
 
 pub struct Seed<'a> {
     pub tree: &'a str,
-    pub parent: &'a str,
+    pub parents: &'a [&'a str],
     pub message: &'a str,
     pub identity: &'a BTreeMap<String, String>,
 }
