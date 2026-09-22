@@ -11,7 +11,7 @@ const WORKFLOW: &str = "ship.yml";
 const PRERELEASES: [&str; 2] = ["rc", "beta"];
 const STABLE: &str = "stable";
 
-pub(super) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<String, String> {
+pub(in crate::command) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<String, String> {
     let held = if raw.starts_with('v') {
         raw.to_string()
     } else {
@@ -36,6 +36,14 @@ pub(super) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<String, String
         "list the remote",
         git(&root, &["ls-remote", "--heads", "--tags", remote])?,
     )?;
+    let spec = crate::shape::release::Spec::controller(&root)?;
+    super::owed::Seat {
+        root: &root,
+        remote,
+        listing: &listing,
+        spec: &spec,
+    }
+    .require(&version)?;
     let head = reference(&listing, &format!("refs/heads/{branch}")).ok_or_else(|| {
         format!("{remote} has no {branch}; a marker stands only on its release line")
     })?;
@@ -62,16 +70,6 @@ pub(super) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<String, String
         }
         version.clone()
     };
-    let spec = crate::shape::release::Spec::controller(&root)?;
-    super::owed::require(
-        &super::owed::Seat {
-            root: &root,
-            remote,
-            listing: &listing,
-            spec: &spec,
-        },
-        &version,
-    )?;
     let mut course = Course::new(dry);
     course.step(format!("fetch {branch} from {remote}"), || {
         text(
@@ -180,15 +178,13 @@ pub(super) fn dispatch(options: Dispatch) -> Result<String, String> {
         return Err(format!("{repo} has no marker {}", options.marker));
     }
     let spec = crate::shape::release::Spec::controller(&root)?;
-    super::owed::require(
-        &super::owed::Seat {
-            root: &root,
-            remote: "origin",
-            listing: &listing,
-            spec: &spec,
-        },
-        &options.marker,
-    )?;
+    super::owed::Seat {
+        root: &root,
+        remote: "origin",
+        listing: &listing,
+        spec: &spec,
+    }
+    .require(&options.marker)?;
     let mut course = Course::new(options.dry);
     let fields = [
         format!("repository={repo}"),
@@ -222,7 +218,7 @@ pub(super) fn repository(url: &str) -> Result<String, String> {
     Ok(path.trim_end_matches(".git").to_string())
 }
 
-fn reference(listing: &str, name: &str) -> Option<String> {
+pub(super) fn reference(listing: &str, name: &str) -> Option<String> {
     listing.lines().find_map(|line| {
         let (object, held) = line.split_once('\t')?;
         (held == name).then(|| object.to_string())
@@ -245,7 +241,7 @@ fn next(listing: &str, base: &str, channel: &str) -> u64 {
         + 1
 }
 
-fn git(root: &Path, args: &[&str]) -> Result<Output, String> {
+pub(super) fn git(root: &Path, args: &[&str]) -> Result<Output, String> {
     run(Command::new("git").args(args).current_dir(root))
 }
 
@@ -255,7 +251,7 @@ fn run(command: &mut Command) -> Result<Output, String> {
         .map_err(|error| format!("cannot run {:?}: {error}", command.get_program()))
 }
 
-fn text(deed: &str, output: Output) -> Result<String, String> {
+pub(super) fn text(deed: &str, output: Output) -> Result<String, String> {
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
     } else {

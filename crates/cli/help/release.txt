@@ -15,11 +15,19 @@ already holds and lands through a pull with that proof as its guard status. A
 release line that carries changes main lacks is refused; land them into main
 first.
 
+A release line is release/vX.Y.Z and carries one version. Open cuts it from
+main, or from a lower stable marker for a fix that ships on its own; a version
+that stands as stable never reopens. Close deletes a line once its stable
+marker is home, refusing a line that moved past its marker; the markers keep
+its history. A line that never reached stable closes only with --abandon, and
+only while its head is one of its markers.
+
 A stable marker leaves obligations behind: its commit merged home into main,
-its changelog lodged on Depot, and its skill where the product declares one.
-Stamp and ship dispatch refuse any later marker, on any channel, while the
-highest stable below it still owes one, and name the command that settles each:
-release rejoin for the merge, depot consign for the rest.
+its changelog lodged on Depot, its skill where the product declares one, and
+its line closed. Open, stamp and ship dispatch refuse any later version, on any
+channel, while the highest stable below it still owes one, and name the command
+that settles each: release rejoin, depot consign and release close. Owed
+reports each obligation of that stable marker, settled or owed.
 
 Release never builds, compiles, publishes, or edits a version line. Wharf decides
 release identity at distribution time, so sources declare version 0.0.0 and a

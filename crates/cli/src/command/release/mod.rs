@@ -31,6 +31,19 @@ fn execute(deed: Deed) -> Result<String, String> {
         } => super::operator::stamp(&version, &remote, dry),
         Deed::Retract { version, dry } => super::operator::retract(&version, dry),
         Deed::Rejoin { dry } => super::operator::rejoin(dry),
+        Deed::Open {
+            version,
+            from,
+            remote,
+            dry,
+        } => super::operator::open(&version, &from, &remote, dry),
+        Deed::Close {
+            version,
+            abandon,
+            remote,
+            dry,
+        } => super::operator::close(&version, abandon, &remote, dry),
+        Deed::Owed { version, remote } => super::operator::owed(version.as_deref(), &remote),
         Deed::Managers { version, out } => {
             let spec = Spec::read(Path::new("plumb.toml"))?;
             manager::write(&spec, &channel::channel(&version)?, &version, &out)
