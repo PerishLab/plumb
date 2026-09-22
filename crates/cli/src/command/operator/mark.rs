@@ -4,7 +4,7 @@ use super::worktree::fetch;
 use std::path::Path;
 use std::process::{Command, Output};
 
-pub(super) fn retract(raw: &str, dry: bool) -> Result<String, String> {
+pub(in crate::command) fn retract(raw: &str, dry: bool) -> Result<String, String> {
     let held = named(raw);
     let channel = super::super::release::channel(&held)?;
     let version = value::version(&held, &channel)?;

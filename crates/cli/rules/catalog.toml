@@ -462,6 +462,15 @@ owner = "release"
 tags = ["ownership", "release", "state"]
 
 [[rule]]
+id = "release.line-closed"
+summary = "A released line is closed"
+law = "Once its stable marker ships and main holds it, a release line is deleted; the marker keeps its history, and a line that never reached stable closes only as abandoned."
+evidence = "The remote heads against the highest stable marker below the marker at hand: release close deletes a line whose head is its stable commit, release stamp and ship dispatch refuse while the line still stands, and release open refuses to reopen a version that stands as stable."
+standing = "mechanized"
+owner = "release"
+tags = ["release", "state"]
+
+[[rule]]
 id = "release.stable-lodged"
 summary = "Stable lodges its changelog and skill on Depot"
 law = "A stable marker's changelog, and its skill where the product declares one, stand as generations on the product's Depot before another marker of that product is stamped or dispatched."
