@@ -118,6 +118,11 @@ answers for.
   that reads it, `release owed` reports it, and `release open`, `release
   stamp` and `ship dispatch` refuse any later version while one is owed. A settlement never ships without its detector, nor
   a detector without its settlement.
+- Wherever a marker has a distribution record, it alone says how far the marker
+  is distributed: `ship status` reads it, `ship dispatch --watch` judges its run
+  by it, and `release retract` refuses a marker it shows anything public for. A
+  marker without one — older than the record, or one whose record was lost — is
+  judged by its seal, conservatively.
 - A marker names identity, not capability. Reading a historical marker does not
   authorize producing its targets today; wharf refuses what the product's own
   manifests no longer support.

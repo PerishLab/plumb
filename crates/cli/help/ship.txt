@@ -12,6 +12,13 @@ it dispatches; --repo, when given, must name that same origin. It refuses while
 the highest stable marker below the one it dispatches still owes anything, as
 stamp does; plumb release --help names those obligations.
 
+How far a marker is distributed is what wharf's distribution.json beside its
+seal says, and nothing else: it names the marker's commit, what became of each
+medium and whether a run completed it. Status reads it. Dispatch --watch waits
+for the run, riding out a connection that drops, and then judges by that record
+rather than by the run's own verdict: it succeeds only when this run recorded
+the marker complete.
+
 Ship carries no credentials and holds no plan of its own. A product repository
 keeps no distribution secret; wharf is the only writer.
 

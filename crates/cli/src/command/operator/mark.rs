@@ -39,7 +39,17 @@ impl Point<'_> {
     ) -> Result<String, String> {
         let url = format!("{authority}/v1/releases/{channel}/{version}/seal.json");
         let mut course = Course::new(dry);
-        if published(&url)? {
+        let record = super::owed::distribution(authority, channel, version);
+        if let Some(body) = super::wharf::status::read(&record)? {
+            let public =
+                super::wharf::status::public(&super::wharf::status::record(&body, version)?);
+            if !public.is_empty() {
+                return Err(format!(
+                    "{version} has {} public by {record}; retraction acts only on a declaration",
+                    public.join(", ")
+                ));
+            }
+        } else if published(&url)? {
             return Err(format!(
                 "{version} is published at {url}; retraction acts only on a declaration"
             ));

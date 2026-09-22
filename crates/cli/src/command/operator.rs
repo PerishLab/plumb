@@ -15,6 +15,7 @@ pub(super) use line::{close, open, owed};
 pub(super) use mark::retract;
 pub(super) use rejoin::rejoin;
 pub(super) use wharf::stamp;
+pub(super) use wharf::status::status;
 
 #[derive(Args)]
 #[group(skip)]
