@@ -107,11 +107,13 @@ answers for.
   region bound after compilation and before final signing. This is a convergence
   contract, not a claim of completed support: platform retention, optimized
   runtime reads, signing, and consumer acceptance must be proved before release.
-- A stable marker comes home by a real merge into main before the next stable
-  marker. `release rejoin` makes that merge, Doctor notes a stable marker main
-  does not yet hold, and `release stamp` refuses the next stable marker until
-  the remote main holds the last. Each obligation a release step leaves owns
-  both its settlement and its detection here.
+- A stable marker leaves obligations that are paid before the next marker:
+  its merge into main (`release rejoin`), its changelog on Depot and its skill
+  where one is declared (`depot consign`). `command/operator/owed` is their
+  table; each row names its rule, the command that settles it and the detector
+  that reads it, and `release stamp` and `ship dispatch` refuse any later
+  marker while one is owed. A settlement never ships without its detector, nor
+  a detector without its settlement.
 - A marker names identity, not capability. Reading a historical marker does not
   authorize producing its targets today; wharf refuses what the product's own
   manifests no longer support.

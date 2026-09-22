@@ -10,12 +10,15 @@ rule!(ATTACHMENT_EXERCISED, "release.attachment-exercised");
 
 rule!(STABLE_REJOIN, "release.stable-rejoin");
 
+rule!(STABLE_LODGED, "release.stable-lodged");
+
 pub fn mechanisms() -> Vec<&'static Mechanism> {
     vec![
         &ATTACHMENT_EXERCISED,
         &ATTACHMENT_PERMITTED,
         &DATUM_RECORDED,
         &SPEC_DECLARED,
+        &STABLE_LODGED,
         &STABLE_REJOIN,
     ]
 }

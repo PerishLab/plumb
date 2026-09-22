@@ -456,10 +456,19 @@ tags = ["ownership", "release"]
 id = "release.stable-rejoin"
 summary = "Stable settles back into main"
 law = "After stable activation a topology-preserving merge makes its published commit an ancestor of main before another stable activation; exact release and ordinary main movement remain independent."
-evidence = "The highest stable marker's commit against main's ancestry: release rejoin settles it with a topology-only merge carrying main's Guard proof, Doctor notes a stable marker main does not yet hold, and release stamp refuses the next stable marker until the remote main holds the last."
+evidence = "The highest stable marker's commit against main's ancestry: release rejoin settles it with a topology-only merge carrying main's Guard proof, Doctor notes a stable marker main does not yet hold, and release stamp and ship dispatch refuse any later marker until the remote main holds it."
 standing = "mechanized"
 owner = "release"
 tags = ["ownership", "release", "state"]
+
+[[rule]]
+id = "release.stable-lodged"
+summary = "Stable lodges its changelog and skill on Depot"
+law = "A stable marker's changelog, and its skill where the product declares one, stand as generations on the product's Depot before another marker of that product is stamped or dispatched."
+evidence = "The standing Depot generation of the highest stable marker below the marker at hand: release stamp and ship dispatch refuse while one is missing, and depot consign lodges it through wharf's yard and reads it back."
+standing = "mechanized"
+owner = "release"
+tags = ["release", "state"]
 
 [[rule]]
 id = "release.stable-single-writer"
