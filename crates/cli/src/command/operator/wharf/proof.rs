@@ -88,3 +88,61 @@ fn preference() {
     });
     assert_eq!(found.as_deref(), Ok("v0.38.0-rc.1"));
 }
+
+fn distributed(run: &str, state: &str, npm: &str) -> Vec<u8> {
+    format!(
+        r#"{{"marker":"v0.43.0","commit":"abcdef0123456789","state":"{state}","attempt":{{"run":"{run}"}},"media":{{"binaries":"published","npm":"{npm}","oci":"none"}}}}"#
+    )
+    .into_bytes()
+}
+
+#[test]
+fn verdict() {
+    use super::status::verdict;
+    let said = verdict(
+        Some(distributed("9", "complete", "published")),
+        "v0.43.0",
+        "9",
+    );
+    assert_eq!(
+        said.as_deref(),
+        Ok(
+            "v0.43.0 complete at abcdef012345\n  binaries  published\n  npm       published\n  oci       none"
+        )
+    );
+    let stale = verdict(
+        Some(distributed("8", "complete", "published")),
+        "v0.43.0",
+        "9",
+    );
+    assert!(stale.unwrap_err().contains("did not write"));
+    let unfinished = verdict(
+        Some(distributed("9", "incomplete", "failed")),
+        "v0.43.0",
+        "9",
+    );
+    assert!(unfinished.unwrap_err().contains("npm       failed"));
+    assert!(
+        verdict(None, "v0.43.0", "9")
+            .unwrap_err()
+            .contains("wrote no distribution record")
+    );
+    assert!(
+        verdict(
+            Some(distributed("9", "complete", "published")),
+            "v0.43.1",
+            "9"
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn public() {
+    use super::status::{public, record};
+    let named =
+        |npm| public(&record(&distributed("9", "incomplete", npm), "v0.43.0").expect("record"));
+    assert_eq!(named("failed"), ["binaries"]);
+    assert_eq!(named("present"), ["binaries", "npm"]);
+    assert_eq!(named("skipped"), ["binaries", "npm"]);
+}

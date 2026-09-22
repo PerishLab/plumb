@@ -17,7 +17,7 @@ fn retraction() {
     );
     let refused = String::from_utf8_lossy(&exact.stderr).to_string();
     assert!(
-        refused.contains("https://releases.test/v1/releases/beta/v0.10.2-beta.1/seal.json"),
+        refused.contains("https://releases.test/v1/releases/beta/v0.10.2-beta.1/distribution.json"),
         "an exact point is retractable, and reads its own channel: {refused}"
     );
 
@@ -32,7 +32,7 @@ fn retraction() {
         "a preview that cannot read the authority must refuse: {printed}"
     );
     assert!(
-        refusal.contains("https://releases.test/v1/releases/stable/v0.10.2/seal.json"),
+        refusal.contains("https://releases.test/v1/releases/stable/v0.10.2/distribution.json"),
         "a refusal must name what it could not read: {refusal}"
     );
     assert!(

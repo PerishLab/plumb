@@ -5,6 +5,7 @@ use std::path::Path;
 use std::process::{Command, Output};
 
 pub(super) mod launch;
+pub(super) mod status;
 
 const HUB: &str = "PerishLab/wharf";
 const WORKFLOW: &str = "ship.yml";
@@ -184,12 +185,23 @@ pub(super) fn dispatch(options: Dispatch) -> Result<String, String> {
         launch::Launch {
             workflow: WORKFLOW,
             fields: &fields,
-            watch: options.watch,
+            watch: false,
         },
     )?;
     match launched {
         None => Ok(course.plan()),
-        Some(url) if options.watch => Ok(format!("{url} succeeded")),
+        Some(url) if options.watch => {
+            launch::wait(&url)?;
+            let channel = super::super::release::channel(&options.marker)?;
+            let record = super::owed::distribution(&spec.authority, &channel, &options.marker);
+            let said = status::verdict(
+                status::read(&record)?,
+                &options.marker,
+                launch::identity(&url),
+            )
+            .map_err(|error| format!("{url}: {error}"))?;
+            Ok(format!("{url}\n{said}"))
+        }
         Some(url) => Ok(url),
     }
 }
