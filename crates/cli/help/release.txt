@@ -18,9 +18,11 @@ first.
 A release line is release/vX.Y.Z and carries one version. Open cuts it from
 main, or from a lower stable marker for a fix that ships on its own; a version
 that stands as stable never reopens. Close deletes a line once its stable
-marker is home, refusing a line that moved past its marker; the markers keep
-its history. A line that never reached stable closes only with --abandon, and
-only while its head is one of its markers.
+marker is home and deleting it loses nothing: its head must be main's or a
+marker's, and the markers keep its history. A version counts as released when
+its stable marker stands or the release authority holds its stable seal, as
+lines stamped before stable markers were tags do. A line that never reached
+stable closes only with --abandon.
 
 A stable marker leaves obligations behind: its commit merged home into main,
 its changelog lodged on Depot, its skill where the product declares one, and

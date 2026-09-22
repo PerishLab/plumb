@@ -31,7 +31,7 @@ pub fn unsettled(root: &Path) -> Option<String> {
     let stable = latest(tags)?;
     (!settled(root, &stable.commit, &main)).then(|| {
         format!(
-            "stable {} at {} is not an ancestor of main; run plumb release rejoin before the next stable marker",
+            "stable {} at {} is not an ancestor of main; run plumb release rejoin, and plumb release owed for every obligation it leaves",
             stable.marker,
             &stable.commit[..stable.commit.len().min(12)]
         )
