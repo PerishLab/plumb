@@ -7,6 +7,11 @@ wharf: it derives the channel and version from the marker, reads what to build
 from the product's own manifests, binds each binary to the marker, publishes
 every declared medium, and records the run.
 
+Dispatch runs in the product's repository, whose origin names the repository
+it dispatches; --repo, when given, must name that same origin. It refuses while
+the highest stable marker below the one it dispatches still owes anything, as
+stamp does; plumb release --help names those obligations.
+
 Ship carries no credentials and holds no plan of its own. A product repository
 keeps no distribution secret; wharf is the only writer.
 

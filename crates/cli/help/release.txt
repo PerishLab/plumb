@@ -13,7 +13,13 @@ that commit. Rejoin records only the topology, a commit with main's own tree
 whose second parent is the stable commit, so it carries the Guard proof main
 already holds and lands through a pull with that proof as its guard status. A
 release line that carries changes main lacks is refused; land them into main
-first. Stamp refuses the next stable marker while the last one is owed.
+first.
+
+A stable marker leaves obligations behind: its commit merged home into main,
+its changelog lodged on Depot, and its skill where the product declares one.
+Stamp and ship dispatch refuse any later marker, on any channel, while the
+highest stable below it still owes one, and name the command that settles each:
+release rejoin for the merge, depot consign for the rest.
 
 Release never builds, compiles, publishes, or edits a version line. Wharf decides
 release identity at distribution time, so sources declare version 0.0.0 and a
