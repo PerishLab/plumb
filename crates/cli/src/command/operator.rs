@@ -1,5 +1,6 @@
 mod course;
 mod mark;
+mod rejoin;
 mod value;
 mod wharf;
 mod worktree;
@@ -29,4 +30,8 @@ pub(super) fn stamp(version: &str, remote: &str, dry: bool) -> Result<String, St
 
 pub(super) fn retract(version: &str, dry: bool) -> Result<String, String> {
     mark::retract(version, dry)
+}
+
+pub(super) fn rejoin(dry: bool) -> Result<String, String> {
+    rejoin::rejoin(dry)
 }

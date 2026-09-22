@@ -4,6 +4,7 @@ use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
 mod flow;
+pub mod rejoin;
 mod repo;
 
 use flow::{Candidate, Landing};

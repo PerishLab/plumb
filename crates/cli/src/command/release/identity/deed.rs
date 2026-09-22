@@ -18,6 +18,11 @@ pub enum Deed {
         #[arg(long = "dry-run")]
         dry: bool,
     },
+    #[command(about = "Merge the standing stable marker home into main")]
+    Rejoin {
+        #[arg(long = "dry-run")]
+        dry: bool,
+    },
     #[command(about = "Render the manager scripts one release version installs with")]
     Managers {
         #[arg(long)]
