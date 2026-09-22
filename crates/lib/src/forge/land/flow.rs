@@ -155,7 +155,7 @@ impl Landing {
         let identity = self.identity()?;
         let head = self.repo.record(&Seed {
             tree: &tree,
-            parent: &target,
+            parents: &[&target],
             message: &message,
             identity: &identity,
         })?;

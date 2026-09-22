@@ -84,12 +84,12 @@ fn preference() {
 #[test]
 fn peeled() {
     let listing = "t1\trefs/tags/v1.0.0\nc1\trefs/tags/v1.0.0^{}\nc2\trefs/tags/v1.1.0\nt3\trefs/tags/v2.0.0-rc.1\nc3\trefs/tags/v2.0.0-rc.1^{}\n";
-    let stable = crate::shape::pair::rejoin::latest(settle::tags(listing)).expect("stable");
+    let stable = plumb::land::rejoin::latest(plumb::land::rejoin::tags(listing)).expect("stable");
     assert_eq!(
         (stable.marker.as_str(), stable.commit.as_str()),
         ("v1.1.0", "c2")
     );
-    assert!(crate::shape::pair::rejoin::latest(settle::tags(LISTING)).is_none());
+    assert!(plumb::land::rejoin::latest(plumb::land::rejoin::tags(LISTING)).is_none());
 }
 
 #[test]

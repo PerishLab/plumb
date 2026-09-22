@@ -1,23 +1,6 @@
+use plumb::land::rejoin::latest;
 use std::path::Path;
 use std::process::Command;
-
-pub struct Stable {
-    pub marker: String,
-    pub commit: String,
-}
-
-pub fn latest<'a>(tags: impl IntoIterator<Item = (&'a str, &'a str)>) -> Option<Stable> {
-    tags.into_iter()
-        .filter_map(|(name, commit)| {
-            let version = semver::Version::parse(name.strip_prefix('v')?).ok()?;
-            version.pre.is_empty().then_some((version, name, commit))
-        })
-        .max_by(|left, right| left.0.cmp(&right.0))
-        .map(|(_, name, commit)| Stable {
-            marker: name.to_string(),
-            commit: commit.to_string(),
-        })
-}
 
 pub fn settled(root: &Path, commit: &str, main: &str) -> bool {
     git(root, &["merge-base", "--is-ancestor", commit, main])
@@ -48,7 +31,7 @@ pub fn unsettled(root: &Path) -> Option<String> {
     let stable = latest(tags)?;
     (!settled(root, &stable.commit, &main)).then(|| {
         format!(
-            "stable {} at {} is not an ancestor of main; merge it home before the next stable marker",
+            "stable {} at {} is not an ancestor of main; run plumb release rejoin before the next stable marker",
             stable.marker,
             &stable.commit[..stable.commit.len().min(12)]
         )
