@@ -82,9 +82,10 @@ answers for.
 ## Distribution
 
 - `release` only stamps its immutable marker on the head of a release line.
-  `ship` hands that marker to wharf, which publishes every medium. `depot`
-  only reports the configuration seat this binary reads; wharf moves Depot
-  generations on the marker's own path. Neither is a phase inside the other.
+  `ship` hands that marker to wharf, which publishes every medium. `depot
+  consign` places a marker's changelog or skill in wharf's yard, dispatches
+  wharf to lodge it, and reads Depot back; wharf is Depot's only writer.
+  Neither is a phase inside the other.
 - Artifact reuse and distribution identity are separate domain-wide concerns,
   across binaries and registry media. Plan must key reusable content by its
   actual build inputs and tool world, and key publication by that content plus

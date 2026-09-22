@@ -2,8 +2,9 @@ use super::Dispatch;
 use super::course::Course;
 use super::value;
 use std::path::Path;
-use std::process::{Command, Output, Stdio};
+use std::process::{Command, Output};
 
+pub(super) mod launch;
 mod settle;
 
 const HUB: &str = "PerishLab/wharf";
@@ -160,51 +161,26 @@ pub(super) fn dispatch(options: Dispatch) -> Result<String, String> {
         return Err(format!("{} has no marker {}", options.repo, options.marker));
     }
     let mut course = Course::new(options.dry);
-    let launched = course.step(
-        format!(
-            "gh workflow run {WORKFLOW} -R {HUB} -f repository={} -f marker={}",
-            options.repo, options.marker
-        ),
-        || {
-            let fields = [
-                format!("repository={}", options.repo),
-                format!("marker={}", options.marker),
-            ];
-            text(
-                "dispatch wharf",
-                run(Command::new("gh").args([
-                    "workflow", "run", WORKFLOW, "-R", HUB, "-f", &fields[0], "-f", &fields[1],
-                ]))?,
-            )
+    let fields = [
+        format!("repository={}", options.repo),
+        format!("marker={}", options.marker),
+    ];
+    let launched = launch::launch(
+        &mut course,
+        launch::Launch {
+            workflow: WORKFLOW,
+            fields: &fields,
+            watch: options.watch,
         },
     )?;
-    let Some(said) = launched else {
-        return Ok(course.plan());
-    };
-    let url = said
-        .lines()
-        .find(|line| line.contains("/actions/runs/"))
-        .ok_or_else(|| format!("wharf dispatch named no run: {said}"))?
-        .trim()
-        .to_string();
-    if !options.watch {
-        return Ok(url);
-    }
-    let id = url.rsplit('/').next().unwrap_or_default().to_string();
-    let status = Command::new("gh")
-        .args(["run", "watch", &id, "-R", HUB, "--exit-status"])
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()
-        .map_err(|error| format!("cannot run gh: {error}"))?;
-    if status.success() {
-        Ok(format!("{url} succeeded"))
-    } else {
-        Err(format!("{url} did not succeed"))
+    match launched {
+        None => Ok(course.plan()),
+        Some(url) if options.watch => Ok(format!("{url} succeeded")),
+        Some(url) => Ok(url),
     }
 }
 
-fn repository(url: &str) -> Result<String, String> {
+pub(super) fn repository(url: &str) -> Result<String, String> {
     let path = url
         .strip_prefix("https://github.com/")
         .or_else(|| url.strip_prefix("git@github.com:"))

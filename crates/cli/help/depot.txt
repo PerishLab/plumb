@@ -1,0 +1,22 @@
+Move a release's changelog and skill onto Depot through wharf.
+
+Depot is written by wharf alone. Plumb consigns: it places one document in
+wharf's yard, a private bucket whose objects expire after seven days, and
+dispatches wharf's depot workflow to lodge it. The document is addressed by
+the sha256 of its bytes and created only, so a consignment names exactly what
+it carries. Wharf reads it by that digest, vets it again and only then writes
+the generation, so the yard is never trusted.
+
+Consign a changelog with --kind changelog and the prepared notes in --dir; the
+notes are proved against the diff budget of --version first, as plumb
+changelog --prove does. Consign a skill with --kind skill; it is taken from
+skills/<product> in the marker's own tree, and wharf refuses one that differs.
+
+The yard seat comes from PLUMB_YARD_ENDPOINT, PLUMB_YARD_BUCKET,
+PLUMB_YARD_ACCESS_KEY_ID and PLUMB_YARD_SECRET_ACCESS_KEY or its _FILE
+variant, which the developer profile carries: runseal :liberte plumb depot
+consign. Dispatch drives the gh CLI under the same profile.
+
+By default consign watches the lodge and then reads Depot back: it succeeds
+only when the standing generation for the marker holds exactly what was
+consigned. --no-watch returns once the lodge is dispatched.

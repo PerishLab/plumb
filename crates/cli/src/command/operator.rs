@@ -1,3 +1,4 @@
+mod consign;
 mod course;
 mod mark;
 mod rejoin;
@@ -6,6 +7,8 @@ mod wharf;
 mod worktree;
 
 use clap::Args;
+
+pub use consign::Consign;
 
 #[derive(Args)]
 #[group(skip)]
@@ -34,4 +37,8 @@ pub(super) fn retract(version: &str, dry: bool) -> Result<String, String> {
 
 pub(super) fn rejoin(dry: bool) -> Result<String, String> {
     rejoin::rejoin(dry)
+}
+
+pub fn consign(options: Consign) -> Result<String, String> {
+    consign::consign(options)
 }
