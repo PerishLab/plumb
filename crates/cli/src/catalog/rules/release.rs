@@ -12,11 +12,14 @@ rule!(STABLE_REJOIN, "release.stable-rejoin");
 
 rule!(STABLE_LODGED, "release.stable-lodged");
 
+rule!(LINE_CLOSED, "release.line-closed");
+
 pub fn mechanisms() -> Vec<&'static Mechanism> {
     vec![
         &ATTACHMENT_EXERCISED,
         &ATTACHMENT_PERMITTED,
         &DATUM_RECORDED,
+        &LINE_CLOSED,
         &SPEC_DECLARED,
         &STABLE_LODGED,
         &STABLE_REJOIN,

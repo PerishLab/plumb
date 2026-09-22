@@ -1,5 +1,6 @@
 mod consign;
 mod course;
+mod line;
 mod mark;
 mod owed;
 mod rejoin;
@@ -10,6 +11,10 @@ mod worktree;
 use clap::Args;
 
 pub use consign::Consign;
+pub(super) use line::{close, open, owed};
+pub(super) use mark::retract;
+pub(super) use rejoin::rejoin;
+pub(super) use wharf::stamp;
 
 #[derive(Args)]
 #[group(skip)]
@@ -26,18 +31,6 @@ pub struct Dispatch {
 
 pub fn dispatch(options: Dispatch) -> Result<String, String> {
     wharf::dispatch(options)
-}
-
-pub(super) fn stamp(version: &str, remote: &str, dry: bool) -> Result<String, String> {
-    wharf::stamp(version, remote, dry)
-}
-
-pub(super) fn retract(version: &str, dry: bool) -> Result<String, String> {
-    mark::retract(version, dry)
-}
-
-pub(super) fn rejoin(dry: bool) -> Result<String, String> {
-    rejoin::rejoin(dry)
 }
 
 pub fn consign(options: Consign) -> Result<String, String> {

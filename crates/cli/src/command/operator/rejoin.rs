@@ -1,6 +1,6 @@
 use plumb::land::rejoin::{Report, plan, run};
 
-pub(super) fn rejoin(dry: bool) -> Result<String, String> {
+pub(in crate::command) fn rejoin(dry: bool) -> Result<String, String> {
     let root = super::worktree::root()?;
     let report = if dry { plan(&root) } else { run(&root) }.map_err(|refusal| refusal.message)?;
     Ok(said(&report))

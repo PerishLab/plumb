@@ -1,4 +1,4 @@
-use super::{OBLIGATIONS, Seat, below, rejoined};
+use super::{OBLIGATIONS, Seat, below};
 use crate::shape::release::Spec;
 use clap::CommandFactory as _;
 use plumb::land::rejoin::{Stable, latest, tags};
@@ -106,7 +106,7 @@ fn settlement() {
             listing,
             spec: &spec,
         };
-        rejoined(&seat, &below(listing, "v1.1.0").expect("stable"))
+        seat.rejoined(&below(listing, "v1.1.0").expect("stable"))
     };
     let listing = git(&clone, &["ls-remote", "--heads", "--tags", "origin"]);
     assert!(!owed(&listing).expect("readable"));
@@ -118,4 +118,27 @@ fn settlement() {
     git(&work, &["push", "-q", "hub", "main"]);
     let listing = git(&clone, &["ls-remote", "--heads", "--tags", "origin"]);
     assert!(owed(&listing).expect("readable"));
+}
+
+#[test]
+fn closing() {
+    let spec = Spec::decode(
+        Path::new("."),
+        "[release]\nproduct = \"demo\"\nauthority = \"https://releases.demo.example\"\nbinaries = [\"demo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
+        "fixture",
+    )
+    .expect("spec");
+    let stable = Stable {
+        marker: "v1.1.0".into(),
+        commit: "c2".into(),
+    };
+    let seat = |listing| Seat {
+        root: Path::new("."),
+        remote: "origin",
+        listing,
+        spec: &spec,
+    };
+    assert!(seat(LISTING).closed(&stable).expect("read"));
+    let open = format!("{LISTING}x\trefs/heads/release/v1.1.0\n");
+    assert!(!seat(&open).closed(&stable).expect("read"));
 }
