@@ -6,8 +6,9 @@ prerelease it promotes. Stamp creates it: a beta or rc marker takes the next
 number on the line, and a stable marker takes the version of an rc or beta that
 already shipped from the same commit, preferring the rc. Shipped means what
 wharf's distribution.json beside the marker's seal says: the prerelease is
-recorded complete at that commit. Retract removes only an
-unpublished marker. Managers renders the scripts a version installs with.
+recorded complete at that commit. Retract removes only a marker nothing of
+which is public: its distribution record decides, and a marker without one is
+judged by its seal. Managers renders the scripts a version installs with.
 
 Rejoin settles the standing stable marker into main. It names no version: the
 debt is the highest stable marker origin holds, and it is owed until main holds

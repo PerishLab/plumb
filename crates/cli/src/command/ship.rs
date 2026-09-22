@@ -7,11 +7,21 @@ pub enum Deed {
         #[command(flatten)]
         options: super::operator::Dispatch,
     },
+    #[command(
+        about = "Report how far one release marker is distributed, from its distribution record"
+    )]
+    Status {
+        #[arg(long)]
+        marker: String,
+    },
 }
 
 pub fn run(deed: Deed) -> i32 {
-    let Deed::Dispatch { options } = deed;
-    match super::operator::dispatch(options) {
+    let done = match deed {
+        Deed::Dispatch { options } => super::operator::dispatch(options),
+        Deed::Status { marker } => super::operator::status(&marker),
+    };
+    match done {
         Ok(message) => {
             println!("{message}");
             0
