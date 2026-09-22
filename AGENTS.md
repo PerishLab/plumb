@@ -37,17 +37,10 @@ These are the nodes `[layout]` has not converged on. Each leaves this list when 
 seat can state it; nothing belongs here that a seat, a rule, or a verb already
 answers for.
 
-- `crates/lib/src/forge/forgejo` — the archived Forgejo adaptors over Runseal's
-  structured Forgejo operations, still read by authority and retire. Nothing
-  lands through it; it owns no HTTP sender and reads no `tea.yml`.
 - `crates/lib/src/forge/{land,github.rs}` — land projects a guarded candidate
   onto GitHub through the `gh` CLI the caller's Runseal profile authorizes.
   Plumb holds no GitHub credential. The required `guard` status is Plumb's
   verified Guard proof, and the merge must match that exact candidate.
-- `crates/cli/src/command/retire` — Cloudflare interpretation and orchestration
-  over Runseal's structured Cloudflare operations. Worker versions and their
-  deployments are wharf's to publish. Plumb owns no authenticated Cloudflare
-  HTTP sender and no raw route dialect.
 - `crates/cli/{rules,assets,cookbook,help}` — Plumb's governed resources,
   carried inside the binary. A release is its own rule set: nothing is fetched,
   installed or overlaid at run time, and changing a rule is a change to Plumb.
@@ -148,11 +141,9 @@ every decision that put it there, is `perish.code/plumb-release-contract`.
 
 ## Retirement
 
-Retirement is the mirror of release, not a foreign errand, and it lives here
-because everything it destroys is something Plumb declared, published, or
-protected.
-
-Plumb converges no external authority. Buckets, domains, writers and secrets
-that distribution needs are wharf's to provision and hold. Runseal owns each
-authenticated provider atom; retire composes those atoms but owns no raw
-provider route, credential store, or private instance state.
+Retirement is the mirror of release: everything it destroys is something Plumb
+declared, so the declaration (`[release.retire]`) and its detection stay here.
+Destroying a bucket, a domain or a writer is a credentialed effect, and those
+are wharf's to execute, as provisioning is. Plumb holds no provider credential
+and depends on no provider tool; until wharf carries retirement, nothing
+executes it.

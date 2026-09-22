@@ -2,11 +2,10 @@ pub mod doctor;
 mod guard;
 pub mod operator;
 pub mod release;
-pub mod retire;
 pub mod ship;
 
 pub(crate) use guard::{audit, changelog};
-pub use guard::{clock, cookbook, land, precommit, radius, render};
+pub use guard::{cookbook, land, precommit, radius, render};
 
 impl crate::Command {
     pub(crate) fn name(&self) -> &'static str {
@@ -25,7 +24,6 @@ impl crate::Command {
             crate::Command::Affirm { .. } => "affirm",
             crate::Command::Release { .. } => "release",
             crate::Command::Ship { .. } => "ship",
-            crate::Command::Retire { .. } => "retire",
         }
     }
 }

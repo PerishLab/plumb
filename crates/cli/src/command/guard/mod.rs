@@ -1,6 +1,5 @@
 pub(crate) mod audit;
 pub(crate) mod changelog;
-pub mod clock;
 pub mod cookbook;
 pub mod land;
 pub mod precommit;
