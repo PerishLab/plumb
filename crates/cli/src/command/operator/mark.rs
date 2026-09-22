@@ -1,6 +1,6 @@
 use super::course::Course;
 use super::value;
-use plumb::forgejo::git::fetch;
+use super::worktree::fetch;
 use std::path::Path;
 use std::process::{Command, Output};
 
@@ -8,7 +8,7 @@ pub(super) fn retract(raw: &str, dry: bool) -> Result<String, String> {
     let held = named(raw);
     let channel = super::super::release::channel(&held)?;
     let version = value::version(&held, &channel)?;
-    let root = plumb::forgejo::git::root()?;
+    let root = super::worktree::root()?;
     let authority = super::super::release::authority(&root)?;
     point(&root).retract(&authority, &channel, &version, dry)
 }

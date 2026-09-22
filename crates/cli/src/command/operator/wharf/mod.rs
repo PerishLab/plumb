@@ -26,7 +26,7 @@ pub(super) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<String, String
     let version = value::version(&held, &channel)?;
     let base = version.split('-').next().unwrap_or(&version).to_string();
     let branch = value::branch(&base);
-    let root = plumb::forgejo::git::root()?;
+    let root = super::worktree::root()?;
     let url = text(
         "read the remote",
         git(&root, &["remote", "get-url", remote])?,

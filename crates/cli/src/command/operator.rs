@@ -2,6 +2,7 @@ mod course;
 mod mark;
 mod value;
 mod wharf;
+mod worktree;
 
 use clap::Args;
 

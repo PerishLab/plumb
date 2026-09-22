@@ -59,12 +59,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "anyhow"
-version = "1.0.104"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
-
-[[package]]
 name = "arbitrary"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -455,24 +449,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
-name = "path-absolutize"
-version = "3.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4af381fe79fa195b4909485d99f73a80792331df0625188e707854f0b3383f5"
-dependencies = [
- "path-dedot",
-]
-
-[[package]]
-name = "path-dedot"
-version = "3.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07ba0ad7e047712414213ff67533e6dd477af0a4e1d14fb52343e53d30ea9397"
-dependencies = [
- "once_cell",
-]
-
-[[package]]
 name = "percent-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -494,7 +470,6 @@ dependencies = [
  "object",
  "pin-project-lite",
  "plumb-macro",
- "runseal",
  "semver",
  "serde",
  "serde_json",
@@ -515,7 +490,6 @@ dependencies = [
  "flate2",
  "locus",
  "plumb",
- "runseal",
  "semver",
  "serde",
  "serde_json",
@@ -578,21 +552,6 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "runseal"
-version = "0.18.8"
-source = "sparse+https://git.perish.top/api/packages/PerishLab/cargo/"
-checksum = "1cba1c6a17cc4c2c3e148eb38fd72983adf1027704bb568813284f4e30c6d1c9"
-dependencies = [
- "anyhow",
- "path-absolutize",
- "serde",
- "serde_json",
- "toml",
- "ureq",
- "zeroize",
 ]
 
 [[package]]

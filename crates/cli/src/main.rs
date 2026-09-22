@@ -141,14 +141,6 @@ enum Command {
         #[command(subcommand)]
         deed: command::ship::Deed,
     },
-    #[command(
-        about = "Destroy one declared delivery chain in a fixed order",
-        long_about = plumb::seat::resource!("help/retire.txt")
-    )]
-    Retire {
-        #[command(flatten)]
-        deed: command::retire::Deed,
-    },
 }
 fn execute(command: Command) -> i32 {
     match command {
@@ -219,7 +211,6 @@ fn execute(command: Command) -> i32 {
         }
         Command::Release { deed } => command::release::run(deed),
         Command::Ship { deed } => command::ship::run(deed),
-        Command::Retire { deed } => command::retire::run(deed),
     }
 }
 fn main() {
