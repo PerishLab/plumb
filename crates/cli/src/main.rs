@@ -141,6 +141,14 @@ enum Command {
         #[command(subcommand)]
         deed: command::ship::Deed,
     },
+    #[command(
+        about = "Move a release's changelog and skill onto Depot through wharf",
+        long_about = plumb::seat::resource!("help/depot.txt")
+    )]
+    Depot {
+        #[command(subcommand)]
+        deed: command::depot::Deed,
+    },
 }
 fn execute(command: Command) -> i32 {
     match command {
@@ -211,6 +219,7 @@ fn execute(command: Command) -> i32 {
         }
         Command::Release { deed } => command::release::run(deed),
         Command::Ship { deed } => command::ship::run(deed),
+        Command::Depot { deed } => command::depot::run(deed),
     }
 }
 fn main() {
