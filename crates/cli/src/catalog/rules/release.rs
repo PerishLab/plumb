@@ -14,12 +14,15 @@ rule!(STABLE_LODGED, "release.stable-lodged");
 
 rule!(LINE_CLOSED, "release.line-closed");
 
+rule!(MARKER_DISTRIBUTED, "release.marker-distributed");
+
 pub fn mechanisms() -> Vec<&'static Mechanism> {
     vec![
         &ATTACHMENT_EXERCISED,
         &ATTACHMENT_PERMITTED,
         &DATUM_RECORDED,
         &LINE_CLOSED,
+        &MARKER_DISTRIBUTED,
         &SPEC_DECLARED,
         &STABLE_LODGED,
         &STABLE_REJOIN,

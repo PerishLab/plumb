@@ -55,10 +55,7 @@ pub(in crate::command) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<St
         }
         let authority = super::super::release::authority(&root)?;
         let promoted = promoted(&listing, &base, &head, |channel, marker| {
-            plumb::bucket::fetch(&format!(
-                "{}/v1/releases/{channel}/{marker}/seal.json",
-                authority.trim_end_matches('/')
-            ))
+            plumb::bucket::fetch(&super::owed::distribution(&authority, channel, marker))
         })?;
         format!("{version}\n\npromotes {promoted}")
     } else {
@@ -105,7 +102,7 @@ fn promoted(
     listing: &str,
     base: &str,
     head: &str,
-    seal: impl Fn(&str, &str) -> Result<Option<Vec<u8>>, String>,
+    read: impl Fn(&str, &str) -> Result<Option<Vec<u8>>, String>,
 ) -> Result<String, String> {
     let mut held = Vec::new();
     for channel in PRERELEASES {
@@ -135,20 +132,12 @@ fn promoted(
         ));
     }
     for (channel, marker) in held {
-        let Some(body) = seal(channel, &marker)? else {
-            continue;
-        };
-        let document: serde_json::Value = serde_json::from_slice(&body)
-            .map_err(|error| format!("{marker} seal does not parse: {error}"))?;
-        if document["releaseVersion"] == marker.as_str()
-            && document["channel"] == channel
-            && document["commit"] == head
-        {
+        if super::owed::complete(read(channel, &marker)?, &marker, head)? {
             return Ok(marker);
         }
     }
     Err(format!(
-        "no prerelease marker at {head} has a published seal; ship one before promoting it"
+        "no prerelease marker at {head} has completed its distribution; ship one before promoting it"
     ))
 }
 
