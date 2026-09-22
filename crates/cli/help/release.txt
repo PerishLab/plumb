@@ -4,7 +4,9 @@ Release owns identity, not distribution. A marker is one annotated Git tag on th
 head of its release line, naming the version and, for a stable marker, the
 prerelease it promotes. Stamp creates it: a beta or rc marker takes the next
 number on the line, and a stable marker takes the version of an rc or beta that
-already shipped from the same commit, preferring the rc. Retract removes only an
+already shipped from the same commit, preferring the rc. Shipped means what
+wharf's distribution.json beside the marker's seal says: the prerelease is
+recorded complete at that commit. Retract removes only an
 unpublished marker. Managers renders the scripts a version installs with.
 
 Rejoin settles the standing stable marker into main. It names no version: the
@@ -24,11 +26,12 @@ its stable marker stands or the release authority holds its stable seal, as
 lines stamped before stable markers were tags do. A line that never reached
 stable closes only with --abandon.
 
-A stable marker leaves obligations behind: its commit merged home into main,
-its changelog lodged on Depot, its skill where the product declares one, and
-its line closed. Open, stamp and ship dispatch refuse any later version, on any
-channel, while the highest stable below it still owes one, and name the command
-that settles each: release rejoin, depot consign and release close. Owed
+A stable marker leaves obligations behind: its distribution completed, its
+commit merged home into main, its changelog lodged on Depot, its skill where
+the product declares one, and its line closed. Open, stamp and ship dispatch
+refuse any later version, on any channel, while the highest stable below it
+still owes one, and name the command that settles each: ship dispatch, release
+rejoin, depot consign and release close. Owed
 reports each obligation of that stable marker, settled or owed.
 
 Release never builds, compiles, publishes, or edits a version line. Wharf decides
