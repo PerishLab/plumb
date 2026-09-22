@@ -23,7 +23,15 @@ pub struct Obligation {
     pub detect: fn(&Seat<'_>, &Stable) -> Result<bool, String>,
 }
 
-pub const OBLIGATIONS: [Obligation; 4] = [
+pub const OBLIGATIONS: [Obligation; 5] = [
+    Obligation {
+        rule: &law::MARKER_DISTRIBUTED,
+        name: "its distribution completed",
+        settle: &["ship", "dispatch"],
+        arguments: |stable| format!("--marker {}", stable.marker),
+        applies: |_| true,
+        detect: |seat, stable| seat.distributed(stable),
+    },
     Obligation {
         rule: &law::STABLE_REJOIN,
         name: "its commit merged home into main",
@@ -169,6 +177,11 @@ impl Seat<'_> {
         Ok(rejoin::settled(self.root, &stable.commit, &main))
     }
 
+    fn distributed(&self, stable: &Stable) -> Result<bool, String> {
+        let url = distribution(&self.spec.authority, "stable", &stable.marker);
+        complete(plumb::bucket::fetch(&url)?, &stable.marker, &stable.commit)
+    }
+
     fn closed(&self, stable: &Stable) -> Result<bool, String> {
         let line = format!("refs/heads/release/{}", stable.marker);
         Ok(!self
@@ -189,6 +202,24 @@ impl Seat<'_> {
         .map(|found| found.is_some())
         .map_err(|error| format!("cannot read {source} for {}: {error}", stable.marker))
     }
+}
+
+pub fn distribution(authority: &str, channel: &str, marker: &str) -> String {
+    format!(
+        "{}/v1/releases/{channel}/{marker}/distribution.json",
+        authority.trim_end_matches('/')
+    )
+}
+
+pub fn complete(body: Option<Vec<u8>>, marker: &str, commit: &str) -> Result<bool, String> {
+    let Some(body) = body else {
+        return Ok(false);
+    };
+    let document: serde_json::Value = serde_json::from_slice(&body)
+        .map_err(|error| format!("{marker} distribution record does not parse: {error}"))?;
+    Ok(document["marker"] == marker
+        && document["commit"] == commit
+        && document["state"] == "complete")
 }
 
 pub fn source(spec: &Spec) -> String {

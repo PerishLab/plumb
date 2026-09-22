@@ -1,4 +1,4 @@
-use super::{OBLIGATIONS, Seat, below};
+use super::{OBLIGATIONS, Seat, below, complete, distribution};
 use crate::shape::release::Spec;
 use clap::CommandFactory as _;
 use plumb::land::rejoin::{Stable, latest, tags};
@@ -22,11 +22,47 @@ fn paired() {
         marker: "v1.0.0".into(),
         commit: "c".into(),
     };
-    assert_eq!(OBLIGATIONS[0].hint(&stable), "plumb release rejoin");
     assert_eq!(
-        OBLIGATIONS[2].hint(&stable),
+        OBLIGATIONS[0].hint(&stable),
+        "plumb ship dispatch --marker v1.0.0"
+    );
+    assert_eq!(OBLIGATIONS[1].hint(&stable), "plumb release rejoin");
+    assert_eq!(
+        OBLIGATIONS[3].hint(&stable),
         "plumb depot consign --version v1.0.0 --kind skill"
     );
+}
+
+#[test]
+fn distributed() {
+    assert_eq!(
+        distribution("https://releases.plumb.perish.uk/", "stable", "v1.0.0"),
+        "https://releases.plumb.perish.uk/v1/releases/stable/v1.0.0/distribution.json"
+    );
+    let record = |marker: &str, commit: &str, state: &str| {
+        Some(
+            format!(r#"{{"marker":"{marker}","commit":"{commit}","state":"{state}"}}"#)
+                .into_bytes(),
+        )
+    };
+    assert_eq!(
+        complete(record("v1.0.0", "c", "complete"), "v1.0.0", "c"),
+        Ok(true)
+    );
+    assert_eq!(
+        complete(record("v1.0.0", "c", "incomplete"), "v1.0.0", "c"),
+        Ok(false)
+    );
+    assert_eq!(
+        complete(record("v1.0.0", "d", "complete"), "v1.0.0", "c"),
+        Ok(false)
+    );
+    assert_eq!(
+        complete(record("v0.9.0", "c", "complete"), "v1.0.0", "c"),
+        Ok(false)
+    );
+    assert_eq!(complete(None, "v1.0.0", "c"), Ok(false));
+    assert!(complete(Some(b"{".to_vec()), "v1.0.0", "c").is_err());
 }
 
 #[test]

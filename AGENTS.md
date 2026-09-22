@@ -109,6 +109,9 @@ answers for.
   runtime reads, signing, and consumer acceptance must be proved before release.
 - A release line is opened by `release open` and closed by `release close`;
   a stable marker leaves obligations that are paid before the next marker:
+  its distribution completed (`ship dispatch`, read from wharf's
+  `distribution.json`, the one authority on how far a marker is distributed,
+  which is also what a stable stamp reads for the prerelease it promotes),
   its merge into main (`release rejoin`), its changelog on Depot and its skill
   where one is declared (`depot consign`), and its line closed. `command/operator/owed` is their
   table; each row names its rule, the command that settles it and the detector
