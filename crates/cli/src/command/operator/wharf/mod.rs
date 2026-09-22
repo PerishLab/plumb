@@ -5,7 +5,6 @@ use std::path::Path;
 use std::process::{Command, Output};
 
 pub(super) mod launch;
-mod settle;
 
 const HUB: &str = "PerishLab/wharf";
 const WORKFLOW: &str = "ship.yml";
@@ -46,7 +45,6 @@ pub(super) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<String, String
                 "{version} already stands; a stable marker never moves"
             ));
         }
-        settle::require(&root, remote, &listing)?;
         let authority = super::super::release::authority(&root)?;
         let promoted = promoted(&listing, &base, &head, |channel, marker| {
             plumb::bucket::fetch(&format!(
@@ -64,6 +62,16 @@ pub(super) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<String, String
         }
         version.clone()
     };
+    let spec = crate::shape::release::Spec::controller(&root)?;
+    super::owed::require(
+        &super::owed::Seat {
+            root: &root,
+            remote,
+            listing: &listing,
+            spec: &spec,
+        },
+        &version,
+    )?;
     let mut course = Course::new(dry);
     course.step(format!("fetch {branch} from {remote}"), || {
         text(
@@ -148,21 +156,42 @@ fn promoted(
 
 pub(super) fn dispatch(options: Dispatch) -> Result<String, String> {
     super::super::release::channel(&options.marker)?;
-    if options.repo.split('/').count() != 2 || options.repo.split('/').any(str::is_empty) {
-        return Err("ship dispatch requires --repo owner/name".into());
+    let root = super::worktree::root()
+        .map_err(|error| format!("ship dispatch runs in the product's repository: {error}"))?;
+    let origin = repository(&text(
+        "read the remote",
+        git(&root, &["remote", "get-url", "origin"])?,
+    )?)?;
+    let repo = if options.repo.is_empty() {
+        origin.clone()
+    } else {
+        options.repo.clone()
+    };
+    if repo != origin {
+        return Err(format!(
+            "--repo {repo} is not this repository's origin {origin}; dispatch runs in the product's repository"
+        ));
     }
-    let product = format!("https://github.com/{}", options.repo);
-    let marker = format!("refs/tags/{}", options.marker);
     let listing = text(
-        "read the product marker",
-        run(Command::new("git").args(["ls-remote", &product, &marker]))?,
+        "list the remote",
+        git(&root, &["ls-remote", "--heads", "--tags", "origin"])?,
     )?;
-    if reference(&listing, &marker).is_none() {
-        return Err(format!("{} has no marker {}", options.repo, options.marker));
+    if reference(&listing, &format!("refs/tags/{}", options.marker)).is_none() {
+        return Err(format!("{repo} has no marker {}", options.marker));
     }
+    let spec = crate::shape::release::Spec::controller(&root)?;
+    super::owed::require(
+        &super::owed::Seat {
+            root: &root,
+            remote: "origin",
+            listing: &listing,
+            spec: &spec,
+        },
+        &options.marker,
+    )?;
     let mut course = Course::new(options.dry);
     let fields = [
-        format!("repository={}", options.repo),
+        format!("repository={repo}"),
         format!("marker={}", options.marker),
     ];
     let launched = launch::launch(

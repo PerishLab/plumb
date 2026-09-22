@@ -124,11 +124,7 @@ fn gathered(
 }
 
 fn lodged(lodging: &Lodging<'_>, objects: &[Good]) -> Result<String, String> {
-    let source = lodging
-        .spec
-        .route
-        .clone()
-        .unwrap_or_else(|| format!("https://depot.{}.perish.uk", lodging.spec.product));
+    let source = super::owed::source(lodging.spec);
     let found = Generation::latest(Query {
         source: &source,
         product: &lodging.spec.product,
