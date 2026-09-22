@@ -3,7 +3,7 @@ use super::owed::Seat;
 use super::value;
 use super::wharf::{git, reference, repository, text};
 use crate::shape::release::Spec;
-use plumb::land::rejoin::{Stable, tags};
+use plumb::land::rejoin::tags;
 use std::path::PathBuf;
 
 const MAIN: &str = "main";
@@ -68,6 +68,37 @@ impl Line {
         }
         self.marked(from)
             .ok_or_else(|| format!("{} holds no stable marker {from}", self.remote))
+    }
+
+    fn released(&self, version: &str) -> Result<Option<String>, String> {
+        if let Some(commit) = self.marked(version) {
+            return Ok(Some(commit));
+        }
+        let authority = super::super::release::authority(&self.root)?;
+        let url = format!(
+            "{}/v1/releases/stable/{version}/seal.json",
+            authority.trim_end_matches('/')
+        );
+        let Some(body) = plumb::bucket::fetch(&url)? else {
+            return Ok(None);
+        };
+        let seal: serde_json::Value = serde_json::from_slice(&body)
+            .map_err(|error| format!("{url} does not parse: {error}"))?;
+        if seal["releaseVersion"] != version {
+            return Err(format!("{url} names another version"));
+        }
+        seal["commit"]
+            .as_str()
+            .map(|commit| Some(commit.to_string()))
+            .ok_or_else(|| format!("{url} names no commit"))
+    }
+
+    fn home(&self, commit: &str) -> Result<bool, String> {
+        let main = reference(&self.listing, "refs/heads/main")
+            .ok_or_else(|| format!("{} has no main", self.remote))?;
+        Ok(crate::shape::pair::rejoin::settled(
+            &self.root, commit, &main,
+        ))
     }
 
     fn fetch(&self, reference: &str) -> Result<(), String> {
@@ -136,7 +167,9 @@ pub(in crate::command) fn close(
     let line = Line::read(remote)?;
     let head = reference(&line.listing, &format!("refs/heads/{branch}"))
         .ok_or_else(|| format!("{remote} has no {branch}; nothing to close"))?;
-    match (line.marked(&version), abandon) {
+    line.fetch(&format!("refs/heads/{branch}"))?;
+    line.fetch("refs/heads/main")?;
+    match (line.released(&version)?, abandon) {
         (Some(commit), false) => released(&line, &version, &commit, &head)?,
         (Some(_), true) => {
             return Err(format!(
@@ -179,16 +212,12 @@ pub(in crate::command) fn owed(version: Option<&str>, remote: &str) -> Result<St
 }
 
 fn released(line: &Line, version: &str, commit: &str, head: &str) -> Result<(), String> {
-    if head != commit {
+    if head != commit && !line.home(head)? {
         return Err(format!(
-            "release/{version} stands at {head}, past stable {version} at {commit}; land those commits into main or open another line before closing"
+            "release/{version} stands at {head}, past stable {version} at {commit}, and main does not hold it; land those commits into main or open another line before closing"
         ));
     }
-    let stable = Stable {
-        marker: version.to_string(),
-        commit: commit.to_string(),
-    };
-    if !line.seat().rejoined(&stable)? {
+    if !line.home(commit)? {
         return Err(format!(
             "stable {version} is not yet in main; run plumb release rejoin before closing its line"
         ));
@@ -201,11 +230,11 @@ fn unreleased(line: &Line, version: &str, head: &str, branch: &str) -> Result<()
     let recorded = tags(&line.listing)
         .into_iter()
         .any(|(name, commit)| name.starts_with(&prefix) && commit == head);
-    if recorded {
+    if recorded || line.home(head)? {
         return Ok(());
     }
     Err(format!(
-        "{branch} stands at {head}, which no marker of {version} records; abandoning it would lose those commits"
+        "{branch} stands at {head}, which neither main nor any marker of {version} holds; abandoning it would lose those commits"
     ))
 }
 

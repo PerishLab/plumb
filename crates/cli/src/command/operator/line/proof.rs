@@ -47,7 +47,10 @@ fn abandoned() {
     let held = line();
     unreleased(&held, "v1.2.0", "r2", "release/v1.2.0").expect("a line resting on its rc closes");
     let refused = unreleased(&held, "v1.1.0", "l", "release/v1.1.0").expect_err("unrecorded head");
-    assert!(refused.contains("no marker of v1.1.0 records"), "{refused}");
+    assert!(
+        refused.contains("neither main nor any marker of v1.1.0 holds"),
+        "{refused}"
+    );
 }
 
 #[test]
