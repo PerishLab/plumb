@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 pub mod bucket;
 pub mod depot;
 
-pub use plumb_macro::resource;
+pub use plumb_macro::{catalogue, resource};
 
 pub const TMP: &str = ".tmp";
 

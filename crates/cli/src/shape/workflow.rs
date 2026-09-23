@@ -1,4 +1,3 @@
-use crate::catalog::set;
 use std::collections::{BTreeMap, BTreeSet};
 
 pub struct Key {
@@ -180,12 +179,33 @@ fn leaf(list: &[toml::Value], name: &str) -> Result<Vec<String>, String> {
         .collect()
 }
 
+const CARGO: [&str; 7] = [
+    ".cargo",
+    "Cargo.lock",
+    "Cargo.toml",
+    "clippy.toml",
+    "crates",
+    "rust-toolchain.toml",
+    "rustfmt.toml",
+];
+
+const PNPM: [&str; 7] = [
+    "apps",
+    "biome.json",
+    "package.json",
+    "packages",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "tsconfig.json",
+];
+
 fn suite(name: &str, key: &str) -> Result<Vec<String>, String> {
-    set::current()
-        .suites
-        .get(name)
-        .cloned()
-        .ok_or_else(|| format!("{key} names no suite called {name}"))
+    let held: &[&str] = match name {
+        "cargo" => &CARGO,
+        "pnpm" => &PNPM,
+        _ => return Err(format!("{key} names no suite called {name}")),
+    };
+    Ok(held.iter().map(|path| (*path).to_string()).collect())
 }
 
 fn refuse(message: String) -> Held {

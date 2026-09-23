@@ -68,10 +68,16 @@ fn governs() {
     govern(&bare);
     std::fs::write(bare.join("README.md"), "# bare\n").expect("readme should be written");
     let out = run(&["doctor", bare.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&bare).expect("fixture should be swept");
     assert!(!out.contains("no guard workflow"), "{out}");
     assert!(!out.contains("no ectropy.toml"), "{out}");
-    assert!(out.contains("true to the skeleton"), "{out}");
+    assert!(out.contains("nothing declares this repository"), "{out}");
+    assert!(!out.contains("true to the skeleton"), "{out}");
+
+    super::world::declare(&bare);
+    let out = run(&["doctor", bare.to_str().expect("path should be utf8")]);
+    std::fs::remove_dir_all(&bare).expect("fixture should be swept");
+    assert!(!out.contains("nothing declares this repository"), "{out}");
+    assert!(!out.contains("out of true:"), "{out}");
 
     let seat = std::env::temp_dir().join("plumb-governed");
     std::fs::create_dir_all(seat.join(".runseal")).expect("fixture should be made");

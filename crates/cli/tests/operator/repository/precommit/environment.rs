@@ -1,4 +1,4 @@
-use super::{Repo, cache, support};
+use super::{Repo, cache};
 use std::path::Path;
 use std::process::Output;
 
@@ -116,8 +116,7 @@ fn external() {
 
 #[test]
 fn node() {
-    let rules: toml::Value = toml::from_str(&support::policy("rules/workflow.toml")).unwrap();
-    let contract: plumb::config::Contract = rules["execution"]["pnpm"].clone().try_into().unwrap();
+    let contract = plumb::config::contract("pnpm").unwrap();
     let clean = contract.capture([]).unwrap();
     let metadata = contract
         .capture([("NODE_VERSION".into(), "24.18.0".into())])

@@ -11,12 +11,15 @@
 # A cap is a knob, not a verdict. It sits here rather than in the binary so
 # moving it is a row edited and published, never a release.
 
+addressed = true
+
 [member]
 rule = "structure.seat-member"
 
 [[member.entry]]
 name = "docker-client"
-note = "OCI production uses the declared Docker client."
+kind = "retired"
+note = "Selected by the OCI production profiles that governed codehull and ensign; no governed repository declares an image seat today. A production repository naming this rule revives it."
 [[member.entry.probe]]
 platform = ["linux-x86_64"]
 argv = ["docker", "version", "--format", "{{.Client.Version}}"]
@@ -24,7 +27,8 @@ stdout = "29.6.1"
 
 [[member.entry]]
 name = "docker-engine"
-note = "OCI production binds the actual Docker engine version."
+kind = "retired"
+note = "Selected by the OCI production profiles; revived by the first governed repository that builds an image."
 [[member.entry.probe]]
 platform = ["linux-x86_64"]
 argv = ["docker", "version", "--format", "{{.Server.Version}}"]
@@ -32,7 +36,8 @@ stdout = "29.6.1"
 
 [[member.entry]]
 name = "docker-buildx"
-note = "The Docker build frontend is a production input."
+kind = "retired"
+note = "Selected by the OCI production profiles; revived with the Docker build frontend it names."
 [[member.entry.probe]]
 platform = ["linux-x86_64"]
 argv = ["docker", "buildx", "version"]
@@ -40,7 +45,8 @@ stdout = "github.com/docker/buildx v0.35.0 a319e5b15052cf6557ceb666eb8ff6e32380b
 
 [[member.entry]]
 name = "regctl"
-note = "Archive-native OCI publication uses the shared registry client."
+kind = "retired"
+note = "Selected by the OCI publication profiles; revived by the first governed repository that publishes archive-native images."
 [[member.entry.probe]]
 platform = ["linux-x86_64"]
 argv = ["regctl", "version", "--format", "{{.VCSTag}}"]
@@ -48,19 +54,22 @@ stdout = "v0.11.6"
 
 [[member.entry]]
 name = "rust-roles"
+kind = "retired"
 allow = ["cli", "api", "lib"]
-note = "Rust workspace members occupy only established product roles. Optional roles remain absent until the product needs them."
+note = "Selected by the runseal profile before profiles retired; revived by a Rust repository that adopts the roster the domain exercised."
 
 [[member.entry]]
 name = "rust-ignore"
-note = "Rust-only product repositories carry one conventional Git ignore policy."
+kind = "retired"
+note = "Selected by the runseal profile before profiles retired; revived by a Rust-only repository adopting the conventional ignore policy."
 [member.entry.lines]
 allow = ["/.task/", "/.local/", "target/"]
 required = ["/.task/", "/.local/", "target/"]
 
 [[member.entry]]
 name = "text-attributes"
-note = "Text uses the domain LF convention; a product carrying PowerShell may also declare its CRLF attribute."
+kind = "retired"
+note = "Selected by the runseal profile before profiles retired; revived by a repository declaring the domain line-ending convention."
 [member.entry.lines]
 allow = ["* text=auto eol=lf", "*.ps1 text eol=crlf"]
 required = ["* text=auto eol=lf"]

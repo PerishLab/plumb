@@ -1,6 +1,6 @@
 use super::model::{Mechanism, Rule};
 
-pub mod depot;
+pub mod config;
 pub mod dispatch;
 mod domain;
 pub mod env;
@@ -30,7 +30,7 @@ pub fn held(id: &str) -> &'static Rule {
 
 pub(super) fn mechanisms() -> Vec<&'static Mechanism> {
     [
-        depot::mechanisms(),
+        config::mechanisms(),
         dispatch::mechanisms(),
         env::mechanisms(),
         structure::mechanisms(),

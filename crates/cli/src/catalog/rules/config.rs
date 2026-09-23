@@ -1,7 +1,7 @@
 use super::{Mechanism, rule};
 
-rule!(DEPOT_SCHEMA, "depot.schema-supported");
+rule!(PLUMB_CURRENT, "config.plumb-current-and-guarded");
 
 pub fn mechanisms() -> Vec<&'static Mechanism> {
-    vec![&DEPOT_SCHEMA]
+    vec![&PLUMB_CURRENT]
 }
