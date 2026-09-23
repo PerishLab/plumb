@@ -1,0 +1,180 @@
+# The path sets ectropy scans, each named so a shape can select it rather than
+# carry a copy. A set asserts nothing on its own; suites/shape.toml says which
+# repository shape earns which set.
+
+addressed = true
+
+rule = "structure.ectropy-policy"
+
+[[set]]
+name = "crates-rust"
+include = [
+  "crates/**/*.rs",
+]
+exclude = [
+  "**/target/**",
+]
+roots = [
+  "crates/*/src",
+  "crates/*/tests",
+]
+tests = [
+  "crates/*/src/**/*.rs",
+  "crates/*/tests/**/*.rs",
+]
+environment = [
+  "crates/*/tests/**/*.rs",
+]
+
+[[set]]
+name = "app-rust"
+include = [
+  "app/src/**/*.rs",
+  "app/tests/**/*.rs",
+]
+exclude = [
+  "**/target/**",
+]
+roots = [
+  "app/src",
+  "app/tests",
+]
+tests = [
+  "app/tests/**/*.rs",
+]
+
+[[set]]
+name = "runseal-scripts"
+include = [
+  ".runseal/**",
+]
+roots = [
+  ".runseal",
+]
+
+[[set]]
+name = "lib-ts"
+include = [
+  "lib/**/*.ts",
+  "lib/**/*.tsx",
+]
+exclude = [
+  "**/node_modules/**",
+]
+roots = [
+  "lib",
+]
+
+[[set]]
+name = "tests-ts"
+include = [
+  "tests/**/*.ts",
+  "tests/**/*.tsx",
+]
+roots = [
+  "tests",
+]
+tests = [
+  "tests/**/*.test.ts",
+  "tests/**/*.test.tsx",
+]
+
+[[set]]
+name = "docs-md"
+include = [
+  "docs/**/*.md",
+]
+roots = [
+  "docs",
+]
+
+[[set]]
+name = "skills-md"
+include = [
+  "skills/**/*.md",
+]
+roots = [
+  "skills/*",
+]
+
+[[set]]
+name = "web-components-banned"
+bans = [
+  "apps/web/src/lib/components/**",
+]
+
+[[set]]
+name = "apps-web"
+include = [
+  "apps/**/*.ts",
+  "apps/**/*.css",
+  "apps/**/*.scss",
+]
+exclude = [
+  "**/node_modules/**",
+  "**/dist/**",
+]
+roots = [
+  "apps/*",
+  "apps/*/src",
+  "apps/*/tests",
+]
+tests = [
+  "apps/*/tests/**/*.test.ts",
+]
+
+[[set]]
+name = "apps-web-svelte"
+include = [
+  "apps/**/*.svelte",
+]
+exclude = [
+  "**/.svelte-kit/**",
+]
+
+[[set]]
+name = "apps-web-tsx"
+include = [
+  "apps/**/*.tsx",
+]
+tests = [
+  "apps/*/tests/**/*.test.tsx",
+]
+
+[[set]]
+name = "packages-web"
+include = [
+  "packages/**/*.ts",
+  "packages/**/*.css",
+  "packages/**/*.scss",
+]
+exclude = [
+  "**/node_modules/**",
+  "**/dist/**",
+]
+roots = [
+  "packages/*/lib",
+  "packages/*/src",
+  "packages/*/tests",
+]
+tests = [
+  "packages/*/tests/**/*.test.ts",
+]
+
+[[set]]
+name = "packages-web-svelte"
+include = [
+  "packages/**/*.svelte",
+]
+exclude = [
+  "**/.svelte-kit/**",
+]
+
+[[set]]
+name = "packages-web-tsx"
+include = [
+  "packages/**/*.tsx",
+]
+tests = [
+  "packages/*/tests/**/*.test.tsx",
+]

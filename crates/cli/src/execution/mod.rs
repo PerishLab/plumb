@@ -5,13 +5,7 @@ use plumb::rule::{Observation, Probe};
 use std::path::Path;
 
 pub(crate) fn contract(name: &str) -> Result<Contract, String> {
-    crate::catalog::set::read("workflow")?
-        .get("execution")
-        .and_then(|held| held.get(name))
-        .ok_or_else(|| format!("rules/workflow.toml must declare execution.{name}"))?
-        .clone()
-        .try_into()
-        .map_err(|error| format!("invalid {name} execution contract: {error}"))
+    plumb::config::contract(name)
 }
 
 pub(crate) fn environment(name: &str) -> Result<Environment, String> {

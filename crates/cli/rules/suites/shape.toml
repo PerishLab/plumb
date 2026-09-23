@@ -1,0 +1,46 @@
+# Which scan sets a repository earns. A row names the directories whose presence
+# earns them and the sets it selects; it carries no paths of its own.
+
+[[shape]]
+when = ["crates"]
+use = ["rule://scan/crates-rust"]
+
+[[shape]]
+when = ["app"]
+use = ["rule://scan/app-rust"]
+
+[[shape]]
+when = ["app", ".runseal"]
+use = ["rule://scan/runseal-scripts"]
+
+[[shape]]
+when = ["lib"]
+use = ["rule://scan/lib-ts"]
+
+[[shape]]
+when = ["tests"]
+use = ["rule://scan/tests-ts"]
+
+[[shape]]
+when = ["docs"]
+use = ["rule://scan/docs-md"]
+
+[[shape]]
+when = ["skills"]
+use = ["rule://scan/skills-md"]
+
+[[shape]]
+when = ["apps/web/src/lib/components"]
+use = ["rule://scan/web-components-banned"]
+
+[[web]]
+seat = "apps"
+use = ["rule://scan/apps-web"]
+svelte = ["rule://scan/apps-web-svelte"]
+tsx = ["rule://scan/apps-web-tsx"]
+
+[[web]]
+seat = "packages"
+use = ["rule://scan/packages-web"]
+svelte = ["rule://scan/packages-web-svelte"]
+tsx = ["rule://scan/packages-web-tsx"]

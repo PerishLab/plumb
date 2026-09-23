@@ -125,10 +125,7 @@ pub(super) fn execute(
     command
         .args(args)
         .current_dir(root)
-        .env_remove("GIT_INDEX_FILE")
-        .env_remove("PLUMB_GUARD_CONFIGURATION")
-        .env_remove("PLUMB_GUARD_DEPOT")
-        .env_remove("PLUMB_GUARD_VIEW");
+        .env_remove("GIT_INDEX_FILE");
     let status = command
         .status()
         .map_err(|error| format!("cannot run {}: {error}", argv.join(" ")))?;

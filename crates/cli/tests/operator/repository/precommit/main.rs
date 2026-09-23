@@ -76,7 +76,6 @@ fn accepts() {
 #[test]
 fn staged() {
     let fixture = tempfile::tempdir().expect("fixture");
-    let home = tempfile::tempdir().expect("home");
     let depot = support::home();
     let root = fixture.path();
     Repo::git(root, &["init", "-q"]);
@@ -125,7 +124,6 @@ fn staged() {
             .args(["guard", ".", "--json"])
             .current_dir(root)
             .env("PLUMB_HOME", depot.path())
-            .env("PLUMB_GUARD_CONFIGURATION", home.path())
             .env("GIT_DIR", root.join(".git"))
             .env("GIT_INDEX_FILE", ".git/index")
             .env("GIT_WORK_TREE", root)

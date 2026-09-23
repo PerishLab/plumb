@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use toml::{Table, Value};
 
-pub const DEFAULTS: &str = "rules/plumb.toml";
+pub const DEFAULTS: &str = "rules/suites/layout.toml";
 
 pub fn layered(project: Table) -> Result<(Table, Vec<String>), String> {
     let mut overrides = Vec::new();

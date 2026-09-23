@@ -2,39 +2,40 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::LazyLock;
 
 pub struct Rules {
-    pub suites: BTreeMap<String, Vec<String>>,
     pub dirs: BTreeSet<String>,
     pub lanes: BTreeSet<String>,
     pub retired: Vec<(String, String)>,
     pub blacklist: BTreeSet<String>,
-    pub stable: Stable,
     pub release: Release,
 }
+
+pub struct Cargo {
+    pub registry: &'static str,
+    pub index: &'static str,
+}
+
+pub const CARGO: Cargo = Cargo {
+    registry: "perish",
+    index: "sparse+https://git.perish.top/api/packages/PerishLab/cargo/",
+};
 
 pub struct Release {
     pub ceiling: usize,
     pub permitted: BTreeMap<String, usize>,
-    pub exercised: BTreeMap<String, usize>,
-    pub forge: String,
 }
 
-pub struct Stable {
-    pub cargo: Cargo,
-}
-
-pub struct Cargo {
-    pub registry: String,
-    pub index: String,
-}
-
-const SETS: [&str; 5] = ["deps", "release", "seat", "structure", "workflow"];
+const SETS: [&str; 6] = ["deps", "limit", "release", "scan", "seat", "structure"];
 
 static POLICY: LazyLock<Result<toml::Table, String>> =
-    LazyLock::new(|| table("rules/policy.toml").and_then(shaped));
+    LazyLock::new(|| table("rules/suites/shape.toml").and_then(shaped));
+
+static LIMIT: LazyLock<Result<toml::Table, String>> =
+    LazyLock::new(|| table("rules/atoms/limit.toml"));
 
 static RULES: LazyLock<Result<Rules, String>> = LazyLock::new(build);
 pub fn prepare() -> Result<(), String> {
     policy()?;
+    LIMIT.as_ref().map_err(Clone::clone)?;
     rules()?;
     Ok(())
 }
@@ -47,8 +48,10 @@ pub fn rules() -> Result<&'static Rules, String> {
     RULES.as_ref().map_err(Clone::clone)
 }
 
-fn held() -> &'static toml::Table {
-    policy().expect("policy access must follow depot preparation")
+fn measures() -> &'static toml::Table {
+    LIMIT
+        .as_ref()
+        .expect("limit access must follow depot preparation")
 }
 
 fn carried() -> &'static Rules {
@@ -62,14 +65,14 @@ fn shaped(table: toml::Table) -> Result<toml::Table, String> {
             .and_then(toml::Value::as_array)
             .is_none_or(Vec::is_empty)
         {
-            return Err(format!("rules/policy.toml must hold {name} rows"));
+            return Err(format!("rules/suites/shape.toml must hold {name} rows"));
         }
     }
     Ok(table)
 }
 
 pub fn limits() -> BTreeMap<String, i64> {
-    measured(held())
+    measured(measures())
 }
 
 fn measured(policy: &toml::Table) -> BTreeMap<String, i64> {
@@ -82,22 +85,22 @@ fn measured(policy: &toml::Table) -> BTreeMap<String, i64> {
                 .filter_map(|(name, value)| Some((name.clone(), value.as_integer()?)))
                 .collect()
         })
-        .unwrap_or_else(|| panic!("rules/policy.toml must hold a limit table"))
+        .unwrap_or_else(|| panic!("rules/atoms/limit.toml must hold a limit table"))
 }
 
 pub fn setting(section: &str, key: &str) -> bool {
-    held()
+    measures()
         .get(section)
         .and_then(|table| table.get(key))
         .and_then(toml::Value::as_bool)
-        .unwrap_or_else(|| panic!("rules/policy.toml must hold {section}.{key}"))
+        .unwrap_or_else(|| panic!("rules/atoms/limit.toml must hold {section}.{key}"))
 }
 
 pub fn read(name: &str) -> Result<toml::Table, String> {
     if !SETS.contains(&name) {
         return Err(format!("rule://{name} names no released set"));
     }
-    table(&format!("rules/{name}.toml"))
+    table(&format!("rules/atoms/{name}.toml"))
 }
 
 pub fn current() -> &'static Rules {
@@ -111,78 +114,45 @@ fn table(path: &str) -> Result<toml::Table, String> {
 }
 
 fn build() -> Result<Rules, String> {
-    let structure = table("rules/structure.toml")?;
-    let workflow = table("rules/workflow.toml")?;
-    let deps = table("rules/deps.toml")?;
-    let release = table("rules/release.toml")?;
-    let suites = workflow
-        .get("suite")
-        .and_then(toml::Value::as_table)
-        .map(|table| {
-            table
-                .iter()
-                .map(|(name, value)| Ok((name.clone(), paths(value)?)))
-                .collect::<Result<BTreeMap<_, _>, String>>()
-        })
-        .transpose()?
-        .unwrap_or_default();
+    let structure = table("rules/atoms/structure.toml")?;
+    let deps = table("rules/atoms/deps.toml")?;
+    let release = table("rules/atoms/release.toml")?;
     let retired = deps
         .get("retired")
         .and_then(toml::Value::as_array)
         .map(|list| {
             list.iter()
                 .map(|entry| {
-                    let name = required(entry, "name", "rules/deps.toml retired entry")?;
-                    let held = required(entry, "use", "rules/deps.toml retired entry")?;
+                    let name = required(entry, "name", "rules/atoms/deps.toml retired entry")?;
+                    let held = required(entry, "use", "rules/atoms/deps.toml retired entry")?;
                     Ok((name, held))
                 })
                 .collect::<Result<Vec<_>, String>>()
         })
         .transpose()?
         .unwrap_or_default();
-    let stable = deps
-        .get("stable")
-        .ok_or_else(|| "rules/deps.toml must name stable authorities".to_string())?;
-    let cargo = stable
-        .get("cargo")
-        .ok_or_else(|| "rules/deps.toml must name stable.cargo".to_string())?;
-    let blacklist =
-        deps.get("blacklist")
-            .and_then(toml::Value::as_array)
-            .map(|list| {
-                list.iter()
-                    .map(|value| {
-                        value.as_str().map(str::to_string).ok_or_else(|| {
-                            "rules/deps.toml blacklist must hold strings".to_string()
-                        })
+    let blacklist = deps
+        .get("blacklist")
+        .and_then(toml::Value::as_array)
+        .map(|list| {
+            list.iter()
+                .map(|value| {
+                    value.as_str().map(str::to_string).ok_or_else(|| {
+                        "rules/atoms/deps.toml blacklist must hold strings".to_string()
                     })
-                    .collect::<Result<BTreeSet<_>, _>>()
-            })
-            .transpose()?
-            .unwrap_or_default();
-    let forge = release
-        .get("forge")
-        .and_then(|table| table.get("image"))
-        .and_then(toml::Value::as_str)
-        .ok_or_else(|| "rules/release.toml must name forge.image".to_string())?
-        .to_string();
+                })
+                .collect::<Result<BTreeSet<_>, _>>()
+        })
+        .transpose()?
+        .unwrap_or_default();
     Ok(Rules {
-        suites,
         dirs: members(&structure, "dir"),
         lanes: members(&structure, "lane"),
         retired,
         blacklist,
-        stable: Stable {
-            cargo: Cargo {
-                registry: required(cargo, "registry", "rules/deps.toml stable.cargo")?,
-                index: required(cargo, "index", "rules/deps.toml stable.cargo")?,
-            },
-        },
         release: Release {
             ceiling: ceiling(&release)?,
             permitted: counted(&release, "permitted"),
-            exercised: counted(&release, "exercised"),
-            forge,
         },
     })
 }
@@ -209,7 +179,7 @@ fn ceiling(doc: &toml::Table) -> Result<usize, String> {
     doc.get("ceiling")
         .and_then(toml::Value::as_integer)
         .and_then(|held| usize::try_from(held).ok())
-        .ok_or_else(|| "rules/release.toml must name ceiling".to_string())
+        .ok_or_else(|| "rules/atoms/release.toml must name ceiling".to_string())
 }
 
 fn counted(doc: &toml::Table, key: &str) -> BTreeMap<String, usize> {
@@ -233,18 +203,4 @@ fn required(value: &toml::Value, key: &str, place: &str) -> Result<String, Strin
         .and_then(toml::Value::as_str)
         .map(str::to_string)
         .ok_or_else(|| format!("{place} must name {key}"))
-}
-
-fn paths(value: &toml::Value) -> Result<Vec<String>, String> {
-    value
-        .as_array()
-        .ok_or_else(|| "rules/workflow.toml suite must hold paths".to_string())?
-        .iter()
-        .map(|value| {
-            value
-                .as_str()
-                .map(str::to_string)
-                .ok_or_else(|| "rules/workflow.toml suite paths must be strings".to_string())
-        })
-        .collect()
 }

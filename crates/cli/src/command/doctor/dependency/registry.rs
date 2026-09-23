@@ -28,9 +28,7 @@ fn fetch(ecosystem: Ecosystem, name: &str) -> Result<String, String> {
     let url = match ecosystem {
         Ecosystem::Cargo => format!(
             "{}/{}",
-            set::current()
-                .stable
-                .cargo
+            set::CARGO
                 .index
                 .trim_start_matches("sparse+")
                 .trim_end_matches('/'),

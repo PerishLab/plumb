@@ -1,3 +1,5 @@
+pub mod contract;
+
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::ffi::OsString;

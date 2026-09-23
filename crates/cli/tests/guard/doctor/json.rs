@@ -22,13 +22,20 @@ fn clean() {
     assert_eq!(report["operation"], "doctor");
     assert_eq!(report["target"], fixture.path().display().to_string());
     assert_eq!(report["ok"], true);
-    assert_eq!(report["clean"], true);
-    assert_eq!(report["findings"], serde_json::json!([]));
+    let graded = report["findings"]
+        .as_array()
+        .expect("findings")
+        .iter()
+        .all(|finding| finding["grade"] == "noted");
+    assert!(
+        graded,
+        "a declared fixture is true but for what it overrides"
+    );
     assert_eq!(report["summary"]["out_of_true"], 0);
     assert_eq!(report["summary"]["unknown"], 0);
     assert_eq!(report["summary"]["blind"], 0);
     let coverage = &report["coverage"];
-    let classified = ["mechanized", "observed", "prose_only"]
+    let classified = ["mechanized", "observed", "prose_only", "retired"]
         .iter()
         .map(|standing| coverage[standing].as_u64().expect("coverage count"))
         .sum::<u64>();
@@ -133,8 +140,11 @@ fn briefs() {
         report["briefs"].is_array(),
         "a report names the briefs standing beside the binary it ran"
     );
-    assert_eq!(
-        report["summary"]["noted"], 0,
+    let held = report["findings"].as_array().expect("findings").iter();
+    assert!(
+        !held
+            .map(|finding| finding["evidence"].to_string())
+            .any(|evidence| evidence.contains("skills/plumb")),
         "a brief beside the binary is the operator's business, not the repository's"
     );
 }

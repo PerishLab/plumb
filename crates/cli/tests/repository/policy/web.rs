@@ -1,4 +1,4 @@
-use super::{POLICY, govern, policy, stock};
+use super::{LIMIT, SCAN, SHAPE, govern, policy, stock};
 use std::process::Command;
 
 #[test]
@@ -30,7 +30,9 @@ fn carriage() {
     std::fs::write(root.path().join("ectropy.toml"), "").expect("policy should be written");
     stock(
         seat.path(),
-        &POLICY.replace("docs/**/*.md", "notes/**/*.md"),
+        LIMIT,
+        &SCAN.replace("docs/**/*.md", "notes/**/*.md"),
+        SHAPE,
     );
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args([
@@ -56,11 +58,16 @@ fn transition() {
     govern(root.path());
     let rendered = policy(root.path(), true);
     assert!(rendered.status.success(), "{rendered:?}");
-    let carried = POLICY.replace("path = 3", "path = 4").replace(
+    let carried = SCAN.replace(
         "roots = [\"apps/*/src\", \"apps/*/tests\"]",
         "roots = [\"apps/*\", \"apps/*/src\", \"apps/*/tests\"]",
     );
-    stock(seat.path(), &carried);
+    stock(
+        seat.path(),
+        &LIMIT.replace("path = 3", "path = 4"),
+        &carried,
+        SHAPE,
+    );
     let judged = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.path().to_str().expect("path should be utf8")])
         .env("PLUMB_HOME", seat.path())
@@ -80,10 +87,7 @@ fn refusal() {
     let seat = tempfile::tempdir().expect("seat");
     std::fs::create_dir_all(root.path().join("docs")).expect("fixture should be made");
     std::fs::write(root.path().join("ectropy.toml"), "").expect("policy should be written");
-    stock(
-        seat.path(),
-        "[limit]\nblock=4\nfanout=10\nfile=300\nmarkup=8\nparam=4\npath=4\n[comment]\nallow=false\n[word]\nsingle=true\n",
-    );
+    stock(seat.path(), LIMIT, SCAN, "");
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args([
             "policy",
@@ -95,7 +99,8 @@ fn refusal() {
         .expect("plumb should run");
     assert!(!output.status.success(), "{output:?}");
     assert!(
-        String::from_utf8_lossy(&output.stderr).contains("rules/policy.toml must hold shape rows"),
+        String::from_utf8_lossy(&output.stderr)
+            .contains("rules/suites/shape.toml must hold shape rows"),
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );

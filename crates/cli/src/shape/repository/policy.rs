@@ -65,49 +65,49 @@ impl Expected {
         for row in rows(policy, "shape") {
             let table = row
                 .as_table()
-                .unwrap_or_else(|| panic!("rules/policy.toml shape rows must be tables"));
+                .unwrap_or_else(|| panic!("rules/suites/shape.toml rows must be tables"));
             if list(table, "when")
                 .iter()
                 .all(|path| root.join(path).is_dir())
             {
-                held.apply(table, "include", Part::Include);
-                held.apply(table, "exclude", Part::Exclude);
-                held.apply(table, "roots", Part::Root);
-                held.apply(table, "tests", Part::Test);
-                held.reads(table, "tests");
-                held.apply(table, "bans", Part::Ban);
+                held.select(table, "use");
             }
         }
         for row in rows(policy, "web") {
             let table = row
                 .as_table()
-                .unwrap_or_else(|| panic!("rules/policy.toml web rows must be tables"));
+                .unwrap_or_else(|| panic!("rules/suites/shape.toml web rows must be tables"));
             let seat = table
                 .get("seat")
                 .and_then(toml::Value::as_str)
-                .unwrap_or_else(|| panic!("rules/policy.toml web rows must name a seat"));
+                .unwrap_or_else(|| panic!("rules/suites/shape.toml web rows must name a seat"));
             let base = root.join(seat);
             if !base.is_dir() {
                 continue;
             }
-            held.apply(table, "include", Part::Include);
-            held.apply(table, "exclude", Part::Exclude);
-            held.apply(table, "roots", Part::Root);
-            held.apply(table, "tests", Part::Test);
-            held.reads(table, "tests");
+            held.select(table, "use");
             let svelte = extension(&base, "svelte");
-            let tsx = extension(&base, "tsx");
             if svelte {
-                held.apply(table, "svelte-include", Part::Include);
-                held.apply(table, "svelte-exclude", Part::Exclude);
+                held.select(table, "svelte");
             }
-            if !svelte || tsx {
-                held.apply(table, "tsx-include", Part::Include);
-                held.apply(table, "tsx-tests", Part::Test);
-                held.reads(table, "tsx-tests");
+            if !svelte || extension(&base, "tsx") {
+                held.select(table, "tsx");
             }
         }
         held
+    }
+
+    fn select(&mut self, table: &toml::Table, key: &str) {
+        for held in list(table, key) {
+            let set = crate::catalog::member::scan(&held)
+                .unwrap_or_else(|error| panic!("rules/suites/shape.toml names {held}: {error}"));
+            self.apply(&set, "include", Part::Include);
+            self.apply(&set, "exclude", Part::Exclude);
+            self.apply(&set, "roots", Part::Root);
+            self.apply(&set, "tests", Part::Test);
+            self.reads(&set, "tests");
+            self.apply(&set, "bans", Part::Ban);
+        }
     }
 
     fn reads(&mut self, table: &toml::Table, fallback: &str) {
@@ -142,19 +142,19 @@ fn rows<'a>(policy: &'a toml::Table, name: &str) -> &'a [toml::Value] {
         .get(name)
         .and_then(toml::Value::as_array)
         .map(Vec::as_slice)
-        .unwrap_or_else(|| panic!("rules/policy.toml must hold {name} rows"))
+        .unwrap_or_else(|| panic!("rules/suites/shape.toml must hold {name} rows"))
 }
 
 fn list(table: &toml::Table, key: &str) -> BTreeSet<String> {
     match table.get(key) {
         Some(value) => value
             .as_array()
-            .unwrap_or_else(|| panic!("rules/policy.toml {key} must be a list"))
+            .unwrap_or_else(|| panic!("a {key} list is a list"))
             .iter()
             .map(|value| {
                 value
                     .as_str()
-                    .unwrap_or_else(|| panic!("rules/policy.toml {key} must hold strings"))
+                    .unwrap_or_else(|| panic!("a {key} list holds strings"))
                     .to_string()
             })
             .collect(),

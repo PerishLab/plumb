@@ -69,7 +69,7 @@ fn fields() {
 fn inspect(rule: &str, name: &str, body: Option<&[u8]>) -> String {
     let root = tempfile::tempdir().expect("repository");
     let rules = format!("[member]\n[[member.entry]]\nname = \"content\"\n{rule}\n");
-    let depot = super::support::overlay(&[("rules/seat.toml", &rules)]);
+    let depot = super::support::overlay(&[("rules/atoms/seat.toml", &rules)]);
     assert!(
         Command::new("git")
             .arg("-C")

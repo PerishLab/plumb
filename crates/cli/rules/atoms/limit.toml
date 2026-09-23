@@ -1,0 +1,19 @@
+# The numbers and switches ectropy measures a repository against. A limit with no
+# retirement condition stops being a limit: a repository that cannot meet one
+# states a boundary naming the paths and the reason.
+
+rule = "structure.ectropy-policy"
+
+[limit]
+block = 4
+fanout = 10
+file = 300
+markup = 8
+param = 4
+path = 3
+
+[comment]
+allow = false
+
+[word]
+single = true

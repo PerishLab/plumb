@@ -36,7 +36,7 @@ fn recorded() {
     record(root, "v1.2.0", "schema = 1\nversion = \"v1.2.0\"\n");
     let out = super::run(&["doctor", root.to_str().expect("path should be utf8")]);
     assert!(!out.contains("records no datum"), "{out}");
-    assert!(out.contains("true to the skeleton"), "{out}");
+    assert!(!out.contains("out of true:"), "{out}");
 }
 
 #[test]
