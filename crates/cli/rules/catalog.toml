@@ -21,29 +21,11 @@
 # one nobody notices until it fires.
 
 [[rule]]
-id = "config.vocabulary-owned-by-product"
-summary = "Products own config vocabulary"
-law = "The substrate exports config mechanism; each binary declares its own sections and values."
-evidence = "Product config types and imports from the substrate."
-standing = "prose-only"
-owner = "product"
-tags = ["configuration", "ownership"]
-
-[[rule]]
 id = "config.plumb-current-and-guarded"
 summary = "Plumb is stable-current and guards its worktrees"
 law = "A manager-installed Plumb is stable latest, and governed worktrees carry the Git guard hooks the running Plumb carries."
 evidence = "The managed binary identity and stable channel pointer, the running version, plus effective pre-commit and commit-msg hooks."
 standing = "mechanized"
-owner = "plumb"
-tags = ["configuration", "adoption"]
-
-[[rule]]
-id = "depot.schema-supported"
-summary = "Plumb is stable-current and guards its worktrees"
-law = "Retired on 2026-09-23. The id said Depot and the law said adoption: it never judged a Depot schema, only that the managed Plumb is stable latest and that a governed worktree carries its hooks. It stands here so the name keeps its evidence; config.plumb-current-and-guarded judges that now."
-evidence = "None. A retired rule judges nothing."
-standing = "retired"
 owner = "plumb"
 tags = ["configuration", "adoption"]
 
@@ -318,42 +300,6 @@ owner = "release"
 tags = ["ownership", "release"]
 
 [[rule]]
-id = "release.canonical-authority"
-summary = "Stable identity includes its authority"
-law = "A stable label admits a default seat only when its release authority is the product's canonical authority."
-evidence = "Manager source selection, canonical release URL, and the resolved install paths."
-standing = "prose-only"
-owner = "release"
-tags = ["ownership", "release"]
-
-[[rule]]
-id = "release.canonical-manager-stable"
-summary = "Canonical managers belong to stable"
-law = "Root public managers change only during stable activation; every exact seal records generated content-addressed managers."
-evidence = "Release object keys, manager digests, stable activation ordering, and public readback."
-standing = "prose-only"
-owner = "release"
-tags = ["ownership", "release"]
-
-[[rule]]
-id = "release.capsule-sealed"
-summary = "A compiled capsule does not drift"
-law = "A release run compiles once and retries the same capsule rather than resolving a new generator or artifact set."
-evidence = "Capsule creation boundary and retry inputs."
-standing = "prose-only"
-owner = "release"
-tags = ["release"]
-
-[[rule]]
-id = "release.coordinator-single"
-summary = "One coordinator owns release state"
-law = "Platform jobs only produce product artifacts; one coordinator compiles, publishes, verifies, and activates."
-evidence = "Workflow job graph and credential placement."
-standing = "prose-only"
-owner = "release"
-tags = ["release"]
-
-[[rule]]
 id = "release.datum-recorded"
 summary = "Release lines judge against a recorded datum"
 law = "A release line carries the stable answers its judgement rests on, recorded once when the line is cut, so every later judgement measures the frozen candidate against that datum instead of a registry that moves under it."
@@ -361,96 +307,6 @@ evidence = "The datum leaf under the mechanism seat in the release line's own tr
 standing = "mechanized"
 owner = "release"
 tags = ["dependency", "release"]
-
-[[rule]]
-id = "release.default-seat-stable"
-summary = "Stable alone occupies default seats"
-law = "Canonical install roots and command entrypoints admit stable releases and refuse every non-stable channel."
-evidence = "Manager channel, effective install root, effective bin directory, and refusal ordering."
-standing = "prose-only"
-owner = "release"
-tags = ["adoption", "ownership", "release"]
-
-[[rule]]
-id = "release.dry-run-asserted"
-summary = "Dry run proves the intended version"
-law = "Before publishing, each ship node requires the publisher dry run to name the intended version."
-evidence = "Dry-run output before the first irreversible action."
-standing = "prose-only"
-owner = "release"
-tags = ["release"]
-
-[[rule]]
-id = "release.exact-create-only"
-summary = "Exact release identity is immutable"
-law = "Content objects are addressed by digest and an exact seal is created only when absent or already byte-identical."
-evidence = "Object keys, exact seal conditionals, digests, and rerun behavior."
-standing = "prose-only"
-owner = "release"
-tags = ["release"]
-
-[[rule]]
-id = "release.generated-ephemeral"
-summary = "Generated delivery files stay out of source"
-law = "Managers, capsules, seals, and pointers are release outputs rather than checked-in product files."
-evidence = "Repository paths compared with capsule output."
-standing = "prose-only"
-owner = "release"
-tags = ["ownership", "release"]
-
-[[rule]]
-id = "release.generator-stable"
-summary = "Ship uses one exact Plumb atom"
-law = "Each ship dispatch names and resolves one exact Plumb atom without rendering or copying a downstream workflow; changing that atom neither mutates the product marker nor invalidates reusable product work."
-evidence = "Dispatch inputs, workflow revision, atom plan identity, product marker identity, and retry boundaries."
-standing = "prose-only"
-owner = "release"
-tags = ["release"]
-
-[[rule]]
-id = "release.manifest-stamped"
-summary = "The published manifest is stamped"
-law = "A release stamps the manifest the publisher actually reads."
-evidence = "The release stamp target and packaged manifest."
-standing = "prose-only"
-owner = "release"
-tags = ["cargo", "release"]
-
-[[rule]]
-id = "release.nonstable-exact"
-summary = "Non-stable install intent is exact"
-law = "Every non-stable consumer names both its channel and one exact sealed version; no non-stable pointer exists."
-evidence = "Manager and workflow inputs compared with the exact release seal."
-standing = "prose-only"
-owner = "release"
-tags = ["adoption", "release"]
-
-[[rule]]
-id = "release.nonstable-isolated"
-summary = "Non-stable installs are task-isolated"
-law = "A non-stable release requires explicit install and command paths provably disjoint from stable default seats."
-evidence = "Effective normalized paths, symlink resolution, channel, and writes performed after the refusal gate."
-standing = "prose-only"
-owner = "release"
-tags = ["adoption", "ownership", "release"]
-
-[[rule]]
-id = "release.promotion-proof-exact"
-summary = "Stable records an exact candidate proof"
-law = "Stable promotion embeds one complete non-stable exact seal and its digest, with the same product, base version, and source commit."
-evidence = "Stable seal, exact candidate seal and digest, source commits, and pre-publish revalidation."
-standing = "prose-only"
-owner = "release"
-tags = ["ownership", "release"]
-
-[[rule]]
-id = "release.public-readback"
-summary = "Published objects are read back publicly"
-law = "A release fetches its exact seal and every named object through the public authority and verifies size and digest."
-evidence = "Public responses compared with the exact seal."
-standing = "prose-only"
-owner = "release"
-tags = ["release"]
 
 [[rule]]
 id = "release.spec-declared"
@@ -498,114 +354,6 @@ owner = "release"
 tags = ["release", "state"]
 
 [[rule]]
-id = "release.stable-single-writer"
-summary = "Stable default seats have one writer"
-law = "Default-seat mutation is locked, ownership-proven, staged, atomically switched, and monotonic unless an exact rollback is explicit."
-evidence = "Manager locks, markers, staging paths, entrypoint replacement, and installed-versus-selected versions."
-standing = "prose-only"
-owner = "release"
-tags = ["ownership", "release", "state"]
-
-[[rule]]
-id = "release.stable-source-line"
-summary = "Stable alone binds a release line"
-law = "Exact publication may bind any selected branch ref, while stable binds only refs/heads/release/vX.Y.Z and freezes that ref and commit before publication."
-evidence = "Dispatch event ref and commit, release channel and version, checkout HEAD, and stable branch protection state."
-standing = "prose-only"
-owner = "release"
-tags = ["ownership", "release", "state"]
-
-[[rule]]
-id = "site.artifact-stamps-identity"
-summary = "Site artifacts declare identity"
-law = "The built health document carries the commit and version that produced it."
-evidence = "Built health documents."
-standing = "prose-only"
-owner = "release"
-tags = ["site", "web"]
-
-[[rule]]
-id = "site.binding-three-valued"
-summary = "Binding admits unknown"
-law = "A denied control-plane read is unknown rather than evidence that a domain is unbound."
-evidence = "Provider binding lookup results and permission failures."
-standing = "prose-only"
-owner = "release"
-tags = ["site"]
-
-[[rule]]
-id = "site.dispatch-only"
-summary = "Site deployment is deliberate"
-law = "The canonical ship graph admits site deployment only for an explicit marker dispatch rather than every landing."
-evidence = "The ship request and resolved site node."
-standing = "prose-only"
-owner = "release"
-tags = ["release", "site"]
-
-[[rule]]
-id = "site.purpose-scoped-key"
-summary = "Site credentials are purpose-scoped"
-law = "The deploy key carries only the account and zone permissions one site needs."
-evidence = "Provider token policy and the workflow secret surface."
-standing = "prose-only"
-owner = "release"
-tags = ["ownership", "site"]
-
-[[rule]]
-id = "site.readback-proves-build"
-summary = "Readback proves the served build"
-law = "Reachability compares a fingerprinted served asset with the built page."
-evidence = "Built and edge-served asset fingerprints."
-standing = "prose-only"
-owner = "release"
-tags = ["site", "web"]
-
-[[rule]]
-id = "site.routes-declared-by-artifact"
-summary = "Site artifacts declare routes"
-law = "Published routes are discoverable from the built artifact."
-evidence = "Built sitemap or prerendered documents."
-standing = "prose-only"
-owner = "release"
-tags = ["site", "web"]
-
-[[rule]]
-id = "site.shipper-reads-artifact"
-summary = "Shippers inspect artifacts, not source"
-law = "The site shipper derives identity and routes from build output rather than application source."
-evidence = "The site CLI inputs and artifact inspection paths."
-standing = "prose-only"
-owner = "release"
-tags = ["release", "site"]
-
-[[rule]]
-id = "site.states-separated"
-summary = "Deploy, binding, and reachability stay separate"
-law = "A site ship reports upload, platform binding, and edge reachability as distinct states."
-evidence = "The ship report and its three evidence sources."
-standing = "prose-only"
-owner = "release"
-tags = ["site"]
-
-[[rule]]
-id = "skill.candidate-stage-isolated"
-summary = "Candidate skills stage outside the ledger"
-law = "A non-stable skill requires an exact version and a new explicit path, receives a staged marker, and never enters managed state."
-evidence = "Stage inputs, target absence, staged marker, and unchanged managed ledger."
-standing = "prose-only"
-owner = "skill"
-tags = ["adoption", "ownership", "skill", "state"]
-
-[[rule]]
-id = "skill.managed-stable-only"
-summary = "Managed skill seats admit stable"
-law = "Install, status, and upgrade keep the global skill ledger anchored to stable releases."
-evidence = "Managed skill command inputs, stable pointer, exact seal, and ledger writes."
-standing = "prose-only"
-owner = "skill"
-tags = ["adoption", "ownership", "skill", "state"]
-
-[[rule]]
 id = "skill.seat-matches-binary"
 summary = "An installed brief describes the binary beside it"
 law = "Every installed agent brief names the Plumb release that is actually running, because a brief is what a reader trusts first and a stale one documents verbs the binary does not have."
@@ -613,69 +361,6 @@ evidence = "The skill ledger's recorded version for each installed seat against 
 standing = "observed"
 owner = "skill"
 tags = ["skill", "adoption"]
-
-[[rule]]
-id = "skill.standing-accurate"
-summary = "Skill standing matches its binary"
-law = "A released skill never claims enforcement its matching binary does not provide."
-evidence = "The skill's standing references compared with the binary rule catalog."
-standing = "prose-only"
-owner = "skill"
-tags = ["skill"]
-
-[[rule]]
-id = "state.home-enters-through-cascade"
-summary = "Data home enters through the cascade"
-law = "A stateful tool resolves one data home as ordinary four-layer configuration."
-evidence = "Home resolution code and the product config surface."
-standing = "prose-only"
-owner = "product"
-tags = ["configuration", "state"]
-
-[[rule]]
-id = "state.ownership-two-sided"
-summary = "Destructive ownership proof is two-sided"
-law = "Acting on a managed path requires both a registry record and an in-path marker naming the tool."
-evidence = "The managed registry, target marker, and destructive operation."
-standing = "prose-only"
-owner = "product"
-tags = ["ownership", "state"]
-
-[[rule]]
-id = "state.records-not-config"
-summary = "State is not a config surface"
-law = "Machine state may be rewritten; human policy enters through the cascade."
-evidence = "State and configuration documentation and code paths."
-standing = "prose-only"
-owner = "product"
-tags = ["configuration", "state"]
-
-[[rule]]
-id = "state.records-schema-versioned"
-summary = "State records carry schema versions"
-law = "Each machine-owned record names its shape version and unknown versions refuse."
-evidence = "Serialized state shapes and their readers."
-standing = "prose-only"
-owner = "product"
-tags = ["state"]
-
-[[rule]]
-id = "state.records-under-state"
-summary = "Machine records live under state/"
-law = "Machine-written records live below the tool's data-home state directory."
-evidence = "The product's data-home layout."
-standing = "prose-only"
-owner = "product"
-tags = ["state"]
-
-[[rule]]
-id = "state.records-written-whole"
-summary = "State records are replaced atomically"
-law = "A state write lands beside the target and replaces it whole."
-evidence = "Every durable state write path."
-standing = "prose-only"
-owner = "product"
-tags = ["state"]
 
 [[rule]]
 id = "structure.anchor-present"
@@ -712,15 +397,6 @@ evidence = "Boundary paths declared in repository policy."
 standing = "mechanized"
 owner = "ectropy"
 tags = ["ectropy", "repository"]
-
-[[rule]]
-id = "structure.canonical-branch-protection"
-summary = "Managed repositories share branch protection"
-law = "Every Plumb-managed repository carries byte-identical main and release/** baseline rules; exact release rules follow only PREPARING or FROZEN state, and settled release branches remain frozen."
-evidence = "Forgejo branch-protection responses projected onto the canonical skill documents, existing release branches, and stable consensus."
-standing = "prose-only"
-owner = "plumb"
-tags = ["release", "repository", "state"]
 
 [[rule]]
 id = "structure.cargo-target-ignored"
@@ -876,24 +552,6 @@ owner = "plumb"
 tags = ["adoption", "repository"]
 
 [[rule]]
-id = "template.manifest-variables-aligned"
-summary = "Manifest variables match product vocabulary"
-law = "A manifest spells every injected environment key exactly as the target product derives it."
-evidence = "Manifest templates compared with the target's cascade vocabulary."
-standing = "prose-only"
-owner = "product"
-tags = ["configuration"]
-
-[[rule]]
-id = "template.variables-owned-by-product"
-summary = "Products own template variables"
-law = "The substrate owns template grammar while each caller owns the variables it supplies."
-evidence = "Manifest documentation and the variable table passed to fill."
-standing = "prose-only"
-owner = "product"
-tags = ["configuration", "ownership"]
-
-[[rule]]
 id = "vocabulary.retired-term-absent"
 summary = "Retired domain terms leave the active closure"
 law = "A term in Plumb's transitional retired dictionary is absent from Git-tracked paths and current working-tree bytes."
@@ -1030,8 +688,8 @@ tags = ["dispatch", "web"]
 
 [[rule]]
 id = "structure.default-overridden"
-summary = "A project plumb.toml departs from a Depot layout default"
-law = "A key the project's plumb.toml states over the Depot defaults in rules/plumb.toml takes precedence; each such departure is reported so it stays visible."
+summary = "A project plumb.toml departs from a Plumb layout default"
+law = "A key the project's plumb.toml states over the Plumb defaults in rules/suites/layout.toml takes precedence; each such departure is reported so it stays visible."
 evidence = "The layered layout's overridden seat paths, file names and keys."
 standing = "mechanized"
 owner = "plumb"

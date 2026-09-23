@@ -152,14 +152,12 @@ pub fn coverage() -> Coverage {
         prose: 0,
         observed: 0,
         mechanized: 0,
-        retired: 0,
     };
     for rule in all() {
         match rule.standing {
             Standing::Prose => coverage.prose += 1,
             Standing::Observed => coverage.observed += 1,
             Standing::Mechanized => coverage.mechanized += 1,
-            Standing::Retired => coverage.retired += 1,
         }
     }
     coverage

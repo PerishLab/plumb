@@ -122,12 +122,11 @@ fn catalog() {
     let mechanized = json(&["rule", "list", "--standing", "mechanized", "--json"]);
     let observed = json(&["rule", "list", "--standing", "observed", "--json"]);
     let prose = json(&["rule", "list", "--standing", "prose-only", "--json"]);
-    let retired = json(&["rule", "list", "--standing", "retired", "--json"]);
     assert_eq!(all["schema"], "plumb.rule-list/v1");
     let total = all["rules"].as_array().map(Vec::len).expect("all rules");
     let law = crate::support::policy("rules/catalog.toml");
     assert_eq!(total, law.matches("[[rule]]").count());
-    let classified = [&mechanized, &observed, &prose, &retired]
+    let classified = [&mechanized, &observed, &prose]
         .iter()
         .map(|report| report["rules"].as_array().map(Vec::len).expect("rules"))
         .sum::<usize>();
