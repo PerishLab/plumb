@@ -47,8 +47,6 @@ pub struct Hit {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Raw {
-    schema: u8,
-    codec: String,
     retired: Vec<String>,
 }
 
@@ -71,12 +69,6 @@ impl Dictionary {
                 format!("cannot parse domain dictionary: {error}"),
             )
         })?;
-        if raw.schema != 1 || raw.codec != CODEC {
-            return Err(refuse(
-                "dictionary",
-                "domain dictionary schema or codec is unsupported",
-            ));
-        }
         let mut unique = BTreeSet::new();
         let mut terms = Vec::new();
         for encoded in raw.retired {

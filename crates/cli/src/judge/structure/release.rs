@@ -1,8 +1,19 @@
 use crate::catalog::rules::release as release_rule;
+
 use crate::catalog::rules::structure as rule;
 use crate::judge::finding::{Found, Seed};
 use crate::shape;
 use crate::shape::pair::Release;
+
+const EXERCISED: [(&str, usize); 2] = [("cargo", 2), ("npm", 1)];
+
+fn exercised(attachment: &str) -> usize {
+    EXERCISED
+        .iter()
+        .find(|(name, _)| *name == attachment)
+        .map(|(_, width)| *width)
+        .unwrap_or(0)
+}
 
 pub fn judge(held: &shape::Shape) -> Found {
     Judge(held).run()
@@ -58,7 +69,7 @@ fn measured(release: &Release, found: &mut Found) {
             ));
             continue;
         }
-        let exercised = rules.exercised.get(attachment).copied().unwrap_or(0);
+        let exercised = exercised(attachment);
         if *held > exercised {
             found.push(Seed::noted(
                 &release_rule::ATTACHMENT_EXERCISED,

@@ -3,13 +3,13 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub fn command() -> Command {
-    let cargo = &crate::catalog::set::current().stable.cargo;
-    configured(&cargo.registry, &cargo.index)
+    let cargo = crate::catalog::set::CARGO;
+    configured(cargo.registry, cargo.index)
 }
 
 pub fn configure(command: &mut Command) {
-    let cargo = &crate::catalog::set::current().stable.cargo;
-    for (key, value) in configured(&cargo.registry, &cargo.index).get_envs() {
+    let cargo = crate::catalog::set::CARGO;
+    for (key, value) in configured(cargo.registry, cargo.index).get_envs() {
         if let Some(value) = value {
             command.env(key, value);
         }

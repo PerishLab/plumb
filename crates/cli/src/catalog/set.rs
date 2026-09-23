@@ -7,24 +7,22 @@ pub struct Rules {
     pub lanes: BTreeSet<String>,
     pub retired: Vec<(String, String)>,
     pub blacklist: BTreeSet<String>,
-    pub stable: Stable,
     pub release: Release,
 }
+
+pub struct Cargo {
+    pub registry: &'static str,
+    pub index: &'static str,
+}
+
+pub const CARGO: Cargo = Cargo {
+    registry: "perish",
+    index: "sparse+https://git.perish.top/api/packages/PerishLab/cargo/",
+};
 
 pub struct Release {
     pub ceiling: usize,
     pub permitted: BTreeMap<String, usize>,
-    pub exercised: BTreeMap<String, usize>,
-    pub forge: String,
-}
-
-pub struct Stable {
-    pub cargo: Cargo,
-}
-
-pub struct Cargo {
-    pub registry: String,
-    pub index: String,
 }
 
 const SETS: [&str; 5] = ["deps", "release", "seat", "structure", "workflow"];
@@ -140,12 +138,6 @@ fn build() -> Result<Rules, String> {
         })
         .transpose()?
         .unwrap_or_default();
-    let stable = deps
-        .get("stable")
-        .ok_or_else(|| "rules/deps.toml must name stable authorities".to_string())?;
-    let cargo = stable
-        .get("cargo")
-        .ok_or_else(|| "rules/deps.toml must name stable.cargo".to_string())?;
     let blacklist =
         deps.get("blacklist")
             .and_then(toml::Value::as_array)
@@ -160,29 +152,15 @@ fn build() -> Result<Rules, String> {
             })
             .transpose()?
             .unwrap_or_default();
-    let forge = release
-        .get("forge")
-        .and_then(|table| table.get("image"))
-        .and_then(toml::Value::as_str)
-        .ok_or_else(|| "rules/release.toml must name forge.image".to_string())?
-        .to_string();
     Ok(Rules {
         suites,
         dirs: members(&structure, "dir"),
         lanes: members(&structure, "lane"),
         retired,
         blacklist,
-        stable: Stable {
-            cargo: Cargo {
-                registry: required(cargo, "registry", "rules/deps.toml stable.cargo")?,
-                index: required(cargo, "index", "rules/deps.toml stable.cargo")?,
-            },
-        },
         release: Release {
             ceiling: ceiling(&release)?,
             permitted: counted(&release, "permitted"),
-            exercised: counted(&release, "exercised"),
-            forge,
         },
     })
 }

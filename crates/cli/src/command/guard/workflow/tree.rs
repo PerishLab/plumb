@@ -1,4 +1,3 @@
-use crate::catalog::set;
 use crate::shape::workflow::Key;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -57,8 +56,6 @@ impl Tree {
             sponge.update([0]);
         }
         sponge.update([1]);
-        sponge.update(set::current().release.forge.as_bytes());
-        sponge.update([0]);
         for (path, meta) in self.selection(&key.paths) {
             if let Some(held) = super::release::fingerprint(
                 key.lane() == "guard",

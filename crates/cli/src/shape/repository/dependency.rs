@@ -22,11 +22,7 @@ impl Dependencies {
 }
 
 pub fn read(root: &Path) -> Dependencies {
-    let mut found = cargo::read(
-        root,
-        &set::current().stable.cargo.registry,
-        &set::current().stable.cargo.index,
-    );
+    let mut found = cargo::read(root, set::CARGO.registry, set::CARGO.index);
     found.normalize();
     found
 }

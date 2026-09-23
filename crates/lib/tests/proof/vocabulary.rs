@@ -8,10 +8,7 @@ fn dictionary(encoded: &[String]) -> Dictionary {
         .map(|value| format!("\"{value}\""))
         .collect::<Vec<_>>()
         .join(", ");
-    Dictionary::parse(&format!(
-        "schema = 1\ncodec = \"p64-v1\"\nretired = [{values}]\n"
-    ))
-    .expect("dictionary")
+    Dictionary::parse(&format!("retired = [{values}]\n")).expect("dictionary")
 }
 
 fn git(root: &Path, args: &[&str]) -> std::process::Output {
@@ -48,8 +45,7 @@ fn codec() {
 #[test]
 fn duplicate() {
     let encoded = encode("retired").expect("encode");
-    let source =
-        format!("schema = 1\ncodec = \"p64-v1\"\nretired = [\"{encoded}\", \"{encoded}\"]\n");
+    let source = format!("retired = [\"{encoded}\", \"{encoded}\"]\n");
     assert_eq!(
         Dictionary::parse(&source).expect_err("duplicate").kind,
         "dictionary"
@@ -68,10 +64,8 @@ fn empty() {
 #[test]
 fn digest() {
     let fixture = tempfile::tempdir().expect("fixture");
-    let first = Dictionary::parse("schema = 1\ncodec = \"p64-v1\"\nretired = []\n")
-        .expect("first dictionary");
-    let second = Dictionary::parse("schema = 1\ncodec = \"p64-v1\"\nretired = []\n\n")
-        .expect("second dictionary");
+    let first = Dictionary::parse("retired = []\n").expect("first dictionary");
+    let second = Dictionary::parse("retired = []\n\n").expect("second dictionary");
     let first = scan(fixture.path(), &first).expect("first report");
     let second = scan(fixture.path(), &second).expect("second report");
 
