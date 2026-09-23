@@ -2,6 +2,8 @@
 # carry a copy. A set asserts nothing on its own; suites/shape.toml says which
 # repository shape earns which set.
 
+addressed = true
+
 rule = "structure.ectropy-policy"
 
 [[set]]

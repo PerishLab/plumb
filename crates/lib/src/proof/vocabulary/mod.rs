@@ -45,7 +45,6 @@ pub struct Hit {
 }
 
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
 struct Raw {
     retired: Vec<String>,
 }

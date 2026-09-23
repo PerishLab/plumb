@@ -1,6 +1,8 @@
 # The deps dimension's first-party policy: the styling packages a governed
 # repository does not carry.
 
+rule = "deps.styling-package-allowed"
+
 blacklist = [
   "@compiled/react",
   "@emotion/css",

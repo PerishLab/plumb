@@ -2,7 +2,6 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::LazyLock;
 
 pub struct Rules {
-    pub suites: BTreeMap<String, Vec<String>>,
     pub dirs: BTreeSet<String>,
     pub lanes: BTreeSet<String>,
     pub retired: Vec<(String, String)>,
@@ -25,15 +24,7 @@ pub struct Release {
     pub permitted: BTreeMap<String, usize>,
 }
 
-const SETS: [&str; 7] = [
-    "deps",
-    "inputs",
-    "limit",
-    "release",
-    "scan",
-    "seat",
-    "structure",
-];
+const SETS: [&str; 6] = ["deps", "limit", "release", "scan", "seat", "structure"];
 
 static POLICY: LazyLock<Result<toml::Table, String>> =
     LazyLock::new(|| table("rules/suites/shape.toml").and_then(shaped));
@@ -124,25 +115,8 @@ fn table(path: &str) -> Result<toml::Table, String> {
 
 fn build() -> Result<Rules, String> {
     let structure = table("rules/atoms/structure.toml")?;
-    let inputs = table("rules/atoms/inputs.toml")?;
     let deps = table("rules/atoms/deps.toml")?;
     let release = table("rules/atoms/release.toml")?;
-    let suites = inputs
-        .get("set")
-        .and_then(toml::Value::as_array)
-        .map(|list| {
-            list.iter()
-                .map(|entry| {
-                    let name = required(entry, "name", "rules/atoms/inputs.toml set")?;
-                    Ok((
-                        name,
-                        paths(entry.get("paths").unwrap_or(&toml::Value::Boolean(false)))?,
-                    ))
-                })
-                .collect::<Result<BTreeMap<_, _>, String>>()
-        })
-        .transpose()?
-        .unwrap_or_default();
     let retired = deps
         .get("retired")
         .and_then(toml::Value::as_array)
@@ -172,7 +146,6 @@ fn build() -> Result<Rules, String> {
         .transpose()?
         .unwrap_or_default();
     Ok(Rules {
-        suites,
         dirs: members(&structure, "dir"),
         lanes: members(&structure, "lane"),
         retired,
@@ -230,18 +203,4 @@ fn required(value: &toml::Value, key: &str, place: &str) -> Result<String, Strin
         .and_then(toml::Value::as_str)
         .map(str::to_string)
         .ok_or_else(|| format!("{place} must name {key}"))
-}
-
-fn paths(value: &toml::Value) -> Result<Vec<String>, String> {
-    value
-        .as_array()
-        .ok_or_else(|| "rules/atoms/inputs.toml set must hold paths".to_string())?
-        .iter()
-        .map(|value| {
-            value
-                .as_str()
-                .map(str::to_string)
-                .ok_or_else(|| "rules/atoms/inputs.toml set paths must be strings".to_string())
-        })
-        .collect()
 }

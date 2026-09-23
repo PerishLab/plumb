@@ -4,6 +4,8 @@
 # the attachments that depart from it. What the skeleton has actually released
 # is carried in source, beside the mechanism that reports the gap.
 
+rule = "release.attachment-permitted"
+
 ceiling = 10
 
 [permitted]

@@ -1,1 +1,3 @@
+rule = "vocabulary.retired-term-absent"
+
 retired = ["~c2VhbGtpdA", "~cGFja3BvcnQ"]
