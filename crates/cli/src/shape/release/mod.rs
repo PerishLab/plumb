@@ -1,12 +1,10 @@
 mod attachment;
 mod depot;
-mod retire;
 mod shape;
 mod target;
 
 pub use attachment::{Cargo, Cfworker, Chart, Deb, Npm, Oci};
 pub use depot::Depot;
-pub use retire::Retire;
 pub use target::{Format, Target};
 
 use serde::Deserialize;
@@ -29,7 +27,6 @@ pub struct Spec {
     pub npm: Option<Npm>,
     pub cfworker: Option<Cfworker>,
     pub deb: Option<Deb>,
-    pub retire: Option<Retire>,
     pub depot: Option<Depot>,
 }
 
@@ -52,7 +49,6 @@ struct Raw {
     npm: Option<Npm>,
     cfworker: Option<Cfworker>,
     deb: Option<Deb>,
-    retire: Option<Retire>,
     depot: Option<Depot>,
 }
 impl Spec {
@@ -95,7 +91,6 @@ impl Spec {
             npm,
             cfworker,
             deb,
-            retire,
             depot,
         } = held.release;
         let mut spec = Self {
@@ -118,7 +113,6 @@ impl Spec {
             npm,
             cfworker,
             deb,
-            retire,
             depot,
         };
         if let Some(deb) = &mut spec.deb
@@ -189,9 +183,6 @@ impl Spec {
                 "declared skill root is absent: {}",
                 self.root.join("skills").join(&self.product).display()
             ));
-        }
-        if let Some(retire) = &self.retire {
-            retire.validate()?;
         }
         if let Some(depot) = &self.depot {
             token("product", &self.product, false)?;
