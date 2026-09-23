@@ -8,7 +8,6 @@ pub enum Standing {
     Prose,
     Observed,
     Mechanized,
-    Retired,
 }
 
 impl Standing {
@@ -17,7 +16,6 @@ impl Standing {
             Self::Prose => "prose-only",
             Self::Observed => "observed",
             Self::Mechanized => "mechanized",
-            Self::Retired => "retired",
         }
     }
 
@@ -26,7 +24,6 @@ impl Standing {
             "prose-only" => Some(Self::Prose),
             "observed" => Some(Self::Observed),
             "mechanized" => Some(Self::Mechanized),
-            "retired" => Some(Self::Retired),
             _ => None,
         }
     }
@@ -103,5 +100,4 @@ pub struct Coverage {
     pub prose: usize,
     pub observed: usize,
     pub mechanized: usize,
-    pub retired: usize,
 }

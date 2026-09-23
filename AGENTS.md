@@ -53,8 +53,8 @@ answers for.
   nothing is the binary's own and lives in source. `plumb::seat::catalogue!`
   reads that directory where it is carried, refuses every departure from it,
   and emits what `catalog/carried.rs` used to list by hand. A rule that stops
-  being judged stands as `standing = "retired"` with the reason in its law, as
-  a retired seat or directory keeps its page. Each is one file per addressable thing, and the address is the
+  being judged leaves the catalogue; the commit that removes it says why. Each
+  is one file per addressable thing, and the address is the
   path: a rule set is its name, a cookbook entry is the finding that sends you
   there, and long help is the command path, so `plumb release` reads
   `help/release.txt`. Prose an agent reads as contract is carried, never
@@ -175,3 +175,25 @@ Destroying a bucket, a domain or a writer is a credentialed effect, and those
 are wharf's to execute, as provisioning is. Plumb holds no provider credential
 and depends on no provider tool; until wharf carries retirement, nothing
 executes it.
+
+## Commitments
+
+These bind how Plumb is written rather than what a repository carries, so no
+tree answers them and the catalogue does not hold them.
+
+- A stateful tool resolves one data home as ordinary four-layer configuration.
+- Machine state may be rewritten; human policy enters through the cascade.
+- Machine-written records live below the tool's data-home state directory, name
+  their shape version, and refuse a version they do not know.
+- A state write lands beside the target and replaces it whole.
+- Acting on a managed path requires both a registry record and an in-path
+  marker naming the tool.
+- The substrate exports config mechanism; each binary declares its own sections
+  and values, and owns the variables it supplies to a template whose grammar the
+  substrate owns. A manifest spells every injected environment key exactly as
+  the target product derives it.
+- A released skill never claims enforcement its matching binary does not
+  provide. Install, status and upgrade keep the global skill ledger anchored to
+  stable, and a non-stable skill takes an exact version and an explicit path,
+  receives a staged marker, and never enters managed state.
+
