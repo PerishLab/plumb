@@ -167,15 +167,6 @@ and ship boundary, the seats a stable label may take, and the isolation every
 non-stable release owes. Why the contract has this shape, and
 every decision that put it there, is `perish.code/plumb-release-contract`.
 
-## Retirement
-
-Retirement is the mirror of release: everything it destroys is something Plumb
-declared, so the declaration (`[release.retire]`) and its detection stay here.
-Destroying a bucket, a domain or a writer is a credentialed effect, and those
-are wharf's to execute, as provisioning is. Plumb holds no provider credential
-and depends on no provider tool; until wharf carries retirement, nothing
-executes it.
-
 ## Commitments
 
 These bind how Plumb is written rather than what a repository carries, so no
