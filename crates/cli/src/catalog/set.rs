@@ -16,7 +16,7 @@ pub struct Cargo {
 
 pub const CARGO: Cargo = Cargo {
     registry: "perish",
-    index: "sparse+https://git.perish.top/api/packages/PerishLab/cargo/",
+    index: "sparse+https://cargo.perish.uk/",
 };
 
 pub struct Release {
