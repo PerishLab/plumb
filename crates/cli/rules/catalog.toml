@@ -750,6 +750,15 @@ owner = "ectropy"
 tags = ["ectropy", "repository"]
 
 [[rule]]
+id = "structure.declaration-present"
+summary = "A governed repository declares itself"
+law = "A repository carries plumb.toml, because everything the skeleton judges it against is either declared there or selected by it. Without one there is nothing to judge, and saying so is the answer; Guard refuses to prove a staged tree in the same case, so neither says true where nothing was read."
+evidence = "plumb.toml at the repository root."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository", "adoption"]
+
+[[rule]]
 id = "structure.ectropy-policy-present"
 summary = "Ectropy policy is present"
 law = "A governed repository declares its ectropy policy."

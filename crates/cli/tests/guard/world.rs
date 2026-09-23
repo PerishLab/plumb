@@ -38,7 +38,15 @@ pub(crate) fn govern(root: &std::path::Path) {
 pub(crate) fn fixture() -> tempfile::TempDir {
     let seat = tempfile::tempdir().expect("fixture");
     govern(seat.path());
+    declare(seat.path());
     seat
+}
+
+pub(crate) fn declare(root: &std::path::Path) {
+    let held = "[[layout.seat]]\npath = \"charts/*\"\nkind = \"retired\"\n\n\
+                [[layout.seat]]\npath = \"skills/*\"\nkind = \"retired\"\n\n\
+                [[layout.file]]\nname = [\"AGENTS.md\"]\nkind = \"retired\"\n";
+    std::fs::write(root.join("plumb.toml"), held).expect("fixture should declare itself");
 }
 
 pub(crate) fn run(args: &[&str]) -> String {

@@ -82,6 +82,13 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
         Err(error) => Err(error.clone()),
     };
     let mut findings = judge::judge(&held);
+    if !root.join("plumb.toml").is_file() {
+        findings.push(finding::Finding::new(finding::Seed::blind(
+            &crate::catalog::rules::structure::DECLARATION_PRESENT,
+            "plumb.toml is absent; nothing declares this repository, so nothing here was judged"
+                .to_string(),
+        )));
+    }
     if root.join("plumb.toml").is_file() {
         findings.extend(precommit::hooks(&root).into_iter().map(|held| match held {
             precommit::hook::Finding::Wrong(evidence) => {

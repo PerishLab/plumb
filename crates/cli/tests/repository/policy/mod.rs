@@ -217,7 +217,7 @@ paths = ["packages/react-components/**"]
     std::fs::write(root.join("ectropy.toml"), policy).expect("policy should be written");
     let out = run(&root);
     std::fs::remove_dir_all(&root).expect("fixture should be swept");
-    assert!(out.contains("true to the skeleton"), "{out}");
+    assert!(!out.contains("out of true:"), "{out}");
 }
 
 #[test]

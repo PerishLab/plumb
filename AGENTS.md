@@ -116,6 +116,11 @@ answers for.
   region bound after compilation and before final signing. This is a convergence
   contract, not a claim of completed support: platform retention, optimized
   runtime reads, signing, and consumer acceptance must be proved before release.
+- Doctor never calls a repository true where it read nothing. A repository
+  without plumb.toml declares nothing, so Doctor says that and stands blind
+  rather than clean, which is what Guard already says when it refuses to prove
+  a staged tree there. An undeclared ectropy policy reads as undeclared too,
+  not as limits of zero.
 - A release line is opened by `release open` and closed by `release close`;
   a stable marker leaves obligations that are paid before the next marker:
   its distribution completed (`ship dispatch`, read from wharf's

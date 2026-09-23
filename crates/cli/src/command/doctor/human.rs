@@ -40,12 +40,13 @@ pub fn render(seen: Held<'_>) {
             dependency.seat,
         );
     }
-    println!(
-        "  law       block={} path={} grants={}",
-        held.block.unwrap_or(0),
-        held.path.unwrap_or(0),
-        show(&held.grants)
-    );
+    match (held.block, held.path) {
+        (Some(block), Some(path)) => println!(
+            "  law       block={block} path={path} grants={}",
+            show(&held.grants)
+        ),
+        _ => println!("  law       undeclared"),
+    }
     match vocabulary {
         Ok(report) => println!(
             "  vocabulary {} {} retired={} scanned={}/{}",
