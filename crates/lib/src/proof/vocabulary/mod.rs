@@ -7,7 +7,7 @@ pub use super::snapshot::Refusal;
 
 pub const CODEC: &str = "p64-v1";
 pub const SCHEMA: &str = "plumb.vocabulary/v2";
-const RULE: &str = "rules/vocabulary.toml";
+const RULE: &str = "rules/atoms/vocabulary.toml";
 
 mod codec;
 

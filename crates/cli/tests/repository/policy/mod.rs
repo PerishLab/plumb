@@ -1,7 +1,9 @@
 use std::path::Path;
 use std::process::Command;
 
-pub(super) const POLICY: &str = r#"
+pub(super) const LIMIT: &str = r#"
+rule = "structure.ectropy-policy"
+
 [limit]
 block = 4
 fanout = 10
@@ -15,38 +17,81 @@ allow = false
 
 [word]
 single = true
+"#;
 
-[[shape]]
-when = ["docs"]
+pub(super) const SCAN: &str = r#"
+rule = "structure.ectropy-policy"
+
+[[set]]
+name = "docs-md"
 include = ["docs/**/*.md"]
 roots = ["docs"]
 
-[[shape]]
-when = ["skills"]
+[[set]]
+name = "skills-md"
 include = ["skills/**/*.md"]
 roots = ["skills/*"]
 
+[[set]]
+name = "web-components-banned"
+bans = ["apps/web/src/lib/components/**"]
+
+[[set]]
+name = "apps-web"
+include = ["apps/**/*.ts"]
+roots = ["apps/*/src", "apps/*/tests"]
+
+[[set]]
+name = "apps-web-svelte"
+include = ["apps/**/*.svelte"]
+exclude = ["**/.svelte-kit/**"]
+
+[[set]]
+name = "apps-web-tsx"
+include = ["apps/**/*.tsx"]
+
+[[set]]
+name = "packages-web"
+include = ["packages/**/*.ts"]
+roots = ["packages/*/src"]
+
+[[set]]
+name = "packages-web-svelte"
+include = ["packages/**/*.svelte"]
+exclude = ["**/.svelte-kit/**"]
+
+[[set]]
+name = "packages-web-tsx"
+include = ["packages/**/*.tsx"]
+"#;
+
+pub(super) const SHAPE: &str = r#"
+[[shape]]
+when = ["docs"]
+use = ["rule://scan/docs-md"]
+
+[[shape]]
+when = ["skills"]
+use = ["rule://scan/skills-md"]
+
 [[shape]]
 when = ["apps/web/src/lib/components"]
-bans = ["apps/web/src/lib/components/**"]
+use = ["rule://scan/web-components-banned"]
 
 [[web]]
 seat = "apps"
-include = ["apps/**/*.ts"]
-roots = ["apps/*/src", "apps/*/tests"]
-svelte-include = ["apps/**/*.svelte"]
-svelte-exclude = ["**/.svelte-kit/**"]
-tsx-include = ["apps/**/*.tsx"]
+use = ["rule://scan/apps-web"]
+svelte = ["rule://scan/apps-web-svelte"]
+tsx = ["rule://scan/apps-web-tsx"]
 
 [[web]]
 seat = "packages"
-include = ["packages/**/*.ts"]
-roots = ["packages/*/src"]
-svelte-include = ["packages/**/*.svelte"]
-svelte-exclude = ["**/.svelte-kit/**"]
-tsx-include = ["packages/**/*.tsx"]
+use = ["rule://scan/packages-web"]
+svelte = ["rule://scan/packages-web-svelte"]
+tsx = ["rule://scan/packages-web-tsx"]
 "#;
-const DEPS: &str = "blacklist = [\"@stylexjs/stylex\"]\n\n[stable.cargo]\nregistry = \"fixture\"\nindex = \"sparse+https://registry.invalid/\"\n";
+
+const DEPS: &str = "blacklist = [\"@stylexjs/stylex\"]\n";
 
 pub(super) fn govern(root: &Path) {
     let status = Command::new("git")
@@ -63,7 +108,7 @@ pub(super) fn govern(root: &Path) {
 
 pub(super) fn run(root: &Path) -> String {
     let home = root.join(".plumb-test-home");
-    stock(&home, POLICY);
+    stock(&home, LIMIT, SCAN, SHAPE);
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["doctor", root.to_str().expect("path should be utf8")])
         .env("PLUMB_HOME", home)
@@ -74,7 +119,7 @@ pub(super) fn run(root: &Path) -> String {
 
 pub(super) fn policy(root: &Path, write: bool) -> std::process::Output {
     let home = root.join(".plumb-test-home");
-    stock(&home, POLICY);
+    stock(&home, LIMIT, SCAN, SHAPE);
     let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
     command.args(["policy", root.to_str().expect("path should be utf8")]);
     command.env("PLUMB_HOME", home);
@@ -84,8 +129,13 @@ pub(super) fn policy(root: &Path, write: bool) -> std::process::Output {
     command.output().expect("plumb should run")
 }
 
-pub(super) fn stock(home: &Path, policy: &str) {
-    for (path, body) in [("rules/policy.toml", policy), ("rules/deps.toml", DEPS)] {
+pub(super) fn stock(home: &Path, limit: &str, scan: &str, shape: &str) {
+    for (path, body) in [
+        ("rules/atoms/limit.toml", limit),
+        ("rules/atoms/scan.toml", scan),
+        ("rules/suites/shape.toml", shape),
+        ("rules/atoms/deps.toml", DEPS),
+    ] {
         let target = home.join("overlay").join(path);
         std::fs::create_dir_all(target.parent().expect("overlay parent")).expect("overlay seat");
         std::fs::write(target, body).expect("overlay rule");

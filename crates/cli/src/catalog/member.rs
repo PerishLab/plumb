@@ -33,6 +33,23 @@ pub(crate) fn parse(held: &str) -> Result<Reference, String> {
     })
 }
 
+pub(crate) fn scan(held: &str) -> Result<toml::Table, String> {
+    let reference = parse(held)?;
+    let slug = reference
+        .slug
+        .as_deref()
+        .ok_or_else(|| format!("{held} names a set and not one of its members"))?;
+    crate::catalog::set::read(&reference.set)?
+        .get("set")
+        .and_then(toml::Value::as_array)
+        .unwrap_or(&Vec::new())
+        .iter()
+        .find(|entry| entry.get("name").and_then(toml::Value::as_str) == Some(slug))
+        .and_then(toml::Value::as_table)
+        .cloned()
+        .ok_or_else(|| format!("{held} names no set"))
+}
+
 pub(crate) fn member(reference: &Reference) -> Result<Member, String> {
     let doc = crate::catalog::set::read(&reference.set)?;
     let slug = reference

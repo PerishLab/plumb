@@ -1,0 +1,29 @@
+# The paths a well-known toolchain reads, named so a product declares intent
+# instead of copying a list. Adding a path here is a change to Plumb, never one
+# a product makes for itself.
+
+rule = "workflow.inputs-declared"
+
+[[set]]
+name = "cargo"
+paths = [
+  ".cargo",
+  "Cargo.lock",
+  "Cargo.toml",
+  "clippy.toml",
+  "crates",
+  "rust-toolchain.toml",
+  "rustfmt.toml",
+]
+
+[[set]]
+name = "pnpm"
+paths = [
+  "apps",
+  "biome.json",
+  "package.json",
+  "packages",
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
+  "tsconfig.json",
+]

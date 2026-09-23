@@ -43,7 +43,7 @@ fn malformed() {
 fn report(rule: &str) -> String {
     let root = tempfile::tempdir().expect("repository");
     let rules = format!("[member]\n[[member.entry]]\nname = \"roles\"\n{rule}\n");
-    let depot = super::support::overlay(&[("rules/seat.toml", &rules)]);
+    let depot = super::support::overlay(&[("rules/atoms/seat.toml", &rules)]);
     git(root.path(), &["init", "-q"]);
     std::fs::write(
         root.path().join("plumb.toml"),
