@@ -44,8 +44,17 @@ answers for.
 - `crates/cli/{rules,assets,cookbook,help}` — Plumb's governed resources,
   carried inside the binary. A release is its own rule set: nothing is fetched,
   installed or overlaid at run time, and changing a rule is a change to Plumb.
-  `catalog/carried.rs` names every rule file, and a test holds it to the
-  directory. Each is one file per addressable thing, and the address is the
+  `rules/` holds four things and the compiler holds it to them:
+  `catalog.toml` says what each rule requires, `taxonomy.toml` the words it is
+  filed under, `atoms/` each judgement a mechanism makes, and `suites/` which
+  atoms a position selects. An atom is self-contained and names the mechanized
+  rule it judges; a suite only selects, by `rule://<atom>/<member>`, and
+  carries no assertion of its own. Anything that judges nothing and selects
+  nothing is the binary's own and lives in source. `plumb::seat::catalogue!`
+  reads that directory where it is carried, refuses every departure from it,
+  and emits what `catalog/carried.rs` used to list by hand. A rule that stops
+  being judged stands as `standing = "retired"` with the reason in its law, as
+  a retired seat or directory keeps its page. Each is one file per addressable thing, and the address is the
   path: a rule set is its name, a cookbook entry is the finding that sends you
   there, and long help is the command path, so `plumb release` reads
   `help/release.txt`. Prose an agent reads as contract is carried, never

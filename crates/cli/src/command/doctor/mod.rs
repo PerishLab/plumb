@@ -1,5 +1,5 @@
 use crate::catalog::model::Coverage;
-use crate::catalog::rules::depot::DEPOT_SCHEMA;
+use crate::catalog::rules::config::PLUMB_CURRENT;
 use crate::command::precommit;
 use crate::judge::{self, finding};
 use crate::shape;
@@ -85,10 +85,10 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
     if root.join("plumb.toml").is_file() {
         findings.extend(precommit::hooks(&root).into_iter().map(|held| match held {
             precommit::hook::Finding::Wrong(evidence) => {
-                finding::Finding::new(finding::Seed::wrong(&DEPOT_SCHEMA, evidence))
+                finding::Finding::new(finding::Seed::wrong(&PLUMB_CURRENT, evidence))
             }
             precommit::hook::Finding::Blind(evidence) => {
-                finding::Finding::new(finding::Seed::blind(&DEPOT_SCHEMA, evidence))
+                finding::Finding::new(finding::Seed::blind(&PLUMB_CURRENT, evidence))
             }
         }));
     }

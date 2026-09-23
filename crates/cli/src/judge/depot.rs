@@ -1,5 +1,5 @@
 use super::finding::{Finding, Seed};
-use crate::catalog::rules::depot::DEPOT_SCHEMA;
+use crate::catalog::rules::config::PLUMB_CURRENT;
 use std::process::Command;
 
 pub fn runtime() -> Vec<Finding> {
@@ -11,7 +11,7 @@ pub fn runtime() -> Vec<Finding> {
         Ok(state) => state,
         Err(error) => {
             return vec![Finding::new(Seed::blind(
-                &DEPOT_SCHEMA,
+                &PLUMB_CURRENT,
                 format!(
                     "cannot read managed Plumb identity {}: {error}",
                     manager.display()
@@ -27,7 +27,7 @@ pub fn runtime() -> Vec<Finding> {
     };
     if field("channel") != Some("stable") || field("version") != Some(running) {
         return vec![Finding::new(Seed::wrong(
-            &DEPOT_SCHEMA,
+            &PLUMB_CURRENT,
             format!("managed Plumb identity is not stable {running}; reinstall stable latest"),
         ))];
     }
@@ -52,7 +52,7 @@ pub fn runtime() -> Vec<Finding> {
         Ok(output) if output.status.success() => output,
         Ok(output) => {
             return vec![Finding::new(Seed::blind(
-                &DEPOT_SCHEMA,
+                &PLUMB_CURRENT,
                 format!(
                     "cannot read Plumb stable latest at {url}: {}",
                     String::from_utf8_lossy(&output.stderr).trim()
@@ -61,7 +61,7 @@ pub fn runtime() -> Vec<Finding> {
         }
         Err(error) => {
             return vec![Finding::new(Seed::blind(
-                &DEPOT_SCHEMA,
+                &PLUMB_CURRENT,
                 format!("cannot read Plumb stable latest at {url}: {error}"),
             ))];
         }
@@ -70,7 +70,7 @@ pub fn runtime() -> Vec<Finding> {
         Ok(pointer) => pointer,
         Err(error) => {
             return vec![Finding::new(Seed::blind(
-                &DEPOT_SCHEMA,
+                &PLUMB_CURRENT,
                 format!("cannot parse Plumb stable latest at {url}: {error}"),
             ))];
         }
@@ -83,7 +83,7 @@ pub fn runtime() -> Vec<Finding> {
         && pointer.get("channel").and_then(serde_json::Value::as_str) == Some("stable");
     if !valid || latest.is_none() {
         return vec![Finding::new(Seed::blind(
-            &DEPOT_SCHEMA,
+            &PLUMB_CURRENT,
             format!("Plumb stable latest at {url} has an unknown shape"),
         ))];
     }
@@ -91,7 +91,7 @@ pub fn runtime() -> Vec<Finding> {
         Vec::new()
     } else {
         vec![Finding::new(Seed::wrong(
-            &DEPOT_SCHEMA,
+            &PLUMB_CURRENT,
             format!(
                 "the running Plumb is {running}, stable latest is {}; reinstall stable latest",
                 latest.unwrap_or_default()

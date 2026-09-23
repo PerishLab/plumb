@@ -28,7 +28,7 @@ fn clean() {
     assert_eq!(report["summary"]["unknown"], 0);
     assert_eq!(report["summary"]["blind"], 0);
     let coverage = &report["coverage"];
-    let classified = ["mechanized", "observed", "prose_only"]
+    let classified = ["mechanized", "observed", "prose_only", "retired"]
         .iter()
         .map(|standing| coverage[standing].as_u64().expect("coverage count"))
         .sum::<u64>();
