@@ -81,12 +81,6 @@ count = 1
 note = "One member, named after the repository that carries it. Measured 2026-08-20: charts three of three, skills six of six. This is the shape structure.anchor-unique and structure.package-directory-name each hardcode for one seat."
 
 [[member.entry]]
-name = "version-named"
-holds = "version"
-kind = "retired"
-note = "Release-note versions moved to the depot; no active repository seat selects this historical naming rule."
-
-[[member.entry]]
 name = "wayfinder"
 leaf = "SKILL.md"
 bytes = 3072
