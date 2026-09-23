@@ -4,10 +4,8 @@
 #
 # A member carries `name` and `note`. The note is data, not a comment, so
 # `plumb rule show` can print why a name is permitted; a member nobody can
-# justify has no note to write and does not belong here. `kind` defaults to
-# `machine`; `kind = "retired"` keeps a member on the page with its reason and
-# takes it out of the set, because a name deleted outright takes its evidence
-# with it.
+# justify has no note to write and does not belong here. A name that stops
+# being legal is deleted; the commit that deletes it says why.
 #
 # Exercise counts below were measured across the fifteen governed repositories
 # on 2026-08-20. They are evidence, not law: re-measure before trusting them.
@@ -39,19 +37,6 @@ note = "Rust members. Eleven governed repositories; the most exercised seat here
 name = "deploy"
 note = "Deployment substrate outside the application. codehull, ensign."
 
-# Every repository ignores dist/, and `Root::dirs` reads the Git snapshot, so a
-# dist seat can never reach this set. Retired because it is unjudgeable, not
-# because it is unpopular: no observable behaviour changes.
-[[dir.member]]
-name = "dist"
-kind = "retired"
-note = "Build output. Ignored in every repository, therefore never present in the snapshot this set is compared against."
-
-[[dir.member]]
-name = "docs"
-kind = "retired"
-note = "Release notes moved to the depot; repositories no longer carry a docs seat."
-
 [[dir.member]]
 name = "examples"
 note = "Runnable specimens beside the product. sidecar."
@@ -59,11 +44,6 @@ note = "Runnable specimens beside the product. sidecar."
 [[dir.member]]
 name = "hosts"
 note = "Host declarations. hardrig."
-
-[[dir.member]]
-name = "lib"
-kind = "retired"
-note = "Zero occurrences across all twenty-one repositories, governed and ungoverned. Rust members live under crates, node members under packages; nothing claimed this name."
 
 [[dir.member]]
 name = "packages"
@@ -81,79 +61,7 @@ note = "Forgejo runner lifecycle. Carried by actions, which is not governed yet;
 name = "skills"
 note = "Operating briefs. concord, ectropy, ensign, locus, plumb, runseal."
 
-[[dir.member]]
-name = "tests"
-kind = "retired"
-note = "Zero occurrences across all twenty-one repositories. Tests live beside their member: crates/*/tests, apps/*/tests, packages/*/tests."
-
-[lane]
-rule = "structure.known-workflow"
-
-[[lane.member]]
-name = "deploy"
-kind = "retired"
-note = "Site deployment on explicit dispatch. Carried by design, which is not governed yet; no governed repository holds this lane as of 2026-08-20."
-
-[[lane.member]]
-name = "depot"
-kind = "retired"
-note = "Depot owns no repository workflow. It explicitly consumes the same release marker as ship while remaining an independent local transaction."
-
-[[lane.member]]
-name = "exact.release"
-kind = "retired"
-note = "Exact distribution moved into Plumb's canonical ship atom."
-
-[[lane.member]]
-name = "guard"
-kind = "retired"
-note = "Guard is a Plumb-managed precommit proof and owns no repository workflow seat."
-
-[[lane.member]]
-name = "plan.atom"
-kind = "retired"
-note = "Plan is a Plumb engine invoked inside the canonical ship atom, not a repository workflow."
-
-[[lane.member]]
-name = "platform"
-kind = "retired"
-note = "Platform variation is a ship matrix concern and no longer owns a repository workflow."
-
-[[lane.member]]
-name = "probe"
-kind = "retired"
-note = "Zero occurrences across all twenty-one repositories. Nothing in the skeleton renders or dispatches it."
-
-[[lane.member]]
-name = "release-binary"
-kind = "retired"
-note = "Binary release projection moved into Plumb's canonical ship atom."
-
-[[lane.member]]
-name = "release-cargo"
-kind = "retired"
-note = "Cargo release projection moved into Plumb's canonical ship atom."
-
-[[lane.member]]
-name = "release-exact"
-kind = "retired"
-note = "Legacy exact release workflow retired after canonical ship absorbed it."
-
-[[lane.member]]
-name = "release-runner"
-kind = "retired"
-note = "Runner release projection moved into Plumb's canonical ship atom."
-
-[[lane.member]]
-name = "release-stable"
-kind = "retired"
-note = "Legacy stable release workflow retired after canonical ship absorbed it."
-
 [[lane.member]]
 name = "ship"
 note = "Canonical ship atom owned only by Plumb; product repositories dispatch it and carry no lane."
 
-[[lane.member]]
-name = "stable.release"
-kind = "retired"
-note = "Stable distribution moved into Plumb's canonical ship atom."
