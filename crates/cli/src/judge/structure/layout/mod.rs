@@ -133,13 +133,13 @@ impl Tree<'_> {
         };
         let members = self.members(container);
         let mut found = Vec::new();
-        if let Some(count) = member.count
-            && members.len() != count
+        if let Some(most) = member.most
+            && members.len() > most
         {
             found.push(wrong(
                 &law::SEAT_MEMBER,
                 format!(
-                    "{container} holds {} members where {held} fixes {count}; see: plumb cookbook seat",
+                    "{container} holds {} members where {held} admits at most {most}; see: plumb cookbook seat",
                     members.len()
                 ),
             ));
