@@ -77,8 +77,8 @@ required = ["* text=auto eol=lf"]
 [[member.entry]]
 name = "named-after-repository"
 holds = "repository"
-count = 1
-note = "One member, named after the repository that carries it. Measured 2026-08-20: charts three of three, skills six of six. This is the shape structure.anchor-unique and structure.package-directory-name each hardcode for one seat."
+most = 1
+note = "At most one member, named after the repository that carries it. A seat admits and never demands: a repository with no chart or no skill owes no member and no tombstone, and one that has a member holds it to this name. Measured 2026-08-20: charts three of three, skills six of six where present. This is the shape structure.anchor-unique and structure.package-directory-name each hardcode for one seat."
 
 [[member.entry]]
 name = "wayfinder"

@@ -10,7 +10,7 @@ pub(crate) struct Member {
     pub allow: Option<Vec<String>>,
     pub deny: Vec<String>,
     pub holds: Option<String>,
-    pub count: Option<usize>,
+    pub most: Option<usize>,
     pub leaf: Option<String>,
     pub bytes: Option<usize>,
     pub affirms: Vec<String>,
@@ -102,7 +102,7 @@ pub(crate) fn member(reference: &Reference) -> Result<Member, String> {
             .get("holds")
             .and_then(toml::Value::as_str)
             .map(str::to_string),
-        count: sized(entry, "count"),
+        most: sized(entry, "most"),
         leaf: entry
             .get("leaf")
             .and_then(toml::Value::as_str)
