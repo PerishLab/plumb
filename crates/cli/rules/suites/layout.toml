@@ -3,7 +3,7 @@
 [[layout.seat]]
 path = "charts/*"
 rule = ["rule://seat/named-after-repository"]
-note = "Helm chart carriers. Three of three across the domain."
+note = "Helm chart carriers, admitted and never demanded. Three of three across the domain where present."
 
 [[layout.seat]]
 path = "skills/*"
@@ -12,7 +12,7 @@ rule = [
   "rule://seat/wayfinder",
   "rule://seat/affirmed",
 ]
-note = "Operating briefs. Six of six. Rejudged when the skills line is decided."
+note = "Operating briefs, admitted and never demanded. Six of six where present. Retires to the depot with the skills line."
 
 [[layout.seat]]
 path = "docs/CHANGELOG/*"

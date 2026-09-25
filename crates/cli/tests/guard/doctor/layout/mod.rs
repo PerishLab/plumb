@@ -181,6 +181,22 @@ fn refused() {
 }
 
 #[test]
+fn optional() {
+    let seat = seated(DECLARED);
+    std::fs::remove_dir_all(seat.path().join("charts")).expect("charts");
+    let status = Command::new("git")
+        .args(["-C", seat.path().to_str().expect("utf8"), "add", "-A"])
+        .status()
+        .expect("git");
+    assert!(status.success(), "fixture should be tracked");
+    let held = report(seat.path());
+    assert!(
+        !held.contains("rule://seat/named-after-repository"),
+        "{held}"
+    );
+}
+
+#[test]
 fn ruled() {
     let seat = seated(DECLARED);
     std::fs::create_dir_all(seat.path().join("charts/novel")).expect("novel");
@@ -188,7 +204,9 @@ fn ruled() {
     track(seat.path());
     let held = report(seat.path());
     assert!(
-        held.contains("charts holds 2 members where rule://seat/named-after-repository fixes 1"),
+        held.contains(
+            "charts holds 2 members where rule://seat/named-after-repository admits at most 1"
+        ),
         "{held}"
     );
     assert!(
