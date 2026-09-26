@@ -1,10 +1,10 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub const FIELDS: &str =
     "id,number,url,title,state,updatedAt,issueType,parent,subIssues,blockedBy,blocking";
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Issue {
     pub node: String,
     pub number: u64,
@@ -21,7 +21,7 @@ pub struct Issue {
     pub blocking: Vec<Reference>,
 }
 
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct Reference {
     pub repository: String,
     pub number: u64,

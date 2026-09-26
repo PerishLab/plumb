@@ -12,6 +12,7 @@ pub struct Remote {
 }
 
 pub struct Pull {
+    pub node: String,
     pub number: u64,
     pub url: String,
     pub head: String,
@@ -172,7 +173,7 @@ impl Client {
     }
 }
 
-const FIELDS: &str = "number,url,headRefOid,title,body";
+const FIELDS: &str = "id,number,url,headRefOid,title,body";
 fn pull(value: &Value) -> Option<Pull> {
     let text = |key: &str| {
         value
@@ -182,6 +183,7 @@ fn pull(value: &Value) -> Option<Pull> {
             .to_string()
     };
     Some(Pull {
+        node: text("id"),
         number: value.get("number")?.as_u64()?,
         url: text("url"),
         head: text("headRefOid"),
@@ -198,7 +200,7 @@ fn pending(error: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::parse;
+    use super::{parse, pull};
 
     #[test]
     fn remotes() {
@@ -215,5 +217,20 @@ mod tests {
         }
         let refused = parse("ssh://git@git.perish.top/PerishLab/plumb.git").err();
         assert!(refused.is_some_and(|error| error.contains("Forgejo is archived")));
+    }
+
+    #[test]
+    fn pulls() {
+        let value = serde_json::json!({
+            "id": "PR_one",
+            "number": 23,
+            "url": "https://github.com/PerishLab/plumb/pull/23",
+            "headRefOid": "abc",
+            "title": "Delivery",
+            "body": "Refs PerishLab/plumb#20"
+        });
+        let pull = pull(&value).expect("pull");
+        assert_eq!(pull.node, "PR_one");
+        assert_eq!(pull.number, 23);
     }
 }
