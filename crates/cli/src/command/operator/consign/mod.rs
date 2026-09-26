@@ -104,16 +104,15 @@ fn gathered(
     marker: &str,
 ) -> Result<(Vec<Good>, Kind), String> {
     if options.kind == "skill" {
-        if options.dir.is_some() {
-            return Err("a skill is taken from the marker's own tree; drop --dir".into());
-        }
         if !spec.skill {
             return Err(format!("{} declares no skill to consign", spec.product));
         }
-        return Ok((
-            goods::Tree(root).carried(marker, &spec.product)?,
-            Kind::Skill,
-        ));
+        let dir = options
+            .dir
+            .as_deref()
+            .ok_or("a skill consigns the brief in --dir")?;
+        brief(dir)?;
+        return Ok((goods::directory(dir)?, Kind::Skill));
     }
     let dir = options
         .dir
@@ -121,6 +120,30 @@ fn gathered(
         .ok_or("a changelog consigns the notes in --dir")?;
     crate::command::changelog::prove(root, dir, marker)?;
     Ok((goods::directory(dir)?, Kind::Changelog))
+}
+
+fn brief(dir: &Path) -> Result<(), String> {
+    let rule = crate::catalog::member::parse(WAYFINDER)
+        .and_then(|held| crate::catalog::member::member(&held))?;
+    vet(dir, rule.leaf.as_deref().unwrap_or("SKILL.md"), rule.bytes)
+}
+
+const WAYFINDER: &str = "rule://seat/wayfinder";
+
+fn vet(dir: &Path, leaf: &str, cap: Option<usize>) -> Result<(), String> {
+    let path = dir.join(leaf);
+    let held = std::fs::metadata(&path)
+        .map_err(|_| format!("{} carries no {leaf}; a skill is a brief", dir.display()))?;
+    if let Some(bytes) = cap
+        && held.len() > bytes as u64
+    {
+        return Err(format!(
+            "{} carries {} bytes where {WAYFINDER} caps {bytes}; see: plumb cookbook wayfinder",
+            path.display(),
+            held.len()
+        ));
+    }
+    Ok(())
 }
 
 fn lodged(lodging: &Lodging<'_>, objects: &[Good]) -> Result<String, String> {

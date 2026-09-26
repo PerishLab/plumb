@@ -45,8 +45,8 @@ impl Spec {
     }
 
     pub(super) fn standalone(&self) -> Result<(), String> {
-        if self.skill || self.deb.is_some() {
-            return Err("a skill or Debian attachment requires a binary release".into());
+        if self.skill {
+            return Err("a skill requires a binary release, whose CLI installs it".into());
         }
         if self.attached() {
             return Ok(());

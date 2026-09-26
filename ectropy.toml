@@ -48,7 +48,6 @@ roots = [
     "packages/*/lib",
     "packages/*/src",
     "packages/*/tests",
-    "skills/*",
 ]
 
 [scan]
@@ -68,7 +67,6 @@ include = [
     "packages/**/*.scss",
     "packages/**/*.ts",
     "packages/**/*.tsx",
-    "skills/**/*.md",
 ]
 
 [word]

@@ -64,7 +64,6 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [release.depot]
 source = "{authority}"
-derivatives = ["changelog"]
 "#
         ),
     )

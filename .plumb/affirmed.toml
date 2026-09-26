@@ -1,10 +1,5 @@
 [[record]]
-target = "skills/plumb/SKILL.md"
-rule = "rule://seat/affirmed"
-authority = "c616af4f56079b24600a9e4506015dbbd81ecbf735a35b887758fbad688642be"
-
-[[record]]
 target = "AGENTS.md"
 rule = "rule://seat/affirmed"
-authority = "c616af4f56079b24600a9e4506015dbbd81ecbf735a35b887758fbad688642be"
+authority = "3420b4e2c27388f77389ad9b01a47ee8d3ff5d5e3daf3d9f9a61d855e15d3098"
 

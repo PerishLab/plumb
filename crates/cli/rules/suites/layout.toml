@@ -7,12 +7,8 @@ note = "Helm chart carriers, admitted and never demanded. Three of three across 
 
 [[layout.seat]]
 path = "skills/*"
-rule = [
-  "rule://seat/named-after-repository",
-  "rule://seat/wayfinder",
-  "rule://seat/affirmed",
-]
-note = "Operating briefs, admitted and never demanded. Six of six where present. Retires to the depot with the skills line."
+kind = "retired"
+note = "Operating briefs live on Depot, written for each release and consigned with --dir; this tombstone keeps the retired source seat absent."
 
 [[layout.seat]]
 path = "docs/CHANGELOG/*"

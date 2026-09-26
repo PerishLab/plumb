@@ -66,10 +66,8 @@ fn seated(manifest: &Path) -> bool {
 
 fn attachments(spec: &Spec) -> BTreeSet<String> {
     let mut found: BTreeSet<String> = spec.surface().into_iter().map(str::to_string).collect();
-    for (present, name) in [(spec.skill, "skill"), (spec.deb.is_some(), "deb")] {
-        if present {
-            found.insert(name.to_string());
-        }
+    if spec.skill {
+        found.insert("skill".to_string());
     }
     found
 }

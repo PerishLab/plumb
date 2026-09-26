@@ -9,8 +9,10 @@ the generation, so the yard is never trusted.
 
 Consign a changelog with --kind changelog and the prepared notes in --dir; the
 notes are proved against the diff budget of --version first, as plumb
-changelog --prove does. Consign a skill with --kind skill; it is taken from
-skills/<product> in the marker's own tree, and wharf refuses one that differs.
+changelog --prove does. Consign a skill with --kind skill and the brief in --dir: a SKILL.md
+within the cap rule://seat/wayfinder sets, beside whatever plain files it
+points at. A skill is written for its release and lives only on Depot; no
+repository carries skills/<product>.
 
 The yard seat comes from PLUMB_YARD_ENDPOINT, PLUMB_YARD_BUCKET,
 PLUMB_YARD_ACCESS_KEY_ID and PLUMB_YARD_SECRET_ACCESS_KEY or its _FILE

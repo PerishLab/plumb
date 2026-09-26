@@ -26,10 +26,6 @@ when = ["docs"]
 use = ["rule://scan/docs-md"]
 
 [[shape]]
-when = ["skills"]
-use = ["rule://scan/skills-md"]
-
-[[shape]]
 when = ["apps/web/src/lib/components"]
 use = ["rule://scan/web-components-banned"]
 

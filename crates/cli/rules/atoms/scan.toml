@@ -89,15 +89,6 @@ roots = [
 ]
 
 [[set]]
-name = "skills-md"
-include = [
-  "skills/**/*.md",
-]
-roots = [
-  "skills/*",
-]
-
-[[set]]
 name = "web-components-banned"
 bans = [
   "apps/web/src/lib/components/**",
