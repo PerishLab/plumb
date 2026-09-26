@@ -52,7 +52,7 @@ pub const OBLIGATIONS: [Obligation; 5] = [
         rule: &law::STABLE_LODGED,
         name: "its skill lodged on Depot",
         settle: &["depot", "consign"],
-        arguments: |stable| format!("--version {} --kind skill", stable.marker),
+        arguments: |stable| format!("--version {} --kind skill --dir <brief>", stable.marker),
         applies: |spec| spec.skill,
         detect: |seat, stable| seat.lodged(stable, Kind::Skill),
     },
@@ -223,9 +223,7 @@ pub fn complete(body: Option<Vec<u8>>, marker: &str, commit: &str) -> Result<boo
 }
 
 pub fn source(spec: &Spec) -> String {
-    spec.route
-        .clone()
-        .unwrap_or_else(|| format!("https://depot.{}.perish.uk", spec.product))
+    spec.source()
 }
 
 #[cfg(test)]

@@ -3,7 +3,7 @@ mod depot;
 mod shape;
 mod target;
 
-pub use attachment::{Cargo, Cfworker, Chart, Deb, Npm, Oci};
+pub use attachment::{Cargo, Cfworker, Chart, Npm, Oci};
 pub use depot::Depot;
 pub use target::{Format, Target};
 
@@ -16,8 +16,6 @@ pub struct Spec {
     pub root: PathBuf,
     pub product: String,
     pub authority: String,
-    pub route: Option<String>,
-    pub derivatives: Vec<plumb::depot::v3::Kind>,
     pub binaries: Vec<String>,
     pub target: Vec<Target>,
     pub skill: bool,
@@ -26,7 +24,6 @@ pub struct Spec {
     pub chart: Option<Chart>,
     pub npm: Option<Npm>,
     pub cfworker: Option<Cfworker>,
-    pub deb: Option<Deb>,
     pub depot: Option<Depot>,
 }
 
@@ -48,7 +45,6 @@ struct Raw {
     chart: Option<Chart>,
     npm: Option<Npm>,
     cfworker: Option<Cfworker>,
-    deb: Option<Deb>,
     depot: Option<Depot>,
 }
 impl Spec {
@@ -90,10 +86,9 @@ impl Spec {
             chart,
             npm,
             cfworker,
-            deb,
             depot,
         } = held.release;
-        let mut spec = Self {
+        let spec = Self {
             root: root.to_path_buf(),
             target: targets
                 .iter()
@@ -101,10 +96,6 @@ impl Spec {
                 .collect::<Result<Vec<_>, _>>()?,
             product,
             authority,
-            route: depot.as_ref().map(|held| held.source.clone()),
-            derivatives: depot
-                .as_ref()
-                .map_or_else(Vec::new, |held| held.derivatives.clone()),
             binaries,
             skill,
             cargo,
@@ -112,14 +103,8 @@ impl Spec {
             chart,
             npm,
             cfworker,
-            deb,
             depot,
         };
-        if let Some(deb) = &mut spec.deb
-            && deb.root.is_relative()
-        {
-            deb.root = root.join(&deb.root);
-        }
         spec.validate()?;
         Ok(spec)
     }
@@ -178,12 +163,6 @@ impl Spec {
                 }
             }
         }
-        if self.skill && !self.root.join("skills").join(&self.product).is_dir() {
-            return Err(format!(
-                "declared skill root is absent: {}",
-                self.root.join("skills").join(&self.product).display()
-            ));
-        }
         if let Some(depot) = &self.depot {
             token("product", &self.product, false)?;
             if self.authority.is_empty() {
@@ -193,21 +172,6 @@ impl Spec {
         }
         for held in self.attachments() {
             held?;
-        }
-        if let Some(deb) = &self.deb {
-            if !self
-                .target
-                .iter()
-                .any(|target| target.triple == "x86_64-unknown-linux-gnu")
-            {
-                return Err("Debian attachment requires x86_64-unknown-linux-gnu".into());
-            }
-            if !deb.root.join("control").is_file() {
-                return Err(format!(
-                    "Debian attachment has no control template: {}",
-                    deb.root.join("control").display()
-                ));
-            }
         }
         Ok(())
     }

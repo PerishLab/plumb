@@ -78,13 +78,14 @@ required = ["* text=auto eol=lf"]
 name = "named-after-repository"
 holds = "repository"
 most = 1
-note = "At most one member, named after the repository that carries it. A seat admits and never demands: a repository with no chart or no skill owes no member and no tombstone, and one that has a member holds it to this name. Measured 2026-08-20: charts three of three, skills six of six where present. This is the shape structure.anchor-unique and structure.package-directory-name each hardcode for one seat."
+note = "At most one member, named after the repository that carries it. A seat admits and never demands: a repository with no chart or no skill owes no member and no tombstone, and one that has a member holds it to this name. Measured 2026-08-20: charts three of three. This is the shape structure.anchor-unique and structure.package-directory-name each hardcode for one seat."
 
 [[member.entry]]
 name = "wayfinder"
+kind = "retired"
 leaf = "SKILL.md"
 bytes = 3072
-note = "A brief is the minimal authoritative wayfinding a coding agent reads, not prose a person skims. It states what the tool is, when it is silent, and which authority answers what; it never restates a surface that answers for itself. Three kilobytes is where four of the six briefs in this domain already sit, so the cap holds the shape that was found rather than one that was imposed."
+note = "No seat selects it since skills/* retired to Depot: plumb depot consign --kind skill holds the brief it is handed to this cap, and a layout naming the rule revives it. A brief is the minimal authoritative wayfinding a coding agent reads, not prose a person skims. It states what the tool is, when it is silent, and which authority answers what; it never restates a surface that answers for itself. Three kilobytes is where four of the six briefs in this domain already sit, so the cap holds the shape that was found rather than one that was imposed."
 
 [[member.entry]]
 name = "affirmed"

@@ -61,7 +61,6 @@ skill = true
 
 [release.depot]
 source = "https://depot.plumb.perish.uk"
-derivatives = ["changelog", "skill"]
 
 [release.oci]
 registry = "ghcr.io"
