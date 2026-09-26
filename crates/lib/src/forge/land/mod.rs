@@ -45,6 +45,27 @@ pub struct Plan {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct Preparation {
+    pub root: PathBuf,
+    pub base: String,
+    pub target: String,
+    pub branch: String,
+    pub projection: String,
+    pub source: String,
+    pub candidate: String,
+    pub title: String,
+    pub body: String,
+    pub guard: Guard,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct Guard {
+    pub schema: String,
+    pub tree: String,
+    pub digest: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Refusal {
     pub kind: &'static str,
     pub message: String,
@@ -63,6 +84,31 @@ pub(crate) fn refuse(kind: &'static str, message: impl Into<String>) -> Refusal 
         kind,
         message: message.into(),
     }
+}
+
+pub fn prepare(request: Request<'_>) -> Result<Preparation, Refusal> {
+    let landing = Landing::open(request.root, request.base)?;
+    landing.landable(false)?;
+    let story = landing.describe(request.title, request.body)?;
+    let candidate = landing.derive(&story)?;
+    let proof = crate::guard::current(&landing.repo.root, &candidate.head)
+        .map_err(|error| refuse("guard", error))?;
+    Ok(Preparation {
+        root: landing.repo.root,
+        base: landing.base,
+        target: candidate.base,
+        branch: landing.branch,
+        projection: candidate.projection,
+        source: candidate.source,
+        candidate: candidate.head,
+        title: story.title,
+        body: story.body,
+        guard: Guard {
+            schema: proof.schema,
+            tree: proof.tree,
+            digest: proof.digest,
+        },
+    })
 }
 
 pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {

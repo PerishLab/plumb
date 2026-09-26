@@ -1,0 +1,10 @@
+Validate delivery declarations before repository mutation.
+
+Plan is an observational phase. Delivery takes one explicit GitHub Issue
+coordinate, reads the repository origin and the current committed topic, and
+returns a versioned plan binding the Issue node, native type and relationships
+to the base, projected candidate and staged-tree Guard proof.
+
+The gh CLI supplies provider authority through the caller's Runseal profile.
+Plan holds no credential and changes no Issue, pull request, Concord object,
+branch, ref or worktree. Doctor and Guard remain network-independent.

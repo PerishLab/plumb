@@ -2,6 +2,7 @@ pub mod depot;
 pub mod doctor;
 mod guard;
 pub mod operator;
+pub mod plan;
 pub mod release;
 pub mod ship;
 
@@ -13,6 +14,7 @@ impl crate::Command {
         match self {
             crate::Command::Doctor { .. } => "doctor",
             crate::Command::Land { .. } => "land",
+            crate::Command::Plan { .. } => "plan",
             crate::Command::Guard { .. } => "guard",
             crate::Command::Radius { .. } => "radius",
             crate::Command::Policy { .. } => "policy",

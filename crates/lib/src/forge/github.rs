@@ -2,6 +2,10 @@ use serde_json::Value;
 use std::path::Path;
 use std::process::Command;
 
+pub mod issue;
+
+pub use issue::Issue;
+
 pub struct Remote {
     pub owner: String,
     pub repo: String,
@@ -70,6 +74,22 @@ impl Client {
             .as_array()
             .and_then(|held| held.first())
             .and_then(pull))
+    }
+
+    pub fn issue(&self, number: u64) -> Result<Issue, String> {
+        let number = number.to_string();
+        let viewed = self.gh(&[
+            "issue",
+            "view",
+            &number,
+            "-R",
+            &self.seat,
+            "--json",
+            issue::FIELDS,
+        ])?;
+        let value: Value = serde_json::from_str(&viewed)
+            .map_err(|error| format!("gh issue view did not answer JSON: {error}"))?;
+        issue::parse(&value).ok_or_else(|| format!("issue {number} has no stable identity"))
     }
 
     pub fn raise(&self, base: &str, head: &str, title: &str, body: &str) -> Result<Pull, String> {
@@ -153,7 +173,6 @@ impl Client {
 }
 
 const FIELDS: &str = "number,url,headRefOid,title,body";
-
 fn pull(value: &Value) -> Option<Pull> {
     let text = |key: &str| {
         value
