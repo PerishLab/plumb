@@ -16,6 +16,8 @@ pub enum Deed {
         #[arg(long)]
         issue: String,
         #[arg(long)]
+        close: bool,
+        #[arg(long)]
         json: bool,
     },
 }
@@ -34,6 +36,7 @@ pub fn run(deed: Deed) -> i32 {
             target,
             base,
             issue,
+            close,
             json,
         } => {
             let root = PathBuf::from(target.root);
@@ -41,6 +44,7 @@ pub fn run(deed: Deed) -> i32 {
                 root: &root,
                 base: &base,
                 issue: &issue,
+                close,
             }) {
                 Ok(plan) => planned(plan, json),
                 Err(refusal) => rejected(&root, refusal, json),
