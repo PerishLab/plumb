@@ -47,6 +47,14 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    #[command(
+        about = "Validate delivery declarations before repository mutation",
+        long_about = plumb::seat::resource!("help/plan.txt")
+    )]
+    Plan {
+        #[command(subcommand)]
+        deed: command::plan::Deed,
+    },
     #[command(about = "Prove the staged tree, or one committed task boundary")]
     Guard {
         #[command(flatten)]
@@ -170,6 +178,7 @@ fn execute(command: Command) -> i32 {
             dry,
             json,
         }),
+        Command::Plan { deed } => command::plan::run(deed),
         Command::Guard {
             target,
             base,
