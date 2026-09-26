@@ -130,9 +130,7 @@ fn depot() {
 
     std::fs::write(
         dir.join("plumb.toml"),
-        format!(
-            "{BINARY}\n[release.depot]\nsource = \"https://depot.foo.example\"\nderivatives = [\"changelog\", \"skill\"]\n"
-        ),
+        format!("{BINARY}\n[release.depot]\nsource = \"https://depot.foo.example\"\n"),
     )
     .expect("manifest should be written");
     let held = crate::run(&["doctor", path]);
@@ -141,25 +139,12 @@ fn depot() {
     std::fs::write(
         dir.join("plumb.toml"),
         format!(
-            "{BINARY}\n[release.depot]\nsource = \"https://depot.foo.example\"\nderivatives = [\"artifact\"]\n"
+            "{BINARY}\n[release.depot]\nsource = \"https://depot.foo.example\"\nderivatives = [\"changelog\"]\n"
         ),
     )
     .expect("manifest should be written");
     let unknown = crate::run(&["doctor", path]);
     assert!(unknown.contains("the current Plumb refuses"), "{unknown}");
-
-    std::fs::write(
-        dir.join("plumb.toml"),
-        format!(
-            "{BINARY}\n[release.depot]\nsource = \"https://depot.foo.example\"\nderivatives = [\"configuration\", \"changelog\"]\n"
-        ),
-    )
-    .expect("manifest should be written");
-    let source = crate::run(&["doctor", path]);
-    assert!(
-        source.contains("configuration travels inside the Plumb binary"),
-        "{source}"
-    );
 
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }

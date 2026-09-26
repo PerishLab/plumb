@@ -29,7 +29,7 @@ fn paired() {
     assert_eq!(OBLIGATIONS[1].hint(&stable), "plumb release rejoin");
     assert_eq!(
         OBLIGATIONS[3].hint(&stable),
-        "plumb depot consign --version v1.0.0 --kind skill"
+        "plumb depot consign --version v1.0.0 --kind skill --dir <brief>"
     );
 }
 

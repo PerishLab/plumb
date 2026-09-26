@@ -197,10 +197,10 @@ fn changelog(
     version: &str,
 ) -> Result<Option<plumb::depot::v3::Generation>, String> {
     let spec = crate::shape::release::Spec::controller(root)?;
-    let depot = spec.route(plumb::depot::v3::Kind::Changelog)?;
+    let depot = spec.source();
     let channel = crate::command::release::channel(version)?;
     plumb::depot::v3::Generation::latest(plumb::depot::v3::Query {
-        source: depot,
+        source: &depot,
         product: &spec.product,
         channel: &channel,
         version,

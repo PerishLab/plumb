@@ -2,7 +2,6 @@ use base64::Engine as _;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::path::Path;
-use std::process::Command;
 
 pub const SCHEMA: &str = "wharf.yard/v1";
 
@@ -88,46 +87,4 @@ fn executable(held: &std::fs::Metadata) -> bool {
 #[cfg(not(unix))]
 fn executable(_: &std::fs::Metadata) -> bool {
     false
-}
-
-pub struct Tree<'a>(pub &'a Path);
-
-impl Tree<'_> {
-    pub fn carried(&self, marker: &str, product: &str) -> Result<Vec<Good>, String> {
-        let seat = format!("skills/{product}");
-        let listed = self.git(&["ls-tree", "-r", &format!("refs/tags/{marker}"), "--", &seat])?;
-        let mut held = Vec::new();
-        for line in String::from_utf8_lossy(&listed).lines() {
-            let (head, path) = line
-                .split_once('\t')
-                .ok_or_else(|| format!("git ls-tree answered {line:?}"))?;
-            let fields = head.split_whitespace().collect::<Vec<_>>();
-            let [mode @ ("100644" | "100755"), "blob", object] = fields.as_slice() else {
-                return Err(format!("{path} at {marker} is not a plain file"));
-            };
-            let body = self.git(&["cat-file", "blob", object])?;
-            let relative = path.strip_prefix(&format!("{seat}/")).unwrap_or(path);
-            held.push(good(relative.to_string(), &body, *mode == "100755"));
-        }
-        if held.is_empty() {
-            return Err(format!("{marker} carries no {seat}"));
-        }
-        Ok(held)
-    }
-
-    fn git(&self, args: &[&str]) -> Result<Vec<u8>, String> {
-        let output = Command::new("git")
-            .args(args)
-            .current_dir(self.0)
-            .output()
-            .map_err(|error| format!("cannot run git: {error}"))?;
-        if output.status.success() {
-            return Ok(output.stdout);
-        }
-        Err(format!(
-            "git {} failed: {}",
-            args.join(" "),
-            String::from_utf8_lossy(&output.stderr).trim()
-        ))
-    }
 }

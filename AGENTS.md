@@ -144,9 +144,12 @@ answers for.
   configuration travels inside the binary. Generations remain immutable and
   addressable. A latest pointer may move, but every movement names the release
   marker and uses conditional readback. A product's own `plumb.toml` declares
-  its depot derivatives and their authority; there is no central product
-  catalogue. Changelog and skill source trees are caller-owned temporary media
-  passed explicitly, never repository or `PLUMB_HOME` seats. Products
+  whether it owes a skill (`skill = true`) and, where it differs from
+  `https://depot.<product>.perish.uk`, its depot source; there is no central
+  product catalogue. Changelog and skill source trees are caller-owned temporary
+  media passed explicitly with `--dir`, never repository or `PLUMB_HOME` seats:
+  `skills/*` is a retired seat, and a skill is written for its release on top
+  of the previous generation. Products
   consume a skill through their own command surface while delegating its exact
   generation and digest binding to `plumb` the library.
 - The distribution workflow lives in wharf, which sits above Plumb. This
