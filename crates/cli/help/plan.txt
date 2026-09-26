@@ -8,3 +8,7 @@ to the base, projected candidate and staged-tree Guard proof.
 The gh CLI supplies provider authority through the caller's Runseal profile.
 Plan holds no credential and changes no Issue, pull request, Concord object,
 branch, ref or worktree. Doctor and Guard remain network-independent.
+
+The generated pull narrative uses a non-closing Refs association. --close is an
+explicit caller choice that instead records Closes; landing never infers closure
+from Issue type, branch name, mergeability, or release state.

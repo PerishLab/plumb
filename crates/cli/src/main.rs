@@ -40,6 +40,8 @@ enum Command {
         title: String,
         #[arg(long, default_value = "")]
         body: String,
+        #[arg(long, value_name = "FILE", conflicts_with_all = ["title", "body", "dry"])]
+        plan: Option<PathBuf>,
         #[arg(long = "no-watch", action = clap::ArgAction::SetFalse)]
         watch: bool,
         #[arg(long = "dry-run")]
@@ -166,6 +168,7 @@ fn execute(command: Command) -> i32 {
             base,
             title,
             body,
+            plan,
             watch,
             dry,
             json,
@@ -174,6 +177,7 @@ fn execute(command: Command) -> i32 {
             base,
             title,
             body,
+            plan,
             watch,
             dry,
             json,

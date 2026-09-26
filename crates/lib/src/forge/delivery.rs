@@ -1,8 +1,12 @@
 use super::github::{self, Client, Issue};
 use super::land::{self, Guard, Refusal};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+pub mod landing;
+
+pub use landing::{Landing, Report, land, read, required};
 
 pub const SCHEMA: &str = "plumb.delivery-plan/v1";
 
@@ -10,11 +14,13 @@ pub struct Request<'a> {
     pub root: &'a Path,
     pub base: &'a str,
     pub issue: &'a str,
+    pub close: bool,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Plan {
-    pub schema: &'static str,
+    pub schema: String,
     pub root: PathBuf,
     pub repository: String,
     pub issue: Issue,
@@ -31,7 +37,7 @@ pub struct Plan {
     pub guard: Guard,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Pull {
     pub title: String,
     pub body: String,
@@ -55,20 +61,18 @@ pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {
         .issue(coordinate.number)
         .map_err(|error| land::refuse("forge", error))?;
     validate(&issue)?;
-    let reference = format!("Refs {}", coordinate.render());
-    let prepared = land::prepare(land::Request {
+    let reference = association(request.close, &coordinate);
+    let prepared = land::Request {
         root: request.root,
         base: request.base,
         title: &issue.title,
         body: &reference,
         watch: false,
-    })?;
-    let observed = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|error| land::refuse("clock", format!("cannot observe time: {error}")))?
-        .as_secs();
+    }
+    .prepare()?;
+    let observed = now()?;
     Ok(Plan {
-        schema: SCHEMA,
+        schema: SCHEMA.to_string(),
         root: prepared.root,
         repository,
         issue,
@@ -87,7 +91,22 @@ pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {
     })
 }
 
-fn validate(issue: &Issue) -> Result<(), Refusal> {
+fn association(close: bool, coordinate: &Coordinate) -> String {
+    format!(
+        "{} {}",
+        if close { "Closes" } else { "Refs" },
+        coordinate.render()
+    )
+}
+
+pub(super) fn now() -> Result<u64, Refusal> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| land::refuse("clock", format!("cannot observe time: {error}")))
+        .map(|held| held.as_secs())
+}
+
+pub(super) fn validate(issue: &Issue) -> Result<(), Refusal> {
     if issue.node.trim().is_empty() {
         return Err(land::refuse("issue", "issue has no stable node identity"));
     }
@@ -143,7 +162,7 @@ impl Coordinate {
 
 #[cfg(test)]
 mod tests {
-    use super::{Coordinate, validate};
+    use super::{Coordinate, association, validate};
     use crate::forge::github::Issue;
 
     #[test]
@@ -151,6 +170,8 @@ mod tests {
         let held = Coordinate::parse("PerishLab/plumb#20").expect("coordinate");
         assert_eq!(held.repository(), "PerishLab/plumb");
         assert_eq!(held.number, 20);
+        assert_eq!(association(false, &held), "Refs PerishLab/plumb#20");
+        assert_eq!(association(true, &held), "Closes PerishLab/plumb#20");
         for raw in ["plumb#20", "PerishLab/plumb", "PerishLab/plumb#0"] {
             assert!(Coordinate::parse(raw).is_err(), "{raw}");
         }

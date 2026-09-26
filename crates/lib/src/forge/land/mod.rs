@@ -1,5 +1,5 @@
 use super::github::{self, Client};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
@@ -28,6 +28,8 @@ pub struct Report {
     pub projection: String,
     pub source: String,
     pub candidate: String,
+    #[serde(rename = "pull_node")]
+    pub node: String,
     pub pull: u64,
     pub url: String,
     pub merged: bool,
@@ -44,7 +46,7 @@ pub struct Plan {
     pub steps: Vec<String>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Preparation {
     pub root: PathBuf,
     pub base: String,
@@ -58,7 +60,7 @@ pub struct Preparation {
     pub guard: Guard,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Guard {
     pub schema: String,
     pub tree: String,
@@ -86,23 +88,33 @@ pub(crate) fn refuse(kind: &'static str, message: impl Into<String>) -> Refusal 
     }
 }
 
-pub fn prepare(request: Request<'_>) -> Result<Preparation, Refusal> {
-    let landing = Landing::open(request.root, request.base)?;
-    landing.landable(false)?;
-    let story = landing.describe(request.title, request.body)?;
-    let candidate = landing.derive(&story)?;
+impl Request<'_> {
+    pub fn prepare(self) -> Result<Preparation, Refusal> {
+        let landing = Landing::open(self.root, self.base)?;
+        landing.landable(false)?;
+        let story = landing.describe(self.title, self.body)?;
+        let candidate = landing.derive(&story)?;
+        preparation(&landing, &story, &candidate)
+    }
+}
+
+fn preparation(
+    landing: &Landing,
+    story: &flow::Story,
+    candidate: &Candidate,
+) -> Result<Preparation, Refusal> {
     let proof = crate::guard::current(&landing.repo.root, &candidate.head)
         .map_err(|error| refuse("guard", error))?;
     Ok(Preparation {
-        root: landing.repo.root,
-        base: landing.base,
-        target: candidate.base,
-        branch: landing.branch,
-        projection: candidate.projection,
-        source: candidate.source,
-        candidate: candidate.head,
-        title: story.title,
-        body: story.body,
+        root: landing.repo.root.clone(),
+        base: landing.base.clone(),
+        target: candidate.base.clone(),
+        branch: landing.branch.clone(),
+        projection: candidate.projection.clone(),
+        source: candidate.source.clone(),
+        candidate: candidate.head.clone(),
+        title: story.title.clone(),
+        body: story.body.clone(),
         guard: Guard {
             schema: proof.schema,
             tree: proof.tree,
@@ -147,6 +159,16 @@ pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {
 }
 
 pub fn run(request: Request<'_>) -> Result<Report, Refusal> {
+    execute(request, None)
+}
+
+impl Request<'_> {
+    pub fn exact(self, expected: &Preparation) -> Result<Report, Refusal> {
+        execute(self, Some(expected))
+    }
+}
+
+fn execute(request: Request<'_>, expected: Option<&Preparation>) -> Result<Report, Refusal> {
     let landing = Landing::open(request.root, request.base)?;
     landing.landable(true)?;
     let remote = github::remote(&landing.repo.root).map_err(|error| refuse("remote", error))?;
@@ -165,6 +187,24 @@ pub fn run(request: Request<'_>) -> Result<Report, Refusal> {
         .map_or(request.body, |pull| &pull.body);
     let story = landing.describe(title, body)?;
     let candidate = landing.derive(&story)?;
+    if let Some(expected) = expected {
+        let current = preparation(&landing, &story, &candidate)?;
+        if current != *expected {
+            return Err(refuse(
+                "stale",
+                "delivery plan no longer matches the base, candidate, narrative, or Guard proof",
+            ));
+        }
+        if standing
+            .as_ref()
+            .is_some_and(|pull| pull.title != story.title || pull.body != story.body)
+        {
+            return Err(refuse(
+                "stale",
+                "standing pull narrative no longer matches the delivery plan",
+            ));
+        }
+    }
 
     landing.push(&landing.branch, &landing.branch, true)?;
     if standing
@@ -186,7 +226,7 @@ pub fn run(request: Request<'_>) -> Result<Report, Refusal> {
             .map_err(|error| refuse("forge", error))?,
     };
 
-    let mut report = shape(&landing, &candidate, pull.number, &pull.url);
+    let mut report = shape(&landing, &candidate, &pull);
     if !request.watch {
         return Ok(report);
     }
@@ -206,7 +246,7 @@ pub fn run(request: Request<'_>) -> Result<Report, Refusal> {
     Ok(report)
 }
 
-fn shape(landing: &Landing, candidate: &Candidate, pull: u64, url: &str) -> Report {
+fn shape(landing: &Landing, candidate: &Candidate, pull: &github::Pull) -> Report {
     Report {
         schema: SCHEMA,
         root: landing.repo.root.clone(),
@@ -215,8 +255,9 @@ fn shape(landing: &Landing, candidate: &Candidate, pull: u64, url: &str) -> Repo
         projection: candidate.projection.clone(),
         source: candidate.source.clone(),
         candidate: candidate.head.clone(),
-        pull,
-        url: url.to_string(),
+        node: pull.node.clone(),
+        pull: pull.number,
+        url: pull.url.clone(),
         merged: false,
         synced: None,
     }

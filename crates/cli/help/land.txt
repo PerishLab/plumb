@@ -9,3 +9,11 @@ The source branch is kept. What lands is a one-commit projection at
 land/<branch>. Plumb verifies the projection carries the staged-tree Guard proof,
 posts that as the required guard status, and merges the pull with a merge commit
 that must match the exact candidate the guard passed.
+
+--plan consumes one plumb.delivery-plan/v1 document. Plumb re-observes its Issue
+and re-derives its base, candidate, narrative, and Guard identity after fetch;
+any drift refuses before a pull request or remote branch is changed. The report
+names the pull node and both observation times. Plumb never closes the Issue.
+
+Repositories may set [delivery] plan = true in plumb.toml to refuse the legacy
+landing path. Repositories without that opt-in retain explicit --title and --body.
