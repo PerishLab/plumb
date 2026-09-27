@@ -1,5 +1,6 @@
-use super::{Plan, now, validate};
-use crate::forge::github::{self, Client, Issue};
+use super::{Plan, now};
+use crate::delivery::{self as kernel, Snapshot};
+use crate::forge::github::{self, Client};
 use crate::forge::land::{self, Guard, Refusal};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -17,7 +18,7 @@ pub struct Report {
     pub schema: &'static str,
     pub root: PathBuf,
     pub repository: String,
-    pub issue: Issue,
+    pub issue: Snapshot,
     #[serde(rename = "observed_at")]
     pub observed: u64,
     #[serde(rename = "landed_at")]
@@ -62,25 +63,20 @@ pub fn land(request: Landing<'_>) -> Result<Report, Refusal> {
     let issue = Client::new(&remote)
         .issue(plan.issue.number)
         .map_err(|error| land::refuse("forge", error))?;
-    validate(&issue)?;
-    if issue != plan.issue {
-        return Err(land::refuse(
-            "stale",
-            "delivery plan Issue identity or declarations changed",
-        ));
-    }
-    let expected = land::Preparation {
-        root: plan.root.clone(),
-        base: plan.base.clone(),
-        target: plan.target.clone(),
-        branch: plan.branch.clone(),
-        projection: plan.projection.clone(),
-        source: plan.source.clone(),
-        candidate: plan.candidate.clone(),
-        title: plan.pull.title.clone(),
-        body: plan.pull.body.clone(),
-        guard: plan.guard.clone(),
-    };
+    let authority =
+        crate::guard::Authority::running().map_err(|error| land::refuse("guard", error))?;
+    let ready = kernel::revalidate(
+        kernel::Request {
+            root: request.root,
+            repository: &repository,
+            issue: &issue,
+            observed: now()?,
+            base: &plan.base,
+            pull: &plan.pull,
+        },
+        plan,
+        &authority,
+    )?;
     let report = land::Request {
         root: request.root,
         base: &plan.base,
@@ -88,7 +84,7 @@ pub fn land(request: Landing<'_>) -> Result<Report, Refusal> {
         body: &plan.pull.body,
         watch: request.watch,
     }
-    .exact(&expected)?;
+    .exact(ready.preparation())?;
     Ok(Report {
         schema: SCHEMA,
         root: report.root,
@@ -109,14 +105,7 @@ pub fn land(request: Landing<'_>) -> Result<Report, Refusal> {
 }
 
 pub fn read(path: &Path) -> Result<Plan, Refusal> {
-    let bytes = std::fs::read(path).map_err(|error| {
-        land::refuse(
-            "plan",
-            format!("cannot read delivery plan {}: {error}", path.display()),
-        )
-    })?;
-    serde_json::from_slice(&bytes)
-        .map_err(|error| land::refuse("plan", format!("cannot parse delivery plan: {error}")))
+    kernel::read(path)
 }
 
 pub fn required(root: &Path) -> Result<bool, Refusal> {

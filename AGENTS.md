@@ -37,10 +37,12 @@ These are the nodes `[layout]` has not converged on. Each leaves this list when 
 seat can state it; nothing belongs here that a seat, a rule, or a verb already
 answers for.
 
-- `crates/lib/src/forge/{land,github.rs}` — land projects a guarded candidate
-  onto GitHub through the `gh` CLI the caller's Runseal profile authorizes.
-  Plumb holds no GitHub credential. The required `guard` status is Plumb's
-  verified Guard proof, and the merge must match that exact candidate.
+- `crates/lib/src/forge/delivery/kernel.rs` — the narrow `delivery` feature
+  prepares and revalidates an exact candidate from caller-supplied Issue and
+  pull declarations under released Guard authority. It has no provider client.
+  The sibling forge adapter and `land` project that candidate onto GitHub
+  through the `gh` CLI the caller's Runseal profile authorizes. Plumb holds no
+  GitHub credential, and the merge must match that exact candidate.
 - `crates/cli/{rules,assets,cookbook,help}` — Plumb's governed resources,
   carried inside the binary. A release is its own rule set: nothing is fetched,
   installed or overlaid at run time, and changing a rule is a change to Plumb.
@@ -197,4 +199,3 @@ tree answers them and the catalogue does not hold them.
   provide. Install, status and upgrade keep the global skill ledger anchored to
   stable, and a non-stable skill takes an exact version and an explicit path,
   receives a staged marker, and never enters managed state.
-

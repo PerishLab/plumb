@@ -1,35 +1,9 @@
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+pub use crate::delivery::{Reference, Snapshot as Issue};
 
 pub const FIELDS: &str =
     "id,number,url,title,state,updatedAt,issueType,parent,subIssues,blockedBy,blocking";
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct Issue {
-    pub node: String,
-    pub number: u64,
-    pub url: String,
-    pub title: String,
-    pub state: String,
-    pub kind: String,
-    pub updated: String,
-    pub parent: Option<Reference>,
-    #[serde(rename = "sub_issues")]
-    pub parts: Vec<Reference>,
-    #[serde(rename = "blocked_by")]
-    pub behind: Vec<Reference>,
-    pub blocking: Vec<Reference>,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-pub struct Reference {
-    pub repository: String,
-    pub number: u64,
-    pub node: String,
-    pub url: String,
-    pub title: String,
-    pub state: String,
-}
 
 pub fn parse(value: &Value) -> Option<Issue> {
     Shape(value).issue()
@@ -39,16 +13,18 @@ struct Shape<'a>(&'a Value);
 
 impl Shape<'_> {
     fn issue(&self) -> Option<Issue> {
-        let mut parts = self.many("subIssues");
-        let mut behind = self.many("blockedBy");
+        let mut sub_issues = self.many("subIssues");
+        let mut blocked_by = self.many("blockedBy");
         let mut blocking = self.many("blocking");
-        parts.sort();
-        behind.sort();
+        sub_issues.sort();
+        blocked_by.sort();
         blocking.sort();
+        let url = self.text("url");
         Some(Issue {
             node: self.text("id"),
+            repository: repository(&url)?,
             number: self.0.get("number")?.as_u64()?,
-            url: self.text("url"),
+            url,
             title: self.text("title"),
             state: self.text("state"),
             kind: self
@@ -63,8 +39,8 @@ impl Shape<'_> {
                 .0
                 .get("parent")
                 .and_then(|value| Shape(value).reference()),
-            parts,
-            behind,
+            sub_issues,
+            blocked_by,
             blocking,
         })
     }
@@ -82,11 +58,7 @@ impl Shape<'_> {
 
     fn reference(&self) -> Option<Reference> {
         let url = self.0.get("url")?.as_str()?.to_string();
-        let repository = url
-            .strip_prefix("https://github.com/")?
-            .split_once("/issues/")?
-            .0
-            .to_string();
+        let repository = repository(&url)?;
         Some(Reference {
             repository,
             number: self.0.get("number")?.as_u64()?,
@@ -104,6 +76,12 @@ impl Shape<'_> {
             .unwrap_or_default()
             .to_string()
     }
+}
+
+fn repository(url: &str) -> Option<String> {
+    url.strip_prefix("https://github.com/")?
+        .split_once("/issues/")
+        .map(|(repository, _)| repository.to_string())
 }
 
 #[cfg(test)]
@@ -133,6 +111,6 @@ mod tests {
         });
         let issue = parse(&value).expect("issue");
         assert_eq!(issue.kind, "Feature");
-        assert_eq!(issue.behind[0].repository, "PerishLab/.github");
+        assert_eq!(issue.blocked_by[0].repository, "PerishLab/.github");
     }
 }

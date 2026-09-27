@@ -38,7 +38,7 @@ pub fn run(input: Input) -> i32 {
             Err(refusal) => rejected(&input.root, refusal, input.json),
         };
     }
-    match plumb::delivery::required(&input.root) {
+    match plumb::github_delivery::required(&input.root) {
         Ok(true) => {
             return rejected(
                 &input.root,
@@ -60,11 +60,11 @@ pub fn run(input: Input) -> i32 {
 }
 
 fn exact(input: &Input, path: &std::path::Path) -> i32 {
-    let plan = match plumb::delivery::read(path) {
+    let plan = match plumb::github_delivery::read(path) {
         Ok(plan) => plan,
         Err(refusal) => return refused(&input.root, refusal, input.json),
     };
-    match plumb::delivery::land(plumb::delivery::Landing {
+    match plumb::github_delivery::land(plumb::github_delivery::Landing {
         root: &input.root,
         plan: &plan,
         watch: input.watch,
@@ -74,7 +74,7 @@ fn exact(input: &Input, path: &std::path::Path) -> i32 {
     }
 }
 
-fn shown(report: plumb::delivery::Report, json: bool) -> i32 {
+fn shown(report: plumb::github_delivery::Report, json: bool) -> i32 {
     if json {
         println!(
             "{}",
@@ -105,7 +105,7 @@ fn shown(report: plumb::delivery::Report, json: bool) -> i32 {
 fn refused(root: &PathBuf, refusal: Refusal, json: bool) -> i32 {
     if json {
         let failed = Failed {
-            schema: plumb::delivery::landing::SCHEMA,
+            schema: plumb::github_delivery::landing::SCHEMA,
             root,
             ok: false,
             refusal,

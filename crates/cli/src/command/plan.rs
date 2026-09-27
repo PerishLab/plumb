@@ -1,6 +1,6 @@
 use clap::Subcommand;
 use plumb::cli::Root;
-use plumb::delivery::{Plan, Request};
+use plumb::github_delivery::{Plan, Request};
 use plumb::land::Refusal;
 use serde::Serialize;
 use std::path::PathBuf;
@@ -40,7 +40,7 @@ pub fn run(deed: Deed) -> i32 {
             json,
         } => {
             let root = PathBuf::from(target.root);
-            match plumb::delivery::plan(Request {
+            match plumb::github_delivery::plan(Request {
                 root: &root,
                 base: &base,
                 issue: &issue,
@@ -80,7 +80,7 @@ fn planned(plan: Plan, json: bool) -> i32 {
 fn rejected(root: &PathBuf, refusal: Refusal, json: bool) -> i32 {
     if json {
         let failed = Failed {
-            schema: plumb::delivery::SCHEMA,
+            schema: plumb::github_delivery::SCHEMA,
             root,
             ok: false,
             refusal,
