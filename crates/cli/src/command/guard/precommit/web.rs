@@ -11,9 +11,9 @@ pub(super) fn commands(tree: &Tree) -> Result<Vec<Vec<String>>, String> {
     held.push(vec![
         "pnpm".into(),
         "-r".into(),
-        "exec".into(),
-        "tsc".into(),
-        "--noEmit".into(),
+        "--if-present".into(),
+        "run".into(),
+        "typecheck".into(),
     ]);
     held.push(vec!["pnpm".into(), "-r".into(), "test".into()]);
     let mut sites = Vec::new();
