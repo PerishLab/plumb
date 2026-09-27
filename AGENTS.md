@@ -39,10 +39,9 @@ answers for.
 
 - `crates/lib/src/forge/delivery/kernel.rs` — the narrow `delivery` feature
   prepares and revalidates an exact candidate from caller-supplied Issue and
-  pull declarations under released Guard authority. It has no provider client.
-  The sibling forge adapter and `land` project that candidate onto GitHub
-  through the `gh` CLI the caller's Runseal profile authorizes. Plumb holds no
-  GitHub credential, and the merge must match that exact candidate.
+  pull declarations under released Guard authority. It has no provider client
+  and is consumed by Concord. Plumb carries no Issue observation or Issue-aware
+  pull adapter; repository-only `land` remains a separate explicit surface.
 - `crates/cli/{rules,assets,cookbook,help}` — Plumb's governed resources,
   carried inside the binary. A release is its own rule set: nothing is fetched,
   installed or overlaid at run time, and changing a rule is a change to Plumb.
