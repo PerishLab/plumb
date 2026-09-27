@@ -5,6 +5,8 @@ use std::path::{Path, PathBuf};
 
 mod authority;
 mod index;
+pub mod landing;
+pub(crate) mod running;
 mod store;
 mod transit;
 #[cfg(test)]
@@ -184,11 +186,7 @@ impl Descriptor {
 }
 
 pub fn current(root: &Path, commit: &str) -> Result<Descriptor, String> {
-    let proof = self::commit(root, commit)?;
-    let expected = Expected::held(&proof);
-    Authority::running()?
-        .judge(root, proof, &expected)
-        .map(Verified::take)
+    running::verified(root, commit).map(Verified::take)
 }
 
 pub fn commit(root: &Path, commit: &str) -> Result<Descriptor, String> {
