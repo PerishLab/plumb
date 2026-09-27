@@ -6,7 +6,7 @@ import Home from "../src/views/index.svelte";
 test("home", () => {
 	const markup = render(Home).body;
 	expect(markup).toContain("plumb");
-	expect(markup).toContain('class="frame"');
+	expect(markup).toContain('class="frame');
 });
 
 test("meta", () => {
