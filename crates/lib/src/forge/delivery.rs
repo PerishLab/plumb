@@ -1,46 +1,19 @@
-use super::github::{self, Client, Issue};
-use super::land::{self, Guard, Refusal};
-use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use super::github::{self, Client};
+use super::land::{self, Refusal};
+use crate::delivery::{self as kernel, Narrative};
+use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub mod landing;
 
+pub use crate::delivery::{Plan, SCHEMA};
 pub use landing::{Landing, Report, land, read, required};
-
-pub const SCHEMA: &str = "plumb.delivery-plan/v1";
 
 pub struct Request<'a> {
     pub root: &'a Path,
     pub base: &'a str,
     pub issue: &'a str,
     pub close: bool,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct Plan {
-    pub schema: String,
-    pub root: PathBuf,
-    pub repository: String,
-    pub issue: Issue,
-    #[serde(rename = "observed_at")]
-    pub observed: u64,
-    pub base: String,
-    #[serde(rename = "base_commit")]
-    pub target: String,
-    pub branch: String,
-    pub projection: String,
-    pub source: String,
-    pub candidate: String,
-    pub pull: Pull,
-    pub guard: Guard,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct Pull {
-    pub title: String,
-    pub body: String,
 }
 
 pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {
@@ -60,35 +33,23 @@ pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {
     let issue = Client::new(&remote)
         .issue(coordinate.number)
         .map_err(|error| land::refuse("forge", error))?;
-    validate(&issue)?;
-    let reference = association(request.close, &coordinate);
-    let prepared = land::Request {
-        root: request.root,
-        base: request.base,
-        title: &issue.title,
-        body: &reference,
-        watch: false,
-    }
-    .prepare()?;
-    let observed = now()?;
-    Ok(Plan {
-        schema: SCHEMA.to_string(),
-        root: prepared.root,
-        repository,
-        issue,
-        observed,
-        base: prepared.base,
-        target: prepared.target,
-        branch: prepared.branch,
-        projection: prepared.projection,
-        source: prepared.source,
-        candidate: prepared.candidate,
-        pull: Pull {
-            title: prepared.title,
-            body: prepared.body,
+    let pull = Narrative {
+        title: issue.title.clone(),
+        body: association(request.close, &coordinate),
+    };
+    let authority =
+        crate::guard::Authority::running().map_err(|error| land::refuse("guard", error))?;
+    kernel::prepare(
+        kernel::Request {
+            root: request.root,
+            repository: &repository,
+            issue: &issue,
+            observed: now()?,
+            base: request.base,
+            pull: &pull,
         },
-        guard: prepared.guard,
-    })
+        &authority,
+    )
 }
 
 fn association(close: bool, coordinate: &Coordinate) -> String {
@@ -104,22 +65,6 @@ pub(super) fn now() -> Result<u64, Refusal> {
         .duration_since(UNIX_EPOCH)
         .map_err(|error| land::refuse("clock", format!("cannot observe time: {error}")))
         .map(|held| held.as_secs())
-}
-
-pub(super) fn validate(issue: &Issue) -> Result<(), Refusal> {
-    if issue.node.trim().is_empty() {
-        return Err(land::refuse("issue", "issue has no stable node identity"));
-    }
-    if issue.kind.trim().is_empty() {
-        return Err(land::refuse("issue", "issue has no enabled native type"));
-    }
-    if issue.state != "OPEN" {
-        return Err(land::refuse(
-            "issue",
-            format!("issue #{} is not open", issue.number),
-        ));
-    }
-    Ok(())
 }
 
 struct Coordinate {
@@ -162,44 +107,16 @@ impl Coordinate {
 
 #[cfg(test)]
 mod tests {
-    use super::{Coordinate, association, validate};
-    use crate::forge::github::Issue;
+    use super::{Coordinate, association};
 
     #[test]
     fn coordinates() {
         let held = Coordinate::parse("PerishLab/plumb#20").expect("coordinate");
         assert_eq!(held.repository(), "PerishLab/plumb");
-        assert_eq!(held.number, 20);
         assert_eq!(association(false, &held), "Refs PerishLab/plumb#20");
         assert_eq!(association(true, &held), "Closes PerishLab/plumb#20");
         for raw in ["plumb#20", "PerishLab/plumb", "PerishLab/plumb#0"] {
             assert!(Coordinate::parse(raw).is_err(), "{raw}");
         }
-    }
-
-    #[test]
-    fn declarations() {
-        let mut issue = Issue {
-            node: "I_one".to_string(),
-            number: 20,
-            url: "https://github.com/PerishLab/plumb/issues/20".to_string(),
-            title: "Plan delivery".to_string(),
-            state: "OPEN".to_string(),
-            kind: "Feature".to_string(),
-            updated: "2026-09-26T00:00:00Z".to_string(),
-            parent: None,
-            parts: Vec::new(),
-            behind: Vec::new(),
-            blocking: Vec::new(),
-        };
-        assert!(validate(&issue).is_ok());
-        issue.kind.clear();
-        assert_eq!(validate(&issue).expect_err("type").kind, "issue");
-        issue.kind = "Feature".to_string();
-        issue.state = "CLOSED".to_string();
-        assert_eq!(validate(&issue).expect_err("state").kind, "issue");
-        issue.state = "OPEN".to_string();
-        issue.node.clear();
-        assert_eq!(validate(&issue).expect_err("node").kind, "issue");
     }
 }

@@ -2,11 +2,14 @@ extern crate self as plumb;
 
 pub mod cli;
 pub mod config;
+#[cfg(feature = "delivery")]
+#[path = "forge/delivery/kernel.rs"]
+pub mod delivery;
 pub mod fill;
 #[cfg(feature = "vendor")]
 mod forge;
 #[cfg(feature = "vendor")]
-pub use forge::{delivery, land};
+pub use forge::{delivery as github_delivery, land};
 pub use proof::guard::landing;
 mod proof;
 mod runtime;

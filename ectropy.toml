@@ -71,3 +71,11 @@ include = [
 
 [word]
 single = true
+
+[[vocabulary.term]]
+description = "The native structural children carried by one external Issue snapshot."
+name = "sub_issues"
+
+[[vocabulary.term]]
+description = "The native blocking predecessors carried by one external Issue snapshot."
+name = "blocked_by"

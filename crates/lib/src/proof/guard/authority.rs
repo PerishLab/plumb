@@ -92,7 +92,7 @@ impl Authority {
         self.judge(root, proof, expected)
     }
 
-    pub(super) fn running() -> Result<Self, String> {
+    pub(crate) fn running() -> Result<Self, String> {
         Ok(Self {
             producer: super::identity(),
             depot: crate::depot::rules()?.mark().to_string(),
