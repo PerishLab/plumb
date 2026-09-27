@@ -3,10 +3,14 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use std::path::{Path, PathBuf};
 
+mod authority;
 mod index;
 mod store;
 mod transit;
+#[cfg(test)]
+mod verify;
 
+pub use authority::{Authority, Expected, Verified};
 pub use index::tree;
 pub use transit::{attach, stage, staged};
 
@@ -120,7 +124,7 @@ impl Descriptor {
     }
 
     fn subject(&self, root: &Path) -> Result<(), String> {
-        store::Seat::new(root)?.matches(self)?;
+        self.repository(root)?;
         let plumb = identity();
         if self.plumb != plumb {
             return Err(format!(
@@ -129,6 +133,10 @@ impl Descriptor {
             ));
         }
         Ok(())
+    }
+
+    fn repository(&self, root: &Path) -> Result<(), String> {
+        store::Seat::new(root)?.matches(self)
     }
 
     fn platform(&self) -> Result<(), String> {
@@ -177,8 +185,10 @@ impl Descriptor {
 
 pub fn current(root: &Path, commit: &str) -> Result<Descriptor, String> {
     let proof = self::commit(root, commit)?;
-    proof.current(root)?;
-    Ok(proof)
+    let expected = Expected::held(&proof);
+    Authority::running()?
+        .judge(root, proof, &expected)
+        .map(Verified::take)
 }
 
 pub fn commit(root: &Path, commit: &str) -> Result<Descriptor, String> {

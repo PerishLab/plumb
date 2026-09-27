@@ -29,4 +29,18 @@ mod tests {
             "every rule source is carried, and nothing else"
         );
     }
+
+    #[test]
+    fn mark() {
+        plumb::depot::carry(super::FILES);
+        let manifest: toml::Value =
+            toml::from_str(include_str!("../../../lib/Cargo.toml")).expect("library manifest");
+        let declared = manifest["package"]["metadata"]["perish"]["guard"]["depot"]
+            .as_str()
+            .expect("released Depot mark");
+        assert_eq!(
+            plumb::depot::rules().expect("carried rules").mark(),
+            declared
+        );
+    }
 }
