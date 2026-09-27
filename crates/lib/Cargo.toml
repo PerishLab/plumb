@@ -14,9 +14,10 @@ depot = "da911e1a1ae27c87f4ef8d9b7f638fcedf222d669798d075aafcaaab045250af"
 depot = [
   "dep:ureq",
 ]
+delivery = []
 radius = [
 ]
-vendor = []
+vendor = ["delivery"]
 skill = [
   "depot",
   "dep:flate2",
@@ -65,6 +66,11 @@ required-features = ["skill"]
 name = "vendor"
 path = "tests/vendor/mod.rs"
 required-features = ["vendor"]
+
+[[test]]
+name = "delivery"
+path = "tests/proof/delivery.rs"
+required-features = ["delivery"]
 
 [[test]]
 name = "runtime"
