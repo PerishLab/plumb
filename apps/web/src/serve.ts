@@ -49,9 +49,9 @@ const guide = `# open-web
 
 ## source
 
-- https://git.perish.top/PerishFire/ectropy
-- https://git.perish.top/PerishFire/runseal
-- https://git.perish.top/PerishFire/sidecar
+- https://github.com/PerishLab/ectropy
+- https://github.com/PerishLab/runseal
+- https://github.com/PerishLab/sidecar
 `;
 
 const manual = `# open-web - full reference for agents
@@ -91,7 +91,7 @@ whole tree):
   [[boundary]] paths, allow, note - a declared exemption
   [[vocabulary.term]] name / description registers one explained compound;
   both fields are required and duplicates are rejected.
-source: https://git.perish.top/PerishFire/ectropy
+source: https://github.com/PerishLab/ectropy
 
 ## runseal - operator toolbelt
 
@@ -108,7 +108,7 @@ surface:
 
 every invocation names either the external command or atomic @tool operation;
 the profile supplies only env, argv, symlink, and resource identity data.
-source: https://git.perish.top/PerishFire/runseal
+source: https://github.com/PerishLab/runseal
 
 ## sidecar - local process manager
 
@@ -131,7 +131,7 @@ manifest (sidecar.toml at the repo root):
   template), ready
 the packed --sidecar-stamp arg is the only identity contract; state lives in
 targets.json and logs under the data home.
-source: https://git.perish.top/PerishFire/sidecar
+source: https://github.com/PerishLab/sidecar
 
 ## law
 
