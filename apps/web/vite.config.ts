@@ -1,4 +1,4 @@
-import { design } from "@perish/design/vite";
+import { design } from "@perishlab/design/vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig } from "vite";
 

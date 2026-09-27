@@ -42,7 +42,7 @@ pub fn check(held: &shape::Shape) -> Found {
     found
 }
 
-const SUBSTRATE: [&str; 2] = ["plumb", "@perish/plumb"];
+const SUBSTRATE: [&str; 2] = ["plumb", "@perishlab/plumb"];
 
 fn currency(dependency: &Dependency, found: &mut Found) {
     if let Some((_, current)) = set::current()

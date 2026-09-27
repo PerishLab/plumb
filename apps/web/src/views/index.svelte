@@ -1,7 +1,7 @@
 <script lang="ts">
-import { Frame, Hero } from "@perish/design";
+import { Frame, Hero } from "@perishlab/design";
 </script>
 
 <Frame>
-	<Hero title="plumb" text="a plumb line for repositories" mark="◆" />
+	<Hero title="plumb" line="a plumb line for repositories" mark="◆" />
 </Frame>
