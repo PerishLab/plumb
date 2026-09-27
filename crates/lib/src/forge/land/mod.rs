@@ -1,6 +1,5 @@
 use super::github::{self, Client};
-use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
+use serde::Serialize;
 use std::path::{Path, PathBuf};
 
 mod flow;
@@ -8,6 +7,8 @@ pub mod rejoin;
 mod repo;
 
 use flow::{Candidate, Landing};
+
+pub use crate::landing::{Guard, Preparation, Refusal};
 
 pub const SCHEMA: &str = "plumb.land/v1";
 
@@ -46,81 +47,27 @@ pub struct Plan {
     pub steps: Vec<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct Preparation {
-    pub root: PathBuf,
-    pub base: String,
-    pub target: String,
-    pub branch: String,
-    pub projection: String,
-    pub source: String,
-    pub candidate: String,
-    pub title: String,
-    pub body: String,
-    pub guard: Guard,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct Guard {
-    pub schema: String,
-    pub tree: String,
-    pub digest: String,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-pub struct Refusal {
-    pub kind: &'static str,
-    pub message: String,
-}
-
-impl Display for Refusal {
-    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(&self.message)
-    }
-}
-
-impl std::error::Error for Refusal {}
-
 pub(crate) fn refuse(kind: &'static str, message: impl Into<String>) -> Refusal {
-    Refusal {
-        kind,
-        message: message.into(),
-    }
+    crate::landing::refuse(kind, message)
 }
 
 impl Request<'_> {
     pub fn prepare(self) -> Result<Preparation, Refusal> {
-        let landing = Landing::open(self.root, self.base)?;
-        landing.landable(false)?;
-        let story = landing.describe(self.title, self.body)?;
-        let candidate = landing.derive(&story)?;
-        preparation(&landing, &story, &candidate)
+        prepare(self.root, self.base, self.title, self.body)
     }
 }
 
-fn preparation(
-    landing: &Landing,
-    story: &flow::Story,
-    candidate: &Candidate,
-) -> Result<Preparation, Refusal> {
-    let proof = crate::guard::current(&landing.repo.root, &candidate.head)
+fn prepare(root: &Path, base: &str, title: &str, body: &str) -> Result<Preparation, Refusal> {
+    let inspected = crate::landing::Request {
+        root,
+        base,
+        title,
+        body,
+    }
+    .inspect()?;
+    let verified = crate::guard::running::verified(inspected.root(), inspected.source())
         .map_err(|error| refuse("guard", error))?;
-    Ok(Preparation {
-        root: landing.repo.root.clone(),
-        base: landing.base.clone(),
-        target: candidate.base.clone(),
-        branch: landing.branch.clone(),
-        projection: candidate.projection.clone(),
-        source: candidate.source.clone(),
-        candidate: candidate.head.clone(),
-        title: story.title.clone(),
-        body: story.body.clone(),
-        guard: Guard {
-            schema: proof.schema,
-            tree: proof.tree,
-            digest: proof.digest,
-        },
-    })
+    inspected.prepare(verified)
 }
 
 pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {
@@ -186,24 +133,32 @@ fn execute(request: Request<'_>, expected: Option<&Preparation>) -> Result<Repor
         .filter(|_| request.body.is_empty())
         .map_or(request.body, |pull| &pull.body);
     let story = landing.describe(title, body)?;
-    let candidate = landing.derive(&story)?;
-    if let Some(expected) = expected {
-        let current = preparation(&landing, &story, &candidate)?;
-        if current != *expected {
-            return Err(refuse(
-                "stale",
-                "delivery plan no longer matches the base, candidate, narrative, or Guard proof",
-            ));
-        }
-        if standing
+    let prepared = prepare(&landing.repo.root, &landing.base, &story.title, &story.body)?;
+    let verified = crate::guard::running::verified(&landing.repo.root, &prepared.source)
+        .map_err(|error| refuse("guard", error))?;
+    let prepared = crate::landing::Request {
+        root: &landing.repo.root,
+        base: &landing.base,
+        title: &story.title,
+        body: &story.body,
+    }
+    .revalidate(expected.unwrap_or(&prepared), verified)?
+    .take();
+    let candidate = Candidate {
+        projection: prepared.projection.clone(),
+        head: prepared.candidate.clone(),
+        source: prepared.source.clone(),
+        base: prepared.target.clone(),
+    };
+    if expected.is_some()
+        && standing
             .as_ref()
             .is_some_and(|pull| pull.title != story.title || pull.body != story.body)
-        {
-            return Err(refuse(
-                "stale",
-                "standing pull narrative no longer matches the delivery plan",
-            ));
-        }
+    {
+        return Err(refuse(
+            "stale",
+            "standing pull narrative no longer matches the delivery plan",
+        ));
     }
 
     landing.push(&landing.branch, &landing.branch, true)?;
