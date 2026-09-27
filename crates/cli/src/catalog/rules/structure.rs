@@ -16,6 +16,10 @@ rule!(SEAT_MEMBER, "structure.seat-member");
 rule!(SEAT_AFFIRMED, "structure.seat-affirmed");
 rule!(KNOWN_DIRECTORY, "structure.known-directory");
 rule!(KNOWN_WORKFLOW, "structure.known-workflow");
+rule!(
+    COLLABORATION_SURFACE_INHERITED,
+    "structure.collaboration-surface-inherited"
+);
 
 rule!(DECLARATION_PRESENT, "structure.declaration-present");
 rule!(RETIRED_SEAT_ABSENT, "structure.retired-seat-absent");
@@ -34,7 +38,8 @@ pub fn mechanisms() -> Vec<&'static Mechanism> {
         &ANCHOR_PRESENT, &ANCHOR_UNIQUE, &API_ENTRYPOINT, &BOUNDARY_EXISTS,
         &CARGO_TARGET_IGNORED, &CASCADE_DERIVES_IN_ANCHOR, &DEFAULT_OVERRIDDEN, &ECTROPY_POLICY,
         &ECTROPY_POLICY_PRESENT, &ECTROPY_POLICY_READABLE,
-        &DECLARATION_PRESENT, &KNOWN_DIRECTORY, &KNOWN_FILE, &KNOWN_WORKFLOW,
+        &COLLABORATION_SURFACE_INHERITED, &DECLARATION_PRESENT,
+        &KNOWN_DIRECTORY, &KNOWN_FILE, &KNOWN_WORKFLOW,
         &SEAT_AFFIRMED, &SEAT_ANCHORED, &SEAT_MEMBER,
         &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
         &RESERVED_COMPONENTS_SEAT,
