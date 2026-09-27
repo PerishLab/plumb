@@ -1,5 +1,6 @@
 mod configuration;
 mod identity;
+mod surface;
 
 use std::path::{Path, PathBuf};
 use std::process::Command;

@@ -9,7 +9,7 @@ pub mod fill;
 #[cfg(feature = "vendor")]
 mod forge;
 #[cfg(feature = "vendor")]
-pub use forge::{delivery as github_delivery, land};
+pub use forge::land;
 pub use proof::guard::landing;
 mod proof;
 mod runtime;
