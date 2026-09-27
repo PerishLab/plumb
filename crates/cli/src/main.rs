@@ -40,22 +40,12 @@ enum Command {
         title: String,
         #[arg(long, default_value = "")]
         body: String,
-        #[arg(long, value_name = "FILE", conflicts_with_all = ["title", "body", "dry"])]
-        plan: Option<PathBuf>,
         #[arg(long = "no-watch", action = clap::ArgAction::SetFalse)]
         watch: bool,
         #[arg(long = "dry-run")]
         dry: bool,
         #[arg(long)]
         json: bool,
-    },
-    #[command(
-        about = "Validate delivery declarations before repository mutation",
-        long_about = plumb::seat::resource!("help/plan.txt")
-    )]
-    Plan {
-        #[command(subcommand)]
-        deed: command::plan::Deed,
     },
     #[command(about = "Prove the staged tree, or one committed task boundary")]
     Guard {
@@ -168,7 +158,6 @@ fn execute(command: Command) -> i32 {
             base,
             title,
             body,
-            plan,
             watch,
             dry,
             json,
@@ -177,12 +166,10 @@ fn execute(command: Command) -> i32 {
             base,
             title,
             body,
-            plan,
             watch,
             dry,
             json,
         }),
-        Command::Plan { deed } => command::plan::run(deed),
         Command::Guard {
             target,
             base,

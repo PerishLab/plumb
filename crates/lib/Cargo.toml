@@ -17,7 +17,7 @@ depot = [
 delivery = []
 radius = [
 ]
-vendor = ["delivery"]
+vendor = []
 skill = [
   "depot",
   "dep:flate2",
