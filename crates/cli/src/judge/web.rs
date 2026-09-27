@@ -13,7 +13,7 @@ pub fn judge(evidence: Option<&Evidence>) -> Found {
         &mut found,
         plane.design,
         &rule::DESIGN_DEPENDENCY,
-        "web does not depend on @perish/design",
+        "web does not depend on @perishlab/design",
     );
     check(
         &mut found,

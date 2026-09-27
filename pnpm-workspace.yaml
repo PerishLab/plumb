@@ -1,5 +1,8 @@
 minimumReleaseAgeExclude:
-  - "@perish/design"
+  - "@perishlab/design"
+  - '@perishlab/bone@0.3.0 || 0.3.1 || 0.3.2'
+  - '@perishlab/sign@0.3.0 || 0.3.1 || 0.3.2'
+  - '@perishlab/token@0.3.0 || 0.3.1 || 0.3.2'
 
 packages:
   - apps/*

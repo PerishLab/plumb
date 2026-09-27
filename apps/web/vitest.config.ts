@@ -5,5 +5,10 @@ export default defineConfig({
 	plugins: [svelte()],
 	test: {
 		include: ["tests/**/*.test.ts"],
+		server: {
+			deps: {
+				inline: ["@perishlab/crest", "@perishlab/design", "@perishlab/sign"],
+			},
+		},
 	},
 });

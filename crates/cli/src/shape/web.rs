@@ -48,11 +48,11 @@ impl Web<'_> {
         .unwrap_or_default();
         let source = self.sources(&self.0.join("apps/web/src"));
         let plane = Plane {
-            design: has(&package, "@perish/design"),
+            design: has(&package, "@perishlab/design"),
             plugin: config.contains("design("),
             dispatch: !config.contains("SIDECAR_PORT") && !config.contains("API_URL"),
             loaded: source.contains("virtual:perish/views"),
-            rendered: source.contains("Views") && source.contains("@perish/design"),
+            rendered: source.contains("Views") && source.contains("@perishlab/design"),
             typed: source.contains("declare module \"virtual:perish/views\""),
             build: package
                 .get("scripts")

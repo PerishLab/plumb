@@ -1,5 +1,5 @@
 import source from "virtual:perish/views";
-import { Views } from "@perish/design";
+import { Views } from "@perishlab/design";
 import { hydrate, mount } from "svelte";
 
 const target = document.getElementById("root");

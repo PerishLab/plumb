@@ -24,12 +24,12 @@ fn fixture(name: &str) -> std::path::PathBuf {
     }
     std::fs::write(
         root.join("apps/web/package.json"),
-        r#"{"name":"@specimen/web","scripts":{"build":"vite build"},"dependencies":{"@perish/design":"0.2.1","svelte":"5","vite":"8"},"devDependencies":{}}"#,
+        r#"{"name":"@specimen/web","scripts":{"build":"vite build"},"dependencies":{"@perishlab/design":"0.2.1","svelte":"5","vite":"8"},"devDependencies":{}}"#,
     )
     .expect("manifest should be written");
     std::fs::write(
         root.join("apps/web/vite.config.ts"),
-        "import { design } from '@perish/design/vite'; design();",
+        "import { design } from '@perishlab/design/vite'; design();",
     )
     .expect("vite config should be written");
     std::fs::write(
@@ -39,7 +39,7 @@ fn fixture(name: &str) -> std::path::PathBuf {
     .expect("compiler config should be written");
     std::fs::write(
         root.join("apps/web/src/main.ts"),
-        "declare module \"virtual:perish/views\";\nimport source from 'virtual:perish/views'; import { Views } from '@perish/design'; mount(Views, { props: { source } });",
+        "declare module \"virtual:perish/views\";\nimport source from 'virtual:perish/views'; import { Views } from '@perishlab/design'; mount(Views, { props: { source } });",
     )
     .expect("entry should be written");
     std::fs::write(
