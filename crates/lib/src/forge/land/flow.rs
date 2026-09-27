@@ -1,6 +1,5 @@
-use super::repo::{Repository, Seed, line, success};
+use super::repo::{Repository, success};
 use super::{Refusal, refuse};
-use std::collections::BTreeMap;
 
 pub struct Landing {
     pub repo: Repository,
@@ -109,99 +108,6 @@ impl Landing {
             title,
             body: narrative(&body),
         })
-    }
-
-    pub fn derive(&self, story: &Story) -> Result<Candidate, Refusal> {
-        let upstream = self.upstream();
-        let source = self.repo.revision("HEAD")?;
-        let target = self.repo.revision(&upstream)?;
-        let merged = [
-            "merge-tree",
-            "--write-tree",
-            "--no-messages",
-            &upstream,
-            "HEAD",
-        ];
-        let output = self.repo.git(&merged)?;
-        if !output.status.success() {
-            return Err(refuse(
-                "conflict",
-                format!(
-                    "{} conflicts with {upstream}; resolve it on the source line",
-                    self.branch
-                ),
-            ));
-        }
-        let tree = line(output.stdout)?;
-        if tree == self.repo.revision(&format!("{target}^{{tree}}"))? {
-            return Err(refuse(
-                "empty",
-                format!("{} contributes no tree changes to {upstream}", self.branch),
-            ));
-        }
-        let proof = crate::guard::current(&self.repo.root, &source)
-            .map_err(|error| refuse("guard", error))?;
-        if proof.tree != tree {
-            return Err(refuse(
-                "guard",
-                format!(
-                    "the guarded source tree {} does not equal the projected tree {tree}; update the source from {upstream} and run precommit again",
-                    proof.tree
-                ),
-            ));
-        }
-        let token = proof.encode().map_err(|error| refuse("guard", error))?;
-        let message = self.message(story, &source, &token);
-        let identity = self.identity()?;
-        let head = self.repo.record(&Seed {
-            tree: &tree,
-            parents: &[&target],
-            message: &message,
-            identity: &identity,
-        })?;
-        crate::guard::current(&self.repo.root, &head).map_err(|error| refuse("guard", error))?;
-        Ok(Candidate {
-            projection: self.projection(),
-            head,
-            source,
-            base: target,
-        })
-    }
-
-    fn message(&self, story: &Story, source: &str, proof: &str) -> String {
-        let body = narrative(&story.body);
-        let body = body.trim();
-        let held = if body.is_empty() {
-            String::new()
-        } else {
-            format!("\n\n{body}")
-        };
-        format!(
-            "{}{held}\n\nLand-Source: {}@{source}\n{} {proof}\n",
-            story.title.trim(),
-            self.branch,
-            crate::guard::TRAILER
-        )
-    }
-
-    fn identity(&self) -> Result<BTreeMap<String, String>, Refusal> {
-        let mut held = BTreeMap::new();
-        for (name, shape) in [
-            ("GIT_AUTHOR_NAME", "%an"),
-            ("GIT_AUTHOR_EMAIL", "%ae"),
-            ("GIT_AUTHOR_DATE", "%aI"),
-            ("GIT_COMMITTER_NAME", "%cn"),
-            ("GIT_COMMITTER_EMAIL", "%ce"),
-            ("GIT_COMMITTER_DATE", "%cI"),
-        ] {
-            let value = self.repo.text(
-                &["show", "-s", &format!("--format={shape}"), "HEAD"],
-                "git",
-                "cannot read commit identity",
-            )?;
-            held.insert(name.to_string(), value);
-        }
-        Ok(held)
     }
 
     pub fn push(&self, branch: &str, source: &str, upstream: bool) -> Result<(), Refusal> {

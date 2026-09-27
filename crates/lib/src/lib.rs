@@ -7,6 +7,7 @@ pub mod fill;
 mod forge;
 #[cfg(feature = "vendor")]
 pub use forge::{delivery, land};
+pub use proof::guard::landing;
 mod proof;
 mod runtime;
 pub mod seat;
