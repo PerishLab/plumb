@@ -9,7 +9,7 @@
 		"build": "pnpm -r build",
 		"test": "pnpm -r test",
 		"check": "biome check .",
-		"typecheck": "pnpm -r exec tsc --noEmit"
+		"typecheck": "pnpm -r typecheck"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",

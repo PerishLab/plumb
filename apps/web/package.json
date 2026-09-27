@@ -6,7 +6,8 @@
 		"dev": "vite",
 		"build": "vite build && vite build --ssr src/serve.ts --outDir .local/server && node .local/server/serve.js",
 		"preview": "vite preview",
-		"test": "vitest run"
+		"test": "vitest run",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@perish/design": "0.2.1",
