@@ -1,10 +1,8 @@
 pub(in crate::command) mod channel;
 mod identity;
-mod truth;
 
 pub use identity::deed::Deed;
 use std::path::Path;
-pub(super) use truth::manager;
 
 use crate::shape::release::Spec;
 
@@ -44,10 +42,6 @@ fn execute(deed: Deed) -> Result<String, String> {
             dry,
         } => super::operator::close(&version, abandon, &remote, dry),
         Deed::Owed { version, remote } => super::operator::owed(version.as_deref(), &remote),
-        Deed::Managers { version, out } => {
-            let spec = Spec::read(Path::new("plumb.toml"))?;
-            manager::write(&spec, &channel::channel(&version)?, &version, &out)
-        }
     }
 }
 

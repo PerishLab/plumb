@@ -78,3 +78,52 @@ fn packages() {
     );
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
+
+#[test]
+fn placed() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let dir = fixture.path();
+    crate::govern(dir);
+    let path = dir.to_str().expect("path should be utf8");
+    let units = dir.join("packaging/deb/root/lib/systemd/system");
+    std::fs::create_dir_all(&units).expect("unit seat");
+    std::fs::write(
+        dir.join("packaging/deb/control"),
+        "Package: foo-api\nVersion: __VERSION__\n",
+    )
+    .expect("control");
+    std::fs::write(
+        units.join("foo-api.service"),
+        "[Service]\nExecStart=/usr/bin/foo-api\n",
+    )
+    .expect("unit");
+    let manifest = "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\", \"foo-api\"]\ntargets = [\"x86_64-unknown-linux-gnu\", \"aarch64-apple-darwin\"]\n[release.binary.foo-api]\ntargets = [\"x86_64-unknown-linux-gnu\"]\ninstall = false\n[release.deb]\nbinary = \"foo-api\"\nroot = \"packaging/deb\"\n";
+    std::fs::write(dir.join("plumb.toml"), manifest).expect("manifest");
+    let held = crate::run(&["doctor", path]);
+    assert!(held.contains("publishes binary deb"), "{held}");
+    assert!(
+        held.contains("binaries  foo, foo-api on x86_64-unknown-linux-gnu uninstalled"),
+        "{held}"
+    );
+    assert!(held.contains("places    deb foo-api"), "{held}");
+    assert!(!held.contains("the current Plumb refuses"), "{held}");
+
+    std::fs::write(
+        dir.join("plumb.toml"),
+        manifest.replace("binary = \"foo-api\"", "binary = \"foo\""),
+    )
+    .expect("manifest");
+    let captured = crate::run(&["doctor", "--json", path]);
+    let report: serde_json::Value = serde_json::from_str(&captured).expect("doctor json");
+    assert!(
+        report["findings"]
+            .as_array()
+            .is_some_and(|findings| findings.iter().any(|finding| {
+                finding["code"] == "release.spec-declared"
+                    && finding["evidence"]
+                        .as_str()
+                        .is_some_and(|evidence| evidence.contains("Package is foo-api"))
+            })),
+        "{captured}"
+    );
+}

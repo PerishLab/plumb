@@ -52,11 +52,4 @@ pub enum Deed {
         #[arg(long = "dry-run")]
         dry: bool,
     },
-    #[command(about = "Render the manager scripts one release version installs with")]
-    Managers {
-        #[arg(long)]
-        version: String,
-        #[arg(long)]
-        out: std::path::PathBuf,
-    },
 }

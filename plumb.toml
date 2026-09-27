@@ -12,7 +12,7 @@ note = "The rules this binary carries. Each release is its own rule set; nothing
 
 [[layout.seat]]
 path = "crates/cli/assets"
-note = "Runtime manager sources and the Git guard hooks this binary carries."
+note = "The Git guard hooks this binary carries."
 
 [[layout.seat]]
 path = "crates/cli/cookbook"
