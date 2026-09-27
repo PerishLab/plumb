@@ -24,6 +24,7 @@ impl Spec {
             self.chart.is_some(),
             self.npm.is_some(),
             self.cfworker.is_some(),
+            self.deb.is_some(),
         ]
         .into_iter()
         .any(|held| held)
@@ -32,6 +33,7 @@ impl Spec {
     pub fn surface(&self) -> Vec<&'static str> {
         [
             (!self.binaries.is_empty(), "binary"),
+            (self.deb.is_some(), "deb"),
             (self.cargo.is_some(), "cargo"),
             (self.chart.is_some(), "chart"),
             (self.npm.is_some(), "npm"),

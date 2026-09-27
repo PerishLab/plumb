@@ -8,7 +8,7 @@ already shipped from the same commit, preferring the rc. Shipped means what
 wharf's distribution.json beside the marker's seal says: the prerelease is
 recorded complete at that commit. Retract removes only a marker nothing of
 which is public: its distribution record decides, and a marker without one is
-judged by its seal. Managers renders the scripts a version installs with.
+judged by its seal.
 
 Rejoin settles the standing stable marker into main. It names no version: the
 debt is the highest stable marker origin holds, and it is owed until main holds

@@ -95,6 +95,13 @@ answers for.
   consign` places a marker's changelog or skill in wharf's yard, dispatches
   wharf to lodge it, and reads Depot back; wharf is Depot's only writer.
   Neither is a phase inside the other.
+- A release is one marker and one seal over every executable it carries, so a
+  CLI and its server release together by construction. Each executable in
+  `binaries` may narrow its targets and stay out of the installed manager
+  (`[release.binary.<name>]`); a placement (`deb`, `oci` with its chart,
+  `cfworker`) names what it carries. Every executable binds the product's
+  identity prefix, and a server built from `crates/api` is named
+  `<product>-api`.
 - Artifact reuse and distribution identity are separate domain-wide concerns,
   across binaries and registry media. Plan must key reusable content by its
   actual build inputs and tool world, and key publication by that content plus

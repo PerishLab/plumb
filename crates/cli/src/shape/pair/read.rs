@@ -6,6 +6,8 @@ use std::path::Path;
 #[derive(Default)]
 pub struct Release {
     pub attachments: BTreeSet<String>,
+    pub executables: Vec<String>,
+    pub placements: Vec<String>,
     pub widths: BTreeMap<String, usize>,
     pub refusal: Option<String>,
     pub blind: Option<String>,
@@ -46,6 +48,8 @@ impl Root<'_> {
         let attachments = attachments(spec);
         Release {
             attachments,
+            executables: spec.lines(),
+            placements: spec.placements(),
             widths: widths(spec),
             refusal: spec.ship().err(),
             blind: identity::Seat(self.0).blind(&spec.product, plumb::commit!("PLUMB")),
