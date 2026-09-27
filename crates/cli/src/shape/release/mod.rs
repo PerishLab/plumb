@@ -1,14 +1,18 @@
 mod attachment;
+mod deb;
 mod depot;
+mod executable;
 mod shape;
 mod target;
 
 pub use attachment::{Cargo, Cfworker, Chart, Npm, Oci};
+pub use deb::Deb;
 pub use depot::Depot;
+pub use executable::{Binary, Executable};
 pub use target::{Format, Target};
 
 use serde::Deserialize;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Debug)]
@@ -17,6 +21,7 @@ pub struct Spec {
     pub product: String,
     pub authority: String,
     pub binaries: Vec<String>,
+    pub executables: Vec<Executable>,
     pub target: Vec<Target>,
     pub skill: bool,
     pub cargo: Option<Cargo>,
@@ -24,6 +29,7 @@ pub struct Spec {
     pub chart: Option<Chart>,
     pub npm: Option<Npm>,
     pub cfworker: Option<Cfworker>,
+    pub deb: Option<Deb>,
     pub depot: Option<Depot>,
 }
 
@@ -39,12 +45,14 @@ struct Raw {
     authority: String,
     binaries: Vec<String>,
     targets: Vec<String>,
+    binary: BTreeMap<String, Binary>,
     skill: bool,
     cargo: Option<Cargo>,
     oci: Option<Oci>,
     chart: Option<Chart>,
     npm: Option<Npm>,
     cfworker: Option<Cfworker>,
+    deb: Option<Deb>,
     depot: Option<Depot>,
 }
 impl Spec {
@@ -80,20 +88,23 @@ impl Spec {
             authority,
             binaries,
             targets,
+            binary,
             skill,
             cargo,
             oci,
             chart,
             npm,
             cfworker,
+            deb,
             depot,
         } = held.release;
         let spec = Self {
             root: root.to_path_buf(),
             target: targets
                 .iter()
-                .map(|triple| target::resolve(&product, triple))
+                .map(|triple| target::resolve(triple))
                 .collect::<Result<Vec<_>, _>>()?,
+            executables: executable::resolve(&binaries, &targets, binary)?,
             product,
             authority,
             binaries,
@@ -103,16 +114,17 @@ impl Spec {
             chart,
             npm,
             cfworker,
+            deb,
             depot,
         };
         spec.validate()?;
         Ok(spec)
     }
 
-    fn attachments(&self) -> [Result<(), String>; 5] {
+    fn attachments(&self) -> [Result<(), String>; 6] {
         [
             self.cargo.as_ref().map_or(Ok(()), Cargo::validate),
-            self.oci.as_ref().map_or(Ok(()), Oci::validate),
+            self.oci.as_ref().map_or(Ok(()), |held| held.validate(self)),
             self.chart
                 .as_ref()
                 .map_or(Ok(()), |held| held.validate(&self.root)),
@@ -122,6 +134,7 @@ impl Spec {
             self.cfworker
                 .as_ref()
                 .map_or(Ok(()), |held| held.validate(&self.root)),
+            self.deb.as_ref().map_or(Ok(()), |held| held.validate(self)),
         ]
     }
 
@@ -158,9 +171,7 @@ impl Spec {
                 if !triples.insert(&target.triple) {
                     return Err(format!("duplicate target {}", target.triple));
                 }
-                if target.format == Format::Zip && self.binaries.len() != 1 {
-                    return Err("a Windows release currently requires exactly one binary".into());
-                }
+                self.carried(target)?;
             }
         }
         if let Some(depot) = &self.depot {
@@ -174,16 +185,6 @@ impl Spec {
             held?;
         }
         Ok(())
-    }
-
-    pub fn environment(&self) -> String {
-        self.product.to_ascii_uppercase().replace('-', "_")
-    }
-
-    pub fn windows(&self) -> Option<&Target> {
-        self.target
-            .iter()
-            .find(|target| target.format == Format::Zip)
     }
 }
 
@@ -210,3 +211,6 @@ pub(super) fn token(subject: &str, value: &str, upper: bool) -> Result<(), Strin
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod proof;

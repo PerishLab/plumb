@@ -26,6 +26,12 @@ pub fn render(seen: Held<'_>) {
     println!("  layout    {}", show(&held.dirs));
     println!("  lanes     {}", show(&held.lanes));
     println!("  publishes {}", show(&held.ships));
+    if !held.release.executables.is_empty() {
+        println!("  binaries  {}", held.release.executables.join(", "));
+    }
+    if !held.release.placements.is_empty() {
+        println!("  places    {}", held.release.placements.join(", "));
+    }
     if !held.sites.is_empty() {
         println!("  sites     {}", show(&held.sites));
     }

@@ -15,6 +15,7 @@ pub struct Oci {
     pub registry: String,
     pub image: String,
     pub account: String,
+    pub binary: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -57,7 +58,10 @@ impl Cargo {
 }
 
 impl Oci {
-    pub(super) fn validate(&self) -> Result<(), String> {
+    pub(super) fn validate(&self, spec: &super::Spec) -> Result<(), String> {
+        if let Some(binary) = &self.binary {
+            spec.server("image placement", binary)?;
+        }
         host("image registry", &self.registry)?;
         account("image account", &self.account)?;
         pair(
