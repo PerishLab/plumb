@@ -408,6 +408,15 @@ owner = "cargo"
 tags = ["cargo", "repository"]
 
 [[rule]]
+id = "structure.collaboration-surface-inherited"
+summary = "Product repositories inherit collaboration templates"
+law = "Organization Issue forms and pull-request templates live only in PerishLab/.github; product repositories inherit that collaboration surface without carrying local copies."
+evidence = "Tracked paths below .github compared with the collaboration-template paths reserved by the organization policy."
+standing = "mechanized"
+owner = "plumb"
+tags = ["ownership", "repository"]
+
+[[rule]]
 id = "structure.cascade-derives-in-anchor"
 summary = "Cascade derives live in the anchor"
 law = "Repository runtime vocabulary is declared in the anchor crate, not a leaf."

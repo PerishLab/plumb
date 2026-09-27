@@ -5,6 +5,7 @@ use crate::catalog::set;
 use crate::shape;
 use std::collections::BTreeSet;
 
+mod collaboration;
 pub(crate) mod layout;
 mod policy;
 mod release;
@@ -19,6 +20,7 @@ impl Structure<'_> {
     fn judge(&self) -> Found {
         let held = self.0;
         let mut found = Found::new();
+        found.extend(collaboration::judge(&held.layout));
         if held.runseal && !held.laws {
             found.push(wrong(&rule::ECTROPY_POLICY_PRESENT, "no ectropy.toml"));
         }

@@ -259,3 +259,4 @@ fn absent() {
 }
 
 mod affirmed;
+mod collaboration;
