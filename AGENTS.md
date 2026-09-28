@@ -86,7 +86,7 @@ answers for.
 
 - Everything a repository knows belongs where it can be judged or where it can be
   found: in the code, in a rule set, in a note beside the key it is about, or in
-  the Concord task that owns the work. A document nobody must read and no
+  the Issue that owns the work. A document nobody must read and no
   mechanism keeps true is the worst of the four.
 
 ## Distribution
@@ -176,7 +176,8 @@ The verbs are `plumb release --help`, `plumb ship --help`, and
 `plumb rule list --namespace release`; they state the product surface, marker
 and ship boundary, the seats a stable label may take, and the isolation every
 non-stable release owes. Why the contract has this shape, and
-every decision that put it there, is `perish.code/plumb-release-contract`.
+every decision that put it there, is in the Issues and pull requests that
+changed it.
 
 ## Commitments
 
