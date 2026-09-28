@@ -30,4 +30,4 @@ note = "Carried by every governed repository."
 
 [[layout.file]]
 name = ["plumb.toml", "ectropy.toml", "runseal.toml", "locus.toml", "sidecar.toml"]
-note = "A root <tool>.toml is legal where <tool> names a perish.code tool. That roster is hardcoded in shape/lane.rs today and holds two names; a rule naming it is owed."
+note = "A root <tool>.toml is legal where <tool> names a perish.code tool. The names this group lists are that roster; a rule naming it is owed."
