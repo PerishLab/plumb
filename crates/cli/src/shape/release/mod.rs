@@ -9,7 +9,7 @@ pub use attachment::{Cargo, Cfworker, Chart, Npm, Oci};
 pub use deb::Deb;
 pub use depot::Depot;
 pub use executable::{Binary, Executable};
-pub use target::{Format, Target};
+pub use target::Target;
 
 use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};

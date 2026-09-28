@@ -1,4 +1,4 @@
-use super::{Format, Spec, Target};
+use super::{Spec, Target};
 use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -92,14 +92,18 @@ impl Spec {
         self.executables
             .iter()
             .map(|held| {
-                let mut line = held.name.clone();
+                let mut qualifiers = Vec::new();
                 if held.targets.len() != self.target.len() {
-                    line = format!("{line} on {}", held.targets.join(" "));
+                    qualifiers.push(format!("on {}", held.targets.join(" ")));
                 }
                 if !held.install {
-                    line.push_str(" uninstalled");
+                    qualifiers.push("uninstalled".to_string());
                 }
-                line
+                if qualifiers.is_empty() {
+                    held.name.clone()
+                } else {
+                    format!("{} ({})", held.name, qualifiers.join(", "))
+                }
             })
             .collect()
     }
@@ -121,22 +125,14 @@ impl Spec {
     }
 
     pub(super) fn carried(&self, target: &Target) -> Result<(), String> {
-        let names: Vec<&str> = self
+        if self
             .executables
             .iter()
-            .filter(|held| held.carries(&target.triple))
-            .map(|held| held.name.as_str())
-            .collect();
-        if names.is_empty() {
-            return Err(format!("no binary carries target {}", target.triple));
+            .any(|held| held.carries(&target.triple))
+        {
+            Ok(())
+        } else {
+            Err(format!("no binary carries target {}", target.triple))
         }
-        if target.format == Format::Zip && names.len() != 1 {
-            return Err(format!(
-                "a Windows target carries exactly one binary: {} carries {}",
-                target.triple,
-                names.join(", ")
-            ));
-        }
-        Ok(())
     }
 }

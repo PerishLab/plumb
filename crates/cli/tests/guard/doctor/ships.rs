@@ -102,7 +102,7 @@ fn placed() {
     let held = crate::run(&["doctor", path]);
     assert!(held.contains("publishes binary deb"), "{held}");
     assert!(
-        held.contains("binaries  foo, foo-api on x86_64-unknown-linux-gnu uninstalled"),
+        held.contains("binaries  foo, foo-api (on x86_64-unknown-linux-gnu, uninstalled)"),
         "{held}"
     );
     assert!(held.contains("places    deb foo-api"), "{held}");
