@@ -117,7 +117,11 @@ enum Command {
         target: Root,
     },
     #[command(about = "Read what to do about a finding that names an entry")]
-    Cookbook { entry: Option<String> },
+    Cookbook {
+        entry: Option<String>,
+        #[arg(long)]
+        json: bool,
+    },
     #[command(about = "Record that a wayfinder was read against the authorities it points at")]
     Affirm {
         #[command(flatten)]
@@ -213,7 +217,7 @@ fn execute(command: Command) -> i32 {
         Command::Layout { target } => {
             command::render::Seat::new(PathBuf::from(target.root)).layout()
         }
-        Command::Cookbook { entry } => command::cookbook::run(entry),
+        Command::Cookbook { entry, json } => command::cookbook::run(entry, json),
         Command::Affirm { target, write } => {
             command::render::Seat::new(PathBuf::from(target.root)).affirm(write)
         }

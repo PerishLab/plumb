@@ -1,6 +1,8 @@
 use serde::Serialize;
 use std::fmt::{Display, Formatter};
 
+mod markdown;
+
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(transparent)]
 pub struct Code(String);
@@ -27,6 +29,7 @@ pub enum Error {
     Code(String),
     Blank { code: String, field: &'static str },
     Duplicate(String),
+    Format(String),
 }
 
 impl Code {
@@ -131,6 +134,7 @@ impl Display for Error {
                 write!(formatter, "Cookbook entry `{code}` has blank {field}")
             }
             Self::Duplicate(code) => write!(formatter, "duplicate Cookbook code `{code}`"),
+            Self::Format(reason) => write!(formatter, "invalid Cookbook entry: {reason}"),
         }
     }
 }
