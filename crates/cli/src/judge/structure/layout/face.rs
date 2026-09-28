@@ -1,3 +1,4 @@
+use crate::shape::lane;
 use crate::shape::layout::Declared;
 use plumb::depot::sha;
 use plumb::snapshot::Snapshot;
@@ -36,8 +37,7 @@ impl Faces<'_> {
             .0
             .entries()
             .iter()
-            .filter_map(|entry| entry.path().strip_prefix(".forgejo/workflows/"))
-            .filter_map(|name| name.strip_suffix(".yml"))
+            .filter_map(|entry| lane::name(entry.path()))
             .map(str::to_string)
             .collect::<Vec<_>>();
         held.sort();

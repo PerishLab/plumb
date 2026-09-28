@@ -7,35 +7,32 @@
 # justify has no note to write and does not belong here. A name that stops
 # being legal is deleted; the commit that deletes it says why.
 #
-# Exercise counts below were measured across the fifteen governed repositories
-# on 2026-08-20. They are evidence, not law: re-measure before trusting them.
+# Exercise counts below were measured across the nineteen governed, unarchived
+# repositories on GitHub main on 2026-09-28. They are evidence, not law:
+# re-measure before trusting them.
 
 [dir]
 rule = "structure.known-directory"
 
 [[dir.member]]
-name = "app"
-note = "One anchor crate directly at the root, for a repository whose only Rust member is itself. runseal alone."
-
-[[dir.member]]
 name = "apps"
-note = "Deployable applications. codehull, ensign, plumb, stim."
+note = "Deployable applications. codehull, design, ensign, noema, plumb, stim."
 
 [[dir.member]]
 name = "charts"
-note = "Helm chart carriers the ship adaptors project onto. codehull, ensign, plumb."
+note = "Helm chart carriers the ship adaptors project onto. codehull, ensign, noema, plumb."
 
 [[dir.member]]
 name = "clusters"
-note = "Cluster declarations. Carried by infra, which is not governed yet; no governed repository holds this seat as of 2026-08-20."
+note = "Cluster declarations. manifests."
 
 [[dir.member]]
 name = "crates"
-note = "Rust members. Eleven governed repositories; the most exercised seat here."
+note = "Rust members. Fifteen governed repositories; the most exercised seat here."
 
 [[dir.member]]
 name = "deploy"
-note = "Deployment substrate outside the application. codehull, ensign."
+note = "Deployment substrate outside the application. codehull, ensign, noema."
 
 [[dir.member]]
 name = "examples"
@@ -47,17 +44,4 @@ note = "Host declarations. hardrig."
 
 [[dir.member]]
 name = "packages"
-note = "Publishable node packages. crest, plumb, sidecar."
-
-[[dir.member]]
-name = "repos"
-note = "Vendored repository trees. Carried by infra, which is not governed yet; no governed repository holds this seat as of 2026-08-20."
-
-[[dir.member]]
-name = "runner-control"
-note = "Forgejo runner lifecycle. Carried by actions, which is not governed yet; no governed repository holds this seat as of 2026-08-20."
-
-[[lane.member]]
-name = "ship"
-note = "Canonical ship atom owned only by Plumb; product repositories dispatch it and carry no lane."
-
+note = "Publishable node packages. crest, design, plumb, sidecar."

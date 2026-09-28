@@ -481,9 +481,9 @@ tags = ["repository"]
 
 [[rule]]
 id = "structure.known-workflow"
-summary = "The workflow namespace belongs to Plumb"
-law = "Only the Plumb source repository carries .forgejo; product repositories dispatch the exact canonical ship atom and carry no workflow files."
-evidence = "Tracked .forgejo paths, workflow names, and repository identity."
+summary = "A governed repository carries no workflow"
+law = "GitHub is the only forge, and every workflow the estate runs lives in wharf, which Plumb does not govern. A governed repository, Plumb included, carries no workflow file under .github/workflows, and any .forgejo path is residue of the archived Forgejo forge."
+evidence = "Workflow file names under .github/workflows and .forgejo/workflows, and tracked .forgejo paths."
 standing = "mechanized"
 owner = "plumb"
 tags = ["ownership", "repository", "release"]
