@@ -1,7 +1,7 @@
 use super::value::Value;
 use super::{Kind, LEAF, POINTER};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub struct Route<'a> {
     pub channel: &'a str,
     pub kind: Kind,
