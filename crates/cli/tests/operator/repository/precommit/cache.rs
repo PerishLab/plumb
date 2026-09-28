@@ -57,7 +57,11 @@ pub(super) fn run(root: &Path, home: &Path) -> Output {
 }
 
 fn seats(home: &Path) -> Vec<PathBuf> {
-    std::fs::read_dir(home.join("cache/guard/cargo"))
+    #[cfg(windows)]
+    let root = home.join("c");
+    #[cfg(not(windows))]
+    let root = home.join("cache/guard/cargo");
+    std::fs::read_dir(root)
         .expect("cache")
         .map(|entry| entry.expect("entry").path())
         .collect()
