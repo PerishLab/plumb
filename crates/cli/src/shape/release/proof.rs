@@ -148,3 +148,29 @@ fn deb() {
     );
     refused(root, &whole, "runs /usr/bin/santi-api");
 }
+
+#[test]
+fn targets() {
+    assert_eq!(
+        super::target::TARGETS,
+        [
+            "x86_64-unknown-linux-gnu",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc",
+        ],
+        "the release target set is shared with wharf (PerishLab/wharf#11); change both together"
+    );
+    let root = tempfile::tempdir().expect("root");
+    for triple in super::target::TARGETS {
+        let text = format!(
+            "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"{triple}\"]\n"
+        );
+        decode(root.path(), &text).expect(triple);
+    }
+    let text = "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-apple-darwin\"]\n";
+    refused(
+        root.path(),
+        text,
+        "unsupported release target x86_64-apple-darwin",
+    );
+}
