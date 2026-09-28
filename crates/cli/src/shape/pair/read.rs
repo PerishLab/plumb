@@ -51,7 +51,7 @@ impl Root<'_> {
             executables: spec.lines(),
             placements: spec.placements(),
             widths: widths(spec),
-            refusal: spec.ship().err(),
+            refusal: None,
             blind: identity::Seat(self.0).blind(&spec.product, plumb::commit!("PLUMB")),
             unsettled: rejoin::unsettled(self.0),
         }

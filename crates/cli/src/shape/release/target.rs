@@ -3,14 +3,21 @@ pub struct Target {
     pub triple: String,
 }
 
+pub(super) const TARGETS: [&str; 3] = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+];
+
 pub(super) fn resolve(triple: &str) -> Result<Target, String> {
-    match triple {
-        "x86_64-unknown-linux-gnu"
-        | "x86_64-apple-darwin"
-        | "aarch64-apple-darwin"
-        | "x86_64-pc-windows-msvc" => Ok(Target {
+    if TARGETS.contains(&triple) {
+        Ok(Target {
             triple: triple.into(),
-        }),
-        _ => Err(format!("unsupported release target {triple}")),
+        })
+    } else {
+        Err(format!(
+            "unsupported release target {triple}; wharf releases {}",
+            TARGETS.join(", ")
+        ))
     }
 }
