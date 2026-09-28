@@ -1,4 +1,6 @@
-use super::{Repo, cache, support};
+#[cfg(unix)]
+use super::Repo;
+use super::{cache, support};
 
 #[test]
 fn unchanged() {
@@ -33,6 +35,29 @@ fn unrelated() {
     cache::success(&second);
     assert_eq!(first.stdout, second.stdout);
     assert!(!String::from_utf8_lossy(&second.stderr).contains("guard guard/rust"));
+}
+
+#[test]
+#[cfg(windows)]
+fn msvc() {
+    let fixture = cache::fixture();
+    let home = support::home();
+    cache::success(&cache::run(fixture.path(), home.path()));
+    let tools = tempfile::tempdir().expect("shadow tools");
+    std::fs::write(tools.path().join("link.exe"), b"not the MSVC linker").expect("shadow linker");
+    let mut paths = vec![tools.path().to_path_buf()];
+    paths.extend(std::env::split_paths(
+        &std::env::var_os("PATH").expect("PATH"),
+    ));
+    let output = super::support::plumb()
+        .args(["guard", ".", "--json"])
+        .current_dir(fixture.path())
+        .env("PLUMB_HOME", home.path())
+        .env("PATH", std::env::join_paths(paths).expect("PATH"))
+        .output()
+        .expect("guard");
+    cache::success(&output);
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("guard guard/rust"));
 }
 
 #[test]

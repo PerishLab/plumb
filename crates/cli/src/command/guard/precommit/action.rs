@@ -13,6 +13,8 @@ struct Preparation {
     name: String,
     input: String,
     commands: Vec<Vec<String>>,
+    probes: Vec<plumb::rule::Probe>,
+    tools: Vec<String>,
     environment: Option<plumb::config::Environment>,
     manifest: Option<String>,
     paths: Vec<String>,
@@ -46,18 +48,24 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         name,
         input,
         commands,
+        probes: declared,
+        tools,
         environment,
         manifest,
         paths,
     } in prepared
     {
         let environment = super::world::environment(&commands, environment)?;
-        let probes = manifest
+        let mut probes = manifest
             .as_deref()
             .map(|manifest| crate::catalog::probe::read(manifest, paths.iter().map(String::as_str)))
             .transpose()?
             .unwrap_or_default();
+        for (at, probe) in declared.into_iter().enumerate() {
+            probes.insert(format!("workflow.probe.{name}.{at}"), vec![probe]);
+        }
         let mut programs = crate::catalog::probe::programs(&probes)?;
+        programs.extend(tools);
         programs.extend(
             commands
                 .iter()
@@ -127,17 +135,19 @@ impl Catalog<'_> {
             .as_deref()
             .map(crate::shape::workflow::parse)
             .unwrap_or_default();
-        if let Some(error) = held.refusal {
-            return Err(error);
+        if let Some(error) = &held.refusal {
+            return Err(error.clone());
         }
         if held.keys.is_empty() {
-            held = crate::shape::workflow::inferred(
+            held.keys = crate::shape::workflow::inferred(
                 tree.has("Cargo.toml"),
                 tree.has("pnpm-lock.yaml"),
                 tree.has("plumb.toml"),
                 tree.has("ectropy.toml"),
-            );
+            )
+            .keys;
         }
+        held.validate()?;
         let mut checks = Vec::new();
         for key in held.keys.iter().filter(|key| key.lane() == "guard") {
             let name = key.name();
@@ -152,6 +162,8 @@ impl Catalog<'_> {
                 .then(|| super::environment::cargo(self.root))
                 .transpose()?;
             checks.push(Preparation {
+                probes: held.probes(&name)?,
+                tools: held.tools(&name)?,
                 name,
                 input,
                 commands,

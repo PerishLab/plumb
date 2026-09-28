@@ -71,6 +71,36 @@ fn scope() {
 }
 
 #[test]
+fn declared() {
+    let fixture = cache::fixture();
+    let root = fixture.path();
+    let home = support::home();
+    let output = std::process::Command::new("rustup")
+        .arg("--version")
+        .output()
+        .expect("rustup version");
+    assert!(output.status.success());
+    let version = String::from_utf8(output.stdout).expect("version");
+    let manifest = format!(
+        "[workflow.hash.guard]\nrust = [\"Cargo.toml\", \"Cargo.lock\", \"src\"]\n[[workflow.tool.guard.rust]]\nprogram = 'rustup'\n[[workflow.probe.guard.rust]]\nargv = ['rustup', '--version']\nstdout = {version:?}\n"
+    );
+    std::fs::write(root.join("plumb.toml"), &manifest).expect("declared prerequisites");
+    Repo::git(root, &["add", "plumb.toml"]);
+    cache::success(&cache::run(root, home.path()));
+    std::fs::write(
+        root.join("plumb.toml"),
+        manifest.replace(&format!("stdout = {version:?}"), "stdout = 'wrong'"),
+    )
+    .expect("changed prerequisite");
+    Repo::git(root, &["add", "plumb.toml"]);
+    let refused = cache::run(root, home.path());
+    assert!(!refused.status.success());
+    let error = String::from_utf8_lossy(&refused.stderr);
+    assert!(error.contains("workflow.probe.guard/rust.0"), "{error}");
+    assert!(!error.contains("guard guard/rust"), "{error}");
+}
+
+#[test]
 #[cfg(unix)]
 fn once() {
     use std::os::unix::fs::PermissionsExt as _;

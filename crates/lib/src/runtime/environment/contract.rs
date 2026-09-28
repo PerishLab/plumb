@@ -25,7 +25,7 @@ struct Held {
 }
 
 const PNPM: Held = Held {
-    inherit: &["PNPM_HOME"],
+    inherit: &["PNPM_HOME", "NPM_CONFIG_USERCONFIG"],
     managed: &[],
     reject: &[
         "NODE_OPTIONS",
@@ -71,6 +71,15 @@ const CARGO: Held = Held {
         "LD_LIBRARY_PATH",
         "DYLD_LIBRARY_PATH",
         "DYLD_FALLBACK_LIBRARY_PATH",
+        "VCINSTALLDIR",
+        "VCToolsInstallDir",
+        "WindowsSdkDir",
+        "WindowsSDKVersion",
+        "UniversalCRTSdkDir",
+        "UCRTVersion",
+        "INCLUDE",
+        "LIB",
+        "LIBPATH",
     ],
     managed: &[
         "CARGO",
