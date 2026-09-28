@@ -64,9 +64,22 @@ fn executables() {
 fn windows() {
     let root = Path::new(".");
     let union = "targets = [\"x86_64-unknown-linux-gnu\", \"x86_64-pc-windows-msvc\"]\n";
-    refused(root, &format!("{HEAD}{union}"), "exactly one binary");
+    let spec = decode(root, &format!("{HEAD}{union}")).expect("two binaries on Windows");
+    for name in ["santi", "santi-api"] {
+        assert!(
+            spec.executable(name)
+                .expect(name)
+                .carries("x86_64-pc-windows-msvc")
+        );
+    }
     let narrowed = "[release.binary.santi-api]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n";
-    decode(root, &format!("{HEAD}{union}{narrowed}")).expect("one binary per Windows target");
+    decode(root, &format!("{HEAD}{union}{narrowed}")).expect("one binary on Windows");
+    let linux = "[release.binary.santi]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n";
+    refused(
+        root,
+        &format!("{HEAD}{union}{narrowed}{linux}"),
+        "no binary carries target x86_64-pc-windows-msvc",
+    );
 }
 
 #[test]
