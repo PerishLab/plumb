@@ -46,12 +46,25 @@ fn brief() {
     assert!(absent.contains("carries no SKILL.md"), "{absent}");
     write(root, "SKILL.md", "# demo\n", 0o644);
     super::vet(root, "SKILL.md", Some(3072)).expect("a brief within the cap");
+    write(root, "PATHS.md", "# paths\n", 0o644);
+    let companion = super::vet(root, "SKILL.md", Some(3072)).expect_err("a companion refuses");
+    assert!(companion.contains("entries beside SKILL.md"), "{companion}");
+    std::fs::remove_file(root.join("PATHS.md")).expect("remove companion");
+    std::fs::create_dir(root.join("references")).expect("references");
+    let directory = super::vet(root, "SKILL.md", Some(3072)).expect_err("a directory refuses");
+    assert!(directory.contains("entries beside SKILL.md"), "{directory}");
+    std::fs::remove_dir(root.join("references")).expect("remove references");
     write(root, "SKILL.md", &"x".repeat(3073), 0o644);
     assert!(
         super::vet(root, "SKILL.md", Some(3072))
             .expect_err("over the cap")
             .contains("caps 3072")
     );
+    std::fs::remove_file(root.join("SKILL.md")).expect("remove brief");
+    let target = tempfile::NamedTempFile::new().expect("target");
+    std::os::unix::fs::symlink(target.path(), root.join("SKILL.md")).expect("brief link");
+    let link = super::vet(root, "SKILL.md", Some(3072)).expect_err("a link refuses");
+    assert!(link.contains("is not a regular file"), "{link}");
 }
 
 #[test]

@@ -131,9 +131,37 @@ fn brief(dir: &Path) -> Result<(), String> {
 const WAYFINDER: &str = "rule://seat/wayfinder";
 
 fn vet(dir: &Path, leaf: &str, cap: Option<usize>) -> Result<(), String> {
+    let root = std::fs::symlink_metadata(dir)
+        .map_err(|error| format!("cannot inspect {}: {error}", dir.display()))?;
+    if !root.file_type().is_dir() {
+        return Err(format!(
+            "{} is not a plain directory; a skill generation contains exactly one regular {leaf}",
+            dir.display()
+        ));
+    }
+    let entries = std::fs::read_dir(dir)
+        .map_err(|error| format!("cannot read {}: {error}", dir.display()))?
+        .map(|entry| {
+            entry
+                .map(|entry| entry.path())
+                .map_err(|error| format!("cannot read {}: {error}", dir.display()))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     let path = dir.join(leaf);
-    let held = std::fs::metadata(&path)
+    let held = std::fs::symlink_metadata(&path)
         .map_err(|_| format!("{} carries no {leaf}; a skill is a brief", dir.display()))?;
+    if !held.file_type().is_file() {
+        return Err(format!(
+            "{} is not a regular file; a skill generation contains exactly one regular {leaf}",
+            path.display()
+        ));
+    }
+    if entries.len() != 1 || entries[0] != path {
+        return Err(format!(
+            "{} carries entries beside {leaf}; a skill generation contains exactly one regular {leaf}",
+            dir.display()
+        ));
+    }
     if let Some(bytes) = cap
         && held.len() > bytes as u64
     {
