@@ -2,9 +2,12 @@ extern crate self as plumb;
 
 pub mod cli;
 pub mod config;
+#[path = "knowledge/cookbook.rs"]
+pub mod cookbook;
 #[cfg(feature = "delivery")]
 #[path = "forge/delivery/kernel.rs"]
 pub mod delivery;
+#[path = "knowledge/fill.rs"]
 pub mod fill;
 #[cfg(feature = "vendor")]
 mod forge;
