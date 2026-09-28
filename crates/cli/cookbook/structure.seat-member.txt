@@ -1,0 +1,28 @@
+# structure.seat-member
+
+## Trigger
+
+A governed seat holds too many members, a member has the wrong name or content,
+or a bounded leaf exceeds the bytes declared by its selected rule.
+
+## Solution
+
+Read the condition named by the finding. For membership or naming, decide
+whether the repository belongs in an existing seat, the declaration owes a
+narrower truthful rule, or the shape is real but not yet judged. Never widen a
+seat or rule merely to admit the current tree.
+
+For an over-cap leaf, move material to the authority that owns it before cutting
+content. Command grammar belongs to `--help`, standing law belongs to
+`plumb rule`, and complex recovery belongs here. Do not raise the cap merely to
+fit prose whose authority already exists elsewhere.
+
+## Evidence
+
+The former catch-all seat entry replaced shape-specific escape hatches, while
+the former wayfinder entry removed repeated command and law lists from agent
+briefs. Both are branches of the same seat-member finding.
+
+## EXIT
+
+Remove this entry when every seat-member finding can state its complete move, or when the seat-member law retires.

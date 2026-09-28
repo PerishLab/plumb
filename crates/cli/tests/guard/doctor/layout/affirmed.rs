@@ -9,7 +9,10 @@ fn affirmed() {
     ));
     let held = report(seat.path());
     assert!(held.contains("was affirmed against a different"), "{held}");
-    assert!(held.contains("plumb cookbook affirmed"), "{held}");
+    assert!(
+        held.contains("plumb cookbook structure.seat-affirmed"),
+        "{held}"
+    );
 }
 
 #[test]

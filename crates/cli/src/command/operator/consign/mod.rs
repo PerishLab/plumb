@@ -138,7 +138,7 @@ fn vet(dir: &Path, leaf: &str, cap: Option<usize>) -> Result<(), String> {
         && held.len() > bytes as u64
     {
         return Err(format!(
-            "{} carries {} bytes where {WAYFINDER} caps {bytes}; see: plumb cookbook wayfinder",
+            "{} carries {} bytes where {WAYFINDER} caps {bytes}; see: plumb cookbook structure.seat-member",
             path.display(),
             held.len()
         ));

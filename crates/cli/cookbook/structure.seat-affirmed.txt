@@ -1,0 +1,26 @@
+# structure.seat-affirmed
+
+## Trigger
+
+A wayfinder was affirmed against a different set of authority faces than the
+ones standing now.
+
+## Solution
+
+Read the target against what moved, then record. The finding names the faces its
+rule watches, so compare the two authorities to find what changed. Fix what the
+wayfinder now gets wrong, then run `plumb affirm --write`. Recording without
+reading is not evidence.
+
+Never widen the watched faces to silence a finding. Which faces a rule watches
+is a row that can be corrected, not an escape hatch.
+
+## Evidence
+
+The affirmation this replaced covered the whole source tree. Over thirty
+commits it fired nineteen times, while only four moved an authority a wayfinder
+points at.
+
+## EXIT
+
+Remove this entry when the finding can state which claim an authority broke, or when the affirmation law retires.
