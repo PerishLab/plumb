@@ -10,6 +10,7 @@ mod state;
 mod survey;
 
 pub use agent::Seat;
+pub(crate) use fetch::sealed;
 pub use fetch::stamp;
 pub use source::Depot;
 use state::Ledger;

@@ -47,6 +47,11 @@ pub enum Deed {
         #[arg(long, default_value = "origin")]
         remote: String,
     },
+    #[command(about = "Report the Guard authority this binary's proofs carry")]
+    Authority {
+        #[arg(long)]
+        json: bool,
+    },
     #[command(about = "Merge the standing stable marker home into main")]
     Rejoin {
         #[arg(long = "dry-run")]

@@ -29,7 +29,7 @@ fn proof() -> Descriptor {
     proof
 }
 
-fn seat() -> tempfile::TempDir {
+pub(super) fn seat() -> tempfile::TempDir {
     let fixture = tempfile::tempdir().expect("fixture");
     let status = Command::new("git")
         .args(["init", "-q"])
@@ -77,7 +77,7 @@ tree = "{TREE}"
 "#
     );
     assert_eq!(
-        Authority::package(&manifest).expect("authority").identity(),
+        Authority::package(&manifest).expect("authority").producer(),
         format!("v0.0.0@{COMMIT}")
     );
 }

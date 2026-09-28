@@ -42,6 +42,7 @@ fn execute(deed: Deed) -> Result<String, String> {
             dry,
         } => super::operator::close(&version, abandon, &remote, dry),
         Deed::Owed { version, remote } => super::operator::owed(version.as_deref(), &remote),
+        Deed::Authority { json } => guard(json),
     }
 }
 
@@ -51,4 +52,17 @@ pub(crate) fn channel(version: &str) -> Result<String, String> {
 
 pub(super) fn authority(root: &Path) -> Result<String, String> {
     Spec::controller(root).map(|spec| spec.authority)
+}
+
+fn guard(json: bool) -> Result<String, String> {
+    let authority = plumb::guard::Authority::running()?;
+    if json {
+        return serde_json::to_string(&authority)
+            .map_err(|error| format!("cannot encode Guard authority: {error}"));
+    }
+    Ok(format!(
+        "producer {}\ndepot {}",
+        authority.producer(),
+        authority.depot()
+    ))
 }

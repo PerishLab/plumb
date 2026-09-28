@@ -26,6 +26,18 @@ Guard stages proof state below `PLUMB_HOME` and carries the compact proof in Git
 release marker creation refuse a tree without that exact proof; an unchanged
 action world is reused and never starts a process.
 
+A Guard authority is the producer a proof names (`vX.Y.Z@commit`) and its
+Depot mark; `judge` matches both exactly. `Authority::released()` is the one
+compiled into plumb-lib. `plumb release authority --json` prints the running
+binary's, and wharf writes it into each stable seal as
+`"guard": {"producer": "vX.Y.Z@<commit>", "depot": "<sha256>"}`, no other keys,
+the producer naming that seal's release. `Authority::stable()` (feature
+`skill`) reads it from `releases.plumb.perish.uk`: the stable pointer, then the
+seal pinned by its sha256, then that field. It refuses a digest mismatch and a
+missing or foreign field, and its unreachable error names the pointer URL. The
+location is fixed; only unit tests override it. A caller accepting several
+authorities picks the proof's own with `Authority::among`, then verifies.
+
 Downstream repositories do not get scanned by plumb, and plumb does not know
 they exist. The CLI travels to them: install it, run it in a repository, read
 what it reports. Feedback comes home as issues on this repo. That is the hot
