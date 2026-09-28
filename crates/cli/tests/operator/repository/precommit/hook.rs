@@ -141,6 +141,8 @@ fn linked() {
             "-m",
             "candidate",
         ])
+        .env("HOME", home.path())
+        .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("PATH", path)
         .env("PLUMB_HOME", home.path())
         .output()
