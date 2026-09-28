@@ -1,7 +1,9 @@
 use super::Descriptor;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 
+#[cfg(feature = "skill")]
+const STABLE: &str = "https://releases.plumb.perish.uk";
 const MANIFEST: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml"));
 const REPOSITORY: &str = "PerishLab/plumb";
 const VERSION: u64 = 1;
@@ -13,6 +15,7 @@ pub struct Expected {
     digest: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Authority {
     producer: String,
     depot: String,
@@ -49,6 +52,23 @@ struct Guard {
     depot: String,
 }
 
+#[cfg(feature = "skill")]
+#[derive(Deserialize)]
+struct Sealed {
+    channel: String,
+    #[serde(rename = "releaseVersion")]
+    version: String,
+    guard: Option<Stable>,
+}
+
+#[cfg(feature = "skill")]
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Stable {
+    producer: String,
+    depot: String,
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Release {
@@ -82,6 +102,43 @@ impl Authority {
         Self::package(MANIFEST)
     }
 
+    #[cfg(feature = "skill")]
+    pub fn stable() -> Result<Self, String> {
+        Self::published(STABLE)
+    }
+
+    pub fn running() -> Result<Self, String> {
+        Ok(Self {
+            producer: super::identity(),
+            depot: crate::depot::rules()?.mark().to_string(),
+        })
+    }
+
+    pub fn among(set: Vec<Self>, root: &Path, commit: &str) -> Result<Self, String> {
+        let proof = super::commit(root, commit)?;
+        let named = set
+            .iter()
+            .map(|authority| authority.producer.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+        set.into_iter()
+            .find(|authority| authority.producer == proof.plumb && authority.depot == proof.depot)
+            .ok_or_else(|| {
+                format!(
+                    "guard proof used Plumb {} with depot {}, which no accepted authority names: [{named}]",
+                    proof.plumb, proof.depot
+                )
+            })
+    }
+
+    pub fn producer(&self) -> &str {
+        &self.producer
+    }
+
+    pub fn depot(&self) -> &str {
+        &self.depot
+    }
+
     pub fn verify(
         &self,
         root: &Path,
@@ -92,24 +149,12 @@ impl Authority {
         self.judge(root, proof, expected)
     }
 
-    pub(crate) fn running() -> Result<Self, String> {
-        Ok(Self {
-            producer: super::identity(),
-            depot: crate::depot::rules()?.mark().to_string(),
-        })
-    }
-
     #[cfg(test)]
     pub(super) fn fixture(producer: String, depot: &str) -> Self {
         Self {
             producer,
             depot: depot.into(),
         }
-    }
-
-    #[cfg(test)]
-    pub(super) fn identity(&self) -> &str {
-        &self.producer
     }
 
     pub(super) fn judge(
@@ -139,6 +184,45 @@ impl Authority {
             return Err("guard proof does not match the expected schema, tree, and digest".into());
         }
         Ok(Verified(proof))
+    }
+
+    #[cfg(feature = "skill")]
+    pub(super) fn published(base: &str) -> Result<Self, String> {
+        let pointer = format!("{}/v1/channels/stable.json", base.trim_end_matches('/'));
+        let body = crate::skill::sealed(base).map_err(|error| {
+            format!("cannot read Plumb stable Guard authority at {pointer}: {error}")
+        })?;
+        let seal: Sealed = serde_json::from_slice(&body)
+            .map_err(|error| format!("stable seal named by {pointer} is malformed: {error}"))?;
+        if seal.channel != "stable" {
+            return Err(format!(
+                "stable seal named by {pointer} is for channel {}",
+                seal.channel
+            ));
+        }
+        let guard = seal.guard.ok_or_else(|| {
+            format!(
+                "Plumb stable {} seal named by {pointer} carries no guard authority",
+                seal.version
+            )
+        })?;
+        let (marker, commit) = guard
+            .producer
+            .split_once('@')
+            .unwrap_or((&guard.producer, ""));
+        if marker != seal.version {
+            return Err(format!(
+                "Plumb stable {} seal names guard producer {}",
+                seal.version, guard.producer
+            ));
+        }
+        hash(commit, "producer commit")
+            .and_then(|()| hash(&guard.depot, "Depot mark"))
+            .map_err(|error| format!("Plumb stable {} seal: {error}", seal.version))?;
+        Ok(Self {
+            producer: guard.producer,
+            depot: guard.depot,
+        })
     }
 
     pub(super) fn package(text: &str) -> Result<Self, String> {

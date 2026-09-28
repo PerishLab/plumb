@@ -40,4 +40,8 @@ release identity at distribution time, so sources declare version 0.0.0 and a
 binary is bound to its marker after it is built. Use ship with the marker to hand
 the distribution to wharf.
 
+Authority reports the Guard authority a bound binary's proofs carry: its
+producer, vX.Y.Z@commit, and its Depot mark. Wharf records it as the guard field
+of that release's seal, which is where Authority::stable() reads it.
+
 A marker never moves. A stable marker refuses a version that already stands.

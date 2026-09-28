@@ -7,6 +7,8 @@ mod authority;
 mod index;
 pub mod landing;
 pub(crate) mod running;
+#[cfg(all(test, feature = "skill"))]
+mod stable;
 mod store;
 mod transit;
 #[cfg(test)]
