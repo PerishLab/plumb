@@ -10,7 +10,9 @@ pub enum Held {
 pub use plumb::depot::root;
 
 pub fn held(over: &Path) -> Held {
-    if let Some(path) = plumb::config::value("PLUMB_GUARD_CONFIGURATION") {
+    if plumb::config::value("PLUMB_HOME").is_none()
+        && let Some(path) = plumb::config::value("PLUMB_GUARD_CONFIGURATION")
+    {
         return plumb::depot::Rules::guard(Path::new(&path), plumb::version!("PLUMB"))
             .map(|seat| Held::Seat(Box::new(seat)))
             .unwrap_or_else(Held::Blind);
