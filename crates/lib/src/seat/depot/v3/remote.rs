@@ -10,6 +10,12 @@ pub struct Query<'a> {
     pub kind: Kind,
 }
 
+#[derive(Eq, PartialEq)]
+struct Projection<'a> {
+    product: &'a str,
+    route: Route<'a>,
+}
+
 #[derive(Clone, Debug)]
 pub struct Generation {
     pub pointer: Pointer,
@@ -33,13 +39,14 @@ impl Generation {
             return Ok(None);
         };
         let pointer = Pointer::parse(&bytes)?;
-        let standing = (
-            pointer.product.as_str(),
-            pointer.channel.as_str(),
-            pointer.version.as_str(),
-            pointer.kind,
-        );
-        let wanted = (query.product, query.channel, query.version, query.kind);
+        let standing = Projection {
+            product: &pointer.product,
+            route: Route::new(&pointer.channel, pointer.kind, &pointer.version),
+        };
+        let wanted = Projection {
+            product: query.product,
+            route,
+        };
         if standing != wanted {
             return Ok(None);
         }
@@ -77,13 +84,14 @@ impl Generation {
         let bytes =
             pull(&url)?.ok_or_else(|| format!("depot generation {generation} has no manifest"))?;
         let manifest = Manifest::parse(&bytes)?;
-        let standing = (
-            manifest.product.as_str(),
-            manifest.channel.as_str(),
-            manifest.version.as_str(),
-            manifest.kind,
-        );
-        let wanted = (query.product, query.channel, query.version, query.kind);
+        let standing = Projection {
+            product: &manifest.product,
+            route: Route::new(&manifest.channel, manifest.kind, &manifest.version),
+        };
+        let wanted = Projection {
+            product: query.product,
+            route,
+        };
         if standing != wanted || manifest.generation()? != generation {
             return Err(format!(
                 "depot generation {generation} does not bind the requested projection"
