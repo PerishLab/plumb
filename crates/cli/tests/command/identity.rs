@@ -50,6 +50,25 @@ fn executable() {
             "{}",
             String::from_utf8_lossy(&result.stderr)
         );
+        let result = Command::new(&path)
+            .args(["release", "authority", "--json"])
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let authority: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+        assert_eq!(
+            authority["producer"],
+            format!("{marker}@{}", "3".repeat(40))
+        );
+        assert!(
+            authority["depot"]
+                .as_str()
+                .is_some_and(|depot| depot.len() == 64)
+        );
     }
     assert_eq!(fs::read(source).unwrap(), original);
 }
