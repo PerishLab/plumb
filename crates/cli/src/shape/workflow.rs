@@ -1,5 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use plumb::rule::Probe;
+
+mod prerequisite;
+use prerequisite::{Tool, declarations};
+
 pub struct Key {
     pub segments: Vec<String>,
     pub roots: Vec<String>,
@@ -25,6 +30,8 @@ impl Key {
 #[derive(Default)]
 pub struct Held {
     pub keys: Vec<Key>,
+    probes: BTreeMap<String, Vec<Probe>>,
+    tools: BTreeMap<String, Vec<Tool>>,
     pub refusal: Option<String>,
 }
 
@@ -33,15 +40,14 @@ pub fn parse(text: &str) -> Held {
         Ok(doc) => doc,
         Err(error) => return refuse(format!("cannot parse plumb.toml: {error}")),
     };
-    let Some(seat) = doc.get("workflow").and_then(|held| held.get("hash")) else {
-        return Held::default();
-    };
-    let Some(seat) = seat.as_table() else {
-        return refuse("workflow.hash must be a table".to_string());
-    };
     let mut keys: Vec<Key> = Vec::new();
-    if let Err(error) = walk(seat, &mut Vec::new(), &mut keys) {
-        return refuse(error);
+    if let Some(seat) = doc.get("workflow").and_then(|held| held.get("hash")) {
+        let Some(seat) = seat.as_table() else {
+            return refuse("workflow.hash must be a table".to_string());
+        };
+        if let Err(error) = walk(seat, &mut Vec::new(), &mut keys) {
+            return refuse(error);
+        }
     }
     for key in &keys {
         let plane = key.segments.first().cloned().unwrap_or_default();
@@ -54,6 +60,14 @@ pub fn parse(text: &str) -> Held {
             return refuse(format!("{} declares no path", key.name()));
         }
     }
+    let probes = match declarations::<Probe>(&doc, "probe") {
+        Ok(found) => found,
+        Err(error) => return refuse(error),
+    };
+    let tools = match declarations::<Tool>(&doc, "tool") {
+        Ok(found) => found,
+        Err(error) => return refuse(error),
+    };
     match resolve(&keys) {
         Ok(found) => {
             for (key, paths) in keys.iter_mut().zip(found) {
@@ -61,6 +75,8 @@ pub fn parse(text: &str) -> Held {
             }
             Held {
                 keys,
+                probes,
+                tools,
                 refusal: None,
             }
         }
@@ -90,6 +106,8 @@ pub fn inferred(cargo: bool, pnpm: bool, plumb: bool, ectropy: bool) -> Held {
             }
             Held {
                 keys,
+                probes: BTreeMap::new(),
+                tools: BTreeMap::new(),
                 refusal: None,
             }
         }
@@ -211,6 +229,8 @@ fn suite(name: &str, key: &str) -> Result<Vec<String>, String> {
 fn refuse(message: String) -> Held {
     Held {
         keys: Vec::new(),
+        probes: BTreeMap::new(),
+        tools: BTreeMap::new(),
         refusal: Some(message),
     }
 }

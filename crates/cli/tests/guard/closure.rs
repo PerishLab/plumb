@@ -84,10 +84,11 @@ fn command() {
 
     let mut held = Vec::new();
     capture(Vec::new(), &mut held);
-    assert_eq!(
-        digest(&held),
-        "212cc333602044d08661c6fa15d5dcb54e91735a6cf017c7f253e450233c820f"
-    );
+    #[cfg(not(windows))]
+    let expected = "212cc333602044d08661c6fa15d5dcb54e91735a6cf017c7f253e450233c820f";
+    #[cfg(windows)]
+    let expected = "3cdc808f2ae2c70ab70c1f8c22929479bc551afe328f4a9ce6a845200e4e59c7";
+    assert_eq!(digest(&held), expected);
 }
 
 #[test]

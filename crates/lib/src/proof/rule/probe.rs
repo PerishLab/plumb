@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::process::Output;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Probe {
     pub argv: Vec<String>,

@@ -25,7 +25,12 @@ impl Line {
         git(&work, &["config", "user.email", "plumb@example.invalid"]);
         git(
             &work,
-            &["remote", "add", "origin", origin.to_str().expect("utf8")],
+            &[
+                "remote",
+                "add",
+                "origin",
+                &origin.to_str().expect("utf8").replace('\\', "/"),
+            ],
         );
         let held = Self {
             fixture,

@@ -2,6 +2,8 @@ use plumb::config::Environment;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+pub(crate) mod msvc;
+
 pub fn command() -> Command {
     let cargo = crate::catalog::set::CARGO;
     configured(cargo.registry, cargo.index)

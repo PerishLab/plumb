@@ -54,7 +54,7 @@ fn tools(name: &str) -> &'static [&'static str] {
 
 pub(super) fn execution(
     name: &str,
-    environment: plumb::config::Environment,
+    mut environment: plumb::config::Environment,
     root: &std::path::Path,
     selected: &[String],
 ) -> Result<plumb::config::Execution, String> {
@@ -63,9 +63,22 @@ pub(super) fn execution(
         .map(|name| name.to_string())
         .collect::<Vec<_>>();
     programs.extend(selected.iter().cloned());
+    let cargo = programs.iter().any(|program| program == "cargo");
+    if cargo {
+        crate::execution::cargo::msvc::environment(&mut environment)?;
+        programs.extend(
+            crate::execution::cargo::msvc::programs()
+                .iter()
+                .map(|program| (*program).to_string()),
+        );
+    }
     programs.sort();
     programs.dedup();
-    plumb::config::Execution::new(environment, &programs, root)
+    let execution = plumb::config::Execution::new(environment, &programs, root)?;
+    if cargo {
+        crate::execution::cargo::msvc::tools(&execution)?;
+    }
+    Ok(execution)
 }
 
 pub(super) fn environment(
