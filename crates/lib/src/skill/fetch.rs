@@ -164,6 +164,12 @@ pub fn stamp(bytes: &[u8]) -> String {
 }
 
 fn current(base: &str) -> Result<Seal, Error> {
+    let body = sealed(base)?;
+    serde_json::from_slice(&body).map_err(|error| Error::Parse(error.to_string()))
+}
+
+pub(crate) fn sealed(base: &str) -> Result<Vec<u8>, Error> {
+    let base = base.trim_end_matches('/');
     let pointer: Pointer = read(&format!("{base}/v1/channels/stable.json"))?;
     if pointer.schema != 1 || pointer.channel != "stable" {
         return Err(Error::Channel(pointer.channel));
@@ -174,7 +180,7 @@ fn current(base: &str) -> Result<Seal, Error> {
     if seal.version != pointer.version {
         return Err(Error::Version(seal.version));
     }
-    Ok(seal)
+    Ok(body)
 }
 
 fn read<T: serde::de::DeserializeOwned>(url: &str) -> Result<T, Error> {
