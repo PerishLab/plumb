@@ -3,6 +3,7 @@ pub mod contract;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::ffi::OsString;
+use std::path::PathBuf;
 use std::process::Command;
 
 #[derive(Deserialize, Serialize)]
@@ -159,6 +160,20 @@ impl Environment {
 
     pub fn get(&self, key: &str) -> Option<&str> {
         self.values.get(&name(key)).map(String::as_str)
+    }
+
+    pub fn prioritize(&mut self, roots: &[PathBuf]) -> Result<(), String> {
+        let Some(path) = self.get("PATH") else {
+            return Err("execution environment has no PATH".into());
+        };
+        let (mut trusted, other): (Vec<_>, Vec<_>) = std::env::split_paths(path)
+            .partition(|entry| roots.iter().any(|root| entry.starts_with(root)));
+        trusted.extend(other);
+        let path = std::env::join_paths(trusted)
+            .map_err(|error| format!("cannot bind execution PATH: {error}"))?;
+        self.values
+            .insert(name("PATH"), path.to_string_lossy().into_owned());
+        Ok(())
     }
 
     pub fn apply(&self, command: &mut Command) {

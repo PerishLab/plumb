@@ -1,7 +1,9 @@
 mod fixtures;
 use object::{Object, ObjectSection};
 use plumb::identity::{Binding, Region};
-use std::{fs, process::Command};
+use std::fs;
+#[cfg(target_os = "linux")]
+use std::process::Command;
 
 #[used]
 #[cfg_attr(target_vendor = "apple", unsafe(link_section = "__DATA,__relid"))]

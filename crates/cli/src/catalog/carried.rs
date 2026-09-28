@@ -15,7 +15,12 @@ mod tests {
                     continue;
                 }
                 let inside = path.strip_prefix(&root).expect("rule path");
-                held.push(format!("rules/{}", inside.to_string_lossy()));
+                let inside = inside
+                    .components()
+                    .map(|part| part.as_os_str().to_string_lossy())
+                    .collect::<Vec<_>>()
+                    .join("/");
+                held.push(format!("rules/{inside}"));
             }
         }
         held.sort();

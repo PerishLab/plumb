@@ -118,6 +118,13 @@ fn external() {
 fn node() {
     let contract = plumb::config::contract("pnpm").unwrap();
     let clean = contract.capture([]).unwrap();
+    let configured = contract
+        .capture([("NPM_CONFIG_USERCONFIG".into(), "trusted/npmrc".into())])
+        .unwrap();
+    assert_eq!(
+        configured.get("NPM_CONFIG_USERCONFIG"),
+        Some("trusted/npmrc")
+    );
     let metadata = contract
         .capture([("NODE_VERSION".into(), "24.18.0".into())])
         .unwrap();
