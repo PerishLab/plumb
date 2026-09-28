@@ -21,6 +21,11 @@ impl Index {
                 .arg("-p")
                 .arg(String::from_utf8_lossy(&parent.stdout).trim());
         }
+        record
+            .env("GIT_AUTHOR_NAME", "Plumb Guard")
+            .env("GIT_AUTHOR_EMAIL", "guard@plumb.invalid")
+            .env("GIT_COMMITTER_NAME", "Plumb Guard")
+            .env("GIT_COMMITTER_EMAIL", "guard@plumb.invalid");
         let mut message = "plumb staged guard".to_string();
         if parent.status.success() {
             let declared = plumb::rig::Rig::resolve(None)
