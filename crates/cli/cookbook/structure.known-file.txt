@@ -1,0 +1,20 @@
+# structure.known-file
+
+## Trigger
+
+A top-level file belongs to no declared file group.
+
+## Solution
+
+Remove an accidental file, move it below the seat that owns it, or add it to one
+narrow file group with a note stating why it belongs at the repository root.
+Do not broaden a group to silence an unrelated file.
+
+## Evidence
+
+Named file groups keep root exceptions reviewable and prevent a growing list of
+unrelated hard-coded filenames.
+
+## EXIT
+
+Remove this entry when the finding can name the exact file group the file wants, or when the known-file law retires.

@@ -1,0 +1,22 @@
+# structure.seat-anchored
+
+## Trigger
+
+A member of a governed seat carries none of the anchors that identify that
+seat's real members.
+
+## Solution
+
+Remove or relocate a foreign member, add the genuinely missing anchor to the
+member, or correct the seat declaration when the anchor no longer describes
+the exercised shape. Use an empty anchor set only when the level is deliberately
+governed but its members are not yet judged.
+
+## Evidence
+
+Anchors distinguish a real member from an arbitrary directory without encoding
+product-specific names in the checker.
+
+## EXIT
+
+Remove this entry when the finding can prove which anchor action is correct, or when the seat-anchored law retires.

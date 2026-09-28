@@ -89,3 +89,20 @@ fn serializes() {
     assert_eq!(value["entries"][0]["evidence"], "Observed evidence.");
     assert_eq!(value["entries"][0]["exit"], "Remove with the law.");
 }
+
+#[test]
+fn markdown() {
+    let held = Entry::parse(
+        "# plumb.seat-missing\n\n## Trigger\n\nA seat is missing.\n\n## Solution\n\nDeclare it.\n\n## Evidence\n\nObserved.\n\n## EXIT\n\nRemove with the law.\n",
+    )
+    .expect("entry");
+    assert_eq!(held.code().text(), "plumb.seat-missing");
+    assert_eq!(held.trigger(), "A seat is missing.");
+    assert_eq!(held.solution(), "Declare it.");
+    assert_eq!(held.evidence(), Some("Observed."));
+    assert_eq!(held.exit(), Some("Remove with the law."));
+    assert!(matches!(
+        Entry::parse("# plumb.seat-missing\n\n## Move\n\nDeclare it."),
+        Err(Error::Format(_))
+    ));
+}

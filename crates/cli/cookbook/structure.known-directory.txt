@@ -1,0 +1,21 @@
+# structure.known-directory
+
+## Trigger
+
+A top-level directory sits in no declared seat.
+
+## Solution
+
+Decide which observed truth applies. Move an accidental directory into an
+existing seat, declare a narrow seat for a real repository shape, or use an
+empty anchor set while the members of that governed level remain undecided.
+Never widen another seat to make the directory disappear from view.
+
+## Evidence
+
+Explicit seats replaced filename-based escape hatches. A new real shape costs
+one reviewable row instead of another permanent special case in the checker.
+
+## EXIT
+
+Remove this entry when the finding can name the exact seat the directory wants, or when the known-directory law retires.
