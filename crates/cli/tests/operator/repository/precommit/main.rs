@@ -2,6 +2,7 @@ use super::support;
 mod cache;
 mod environment;
 mod graph;
+mod hook;
 mod physical;
 mod probe;
 mod world;
