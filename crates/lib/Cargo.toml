@@ -59,6 +59,10 @@ name = "identity"
 path = "tests/runtime/identity/mod.rs"
 
 [[test]]
+name = "knowledge"
+path = "tests/knowledge/main.rs"
+
+[[test]]
 name = "skill"
 required-features = ["skill"]
 
