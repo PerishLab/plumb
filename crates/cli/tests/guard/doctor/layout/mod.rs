@@ -116,7 +116,7 @@ fn private() {
     let held = report(seat.path());
     assert!(
         held.contains(
-            ".forgejo belongs to Plumb; product repositories dispatch the canonical ship atom"
+            ".forgejo is residue of the archived Forgejo forge; GitHub is the only forge and workflows live in wharf"
         ),
         "{held}"
     );
