@@ -122,10 +122,8 @@ pub(super) fn execute(
     if let Some(compiler) = &compiler {
         compiler.apply(&mut command);
     }
-    command
-        .args(args)
-        .current_dir(root)
-        .env_remove("GIT_INDEX_FILE");
+    command.args(args).current_dir(root);
+    unhook(&mut command);
     let status = command
         .status()
         .map_err(|error| format!("cannot run {}: {error}", argv.join(" ")))?;
@@ -136,6 +134,18 @@ pub(super) fn execute(
         Ok(())
     } else {
         Err(format!("{} failed with {status}", argv.join(" ")))
+    }
+}
+
+fn unhook(command: &mut std::process::Command) {
+    let held = command
+        .get_envs()
+        .filter_map(|(key, value)| value.map(|_| key.to_os_string()))
+        .collect::<Vec<_>>();
+    for (key, _) in std::env::vars_os() {
+        if key.to_str().is_some_and(|key| key.starts_with("GIT_")) && !held.contains(&key) {
+            command.env_remove(key);
+        }
     }
 }
 

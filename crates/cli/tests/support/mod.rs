@@ -36,7 +36,12 @@ pub fn rules(names: &[&str]) -> Vec<(String, String)> {
 
 #[allow(dead_code)]
 pub fn plumb() -> std::process::Command {
-    let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_plumb"));
+    outside(env!("CARGO_BIN_EXE_plumb"))
+}
+
+#[allow(dead_code)]
+pub fn outside(program: impl AsRef<std::ffi::OsStr>) -> std::process::Command {
+    let mut command = std::process::Command::new(program);
     for (name, _) in std::env::vars() {
         let ambient = name.starts_with("CARGO_") || name.starts_with("RUST");
         if ambient && !["CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"].contains(&name.as_str()) {
