@@ -120,7 +120,7 @@ fn production(production: &Production, found: &mut Found) {
             &rule::WEB_IMAGE_PRESENT,
             "production has no web image seat",
         )),
-        Image::Unread => {}
+        Image::Unread | Image::Placed => {}
         Image::Held(image) => {
             check(
                 found,
@@ -136,17 +136,26 @@ fn production(production: &Production, found: &mut Found) {
             );
         }
     }
+    let placed = matches!(production.web, Image::Placed);
     check(
         found,
         production.workloads,
         &rule::CHART_SPLITS_WORKLOADS,
-        "chart does not split api and web workloads",
+        if placed {
+            "chart has no api workload beside the worker-placed web"
+        } else {
+            "chart does not split api and web workloads"
+        },
     );
     check(
         found,
         production.ingress,
         &rule::CHART_SPLITS_INGRESS,
-        "chart ingress does not split /api and / between api and web",
+        if placed {
+            "chart ingress does not route /api to api beside the worker-placed web"
+        } else {
+            "chart ingress does not split /api and / between api and web"
+        },
     );
     check(
         found,

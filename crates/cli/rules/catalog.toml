@@ -122,8 +122,8 @@ tags = ["dispatch"]
 [[rule]]
 id = "dispatch.api-image-present"
 summary = "Production carries an API image"
-law = "A production web/API repository carries deploy/api.Dockerfile."
-evidence = "The API image build seat."
+law = "A production web/API repository carries deploy/api.Dockerfile, or a root Containerfile under a declared [release.oci]."
+evidence = "deploy/api.Dockerfile, or the root Containerfile beside [release.oci] in plumb.toml."
 standing = "mechanized"
 owner = "release"
 tags = ["dispatch", "release"]
@@ -176,7 +176,7 @@ tags = ["cargo", "release"]
 [[rule]]
 id = "dispatch.chart-splits-ingress"
 summary = "Ingress splits API and web routes"
-law = "Production ingress routes /api to api and / to web."
+law = "Production ingress routes /api to api and / to web; when [release.cfworker] places the web on a worker, it routes /api to api."
 evidence = "Ingress templates below charts/*/templates."
 standing = "mechanized"
 owner = "release"
@@ -185,7 +185,7 @@ tags = ["dispatch", "release"]
 [[rule]]
 id = "dispatch.chart-splits-workloads"
 summary = "Charts split API and web workloads"
-law = "Production charts declare distinct api and web workloads."
+law = "Production charts declare distinct api and web workloads; when [release.cfworker] places the web on a worker, they declare the api workload."
 evidence = "Workload templates below charts/*/templates."
 standing = "mechanized"
 owner = "release"
@@ -230,7 +230,7 @@ tags = ["dispatch", "web"]
 [[rule]]
 id = "dispatch.web-image-does-not-own-dispatch"
 summary = "Web image does not proxy API dispatch"
-law = "The web image leaves public API dispatch to the deployment layer."
+law = "The web image leaves public API dispatch to the deployment layer; a web placed on a worker by [release.cfworker] carries no web image."
 evidence = "Proxy and server directives in deploy/web.Dockerfile."
 standing = "mechanized"
 owner = "web"
@@ -239,8 +239,8 @@ tags = ["dispatch", "web"]
 [[rule]]
 id = "dispatch.web-image-present"
 summary = "Production carries a web image"
-law = "A production web/API repository carries deploy/web.Dockerfile."
-evidence = "The web image build seat."
+law = "A production web/API repository carries deploy/web.Dockerfile, unless [release.cfworker] places its web on a worker."
+evidence = "The web image build seat, or [release.cfworker] in plumb.toml."
 standing = "mechanized"
 owner = "release"
 tags = ["release", "web"]
@@ -248,7 +248,7 @@ tags = ["release", "web"]
 [[rule]]
 id = "dispatch.web-image-runs-design-runtime"
 summary = "Web image runs the design runtime"
-law = "The production web image runs the server emitted by the design build."
+law = "The production web image runs the server emitted by the design build; a web placed on a worker by [release.cfworker] carries no web image."
 evidence = "deploy/web.Dockerfile."
 standing = "mechanized"
 owner = "web"
