@@ -16,24 +16,11 @@ pub fn govern(root: &Path) {
 }
 
 pub fn declare(root: &Path) {
-    let hooks = root.join(".git/hooks");
-    for name in ["pre-commit", "commit-msg"] {
-        let source = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("assets/git/hooks")
-            .join(name);
-        let target = hooks.join(name);
-        std::fs::copy(source, &target).expect("fixture should carry the guard hooks");
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt as _;
-            std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o755))
-                .expect("fixture hook should be executable");
-        }
-    }
     let held = "[[layout.seat]]\npath = \"charts/*\"\nkind = \"retired\"\n\n\
                 [[layout.seat]]\npath = \"skills/*\"\nkind = \"retired\"\n\n\
                 [[layout.file]]\nname = [\"AGENTS.md\"]\nkind = \"retired\"\n";
     std::fs::write(root.join("plumb.toml"), held).expect("fixture should declare itself");
+    super::support::hooks(root);
 }
 
 pub fn run(root: &Path) -> String {

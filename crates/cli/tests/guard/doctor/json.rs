@@ -12,6 +12,19 @@ fn run(root: &Path) -> Output {
         .expect("run plumb doctor")
 }
 
+fn listed() -> u64 {
+    let home = crate::support::home();
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["rule", "list", "--json"])
+        .env_remove("PLUMB_RELEASE_VERSION")
+        .env("PLUMB_HOME", home.path())
+        .output()
+        .expect("run plumb rule list");
+    assert!(output.status.success());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("rule list json");
+    report["rules"].as_array().expect("listed rules").len() as u64
+}
+
 #[test]
 fn clean() {
     let fixture = crate::fixture();
@@ -39,8 +52,7 @@ fn clean() {
         .iter()
         .map(|standing| coverage[standing].as_u64().expect("coverage count"))
         .sum::<u64>();
-    let law = crate::support::policy("rules/catalog.toml");
-    assert_eq!(classified, law.matches("[[rule]]").count() as u64);
+    assert_eq!(classified, listed());
     assert!(report["shape"]["wrappers"].is_array());
     assert!(report["shape"]["layout"].is_array());
     assert_eq!(report["vocabulary"]["schema"], "plumb.vocabulary/v2");

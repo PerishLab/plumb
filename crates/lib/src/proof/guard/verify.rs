@@ -60,6 +60,26 @@ fn unbound() {
 }
 
 #[test]
+fn pinned() {
+    let depot = Authority::pinned().expect("plumb-lib pins its Depot mark");
+    assert_eq!(depot.len(), 64);
+    let manifest = |schema: u64| {
+        format!(
+            "[package]\nname = \"plumb\"\nversion = \"0.0.0\"\n\
+             [package.metadata.perish.guard]\nschema = {schema}\ndepot = \"{DEPOT}\"\n"
+        )
+    };
+    let pin = |text: &str| {
+        super::authority::perish(text).and_then(|held| super::authority::pin(held.guard))
+    };
+    assert_eq!(pin(&manifest(1)).as_deref(), Ok(DEPOT));
+    assert_eq!(
+        pin(&manifest(2)).err().as_deref(),
+        Some("plumb-lib Guard authority schema 2 is not 1")
+    );
+}
+
+#[test]
 fn package() {
     let manifest = format!(
         r#"[package]

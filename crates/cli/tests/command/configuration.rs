@@ -37,17 +37,18 @@ fn install() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    for name in ["pre-commit", "commit-msg"] {
-        let carried = std::fs::read_to_string(
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("assets/git/hooks")
-                .join(name),
-        )
-        .expect("carried hook");
-        assert_eq!(
-            std::fs::read_to_string(repo.path().join(".git/hooks").join(name)).expect("hook"),
-            carried
-        );
+    for (name, carried) in [
+        ("pre-commit", "#!/bin/sh\nexec plumb guard .\n"),
+        (
+            "commit-msg",
+            "#!/bin/sh\nexec plumb guard . --attach \"$1\"\n",
+        ),
+    ] {
+        let hook = repo.path().join(".git/hooks").join(name);
+        assert_eq!(std::fs::read_to_string(&hook).expect("hook"), carried);
+        use std::os::unix::fs::PermissionsExt as _;
+        let mode = std::fs::metadata(&hook).expect("hook").permissions().mode();
+        assert_eq!(mode & 0o111, 0o111, "{name} is executable");
     }
     assert!(String::from_utf8_lossy(&output.stdout).contains("projected Plumb guard hooks"));
     assert!(!home.path().join("configurations").exists());

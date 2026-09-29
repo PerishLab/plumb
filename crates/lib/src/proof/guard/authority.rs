@@ -40,14 +40,14 @@ struct Metadata {
 }
 
 #[derive(Deserialize)]
-struct Perish {
-    guard: Guard,
+pub(super) struct Perish {
+    pub(super) guard: Guard,
     release: Option<Release>,
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Guard {
+pub(super) struct Guard {
     schema: u64,
     depot: String,
 }
@@ -100,6 +100,10 @@ impl Expected {
 impl Authority {
     pub fn released() -> Result<Self, String> {
         Self::package(MANIFEST)
+    }
+
+    pub fn pinned() -> Result<String, String> {
+        perish(MANIFEST).and_then(|perish| pin(perish.guard))
     }
 
     #[cfg(feature = "skill")]
@@ -226,20 +230,9 @@ impl Authority {
     }
 
     pub(super) fn package(text: &str) -> Result<Self, String> {
-        let manifest: Manifest = toml::from_str(text)
-            .map_err(|error| format!("cannot read plumb-lib package authority: {error}"))?;
-        let guard = manifest.package.metadata.perish.guard;
-        if guard.schema != VERSION {
-            return Err(format!(
-                "plumb-lib Guard authority schema {} is not {VERSION}",
-                guard.schema
-            ));
-        }
-        hash(&guard.depot, "Depot mark")?;
-        let release = manifest
-            .package
-            .metadata
-            .perish
+        let perish = perish(text)?;
+        let depot = pin(perish.guard)?;
+        let release = perish
             .release
             .ok_or("plumb-lib package carries no released authority")?;
         if release.schema != VERSION {
@@ -271,7 +264,7 @@ impl Authority {
         hash(&release.tree, "release tree")?;
         Ok(Self {
             producer: format!("{}@{}", release.marker, release.commit),
-            depot: guard.depot,
+            depot,
         })
     }
 }
@@ -284,6 +277,22 @@ impl Verified {
     pub fn take(self) -> Descriptor {
         self.0
     }
+}
+
+pub(super) fn perish(text: &str) -> Result<Perish, String> {
+    toml::from_str::<Manifest>(text)
+        .map(|manifest| manifest.package.metadata.perish)
+        .map_err(|error| format!("cannot read plumb-lib package authority: {error}"))
+}
+
+pub(super) fn pin(guard: Guard) -> Result<String, String> {
+    if guard.schema != VERSION {
+        return Err(format!(
+            "plumb-lib Guard authority schema {} is not {VERSION}",
+            guard.schema
+        ));
+    }
+    hash(&guard.depot, "Depot mark").map(|()| guard.depot)
 }
 
 fn hash(value: &str, name: &str) -> Result<(), String> {
