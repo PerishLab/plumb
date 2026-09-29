@@ -8,7 +8,7 @@ publish = ["perish"]
 
 [package.metadata.perish.guard]
 schema = 1
-depot = "0c218fcaf5bc5665ecb1d38b297b169ca9f22a8f55ae80313521ec89a0c9c41b"
+depot = "16e6ecfeb2bfe28cfe840a5762e24ad2c5665b540c653eea0c708710952f7277"
 
 [features]
 depot = [
@@ -17,7 +17,9 @@ depot = [
 delivery = []
 radius = [
 ]
-vendor = []
+vendor = [
+  "delivery",
+]
 skill = [
   "depot",
   "dep:flate2",

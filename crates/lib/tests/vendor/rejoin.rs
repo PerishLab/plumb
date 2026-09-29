@@ -1,10 +1,6 @@
-use plumb::guard::{Action, Descriptor, TRAILER};
-use plumb::land::rejoin::{plan, run};
+use plumb::land::rejoin::report;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-
-const CARRIED: &[(&str, &str)] = &[("rules/fixture.toml", "")];
-const DIGEST: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
 struct Line {
     #[allow(dead_code)]
@@ -48,22 +44,6 @@ impl Line {
         head(&self.work, "HEAD")
     }
 
-    fn guarded(&self, path: &str, text: &str) -> String {
-        std::fs::write(self.work.join(path), text).expect("write");
-        git(&self.work, &["add", "-A"]);
-        let tree = git(&self.work, &["write-tree"]);
-        plumb::depot::carry(CARRIED);
-        let action = Action {
-            name: "guard/test".into(),
-            input: DIGEST.into(),
-            world: DIGEST.into(),
-        };
-        let proof = Descriptor::new(&self.work, tree, vec![action]).expect("proof");
-        let message = format!("guarded\n\n{TRAILER} {}", proof.encode().expect("token"));
-        git(&self.work, &["commit", "-q", "-m", &message]);
-        head(&self.work, "HEAD")
-    }
-
     fn stable(&self, branch: &str, marker: &str) {
         git(&self.work, &["tag", "-a", marker, branch, "-m", marker]);
         let mut pushed = vec!["push", "-q", "origin", "main", marker];
@@ -73,8 +53,11 @@ impl Line {
         git(&self.work, &pushed);
     }
 
-    fn remote(&self, reference: &str) -> String {
-        head(&self.origin, reference)
+    fn remote(&self) -> String {
+        git(
+            &self.origin,
+            &["for-each-ref", "--format=%(refname) %(objectname)"],
+        )
     }
 }
 
@@ -108,7 +91,7 @@ fn cut(line: &Line, branch: &str, text: &str) -> String {
 fn unmarked() {
     let line = Line::new();
     git(&line.work, &["push", "-q", "origin", "main"]);
-    let report = plan(&line.work).expect("plan");
+    let report = report(&line.work).expect("report");
     assert_eq!(report.state, "unmarked");
 }
 
@@ -116,7 +99,7 @@ fn unmarked() {
 fn home() {
     let line = Line::new();
     line.stable("main", "v1.0.0");
-    let report = plan(&line.work).expect("plan");
+    let report = report(&line.work).expect("report");
     assert_eq!(
         (report.state, report.marker.as_deref()),
         ("home", Some("v1.0.0"))
@@ -124,74 +107,47 @@ fn home() {
 }
 
 #[test]
-fn diverged() {
-    let line = Line::new();
-    cut(&line, "release/v1.0.0", "only on the line\n");
-    line.stable("release/v1.0.0", "v1.0.0");
-    let refusal = plan(&line.work).expect_err("a line main lacks refuses");
-    assert_eq!(refusal.kind, "diverged", "{}", refusal.message);
-}
-
-#[test]
-fn topology() {
+fn owed() {
     let line = Line::new();
     let released = cut(&line, "release/v1.0.0", "fixed\n");
     line.stable("release/v1.0.0", "v1.0.0");
-    let main = line.guarded("fix.txt", "fixed\n");
-    git(&line.work, &["push", "-q", "origin", "main"]);
-    let report = plan(&line.work).expect("plan");
-    assert_eq!(report.state, "owed");
-    let refusal = run(&line.work).expect_err("a local origin is not GitHub");
-    assert_eq!(refusal.kind, "remote", "{}", refusal.message);
-    settled(&line, &main, &released);
+    let before = line.remote();
+    let owed = report(&line.work).expect("report");
+    assert_eq!(
+        (owed.state, owed.commit.as_deref(), owed.conflicted),
+        ("owed", Some(released.as_str()), false)
+    );
+    assert_eq!(owed.lacking, ["fix.txt"]);
+    assert_eq!(line.remote(), before, "rejoin pushes nothing");
 }
 
 #[test]
-fn landed() {
+fn squashed() {
     let line = Line::new();
     let released = cut(&line, "release/v1.0.0", "fixed\n");
     line.stable("release/v1.0.0", "v1.0.0");
-    git(&line.work, &["checkout", "-q", "-b", "land/fix", "main"]);
-    line.guarded("fix.txt", "fixed\n");
-    git(&line.work, &["checkout", "-q", "main"]);
-    git(
-        &line.work,
-        &["merge", "-q", "--no-ff", "land/fix", "-m", "merge"],
-    );
-    let main = head(&line.work, "HEAD");
+    let main = line.commit("fix.txt", "fixed\n", "Squash the release fix into main");
     git(&line.work, &["push", "-q", "origin", "main"]);
-    run(&line.work).expect_err("a local origin is not GitHub");
-    settled(&line, &main, &released);
-}
-
-fn settled(line: &Line, main: &str, released: &str) {
-    let rejoin = line.remote("refs/heads/rejoin/v1.0.0");
+    let before = line.remote();
+    let home = report(&line.work).expect("report");
     assert_eq!(
-        git(&line.origin, &["rev-list", "--parents", "-n", "1", &rejoin]),
-        format!("{rejoin} {main} {released}")
+        (home.state, home.commit.as_deref(), home.main.as_deref()),
+        ("home", Some(released.as_str()), Some(main.as_str()))
     );
-    assert_eq!(
-        line.remote(&format!("{rejoin}^{{tree}}")),
-        line.remote(&format!("{main}^{{tree}}"))
-    );
-    let message = git(&line.origin, &["show", "-s", "--format=%B", &rejoin]);
-    assert!(message.starts_with("Rejoin v1.0.0"), "{message}");
-    assert!(
-        message.contains(&format!("Rejoin-Source: v1.0.0@{released}")),
-        "{message}"
-    );
-    assert_eq!(message.matches(TRAILER).count(), 1, "{message}");
-}
-
-#[test]
-fn unguarded() {
-    let line = Line::new();
-    cut(&line, "release/v1.0.0", "fixed\n");
-    line.stable("release/v1.0.0", "v1.0.0");
-    line.commit("fix.txt", "fixed\n", "fix without a proof");
-    git(&line.work, &["push", "-q", "origin", "main"]);
-    let refusal = run(&line.work).expect_err("main without a proof refuses");
-    assert_eq!(refusal.kind, "guard", "{}", refusal.message);
+    assert!(home.lacking.is_empty(), "{:?}", home.lacking);
+    assert_eq!(line.remote(), before, "rejoin pushes nothing");
     let listed = git(&line.origin, &["branch", "--list", "rejoin/*"]);
-    assert!(listed.is_empty(), "nothing is pushed: {listed}");
+    assert!(listed.is_empty(), "no rejoin branch: {listed}");
+}
+
+#[test]
+fn conflicting() {
+    let line = Line::new();
+    cut(&line, "release/v1.0.0", "fixed on the line\n");
+    line.stable("release/v1.0.0", "v1.0.0");
+    line.commit("fix.txt", "fixed otherwise\n", "Fix main otherwise");
+    git(&line.work, &["push", "-q", "origin", "main"]);
+    let owed = report(&line.work).expect("report");
+    assert_eq!((owed.state, owed.conflicted), ("owed", true));
+    assert_eq!(owed.lacking, ["fix.txt"]);
 }

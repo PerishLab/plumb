@@ -3,6 +3,10 @@ use crate::landing::{self, Preparation, Refusal};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+mod squash;
+
+pub use squash::{Landed, Squash, landed};
+
 pub const SCHEMA: &str = "plumb.delivery-plan/v2";
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

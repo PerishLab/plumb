@@ -246,7 +246,9 @@ fn unsettled() {
     git(&["symbolic-ref", "HEAD", "refs/heads/main"]);
     git(&["commit", "-q", "--no-verify", "--allow-empty", "-m", "base"]);
     git(&["checkout", "-q", "-b", "release/v1.0.0"]);
-    git(&["commit", "-q", "--no-verify", "--allow-empty", "-m", "line"]);
+    std::fs::write(root.join("fix.txt"), "fixed\n").expect("fix");
+    git(&["add", "fix.txt"]);
+    git(&["commit", "-q", "--no-verify", "-m", "line"]);
     git(&["tag", "-a", "v1.0.0", "-m", "v1.0.0"]);
     git(&["checkout", "-q", "-b", "release/v2.0.0", "main"]);
     git(&[
@@ -271,15 +273,9 @@ fn unsettled() {
     );
     assert!(!held.contains("v2.0.0"), "{held}");
 
-    git(&[
-        "merge",
-        "-q",
-        "--no-verify",
-        "--no-ff",
-        "release/v1.0.0",
-        "-m",
-        "settle v1.0.0",
-    ]);
+    std::fs::write(root.join("fix.txt"), "fixed\n").expect("fix");
+    git(&["add", "fix.txt"]);
+    git(&["commit", "-q", "--no-verify", "-m", "settle v1.0.0"]);
     let held = crate::run(&["doctor", path]);
-    assert!(!held.contains("is not an ancestor of main"), "{held}");
+    assert!(!held.contains("carries changes main lacks"), "{held}");
 }
