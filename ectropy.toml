@@ -78,3 +78,11 @@ name = "sub_issues"
 [[vocabulary.term]]
 description = "The native blocking predecessors carried by one external Issue snapshot."
 name = "blocked_by"
+
+[[grant]]
+paths = [
+    "crates/lib/src/proof/guard/authority.rs",
+    "crates/macro/src/catalogue/mod.rs",
+    "crates/macro/src/resource.rs",
+]
+syntax = "embed"
