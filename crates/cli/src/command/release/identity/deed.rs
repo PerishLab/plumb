@@ -52,9 +52,6 @@ pub enum Deed {
         #[arg(long)]
         json: bool,
     },
-    #[command(about = "Merge the standing stable marker home into main")]
-    Rejoin {
-        #[arg(long = "dry-run")]
-        dry: bool,
-    },
+    #[command(about = "Report whether main holds the standing stable marker's changes")]
+    Rejoin,
 }

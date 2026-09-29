@@ -3,9 +3,7 @@ use std::path::Path;
 use std::process::Command;
 
 pub fn settled(root: &Path, commit: &str, main: &str) -> bool {
-    git(root, &["merge-base", "--is-ancestor", commit, main])
-        .status()
-        .is_ok_and(|status| status.success())
+    plumb::land::rejoin::contained(root, commit, main).unwrap_or(false)
 }
 
 pub fn unsettled(root: &Path) -> Option<String> {
@@ -31,7 +29,7 @@ pub fn unsettled(root: &Path) -> Option<String> {
     let stable = latest(tags)?;
     (!settled(root, &stable.commit, &main)).then(|| {
         format!(
-            "stable {} at {} is not an ancestor of main; run plumb release rejoin, and plumb release owed for every obligation it leaves",
+            "stable {} at {} carries changes main lacks; land them into main (plumb release rejoin names them), and run plumb release owed for every obligation it leaves",
             stable.marker,
             &stable.commit[..stable.commit.len().min(12)]
         )

@@ -107,21 +107,12 @@ impl Client {
         .map(|_| ())
     }
 
-    pub fn settle(&self, number: u64, head: &str) -> Result<(), String> {
-        let number = number.to_string();
+    pub fn settle(&self, number: u64, squash: &crate::delivery::Squash) -> Result<(), String> {
+        let arguments = squash.arguments(&self.seat, number);
+        let arguments = arguments.iter().map(String::as_str).collect::<Vec<_>>();
         let mut last = String::new();
         for turn in 1..=6 {
-            let merged = self.gh(&[
-                "pr",
-                "merge",
-                &number,
-                "-R",
-                &self.seat,
-                "--merge",
-                "--match-head-commit",
-                head,
-            ]);
-            match merged {
+            match self.gh(&arguments) {
                 Ok(_) => return Ok(()),
                 Err(error) if pending(&error) => last = error,
                 Err(error) => return Err(error),

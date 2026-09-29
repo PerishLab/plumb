@@ -91,11 +91,12 @@ pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {
             "gh api -X POST repos/{seat}/statuses/<candidate> (context=guard / guard (pull_request), state=success)"
         ),
         format!(
-            "gh pr merge <n> -R {seat} --merge --match-head-commit <candidate> (no branch deleted)"
+            "gh pr merge <n> -R {seat} --squash --match-head-commit <candidate> --subject <its subject> --body <its body> (no branch deleted)"
         ),
         format!(
-            "fetch origin, then exactly fast-forward the clean {base} worktree to origin/{base}"
+            "fetch origin and verify origin/{base} is one squash carrying <candidate>'s parent, tree and Guard proof"
         ),
+        format!("exactly fast-forward the clean {base} worktree to origin/{base}"),
     ];
     Ok(Plan {
         schema: SCHEMA,
@@ -188,6 +189,7 @@ fn execute(request: Request<'_>, expected: Option<&Preparation>) -> Result<Repor
         return Ok(report);
     }
     landing.settled(&candidate)?;
+    let squash = crate::delivery::Squash::read(&landing.repo.root, &candidate.head)?;
     client
         .mark(
             &candidate.head,
@@ -196,8 +198,11 @@ fn execute(request: Request<'_>, expected: Option<&Preparation>) -> Result<Repor
         )
         .map_err(|error| refuse("forge", error))?;
     client
-        .settle(pull.number, &candidate.head)
+        .settle(pull.number, &squash)
         .map_err(|error| refuse("forge", error))?;
+    landing.repo.fetch()?;
+    let head = landing.repo.revision(&landing.upstream())?;
+    crate::delivery::landed(&landing.repo.root, &candidate.head, &head)?;
     report.merged = true;
     report.synced = landing.sync()?;
     Ok(report)

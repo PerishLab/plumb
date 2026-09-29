@@ -10,13 +10,14 @@ recorded complete at that commit. Retract removes only a marker nothing of
 which is public: its distribution record decides, and a marker without one is
 judged by its seal.
 
-Rejoin settles the standing stable marker into main. It names no version: the
-debt is the highest stable marker origin holds, and it is owed until main holds
-that commit. Rejoin records only the topology, a commit with main's own tree
-whose second parent is the stable commit, so it carries the Guard proof main
-already holds and lands through a pull with that proof as its guard status. A
-release line that carries changes main lacks is refused; land them into main
-first.
+Rejoin reports whether the standing stable marker is home in main. It names no
+version and writes nothing: the debt is the highest stable marker origin holds,
+and it is owed until main holds every change that commit carries, that is until
+merging it into main would leave main's tree unchanged. A stable commit already
+in main's history is home. Main takes only squash merges, so no merge commit
+records the release line; while the marker is owed, rejoin names the paths
+whose changes main lacks, and the remedy is to land the release line's changes
+into main.
 
 A release line is release/vX.Y.Z and carries one version. Open cuts it from
 main, or from a lower stable marker for a fix that ships on its own; a version
@@ -28,7 +29,7 @@ lines stamped before stable markers were tags do. A line that never reached
 stable closes only with --abandon.
 
 A stable marker leaves obligations behind: its distribution completed, its
-commit merged home into main, its changelog lodged on Depot, its skill where
+changes held by main, its changelog lodged on Depot, its skill where
 the product declares one, and its line closed. Open, stamp and ship dispatch
 refuse any later version, on any channel, while the highest stable below it
 still owes one, and name the command that settles each: ship dispatch, release

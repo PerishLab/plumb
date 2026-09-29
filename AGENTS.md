@@ -51,8 +51,10 @@ answers for.
 
 - `crates/lib/src/forge/delivery/kernel.rs` — the narrow `delivery` feature
   prepares and revalidates an exact candidate from caller-supplied Issue and
-  pull declarations under released Guard authority. It has no provider client
-  and is consumed by Concord. Plumb carries no Issue observation or Issue-aware
+  pull declarations under released Guard authority, and holds the one squash
+  merge contract and its readback that `land` and Concord both run. It has no
+  provider client: callers run its argument vector through their own command.
+  It is consumed by Concord. Plumb carries no Issue observation or Issue-aware
   pull adapter; repository-only `land` remains a separate explicit surface.
 - `crates/cli/{rules,assets,cookbook,help}` — Plumb's governed resources,
   carried inside the binary. A release is its own rule set: nothing is fetched,
@@ -146,8 +148,10 @@ answers for.
   its distribution completed (`ship dispatch`, read from wharf's
   `distribution.json`, the one authority on how far a marker is distributed,
   which is also what a stable stamp reads for the prerelease it promotes),
-  its merge into main (`release rejoin`), its changelog on Depot and its skill
-  where one is declared (`depot consign`), and its line closed. `command/operator/owed` is their
+  its changes held by main (contained, not ancestral, since main takes only
+  squash merges; `release rejoin` reports it and landing the line's changes
+  settles it), its changelog on Depot and its skill where one is declared
+  (`depot consign`), and its line closed. `command/operator/owed` is their
   table; each row names its rule, the command that settles it and the detector
   that reads it, `release owed` reports it, and `release open`, `release
   stamp` and `ship dispatch` refuse any later version while one is owed. A settlement never ships without its detector, nor

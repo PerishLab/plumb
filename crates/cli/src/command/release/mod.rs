@@ -28,7 +28,7 @@ fn execute(deed: Deed) -> Result<String, String> {
             dry,
         } => super::operator::stamp(&version, &remote, dry),
         Deed::Retract { version, dry } => super::operator::retract(&version, dry),
-        Deed::Rejoin { dry } => super::operator::rejoin(dry),
+        Deed::Rejoin => super::operator::rejoin(),
         Deed::Open {
             version,
             from,

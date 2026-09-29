@@ -1,7 +1,6 @@
 use super::{Refusal, refuse};
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
+use std::process::{Command, Output};
 
 pub struct Repository {
     pub root: PathBuf,
@@ -30,38 +29,6 @@ impl Repository {
             .current_dir(&self.root)
             .output()
             .map_err(|error| refuse("git", format!("cannot run git: {error}")))
-    }
-
-    pub fn record(&self, seed: &Seed<'_>) -> Result<String, Refusal> {
-        use std::io::Write as _;
-        let mut args = vec!["commit-tree", seed.tree];
-        for parent in seed.parents {
-            args.extend(["-p", parent]);
-        }
-        args.extend(["-F", "-"]);
-        let mut child = Command::new("git")
-            .args(&args)
-            .current_dir(&self.root)
-            .envs(seed.identity)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|error| refuse("git", format!("cannot run git commit-tree: {error}")))?;
-        child
-            .stdin
-            .take()
-            .ok_or_else(|| refuse("git", "cannot open git commit-tree input"))?
-            .write_all(seed.message.as_bytes())
-            .map_err(|error| refuse("git", format!("cannot write commit message: {error}")))?;
-        let output = child
-            .wait_with_output()
-            .map_err(|error| refuse("git", format!("cannot wait for git commit-tree: {error}")))?;
-        line(success(
-            output,
-            "candidate",
-            "cannot write the candidate commit",
-        )?)
     }
 
     pub fn text(&self, args: &[&str], kind: &'static str, whose: &str) -> Result<String, Refusal> {
@@ -142,13 +109,6 @@ impl Repository {
             .map(|held| held == self.root)
             .unwrap_or(false)
     }
-}
-
-pub struct Seed<'a> {
-    pub tree: &'a str,
-    pub parents: &'a [&'a str],
-    pub message: &'a str,
-    pub identity: &'a BTreeMap<String, String>,
 }
 
 pub fn success(

@@ -7,7 +7,11 @@ sender of its own.
 
 The source branch is kept. What lands is a one-commit projection at
 land/<branch>. Plumb verifies the projection carries the staged-tree Guard proof,
-posts that as the required guard status, and merges the pull with a merge commit
-that must match the exact candidate the guard passed. The caller supplies the
-repository-local title and body explicitly; Issue lifecycle orchestration belongs
-to Concord.
+posts that as the required guard status, and squash-merges the pull, bound to
+the exact candidate the guard passed and carrying the candidate's own subject
+and body, Guard proof trailer included. It then reads main back: the new head
+must sit on the candidate's parent, hold the candidate's tree, and carry its
+Guard proof, or land refuses and names the commits. A base that moved under the
+merge leaves main holding a tree no Guard proved, which land reports and cannot
+undo. The caller supplies the repository-local title and body explicitly; Issue
+lifecycle orchestration belongs to Concord.
