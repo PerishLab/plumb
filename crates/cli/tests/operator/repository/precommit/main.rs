@@ -79,7 +79,7 @@ fn staged() {
     let fixture = tempfile::tempdir().expect("fixture");
     let depot = support::home();
     let root = fixture.path();
-    Repo::git(root, &["init", "-q"]);
+    Repo::git(root, &["init", "-q", "-b", "topic"]);
     Repo::git(root, &["config", "user.name", "Plumb Test"]);
     Repo::git(root, &["config", "user.email", "plumb@example.invalid"]);
     Repo::git(
@@ -178,4 +178,29 @@ fn staged() {
         "unchanged action must not start: {}",
         String::from_utf8_lossy(&second.stderr)
     );
+}
+
+#[test]
+fn integration() {
+    for branch in ["main", "master"] {
+        let fixture = tempfile::tempdir().expect("fixture");
+        let root = fixture.path();
+        Repo::git(root, &["init", "-q", "-b", branch]);
+        let output = support::plumb()
+            .args(["guard", ".", "--json"])
+            .current_dir(root)
+            .output()
+            .expect("guard");
+        assert!(!output.status.success());
+        let finding: Value = serde_json::from_slice(&output.stdout).expect("finding");
+        assert_eq!(finding["schema"], "plumb.guard-finding/v1");
+        assert_eq!(finding["code"], "guard.integration-branch");
+        assert_eq!(finding["ok"], false);
+        assert!(
+            finding["message"]
+                .as_str()
+                .expect("message")
+                .contains("Issue-managed topic worktree")
+        );
+    }
 }

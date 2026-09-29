@@ -5,7 +5,7 @@ use std::process::{Command, Output};
 pub(super) fn fixture() -> tempfile::TempDir {
     let held = tempfile::tempdir().expect("repository");
     let root = held.path();
-    Repo::git(root, &["init", "-q"]);
+    Repo::git(root, &["init", "-q", "-b", "topic"]);
     Repo::git(root, &["config", "user.name", "Plumb Test"]);
     Repo::git(root, &["config", "user.email", "plumb@example.invalid"]);
     Repo::git(

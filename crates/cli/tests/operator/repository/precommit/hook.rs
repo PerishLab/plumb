@@ -161,3 +161,52 @@ fn linked() {
     let tags = Repo::git(&repository, &["tag", "-l"]);
     assert!(tags.stdout.is_empty());
 }
+
+#[test]
+fn guarded() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let root = fixture.path();
+    seed(root);
+    let home = support::home();
+    let install = support::plumb()
+        .args(["configuration", "install"])
+        .arg(root)
+        .env("PLUMB_HOME", home.path())
+        .output()
+        .expect("install");
+    assert!(install.status.success());
+    std::fs::write(root.join("src/lib.rs"), "pub fn answer() -> u8 { 43 }\n").expect("change");
+    Repo::git(root, &["add", "src/lib.rs"]);
+    let binary = Path::new(env!("CARGO_BIN_EXE_plumb"))
+        .parent()
+        .expect("bin");
+    let path = std::env::join_paths(std::iter::once(binary.to_path_buf()).chain(
+        std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()),
+    ))
+    .expect("path");
+    let commit = support::outside("git")
+        .arg("-C")
+        .arg(root)
+        .args([
+            "-c",
+            "user.name=Plumb Test",
+            "-c",
+            "user.email=plumb@example.invalid",
+            "commit",
+            "-m",
+            "direct main change",
+        ])
+        .env("HOME", home.path())
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("PATH", path)
+        .env("PLUMB_HOME", home.path())
+        .output()
+        .expect("commit");
+    assert!(!commit.status.success());
+    let error = String::from_utf8_lossy(&commit.stderr);
+    assert!(error.contains("guard.integration-branch"), "{error}");
+    assert!(
+        error.contains("plumb cookbook guard.integration-branch"),
+        "{error}"
+    );
+}
