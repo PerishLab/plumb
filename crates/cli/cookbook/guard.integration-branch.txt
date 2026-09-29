@@ -1,0 +1,25 @@
+# guard.integration-branch
+
+## Trigger
+
+Staged Guard proof was requested while the checkout was attached to `main` or
+`master`, which are reserved as integration branches rather than mutable task
+seats.
+
+## Solution
+
+Start from a repository-local GitHub Issue, let Concord attach its one managed
+topic worktree from a clean synchronized integration checkout, and make the
+change there. Do not bypass the hook or move the integration branch merely to
+silence this finding. If the intended operation only verifies an existing
+commit or Boundary, use that verification path instead of staged Guard proof.
+
+## Evidence
+
+The installed pre-commit hook and direct staged `plumb guard` invocation share
+one branch check. GitHub rules remain the remote hard boundary; this finding is
+local defense in depth and does not claim filesystem immutability.
+
+## EXIT
+
+Remove this entry when staged Guard proof no longer participates in commit creation, or when integration branches cease to be reserved mirrors.

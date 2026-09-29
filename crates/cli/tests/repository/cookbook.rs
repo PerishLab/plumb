@@ -13,7 +13,11 @@ fn ledger() {
     let output = run(&["cookbook"]);
     assert!(output.status.success());
     let held = String::from_utf8_lossy(&output.stdout).to_string();
-    for code in ["structure.seat-member", "structure.known-directory"] {
+    for code in [
+        "guard.integration-branch",
+        "structure.seat-member",
+        "structure.known-directory",
+    ] {
         assert!(held.contains(code), "{held}");
     }
     let exits = held.lines().filter(|line| line.contains("EXIT:")).count();
@@ -49,7 +53,7 @@ fn json() {
     let output = run(&["cookbook", "--json"]);
     assert!(output.status.success());
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
-    assert_eq!(value["entries"].as_array().expect("entries").len(), 5);
+    assert_eq!(value["entries"].as_array().expect("entries").len(), 6);
 }
 
 #[test]
