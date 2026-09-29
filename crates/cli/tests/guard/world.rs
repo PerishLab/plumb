@@ -1,11 +1,15 @@
 use std::process::Command;
 
 pub(crate) fn seat() -> std::path::PathBuf {
-    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(std::path::Path::parent)
-        .expect("crate should sit two below the repo")
-        .to_path_buf()
+    let output = Command::new("git")
+        .args(["rev-parse", "--show-toplevel"])
+        .output()
+        .expect("git should run");
+    assert!(
+        output.status.success(),
+        "the guard runs inside its repository"
+    );
+    std::path::PathBuf::from(String::from_utf8_lossy(&output.stdout).trim())
 }
 
 pub(crate) fn govern(root: &std::path::Path) {
@@ -19,20 +23,7 @@ pub(crate) fn govern(root: &std::path::Path) {
         .status()
         .expect("git should run");
     assert!(status.success(), "fixture should become a repository");
-    let hooks = root.join(".git/hooks");
-    for name in ["pre-commit", "commit-msg"] {
-        let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("assets/git/hooks")
-            .join(name);
-        let target = hooks.join(name);
-        std::fs::copy(source, &target).expect("fixture should carry depot-projected guard hooks");
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt as _;
-            std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o755))
-                .expect("fixture hook should be executable");
-        }
-    }
+    super::support::hooks(root);
 }
 
 pub(crate) fn fixture() -> tempfile::TempDir {

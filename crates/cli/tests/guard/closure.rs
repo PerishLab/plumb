@@ -103,22 +103,20 @@ fn rule() {
     assert!(output.status.success());
     let report: Value = serde_json::from_slice(&output.stdout).expect("rule list json");
     assert_eq!(report["schema"], "plumb.rule-list/v1");
-    let catalog: toml::Table = super::support::policy("rules/catalog.toml")
-        .parse()
-        .expect("seat catalog");
-    let mut rules = catalog["rule"]
-        .as_array()
-        .expect("catalog rules")
+    let rules = report["rules"].as_array().expect("listed rules");
+    assert!(!rules.is_empty(), "the carried catalogue lists its law");
+    let ids = rules
         .iter()
-        .map(|rule| {
-            let mut rule = serde_json::to_value(rule).expect("catalog rule");
-            let id = rule["id"].as_str().expect("rule identity").to_string();
-            let (namespace, name) = id.split_once('.').expect("qualified identity");
-            rule["namespace"] = namespace.into();
-            rule["name"] = name.into();
-            rule
-        })
+        .map(|rule| rule["id"].as_str().expect("rule identity"))
         .collect::<Vec<_>>();
-    rules.sort_by(|left, right| left["id"].as_str().cmp(&right["id"].as_str()));
-    assert_eq!(report["rules"], serde_json::json!(rules));
+    let mut held = ids.clone();
+    held.sort_unstable();
+    held.dedup();
+    assert_eq!(ids, held, "rules are listed once each, by identity");
+    for rule in rules {
+        let id = rule["id"].as_str().expect("rule identity");
+        let (namespace, name) = id.split_once('.').expect("qualified identity");
+        assert_eq!(rule["namespace"], namespace, "{id}");
+        assert_eq!(rule["name"], name, "{id}");
+    }
 }

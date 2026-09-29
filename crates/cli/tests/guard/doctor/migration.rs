@@ -4,7 +4,7 @@ use std::process::Command;
 #[test]
 fn unix() {
     let fixture = seat();
-    let script = script("migration.sh");
+    let (_held, script) = script("migration.sh", SH);
     let output = Command::new("sh")
         .arg(script)
         .current_dir(fixture.path())
@@ -24,7 +24,7 @@ fn windows() {
         return;
     }
     let fixture = seat();
-    let script = script("migration.ps1");
+    let (_held, script) = script("migration.ps1", PS1);
     let output = Command::new("pwsh")
         .args(["-NoProfile", "-File"])
         .arg(script)
@@ -66,8 +66,111 @@ fn migrated(root: &Path) {
     assert_eq!(text.matches("seal = \"\"").count(), 4, "{text}");
 }
 
-fn script(name: &str) -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/fixtures/migration-v0.18.19")
-        .join(name)
+fn script(name: &str, body: &str) -> (tempfile::TempDir, PathBuf) {
+    let held = tempfile::tempdir().expect("script seat");
+    let path = held.path().join(name);
+    std::fs::write(&path, body).expect("migration script");
+    (held, path)
 }
+
+const SH: &str = r#"#!/bin/sh
+set -eu
+
+manifest=${1:-plumb.toml}
+test -f "$manifest"
+if grep -q '^\[\[document\]\]' "$manifest"; then
+  printf '%s\n' "$manifest already declares document bindings" >&2
+  exit 1
+fi
+
+draft=$(mktemp "${manifest}.migration.XXXXXX")
+trap 'rm -f "$draft"' EXIT HUP INT TERM
+awk '
+/^\[\[lock\]\][[:space:]]*$/ { skip = 1; next }
+/^\[skill\][[:space:]]*$/ { skip = 1; next }
+/^\[/ { skip = 0 }
+!skip { print }
+' "$manifest" > "$draft"
+
+printf '%s\n' \
+  '' \
+  '[[document]]' \
+  'strategy = "agent"' \
+  'source = [{ path = ".", seal = "" }]' \
+  'target-seal = ""' >> "$draft"
+
+if test -d skills; then
+  for skill in skills/*; do
+    test -d "$skill" || continue
+    test -f "$skill/SKILL.md"
+    test -f "$skill/PATHS.md"
+    test -f "$skill/SCENARIOS.md"
+    name=${skill##*/}
+    printf '%s\n' \
+      '' \
+      '[[document]]' \
+      'strategy = "brief"' \
+      "name = \"$name\"" \
+      'source = [{ path = ".", seal = "" }]' \
+      'target-seal = ""' >> "$draft"
+  done
+fi
+
+mv "$draft" "$manifest"
+trap - EXIT HUP INT TERM
+printf '%s\n' "$manifest now carries unaffirmed document bindings"
+"#;
+
+const PS1: &str = r#"param([string]$Manifest = "plumb.toml")
+
+$ErrorActionPreference = "Stop"
+if (-not (Test-Path -LiteralPath $Manifest -PathType Leaf)) {
+  throw "$Manifest does not exist"
+}
+$lines = Get-Content -LiteralPath $Manifest
+if ($lines | Where-Object { $_ -match '^\[\[document\]\]\s*$' }) {
+  throw "$Manifest already declares document bindings"
+}
+
+$kept = [System.Collections.Generic.List[string]]::new()
+$skip = $false
+foreach ($line in $lines) {
+  if ($line -match '^\[\[lock\]\]\s*$' -or $line -match '^\[skill\]\s*$') {
+    $skip = $true
+    continue
+  }
+  if ($line -match '^\[') {
+    $skip = $false
+  }
+  if (-not $skip) {
+    $kept.Add($line)
+  }
+}
+
+$kept.Add("")
+$kept.Add("[[document]]")
+$kept.Add('strategy = "agent"')
+$kept.Add('source = [{ path = ".", seal = "" }]')
+$kept.Add('target-seal = ""')
+
+if (Test-Path -LiteralPath "skills" -PathType Container) {
+  foreach ($skill in Get-ChildItem -LiteralPath "skills" -Directory | Sort-Object Name) {
+    foreach ($leaf in @("SKILL.md", "PATHS.md", "SCENARIOS.md")) {
+      if (-not (Test-Path -LiteralPath (Join-Path $skill.FullName $leaf) -PathType Leaf)) {
+        throw "$($skill.FullName) misses $leaf"
+      }
+    }
+    $kept.Add("")
+    $kept.Add("[[document]]")
+    $kept.Add('strategy = "brief"')
+    $kept.Add("name = `"$($skill.Name)`"")
+    $kept.Add('source = [{ path = ".", seal = "" }]')
+    $kept.Add('target-seal = ""')
+  }
+}
+
+$draft = "$Manifest.migration-$PID"
+[System.IO.File]::WriteAllLines($draft, $kept, [System.Text.UTF8Encoding]::new($false))
+Move-Item -LiteralPath $draft -Destination $Manifest -Force
+Write-Output "$Manifest now carries unaffirmed document bindings"
+"#;

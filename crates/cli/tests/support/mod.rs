@@ -21,17 +21,27 @@ pub fn overlay(files: &[(&str, &str)]) -> tempfile::TempDir {
 }
 
 #[allow(dead_code)]
-pub fn rules(names: &[&str]) -> Vec<(String, String)> {
-    names
-        .iter()
-        .map(|name| {
-            let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("rules")
-                .join(name);
-            let body = std::fs::read_to_string(&path).expect("repository rule source");
-            (format!("rules/{name}"), body)
-        })
-        .collect()
+pub fn hooks(root: &Path) {
+    let manifest = root.join("plumb.toml");
+    let borrowed = !manifest.exists();
+    if borrowed {
+        std::fs::write(&manifest, "").expect("fixture should be declared for projection");
+    }
+    let home = home();
+    let output = plumb()
+        .args(["configuration", "install"])
+        .arg(root)
+        .env("PLUMB_HOME", home.path())
+        .output()
+        .expect("plumb should project its hooks");
+    if borrowed {
+        std::fs::remove_file(&manifest).expect("fixture declaration should be returned");
+    }
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 #[allow(dead_code)]
@@ -102,10 +112,4 @@ fn msvc(command: &mut std::process::Command) {
                 std::env::join_paths(lib).expect("MSVC reference path"),
             );
     }
-}
-
-#[allow(dead_code)]
-pub fn policy(path: &str) -> String {
-    let name = path.strip_prefix("rules/").unwrap_or(path);
-    rules(&[name])[0].1.clone()
 }
