@@ -1,4 +1,5 @@
 mod action;
+mod branch;
 mod cache;
 mod cargo;
 mod environment;
@@ -71,6 +72,10 @@ struct Staged<'a>(&'a Path);
 
 impl Staged<'_> {
     fn run(&self, json: bool) -> i32 {
+        if let Err(finding) = branch::inspect(self.0) {
+            finding.render(json);
+            return 1;
+        }
         match action::prove(self.0) {
             Ok(proof) => {
                 if json {
