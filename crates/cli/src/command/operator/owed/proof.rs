@@ -1,7 +1,8 @@
-use super::{OBLIGATIONS, Seat, below, complete, distribution};
+use super::{OBLIGATIONS, Seat, below, shipped};
 use crate::shape::release::Spec;
 use clap::CommandFactory as _;
 use plumb::land::rejoin::{Stable, latest, tags};
+use plumb::seat::release::Distribution;
 use std::path::Path;
 use std::process::Command;
 
@@ -35,34 +36,17 @@ fn paired() {
 
 #[test]
 fn distributed() {
-    assert_eq!(
-        distribution("https://releases.plumb.perish.uk/", "stable", "v1.0.0"),
-        "https://releases.plumb.perish.uk/v1/releases/stable/v1.0.0/distribution.json"
-    );
-    let record = |marker: &str, commit: &str, state: &str| {
-        Some(
-            format!(r#"{{"marker":"{marker}","commit":"{commit}","state":"{state}"}}"#)
-                .into_bytes(),
+    let record = |commit: &str, state: &str| {
+        Distribution::parse(
+            format!(r#"{{"marker":"v1.0.0","commit":"{commit}","state":"{state}"}}"#).as_bytes(),
+            "v1.0.0",
         )
+        .expect("record")
     };
-    assert_eq!(
-        complete(record("v1.0.0", "c", "complete"), "v1.0.0", "c"),
-        Ok(true)
-    );
-    assert_eq!(
-        complete(record("v1.0.0", "c", "incomplete"), "v1.0.0", "c"),
-        Ok(false)
-    );
-    assert_eq!(
-        complete(record("v1.0.0", "d", "complete"), "v1.0.0", "c"),
-        Ok(false)
-    );
-    assert_eq!(
-        complete(record("v0.9.0", "c", "complete"), "v1.0.0", "c"),
-        Ok(false)
-    );
-    assert_eq!(complete(None, "v1.0.0", "c"), Ok(false));
-    assert!(complete(Some(b"{".to_vec()), "v1.0.0", "c").is_err());
+    assert!(shipped(Some(&record("c", "complete")), "c"));
+    assert!(!shipped(Some(&record("c", "incomplete")), "c"));
+    assert!(!shipped(Some(&record("d", "complete")), "c"));
+    assert!(!shipped(None, "c"));
 }
 
 #[test]

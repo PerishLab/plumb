@@ -145,12 +145,7 @@ impl Spec {
         }
         if binary || !self.product.is_empty() || !self.authority.is_empty() {
             token("product", &self.product, false)?;
-            if !self.authority.starts_with("https://")
-                || self.authority.ends_with('/')
-                || self.authority.chars().any(char::is_whitespace)
-            {
-                return Err("authority must be one normalized https URL".into());
-            }
+            plumb::seat::release::Authority::new(&self.authority)?;
         }
         if binary {
             if self.binaries.is_empty() {
