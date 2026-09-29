@@ -1,6 +1,7 @@
 use super::Dispatch;
 use super::course::Course;
 use super::value;
+use plumb::seat::release::{Authority, Distribution, Marker};
 use std::path::Path;
 use std::process::{Command, Output};
 
@@ -54,9 +55,12 @@ pub(in crate::command) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<St
                 "{version} already stands; a stable marker never moves"
             ));
         }
-        let authority = super::super::release::authority(&root)?;
+        let authority = Authority::new(&super::super::release::authority(&root)?)?;
         let promoted = promoted(&listing, &base, &head, |channel, marker| {
-            plumb::bucket::fetch(&super::owed::distribution(&authority, channel, marker))
+            authority.read(&Marker {
+                channel: channel.to_string(),
+                marker: marker.to_string(),
+            })
         })?;
         format!("{version}\n\npromotes {promoted}")
     } else {
@@ -103,7 +107,7 @@ fn promoted(
     listing: &str,
     base: &str,
     head: &str,
-    read: impl Fn(&str, &str) -> Result<Option<Vec<u8>>, String>,
+    read: impl Fn(&str, &str) -> Result<Option<Distribution>, String>,
 ) -> Result<String, String> {
     let mut held = Vec::new();
     for channel in PRERELEASES {
@@ -133,7 +137,7 @@ fn promoted(
         ));
     }
     for (channel, marker) in held {
-        if super::owed::complete(read(channel, &marker)?, &marker, head)? {
+        if super::owed::shipped(read(channel, &marker)?.as_ref(), head) {
             return Ok(marker);
         }
     }
@@ -193,13 +197,12 @@ pub(super) fn dispatch(options: Dispatch) -> Result<String, String> {
         Some(url) if options.watch => {
             launch::wait(&url)?;
             let channel = super::super::release::channel(&options.marker)?;
-            let record = super::owed::distribution(&spec.authority, &channel, &options.marker);
-            let said = status::verdict(
-                status::read(&record)?,
-                &options.marker,
-                launch::identity(&url),
-            )
-            .map_err(|error| format!("{url}: {error}"))?;
+            let record = Authority::new(&spec.authority)?.read(&Marker {
+                channel,
+                marker: options.marker.clone(),
+            })?;
+            let said = status::verdict(record, &options.marker, launch::identity(&url))
+                .map_err(|error| format!("{url}: {error}"))?;
             Ok(format!("{url}\n{said}"))
         }
         Some(url) => Ok(url),

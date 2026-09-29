@@ -1,6 +1,7 @@
 use super::course::Course;
 use super::value;
 use super::worktree::fetch;
+use plumb::seat::release::{Authority, Marker};
 use std::path::Path;
 use std::process::{Command, Output};
 
@@ -9,7 +10,7 @@ pub(in crate::command) fn retract(raw: &str, dry: bool) -> Result<String, String
     let channel = super::super::release::channel(&held)?;
     let version = value::version(&held, &channel)?;
     let root = super::worktree::root()?;
-    let authority = super::super::release::authority(&root)?;
+    let authority = Authority::new(&super::super::release::authority(&root)?)?;
     point(&root).retract(&authority, &channel, &version, dry)
 }
 
@@ -32,17 +33,20 @@ pub fn point(root: &Path) -> Point<'_> {
 impl Point<'_> {
     pub fn retract(
         &self,
-        authority: &str,
+        authority: &Authority,
         channel: &str,
         version: &str,
         dry: bool,
     ) -> Result<String, String> {
-        let url = format!("{authority}/v1/releases/{channel}/{version}/seal.json");
+        let url = authority.seal(channel, version);
         let mut course = Course::new(dry);
-        let record = super::owed::distribution(authority, channel, version);
-        if let Some(body) = super::wharf::status::read(&record)? {
-            let public =
-                super::wharf::status::public(&super::wharf::status::record(&body, version)?);
+        let record = authority.distribution(channel, version);
+        let marker = Marker {
+            channel: channel.to_string(),
+            marker: version.to_string(),
+        };
+        if let Some(held) = authority.read(&marker)? {
+            let public = held.public();
             if !public.is_empty() {
                 return Err(format!(
                     "{version} has {} public by {record}; retraction acts only on a declaration",
