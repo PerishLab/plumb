@@ -61,7 +61,7 @@ pub fn resolve(base: &str, channel: &str, version: Option<&str>) -> Result<Grant
 
     let base = base.trim_end_matches('/');
     let seal = match version {
-        Some(wanted) => read(&format!("{base}/v1/releases/{channel}/{wanted}/seal.json"))?,
+        Some(wanted) => read(&crate::seat::release::Authority::at(base).seal(channel, wanted))?,
         None => current(base)?,
     };
     if seal.schema != 1 {
@@ -169,8 +169,7 @@ fn current(base: &str) -> Result<Seal, Error> {
 }
 
 pub(crate) fn sealed(base: &str) -> Result<Vec<u8>, Error> {
-    let base = base.trim_end_matches('/');
-    let pointer: Pointer = read(&format!("{base}/v1/channels/stable.json"))?;
+    let pointer: Pointer = read(&crate::seat::release::Authority::at(base).pointer("stable"))?;
     if pointer.schema != 1 || pointer.channel != "stable" {
         return Err(Error::Channel(pointer.channel));
     }
