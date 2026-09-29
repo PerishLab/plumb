@@ -93,7 +93,9 @@ pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {
         format!(
             "gh pr merge <n> -R {seat} --merge --match-head-commit <candidate> (no branch deleted)"
         ),
-        format!("git pull --ff-only origin {base} in the worktree holding {base}"),
+        format!(
+            "fetch origin, then exactly fast-forward the clean {base} worktree to origin/{base}"
+        ),
     ];
     Ok(Plan {
         schema: SCHEMA,
