@@ -32,6 +32,8 @@ rule!(
     "structure.cascade-derives-in-anchor"
 );
 rule!(CARGO_TARGET_IGNORED, "structure.cargo-target-ignored");
+rule!(SOURCE_EXPORT_EXPLICIT, "structure.source-export-explicit");
+rule!(TEST_UNDER_TESTS, "structure.test-under-tests");
 #[rustfmt::skip]
 pub fn mechanisms() -> Vec<&'static Mechanism> {
     vec![
@@ -43,6 +45,6 @@ pub fn mechanisms() -> Vec<&'static Mechanism> {
         &SEAT_AFFIRMED, &SEAT_ANCHORED, &SEAT_MEMBER,
         &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
         &RESERVED_COMPONENTS_SEAT,
-        &RETIRED_SEAT_ABSENT,
+        &RETIRED_SEAT_ABSENT, &SOURCE_EXPORT_EXPLICIT, &TEST_UNDER_TESTS,
     ]
 }

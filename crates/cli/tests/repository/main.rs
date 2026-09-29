@@ -1,6 +1,7 @@
 mod anchor;
 mod content;
 mod cookbook;
+mod package;
 mod policy;
 mod production;
 mod roles;
