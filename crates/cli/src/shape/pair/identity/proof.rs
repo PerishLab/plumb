@@ -1,5 +1,4 @@
-#[path = "../../src/shape/pair/identity.rs"]
-mod identity;
+use super::Seat;
 use std::process::Command;
 
 #[test]
@@ -12,7 +11,7 @@ fn settled() {
     let rejoin = commit(root, "rejoin", Some(&base), &[&release]);
     run(root, ["reset", "--hard", &rejoin]);
 
-    assert_eq!(identity::Seat(root).blind("plumb", Some(&release)), None);
+    assert_eq!(Seat(root).blind("plumb", Some(&release)), None);
 }
 
 #[test]
@@ -55,7 +54,7 @@ fn projection() {
     let rejoin = commit(root, "rejoin", Some(&main), &[&release]);
     run(root, ["reset", "--hard", &rejoin]);
 
-    assert_eq!(identity::Seat(root).blind("plumb", Some(&release)), None);
+    assert_eq!(Seat(root).blind("plumb", Some(&release)), None);
 }
 
 #[test]
@@ -69,7 +68,7 @@ fn advanced() {
     let head = commit(root, "head", Some(&base), &[]);
     run(root, ["reset", "--hard", &head]);
 
-    assert!(identity::Seat(root).blind("plumb", Some(&base)).is_some());
+    assert!(Seat(root).blind("plumb", Some(&base)).is_some());
 }
 
 #[test]
@@ -85,11 +84,7 @@ fn drifted() {
     let rejoin = commit(root, "rejoin", Some(&drift), &[&release]);
     run(root, ["reset", "--hard", &rejoin]);
 
-    assert!(
-        identity::Seat(root)
-            .blind("plumb", Some(&release))
-            .is_some()
-    );
+    assert!(Seat(root).blind("plumb", Some(&release)).is_some());
 }
 
 #[test]
@@ -105,11 +100,7 @@ fn source() {
     let rejoin = commit(root, "rejoin", Some(&base), &[&release]);
     run(root, ["reset", "--hard", &rejoin]);
 
-    assert!(
-        identity::Seat(root)
-            .blind("plumb", Some(&release))
-            .is_some()
-    );
+    assert!(Seat(root).blind("plumb", Some(&release)).is_some());
 }
 
 fn initialize(root: &std::path::Path) {
