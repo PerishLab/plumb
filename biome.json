@@ -27,12 +27,6 @@
 					}
 				}
 			}
-		},
-		{
-			"includes": ["crates/lib/tests/fixtures/identity/**"],
-			"formatter": {
-				"enabled": false
-			}
 		}
 	]
 }
