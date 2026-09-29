@@ -247,3 +247,6 @@ fn chart(bytes: &[u8]) -> Result<String, String> {
         .collect::<Vec<_>>()
         .join("\n"))
 }
+
+#[cfg(test)]
+mod proof;

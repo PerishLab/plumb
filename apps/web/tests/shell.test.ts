@@ -1,7 +1,7 @@
+import { pages } from "@plumb/web/meta";
+import Home from "@plumb/web/views/index.svelte";
 import { render } from "svelte/server";
 import { expect, test } from "vitest";
-import { pages } from "../src/lib/meta";
-import Home from "../src/views/index.svelte";
 
 test("home", () => {
 	const markup = render(Home).body;
