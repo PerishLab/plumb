@@ -1,10 +1,17 @@
 use super::{Image, Plane, Production};
+use crate::shape::release::Spec;
 use std::path::{Path, PathBuf};
 
 pub(super) fn read(root: &Path) -> Production {
     let production = Reader(root);
+    let spec = Spec::resolve(root).ok();
+    let placed = spec.as_ref().is_some_and(|spec| spec.cfworker.is_some());
+    let contained = spec.as_ref().is_some_and(|spec| spec.oci.is_some())
+        && root.join("Containerfile").is_file();
     let image = root.join("deploy/web.Dockerfile");
-    let web = if !image.is_file() {
+    let web = if placed {
+        Image::Placed
+    } else if !image.is_file() {
         Image::Absent
     } else {
         match std::fs::read_to_string(image) {
@@ -19,12 +26,13 @@ pub(super) fn read(root: &Path) -> Production {
     let api = templates
         .iter()
         .any(|text| Manifest(text).workload() && Manifest(text).role("api"));
-    let role = templates
-        .iter()
-        .any(|text| Manifest(text).workload() && Manifest(text).role("web"));
-    let ingress = templates
-        .iter()
-        .any(|text| Manifest(text).ingress("/api", "api") && Manifest(text).ingress("/", "web"));
+    let role = placed
+        || templates
+            .iter()
+            .any(|text| Manifest(text).workload() && Manifest(text).role("web"));
+    let ingress = templates.iter().any(|text| {
+        Manifest(text).ingress("/api", "api") && (placed || Manifest(text).ingress("/", "web"))
+    });
     let cargo = production.version();
     let aligned = production.charts().iter().any(|path| {
         let Ok(text) = std::fs::read_to_string(path) else {
@@ -35,7 +43,7 @@ pub(super) fn read(root: &Path) -> Production {
         cargo.as_deref() == version.as_deref() && version == app
     });
     Production {
-        api: root.join("deploy/api.Dockerfile").is_file(),
+        api: contained || root.join("deploy/api.Dockerfile").is_file(),
         web,
         workloads: api && role,
         ingress,
