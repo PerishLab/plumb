@@ -9,6 +9,7 @@ mod collaboration;
 pub(crate) mod layout;
 mod policy;
 mod release;
+mod script;
 
 pub fn judge(held: &shape::Shape) -> Found {
     Structure(held).judge()
@@ -68,6 +69,7 @@ impl Structure<'_> {
             }
         }
         found.extend(release::judge(held));
+        found.extend(script::judge(&held.script));
         self.matched(&mut found);
         self.anchored(&mut found);
         for name in &held.lanes {

@@ -33,7 +33,7 @@ pub fn read(root: &Path) -> Vec<(String, String)> {
     found.into_iter().collect()
 }
 
-fn manifests(root: &Path) -> Vec<PathBuf> {
+pub(super) fn manifests(root: &Path) -> Vec<PathBuf> {
     let mut found = Vec::new();
     let rootmanifest = root.join("package.json");
     if rootmanifest.is_file() {

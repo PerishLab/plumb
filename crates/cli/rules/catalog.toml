@@ -552,6 +552,24 @@ owner = "plumb"
 tags = ["repository"]
 
 [[rule]]
+id = "structure.source-export-explicit"
+summary = "A package exports src by explicit subpath"
+law = "A package manifest (package.json at the root, apps/* or packages/*) exposes its src tree only through explicit subpaths. An exports target, at any depth of its condition maps and fallbacks, that carries a * wildcard and either names a src segment (./src/*, ./src/lib/*, ./src/**/*.ts) or has a fixed prefix whose directory holds src (./* over a package with src/) is refused, because package self-reference would then reach every internal module and reopen the climb ectropy's reach law closes. Explicit subpaths and condition maps, a source condition included, pass, and so does a wildcard into a tree without src, such as ./dist/*, which exposes built output rather than source."
+evidence = "exports targets in package.json at the root, apps/* and packages/*, and the src directories each wildcard's fixed prefix could reach."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
+id = "structure.test-under-tests"
+summary = "TypeScript tests live under their package's tests/"
+law = "A tracked TypeScript test (*.test.ts, *.test.tsx, *.spec.ts, *.spec.tsx) lives below the tests/ directory at the top of its package: apps/<name> or packages/<name> where that directory carries package.json or deno.json, else the repository root where it carries one. A test beside its subject imports siblings without climbing and so escapes ectropy's reach law. A path no such anchor owns is not judged, and JavaScript tests are outside this law."
+evidence = "Test paths in the Git snapshot, outside node_modules, against the package.json or deno.json anchors that own them."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
 id = "structure.transitional-wrappers-observed"
 summary = "Transitional wrappers remain visible"
 law = "Repository-authored wrappers are transitional or product-specific observations, not a required generic lifecycle inventory."
