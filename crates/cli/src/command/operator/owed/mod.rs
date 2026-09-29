@@ -4,6 +4,7 @@ use crate::shape::pair::rejoin;
 use crate::shape::release::Spec;
 use plumb::depot::v3::{Generation, Kind, Query};
 use plumb::land::rejoin::{Stable, tags};
+use plumb::seat::release::{Authority, Distribution, Marker};
 use std::path::Path;
 use std::process::Command;
 
@@ -178,8 +179,11 @@ impl Seat<'_> {
     }
 
     fn distributed(&self, stable: &Stable) -> Result<bool, String> {
-        let url = distribution(&self.spec.authority, "stable", &stable.marker);
-        complete(plumb::bucket::fetch(&url)?, &stable.marker, &stable.commit)
+        let record = Authority::new(&self.spec.authority)?.read(&Marker {
+            channel: "stable".into(),
+            marker: stable.marker.clone(),
+        })?;
+        Ok(shipped(record.as_ref(), &stable.commit))
     }
 
     fn closed(&self, stable: &Stable) -> Result<bool, String> {
@@ -204,22 +208,8 @@ impl Seat<'_> {
     }
 }
 
-pub fn distribution(authority: &str, channel: &str, marker: &str) -> String {
-    format!(
-        "{}/v1/releases/{channel}/{marker}/distribution.json",
-        authority.trim_end_matches('/')
-    )
-}
-
-pub fn complete(body: Option<Vec<u8>>, marker: &str, commit: &str) -> Result<bool, String> {
-    let Some(body) = body else {
-        return Ok(false);
-    };
-    let document: serde_json::Value = serde_json::from_slice(&body)
-        .map_err(|error| format!("{marker} distribution record does not parse: {error}"))?;
-    Ok(document["marker"] == marker
-        && document["commit"] == commit
-        && document["state"] == "complete")
+pub fn shipped(record: Option<&Distribution>, commit: &str) -> bool {
+    record.is_some_and(|held| held.complete() && held.commit == commit)
 }
 
 pub fn source(spec: &Spec) -> String {

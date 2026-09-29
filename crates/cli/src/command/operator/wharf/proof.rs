@@ -1,4 +1,5 @@
 use super::{next, promoted, reference, repository};
+use plumb::seat::release::Distribution;
 
 const LISTING: &str = "aaa\trefs/heads/release/v0.38.0\nbbb\trefs/tags/v0.38.0-beta.1\nccc\trefs/tags/v0.38.0-beta.1^{}\nddd\trefs/tags/v0.38.0-beta.3\neee\trefs/tags/v0.38.1-beta.9\n";
 
@@ -37,8 +38,12 @@ fn remotes() {
 
 const PROMOTION: &str = "aaa\trefs/heads/release/v0.38.0\nt1\trefs/tags/v0.38.0-beta.15\nbbb\trefs/tags/v0.38.0-beta.15^{}\nt2\trefs/tags/v0.38.0-beta.16\naaa\trefs/tags/v0.38.0-beta.16^{}\nt3\trefs/tags/v0.38.0-beta.17\naaa\trefs/tags/v0.38.0-beta.17^{}\n";
 
-fn record(marker: &str, commit: &str, state: &str) -> Vec<u8> {
-    format!(r#"{{"marker":"{marker}","commit":"{commit}","state":"{state}"}}"#).into_bytes()
+fn record(marker: &str, commit: &str, state: &str) -> Distribution {
+    Distribution::parse(
+        format!(r#"{{"marker":"{marker}","commit":"{commit}","state":"{state}"}}"#).as_bytes(),
+        marker,
+    )
+    .expect("record")
 }
 
 #[test]
@@ -89,11 +94,15 @@ fn preference() {
     assert_eq!(found.as_deref(), Ok("v0.38.0-rc.1"));
 }
 
-fn distributed(run: &str, state: &str, npm: &str) -> Vec<u8> {
-    format!(
-        r#"{{"marker":"v0.43.0","commit":"abcdef0123456789","state":"{state}","attempt":{{"run":"{run}"}},"media":{{"binaries":"published","npm":"{npm}","oci":"none"}}}}"#
+fn distributed(run: &str, state: &str, npm: &str) -> Distribution {
+    Distribution::parse(
+        format!(
+            r#"{{"marker":"v0.43.0","commit":"abcdef0123456789","state":"{state}","attempt":{{"run":"{run}"}},"media":{{"binaries":"published","npm":"{npm}","oci":"none"}}}}"#
+        )
+        .as_bytes(),
+        "v0.43.0",
     )
-    .into_bytes()
+    .expect("record")
 }
 
 #[test]
@@ -127,21 +136,11 @@ fn verdict() {
             .unwrap_err()
             .contains("wrote no distribution record")
     );
-    assert!(
-        verdict(
-            Some(distributed("9", "complete", "published")),
-            "v0.43.1",
-            "9"
-        )
-        .is_err()
-    );
 }
 
 #[test]
 fn public() {
-    use super::status::{public, record};
-    let named =
-        |npm| public(&record(&distributed("9", "incomplete", npm), "v0.43.0").expect("record"));
+    let named = |npm| distributed("9", "incomplete", npm).public();
     assert_eq!(named("failed"), ["binaries"]);
     assert_eq!(named("present"), ["binaries", "npm"]);
     assert_eq!(named("skipped"), ["binaries", "npm"]);
