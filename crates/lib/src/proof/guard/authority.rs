@@ -188,7 +188,7 @@ impl Authority {
 
     #[cfg(feature = "skill")]
     pub(super) fn published(base: &str) -> Result<Self, String> {
-        let pointer = format!("{}/v1/channels/stable.json", base.trim_end_matches('/'));
+        let pointer = crate::seat::release::Authority::at(base).pointer("stable");
         let body = crate::skill::sealed(base).map_err(|error| {
             format!("cannot read Plumb stable Guard authority at {pointer}: {error}")
         })?;

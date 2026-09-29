@@ -75,10 +75,7 @@ impl Line {
             return Ok(Some(commit));
         }
         let authority = super::super::release::authority(&self.root)?;
-        let url = format!(
-            "{}/v1/releases/stable/{version}/seal.json",
-            authority.trim_end_matches('/')
-        );
+        let url = plumb::seat::release::Authority::new(&authority)?.seal("stable", version);
         let Some(body) = plumb::bucket::fetch(&url)? else {
             return Ok(None);
         };

@@ -158,3 +158,18 @@ fn refused() {
             .starts_with("v1.0.0 distribution record does not parse: ")
     );
 }
+
+#[test]
+fn placed() {
+    let placed = Authority::at("http://127.0.0.1:9/");
+    assert_eq!(placed.base(), "http://127.0.0.1:9");
+    assert_eq!(
+        placed.pointer("stable"),
+        "http://127.0.0.1:9/v1/channels/stable.json"
+    );
+    assert_eq!(Authority::at(BASE), authority());
+    assert_eq!(
+        Authority::at(&format!("{BASE}/")).seal("stable", "v1.0.0"),
+        authority().seal("stable", "v1.0.0")
+    );
+}

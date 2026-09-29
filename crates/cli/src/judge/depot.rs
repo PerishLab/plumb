@@ -34,7 +34,7 @@ pub fn runtime() -> Vec<Finding> {
     let releases = plumb::rig::Rig::resolve(None)
         .map(|rig| rig.releases)
         .unwrap_or_else(|_| "https://releases.plumb.perish.uk".to_string());
-    let url = format!("{}/v1/channels/stable.json", releases.trim_end_matches('/'));
+    let url = plumb::seat::release::Authority::at(&releases).pointer("stable");
     let output = Command::new("curl")
         .args([
             "--fail",
