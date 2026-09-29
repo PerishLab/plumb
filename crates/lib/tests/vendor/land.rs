@@ -154,7 +154,7 @@ fn planned() {
     assert!(
         plan.steps
             .iter()
-            .any(|step| step.contains("--merge --match-head-commit")
+            .any(|step| step.contains("--squash --match-head-commit")
                 && step.contains("no branch deleted")),
         "the plan must state that no branch is deleted: {:?}",
         plan.steps

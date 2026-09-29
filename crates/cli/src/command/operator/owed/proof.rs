@@ -105,7 +105,9 @@ fn settlement() {
     );
     git(&work, &["commit", "-q", "--allow-empty", "-m", "base"]);
     git(&work, &["checkout", "-q", "-b", "release/v1.0.0"]);
-    git(&work, &["commit", "-q", "--allow-empty", "-m", "line"]);
+    std::fs::write(work.join("fix.txt"), "fixed\n").expect("fix");
+    git(&work, &["add", "fix.txt"]);
+    git(&work, &["commit", "-q", "-m", "line"]);
     git(&work, &["tag", "-a", "v1.0.0", "-m", "v1.0.0"]);
     git(
         &work,
@@ -131,9 +133,11 @@ fn settlement() {
     let listing = git(&clone, &["ls-remote", "--heads", "--tags", "origin"]);
     assert!(!owed(&listing).expect("readable"));
     git(&work, &["checkout", "-q", "main"]);
+    std::fs::write(work.join("fix.txt"), "fixed\n").expect("fix");
+    git(&work, &["add", "fix.txt"]);
     git(
         &work,
-        &["merge", "-q", "--no-ff", "release/v1.0.0", "-m", "settle"],
+        &["commit", "-q", "-m", "Squash the line's fix into main"],
     );
     git(&work, &["push", "-q", "hub", "main"]);
     let listing = git(&clone, &["ls-remote", "--heads", "--tags", "origin"]);

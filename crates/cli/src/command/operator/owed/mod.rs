@@ -35,7 +35,7 @@ pub const OBLIGATIONS: [Obligation; 5] = [
     },
     Obligation {
         rule: &law::STABLE_REJOIN,
-        name: "its commit merged home into main",
+        name: "its changes held by main",
         settle: &["release", "rejoin"],
         arguments: |_| String::new(),
         applies: |_| true,

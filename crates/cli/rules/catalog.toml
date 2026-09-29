@@ -320,8 +320,8 @@ tags = ["ownership", "release"]
 [[rule]]
 id = "release.stable-rejoin"
 summary = "Stable settles back into main"
-law = "After stable activation a topology-preserving merge makes its published commit an ancestor of main before another stable activation; exact release and ordinary main movement remain independent."
-evidence = "The highest stable marker's commit against main's ancestry: release rejoin settles it with a topology-only merge carrying main's Guard proof, Doctor notes a stable marker main does not yet hold, and release stamp and ship dispatch refuse any later marker until the remote main holds it."
+law = "After stable activation main holds every change its published commit carries before another stable activation, so merging that commit into main leaves main's tree unchanged; ancestry is not required, because main takes only squash merges, and exact release and ordinary main movement remain independent."
+evidence = "The highest stable marker's commit against main's content: one containment check passes when that commit is an ancestor of main or its merge into main writes main's own tree. Release rejoin reports it and names the paths main lacks, Doctor notes a stable marker main does not yet contain, and release open, release stamp and ship dispatch refuse any later marker until the remote main contains it."
 standing = "mechanized"
 owner = "release"
 tags = ["ownership", "release", "state"]
