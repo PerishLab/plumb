@@ -66,10 +66,12 @@ fn capture(path: Vec<String>, held: &mut Vec<u8>) {
     let output = success(&args);
     held.extend_from_slice(path.join(" ").as_bytes());
     held.push(0);
-    held.extend_from_slice(&output.stdout);
+    let stdout = String::from_utf8(output.stdout)
+        .expect("help should be utf8")
+        .replace("\r\n", "\n");
+    held.extend_from_slice(stdout.as_bytes());
     held.push(0);
-    let help = String::from_utf8(output.stdout).expect("help should be utf8");
-    for child in children(&help) {
+    for child in children(&stdout) {
         let mut nested = path.clone();
         nested.push(child);
         capture(nested, held);
@@ -84,10 +86,7 @@ fn command() {
 
     let mut held = Vec::new();
     capture(Vec::new(), &mut held);
-    #[cfg(not(windows))]
-    let expected = "2dd5a2ef9780defdd4ee30d4b4161afd92f80e5da29a1be8533d7b8b86cb9157";
-    #[cfg(windows)]
-    let expected = "829b3c53c773f18152bc9ddbc755a18531c842658358b9417368a3e530292809";
+    let expected = "ec8230882abe4d630677d4314209056a0798ebdfca5c472b2b45d8576ca5b858";
     assert_eq!(digest(&held), expected);
 }
 
