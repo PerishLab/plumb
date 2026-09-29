@@ -155,12 +155,14 @@ impl Landing {
             return Ok(None);
         };
         let held = Repository::open(&seat)?;
-        let output = held.git(&["pull", "--ff-only", "origin", &self.base])?;
-        success(
-            output,
-            "sync",
-            format!("cannot sync {} at {}", self.base, seat.display()),
-        )?;
+        held.fetch()?;
+        let tracking = self.upstream();
+        let target = held.revision(&tracking)?;
+        let expected = crate::integration::Expectation::new(&self.base, tracking, target);
+        let inspected = crate::integration::inspect(&seat, &expected)
+            .map_err(|error| refuse("sync", error.to_string()))?;
+        crate::integration::advance(&seat, &expected, &inspected.checkout.head)
+            .map_err(|error| refuse("sync", error.to_string()))?;
         Ok(Some(seat))
     }
 }

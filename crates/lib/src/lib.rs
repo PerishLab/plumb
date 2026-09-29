@@ -11,6 +11,8 @@ pub mod delivery;
 pub mod fill;
 #[cfg(feature = "vendor")]
 mod forge;
+#[path = "proof/guard/integration/mod.rs"]
+pub mod integration;
 #[cfg(feature = "vendor")]
 pub use forge::land;
 pub use proof::guard::landing;
