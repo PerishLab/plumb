@@ -50,6 +50,7 @@ pub(crate) struct Production {
 pub(crate) enum Image {
     Absent,
     Unread,
+    Placed,
     Held(Plane),
 }
 
