@@ -30,6 +30,27 @@ pub struct Input {
 }
 
 pub fn run(input: Input) -> i32 {
+    let runtime = match super::runtime::Selection::read() {
+        Ok(runtime) => runtime,
+        Err(error) => return super::runtime::refused(&input.root, &error, input.json),
+    };
+    if let Some(runtime) = runtime {
+        if input.base.is_some() || input.head.is_some() || !input.write.is_empty() {
+            return super::runtime::refused(
+                &input.root,
+                "PLUMB_GUARD_STRENGTH and PLUMB_GUARD_BOUNDARY disagree with the explicit --base, --head, or --write boundary",
+                input.json,
+            );
+        }
+        if input.attach.is_some() {
+            return super::runtime::refused(
+                &input.root,
+                "runtime Guard selectors cannot be combined with --attach",
+                input.json,
+            );
+        }
+        return runtime.run(&input.root, input.json);
+    }
     if let Some(message) = &input.attach {
         return plain(
             action::prove(&input.root)
@@ -45,6 +66,10 @@ pub fn run(input: Input) -> i32 {
             1
         }
     }
+}
+
+pub(super) fn prove(root: &Path) -> Result<plumb::guard::Descriptor, String> {
+    action::prove(root)
 }
 
 pub(crate) fn hooks(root: &Path) -> Vec<hook::Finding> {

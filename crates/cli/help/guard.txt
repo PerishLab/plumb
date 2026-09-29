@@ -1,0 +1,16 @@
+Prove the staged tree, exact CI HEAD, or one committed task boundary.
+
+With no runtime selectors, guard keeps its local contract: it proves the staged
+tree for commit attachment, or checks an explicit --base/--head/--write task
+boundary.
+
+For CI, declare both PLUMB_GUARD_STRENGTH=full and
+PLUMB_GUARD_BOUNDARY=head. Full runs every applicable Guard action known by this
+Plumb release. Head requires a clean worktree and proves the exact checked-out
+HEAD commit and tree. Human and --json output bind both selectors, repository,
+commit, tree, Plumb and Depot identities, platform, action inputs, and execution
+worlds into one evidence digest.
+
+Selectors are explicit and provider-neutral. CI, GITHUB_ACTIONS, and other
+provider variables do not select or alter this contract. A partial, unknown, or
+contradictory declaration is refused.
