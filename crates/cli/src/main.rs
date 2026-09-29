@@ -47,7 +47,10 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    #[command(about = "Prove the staged tree, or one committed task boundary")]
+    #[command(
+        about = "Prove the staged tree, exact CI HEAD, or one committed task boundary",
+        long_about = plumb::seat::resource!("help/guard.txt")
+    )]
     Guard {
         #[command(flatten)]
         target: Root,
