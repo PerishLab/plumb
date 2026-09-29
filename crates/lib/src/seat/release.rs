@@ -48,6 +48,12 @@ impl Authority {
         })
     }
 
+    pub fn at(base: &str) -> Self {
+        Self {
+            base: base.trim_end_matches('/').to_string(),
+        }
+    }
+
     pub fn declared(manifest: &str) -> Result<Option<Self>, String> {
         let held: Manifest = toml::from_str(manifest)
             .map_err(|error| format!("cannot parse plumb.toml: {error}"))?;
