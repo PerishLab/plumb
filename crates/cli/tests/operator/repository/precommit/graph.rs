@@ -63,6 +63,8 @@ impl Web {
             std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755))
                 .expect("executable");
         }
+        std::fs::write(held.tools.path().join("corepack"), "#!/bin/sh\nexit 97\n")
+            .expect("refuse package manager mutation");
         held
     }
 
@@ -95,6 +97,8 @@ fn working() {
     let first = fixture.run();
     cache::success(&first);
     let calls = std::fs::read_to_string(fixture.tools.path().join("calls")).expect("calls");
+    assert!(calls.starts_with("install --frozen-lockfile\n"), "{calls}");
+    assert!(!calls.contains("enable"), "{calls}");
     assert!(calls.contains("biome ci ."), "{calls}");
     assert!(calls.contains("--filter staged build"), "{calls}");
     assert!(!calls.contains("unstaged"), "{calls}");
@@ -118,6 +122,30 @@ fn working() {
         after,
         std::fs::read_to_string(fixture.tools.path().join("calls")).expect("calls")
     );
+}
+
+#[test]
+#[cfg(unix)]
+fn standalone() {
+    let fixture = Web::new();
+    let prefix = tempfile::tempdir().expect("standalone package manager prefix");
+    let entry = fixture.tools.path().join("pnpm");
+    let executable = prefix.path().join("pnpm");
+    std::fs::rename(&entry, &executable).expect("separate package manager");
+    std::os::unix::fs::symlink(&executable, &entry).expect("package manager entry");
+    let before = std::fs::read(&executable).expect("original executable");
+    cache::success(&fixture.run());
+    assert_eq!(
+        std::fs::read_link(&entry).expect("retained entry"),
+        executable
+    );
+    assert_eq!(
+        std::fs::read(&executable).expect("retained executable"),
+        before
+    );
+    let calls = std::fs::read_to_string(fixture.tools.path().join("calls")).expect("calls");
+    assert!(calls.starts_with("install --frozen-lockfile\n"), "{calls}");
+    assert!(!calls.contains("enable"), "{calls}");
 }
 
 #[test]
