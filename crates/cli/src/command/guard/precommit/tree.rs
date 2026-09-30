@@ -43,21 +43,23 @@ impl Index {
             .output()
             .map_err(|error| format!("cannot run git to record staged tree: {error}"))?;
         let commit = text(output, "record staged tree")?;
-        let base = plumb::config::value("PLUMB_HOME")
-            .map(PathBuf::from)
-            .or_else(|| plumb::config::data("plumb"))
-            .ok_or_else(|| "cannot stage guard worktree: no PLUMB_HOME".to_string())?
-            .join("tmp");
+        let base = plumb::integration::staging::root()
+            .ok_or_else(|| "cannot stage guard worktree: no PLUMB_HOME".to_string())?;
         std::fs::create_dir_all(&base)
             .map_err(|error| format!("cannot create {}: {error}", base.display()))?;
         let temporary = tempfile::Builder::new()
-            .prefix("guard-")
+            .prefix(plumb::integration::staging::PREFIX)
             .tempdir_in(&base)
             .map_err(|error| format!("cannot reserve guard worktree: {error}"))?;
         let root = temporary.path().to_path_buf();
         temporary
             .close()
             .map_err(|error| format!("cannot prepare guard worktree: {error}"))?;
+        let _ = plumb::config::detached("git")
+            .arg("-C")
+            .arg(source)
+            .args(["worktree", "prune"])
+            .output();
         let output = plumb::config::detached("git")
             .arg("-C")
             .arg(source)

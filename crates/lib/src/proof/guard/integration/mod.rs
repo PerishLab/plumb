@@ -2,6 +2,7 @@ mod inventory;
 mod model;
 mod process;
 mod repo;
+pub mod staging;
 
 pub use model::{Checkout, Expectation, Inspection, Refusal, Relation, Worktree};
 
