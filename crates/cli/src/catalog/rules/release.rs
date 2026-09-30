@@ -16,6 +16,8 @@ rule!(LINE_CLOSED, "release.line-closed");
 
 rule!(MARKER_DISTRIBUTED, "release.marker-distributed");
 
+rule!(MARKER_ORDERED, "release.marker-ordered");
+
 pub fn mechanisms() -> Vec<&'static Mechanism> {
     vec![
         &ATTACHMENT_EXERCISED,
@@ -23,6 +25,7 @@ pub fn mechanisms() -> Vec<&'static Mechanism> {
         &DATUM_RECORDED,
         &LINE_CLOSED,
         &MARKER_DISTRIBUTED,
+        &MARKER_ORDERED,
         &SPEC_DECLARED,
         &STABLE_LODGED,
         &STABLE_REJOIN,

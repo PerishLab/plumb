@@ -31,10 +31,9 @@ fn execute(deed: Deed) -> Result<String, String> {
         Deed::Rejoin => super::operator::rejoin(),
         Deed::Open {
             version,
-            from,
             remote,
             dry,
-        } => super::operator::open(&version, &from, &remote, dry),
+        } => super::operator::open(&version, &remote, dry),
         Deed::Close {
             version,
             abandon,

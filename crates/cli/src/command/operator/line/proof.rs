@@ -1,4 +1,4 @@
-use super::{Line, released, unreleased};
+use super::{Line, released, unreleased, value};
 use crate::shape::release::Spec;
 use std::path::PathBuf;
 
@@ -21,25 +21,21 @@ fn line() -> Line {
 }
 
 #[test]
-fn origins() {
-    let held = line();
-    assert_eq!(held.origin("main", "v1.1.0").as_deref(), Ok("m"));
-    assert_eq!(held.origin("v1.0.0", "v1.0.1").as_deref(), Ok("c1"));
-    assert!(
-        held.origin("v1.0.0", "v1.0.0")
-            .expect_err("same")
-            .contains("opens from below")
-    );
-    assert!(
-        held.origin("v1.1.0-rc.1", "v1.2.0")
-            .expect_err("prerelease")
-            .contains("stable marker")
-    );
-    assert!(
-        held.origin("v0.9.0", "v1.0.0")
-            .expect_err("absent")
-            .contains("holds no stable marker")
-    );
+fn ascent() {
+    let judged = |marker| value::ascends(LISTING, "origin", marker);
+    judged("v1.2.0").expect("a stable above its own prerelease");
+    judged("v1.2.0-rc.2").expect("the next prerelease");
+    judged("v1.2.0-rc.1").expect("the highest marker itself");
+    for lower in ["v1.1.0", "v1.1.1-rc.1", "v1.2.0-beta.1", "v1.0.0"] {
+        let refused = judged(lower).expect_err(lower);
+        assert!(
+            refused.contains("does not exceed v1.2.0-rc.1, the highest marker origin holds"),
+            "{refused}"
+        );
+        assert!(refused.contains("[release.marker-ordered]"), "{refused}");
+    }
+    let stray = format!("{LISTING}x\trefs/tags/nightly\ny\trefs/tags/v9\n");
+    value::ascends(&stray, "origin", "v1.2.0").expect("names that are no version do not count");
 }
 
 #[test]

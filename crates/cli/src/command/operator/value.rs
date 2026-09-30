@@ -1,3 +1,5 @@
+use crate::catalog::rules::release as law;
+use plumb::land::rejoin::tags;
 use semver::Version;
 
 pub fn version(raw: &str, channel: &str) -> Result<String, String> {
@@ -33,6 +35,23 @@ pub fn version(raw: &str, channel: &str) -> Result<String, String> {
         }
     }
     Ok(value)
+}
+
+pub fn ascends(listing: &str, remote: &str, marker: &str) -> Result<(), String> {
+    let read = |name: &str| Version::parse(name.strip_prefix('v')?).ok();
+    let claimed = read(marker).ok_or_else(|| format!("invalid exact version: {marker}"))?;
+    let highest = tags(listing)
+        .into_iter()
+        .filter(|(name, _)| *name != marker)
+        .filter_map(|(name, _)| Some((read(name)?, name)))
+        .max_by(|left, right| left.0.cmp(&right.0));
+    match highest {
+        Some((held, name)) if held >= claimed => Err(format!(
+            "{marker} does not exceed {name}, the highest marker {remote} holds; a release version only ascends [{}]",
+            law::MARKER_ORDERED.0
+        )),
+        _ => Ok(()),
+    }
 }
 
 pub fn exact(channel: &str) -> Result<(), String> {

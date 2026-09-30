@@ -38,6 +38,7 @@ pub(in crate::command) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<St
         "list the remote",
         git(&root, &["ls-remote", "--heads", "--tags", remote])?,
     )?;
+    value::ascends(&listing, remote, &version)?;
     let spec = crate::shape::release::Spec::controller(&root)?;
     super::owed::Seat {
         root: &root,
@@ -171,6 +172,7 @@ pub(super) fn dispatch(options: Dispatch) -> Result<String, String> {
     if reference(&listing, &format!("refs/tags/{}", options.marker)).is_none() {
         return Err(format!("{repo} has no marker {}", options.marker));
     }
+    value::ascends(&listing, "origin", &options.marker)?;
     let spec = crate::shape::release::Spec::controller(&root)?;
     super::owed::Seat {
         root: &root,
