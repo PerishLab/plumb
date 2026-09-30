@@ -4,6 +4,13 @@ With no runtime selectors, guard keeps its local contract: it proves the staged
 tree for commit attachment, or checks an explicit --base/--head/--write task
 boundary.
 
+After a caller-directed rebase or other base movement, --refresh requires a
+clean topic branch, proves its exact HEAD tree, and replaces that HEAD commit
+with the same tree, parents, narrative and identity carrying the fresh standard
+Guard proof. It adds no narrative commit. HEAD movement during proof, detached
+HEAD, a dirty worktree, or tree disagreement is refused. Existing delivery
+consumers read the refreshed commit through the ordinary Guard trailer.
+
 For CI, declare both PLUMB_GUARD_STRENGTH=full and
 PLUMB_GUARD_BOUNDARY=head. Full runs every applicable Guard action known by this
 Plumb release. Head requires a clean worktree and proves the exact checked-out
