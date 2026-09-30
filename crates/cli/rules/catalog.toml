@@ -282,6 +282,15 @@ owner = "plumb"
 tags = ["cargo", "repository"]
 
 [[rule]]
+id = "env.immutable-ci-container"
+summary = "CI uses immutable containers"
+law = "A repository-local CI container reference is content-addressed with a lowercase SHA-256 digest."
+evidence = "The container image reference in a GitHub or Forgejo workflow."
+standing = "mechanized"
+owner = "plumb"
+tags = ["configuration", "repository"]
+
+[[rule]]
 id = "release.attachment-exercised"
 summary = "Unexercised width stays visible"
 law = "The width a product declares is reported against the width this skeleton has actually released, so a path no release has ever run says so instead of passing as proven."
