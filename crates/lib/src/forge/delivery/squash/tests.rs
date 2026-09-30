@@ -141,7 +141,7 @@ fn moved() {
     let refusal = landed(repo.root(), &repo.candidate, &head).expect_err("moved");
     assert_eq!(refusal.kind, "moved", "{}", refusal.message);
     assert!(
-        refusal.message.contains("no Guard proved")
+        refusal.message.contains("verify what main holds")
             && refusal.message.contains(&other)
             && refusal.message.contains(&repo.base),
         "{}",
