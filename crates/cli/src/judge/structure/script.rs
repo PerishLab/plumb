@@ -21,5 +21,20 @@ pub fn judge(evidence: &Evidence) -> Found {
             format!("test {test} sits outside {seat}"),
         ));
     }
+    for (tool, version, held) in &evidence.engines {
+        let seen = held.as_deref().unwrap_or("missing");
+        found.push(wrong(
+            &rule::ENGINE_DOMAIN_EXACT,
+            format!("package.json engines.{tool} is {seen}; declare exactly {version:?}"),
+        ));
+    }
+    if let Some(held) = &evidence.manager {
+        found.push(wrong(
+            &rule::PACKAGE_MANAGER_ABSENT,
+            format!(
+                "package.json declares packageManager {held}; remove it and declare exact engines"
+            ),
+        ));
+    }
     found
 }
