@@ -167,20 +167,30 @@ fn edition() {
 #[test]
 fn container() {
     let dir = std::env::temp_dir().join("plumb-container");
-    std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
+    std::fs::create_dir_all(dir.join(".github/workflows")).expect("fixture should be made");
     govern(&dir);
-    let lane = dir.join(".forgejo/workflows/guard.yml");
+    let lane = dir.join(".github/workflows/guard.yml");
 
-    std::fs::write(&lane, "container: mirror.perish.lan/ci/deno:20260716-abc\n")
+    std::fs::write(
+        &lane,
+        "jobs:\n  guard:\n    container:\n      image: ghcr.io/perishlab/images@sha256:35d8fa77f3596fc405bf0e931d71cf41d1c43b4444741f870083ec9c4613aaa7\n",
+    )
         .expect("lane should be written");
-    let pin = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    assert!(!pin.contains("CI container pinned to a tag"), "{pin}");
+    let digest = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(!digest.contains("is not pinned to @sha256"), "{digest}");
 
-    std::fs::write(&lane, "container: mirror.perish.lan/ci/deno\n")
+    std::fs::write(&lane, "container: ghcr.io/perishlab/images:stable\n")
         .expect("lane should be written");
-    let bare = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    let tag = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(tag.contains("is not pinned to @sha256"), "{tag}");
+
+    std::fs::write(&lane, "container: ghcr.io/perishlab/images\n").expect("lane should be written");
+    let unqualified = run(&["doctor", dir.to_str().expect("path should be utf8")]);
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(!bare.contains("CI container pinned"), "{bare}");
+    assert!(
+        unqualified.contains("is not pinned to @sha256"),
+        "{unqualified}"
+    );
 }
 
 #[test]

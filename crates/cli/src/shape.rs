@@ -32,6 +32,7 @@ pub struct Shape {
     pub components: bool,
     pub rust: bool,
     pub runseal: bool,
+    pub containers: Vec<(String, String)>,
     pub edition: Option<String>,
     pub binary: bool,
     pub clap: bool,
@@ -202,7 +203,7 @@ pub fn capture(
         }
     }
     let held = layout::read(root, snapshot.as_ref());
-    let lanes = lane::read(root).names();
+    let lanes = lane::read(root);
     let paired = pair::Root(root);
     let release = paired.release();
     let ships = release.attachments.clone();
@@ -221,7 +222,7 @@ pub fn capture(
         grants,
         laws: laws.exists(),
         unread,
-        lanes,
+        lanes: lanes.names(),
         release,
         ships,
         sites: paired.sites(),
@@ -230,6 +231,7 @@ pub fn capture(
         components: root.join("packages/components").is_dir(),
         rust: root.join("Cargo.toml").exists(),
         runseal: root.join("runseal.toml").is_file() || root.join(".runseal").is_dir(),
+        containers: lanes.containers(),
         edition: seat.edition(),
         binary: seat.binary(),
         clap: seat.manifests().iter().any(|text| {
