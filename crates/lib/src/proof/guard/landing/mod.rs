@@ -88,6 +88,10 @@ impl Request<'_> {
 }
 
 impl Inspection {
+    pub(crate) fn draft(self) -> Draft {
+        self.0
+    }
+
     pub fn root(&self) -> &Path {
         &self.0.landing.repo.root
     }
