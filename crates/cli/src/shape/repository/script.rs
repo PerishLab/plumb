@@ -1,9 +1,13 @@
 use serde_json::Value as Json;
 use std::path::Path;
 
+pub const DOMAIN: [(&str, &str); 2] = [("node", "24.18.0"), ("pnpm", "11.13.0")];
+
 pub struct Evidence {
     pub exports: Vec<(String, String, String)>,
     pub tests: Vec<(String, String)>,
+    pub engines: Vec<(&'static str, &'static str, Option<String>)>,
+    pub manager: Option<String>,
 }
 
 const SUFFIXES: [&str; 4] = [".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx"];
@@ -15,9 +19,14 @@ pub fn read(
     snapshot: Result<&plumb::snapshot::Snapshot, &plumb::snapshot::Refusal>,
 ) -> Evidence {
     let seat = Script(root);
+    let manifest = declared(&root.join("package.json"));
     Evidence {
         exports: seat.exports(),
         tests: snapshot.map(|held| seat.tests(held)).unwrap_or_default(),
+        engines: manifest.as_ref().map(engines).unwrap_or_default(),
+        manager: manifest
+            .as_ref()
+            .and_then(|doc| doc.get("packageManager").map(Json::to_string)),
     }
 }
 
@@ -82,10 +91,24 @@ fn anchored(dir: &Path) -> bool {
     ANCHORS.iter().any(|name| dir.join(name).is_file())
 }
 
-fn exported(path: &Path) -> Option<Json> {
+fn declared(path: &Path) -> Option<Json> {
     let text = std::fs::read_to_string(path).ok()?;
-    let mut doc = serde_json::from_str::<Json>(&text).ok()?;
-    doc.get_mut("exports").map(Json::take)
+    serde_json::from_str::<Json>(&text).ok()
+}
+
+fn exported(path: &Path) -> Option<Json> {
+    declared(path)?.get_mut("exports").map(Json::take)
+}
+
+fn engines(doc: &Json) -> Vec<(&'static str, &'static str, Option<String>)> {
+    let mut found = Vec::new();
+    for (tool, version) in DOMAIN {
+        let held = doc.pointer(&format!("/engines/{tool}"));
+        if held.and_then(Json::as_str) != Some(version) {
+            found.push((tool, version, held.map(Json::to_string)));
+        }
+    }
+    found
 }
 
 fn walk(value: &Json, key: &str, visit: &mut dyn FnMut(&str, &str)) {

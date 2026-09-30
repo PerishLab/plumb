@@ -471,6 +471,15 @@ owner = "ectropy"
 tags = ["ectropy", "repository"]
 
 [[rule]]
+id = "structure.engine-domain-exact"
+summary = "Root engines declare the domain Node and pnpm versions"
+law = "A root package.json declares engines.node and engines.pnpm as exactly the domain versions Plumb carries: one exact x.y.z each, no range, no omission. The domain runs one Node and one pnpm, so a repository that declares another version, or none, resolves different tools on a developer machine, in Guard and at release."
+evidence = "engines.node and engines.pnpm in the root package.json against the domain versions carried in Plumb's source."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
 id = "structure.known-directory"
 summary = "Top-level directories have a known role"
 law = "Every top-level directory sits in a declared seat, or has a shadow in the skeleton where no layout is declared."
@@ -502,6 +511,15 @@ id = "structure.package-directory-name"
 summary = "Package directory matches package name"
 law = "The final package name segment matches its directory under packages/."
 evidence = "Package manifest names and their directory seats."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
+id = "structure.package-manager-absent"
+summary = "No packageManager field at the root"
+law = "A root package.json declares no packageManager field. The field selects a package manager through corepack, which the domain does not use; exact engines are the only declaration."
+evidence = "The packageManager field of the root package.json."
 standing = "mechanized"
 owner = "plumb"
 tags = ["repository"]
