@@ -62,6 +62,8 @@ enum Command {
         write: Vec<String>,
         #[arg(long, hide = true, conflicts_with_all = ["base", "head", "write"])]
         attach: Option<PathBuf>,
+        #[arg(long, conflicts_with_all = ["base", "head", "write", "attach"])]
+        refresh: bool,
         #[arg(long)]
         json: bool,
     },
@@ -183,6 +185,7 @@ fn execute(command: Command) -> i32 {
             head,
             write,
             attach,
+            refresh,
             json,
         } => command::precommit::run(command::precommit::Input {
             root: PathBuf::from(target.root),
@@ -190,6 +193,7 @@ fn execute(command: Command) -> i32 {
             head,
             write,
             attach,
+            refresh,
             json,
         }),
         Command::Radius {
