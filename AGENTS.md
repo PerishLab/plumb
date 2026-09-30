@@ -1,5 +1,10 @@
 # Agents
 
+Read the canonical [PerishLab delivery governance](https://github.com/PerishLab/.github/blob/main/GOVERNANCE.md)
+at work start and again before delivery or Issue closure. That document owns
+organization-wide Issue, pull-request and acceptance policy; this file keeps
+repository-specific constraints without copying that policy.
+
 This repository is the workshop's living skeleton. `ectropy .` must print
 `clean` before anything lands, and CI runs the complete repository guard in
 explicit fail-fast order. Ectropy has one severity: every finding is an error.
