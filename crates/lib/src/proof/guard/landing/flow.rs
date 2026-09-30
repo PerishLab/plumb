@@ -152,11 +152,15 @@ impl Draft {
     pub fn candidate(&self, proof: &Descriptor) -> Result<String, Refusal> {
         let token = proof.encode().map_err(|error| refuse("guard", error))?;
         let message = self.message(&token);
+        self.record(&message)
+    }
+
+    pub(crate) fn record(&self, message: &str) -> Result<String, Refusal> {
         let identity = self.identity()?;
         self.landing.repo.record(&Seed {
             tree: &self.tree,
             parents: &[&self.target],
-            message: &message,
+            message,
             identity: &identity,
         })
     }

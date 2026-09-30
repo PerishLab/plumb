@@ -54,6 +54,12 @@ answers for.
   pull declarations under released Guard authority, and holds the one squash
   merge contract and its readback that `land` and Concord both run. It has no
   provider client: callers run its argument vector through their own command.
+  Its distinct native-gate API accepts an explicit caller-owned verifier only
+  for a source and base without Plumb governance. It binds native evidence to
+  the exact source tree, re-executes the verifier during revalidation, and
+  shares topology, candidate construction and squash readback with Guarded
+  delivery. The caller owns native authority admission and gate policy; no
+  Plumb CLI switches to native delivery on a missing or invalid Guard proof.
   It is consumed by Concord. Plumb carries no Issue observation or Issue-aware
   pull adapter; repository-only `land` remains a separate explicit surface.
 - `crates/cli/{rules,assets,cookbook,help}` — Plumb's governed resources,
