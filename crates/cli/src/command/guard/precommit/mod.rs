@@ -26,6 +26,7 @@ pub struct Input {
     pub head: Option<String>,
     pub write: Vec<String>,
     pub attach: Option<PathBuf>,
+    pub refresh: bool,
     pub json: bool,
 }
 
@@ -42,10 +43,10 @@ pub fn run(input: Input) -> i32 {
                 input.json,
             );
         }
-        if input.attach.is_some() {
+        if input.attach.is_some() || input.refresh {
             return super::runtime::refused(
                 &input.root,
-                "runtime Guard selectors cannot be combined with --attach",
+                "runtime Guard selectors cannot be combined with --attach or --refresh",
                 input.json,
             );
         }
@@ -57,6 +58,9 @@ pub fn run(input: Input) -> i32 {
                 .and_then(|_| plumb::guard::attach(&input.root, message))
                 .map(|proof| format!("attached guard proof {} for {}", proof.digest, proof.tree)),
         );
+    }
+    if input.refresh {
+        return branch::refresh(&input.root, input.json);
     }
     match (&input.base, &input.head) {
         (Some(base), Some(head)) => boundary(&input, base, head),
