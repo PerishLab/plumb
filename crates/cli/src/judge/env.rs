@@ -17,5 +17,26 @@ pub fn judge(held: &shape::Shape) -> Found {
             ),
         ));
     }
+    for (path, image) in &held.containers {
+        if !immutable(image) {
+            found.push(wrong(
+                &rule::IMMUTABLE_CI_CONTAINER,
+                format!(
+                    "CI container {image} in {path} is not pinned to @sha256:<64 lowercase hex>"
+                ),
+            ));
+        }
+    }
     found
+}
+
+fn immutable(image: &str) -> bool {
+    let Some((name, digest)) = image.rsplit_once("@sha256:") else {
+        return false;
+    };
+    !name.is_empty()
+        && digest.len() == 64
+        && digest
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
