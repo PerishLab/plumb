@@ -116,6 +116,18 @@ fn linked() {
     assert!(install.status.success());
     assert!(repository.join("hooks/pre-commit").is_file());
 
+    let stale = fixture.path().join("stale");
+    let add = Command::new("git")
+        .arg("-C")
+        .arg(&repository)
+        .args(["worktree", "add", "-q", "--detach"])
+        .arg(&stale)
+        .arg("main")
+        .output()
+        .expect("stale worktree");
+    assert!(add.status.success());
+    std::fs::remove_dir_all(&stale).expect("abandon stale worktree");
+
     let before = state(&repository);
     std::fs::write(
         worktree.join("src/lib.rs"),
@@ -157,6 +169,8 @@ fn linked() {
     );
     assert!(String::from_utf8_lossy(&commit.stderr).contains("guard guard/test"));
     plumb::guard::commit(&worktree, "HEAD").expect("committed proof");
+    let listed = Repo::git(&repository, &["worktree", "list", "--porcelain"]);
+    assert!(!String::from_utf8_lossy(&listed.stdout).contains(stale.to_str().expect("stale")));
     assert_eq!(state(&repository), before);
     let tags = Repo::git(&repository, &["tag", "-l"]);
     assert!(tags.stdout.is_empty());

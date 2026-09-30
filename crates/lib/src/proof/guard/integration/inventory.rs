@@ -1,4 +1,4 @@
-use super::{Refusal, Worktree};
+use super::{Refusal, Worktree, staging};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -20,7 +20,13 @@ pub fn list(root: &Path) -> Result<Vec<Worktree>, Refusal> {
             String::from_utf8_lossy(&output.stderr).trim(),
         ));
     }
-    Ok(parse(&String::from_utf8_lossy(&output.stdout)))
+    let mut found = parse(&String::from_utf8_lossy(&output.stdout));
+    if let Some(root) = staging::root() {
+        for worktree in &mut found {
+            worktree.staging = staging::contains(&root, &worktree.path);
+        }
+    }
+    Ok(found)
 }
 
 fn parse(text: &str) -> Vec<Worktree> {
@@ -45,6 +51,7 @@ fn parse(text: &str) -> Vec<Worktree> {
                 detached: false,
                 locked: false,
                 prunable: false,
+                staging: false,
             });
             continue;
         }

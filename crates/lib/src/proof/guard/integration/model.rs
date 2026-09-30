@@ -51,6 +51,7 @@ pub struct Worktree {
     pub detached: bool,
     pub locked: bool,
     pub prunable: bool,
+    pub staging: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
