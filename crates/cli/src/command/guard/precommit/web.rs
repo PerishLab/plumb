@@ -1,10 +1,11 @@
 use super::super::workflow::tree::Tree;
 
 pub(super) fn commands(tree: &Tree) -> Result<Vec<Vec<String>>, String> {
-    let mut held = vec![
-        vec!["corepack".into(), "enable".into()],
-        vec!["pnpm".into(), "install".into(), "--frozen-lockfile".into()],
-    ];
+    let mut held = vec![vec![
+        "pnpm".into(),
+        "install".into(),
+        "--frozen-lockfile".into(),
+    ]];
     if tree.has("biome.json") {
         held.push(vec!["pnpm".into(), "biome".into(), "ci".into(), ".".into()]);
     }
