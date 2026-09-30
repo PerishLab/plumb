@@ -345,6 +345,15 @@ owner = "release"
 tags = ["release", "state"]
 
 [[rule]]
+id = "release.marker-ordered"
+summary = "Release versions only ascend"
+law = "Every marker of a product, stable or prerelease, exceeds every marker the product already holds, so a higher version always names a later release. A fix for an older release ships as the next higher version; no line is cut from a lower stable marker."
+evidence = "The markers the remote holds when the verb runs: release open refuses a version, and release stamp and ship dispatch refuse a marker, that does not exceed the highest of them, and the refusal names that marker."
+standing = "mechanized"
+owner = "release"
+tags = ["release", "state"]
+
+[[rule]]
 id = "release.line-closed"
 summary = "A released line is closed"
 law = "Once its stable marker ships and main holds it, a release line is deleted; the marker keeps its history, and a line that never reached stable closes only as abandoned."

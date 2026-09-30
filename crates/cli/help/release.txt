@@ -20,13 +20,19 @@ whose changes main lacks, and the remedy is to land the release line's changes
 into main.
 
 A release line is release/vX.Y.Z and carries one version. Open cuts it from
-main, or from a lower stable marker for a fix that ships on its own; a version
-that stands as stable never reopens. Close deletes a line once its stable
-marker is home and deleting it loses nothing: its head must be main's or a
-marker's, and the markers keep its history. A version counts as released when
-its stable marker stands or the release authority holds its stable seal, as
-lines stamped before stable markers were tags do. A line that never reached
-stable closes only with --abandon.
+main; a version that stands as stable never reopens. Close deletes a line once
+its stable marker is home and deleting it loses nothing: its head must be
+main's or a marker's, and the markers keep its history. A version counts as
+released when its stable marker stands or the release authority holds its
+stable seal, as lines stamped before stable markers were tags do. A line that
+never reached stable closes only with --abandon.
+
+Release versions only ascend: a higher version always names a later release.
+Open refuses a version, and stamp and ship dispatch refuse a marker, unless it
+exceeds every other marker origin holds when they run, stable or prerelease,
+and the refusal names the highest of them. A marker published after a line
+opened therefore still refuses a lower one. A fix for an older release ships
+as the next higher version; no line is cut from a lower stable marker.
 
 A stable marker leaves obligations behind: its distribution completed, its
 changes held by main, its changelog lodged on Depot, its skill where

@@ -10,7 +10,8 @@ every declared medium, and records the run.
 Dispatch runs in the product's repository, whose origin names the repository
 it dispatches; --repo, when given, must name that same origin. It refuses while
 the highest stable marker below the one it dispatches still owes anything, as
-stamp does; plumb release --help names those obligations.
+stamp does; plumb release --help names those obligations. It refuses a marker
+once origin holds a higher one, since release versions only ascend.
 
 How far a marker is distributed is what wharf's distribution.json beside its
 seal says, and nothing else: it names the marker's commit, what became of each

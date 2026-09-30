@@ -6,8 +6,6 @@ use crate::shape::release::Spec;
 use plumb::land::rejoin::tags;
 use std::path::PathBuf;
 
-const MAIN: &str = "main";
-
 struct Line {
     root: PathBuf,
     remote: String,
@@ -50,26 +48,6 @@ impl Line {
             .find_map(|(held, commit)| (held == name).then(|| commit.to_string()))
     }
 
-    fn origin(&self, from: &str, version: &str) -> Result<String, String> {
-        if from == MAIN {
-            return reference(&self.listing, "refs/heads/main")
-                .ok_or_else(|| format!("{} has no main to open a line from", self.remote));
-        }
-        let floor = semver::Version::parse(from.trim_start_matches('v'))
-            .ok()
-            .filter(|held| held.pre.is_empty())
-            .ok_or_else(|| format!("--from takes main or a stable marker, not {from}"))?;
-        let ceiling = semver::Version::parse(version.trim_start_matches('v'))
-            .map_err(|error| format!("invalid version {version}: {error}"))?;
-        if floor >= ceiling {
-            return Err(format!(
-                "a line for {version} opens from below it, not from {from}"
-            ));
-        }
-        self.marked(from)
-            .ok_or_else(|| format!("{} holds no stable marker {from}", self.remote))
-    }
-
     fn released(&self, version: &str) -> Result<Option<String>, String> {
         if let Some(commit) = self.marked(version) {
             return Ok(Some(commit));
@@ -107,12 +85,7 @@ impl Line {
     }
 }
 
-pub(in crate::command) fn open(
-    raw: &str,
-    from: &str,
-    remote: &str,
-    dry: bool,
-) -> Result<String, String> {
+pub(in crate::command) fn open(raw: &str, remote: &str, dry: bool) -> Result<String, String> {
     let version = value::version(&named(raw), "stable")?;
     let branch = value::branch(&version);
     let line = Line::read(remote)?;
@@ -124,16 +97,14 @@ pub(in crate::command) fn open(
             "{version} already stands as stable; a released line never reopens"
         ));
     }
+    value::ascends(&line.listing, remote, &version)?;
     line.seat().require(&version)?;
-    let head = line.origin(from, &version)?;
-    let source = if from == MAIN {
-        "refs/heads/main".to_string()
-    } else {
-        format!("refs/tags/{from}")
-    };
+    let source = "refs/heads/main";
+    let head = reference(&line.listing, source)
+        .ok_or_else(|| format!("{remote} has no main to open a line from"))?;
     let mut course = Course::new(dry);
     course.step(format!("git fetch {remote} {source}"), || {
-        line.fetch(&source)
+        line.fetch(source)
     })?;
     course.step(
         format!("git push {remote} {head}:refs/heads/{branch}"),
@@ -150,7 +121,7 @@ pub(in crate::command) fn open(
     if course.dry() {
         return Ok(course.plan());
     }
-    Ok(format!("opened {branch} at {head} from {from}"))
+    Ok(format!("opened {branch} at {head} from main"))
 }
 
 pub(in crate::command) fn close(

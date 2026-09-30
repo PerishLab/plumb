@@ -22,8 +22,6 @@ pub enum Deed {
     Open {
         #[arg(long)]
         version: String,
-        #[arg(long, default_value = "main")]
-        from: String,
         #[arg(long, default_value = "origin")]
         remote: String,
         #[arg(long = "dry-run")]
