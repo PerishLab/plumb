@@ -212,3 +212,33 @@ fn readback() {
     );
     assert!(super::landed(repo.root(), &plan.candidate, &moved).is_err());
 }
+
+#[test]
+fn retired() {
+    let repo = Repo::new();
+    let plan = plan(&repo, &Check::new("ok"));
+    let message = git(repo.root(), &["log", "-1", "--format=%B", &plan.candidate]);
+    let head = repo.merge(&plan.candidate, &message);
+    let held = super::landed(repo.root(), &plan.candidate, &head).expect("native readback");
+    let origin = tempfile::tempdir().expect("origin");
+    let bare = origin.path().to_str().expect("utf8");
+    git(origin.path(), &["init", "-q", "--bare"]);
+    git(repo.root(), &["remote", "add", "origin", bare]);
+    let projection = format!("{}:refs/heads/land/topic", plan.candidate);
+    git(repo.root(), &["push", "-q", "origin", "topic", &projection]);
+    let pushed = [
+        crate::delivery::Pushed {
+            branch: "land/topic".into(),
+            head: plan.candidate.clone(),
+        },
+        crate::delivery::Pushed {
+            branch: "topic".into(),
+            head: plan.source.clone(),
+        },
+    ];
+    let retired = held.retire(repo.root(), "origin", &pushed);
+    assert_eq!(retired.deleted, ["land/topic", "topic"]);
+    assert!(retired.kept.is_empty(), "{:?}", retired.kept);
+    assert!(git(repo.root(), &["ls-remote", "--heads", "origin"]).is_empty());
+    assert_eq!(git(repo.root(), &["branch", "--list", "topic"]), "");
+}

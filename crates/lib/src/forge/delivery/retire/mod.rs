@@ -35,16 +35,23 @@ pub struct Delivered<'a> {
 
 pub fn retired(delivered: &Delivered<'_>, pushed: &[Pushed]) -> Result<(Landed, Retired), Refusal> {
     let held = landed(delivered.root, delivered.candidate, delivered.head)?;
-    let mut retired = Retired::default();
-    for branch in pushed {
-        Seat {
-            root: delivered.root,
-            remote: delivered.remote,
-            pushed: branch,
-        }
-        .retire(&mut retired);
-    }
+    let retired = held.retire(delivered.root, delivered.remote, pushed);
     Ok((held, retired))
+}
+
+impl Landed {
+    pub fn retire(&self, root: &Path, remote: &str, pushed: &[Pushed]) -> Retired {
+        let mut retired = Retired::default();
+        for branch in pushed {
+            Seat {
+                root,
+                remote,
+                pushed: branch,
+            }
+            .retire(&mut retired);
+        }
+        retired
+    }
 }
 
 struct Seat<'a> {
