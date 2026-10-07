@@ -120,6 +120,22 @@ fn execution() {
 }
 
 #[test]
+fn homes() {
+    let values = [
+        ("RUSTUP_HOME", "/usr/local/rustup"),
+        ("CARGO_HOME", "/usr/local/cargo"),
+        ("PATH", "/usr/bin"),
+    ]
+    .map(|(key, value)| (key.into(), value.into()));
+    let held = config::contract("probe")
+        .expect("probe contract")
+        .capture(values)
+        .expect("environment");
+    assert_eq!(held.get("RUSTUP_HOME"), Some("/usr/local/rustup"));
+    assert_eq!(held.get("CARGO_HOME"), Some("/usr/local/cargo"));
+}
+
+#[test]
 fn contract() {
     for text in [
         "inherit = ['PUBLIC']\nmanaged = ['PUBLIC']\nreject = []\n",

@@ -46,7 +46,7 @@ const PNPM: Held = Held {
 };
 
 const PROBE: Held = Held {
-    inherit: &["PLUMB_HOME"],
+    inherit: &["PLUMB_HOME", "CARGO_HOME", "RUSTUP_HOME"],
     managed: &[],
     reject: &["LD_PRELOAD", "DYLD_*"],
 };
