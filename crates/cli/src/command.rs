@@ -21,6 +21,7 @@ impl crate::Command {
             crate::Command::Changelog { .. } => "changelog",
             crate::Command::Configuration { .. } => "configuration",
             crate::Command::Layout { .. } => "layout",
+            crate::Command::Metadata { .. } => "metadata",
             crate::Command::Cookbook { .. } => "cookbook",
             crate::Command::Affirm { .. } => "affirm",
             crate::Command::Release { .. } => "release",

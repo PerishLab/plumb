@@ -1,12 +1,16 @@
 use super::Command;
 
 pub mod configuration;
+pub mod metadata;
 pub mod skill;
 
 pub fn prepare(command: &Command) -> Result<(), String> {
     if matches!(
         command,
-        Command::Configuration { .. } | Command::Release { .. } | Command::Ship { .. }
+        Command::Configuration { .. }
+            | Command::Metadata { .. }
+            | Command::Release { .. }
+            | Command::Ship { .. }
     ) {
         return Ok(());
     }
