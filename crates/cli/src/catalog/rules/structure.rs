@@ -36,6 +36,8 @@ rule!(CARGO_TARGET_IGNORED, "structure.cargo-target-ignored");
 rule!(SOURCE_EXPORT_EXPLICIT, "structure.source-export-explicit");
 rule!(TEST_UNDER_TESTS, "structure.test-under-tests");
 rule!(PACKAGE_MANAGER_ABSENT, "structure.package-manager-absent");
+rule!(ENGINES_ABSENT, "structure.engines-absent");
+rule!(TOOLCHAIN_FILE_ABSENT, "structure.toolchain-file-absent");
 #[rustfmt::skip]
 pub fn mechanisms() -> Vec<&'static Mechanism> {
     vec![
@@ -49,6 +51,6 @@ pub fn mechanisms() -> Vec<&'static Mechanism> {
         &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
         &RESERVED_COMPONENTS_SEAT,
         &RETIRED_SEAT_ABSENT, &SOURCE_EXPORT_EXPLICIT, &TEST_UNDER_TESTS,
-        &PACKAGE_MANAGER_ABSENT,
+        &PACKAGE_MANAGER_ABSENT, &ENGINES_ABSENT, &TOOLCHAIN_FILE_ABSENT,
     ]
 }

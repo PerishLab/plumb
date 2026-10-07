@@ -197,13 +197,12 @@ fn leaf(list: &[toml::Value], name: &str) -> Result<Vec<String>, String> {
         .collect()
 }
 
-const CARGO: [&str; 7] = [
+const CARGO: [&str; 6] = [
     ".cargo",
     "Cargo.lock",
     "Cargo.toml",
     "clippy.toml",
     "crates",
-    "rust-toolchain.toml",
     "rustfmt.toml",
 ];
 
