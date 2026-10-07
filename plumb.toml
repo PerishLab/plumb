@@ -37,8 +37,8 @@ path = ".cargo"
 note = "The cargo namespace."
 
 [[layout.file]]
-name = ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml"]
-note = "Workspace anchors. The toolchain file pins the exact Rust wharf builds with."
+name = ["Cargo.toml", "Cargo.lock"]
+note = "Workspace anchors."
 
 [[layout.file]]
 name = ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "biome.json", ".npmrc"]
