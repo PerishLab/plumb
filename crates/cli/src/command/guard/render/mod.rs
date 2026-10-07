@@ -38,7 +38,8 @@ impl Seat {
                 println!("  the depot carries no release note for {stamped}");
                 println!();
                 println!(
-                    "  prepare one in a temporary directory and run plumb depot changelog --marker {stamped} --from <path>"
+                    "  prepare one in a temporary directory and run {}",
+                    consign(&stamped)
                 );
                 1
             }
@@ -207,3 +208,10 @@ fn changelog(
         kind: plumb::depot::v3::Kind::Changelog,
     })
 }
+
+fn consign(version: &str) -> String {
+    format!("plumb depot consign --version {version} --kind changelog --dir <path>")
+}
+
+#[cfg(test)]
+mod proof;
