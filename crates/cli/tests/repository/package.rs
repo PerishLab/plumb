@@ -82,11 +82,11 @@ fn engines() {
         let out = doctor(root.path());
         assert_eq!(out.contains(ENGINES), engines, "{manifest}: {out}");
         assert_eq!(out.contains(MANAGER), manager, "{manifest}: {out}");
-        assert_eq!(
-            out.contains(COOKBOOK),
-            engines || manager,
-            "{manifest}: {out}"
-        );
+        for marker in [ENGINES, MANAGER] {
+            for line in out.lines().filter(|line| line.contains(marker)) {
+                assert!(line.contains(COOKBOOK), "{manifest}: {line}");
+            }
+        }
     }
 }
 
@@ -105,9 +105,12 @@ fn pins() {
     git(root.path(), &["add", "."]);
     let out = doctor(root.path());
     for path in ["rust-toolchain.toml", "crates/tool/rust-toolchain"] {
-        assert!(out.contains(&format!("{path} {PIN}")), "{out}");
+        let line = out
+            .lines()
+            .find(|line| line.contains(&format!("{path} {PIN}")))
+            .unwrap_or_else(|| panic!("{path} is not refused: {out}"));
+        assert!(line.contains(COOKBOOK), "{line}");
     }
-    assert!(out.contains(COOKBOOK), "{out}");
 }
 
 fn specimen() -> tempfile::TempDir {
