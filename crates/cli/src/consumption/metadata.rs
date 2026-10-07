@@ -4,6 +4,19 @@ pub const VERSIONS: [(&str, &str); 3] = [
     ("rust.version", "1.96.1"),
 ];
 
+pub fn expected(tool: &str) -> Option<&'static str> {
+    let key = match tool {
+        "cargo" | "rustc" => "rust.version",
+        "node" => "node.version",
+        "pnpm" => "pnpm.version",
+        _ => return None,
+    };
+    VERSIONS
+        .iter()
+        .find(|(name, _)| *name == key)
+        .map(|(_, version)| *version)
+}
+
 pub fn run(key: Option<String>, json: bool) -> i32 {
     if json {
         let held: serde_json::Map<String, serde_json::Value> = VERSIONS

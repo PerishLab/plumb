@@ -177,20 +177,27 @@ fn container() {
     )
         .expect("lane should be written");
     let digest = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    assert!(!digest.contains("is not pinned to @sha256"), "{digest}");
+    assert!(digest.contains("nor pinned to @sha256"), "{digest}");
 
-    std::fs::write(&lane, "container: ghcr.io/perishlab/images:stable\n")
-        .expect("lane should be written");
-    let tag = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    assert!(tag.contains("is not pinned to @sha256"), "{tag}");
-
-    std::fs::write(&lane, "container: ghcr.io/perishlab/images\n").expect("lane should be written");
-    let unqualified = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    for (image, refused) in [
+        ("ghcr.io/perishlab/images:stable", false),
+        ("ghcr.io/perishlab/images:0.2.1", true),
+        ("ghcr.io/perishlab/images", true),
+        (
+            "docker.io/library/rust@sha256:a339861ae23e9abb272cea45dfafde21760d2ce6577a70f8a926153677902663",
+            false,
+        ),
+        ("docker.io/library/rust:1.96.1", true),
+    ] {
+        std::fs::write(&lane, format!("container: {image}\n")).expect("lane should be written");
+        let out = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+        assert_eq!(
+            out.contains("nor pinned to @sha256"),
+            refused,
+            "{image}: {out}"
+        );
+    }
     std::fs::remove_dir_all(&dir).expect("fixture should be swept");
-    assert!(
-        unqualified.contains("is not pinned to @sha256"),
-        "{unqualified}"
-    );
 }
 
 #[test]

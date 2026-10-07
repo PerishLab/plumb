@@ -1,6 +1,7 @@
 mod changelog;
 mod closure;
 mod doctor;
+mod toolchain;
 mod workflow;
 
 #[path = "../support/mod.rs"]

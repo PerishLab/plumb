@@ -283,9 +283,18 @@ tags = ["cargo", "repository"]
 
 [[rule]]
 id = "env.immutable-ci-container"
-summary = "CI uses immutable containers"
-law = "A repository-local CI container reference is content-addressed with a lowercase SHA-256 digest."
+summary = "CI containers follow first-party stable and pin third parties"
+law = "A repository-local CI container reference names a first-party ghcr.io/perishlab image by its stable tag, which follows the latest stable like every first-party reference, or pins any other image with a lowercase SHA-256 digest. The digest a first-party job ran is in its log."
 evidence = "The container image reference in a GitHub or Forgejo workflow."
+standing = "mechanized"
+owner = "plumb"
+tags = ["configuration", "repository"]
+
+[[rule]]
+id = "env.toolchain-domain"
+summary = "Tools resolve to the domain versions"
+law = "Where a repository uses them, cargo and rustc report the domain Rust version and node and pnpm report the domain Node and pnpm versions, as plumb metadata prints them. The environment provides the tools; no repository declares their versions."
+evidence = "The version each tool reports with --version, run from the repository root, for a root Cargo.toml or package.json."
 standing = "mechanized"
 owner = "plumb"
 tags = ["configuration", "repository"]

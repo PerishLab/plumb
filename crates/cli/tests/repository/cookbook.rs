@@ -53,7 +53,7 @@ fn json() {
     let output = run(&["cookbook", "--json"]);
     assert!(output.status.success());
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
-    assert_eq!(value["entries"].as_array().expect("entries").len(), 6);
+    assert_eq!(value["entries"].as_array().expect("entries").len(), 7);
 }
 
 #[test]
