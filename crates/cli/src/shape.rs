@@ -51,6 +51,7 @@ pub struct Shape {
     pub(crate) script: script::Evidence,
     pub(crate) toolchain: toolchain::Evidence,
     pub layout: layout::Read,
+    pub(crate) preview: Result<(), String>,
 }
 
 struct Root<'a>(&'a Path);
@@ -254,6 +255,7 @@ pub fn capture(
         script: script::read(root, snapshot.as_ref()),
         toolchain: toolchain::read(root),
         layout: held,
+        preview: product::preview::read(root, snapshot.as_ref()),
     }
 }
 

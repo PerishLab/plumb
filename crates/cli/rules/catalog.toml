@@ -471,6 +471,15 @@ owner = "plumb"
 tags = ["repository", "adoption"]
 
 [[rule]]
+id = "structure.preview-app"
+summary = "Static Preview app declarations are safe and explicit"
+law = "An optional preview table contains only app declarations. Each app declares exactly path, package, provider and access, with cfworker and public intent, a literal package selector and a normalized relative directory inside the repository. App paths and package identities are unique. The declaration and app package.json and wrangler.jsonc are tracked regular files, and their ancestry traverses no symlink. Declaration admission does not prove static build qualification, authorize public deployment or create release obligations."
+evidence = "Parsed preview.app declarations, Git snapshot file modes and filesystem ancestry."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository", "site"]
+
+[[rule]]
 id = "structure.ectropy-policy-present"
 summary = "Ectropy policy is present"
 law = "A governed repository declares its ectropy policy."
