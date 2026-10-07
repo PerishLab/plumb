@@ -25,7 +25,12 @@ struct Held {
 }
 
 const PNPM: Held = Held {
-    inherit: &["PNPM_HOME", "NPM_CONFIG_USERCONFIG"],
+    inherit: &[
+        "PNPM_HOME",
+        "NPM_CONFIG_USERCONFIG",
+        "CARGO_HOME",
+        "RUSTUP_HOME",
+    ],
     managed: &[],
     reject: &[
         "NODE_OPTIONS",

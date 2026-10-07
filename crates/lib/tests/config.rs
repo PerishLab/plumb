@@ -127,12 +127,14 @@ fn homes() {
         ("PATH", "/usr/bin"),
     ]
     .map(|(key, value)| (key.into(), value.into()));
-    let held = config::contract("probe")
-        .expect("probe contract")
-        .capture(values)
-        .expect("environment");
-    assert_eq!(held.get("RUSTUP_HOME"), Some("/usr/local/rustup"));
-    assert_eq!(held.get("CARGO_HOME"), Some("/usr/local/cargo"));
+    for name in ["probe", "pnpm"] {
+        let held = config::contract(name)
+            .expect("contract")
+            .capture(values.clone())
+            .expect("environment");
+        assert_eq!(held.get("RUSTUP_HOME"), Some("/usr/local/rustup"), "{name}");
+        assert_eq!(held.get("CARGO_HOME"), Some("/usr/local/cargo"), "{name}");
+    }
 }
 
 #[test]
