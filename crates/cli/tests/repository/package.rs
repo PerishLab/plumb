@@ -5,6 +5,12 @@ const WILDCARD: &str = "wildcard into src";
 
 const MANAGER: &str = "package.json declares packageManager";
 
+const ENGINES: &str = "package.json declares engines";
+
+const PIN: &str = "pins a Rust toolchain";
+
+const COOKBOOK: &str = "see: plumb cookbook env.toolchain-domain";
+
 #[test]
 fn exports() {
     let root = specimen();
@@ -58,17 +64,50 @@ fn tests() {
 #[test]
 fn engines() {
     let root = specimen();
-    for (manifest, manager) in [
-        (r#"{}"#, false),
-        (r#"{"engines":{"node":">=24","pnpm":"^11.13.0"}}"#, false),
-        (r#"{"engines":{"node":"24.18.0","pnpm":"11.13.0"}}"#, false),
-        (r#"{"packageManager":"pnpm@11.13.0"}"#, true),
+    for (manifest, engines, manager) in [
+        (r#"{}"#, false, false),
+        (
+            r#"{"engines":{"node":">=24","pnpm":"^11.13.0"}}"#,
+            true,
+            false,
+        ),
+        (
+            r#"{"engines":{"node":"24.18.0","pnpm":"11.13.0"}}"#,
+            true,
+            false,
+        ),
+        (r#"{"packageManager":"pnpm@11.13.0"}"#, false, true),
     ] {
         write(root.path(), "package.json", manifest);
         let out = doctor(root.path());
-        assert!(!out.contains("engines"), "{manifest}: {out}");
+        assert_eq!(out.contains(ENGINES), engines, "{manifest}: {out}");
         assert_eq!(out.contains(MANAGER), manager, "{manifest}: {out}");
+        assert_eq!(
+            out.contains(COOKBOOK),
+            engines || manager,
+            "{manifest}: {out}"
+        );
     }
+}
+
+#[test]
+fn pins() {
+    let root = specimen();
+    git(root.path(), &["add", "."]);
+    assert!(!doctor(root.path()).contains(PIN));
+    std::fs::create_dir_all(root.path().join("crates/tool")).unwrap();
+    write(
+        root.path(),
+        "rust-toolchain.toml",
+        "[toolchain]\nchannel = \"1.96.1\"\n",
+    );
+    write(root.path(), "crates/tool/rust-toolchain", "1.96.1\n");
+    git(root.path(), &["add", "."]);
+    let out = doctor(root.path());
+    for path in ["rust-toolchain.toml", "crates/tool/rust-toolchain"] {
+        assert!(out.contains(&format!("{path} {PIN}")), "{out}");
+    }
+    assert!(out.contains(COOKBOOK), "{out}");
 }
 
 fn specimen() -> tempfile::TempDir {

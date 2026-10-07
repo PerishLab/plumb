@@ -543,6 +543,24 @@ owner = "plumb"
 tags = ["repository"]
 
 [[rule]]
+id = "structure.engines-absent"
+summary = "No engines field at the root"
+law = "A root package.json declares no engines field. Node and pnpm versions are Plumb's to carry (plumb metadata), and the environment provides them; a repository that declared its own could only be checked against itself."
+evidence = "The engines field of the root package.json."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
+id = "structure.toolchain-file-absent"
+summary = "No Rust toolchain file"
+law = "A governed repository tracks no rust-toolchain.toml or rust-toolchain at any depth. The domain Rust version is Plumb's to carry (plumb metadata rust.version), and the environment provides it as the rustup default; a toolchain file overrides that default for every cargo call below it."
+evidence = "Tracked paths named rust-toolchain.toml or rust-toolchain in the Git snapshot."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
 id = "structure.package-under-packages"
 summary = "Publishable packages sit under packages"
 law = "A publishable Node package lives below packages/ rather than at repository root."

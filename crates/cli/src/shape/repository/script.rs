@@ -5,11 +5,15 @@ pub struct Evidence {
     pub exports: Vec<(String, String, String)>,
     pub tests: Vec<(String, String)>,
     pub manager: Option<String>,
+    pub engines: Option<String>,
+    pub pins: Vec<String>,
 }
 
 const SUFFIXES: [&str; 4] = [".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx"];
 
 const ANCHORS: [&str; 2] = ["package.json", "deno.json"];
+
+const PINS: [&str; 2] = ["rust-toolchain.toml", "rust-toolchain"];
 
 pub fn read(
     root: &Path,
@@ -23,7 +27,21 @@ pub fn read(
         manager: manifest
             .as_ref()
             .and_then(|doc| doc.get("packageManager").map(Json::to_string)),
+        engines: manifest
+            .as_ref()
+            .and_then(|doc| doc.get("engines").map(Json::to_string)),
+        pins: snapshot.map(pins).unwrap_or_default(),
     }
+}
+
+fn pins(snapshot: &plumb::snapshot::Snapshot) -> Vec<String> {
+    snapshot
+        .entries()
+        .iter()
+        .map(|entry| entry.path())
+        .filter(|path| PINS.contains(&path.rsplit('/').next().unwrap_or(path)))
+        .map(str::to_string)
+        .collect()
 }
 
 struct Script<'a>(&'a Path);
