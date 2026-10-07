@@ -151,12 +151,14 @@ fn planned() {
     assert_eq!(plan.branch, "topic");
     assert_eq!(plan.projection, "land/topic");
     assert_eq!(plan.base, "main");
+    let position = |text: &str| plan.steps.iter().position(|step| step.contains(text));
+    let merged = position("--squash --match-head-commit").expect("a squash merge step");
+    let read = position("verify origin/main is one squash").expect("a readback step");
+    let deleted = position("delete land/topic and topic on origin by lease")
+        .expect("the plan must name the branches it deletes");
     assert!(
-        plan.steps
-            .iter()
-            .any(|step| step.contains("--squash --match-head-commit")
-                && step.contains("no branch deleted")),
-        "the plan must state that no branch is deleted: {:?}",
+        merged < read && read < deleted,
+        "branches are deleted only after the merge is read back: {:?}",
         plan.steps
     );
     assert!(
@@ -164,11 +166,6 @@ fn planned() {
             .iter()
             .any(|step| step.contains("guard / guard (pull_request)")),
         "the proof status must be visible before merge: {:?}",
-        plan.steps
-    );
-    assert!(
-        !plan.steps.iter().any(|step| step.contains("branch -D")),
-        "no plan step may delete a branch: {:?}",
         plan.steps
     );
 

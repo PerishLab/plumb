@@ -84,13 +84,22 @@ fn landed(report: Report, json: bool) -> i32 {
         Some(seat) => println!("  synced     {}", seat.display()),
         None => println!("  synced     no separate {} seat", report.base),
     }
+    for branch in &report.retired.deleted {
+        println!("  deleted    {branch}");
+    }
+    for held in &report.retired.kept {
+        println!(
+            "  kept       {} on {}: {}",
+            held.branch, held.seat, held.reason
+        );
+    }
     println!();
     println!(
         "  {}",
-        if report.merged {
-            "landed; both branches retained"
-        } else {
-            "pull is up; guard not awaited"
+        match (report.merged, report.retired.kept.is_empty()) {
+            (false, _) => "pull is up; guard not awaited",
+            (true, true) => "landed; the branches it pushed are deleted",
+            (true, false) => "landed; the kept branches above were not deleted",
         }
     );
     0

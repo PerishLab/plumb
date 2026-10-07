@@ -34,6 +34,7 @@ pub struct Report {
     pub pull: u64,
     pub url: String,
     pub merged: bool,
+    pub retired: crate::delivery::Retired,
     pub synced: Option<PathBuf>,
 }
 
@@ -91,10 +92,13 @@ pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {
             "gh api -X POST repos/{seat}/statuses/<candidate> (context=guard / guard (pull_request), state=success)"
         ),
         format!(
-            "gh pr merge <n> -R {seat} --squash --match-head-commit <candidate> --subject <its subject> --body <its body> (no branch deleted)"
+            "gh pr merge <n> -R {seat} --squash --match-head-commit <candidate> --subject <its subject> --body <its body>"
         ),
         format!(
             "fetch origin and verify origin/{base} is one squash carrying <candidate>'s parent, tree and Guard proof"
+        ),
+        format!(
+            "delete {projection} and {branch} on origin by lease on the heads pushed, and locally while they hold them"
         ),
         format!("exactly fast-forward the clean {base} worktree to origin/{base}"),
     ];
@@ -202,8 +206,25 @@ fn execute(request: Request<'_>, expected: Option<&Preparation>) -> Result<Repor
         .map_err(|error| refuse("forge", error))?;
     landing.repo.fetch()?;
     let head = landing.repo.revision(&landing.upstream())?;
-    crate::delivery::landed(&landing.repo.root, &candidate.head, &head)?;
+    let delivered = crate::delivery::Delivered {
+        root: &landing.repo.root,
+        remote: "origin",
+        candidate: &candidate.head,
+        head: &head,
+    };
+    let pushed = [
+        crate::delivery::Pushed {
+            branch: candidate.projection.clone(),
+            head: candidate.head.clone(),
+        },
+        crate::delivery::Pushed {
+            branch: landing.branch.clone(),
+            head: candidate.source.clone(),
+        },
+    ];
+    let (_, retired) = crate::delivery::retired(&delivered, &pushed)?;
     report.merged = true;
+    report.retired = retired;
     report.synced = landing.sync()?;
     Ok(report)
 }
@@ -221,6 +242,7 @@ fn shape(landing: &Landing, candidate: &Candidate, pull: &github::Pull) -> Repor
         pull: pull.number,
         url: pull.url.clone(),
         merged: false,
+        retired: crate::delivery::Retired::default(),
         synced: None,
     }
 }
