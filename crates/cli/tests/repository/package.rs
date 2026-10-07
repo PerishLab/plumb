@@ -3,10 +3,6 @@ use std::process::Command;
 
 const WILDCARD: &str = "wildcard into src";
 
-const NODE: &str = "package.json engines.node is";
-
-const PNPM: &str = "package.json engines.pnpm is";
-
 const MANAGER: &str = "package.json declares packageManager";
 
 #[test]
@@ -62,50 +58,15 @@ fn tests() {
 #[test]
 fn engines() {
     let root = specimen();
-    let out = doctor(root.path());
-    for finding in [NODE, PNPM, MANAGER] {
-        assert!(!out.contains(finding), "no root manifest: {out}");
-    }
-    for (manifest, held, manager) in [
-        (
-            r#"{"engines":{"node":"24.18.0","pnpm":"11.13.0"}}"#,
-            [None, None],
-            false,
-        ),
-        (r#"{}"#, [Some("missing"), Some("missing")], false),
-        (
-            r#"{"engines":{"node":">=24","pnpm":"11.13.0"}}"#,
-            [Some(r#"">=24""#), None],
-            false,
-        ),
-        (
-            r#"{"engines":{"node":"24.18.0","pnpm":"11.13.1"}}"#,
-            [None, Some(r#""11.13.1""#)],
-            false,
-        ),
-        (
-            r#"{"engines":{"node":24,"pnpm":"^11.13.0"}}"#,
-            [Some("24"), Some(r#""^11.13.0""#)],
-            false,
-        ),
-        (
-            r#"{"packageManager":"pnpm@11.13.0","engines":{"node":"24.18.0","pnpm":"11.13.0"}}"#,
-            [None, None],
-            true,
-        ),
+    for (manifest, manager) in [
+        (r#"{}"#, false),
+        (r#"{"engines":{"node":">=24","pnpm":"^11.13.0"}}"#, false),
+        (r#"{"engines":{"node":"24.18.0","pnpm":"11.13.0"}}"#, false),
+        (r#"{"packageManager":"pnpm@11.13.0"}"#, true),
     ] {
         write(root.path(), "package.json", manifest);
         let out = doctor(root.path());
-        for ((finding, exact), seen) in [(NODE, "24.18.0"), (PNPM, "11.13.0")].into_iter().zip(held)
-        {
-            match seen {
-                Some(seen) => assert!(
-                    out.contains(&format!(r#"{finding} {seen}; declare exactly "{exact}""#)),
-                    "{manifest}: {out}"
-                ),
-                None => assert!(!out.contains(finding), "{manifest}: {out}"),
-            }
-        }
+        assert!(!out.contains("engines"), "{manifest}: {out}");
         assert_eq!(out.contains(MANAGER), manager, "{manifest}: {out}");
     }
 }

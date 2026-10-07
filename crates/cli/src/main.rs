@@ -121,6 +121,12 @@ enum Command {
         #[command(flatten)]
         target: Root,
     },
+    #[command(about = "Print the domain toolchain versions this Plumb carries")]
+    Metadata {
+        key: Option<String>,
+        #[arg(long, conflicts_with = "key")]
+        json: bool,
+    },
     #[command(about = "Read what to do about a finding that names an entry")]
     Cookbook {
         entry: Option<String>,
@@ -224,6 +230,7 @@ fn execute(command: Command) -> i32 {
         Command::Layout { target } => {
             command::render::Seat::new(PathBuf::from(target.root)).layout()
         }
+        Command::Metadata { key, json } => consumption::metadata::run(key, json),
         Command::Cookbook { entry, json } => command::cookbook::run(entry, json),
         Command::Affirm { target, write } => {
             command::render::Seat::new(PathBuf::from(target.root)).affirm(write)

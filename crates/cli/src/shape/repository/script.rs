@@ -1,12 +1,9 @@
 use serde_json::Value as Json;
 use std::path::Path;
 
-pub const DOMAIN: [(&str, &str); 2] = [("node", "24.18.0"), ("pnpm", "11.13.0")];
-
 pub struct Evidence {
     pub exports: Vec<(String, String, String)>,
     pub tests: Vec<(String, String)>,
-    pub engines: Vec<(&'static str, &'static str, Option<String>)>,
     pub manager: Option<String>,
 }
 
@@ -23,7 +20,6 @@ pub fn read(
     Evidence {
         exports: seat.exports(),
         tests: snapshot.map(|held| seat.tests(held)).unwrap_or_default(),
-        engines: manifest.as_ref().map(engines).unwrap_or_default(),
         manager: manifest
             .as_ref()
             .and_then(|doc| doc.get("packageManager").map(Json::to_string)),
@@ -98,17 +94,6 @@ fn declared(path: &Path) -> Option<Json> {
 
 fn exported(path: &Path) -> Option<Json> {
     declared(path)?.get_mut("exports").map(Json::take)
-}
-
-fn engines(doc: &Json) -> Vec<(&'static str, &'static str, Option<String>)> {
-    let mut found = Vec::new();
-    for (tool, version) in DOMAIN {
-        let held = doc.pointer(&format!("/engines/{tool}"));
-        if held.and_then(Json::as_str) != Some(version) {
-            found.push((tool, version, held.map(Json::to_string)));
-        }
-    }
-    found
 }
 
 fn walk(value: &Json, key: &str, visit: &mut dyn FnMut(&str, &str)) {
