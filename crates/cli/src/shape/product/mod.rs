@@ -1,3 +1,5 @@
+pub(crate) mod preview;
+
 pub fn named(manifest: Option<&str>) -> Result<String, String> {
     let raw = manifest.ok_or_else(|| "staged tree requires plumb.toml".to_string())?;
     let doc: toml::Table = raw

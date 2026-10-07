@@ -70,6 +70,9 @@ impl Structure<'_> {
         }
         found.extend(release::judge(held));
         found.extend(script::judge(&held.script));
+        if let Err(why) = &held.preview {
+            found.push(wrong(&rule::PREVIEW, why));
+        }
         self.matched(&mut found);
         self.anchored(&mut found);
         for name in &held.lanes {
