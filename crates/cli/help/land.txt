@@ -5,13 +5,19 @@ the gh CLI, whose authority comes from the caller's Runseal profile
 (runseal :liberte plumb land); Plumb holds no GitHub credential and owns no HTTP
 sender of its own.
 
-The source branch is kept. What lands is a one-commit projection at
-land/<branch>. Plumb verifies the projection carries the staged-tree Guard proof,
-posts that as the required guard status, and squash-merges the pull, bound to
-the exact candidate the guard passed and carrying the candidate's own subject
-and body, Guard proof trailer included. It then reads main back: the new head
-must sit on the candidate's parent, hold the candidate's tree, and carry its
-Guard proof, or land refuses and names the commits. A base that moved under the
-merge leaves main holding a tree no Guard proved, which land reports and cannot
-undo. The caller supplies the repository-local title and body explicitly; Issue
-lifecycle orchestration belongs to Concord.
+What lands is a one-commit projection at land/<branch>. Plumb verifies the
+projection carries the staged-tree Guard proof, posts that as the required guard
+status, and squash-merges the pull, bound to the exact candidate the guard
+passed and carrying the candidate's own subject and body, Guard proof trailer
+included. It then reads main back: the new head must sit on the candidate's
+parent, hold the candidate's tree, and carry its Guard proof, or land refuses
+and names the commits. A base that moved under the merge leaves main holding a
+tree no Guard proved, which land reports and cannot undo. The caller supplies
+the repository-local title and body explicitly; Issue lifecycle orchestration
+belongs to Concord.
+
+Once main is read back, land deletes the two branches it pushed, the
+projection and the topic: on origin by lease on the head it pushed, and locally
+while the branch still holds that head, detaching this checkout from the topic
+first. A branch that moved after the push, or is checked out in another
+worktree, is kept and named. A merge that is not read back deletes nothing.

@@ -57,7 +57,9 @@ answers for.
 - `crates/lib/src/forge/delivery/kernel.rs` — the narrow `delivery` feature
   prepares and revalidates an exact candidate from caller-supplied Issue and
   pull declarations under released Guard authority, and holds the one squash
-  merge contract and its readback that `land` and Concord both run. It has no
+  merge contract and its readback that `land` and Concord both run. Only after
+  that readback does it delete the branches a delivery pushed, by lease on the
+  heads it pushed, and it keeps and names any that moved. It has no
   provider client: callers run its argument vector through their own command.
   Its distinct native-gate API accepts an explicit caller-owned verifier only
   for a source and base without Plumb governance. It binds native evidence to

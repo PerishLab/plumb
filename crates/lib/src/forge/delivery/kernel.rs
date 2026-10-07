@@ -4,8 +4,10 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 pub mod native;
+mod retire;
 mod squash;
 
+pub use retire::{Delivered, Kept, Pushed, Retired, retired};
 pub use squash::{Landed, Squash, landed};
 
 pub const SCHEMA: &str = "plumb.delivery-plan/v2";
