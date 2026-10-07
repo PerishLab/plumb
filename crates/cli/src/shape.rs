@@ -12,7 +12,7 @@ pub mod workflow;
 
 pub use repository::dependency::{Dependencies, Dependency};
 pub use repository::layout;
-pub(crate) use repository::{dependency, policy, script};
+pub(crate) use repository::{dependency, policy, script, toolchain};
 use repository::{node, pack};
 
 pub struct Shape {
@@ -49,6 +49,7 @@ pub struct Shape {
     pub web: Option<web::Evidence>,
     pub(crate) policy: Option<policy::Evidence>,
     pub(crate) script: script::Evidence,
+    pub(crate) toolchain: toolchain::Evidence,
     pub layout: layout::Read,
 }
 
@@ -251,6 +252,7 @@ pub fn capture(
         web: web::read(root),
         policy,
         script: script::read(root, snapshot.as_ref()),
+        toolchain: toolchain::read(root),
         layout: held,
     }
 }
