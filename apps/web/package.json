@@ -14,7 +14,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@perishlab/design": "0.3.2",
+		"@perishlab/design": "0",
 		"svelte": "catalog:"
 	},
 	"devDependencies": {
