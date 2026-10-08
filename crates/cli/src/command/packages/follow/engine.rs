@@ -88,7 +88,7 @@ pub(super) fn advance(
         base: "main",
         pull: &narrative,
     };
-    let authority = plumb::guard::Authority::released()?;
+    let authority = plumb::guard::Authority::running()?;
     let plan = plumb::delivery::prepare(request, &authority).map_err(|error| error.to_string())?;
     scope::check(&state.worktree, &plan.target, &plan.candidate)?;
     state.candidate = Some(plan.candidate.clone());

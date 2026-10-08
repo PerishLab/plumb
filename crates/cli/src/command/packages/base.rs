@@ -199,7 +199,7 @@ fn advanced() {
     );
     advance(&source);
     let error = engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap_err();
-    assert!(error.contains("carries no released authority"), "{error}");
+    assert!(error.contains("contributes no tree changes"), "{error}");
     let recovered = seat.read("Example/probe").unwrap();
     assert_eq!(recovered.pull, 18);
     let head = work::git(&state.worktree, &["rev-parse", "HEAD"]).unwrap();
