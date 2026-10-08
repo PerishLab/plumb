@@ -4,6 +4,8 @@ use serde_json::json;
 
 #[path = "fixture.rs"]
 mod fixture;
+#[path = "refusal.rs"]
+mod refusal;
 
 #[test]
 fn interrupted() {
