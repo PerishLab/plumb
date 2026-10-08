@@ -13,6 +13,8 @@ pub mod fill;
 mod forge;
 #[path = "proof/guard/integration/mod.rs"]
 pub mod integration;
+#[path = "forge/preview/mod.rs"]
+pub mod preview;
 #[cfg(feature = "vendor")]
 pub use forge::land;
 pub use proof::guard::landing;
