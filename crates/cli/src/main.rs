@@ -250,15 +250,10 @@ fn main() {
         Ok(cli) => cli.command,
         Err(error) => {
             let code = error.exit_code();
-            let run = command::audit::Run::start("parse");
             let _ = error.print();
-            if let Some(run) = run {
-                run.finish(code);
-            }
             std::process::exit(code);
         }
     };
-    let run = command::audit::Run::start(command.name());
     let prepared = plumb::identity::ready().and_then(|()| {
         consumption::prepare(&command).map_err(|error| {
             format!("cannot read installed rules: {error}\nrun plumb configuration install")
@@ -271,8 +266,5 @@ fn main() {
             1
         }
     };
-    if let Some(run) = run {
-        run.finish(code);
-    }
     std::process::exit(code);
 }

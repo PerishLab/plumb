@@ -1,5 +1,4 @@
 #[cfg(unix)]
-mod audit;
 #[path = "precommit/main.rs"]
 mod precommit;
 mod world;
