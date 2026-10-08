@@ -67,6 +67,24 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    #[command(about = "Resolve first-party manifests and locks to the latest stable",
+        long_about = plumb::seat::resource!("help/lift.txt"))]
+    Lift {
+        #[command(flatten)]
+        target: Root,
+        #[arg(long)]
+        json: bool,
+    },
+    #[command(about = "Run one resumable Auto follow operation through the required Guard",
+        long_about = plumb::seat::resource!("help/follow.txt"))]
+    Follow {
+        #[command(flatten)]
+        target: Root,
+        #[arg(long, default_value = "gh")]
+        github_command: PathBuf,
+        #[arg(long)]
+        json: bool,
+    },
     #[command(about = "Report which repositories a candidate version would reach")]
     Radius {
         #[arg(long, required = true)]
@@ -167,6 +185,16 @@ enum Command {
 }
 fn execute(command: Command) -> i32 {
     match command {
+        Command::Follow {
+            target,
+            github_command,
+            json,
+        } => command::packages::follow::run(command::packages::follow::Input {
+            root: PathBuf::from(target.root),
+            github: github_command,
+            json,
+        }),
+        Command::Lift { target, json } => command::packages::lift(PathBuf::from(target.root), json),
         Command::Doctor { target, json } => command::doctor::run(PathBuf::from(target.root), json),
         Command::Land {
             target,

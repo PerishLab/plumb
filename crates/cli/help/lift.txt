@@ -1,0 +1,10 @@
+Resolve first-party manifests and locks to latest stable in a clean topic worktree.
+
+Lift sets registered perish Cargo and @perishlab npm requirements to 0. Local
+workspace and path dependencies retain their own contract. Only tracked
+Cargo.toml, package.json, Cargo.lock and pnpm-lock.yaml paths may change.
+
+Resolution runs in a temporary tree before copying the bounded delta into the
+worktree. It leaves changes unstaged for ordinary Issue delivery. Registry
+failure, prerelease latest, input movement and unsupported locks are refusals.
+The JSON result records exact package versions and the resolved tree.

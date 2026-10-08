@@ -1,4 +1,6 @@
 #[cfg(unix)]
+mod packages;
+#[cfg(unix)]
 #[path = "precommit/main.rs"]
 mod precommit;
 mod world;

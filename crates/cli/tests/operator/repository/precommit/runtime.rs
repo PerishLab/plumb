@@ -70,6 +70,8 @@ fn evidence() {
     assert_eq!(first["boundary"], "head");
     assert_eq!(first["guard"]["repository"], "Example/runtime");
     assert_eq!(first["guard"]["tree"].as_str().unwrap().len(), 40);
+    assert_eq!(first["guard"]["resolution"]["context"], "ci-latest");
+    assert_eq!(first["guard"]["resolution"]["tree"], first["guard"]["tree"]);
     assert_eq!(first["commit"].as_str().unwrap().len(), 40);
     assert_eq!(first["digest"].as_str().unwrap().len(), 64);
     assert_ne!(first["digest"], first["guard"]["digest"]);

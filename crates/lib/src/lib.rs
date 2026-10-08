@@ -13,6 +13,8 @@ pub mod fill;
 mod forge;
 #[path = "proof/guard/integration/mod.rs"]
 pub mod integration;
+#[path = "forge/packages/mod.rs"]
+pub mod packages;
 #[path = "forge/preview/mod.rs"]
 pub mod preview;
 #[cfg(feature = "vendor")]

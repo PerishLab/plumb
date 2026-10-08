@@ -12,6 +12,7 @@ fn authority() -> Authority {
 
 fn proof() -> Descriptor {
     let mut proof = Descriptor {
+        resolution: None,
         schema: SCHEMA.into(),
         repository: "PerishLab/probe".into(),
         tree: TREE.into(),
@@ -211,4 +212,36 @@ fn expectation() {
             .expect_err("different expected identity must refuse")
             .contains("expected schema, tree, and digest")
     );
+}
+
+#[test]
+fn resolutions() {
+    let original = proof();
+    assert!(
+        serde_json::to_value(&original)
+            .unwrap()
+            .get("resolution")
+            .is_none()
+    );
+    let resolution = crate::packages::Resolution {
+        context: "ci-latest".into(),
+        tree: "a".repeat(40),
+        packages: vec![crate::packages::Package {
+            ecosystem: "cargo".into(),
+            name: "plumb".into(),
+            version: "0.1.0".into(),
+        }],
+    };
+    let resolved = original.clone().resolved(resolution).unwrap();
+    assert_ne!(original.digest, resolved.digest);
+    assert_eq!(
+        Descriptor::decode(&resolved.encode().unwrap()).unwrap(),
+        resolved
+    );
+    let mut changed = resolved.clone();
+    changed.resolution.as_mut().unwrap().packages[0].version = "0.2.0".into();
+    assert!(changed.validate().is_err());
+    let mut invalid = resolved.resolution.unwrap();
+    invalid.context = "pretend-local".into();
+    assert!(original.resolved(invalid).is_err());
 }

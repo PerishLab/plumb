@@ -1,0 +1,18 @@
+Run or resume the registered Auto follow operation for this GitHub repository.
+
+A current main is a no-op with no new Issue or pull. A bounded dependency delta
+creates or reuses one automation-owned Auto Issue and auto/<number> branch.
+Only registered first-party manifests and locks may change. The operation proves
+local Guard, publishes an exact candidate, waits within a finite bound for the
+required organization Guard, and revalidates before the ordinary squash merge.
+Closure reads back the merge commit and successful Guard run before accepting
+and closing the Issue.
+
+State and one repository lease live under PLUMB_HOME. Provider writes are read
+back before resuming; a duplicate relationship, needs label, open child or
+blocker, foreign branch movement, permissions refusal or failing Guard stops
+the operation. A stopped operation records the available Issue, pull and failure
+evidence. Repair the blocker and rerun this same command.
+
+--github-command selects the caller's gh-compatible provider executable. Auto
+has no Concord Member and does not repair business source or perform releases.

@@ -9,7 +9,7 @@ pub(crate) struct Index {
 }
 
 impl Index {
-    pub(super) fn new(source: &Path, tree: &str) -> Result<Self, String> {
+    pub(crate) fn new(source: &Path, tree: &str) -> Result<Self, String> {
         let parent = plumb::config::detached("git")
             .arg("-C")
             .arg(source)
@@ -248,4 +248,17 @@ fn output(mut command: Command, action: &str) -> Result<String, String> {
         .output()
         .map_err(|error| format!("cannot run git to {action}: {error}"))?;
     text(output, action)
+}
+
+pub(super) fn unchanged(index: &Index) -> Result<(), String> {
+    if !git(
+        &index.root,
+        &["diff", "--name-only"],
+        "verify Guard inputs remained unchanged",
+    )?
+    .is_empty()
+    {
+        return Err("Guard command changed a tracked verification input".into());
+    }
+    Ok(())
 }

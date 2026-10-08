@@ -31,6 +31,8 @@ pub struct Descriptor {
     pub depot: String,
     pub platform: String,
     pub actions: Vec<Action>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolution: Option<crate::packages::Resolution>,
     pub digest: String,
 }
 
@@ -51,6 +53,8 @@ struct Claim<'a> {
     depot: &'a str,
     platform: &'a str,
     actions: &'a [Action],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    resolution: Option<&'a crate::packages::Resolution>,
 }
 
 impl Descriptor {
@@ -66,11 +70,19 @@ impl Descriptor {
             depot: crate::depot::rules()?.mark().to_string(),
             platform: crate::config::platform(),
             actions,
+            resolution: None,
             digest: String::new(),
         };
         held.digest = held.seal()?;
         held.validate()?;
         Ok(held)
+    }
+
+    pub fn resolved(mut self, resolution: crate::packages::Resolution) -> Result<Self, String> {
+        self.resolution = Some(resolution);
+        self.digest = self.seal()?;
+        self.validate()?;
+        Ok(self)
     }
 
     pub fn encode(&self) -> Result<String, String> {
@@ -97,6 +109,22 @@ impl Descriptor {
         hash(&self.tree, "tree")?;
         hash(&self.digest, "digest")?;
         self.identities()?;
+        if let Some(resolution) = &self.resolution {
+            if !matches!(resolution.context.as_str(), "ci-latest" | "local-locked") {
+                return Err("Guard resolution context must be ci-latest or local-locked".into());
+            }
+            hash(&resolution.tree, "resolved tree")?;
+            for package in &resolution.packages {
+                let version =
+                    semver::Version::parse(&package.version).map_err(|error| error.to_string())?;
+                if (resolution.context == "ci-latest" && !version.pre.is_empty())
+                    || !matches!(package.ecosystem.as_str(), "cargo" | "npm")
+                    || package.name.is_empty()
+                {
+                    return Err("Guard resolution has an invalid stable package identity".into());
+                }
+            }
+        }
         for action in &self.actions {
             if action.name.trim().is_empty() {
                 return Err("guard proof contains an unnamed action".into());
@@ -180,6 +208,7 @@ impl Descriptor {
             depot: &self.depot,
             platform: &self.platform,
             actions: &self.actions,
+            resolution: self.resolution.as_ref(),
         };
         serde_json::to_vec(&claim)
             .map(|bytes| format!("{:x}", Sha256::digest(bytes)))

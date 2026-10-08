@@ -14,7 +14,11 @@ consumers read the refreshed commit through the ordinary Guard trailer.
 For CI, declare both PLUMB_GUARD_STRENGTH=full and
 PLUMB_GUARD_BOUNDARY=head. Full runs every applicable Guard action known by this
 Plumb release. Head requires a clean worktree and proves the exact checked-out
-HEAD commit and tree. Human and --json output bind both selectors, repository,
+HEAD commit and source tree. First-party packages resolve to latest stable in
+an isolated verification tree; local staged Guard uses locked packages. Evidence
+records the resolution context, exact package versions and effective tree.
+Unreadable registries and verification commands changing tracked inputs fail.
+Human and --json output bind both selectors, repository,
 commit, tree, Plumb and Depot identities, platform, action inputs, and execution
 worlds into one evidence digest.
 

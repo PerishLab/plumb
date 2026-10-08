@@ -21,6 +21,21 @@ struct Evidence {
     digest: String,
 }
 
+impl Evidence {
+    fn resolved(&self) {
+        if let Some(resolution) = &self.guard.resolution {
+            println!("  context  {}", resolution.context);
+            println!("  resolved {}", resolution.tree);
+            for package in &resolution.packages {
+                println!(
+                    "  package  {} {} {}",
+                    package.ecosystem, package.name, package.version
+                );
+            }
+        }
+    }
+}
+
 #[derive(Serialize)]
 struct Claim<'a> {
     schema: &'static str,
@@ -34,6 +49,7 @@ struct Claim<'a> {
     platform: &'a str,
     actions: &'a [Action],
     proof: &'a str,
+    resolution: &'a Option<plumb::packages::Resolution>,
 }
 
 #[derive(Serialize)]
@@ -84,7 +100,7 @@ impl Selection {
                     println!("  tree     {}", evidence.guard.tree);
                     println!("  plumb    {}", evidence.guard.plumb);
                     println!("  proof    {}", evidence.guard.digest);
-                    println!("  evidence {}", evidence.digest);
+                    evidence.resolved();
                     println!(
                         "  actions  {}",
                         evidence
@@ -153,6 +169,7 @@ fn prove(root: &Path) -> Result<Evidence, String> {
         platform: &guard.platform,
         actions: &guard.actions,
         proof: &guard.digest,
+        resolution: &guard.resolution,
     };
     let bytes = serde_json::to_vec(&claim)
         .map_err(|error| format!("cannot seal runtime Guard evidence: {error}"))?;

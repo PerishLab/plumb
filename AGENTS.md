@@ -67,8 +67,9 @@ answers for.
   shares topology, candidate construction and squash readback with Guarded
   delivery. The caller owns native authority admission and gate policy; no
   Plumb CLI switches to native delivery on a missing or invalid Guard proof.
-  It is consumed by Concord. Plumb carries no Issue observation or Issue-aware
-  pull adapter; repository-only `land` remains a separate explicit surface.
+  It is consumed by Concord. The registered `follow` operation observes only
+  its automation-owned Auto Issue and pull; ordinary Issue delivery belongs
+  to Concord. Repository-only `land` remains a separate explicit surface.
 - `crates/cli/{rules,assets,cookbook,help}` — Plumb's governed resources,
   carried inside the binary. A release is its own rule set: nothing is fetched,
   installed or overlaid at run time, and changing a rule is a change to Plumb.
