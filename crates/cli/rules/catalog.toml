@@ -480,6 +480,15 @@ owner = "plumb"
 tags = ["repository", "site"]
 
 [[rule]]
+id = "structure.preview-static"
+summary = "Declared Preview apps carry unambiguous static build configuration"
+law = "After declaration admission, each Preview app carries a matching private package with a nonblank build script and no implicit prebuild or postbuild hook. Its Worker configuration contains exactly name, account_id, compatibility_date, workers_dev=false, assets and empty previews; the account is lowercase 32-digit hex, the name a lowercase bounded slug, the date a real calendar date, and assets contain only a normalized relative non-hidden build directory and 404-page handling. Existing output ancestry contains only directories, never symlinks. Critical JSON is bounded to 1 MiB and rejects duplicate fields at every depth; Worker JSONC permits only whole-line comments. Other tracked package and Worker manifests are readable regular files and cannot alias the package name or account/name target. This is local configuration judgment, not build execution, output safety, deployment authorization or release authority. Tool versions remain Plumb's domain authority."
+evidence = "Tracked package and Worker documents, their parsed identities and source/output ancestry."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository", "site"]
+
+[[rule]]
 id = "structure.ectropy-policy-present"
 summary = "Ectropy policy is present"
 law = "A governed repository declares its ectropy policy."

@@ -23,6 +23,7 @@ rule!(
 
 rule!(DECLARATION_PRESENT, "structure.declaration-present");
 rule!(PREVIEW, "structure.preview-app");
+rule!(STATIC, "structure.preview-static");
 rule!(RETIRED_SEAT_ABSENT, "structure.retired-seat-absent");
 rule!(BOUNDARY_EXISTS, "structure.boundary-exists");
 rule!(ANCHOR_PRESENT, "structure.anchor-present");
@@ -46,6 +47,7 @@ pub fn mechanisms() -> Vec<&'static Mechanism> {
         &ECTROPY_POLICY_PRESENT, &ECTROPY_POLICY_READABLE,
         &COLLABORATION_SURFACE_INHERITED, &DECLARATION_PRESENT,
         &PREVIEW,
+        &STATIC,
         &KNOWN_DIRECTORY, &KNOWN_FILE, &KNOWN_WORKFLOW,
         &SEAT_AFFIRMED, &SEAT_ANCHORED, &SEAT_MEMBER,
         &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,

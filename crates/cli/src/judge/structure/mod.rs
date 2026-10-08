@@ -73,6 +73,9 @@ impl Structure<'_> {
         if let Err(why) = &held.preview {
             found.push(wrong(&rule::PREVIEW, why));
         }
+        if let Err(why) = &held.qualification {
+            found.push(wrong(&rule::STATIC, why));
+        }
         self.matched(&mut found);
         self.anchored(&mut found);
         for name in &held.lanes {
