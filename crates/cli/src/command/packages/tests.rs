@@ -141,3 +141,33 @@ fn duplicates() {
 
 #[path = "recovery.rs"]
 mod recovery;
+
+fn isolated(name: &str) -> bool {
+    if std::env::var("PLUMB_TEST_RECOVERY").as_deref() == Ok(name) {
+        return true;
+    }
+    let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+    command
+        .args([
+            "--exact",
+            &format!("command::packages::follow::tests::recovery::{name}"),
+            "--nocapture",
+        ])
+        .env("PLUMB_TEST_RECOVERY", name)
+        .env_remove("CI");
+    for (key, _) in std::env::vars() {
+        let ambient = key.starts_with("CARGO_") || key.starts_with("RUST");
+        if ambient && !["CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"].contains(&key.as_str()) {
+            command.env_remove(key);
+        }
+    }
+    let output = command.output().unwrap();
+    assert!(
+        output.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(String::from_utf8_lossy(&output.stdout).contains("1 passed; 0 failed"));
+    false
+}
