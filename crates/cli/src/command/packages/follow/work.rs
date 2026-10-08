@@ -135,3 +135,32 @@ pub(super) fn git(root: &Path, args: &[&str]) -> Result<String, String> {
         .map(|text| text.trim().into())
         .map_err(|error| format!("Auto git output is not UTF-8: {error}"))
 }
+
+pub(super) fn boundary(root: &Path, base: &str, head: &str) -> Result<(), String> {
+    plumb::boundary::check(plumb::boundary::Request {
+        root,
+        base,
+        head,
+        write: &[
+            "**/Cargo.toml".into(),
+            "**/package.json".into(),
+            "**/Cargo.lock".into(),
+            "**/pnpm-lock.yaml".into(),
+            "Cargo.toml".into(),
+            "package.json".into(),
+            "Cargo.lock".into(),
+            "pnpm-lock.yaml".into(),
+        ],
+    })
+    .map_err(|error| error.to_string())
+    .and_then(|report| {
+        if report.ok {
+            Ok(())
+        } else {
+            Err(format!(
+                "Auto candidate has forbidden paths: {:?}",
+                report.outside
+            ))
+        }
+    })
+}

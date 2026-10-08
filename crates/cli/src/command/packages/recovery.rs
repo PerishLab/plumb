@@ -7,6 +7,9 @@ mod fixture;
 #[path = "refusal.rs"]
 mod refusal;
 
+#[path = "base.rs"]
+mod base;
+
 #[test]
 fn interrupted() {
     if !isolated("interrupted") {

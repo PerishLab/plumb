@@ -1,4 +1,4 @@
-use super::{Provider, Seat, State, issue, pull, work};
+use super::{Provider, Seat, State, issue, pull, refresh, work};
 use std::path::Path;
 
 pub(super) fn advance(
@@ -38,10 +38,20 @@ pub(super) fn advance(
         state,
     };
     work.open()?;
+    if let Some(commit) = refresh::prepare(state)? {
+        state.candidate = Some(commit.clone());
+        state.plan = None;
+        seat.write(state)?;
+        refresh::apply(&state.worktree, &commit)?;
+    }
+    let work = work::Work {
+        source: root,
+        state,
+    };
     crate::command::packages::resolve(&state.worktree, "follow")?;
     let head = work.commit()?;
     let base = work::git(&state.worktree, &["rev-parse", "origin/main"])?;
-    boundary(&state.worktree, &base, &head)?;
+    work::boundary(&state.worktree, &base, &head)?;
     state.candidate = Some(head.clone());
     seat.write(state)?;
     let published = provider.publish(
@@ -80,7 +90,7 @@ pub(super) fn advance(
     };
     let authority = plumb::guard::Authority::released()?;
     let plan = plumb::delivery::prepare(request, &authority).map_err(|error| error.to_string())?;
-    boundary(&state.worktree, &plan.target, &plan.candidate)?;
+    work::boundary(&state.worktree, &plan.target, &plan.candidate)?;
     state.candidate = Some(plan.candidate.clone());
     state.plan = Some(plan.clone());
     seat.write(state)?;
@@ -139,33 +149,4 @@ fn wait(provider: &Provider<'_>, head: &str) -> Result<String, String> {
         }
     }
     Err("organization Guard did not settle within the bounded wait".into())
-}
-
-fn boundary(root: &Path, base: &str, head: &str) -> Result<(), String> {
-    plumb::boundary::check(plumb::boundary::Request {
-        root,
-        base,
-        head,
-        write: &[
-            "**/Cargo.toml".into(),
-            "**/package.json".into(),
-            "**/Cargo.lock".into(),
-            "**/pnpm-lock.yaml".into(),
-            "Cargo.toml".into(),
-            "package.json".into(),
-            "Cargo.lock".into(),
-            "pnpm-lock.yaml".into(),
-        ],
-    })
-    .map_err(|error| error.to_string())
-    .and_then(|report| {
-        if report.ok {
-            Ok(())
-        } else {
-            Err(format!(
-                "Auto candidate has forbidden paths: {:?}",
-                report.outside
-            ))
-        }
-    })
 }
