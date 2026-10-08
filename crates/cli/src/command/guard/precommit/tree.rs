@@ -132,6 +132,7 @@ pub(super) fn execute(
         compiler.apply(&mut command);
     }
     command.args(args).current_dir(root);
+    command.stdout(std::io::stderr());
     unhook(&mut command);
     let status = command
         .status()
