@@ -3,6 +3,7 @@ mod engine;
 mod issue;
 mod provider;
 mod pull;
+mod refresh;
 mod state;
 #[cfg(all(test, unix))]
 #[path = "../tests.rs"]
