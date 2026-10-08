@@ -25,7 +25,6 @@ fn plumb(args: &[&str]) -> Output {
     let seat = super::support::home();
     Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(args)
-        .env("PLUMB_LOCUS_ENABLED", "false")
         .env("PLUMB_HOME", seat.path())
         .output()
         .expect("plumb should run")
@@ -96,7 +95,6 @@ fn rule() {
     let seat = super::support::home();
     let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
         .args(["rule", "list", "--json"])
-        .env("PLUMB_LOCUS_ENABLED", "false")
         .env("PLUMB_HOME", seat.path())
         .output()
         .expect("rule list");

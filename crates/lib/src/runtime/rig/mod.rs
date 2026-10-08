@@ -9,8 +9,6 @@ pub struct Rig {
     pub home: String,
     pub releases: String,
     #[cascade(section)]
-    pub locus: Locus,
-    #[cascade(section)]
     pub release: Release,
     #[cascade(section)]
     pub publish: Authority,
@@ -28,37 +26,6 @@ pub struct Rig {
     pub site: Site,
     #[cascade(section)]
     pub guard: Guard,
-}
-
-#[derive(Debug, Default, PartialEq, Cascade)]
-#[cascade(section)]
-pub struct Locus {
-    pub enabled: bool,
-    #[cascade(section)]
-    pub report: Report,
-    #[cascade(section)]
-    pub trace: Trace,
-    #[cascade(section)]
-    pub target: Target,
-}
-
-#[derive(Debug, Default, PartialEq, Cascade)]
-#[cascade(section)]
-pub struct Report {
-    pub file: PathBuf,
-}
-
-#[derive(Debug, Default, PartialEq, Cascade)]
-#[cascade(section)]
-pub struct Trace {
-    pub file: PathBuf,
-    pub id: String,
-}
-
-#[derive(Debug, Default, PartialEq, Cascade)]
-#[cascade(section)]
-pub struct Target {
-    pub collectors: String,
 }
 
 #[derive(Debug, PartialEq, Cascade)]
@@ -258,7 +225,6 @@ impl Default for Rig {
                 .map(|path| path.display().to_string())
                 .unwrap_or_default(),
             releases: RELEASES.to_string(),
-            locus: Locus::default(),
             release: Release {
                 root: PathBuf::from("."),
                 base: "origin/main".to_string(),
