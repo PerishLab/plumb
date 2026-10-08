@@ -6,6 +6,7 @@ use std::path::Path;
 use std::process::{Command, Output};
 
 pub(super) mod launch;
+mod record;
 pub(super) mod status;
 
 const HUB: &str = "PerishLab/wharf";
@@ -50,13 +51,20 @@ pub(in crate::command) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<St
     let head = reference(&listing, &format!("refs/heads/{branch}")).ok_or_else(|| {
         format!("{remote} has no {branch}; a marker stands only on its release line")
     })?;
+    let authority = Authority::new(&super::super::release::authority(&root)?)?;
+    let read = |marker: &str| {
+        authority.read(&Marker {
+            channel: channel.clone(),
+            marker: marker.to_string(),
+        })
+    };
     let message = if channel == STABLE {
         if reference(&listing, &format!("refs/tags/{version}")).is_some() {
             return Err(format!(
                 "{version} already stands; a stable marker never moves"
             ));
         }
-        let authority = Authority::new(&super::super::release::authority(&root)?)?;
+        record::unmoved(read(&version)?.as_ref(), &version, &head)?;
         let promoted = promoted(&listing, &base, &head, |channel, marker| {
             authority.read(&Marker {
                 channel: channel.to_string(),
@@ -174,6 +182,17 @@ pub(super) fn dispatch(options: Dispatch) -> Result<String, String> {
     }
     value::ascends(&listing, "origin", &options.marker)?;
     let spec = crate::shape::release::Spec::controller(&root)?;
+    let commit = reference(&listing, &format!("refs/tags/{}^{{}}", options.marker))
+        .or_else(|| reference(&listing, &format!("refs/tags/{}", options.marker)))
+        .unwrap_or_default();
+    if !options.dry {
+        let channel = super::super::release::channel(&options.marker)?;
+        let held = Authority::new(&spec.authority)?.read(&Marker {
+            channel,
+            marker: options.marker.clone(),
+        })?;
+        record::unmoved(held.as_ref(), &options.marker, &commit)?;
+    }
     super::owed::Seat {
         root: &root,
         remote: "origin",

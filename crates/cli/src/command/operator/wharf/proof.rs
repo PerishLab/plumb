@@ -145,3 +145,25 @@ fn public() {
     assert_eq!(named("present"), ["binaries", "npm"]);
     assert_eq!(named("skipped"), ["binaries", "npm"]);
 }
+
+fn recorded(marker: &str, commit: &str) -> Distribution {
+    Distribution {
+        marker: marker.to_string(),
+        commit: commit.to_string(),
+        state: "incomplete".to_string(),
+        media: Default::default(),
+        run: None,
+    }
+}
+
+#[test]
+fn unmoved() {
+    let held = recorded("v0.72.0-rc.1", "88663ace");
+    assert!(super::record::unmoved(None, "v0.72.0-rc.1", "58d07bb1").is_ok());
+    assert!(super::record::unmoved(Some(&held), "v0.72.0-rc.1", "88663ace").is_ok());
+    let refused = super::record::unmoved(Some(&held), "v0.72.0-rc.1", "58d07bb1").unwrap_err();
+    assert!(
+        refused.contains("88663ace") && refused.contains("never moves"),
+        "{refused}"
+    );
+}
