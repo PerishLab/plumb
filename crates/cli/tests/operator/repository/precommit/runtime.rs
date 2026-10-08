@@ -153,3 +153,111 @@ fn neutral() {
     assert_eq!(finding["schema"], "plumb.guard-finding/v1");
     assert_eq!(finding["code"], "guard.integration-branch");
 }
+
+#[cfg(unix)]
+fn noisy(fixture: &Runtime, mode: &str) -> tempfile::TempDir {
+    use std::os::unix::fs::PermissionsExt as _;
+    let root = fixture.root.path();
+    std::fs::write(
+        root.join("plumb.toml"),
+        "[workflow.hash.guard]\nweb=['apps']\n",
+    )
+    .expect("web policy");
+    std::fs::create_dir_all(root.join("apps/web")).expect("app");
+    std::fs::write(
+        root.join("apps/web/package.json"),
+        r#"{"name":"noisy","scripts":{"build":"held"}}"#,
+    )
+    .expect("manifest");
+    Repo::git(root, &["add", "."]);
+    Repo::git(root, &["commit", "-q", "-m", "web"]);
+    let tools = tempfile::tempdir().expect("tools");
+    let tail = match mode {
+        "failure" => "exit 17",
+        "stream" => "sleep 1",
+        _ => "exit 0",
+    };
+    for name in ["node", "pnpm"] {
+        let path = tools.path().join(name);
+        let body = format!(
+            "#!/bin/sh\nif [ \"$1\" = --version ]; then echo fixture; exit 0; fi\nprintf '%s\\n' '{{\"ok\":true,\"schema\":\"child-output\"}}'\nprintf '%s\\n' 'child diagnostic' >&2\n{tail}\n"
+        );
+        std::fs::write(&path, body).expect("child script");
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).expect("executable");
+    }
+    tools
+}
+
+#[cfg(unix)]
+fn command(fixture: &Runtime, tools: &tempfile::TempDir) -> Command {
+    let mut paths = vec![tools.path().to_path_buf()];
+    paths.extend(std::env::split_paths(
+        &std::env::var_os("PATH").expect("PATH"),
+    ));
+    let mut command = fixture.command();
+    command.env("PATH", std::env::join_paths(paths).expect("PATH"));
+    command
+}
+
+#[test]
+#[cfg(unix)]
+fn channels() {
+    let fixture = Runtime::new();
+    let tools = noisy(&fixture, "success");
+    let cold = command(&fixture, &tools).output().expect("cold guard");
+    assert!(
+        cold.status.success(),
+        "{}",
+        String::from_utf8_lossy(&cold.stderr)
+    );
+    assert_eq!(report(&cold)["ok"], true);
+    let diagnostic = String::from_utf8_lossy(&cold.stderr);
+    assert!(diagnostic.contains(r#"{"ok":true,"schema":"child-output"}"#));
+    assert!(diagnostic.contains("child diagnostic"));
+    let cached = command(&fixture, &tools).output().expect("cached guard");
+    assert!(cached.status.success());
+    assert_eq!(report(&cold), report(&cached));
+    assert!(!String::from_utf8_lossy(&cached.stderr).contains("child-output"));
+}
+
+#[test]
+#[cfg(unix)]
+fn failure() {
+    let fixture = Runtime::new();
+    let tools = noisy(&fixture, "failure");
+    let output = command(&fixture, &tools).output().expect("failed guard");
+    assert!(!output.status.success());
+    let finding = report(&output);
+    assert_eq!(finding["ok"], false);
+    assert!(finding["message"].as_str().unwrap().contains("17"));
+    let diagnostic = String::from_utf8_lossy(&output.stderr);
+    assert!(diagnostic.contains("child-output"));
+    assert!(diagnostic.contains("child diagnostic"));
+}
+
+#[test]
+#[cfg(unix)]
+fn streaming() {
+    use std::io::BufRead as _;
+    use std::process::Stdio;
+    let fixture = Runtime::new();
+    let tools = noisy(&fixture, "stream");
+    let mut child = command(&fixture, &tools)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("streaming guard");
+    let mut diagnostic = std::io::BufReader::new(child.stderr.take().expect("stderr"));
+    let mut line = String::new();
+    loop {
+        line.clear();
+        assert_ne!(diagnostic.read_line(&mut line).expect("live diagnostic"), 0);
+        if line.contains("child-output") {
+            break;
+        }
+    }
+    assert!(child.try_wait().expect("still running").is_none());
+    let output = child.wait_with_output().expect("completed guard");
+    assert!(output.status.success());
+    assert_eq!(report(&output)["ok"], true);
+}
