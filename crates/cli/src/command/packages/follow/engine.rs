@@ -1,4 +1,4 @@
-use super::{Provider, Seat, State, issue, pull, refresh, work};
+use super::{Provider, Seat, State, issue, pull, refresh, scope, work};
 use std::path::Path;
 
 pub(super) fn advance(
@@ -51,7 +51,7 @@ pub(super) fn advance(
     crate::command::packages::resolve(&state.worktree, "follow")?;
     let head = work.commit()?;
     let base = work::git(&state.worktree, &["rev-parse", "origin/main"])?;
-    work::boundary(&state.worktree, &base, &head)?;
+    scope::check(&state.worktree, &base, &head)?;
     state.candidate = Some(head.clone());
     seat.write(state)?;
     let published = provider.publish(
@@ -90,7 +90,7 @@ pub(super) fn advance(
     };
     let authority = plumb::guard::Authority::released()?;
     let plan = plumb::delivery::prepare(request, &authority).map_err(|error| error.to_string())?;
-    work::boundary(&state.worktree, &plan.target, &plan.candidate)?;
+    scope::check(&state.worktree, &plan.target, &plan.candidate)?;
     state.candidate = Some(plan.candidate.clone());
     state.plan = Some(plan.clone());
     seat.write(state)?;

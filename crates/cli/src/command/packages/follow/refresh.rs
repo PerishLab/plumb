@@ -1,4 +1,4 @@
-use super::{State, work};
+use super::{State, scope, work};
 use std::path::Path;
 
 pub(super) fn prepare(state: &State) -> Result<Option<String>, String> {
@@ -16,7 +16,7 @@ pub(super) fn prepare(state: &State) -> Result<Option<String>, String> {
     if !known {
         return Err("Auto local head moved outside recorded recovery state".into());
     }
-    work::boundary(root, &common, &head)?;
+    scope::check(root, &common, &head)?;
     let output = work::git(root, &["merge-tree", "--write-tree", &head, &base])?;
     let tree = output.lines().next().ok_or("Auto base merge has no tree")?;
     if !matches!(tree.len(), 40 | 64) || !tree.bytes().all(|byte| byte.is_ascii_hexdigit()) {
@@ -35,9 +35,7 @@ pub(super) fn prepare(state: &State) -> Result<Option<String>, String> {
             &format!("Resume follow on current main\n\nRefs #{}.", state.issue),
         ],
     )?;
-    let index = crate::command::guard::precommit::tree::Index::new(root, tree)?;
-    work::git(&index.root, &["checkout", "--detach", "--quiet", &commit])?;
-    work::boundary(&index.root, &base, &commit)?;
+    scope::check(root, &base, &commit)?;
     Ok(Some(commit))
 }
 
