@@ -2,7 +2,7 @@ use super::{Repo, support};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-pub(super) fn fixture() -> tempfile::TempDir {
+pub(crate) fn fixture() -> tempfile::TempDir {
     let held = tempfile::tempdir().expect("repository");
     let root = held.path();
     Repo::git(root, &["init", "-q", "-b", "topic"]);

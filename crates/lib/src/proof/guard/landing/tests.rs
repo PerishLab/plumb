@@ -98,6 +98,7 @@ impl Repo {
 
 fn proof(tree: String, name: &str) -> Descriptor {
     let mut proof = Descriptor {
+        resolution: None,
         schema: crate::guard::SCHEMA.into(),
         repository: "PerishLab/probe".into(),
         tree,
@@ -219,4 +220,17 @@ fn base() {
         .revalidate(&prepared, repo.verified())
         .expect_err("changed base");
     assert_eq!(refusal.kind, "empty");
+}
+
+#[test]
+fn automation() {
+    let repo = Repo::new();
+    let git = Git(&repo.root);
+    git.run(&["branch", "-m", "auto/17"]);
+    let inspected = repo.request("Refs #17.").inspect().unwrap();
+    let prepared = inspected.prepare(repo.verified()).unwrap();
+    assert_eq!(prepared.projection, "auto/17");
+    repo.request("Refs #17.")
+        .revalidate(&prepared, repo.verified())
+        .unwrap();
 }

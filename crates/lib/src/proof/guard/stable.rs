@@ -82,6 +82,7 @@ fn git(root: &Path, args: &[&str]) {
 
 fn committed(root: &Path) -> Expected {
     let mut proof = Descriptor {
+        resolution: None,
         schema: SCHEMA.into(),
         repository: "PerishLab/probe".into(),
         tree: EMPTY.into(),

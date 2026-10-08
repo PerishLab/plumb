@@ -1,5 +1,5 @@
 use super::support;
-mod cache;
+pub(super) mod cache;
 mod environment;
 mod graph;
 mod hook;
@@ -34,7 +34,7 @@ impl Repo {
             head,
         }
     }
-    fn git(root: &std::path::Path, args: &[&str]) -> Output {
+    pub(super) fn git(root: &std::path::Path, args: &[&str]) -> Output {
         let output = Command::new("git")
             .arg("-C")
             .arg(root)

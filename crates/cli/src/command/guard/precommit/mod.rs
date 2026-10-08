@@ -1,5 +1,5 @@
 mod action;
-mod branch;
+pub(crate) mod branch;
 mod cache;
 mod cargo;
 mod environment;
@@ -73,7 +73,7 @@ pub fn run(input: Input) -> i32 {
 }
 
 pub(super) fn prove(root: &Path) -> Result<plumb::guard::Descriptor, String> {
-    action::prove(root)
+    action::resolved(root)
 }
 
 pub(crate) fn hooks(root: &Path) -> Vec<hook::Finding> {

@@ -39,7 +39,15 @@ impl Landing {
     }
 
     fn projection(&self) -> String {
-        format!("land/{}", self.branch)
+        if self
+            .branch
+            .strip_prefix("auto/")
+            .is_some_and(|number| number.parse::<u64>().is_ok_and(|number| number > 0))
+        {
+            self.branch.clone()
+        } else {
+            format!("land/{}", self.branch)
+        }
     }
 
     pub fn inspect(self, title: &str, body: &str) -> Result<Draft, Refusal> {

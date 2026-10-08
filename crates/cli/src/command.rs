@@ -2,6 +2,7 @@ pub mod depot;
 pub mod doctor;
 mod guard;
 pub mod operator;
+pub(crate) mod packages;
 pub mod release;
 pub mod ship;
 

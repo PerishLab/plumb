@@ -32,11 +32,24 @@ pub(super) struct Binding<'a> {
 }
 
 pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
+    prepare(root, false)
+}
+
+pub(super) fn resolved(root: &Path) -> Result<Descriptor, String> {
+    prepare(root, true)
+}
+
+fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
     let tree = plumb::guard::tree(root)?;
-    let captured = Tree::read(root, Some(&tree))?;
+    let index = Index::new(root, &tree)?;
+    let resolution = Some(if latest {
+        crate::command::packages::resolve(&index.root, "ci-latest")?
+    } else {
+        plumb::packages::locked(&index.root, "local-locked")?
+    });
+    let captured = Tree::read(&index.root, None)?;
     let manifest = captured.text("plumb.toml")?;
     let product = crate::shape::product::named(manifest.as_deref())?;
-    let index = Index::new(root, &tree)?;
     let prepared = Catalog {
         root,
         tree: &captured,
@@ -96,6 +109,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
             .actions
             .iter()
             .eq(checks.iter().map(|check| &check.proof))
+        && proof.resolution == resolution
     {
         return Ok(proof);
     }
@@ -114,6 +128,7 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
                         execution: check.execution.as_ref(),
                     },
                 )?;
+                tree::unchanged(&index)?;
             }
             super::cache::record(&check.proof)?;
         }
@@ -123,6 +138,10 @@ pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
         tree,
         checks.into_iter().map(|check| check.proof).collect(),
     )?;
+    let proof = match resolution {
+        Some(resolution) => proof.resolved(resolution)?,
+        None => proof,
+    };
     plumb::guard::stage(root, &proof)?;
     Ok(proof)
 }
@@ -191,7 +210,14 @@ impl Catalog<'_> {
         Ok(match name {
             "guard/rust" => vec![
                 cargo(&["fmt", "--all", "--check"]),
-                cargo(&["clippy", "--all-targets", "--", "-D", "warnings"]),
+                cargo(&[
+                    "clippy",
+                    "--locked",
+                    "--all-targets",
+                    "--",
+                    "-D",
+                    "warnings",
+                ]),
                 cargo(&[
                     "check",
                     "--locked",

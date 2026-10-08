@@ -77,6 +77,10 @@ struct Evidence<'a> {
 #[derive(Clone, Copy)]
 struct Refresh<'a>(&'a Path);
 
+pub(crate) fn renew(root: &Path) -> Result<plumb::guard::Descriptor, String> {
+    Refresh(root).execute().map(|outcome| outcome.proof)
+}
+
 pub(super) fn refresh(root: &Path, json: bool) -> i32 {
     Refresh(root).run(json)
 }
