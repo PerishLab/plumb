@@ -14,7 +14,8 @@ impl Work<'_> {
             return Err("Auto worktree seat is a symlink".into());
         }
         let branch = format!("auto/{}", self.state.issue);
-        if !self.state.worktree.exists() {
+        let created = !self.state.worktree.exists();
+        if created {
             let start = self.state.pushed.as_deref().unwrap_or("origin/main");
             let exists = std::process::Command::new("git")
                 .arg("-C")
@@ -69,11 +70,16 @@ impl Work<'_> {
             self.state.issue,
         ))
         .map_err(|error| error.to_string())?;
-        if marker.exists() && std::fs::read(&marker).map_err(|error| error.to_string())? != identity
-        {
+        if created {
+            return std::fs::write(marker, identity).map_err(|error| error.to_string());
+        }
+        let held = std::fs::read(marker).map_err(|error| {
+            format!("existing Auto worktree has no readable ownership marker: {error}")
+        })?;
+        if held != identity {
             return Err("Auto worktree marker disagrees".into());
         }
-        std::fs::write(marker, identity).map_err(|error| error.to_string())
+        Ok(())
     }
 
     pub fn commit(&self) -> Result<String, String> {

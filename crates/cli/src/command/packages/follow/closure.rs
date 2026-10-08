@@ -27,15 +27,6 @@ pub(super) fn close(
         provider.repository, candidate
     );
     provider.comment(state.issue, &body)?;
-    let current = provider.issue(state.issue)?;
-    let accepted = issue::text(&current, "body")?.replace("- [ ]", "- [x]");
-    provider.patch(
-        &format!("repos/{}/issues/{}", provider.repository, state.issue),
-        &serde_json::json!({"body": accepted, "state": "closed"}),
-    )?;
-    if provider.issue(state.issue)?["state"] != "closed" {
-        return Err("Auto issue closure was not read back".into());
-    }
     let result = format!(
         "Auto #{} completed via pull #{} at {merge}",
         state.issue, state.pull
@@ -86,6 +77,15 @@ pub(super) fn close(
                 serde_json::to_string(&retired.kept).map_err(|error| error.to_string())?
             ),
         )?;
+    }
+    let current = provider.issue(state.issue)?;
+    let accepted = issue::text(&current, "body")?.replace("- [ ]", "- [x]");
+    provider.patch(
+        &format!("repos/{}/issues/{}", provider.repository, state.issue),
+        &serde_json::json!({"body": accepted, "state": "closed"}),
+    )?;
+    if provider.issue(state.issue)?["state"] != "closed" {
+        return Err("Auto issue closure was not read back".into());
     }
     *state = State {
         schema: "plumb.auto-state/v1".into(),
