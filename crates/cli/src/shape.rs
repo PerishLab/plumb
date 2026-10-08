@@ -51,7 +51,8 @@ pub struct Shape {
     pub(crate) script: script::Evidence,
     pub(crate) toolchain: toolchain::Evidence,
     pub layout: layout::Read,
-    pub(crate) preview: Result<(), String>,
+    pub(crate) preview: Result<Vec<product::preview::App>, String>,
+    pub(crate) qualification: Result<(), String>,
 }
 
 struct Root<'a>(&'a Path);
@@ -216,6 +217,8 @@ pub fn capture(
             (path, exists)
         })
         .collect();
+    let preview = product::preview::read(root, snapshot.as_ref());
+    let qualification = product::qualification::read(root, &preview, snapshot.as_ref());
     Shape {
         wrappers: seat.names(".runseal/wrappers", ".ts"),
         dirs: snapshot.as_ref().map(Root::dirs).unwrap_or_default(),
@@ -255,7 +258,8 @@ pub fn capture(
         script: script::read(root, snapshot.as_ref()),
         toolchain: toolchain::read(root),
         layout: held,
-        preview: product::preview::read(root, snapshot.as_ref()),
+        preview,
+        qualification,
     }
 }
 

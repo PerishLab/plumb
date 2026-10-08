@@ -5,7 +5,7 @@ use super::write;
 
 const PREVIEW: &str = "[preview.app.crest]\npath = 'reviews/crest'\npackage = '@perish/review'\nprovider = 'cfworker'\naccess = 'public'\n";
 
-fn preview() -> tempfile::TempDir {
+pub(super) fn preview() -> tempfile::TempDir {
     let root = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(root.path().join("reviews/crest")).unwrap();
     write(root.path(), "plumb.toml", PREVIEW);
@@ -17,7 +17,7 @@ fn preview() -> tempfile::TempDir {
     root
 }
 
-fn git(root: &Path, args: &[&str]) {
+pub(super) fn git(root: &Path, args: &[&str]) {
     let output = Command::new("git")
         .current_dir(root)
         .args(args)

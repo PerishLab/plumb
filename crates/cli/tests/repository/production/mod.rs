@@ -1,4 +1,6 @@
 mod preview;
+mod qualification;
+mod world;
 
 use std::path::Path;
 use std::process::Command;

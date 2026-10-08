@@ -1,4 +1,9 @@
+mod calendar;
+mod document;
+mod package;
 pub(crate) mod preview;
+pub(crate) mod qualification;
+mod worker;
 
 pub fn named(manifest: Option<&str>) -> Result<String, String> {
     let raw = manifest.ok_or_else(|| "staged tree requires plumb.toml".to_string())?;

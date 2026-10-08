@@ -10,9 +10,9 @@ struct Preview {
 
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-struct App {
-    path: String,
-    package: String,
+pub(crate) struct App {
+    pub(super) path: String,
+    pub(super) package: String,
     provider: String,
     access: String,
 }
@@ -20,17 +20,17 @@ struct App {
 pub(crate) fn read(
     root: &Path,
     snapshot: Result<&plumb::snapshot::Snapshot, &plumb::snapshot::Refusal>,
-) -> Result<(), String> {
+) -> Result<Vec<App>, String> {
     let path = root.join("plumb.toml");
     if !path.exists() {
-        return Ok(());
+        return Ok(Vec::new());
     }
     let text = std::fs::read_to_string(path).map_err(|error| error.to_string())?;
     let doc = text
         .parse::<toml::Table>()
         .map_err(|error| error.to_string())?;
     let Some(preview) = doc.get("preview") else {
-        return Ok(());
+        return Ok(Vec::new());
     };
     let held: Preview = preview
         .clone()
@@ -40,16 +40,18 @@ pub(crate) fn read(
     regular(root, snapshot, "plumb.toml")?;
     let mut paths = BTreeSet::new();
     let mut packages = BTreeSet::new();
+    let mut apps = Vec::new();
     for (name, app) in held.app {
         app.judge(root, snapshot)
             .map_err(|error| format!("preview app {name}: {error}"))?;
-        if !paths.insert(app.path) || !packages.insert(app.package) {
+        if !paths.insert(app.path.clone()) || !packages.insert(app.package.clone()) {
             return Err(format!(
                 "preview app {name}: duplicate path or package identity"
             ));
         }
+        apps.push(app);
     }
-    Ok(())
+    Ok(apps)
 }
 
 impl App {
@@ -105,7 +107,11 @@ fn token(value: &str, dotted: bool) -> bool {
         })
 }
 
-fn regular(root: &Path, snapshot: &plumb::snapshot::Snapshot, path: &str) -> Result<(), String> {
+pub(super) fn regular(
+    root: &Path,
+    snapshot: &plumb::snapshot::Snapshot,
+    path: &str,
+) -> Result<(), String> {
     let tracked = snapshot
         .entries()
         .iter()
