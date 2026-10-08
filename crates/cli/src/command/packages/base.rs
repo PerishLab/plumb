@@ -1,4 +1,5 @@
 use super::super::super::refresh;
+use super::super::super::scope;
 use super::{Fixture, Seat, State, engine, isolated, work};
 use serde_json::json;
 use std::path::Path;
@@ -49,7 +50,7 @@ fn incorporated() {
     commit(&source, "src/lib.rs", "pub fn answer() -> u8 { 43 }\n");
     advance(&source);
     let base = work::git(&source, &["rev-parse", "origin/main"]).unwrap();
-    assert!(work::boundary(&state.worktree, &base, old).is_err());
+    assert!(scope::check(&state.worktree, &base, old).is_err());
     let candidate = refresh::prepare(&state).unwrap().unwrap();
     refresh::apply(&state.worktree, &candidate).unwrap();
     assert_eq!(
@@ -203,7 +204,7 @@ fn advanced() {
     assert_eq!(recovered.pull, 18);
     let head = work::git(&state.worktree, &["rev-parse", "HEAD"]).unwrap();
     let base = work::git(&state.worktree, &["rev-parse", "origin/main"]).unwrap();
-    work::boundary(&state.worktree, &base, &head).unwrap();
+    scope::check(&state.worktree, &base, &head).unwrap();
     assert_eq!(
         work::git(&state.worktree, &["merge-base", &head, &old]).unwrap(),
         old

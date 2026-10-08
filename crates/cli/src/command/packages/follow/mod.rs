@@ -4,6 +4,7 @@ mod issue;
 mod provider;
 mod pull;
 mod refresh;
+mod scope;
 mod state;
 #[cfg(all(test, unix))]
 #[path = "../tests.rs"]
