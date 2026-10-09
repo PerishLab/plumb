@@ -3,6 +3,8 @@ mod packages;
 #[cfg(unix)]
 #[path = "precommit/main.rs"]
 mod precommit;
+#[cfg(unix)]
+mod reclaim;
 mod world;
 
 #[path = "../../support/mod.rs"]

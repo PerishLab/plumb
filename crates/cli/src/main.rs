@@ -19,7 +19,7 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
-enum Command {
+pub(crate) enum Command {
     #[command(about = "Judge this repository against the skeleton and report every finding")]
     Doctor {
         #[command(flatten)]
@@ -182,91 +182,12 @@ enum Command {
         #[command(subcommand)]
         deed: command::depot::Deed,
     },
-}
-fn execute(command: Command) -> i32 {
-    match command {
-        Command::Follow {
-            target,
-            github_command,
-            json,
-        } => command::packages::follow::run(command::packages::follow::Input {
-            root: PathBuf::from(target.root),
-            github: github_command,
-            json,
-        }),
-        Command::Lift { target, json } => command::packages::lift(PathBuf::from(target.root), json),
-        Command::Doctor { target, json } => command::doctor::run(PathBuf::from(target.root), json),
-        Command::Land {
-            target,
-            base,
-            title,
-            body,
-            watch,
-            dry,
-            json,
-        } => command::land::run(command::land::Input {
-            root: PathBuf::from(target.root),
-            base,
-            title,
-            body,
-            watch,
-            dry,
-            json,
-        }),
-        Command::Guard {
-            target,
-            base,
-            head,
-            write,
-            attach,
-            refresh,
-            json,
-        } => command::precommit::run(command::precommit::Input {
-            root: PathBuf::from(target.root),
-            base,
-            head,
-            write,
-            attach,
-            refresh,
-            json,
-        }),
-        Command::Radius {
-            root,
-            product,
-            candidate,
-            json,
-        } => command::radius::run(command::radius::Input {
-            roots: root,
-            product,
-            candidate,
-            json,
-        }),
-        Command::Policy { target, write } => {
-            command::render::Seat::new(PathBuf::from(target.root)).policy(write)
-        }
-        Command::Skill { deed } => consumption::skill::run(deed),
-        Command::Rule { deed } => catalog::query::run(deed),
-        Command::Changelog {
-            target,
-            version,
-            prove: Some(home),
-        } => command::render::Seat::new(PathBuf::from(target.root)).proven(version, &home),
-        Command::Changelog {
-            target, version, ..
-        } => command::render::Seat::new(PathBuf::from(target.root)).changelog(version),
-        Command::Configuration { deed } => consumption::configuration::run(deed),
-        Command::Layout { target } => {
-            command::render::Seat::new(PathBuf::from(target.root)).layout()
-        }
-        Command::Metadata { key, json } => consumption::metadata::run(key, json),
-        Command::Cookbook { entry, json } => command::cookbook::run(entry, json),
-        Command::Affirm { target, write } => {
-            command::render::Seat::new(PathBuf::from(target.root)).affirm(write)
-        }
-        Command::Release { deed } => command::release::run(deed),
-        Command::Ship { deed } => command::ship::run(deed),
-        Command::Depot { deed } => command::depot::run(deed),
-    }
+    #[command(about = "Inspect and reclaim idle Guard build caches",
+        long_about = plumb::seat::resource!("help/cache.txt"))]
+    Cache {
+        #[command(subcommand)]
+        deed: command::cache::Deed,
+    },
 }
 fn main() {
     plumb::depot::carry(catalog::carried::FILES);
@@ -288,7 +209,7 @@ fn main() {
         })
     });
     let code = match prepared {
-        Ok(()) => execute(command),
+        Ok(()) => command::execute(command),
         Err(error) => {
             eprintln!("plumb: {error}");
             1

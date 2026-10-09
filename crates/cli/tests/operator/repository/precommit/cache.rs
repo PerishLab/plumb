@@ -46,7 +46,7 @@ pub(crate) fn fixture() -> tempfile::TempDir {
     held
 }
 
-pub(super) fn run(root: &Path, home: &Path) -> Output {
+pub(crate) fn run(root: &Path, home: &Path) -> Output {
     super::support::plumb()
         .args(["guard", ".", "--json"])
         .current_dir(root)
@@ -56,7 +56,7 @@ pub(super) fn run(root: &Path, home: &Path) -> Output {
         .expect("guard")
 }
 
-fn seats(home: &Path) -> Vec<PathBuf> {
+pub(crate) fn seats(home: &Path) -> Vec<PathBuf> {
     #[cfg(windows)]
     let root = home.join("c");
     #[cfg(not(windows))]
@@ -67,7 +67,7 @@ fn seats(home: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
-pub(super) fn success(output: &Output) {
+pub(crate) fn success(output: &Output) {
     assert!(
         output.status.success(),
         "{}{}",
