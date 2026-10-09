@@ -211,13 +211,14 @@ impl Delta {
             let status = std::str::from_utf8(status)
                 .map_err(|_| refuse("git-path", "Git emitted a non-UTF-8 status"))?;
             let count = usize::from(status.starts_with('R') || status.starts_with('C')) + 1;
-            for _ in 0..count {
+            for index in 0..count {
                 let field = fields.next().ok_or_else(|| {
                     refuse("git", format!("Git emitted an incomplete {status} record"))
                 })?;
                 let path = std::str::from_utf8(field)
                     .map_err(|_| refuse("git-path", "Git delta contains a non-UTF-8 path"))?;
-                paths.push(path::parse(path, false)?);
+                let path = path::parse(path, false)?;
+                paths.extend((!status.starts_with('C') || index == 1).then_some(path));
             }
         }
         paths.sort();
