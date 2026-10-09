@@ -188,7 +188,7 @@ fn parse(text: &str, registry: &str) -> Result<Option<toml::Value>, toml::de::Er
     }
 }
 
-fn manifests(base: &Path) -> Vec<std::path::PathBuf> {
+pub(super) fn manifests(base: &Path) -> Vec<std::path::PathBuf> {
     let mut found = vec![base.join("Cargo.toml"), base.join("app/Cargo.toml")];
     if let Ok(entries) = std::fs::read_dir(base.join("crates")) {
         for entry in entries.flatten() {
@@ -199,7 +199,7 @@ fn manifests(base: &Path) -> Vec<std::path::PathBuf> {
     found
 }
 
-fn seat(repo: &Path, path: &Path) -> String {
+pub(super) fn seat(repo: &Path, path: &Path) -> String {
     if let Ok(repo) = repo.canonicalize()
         && let Ok(path) = path.strip_prefix(repo)
     {

@@ -29,12 +29,44 @@ fn cargo() {
 
         [target.'cfg(unix)'.dependencies]
         local = { path = "crates/local" }
+        platform = { version = "1", registry = "perish" }
         "#,
     )
     .expect("manifest");
     assert_eq!(
         plumb_cli::packages(&document, "perish"),
-        std::collections::BTreeSet::from(["held".into(), "renamed".into()])
+        std::collections::BTreeSet::from(["held".into(), "platform".into(), "renamed".into()])
+    );
+}
+
+#[test]
+fn names() {
+    let document: toml::Value = toml::from_str(
+        r#"
+        [dependencies]
+        plain = "1"
+        shared.workspace = true
+
+        [dev-dependencies]
+        alias = { package = "renamed", version = "1" }
+
+        [workspace.dependencies]
+        pooled = "1"
+
+        [target.'cfg(windows)'.build-dependencies]
+        platform = "1"
+        "#,
+    )
+    .expect("manifest");
+    assert_eq!(
+        plumb_cli::names(&document),
+        std::collections::BTreeSet::from([
+            "plain".into(),
+            "platform".into(),
+            "pooled".into(),
+            "renamed".into(),
+            "shared".into(),
+        ])
     );
 }
 

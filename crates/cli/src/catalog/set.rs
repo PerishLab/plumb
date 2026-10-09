@@ -6,6 +6,7 @@ pub struct Rules {
     pub lanes: BTreeSet<String>,
     pub retired: Vec<(String, String)>,
     pub blacklist: BTreeSet<String>,
+    pub refused: BTreeSet<String>,
     pub release: Release,
 }
 
@@ -131,30 +132,39 @@ fn build() -> Result<Rules, String> {
         })
         .transpose()?
         .unwrap_or_default();
-    let blacklist = deps
-        .get("blacklist")
-        .and_then(toml::Value::as_array)
-        .map(|list| {
-            list.iter()
-                .map(|value| {
-                    value.as_str().map(str::to_string).ok_or_else(|| {
-                        "rules/atoms/deps.toml blacklist must hold strings".to_string()
-                    })
-                })
-                .collect::<Result<BTreeSet<_>, _>>()
-        })
-        .transpose()?
-        .unwrap_or_default();
+    let blacklist = listed(deps.get("blacklist"), "blacklist")?;
+    let refused = listed(
+        deps.get("loader").and_then(|held| held.get("refused")),
+        "loader.refused",
+    )?;
     Ok(Rules {
         dirs: members(&structure, "dir"),
         lanes: members(&structure, "lane"),
         retired,
         blacklist,
+        refused,
         release: Release {
             ceiling: ceiling(&release)?,
             permitted: counted(&release, "permitted"),
         },
     })
+}
+
+fn listed(value: Option<&toml::Value>, key: &str) -> Result<BTreeSet<String>, String> {
+    value
+        .and_then(toml::Value::as_array)
+        .map(|list| {
+            list.iter()
+                .map(|value| {
+                    value
+                        .as_str()
+                        .map(str::to_string)
+                        .ok_or_else(|| format!("rules/atoms/deps.toml {key} must hold strings"))
+                })
+                .collect::<Result<BTreeSet<_>, _>>()
+        })
+        .transpose()
+        .map(Option::unwrap_or_default)
 }
 
 fn members(doc: &toml::Table, key: &str) -> BTreeSet<String> {
