@@ -5,8 +5,9 @@ use std::time::{Duration, Instant};
 pub(super) fn run(root: &Path, family: &str, argv: &[String]) -> Result<Vec<u8>, String> {
     let (program, args) = argv.split_first().ok_or("package command is empty")?;
     let environment = crate::config::environment(&crate::config::contract(family)?)?;
-    let mut command = crate::config::detached(program);
-    environment.apply(&mut command);
+    let execution =
+        crate::config::Execution::new(environment, std::slice::from_ref(program), root)?;
+    let mut command = execution.command(program)?;
     command.args(args).current_dir(root);
     capture(command)
 }
