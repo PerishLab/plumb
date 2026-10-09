@@ -1,5 +1,6 @@
 mod artifact;
 mod capability;
+mod evidence;
 
 use plumb::lane::{Address, Name};
 use serde_json::{Value, json};

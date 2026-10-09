@@ -3,6 +3,8 @@ mod artifact;
 mod build;
 mod capability;
 mod digest;
+#[path = "../evidence/mod.rs"]
+pub mod evidence;
 mod name;
 mod source;
 
