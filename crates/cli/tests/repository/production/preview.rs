@@ -3,7 +3,7 @@ use std::process::Command;
 
 use super::write;
 
-const PREVIEW: &str = "[preview.app.crest]\npath = 'reviews/crest'\npackage = '@perish/review'\nprovider = 'cfworker'\naccess = 'public'\n";
+pub(super) const PREVIEW: &str = "[lane]\nrepository = 'PerishLab/crest'\n[lane.app.crest]\npath = 'reviews/crest'\npackage = '@perish/review'\n[lane.app.crest.mapping]\nprovider = 'cfworker'\naccess = 'public'\naccount = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\nresource = 'crest-review'\n[lane.app.crest.binding.preview]\nadaptor = 'static'\ncapabilities = ['inspect', 'deploy']\n[lane.app.crest.binding.preview.authorities]\nauthorization = 'ensign'\npublication = 'wharf'\n";
 
 pub(super) fn preview() -> tempfile::TempDir {
     let root = tempfile::tempdir().unwrap();
@@ -26,7 +26,7 @@ pub(super) fn git(root: &Path, args: &[&str]) {
     assert!(output.status.success(), "{:?}", output);
 }
 
-fn previewed(root: &Path) -> String {
+pub(super) fn previewed(root: &Path) -> String {
     let home = super::super::support::home();
     let output = super::super::support::plumb()
         .args(["doctor", "--json"])
@@ -50,7 +50,7 @@ fn declaration() {
     let root = preview();
     let cases = [
         (PREVIEW.to_owned(), false),
-        ("[preview]\n".to_owned(), false),
+        ("[preview]\n".to_owned(), true),
         ("[preview]\napps = {}\n".to_owned(), true),
         ("preview = 'wrong'\n".to_owned(), true),
         ("[preview]\napp = []\n".to_owned(), true),
@@ -64,10 +64,7 @@ fn declaration() {
             true,
         ),
         (PREVIEW.replace("'@perish/review'", "'review'"), false),
-        (
-            format!("{PREVIEW}{}", PREVIEW.replace("app.crest", "app.other")),
-            true,
-        ),
+        (format!("{PREVIEW}{}", sibling()), true),
     ];
     for (text, refused) in cases {
         write(root.path(), "plumb.toml", &text);
@@ -128,7 +125,7 @@ fn duplicate() {
         write(root.path(), &format!("reviews/other/{file}"), "{}");
     }
     git(root.path(), &["add", "."]);
-    let other = PREVIEW.replace("app.crest", "app.other");
+    let other = sibling();
     for text in [
         other.replace("reviews/crest", "reviews/other"),
         other.replace("@perish/review", "@perish/other"),
@@ -151,6 +148,15 @@ fn duplicate() {
         ),
     );
     assert!(previewed(root.path()).is_empty());
+}
+
+fn sibling() -> String {
+    PREVIEW
+        .split_once("[lane.app.crest]")
+        .unwrap()
+        .1
+        .replace("lane.app.crest", "lane.app.other")
+        .replace("path =", "[lane.app.other]\npath =")
 }
 
 #[cfg(unix)]

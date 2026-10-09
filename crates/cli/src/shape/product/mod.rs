@@ -1,5 +1,7 @@
+mod binding;
 mod calendar;
 mod document;
+mod mapping;
 mod package;
 pub(crate) mod preview;
 pub(crate) mod qualification;

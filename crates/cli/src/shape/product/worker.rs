@@ -34,12 +34,7 @@ impl Worker {
         if self.development || !self.previews.is_empty() {
             return Err("static Worker must disable workers_dev and declare empty previews".into());
         }
-        if self.account.len() != 32
-            || !self
-                .account
-                .bytes()
-                .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f'))
-        {
+        if !account(&self.account) {
             return Err("static Worker needs a lowercase 32-digit hex account".into());
         }
         if !slug(&self.name) {
@@ -72,7 +67,14 @@ impl Assets {
     }
 }
 
-fn slug(value: &str) -> bool {
+pub(super) fn account(value: &str) -> bool {
+    value.len() == 32
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f'))
+}
+
+pub(super) fn slug(value: &str) -> bool {
     let edge = |byte: u8| byte.is_ascii_lowercase() || byte.is_ascii_digit();
     if value.is_empty() || value.len() > 63 {
         return false;
