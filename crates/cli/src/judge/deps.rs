@@ -31,6 +31,7 @@ pub fn check(held: &shape::Shape) -> Found {
     for dependency in &held.dependencies.held {
         currency(dependency, &mut found);
     }
+    loaders(&held.dependencies, &mut found);
     for (seat, name) in &held.node {
         if set::current().blacklist.contains(name) {
             found.push(wrong(
@@ -40,6 +41,22 @@ pub fn check(held: &shape::Shape) -> Found {
         }
     }
     found
+}
+
+fn loaders(held: &shape::Dependencies, found: &mut Found) {
+    for (seat, name) in &held.direct {
+        if set::current().refused.contains(name) {
+            found.push(wrong(
+                &rule::LOADER_ABSENT,
+                format!(
+                    "{seat} depends on .env loader {name}; declare settings through plumb Cascade"
+                ),
+            ));
+        }
+    }
+    for error in &held.unread {
+        found.push(blind(&rule::LOADER_ABSENT, error.clone()));
+    }
 }
 
 const SUBSTRATE: [&str; 2] = ["plumb", "@perishlab/plumb"];

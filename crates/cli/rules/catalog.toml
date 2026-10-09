@@ -39,6 +39,15 @@ owner = "plumb"
 tags = ["dependency"]
 
 [[rule]]
+id = "deps.environment-loader-absent"
+summary = "Configuration does not load .env files"
+law = "A Rust manifest does not depend on a .env loader. Settings enter through plumb Cascade, whose file, environment and argument layers are the only way in; a loader writes whatever .env sits in the working directory into the process environment, feeds that layer unseen and is inherited by every child."
+evidence = "Direct Cargo dependency names, including renamed, workspace and target-specific ones, in the root, app and crates manifests."
+standing = "mechanized"
+owner = "plumb"
+tags = ["configuration", "dependency"]
+
+[[rule]]
 id = "deps.first-party-stable-latest"
 summary = "First-party dependencies resolve to stable latest"
 law = "A direct dependency published by perish.code resolves exactly to the live latest non-prerelease, non-yanked version at its compiled registry authority, except the plumb substrate, whose currency the depot floor decides."

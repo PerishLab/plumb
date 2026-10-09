@@ -91,7 +91,7 @@ svelte = ["rule://scan/packages-web-svelte"]
 tsx = ["rule://scan/packages-web-tsx"]
 "#;
 
-const DEPS: &str = "blacklist = [\"@stylexjs/stylex\"]\n";
+const DEPS: &str = "blacklist = [\"@stylexjs/stylex\"]\n\n[loader]\nrule = \"deps.environment-loader-absent\"\nrefused = [\"dotenvy\"]\n";
 
 pub(super) fn govern(root: &Path) {
     let status = Command::new("git")
@@ -270,4 +270,5 @@ description = "fixture"
     assert!(!out.contains("unexpected ectropy"), "{out}");
 }
 
+mod loader;
 mod web;

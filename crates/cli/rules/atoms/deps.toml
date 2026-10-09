@@ -1,5 +1,6 @@
 # The deps dimension's first-party policy: the styling packages a governed
-# repository does not carry.
+# repository does not carry, and the .env loaders that would let settings
+# bypass Cascade.
 
 rule = "deps.styling-package-allowed"
 
@@ -17,3 +18,7 @@ blacklist = [
   "styled-components",
   "styled-jsx",
 ]
+
+[loader]
+rule = "deps.environment-loader-absent"
+refused = ["dotenv", "dotenvy"]

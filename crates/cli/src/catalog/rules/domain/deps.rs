@@ -9,6 +9,7 @@ rule!(
 );
 rule!(FIRST_PARTY_STABLE_LATEST, "deps.first-party-stable-latest");
 rule!(STYLING_PACKAGE_ALLOWED, "deps.styling-package-allowed");
+rule!(LOADER_ABSENT, "deps.environment-loader-absent");
 
 pub fn mechanisms() -> Vec<&'static Mechanism> {
     vec![
@@ -18,5 +19,6 @@ pub fn mechanisms() -> Vec<&'static Mechanism> {
         &SELF_BUILT_DEPENDENCY_UNPINNED,
         &FIRST_PARTY_STABLE_LATEST,
         &STYLING_PACKAGE_ALLOWED,
+        &LOADER_ABSENT,
     ]
 }

@@ -104,40 +104,53 @@ pub fn route(name: &str) -> String {
 
 pub fn packages(document: &toml::Value, registry: &str) -> BTreeSet<String> {
     let mut found = BTreeSet::new();
-    walk(document, registry, &mut found);
+    walk(document, Some(registry), &mut found);
     found
 }
 
-fn walk(value: &toml::Value, registry: &str, found: &mut BTreeSet<String>) {
+pub fn names(document: &toml::Value) -> BTreeSet<String> {
+    let mut found = BTreeSet::new();
+    walk(document, None, &mut found);
+    found
+}
+
+fn walk(value: &toml::Value, registry: Option<&str>, found: &mut BTreeSet<String>) {
     let Some(table) = value.as_table() else {
         return;
     };
     for (name, value) in table {
-        if matches!(
-            name.as_str(),
-            "dependencies" | "dev-dependencies" | "build-dependencies"
-        ) {
-            collect(value, registry, found);
-        } else if name == "workspace" || name == "target" {
-            walk(value, registry, found);
+        match name.as_str() {
+            "dependencies" | "dev-dependencies" | "build-dependencies" => {
+                collect(value, registry, found);
+            }
+            "workspace" => walk(value, registry, found),
+            "target" => platforms(value, registry, found),
+            _ => {}
         }
     }
 }
 
-fn collect(value: &toml::Value, registry: &str, found: &mut BTreeSet<String>) {
+fn platforms(value: &toml::Value, registry: Option<&str>, found: &mut BTreeSet<String>) {
+    for platform in value.as_table().into_iter().flat_map(toml::Table::values) {
+        walk(platform, registry, found);
+    }
+}
+
+fn collect(value: &toml::Value, registry: Option<&str>, found: &mut BTreeSet<String>) {
     let Some(table) = value.as_table() else {
         return;
     };
     for (name, value) in table {
-        let Some(specification) = value.as_table() else {
-            continue;
-        };
-        if specification.get("registry").and_then(toml::Value::as_str) != Some(registry) {
+        let specification = value.as_table();
+        let source = specification
+            .and_then(|held| held.get("registry"))
+            .and_then(toml::Value::as_str);
+        if registry.is_some_and(|wanted| source != Some(wanted)) {
             continue;
         }
         found.insert(
             specification
-                .get("package")
+                .and_then(|held| held.get("package"))
                 .and_then(toml::Value::as_str)
                 .unwrap_or(name)
                 .to_string(),
