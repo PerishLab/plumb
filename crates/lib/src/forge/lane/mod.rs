@@ -6,6 +6,8 @@ mod digest;
 #[path = "../evidence/mod.rs"]
 pub mod evidence;
 mod name;
+#[path = "../operation/mod.rs"]
+pub mod operation;
 mod source;
 
 pub use address::Address;
