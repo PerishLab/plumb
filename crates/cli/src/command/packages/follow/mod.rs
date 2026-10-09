@@ -112,6 +112,7 @@ fn resume(
         }
         state.issue = issue::create(provider)?;
     }
+    issue::snapshot(provider, state.issue)?;
     let owned = seat.worktree()?.join("worktree");
     if state.worktree.as_os_str().is_empty() {
         state.worktree = owned;
@@ -123,8 +124,38 @@ fn resume(
         if !known && (state.pushed.is_some() || state.candidate.is_some()) {
             return Err("Auto remote head moved outside recorded recovery state".into());
         }
-        if !known && provider.find(state.issue)?.is_none() {
+        let recorded = provider.recorded(state.issue)?;
+        if let Some(intent) = &recorded
+            && intent.head != head
+            && intent.previous.as_ref() != Some(&head)
+        {
+            return Err("Auto remote head moved outside recorded publication intent".into());
+        }
+        if !known
+            && provider.find(state.issue)?.is_none()
+            && recorded.as_ref().is_none_or(|intent| intent.head != head)
+        {
             return Err("unrecorded Auto remote branch has no registered pull relationship".into());
+        }
+        work::git(
+            &input.root,
+            &[
+                "fetch",
+                "origin",
+                &format!("refs/heads/auto/{}", state.issue),
+            ],
+        )?;
+        if work::git(&input.root, &["rev-parse", "FETCH_HEAD"])? != head {
+            return Err("Auto remote head moved during acquisition".into());
+        }
+        if let Some(intent) = recorded.filter(|intent| intent.head == head) {
+            if work::git(&input.root, &["rev-parse", &format!("{head}^{{tree}}")])? != intent.tree {
+                return Err("Auto acquired tree differs from publication intent".into());
+            }
+            scope::check(&input.root, &intent.base, &head)?;
+        } else {
+            let base = work::git(&input.root, &["merge-base", "origin/main", &head])?;
+            scope::check(&input.root, &base, &head)?;
         }
         state.pushed = Some(head);
     }

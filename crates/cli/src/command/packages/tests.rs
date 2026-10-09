@@ -146,6 +146,7 @@ fn isolated(name: &str) -> bool {
     if std::env::var("PLUMB_TEST_RECOVERY").as_deref() == Ok(name) {
         return true;
     }
+    let home = tempfile::tempdir().unwrap();
     let mut command = std::process::Command::new(std::env::current_exe().unwrap());
     command
         .args([
@@ -154,6 +155,8 @@ fn isolated(name: &str) -> bool {
             "--nocapture",
         ])
         .env("PLUMB_TEST_RECOVERY", name)
+        .env("PLUMB_TEST_HOME", home.path())
+        .env("PLUMB_HOME", home.path())
         .env_remove("CI");
     for (key, _) in std::env::vars() {
         let ambient = key.starts_with("CARGO_") || key.starts_with("RUST");

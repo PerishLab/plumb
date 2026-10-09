@@ -8,8 +8,12 @@ required organization Guard, and revalidates before the ordinary squash merge.
 Closure reads back the merge commit and successful Guard run before accepting
 and closing the Issue.
 
-State and one repository lease live under PLUMB_HOME. Provider writes are read
-back before resuming; a duplicate relationship, needs label, open child or
+State and one local repository lease live under PLUMB_HOME. A disposable clone
+and empty home recover from the registered GitHub Issue, exact publication
+intent, branch and pull. New local proof and delivery preparation replace old
+path-bound plans. Publication intent is read back before pushing; provider
+facts decide whether an interrupted write completed. Stage labels grant no
+recovery authority. Provider writes are read back before resuming; a duplicate relationship, needs label, open child or
 blocker, foreign branch movement, permissions refusal or failing Guard stops
 the operation. A stopped operation records the available Issue, pull and failure
 evidence. Repair the blocker and rerun this same command.

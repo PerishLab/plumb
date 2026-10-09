@@ -1,4 +1,4 @@
-use super::{Provider, Seat, State, issue, work};
+use super::{Provider, Seat, State, issue, scope, work};
 use std::path::Path;
 
 pub(super) fn close(
@@ -17,7 +17,15 @@ pub(super) fn close(
         .as_ref()
         .ok_or("Auto merge has no exact candidate identity")?;
     work::git(root, &["fetch", "origin"])?;
-    work::git(root, &["fetch", "origin", candidate])?;
+    work::git(
+        root,
+        &["fetch", "origin", &format!("refs/pull/{}/head", state.pull)],
+    )?;
+    if work::git(root, &["rev-parse", "FETCH_HEAD"])? != *candidate {
+        return Err("Auto merged pull head differs during acquisition".into());
+    }
+    let base = work::git(root, &["rev-parse", &format!("{candidate}^1")])?;
+    scope::check(root, &base, candidate)?;
     work::git(root, &["merge-base", "--is-ancestor", merge, "origin/main"])?;
     issue::snapshot(provider, state.issue)?;
     let landed =
