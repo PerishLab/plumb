@@ -71,7 +71,8 @@ fn capture(path: Vec<String>, held: &mut Vec<u8>) {
     held.push(0);
     let stdout = String::from_utf8(output.stdout)
         .expect("help should be utf8")
-        .replace("\r\n", "\n");
+        .replace("\r\n", "\n")
+        .replace("Usage: plumb.exe", "Usage: plumb");
     held.extend_from_slice(stdout.as_bytes());
     held.push(0);
     for child in children(&stdout) {

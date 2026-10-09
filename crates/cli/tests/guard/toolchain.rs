@@ -1,21 +1,39 @@
-use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
+use std::sync::OnceLock;
 
 const COOKBOOK: &str = "see: plumb cookbook env.toolchain-domain";
 
 const ALIGNED: [(&str, &str); 4] = [
-    ("cargo", "echo 'cargo 1.96.1 (ea2d97820 2026-06-26)'"),
-    ("rustc", "echo 'rustc 1.96.1 (31fca3adb 2026-06-26)'"),
-    ("node", "echo v24.18.0"),
-    ("pnpm", "echo 11.13.0"),
+    ("cargo", "cargo 1.96.1 (ea2d97820 2026-06-26)"),
+    ("rustc", "rustc 1.96.1 (31fca3adb 2026-06-26)"),
+    ("node", "v24.18.0"),
+    ("pnpm", "11.13.0"),
 ];
 
+fn binary() -> &'static Path {
+    static ROOT: OnceLock<tempfile::TempDir> = OnceLock::new();
+    ROOT.get_or_init(|| {
+        let root = tempfile::tempdir().expect("binary");
+        let source = root.path().join("probe.rs");
+        std::fs::write(&source, r#"fn main() { let body = std::fs::read_to_string(std::env::current_exe().unwrap().with_extension("txt")).unwrap(); let mut lines = body.lines(); let status = lines.next().unwrap().parse().unwrap(); println!("{}", lines.next().unwrap()); eprintln!("{}", lines.next().unwrap()); std::process::exit(status); }"#).unwrap();
+        let output = plumb::config::current("rustc")
+            .arg(source).arg("-o").arg(root.path().join("probe.exe"))
+            .output().expect("rustc");
+        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+        root
+    }).path()
+}
+
 fn stub(dir: &Path, tool: &str, body: &str) {
-    let path = dir.join(tool);
-    std::fs::write(&path, format!("#!/bin/sh\n{body}\n")).expect("stub should be written");
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
-        .expect("stub should be executable");
+    let name = if cfg!(windows) {
+        format!("{tool}.exe")
+    } else {
+        tool.into()
+    };
+    let path = dir.join(name);
+    std::fs::copy(binary().join("probe.exe"), &path).expect("native stub");
+    std::fs::write(path.with_extension("txt"), format!("0\n{body}\n\n")).expect("stub output");
 }
 
 fn doctor(root: &Path, tools: &Path) -> String {
@@ -56,17 +74,13 @@ fn aligned() {
 #[test]
 fn diverged() {
     let (root, tools) = specimen(&["Cargo.toml", "package.json"]);
-    stub(
-        tools.path(),
-        "rustc",
-        "echo 'rustc 1.95.0 (abc 2026-05-01)'",
-    );
-    stub(tools.path(), "pnpm", "echo 11.13.1");
-    stub(
-        tools.path(),
-        "cargo",
-        "echo 'error: rustup could not choose a version of cargo to run' >&2; exit 1",
-    );
+    stub(tools.path(), "rustc", "rustc 1.95.0 (abc 2026-05-01)");
+    stub(tools.path(), "pnpm", "11.13.1");
+    std::fs::write(
+        tools.path().join("cargo.txt"),
+        "1\n\nerror: rustup could not choose a version of cargo to run\n",
+    )
+    .unwrap();
     let out = doctor(root.path(), tools.path());
     for line in [
         "rustc reports 1.95.0, the domain runs 1.96.1",
@@ -85,7 +99,7 @@ fn diverged() {
 fn unused() {
     let (root, tools) = specimen(&[]);
     for tool in ["cargo", "rustc", "node", "pnpm"] {
-        stub(tools.path(), tool, "echo 0.0.1");
+        stub(tools.path(), tool, "0.0.1");
     }
     let out = doctor(root.path(), tools.path());
     assert!(!out.contains(COOKBOOK), "{out}");

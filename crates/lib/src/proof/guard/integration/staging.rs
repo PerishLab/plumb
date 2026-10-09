@@ -11,7 +11,13 @@ pub fn root() -> Option<PathBuf> {
 
 pub fn contains(root: &Path, path: &Path) -> bool {
     let root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
-    let path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let path = path.canonicalize().unwrap_or_else(|_| {
+        path.parent()
+            .and_then(|parent| parent.canonicalize().ok())
+            .zip(path.file_name())
+            .map(|(parent, name)| parent.join(name))
+            .unwrap_or_else(|| path.to_path_buf())
+    });
     path.parent() == Some(root.as_path())
         && path
             .file_name()
