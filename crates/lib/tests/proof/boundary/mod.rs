@@ -1,3 +1,4 @@
+mod copies;
 mod index;
 
 use plumb::boundary::{Request, check};
@@ -113,8 +114,9 @@ fn copy() {
     repo.write("copied/item.rs", "same\n");
     let head = repo.commit("copy");
     let report = inspect(&repo, &base, &head, &["copied"]);
-    assert_eq!(report.changed, ["copied/item.rs", "source/item.rs"]);
-    assert_eq!(report.outside, ["source/item.rs"]);
+    assert_eq!(report.changed, ["copied/item.rs"]);
+    assert!(report.outside.is_empty());
+    assert!(report.ok);
 }
 
 #[cfg(unix)]
