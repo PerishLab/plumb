@@ -1,3 +1,8 @@
+mod search;
+mod system;
+
+pub use search::Search;
+
 use super::environment::Environment;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -25,9 +30,9 @@ impl Execution {
             .canonicalize()
             .map_err(|error| format!("cannot resolve execution root: {error}"))?;
         let mut tools = BTreeMap::new();
+        let search = environment.search(&root)?;
         for program in programs.iter().chain(environment.tools.values()) {
-            let path = which::which_in(program, environment.get("PATH"), &root)
-                .map_err(|error| format!("cannot resolve tool {program}: {error}"))?;
+            let path = search.resolve(program)?;
             let digest = fingerprint(&path)?;
             tools.insert(program.clone(), Tool { path, digest });
         }
@@ -87,9 +92,9 @@ impl Execution {
     }
 
     pub fn verify(&self) -> Result<(), String> {
+        let search = self.environment.search(&self.root)?;
         for (name, tool) in &self.tools {
-            let path = which::which_in(name, self.environment.get("PATH"), &self.root)
-                .map_err(|error| format!("cannot resolve tool {name}: {error}"))?;
+            let path = search.resolve(name)?;
             if path != tool.path || fingerprint(&path)? != tool.digest {
                 return Err(format!("resolved tool {name} changed before execution"));
             }

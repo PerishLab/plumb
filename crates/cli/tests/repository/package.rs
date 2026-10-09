@@ -113,6 +113,68 @@ fn pins() {
     }
 }
 
+#[cfg(windows)]
+#[test]
+fn launchers() {
+    let root = specimen();
+    write(root.path(), "package.json", "{}");
+    let binary = env!("CARGO_BIN_EXE_plumb");
+    let output = Command::new(binary)
+        .args(["metadata", "--json"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let metadata: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let tools = root.path().join("space 中文");
+    std::fs::create_dir(&tools).unwrap();
+    for tool in ["node", "pnpm"] {
+        let version = metadata[format!("{tool}.version")].as_str().unwrap();
+        write(
+            &tools,
+            &format!("{tool}.cmd"),
+            &format!("@echo {version}\r\n"),
+        );
+    }
+    let path = std::env::join_paths(
+        std::iter::once(tools.clone())
+            .chain(std::env::split_paths(&std::env::var_os("PATH").unwrap())),
+    )
+    .unwrap();
+    let run = || {
+        let output = Command::new(binary)
+            .env("PATH", &path)
+            .env("PATHEXT", ".CMD;.EXE")
+            .env("PLUMB_HOME", super::support::home().keep())
+            .args(["doctor", root.path().to_str().unwrap(), "--json"])
+            .output()
+            .unwrap();
+        serde_json::from_slice::<serde_json::Value>(&output.stdout).unwrap()
+    };
+    let output = run();
+    assert!(
+        !output["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|finding| finding["code"] == "env.toolchain-domain"),
+        "{output}"
+    );
+    write(&tools, "pnpm.cmd", "@echo 0.0.0\r\n");
+    let output = run();
+    assert!(
+        output["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|finding| finding["code"] == "env.toolchain-domain"
+                && finding["evidence"]
+                    .as_str()
+                    .unwrap()
+                    .contains("pnpm reports 0.0.0")),
+        "{output}"
+    );
+}
+
 fn specimen() -> tempfile::TempDir {
     let root = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(root.path().join("packages/kit/src")).unwrap();

@@ -7,11 +7,15 @@ use std::process::Command;
 pub use crate::runtime::cache::Cache;
 pub use crate::runtime::environment::contract::contract;
 pub use crate::runtime::environment::{Binding, Contract, Environment};
-pub use crate::runtime::execution::{Execution, Tool};
+pub use crate::runtime::execution::{Execution, Search, Tool};
 pub use plumb_macro::Cascade;
 
 pub fn environment(contract: &Contract) -> Result<Environment, String> {
     contract.capture(std::env::vars_os())
+}
+
+pub fn search(root: &Path) -> Result<Search, String> {
+    Search::new(root, std::env::var_os("PATH"), std::env::var_os("PATHEXT"))
 }
 
 #[derive(Debug)]

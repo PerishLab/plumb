@@ -20,7 +20,10 @@ pub fn read(root: &Path) -> Evidence {
 }
 
 fn reported(root: &Path, tool: &str) -> Result<String, String> {
-    let output = plumb::config::detached(tool)
+    let environment = crate::execution::environment(crate::execution::family(tool))?;
+    let execution = plumb::config::Execution::new(environment, &[tool.into()], root)?;
+    let output = execution
+        .command(tool)?
         .arg("--version")
         .current_dir(root)
         .output()
