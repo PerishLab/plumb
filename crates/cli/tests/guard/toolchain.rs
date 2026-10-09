@@ -1,5 +1,4 @@
 use std::path::Path;
-use std::process::Command;
 use std::sync::OnceLock;
 
 const COOKBOOK: &str = "see: plumb cookbook env.toolchain-domain";
@@ -40,7 +39,7 @@ fn doctor(root: &Path, tools: &Path) -> String {
     let path = std::env::var_os("PATH").unwrap_or_default();
     let mut paths = vec![tools.to_path_buf()];
     paths.extend(std::env::split_paths(&path));
-    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+    let output = super::support::plumb()
         .env("PLUMB_HOME", super::support::home().keep())
         .env(
             "PATH",
