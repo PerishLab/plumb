@@ -119,3 +119,46 @@ fn packages() {
     std::fs::write(path, "lockfileVersion: 'unknown'\n").unwrap();
     assert!(lock.names(&mut names).is_err());
 }
+
+#[test]
+fn program() {
+    if let Some(root) = std::env::var_os("PLUMB_PACKAGE_PROBE_ROOT") {
+        let argv = vec!["plumb-package-probe".into(), "literal argument".into()];
+        let output = super::process::run(std::path::Path::new(&root), "pnpm", &argv).unwrap();
+        assert_eq!(
+            String::from_utf8(output).unwrap().trim(),
+            "literal argument"
+        );
+        println!("package-probe-verified");
+        return;
+    }
+    let root = tempfile::tempdir().unwrap();
+    let bin = root.path().join("owned tools");
+    std::fs::create_dir(&bin).unwrap();
+    tool(&bin);
+    let mut paths = vec![bin];
+    paths.extend(std::env::split_paths(&std::env::var_os("PATH").unwrap()));
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "packages::tests::program", "--nocapture"])
+        .env("PLUMB_PACKAGE_PROBE_ROOT", root.path())
+        .env("PATH", std::env::join_paths(paths).unwrap())
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(output.status.success(), "{stdout}");
+    assert!(stdout.contains("package-probe-verified"), "{stdout}");
+}
+
+#[cfg(unix)]
+fn tool(bin: &std::path::Path) {
+    use std::os::unix::fs::PermissionsExt;
+    let path = bin.join("plumb-package-probe");
+    std::fs::write(&path, "#!/bin/sh\nprintf '%s\\n' \"$1\"\n").unwrap();
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700)).unwrap();
+}
+
+#[cfg(windows)]
+fn tool(bin: &std::path::Path) {
+    let path = bin.join("plumb-package-probe.cmd");
+    std::fs::write(path, "@echo off\r\n@echo %~1\r\n").unwrap();
+}
