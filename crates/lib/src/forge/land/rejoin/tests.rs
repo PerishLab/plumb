@@ -139,11 +139,11 @@ fn reports() {
     assert_eq!(
         before
             .lines()
-            .filter(|held| !held.contains("refs/heads/main"))
+            .filter(|held| !held.ends_with("\trefs/heads/main") && !held.ends_with("\tHEAD"))
             .collect::<Vec<_>>(),
         after
             .lines()
-            .filter(|held| !held.contains("refs/heads/main"))
+            .filter(|held| !held.ends_with("\trefs/heads/main") && !held.ends_with("\tHEAD"))
             .collect::<Vec<_>>(),
         "rejoin writes nothing to origin"
     );

@@ -23,10 +23,8 @@ impl Repo {
         git(&root, &["config", "user.name", "Retire Test"]);
         git(&root, &["config", "user.email", "retire@example.invalid"]);
         let origin = fixture.path().join("origin.git");
-        git(
-            &root,
-            &["remote", "add", "origin", origin.to_str().expect("utf8")],
-        );
+        let origin = origin.to_str().expect("utf8").replace('\\', "/");
+        git(&root, &["remote", "add", "origin", &origin]);
         std::fs::write(root.join("README.md"), "base\n").expect("write");
         git(&root, &["add", "-A"]);
         git(&root, &["commit", "-q", "-m", "base"]);

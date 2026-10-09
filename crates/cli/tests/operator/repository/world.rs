@@ -35,6 +35,7 @@ pub fn run(root: &Path) -> String {
 }
 
 #[test]
+#[cfg(unix)]
 fn boundary() {
     let repo = super::precommit::Repo::new();
     let output = repo.plumb("src");

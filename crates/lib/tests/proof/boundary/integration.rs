@@ -110,12 +110,16 @@ fn inventory() {
     let held = inspect(&fixture.checkout, &fixture.expected()).unwrap();
     assert_eq!(held.worktrees.len(), 2);
     assert!(held.worktrees.iter().any(|worktree| {
-        worktree.path == fixture.checkout && worktree.branch.as_deref() == Some("main")
+        worktree.path.canonicalize().unwrap() == fixture.checkout.canonicalize().unwrap()
+            && worktree.branch.as_deref() == Some("main")
     }));
-    assert!(held
-        .worktrees
-        .iter()
-        .any(|worktree| worktree.path == sibling && worktree.branch.as_deref() == Some("topic")));
+    assert!(
+        held.worktrees
+            .iter()
+            .any(|worktree| worktree.path.canonicalize().unwrap()
+                == sibling.canonicalize().unwrap()
+                && worktree.branch.as_deref() == Some("topic"))
+    );
 }
 
 #[test]
