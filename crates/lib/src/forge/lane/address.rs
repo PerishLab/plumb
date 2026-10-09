@@ -47,7 +47,7 @@ fn checked(value: Parts) -> Result<Address, String> {
     Ok(Address(value))
 }
 
-fn repository(value: &str) -> Result<(), String> {
+pub(super) fn repository(value: &str) -> Result<(), String> {
     let parts: Vec<_> = value.split('/').collect();
     if parts.len() != 2 || parts.iter().any(|part| part.is_empty() || part.len() > 100) {
         return Err("lane repository needs a bounded owner/name coordinate".into());
