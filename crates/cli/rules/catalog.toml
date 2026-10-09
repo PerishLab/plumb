@@ -23,8 +23,8 @@
 [[rule]]
 id = "config.plumb-current-and-guarded"
 summary = "Plumb is stable-current and guards its worktrees"
-law = "A manager-installed Plumb is stable latest, and governed worktrees carry the Git guard hooks the running Plumb carries."
-evidence = "The managed binary identity and stable channel pointer, the running version, plus effective pre-commit and commit-msg hooks."
+law = "A manager-installed Plumb is stable latest, and governed worktrees carry, in a hooks directory holding no tracked files, the Git guard hooks the running Plumb carries."
+evidence = "The managed binary identity and stable channel pointer, the running version, plus effective pre-commit and commit-msg hook bodies and the tracked files of their directory."
 standing = "mechanized"
 owner = "plumb"
 tags = ["configuration", "adoption"]

@@ -224,3 +224,68 @@ fn guarded() {
         "{error}"
     );
 }
+
+fn installed(hooks: Option<&str>) -> (tempfile::TempDir, tempfile::TempDir) {
+    let fixture = tempfile::tempdir().expect("fixture");
+    seed(fixture.path());
+    if let Some(hooks) = hooks {
+        Repo::git(fixture.path(), &["config", "core.hooksPath", hooks]);
+    }
+    let home = support::home();
+    let install = support::plumb()
+        .args(["configuration", "install"])
+        .arg(fixture.path())
+        .env("PLUMB_HOME", home.path())
+        .output()
+        .expect("install");
+    assert!(install.status.success());
+    (fixture, home)
+}
+
+fn doctor(root: &Path, home: &Path) -> String {
+    let output = support::plumb()
+        .arg("doctor")
+        .arg(root)
+        .env("PLUMB_HOME", home)
+        .output()
+        .expect("doctor");
+    format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    )
+}
+
+#[test]
+fn bodies() {
+    let (fixture, home) = installed(None);
+    let root = fixture.path();
+    let clean = doctor(root, home.path());
+    assert!(!clean.contains("differs from the hook"), "{clean}");
+    assert!(!clean.contains("tracked by the repository"), "{clean}");
+    std::fs::write(root.join(".git/hooks/pre-commit"), "#!/bin/sh\nexit 0\n").expect("edit");
+    let held = doctor(root, home.path());
+    assert!(
+        held.contains(
+            "pre-commit differs from the hook this Plumb carries; run plumb configuration install"
+        ),
+        "{held}"
+    );
+    assert!(!held.contains("commit-msg differs"), "{held}");
+}
+
+#[test]
+fn tracked() {
+    let (custom, home) = installed(Some(".githooks"));
+    let clean = doctor(custom.path(), home.path());
+    assert!(!clean.contains("tracked by the repository"), "{clean}");
+    assert!(!clean.contains("differs from the hook"), "{clean}");
+    assert!(!clean.contains(".githooks/pre-commit is absent"), "{clean}");
+    Repo::git(custom.path(), &["add", ".githooks"]);
+    let held = doctor(custom.path(), home.path());
+    assert!(
+        held.contains(".githooks holds files tracked by the repository"),
+        "{held}"
+    );
+    assert!(held.contains("keep Git hooks untracked"), "{held}");
+}

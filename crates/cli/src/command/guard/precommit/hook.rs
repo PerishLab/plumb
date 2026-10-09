@@ -61,10 +61,36 @@ impl Hooks<'_> {
             Ok(hooks) => hooks,
             Err(error) => return vec![Finding::Blind(error)],
         };
-        HOOKS
+        let mut found: Vec<Finding> = HOOKS
             .into_iter()
-            .filter_map(|(name, _)| inspect(&hooks.join(name)))
-            .collect()
+            .filter_map(|(name, body)| inspect(&hooks.join(name), body))
+            .collect();
+        found.extend(self.tracked(&hooks));
+        found
+    }
+
+    fn tracked(&self, hooks: &Path) -> Option<Finding> {
+        let top = tree::git(
+            self.0,
+            &["rev-parse", "--show-toplevel"],
+            "locate the worktree",
+        );
+        let (Ok(top), Ok(held)) = (top.map(PathBuf::from), hooks.canonicalize()) else {
+            return None;
+        };
+        if !top.canonicalize().is_ok_and(|top| held.starts_with(top)) {
+            return None;
+        }
+        let path = held.to_string_lossy();
+        match tree::git(self.0, &["ls-files", "--", &path], "list tracked hooks") {
+            Ok(listed) if listed.is_empty() => None,
+            Ok(listed) => Some(Finding::Wrong(format!(
+                "{} holds files tracked by the repository ({}); keep Git hooks untracked and run plumb configuration install",
+                hooks.display(),
+                listed.lines().collect::<Vec<_>>().join(", ")
+            ))),
+            Err(error) => Some(Finding::Blind(error)),
+        }
     }
 
     fn locate(&self) -> Result<PathBuf, String> {
@@ -81,7 +107,7 @@ impl Hooks<'_> {
     }
 }
 
-fn inspect(path: &Path) -> Option<Finding> {
+fn inspect(path: &Path, body: &str) -> Option<Finding> {
     match std::fs::metadata(path) {
         Ok(_) => {}
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
@@ -107,7 +133,17 @@ fn inspect(path: &Path) -> Option<Finding> {
             )));
         }
     }
-    None
+    match std::fs::read(path) {
+        Ok(held) if held == body.as_bytes() => None,
+        Ok(_) => Some(Finding::Wrong(format!(
+            "{} differs from the hook this Plumb carries; run plumb configuration install",
+            path.display()
+        ))),
+        Err(error) => Some(Finding::Blind(format!(
+            "cannot read {}: {error}",
+            path.display()
+        ))),
+    }
 }
 
 #[cfg(unix)]
