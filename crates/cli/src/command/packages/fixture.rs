@@ -205,10 +205,30 @@ fn publication() {
     );
     assert!(state.merged.is_none());
     assert_eq!(fixture.provider().issue(17).unwrap()["state"], "open");
-    assert_eq!(
-        state.plan.unwrap().issue.updated,
-        issue::snapshot(&fixture.provider(), 17).unwrap().updated
-    );
+    let plan = state.plan.unwrap();
+    let current = issue::snapshot(&fixture.provider(), 17).unwrap();
+    assert_eq!(plan.issue.updated, current.updated);
+    fixture
+        .provider()
+        .patch(
+            "repos/Example/probe/issues/17",
+            &json!({"updated_at":"2026-10-09T01:00:00Z"}),
+        )
+        .unwrap();
+    let changed = issue::snapshot(&fixture.provider(), 17).unwrap();
+    let request = plumb::delivery::Request {
+        root: &state.worktree,
+        repository: "Example/probe",
+        issue: &changed,
+        observed: plan.observed,
+        base: &plan.base,
+        pull: &plan.pull,
+    };
+    let authority = plumb::guard::Authority::running().unwrap();
+    let refusal = plumb::delivery::revalidate(request, &plan, &authority)
+        .err()
+        .unwrap();
+    assert!(refusal.to_string().contains("Issue snapshot"));
 }
 
 #[test]
