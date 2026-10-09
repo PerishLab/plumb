@@ -1,0 +1,24 @@
+Inspect and reclaim the Cargo build caches Guard keeps below PLUMB_HOME.
+
+Guard compiles each repository into one bucket keyed by its canonical Git
+common directory, so Members share their Integration's bucket and every
+independent clone gets its own. Cargo never collects superseded units, so a
+bucket grows with every dependency change it has seen.
+
+Retention is idle time: 7 days. Each successful Guard cargo action records the
+units it used: the units it wrote, closed over Cargo's fingerprint graph.
+A bucket unused for 7 days, or whose Git common directory no longer exists, is
+reclaimed whole. In a live bucket, a unit or incremental session no run has
+used for 7 days is reclaimed, along with build outputs no fingerprint owns.
+Guard applies this to its own bucket after each action and to every other
+bucket at most once a day.
+
+Reclamation holds the bucket's lease without waiting. A held lease reports the
+bucket active and leaves it alone. The lease file and the bucket's marker are
+never removed. Plumb acts only on a bucket that carries both its in-path marker
+and its registry record below PLUMB_HOME/state; any other bucket is reported
+unknown and never reclaimed. A cache is acceleration, not evidence: a
+reclaimed unit is rebuilt by the next Guard, and no proof depends on it.
+
+`status` reports every bucket. `reclaim` previews the same targets, and
+`reclaim --apply` removes them and reports the bytes reclaimed.

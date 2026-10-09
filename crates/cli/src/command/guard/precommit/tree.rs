@@ -141,6 +141,9 @@ pub(super) fn execute(
         if let Some(compiler) = compiler {
             compiler.finish()?;
         }
+        if let Some(cache) = &cache {
+            cache.settle();
+        }
         Ok(())
     } else {
         Err(format!("{} failed with {status}", argv.join(" ")))
