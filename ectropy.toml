@@ -1,3 +1,8 @@
+[[boundary]]
+allow = ["word"]
+note = "The isolated which::Sys adapter implements the upstream trait's required associated type and method names."
+paths = ["crates/lib/src/runtime/execution/system.rs"]
+
 [[ban]]
 paths = ["apps/web/src/lib/components/**"]
 syntax = "style"

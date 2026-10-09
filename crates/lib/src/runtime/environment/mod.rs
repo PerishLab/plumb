@@ -150,6 +150,14 @@ impl Contract {
 }
 
 impl Environment {
+    pub fn search(&self, root: &std::path::Path) -> Result<super::execution::Search, String> {
+        super::execution::Search::new(
+            root,
+            self.get("PATH").map(OsString::from),
+            self.get("PATHEXT").map(OsString::from),
+        )
+    }
+
     pub(crate) fn evidence(&self) -> BTreeMap<&str, &str> {
         self.values
             .iter()

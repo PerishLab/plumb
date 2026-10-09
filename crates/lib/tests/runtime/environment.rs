@@ -5,10 +5,14 @@ fn executable() {
     let root = tempfile::tempdir().unwrap();
     let file = if cfg!(windows) { "probe.exe" } else { "probe" };
     std::fs::copy(std::env::current_exe().unwrap(), root.path().join(file)).unwrap();
-    let contract: Contract = toml::from_str("inherit=['PATH']\nmanaged=[]\nreject=[]\n").unwrap();
+    let contract: Contract =
+        toml::from_str("inherit=['PATH','PATHEXT']\nmanaged=[]\nreject=[]\n").unwrap();
     for key in ["PATH", "Path"] {
         let environment = contract
-            .capture([(key.into(), root.path().as_os_str().to_owned())])
+            .capture([
+                (key.into(), root.path().as_os_str().to_owned()),
+                ("PATHEXT".into(), ".EXE".into()),
+            ])
             .unwrap();
         let execution = plumb::config::Execution::new(environment, &["probe".into()], root.path());
         assert_eq!(execution.is_ok(), key == "PATH" || cfg!(windows));
