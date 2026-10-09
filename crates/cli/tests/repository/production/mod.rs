@@ -1,3 +1,4 @@
+mod lane;
 mod preview;
 mod qualification;
 mod world;

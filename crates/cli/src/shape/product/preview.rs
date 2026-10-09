@@ -4,7 +4,7 @@ use std::path::Path;
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Preview {
-    #[serde(default)]
+    repository: String,
     app: BTreeMap<String, App>,
 }
 
@@ -13,8 +13,8 @@ struct Preview {
 pub(crate) struct App {
     pub(super) path: String,
     pub(super) package: String,
-    provider: String,
-    access: String,
+    pub(super) mapping: super::mapping::Mapping,
+    binding: BTreeMap<plumb::lane::Name, super::binding::Binding>,
 }
 
 pub(crate) fn read(
@@ -29,19 +29,26 @@ pub(crate) fn read(
     let doc = text
         .parse::<toml::Table>()
         .map_err(|error| error.to_string())?;
-    let Some(preview) = doc.get("preview") else {
+    if doc.contains_key("preview") {
+        return Err("preview declarations are retired; declare app and bindings under lane".into());
+    }
+    let Some(preview) = doc.get("lane") else {
         return Ok(Vec::new());
     };
     let held: Preview = preview
         .clone()
         .try_into()
         .map_err(|error| error.to_string())?;
+    if held.app.is_empty() {
+        return Err("lane declaration needs at least one explicit app".into());
+    }
     let snapshot = snapshot.map_err(|error| format!("cannot judge preview source: {error}"))?;
     regular(root, snapshot, "plumb.toml")?;
     let mut paths = BTreeSet::new();
     let mut packages = BTreeSet::new();
     let mut apps = Vec::new();
     for (name, app) in held.app {
+        app.bindings(&held.repository, &name)?;
         app.judge(root, snapshot)
             .map_err(|error| format!("preview app {name}: {error}"))?;
         if !paths.insert(app.path.clone()) || !packages.insert(app.package.clone()) {
@@ -55,10 +62,19 @@ pub(crate) fn read(
 }
 
 impl App {
-    fn judge(&self, root: &Path, snapshot: &plumb::snapshot::Snapshot) -> Result<(), String> {
-        if self.provider != "cfworker" || self.access != "public" {
-            return Err("requires cfworker and explicit public access".into());
+    fn bindings(&self, repository: &str, name: &str) -> Result<(), String> {
+        if self.binding.is_empty() {
+            return Err(format!("lane app {name}: needs explicit lane bindings"));
         }
+        for (lane, binding) in &self.binding {
+            let target = plumb::lane::Address::new(repository.into(), name.into(), lane.clone())?;
+            binding.judge(target)?;
+        }
+        Ok(())
+    }
+
+    fn judge(&self, root: &Path, snapshot: &plumb::snapshot::Snapshot) -> Result<(), String> {
+        self.mapping.judge()?;
         if !literal(&self.package) {
             return Err("package must be a literal package selector".into());
         }

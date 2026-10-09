@@ -47,6 +47,11 @@ impl Source<'_> {
         super::package::judge(&self.document(&package, false)?, &app.package)?;
         let path = format!("{}/wrangler.jsonc", app.path);
         let worker = super::worker::Worker::read(self.document(&path, true)?)?;
+        if worker.account != app.mapping.account || worker.name != app.mapping.resource {
+            return Err(
+                "Worker configuration differs from the declared static resource mapping".into(),
+            );
+        }
         self.output(&format!("{}/{}", app.path, worker.assets.path()?))?;
         self.aliases(app, &worker)
     }
