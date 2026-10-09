@@ -145,6 +145,7 @@ fn closed() {
             "push",
             "origin",
             &format!("{candidate}:refs/heads/auto/17"),
+            &format!("{candidate}:refs/pull/18/head"),
             &format!("{merged}:refs/heads/main"),
         ],
     )

@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::io::{Read, Seek, Write};
 use std::path::Path;
@@ -122,4 +123,89 @@ pub(super) fn capture(mut command: Command, limit: Duration) -> Result<Vec<u8>, 
         ));
     }
     Ok(bytes)
+}
+
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Intent {
+    pub schema: String,
+    pub repository: String,
+    pub issue: u64,
+    pub branch: String,
+    pub previous: Option<String>,
+    pub head: String,
+    pub base: String,
+    pub tree: String,
+}
+
+impl Intent {
+    fn check(&self, provider: &Provider<'_>, issue: u64) -> Result<(), String> {
+        let exact = |head: &str| {
+            matches!(head.len(), 40 | 64) && head.bytes().all(|byte| byte.is_ascii_hexdigit())
+        };
+        let identity = (self.schema.as_str(), self.repository.as_str(), self.issue);
+        if identity != ("plumb.auto-push/v1", provider.repository, issue)
+            || self.branch != format!("auto/{issue}")
+        {
+            return Err("Auto publication intent identity disagrees".into());
+        }
+        if ![&self.head, &self.base, &self.tree]
+            .into_iter()
+            .all(|head| exact(head))
+            || self.previous.as_deref().is_some_and(|head| !exact(head))
+        {
+            return Err("Auto publication intent has an invalid Git identity".into());
+        }
+        Ok(())
+    }
+
+    fn body(&self) -> Result<String, String> {
+        Ok(format!(
+            "Auto follow publication intent; provider readback decides execution.\n\n<!-- plumb.auto-push/v1\n{}\n-->",
+            serde_json::to_string(self).map_err(|error| error.to_string())?
+        ))
+    }
+}
+
+impl Provider<'_> {
+    pub(super) fn intent(&self, issue: u64, held: &Intent) -> Result<(), String> {
+        held.check(self, issue)?;
+        self.comment(issue, &held.body()?)?;
+        if self.recorded(issue)?.as_ref() != Some(held) {
+            return Err("Auto publication intent readback disagrees".into());
+        }
+        Ok(())
+    }
+
+    pub(super) fn recorded(&self, issue: u64) -> Result<Option<Intent>, String> {
+        let owner = self.issue(issue)?["user"]["id"]
+            .as_u64()
+            .filter(|id| *id > 0)
+            .ok_or("Auto issue has no operation writer identity")?;
+        let comments = self.pages(&format!(
+            "repos/{}/issues/{issue}/comments?per_page=100",
+            self.repository
+        ))?;
+        let mut standing = None;
+        for comment in comments {
+            let body = comment["body"]
+                .as_str()
+                .ok_or("Auto comment is unreadable")?;
+            if !body.contains("<!-- plumb.auto-push/") {
+                continue;
+            }
+            if comment["user"]["id"].as_u64() != Some(owner) {
+                return Err("Auto publication intent has another operation writer".into());
+            }
+            let value = body
+                .split_once("<!-- plumb.auto-push/v1\n")
+                .and_then(|(_, value)| value.strip_suffix("\n-->"))
+                .ok_or("Auto publication intent has an unknown shape")?;
+            let held: Intent = serde_json::from_str(value)
+                .map_err(|error| format!("Auto publication intent is unreadable: {error}"))?;
+            held.check(self, issue)?;
+            standing = Some(held);
+        }
+        Ok(standing)
+    }
 }

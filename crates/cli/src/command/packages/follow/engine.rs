@@ -25,6 +25,12 @@ pub(super) fn advance(
             seat.write(state)?;
             return super::closure::close(root, provider, seat, state);
         }
+        let head = issue::text(&pull["head"], "sha")?;
+        if let Err(error) = provider.guard(&head)
+            && !error.starts_with("organization Guard is pending;")
+        {
+            return Err(error);
+        }
         if pull["state"] != "open" {
             return Err("Auto pull was closed without merge; human judgment required".into());
         }
@@ -142,7 +148,7 @@ fn wait(provider: &Provider<'_>, head: &str) -> Result<String, String> {
     for _ in 0..90 {
         match provider.guard(head) {
             Ok(run) => return Ok(run),
-            Err(error) if error.contains("pending") => {
+            Err(error) if error.starts_with("organization Guard is pending;") => {
                 std::thread::sleep(std::time::Duration::from_secs(10))
             }
             Err(error) => return Err(error),

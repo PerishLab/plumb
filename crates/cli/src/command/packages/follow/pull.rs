@@ -1,5 +1,5 @@
 use super::issue::text;
-use super::provider::Provider;
+use super::provider::{Intent, Provider};
 use serde_json::{Value, json};
 
 impl Provider<'_> {
@@ -23,6 +23,9 @@ impl Provider<'_> {
                 != (Some(branch.as_str()), Some("main"))
             {
                 return Err("Auto pull branches disagree with its registered issue".into());
+            }
+            if pull["head"]["repo"]["full_name"].as_str() != Some(self.repository) {
+                return Err("Auto pull source repository disagrees".into());
             }
             if !pull["body"]
                 .as_str()
@@ -62,6 +65,17 @@ impl Provider<'_> {
             );
         }
         if expected != head {
+            let intent = Intent {
+                schema: "plumb.auto-push/v1".into(),
+                repository: self.repository.into(),
+                issue,
+                branch: branch.clone(),
+                previous: (!expected.is_empty()).then_some(expected.clone()),
+                head: head.into(),
+                base: workgit(root, &["merge-base", "origin/main", head])?,
+                tree: workgit(root, &["rev-parse", &format!("{head}^{{tree}}")])?,
+            };
+            self.intent(issue, &intent)?;
             let lease = format!("--force-with-lease=refs/heads/{branch}:{expected}");
             let spec = format!("{head}:refs/heads/{branch}");
             workgit(root, &["push", &lease, "origin", &spec])?;
