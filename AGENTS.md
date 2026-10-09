@@ -225,6 +225,9 @@ tree answers them and the catalogue does not hold them.
   and values, and owns the variables it supplies to a template whose grammar the
   substrate owns. A manifest spells every injected environment key exactly as
   the target product derives it.
+- Package subprocesses resolve and verify their tools through captured
+  `config::Execution` bindings. Executable lookup and platform invocation stay
+  inside that mechanism.
 - A released skill never claims enforcement its matching binary does not
   provide. Install, status and upgrade keep the global skill ledger anchored to
   stable, and a non-stable skill takes an exact version and an explicit path,
