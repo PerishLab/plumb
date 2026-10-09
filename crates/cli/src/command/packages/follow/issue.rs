@@ -112,3 +112,18 @@ pub(super) fn text(value: &Value, key: &str) -> Result<String, String> {
         .map(str::to_string)
         .ok_or_else(|| format!("provider field {key} is missing"))
 }
+
+impl Provider<'_> {
+    pub(super) fn published(
+        &self,
+        previous: &plumb::delivery::Snapshot,
+    ) -> Result<plumb::delivery::Snapshot, String> {
+        let current = snapshot(self, previous.number)?;
+        let mut expected = previous.clone();
+        expected.updated = current.updated.clone();
+        if current != expected {
+            return Err("Auto Issue policy changed during candidate publication".into());
+        }
+        Ok(current)
+    }
+}

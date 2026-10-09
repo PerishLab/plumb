@@ -54,6 +54,8 @@ import json, pathlib, subprocess, sys
 root = pathlib.Path(__file__).parent
 args = sys.argv[1:]
 endpoint = args[1]
+if args[:2] == ['pr', 'merge'] and (root / 'mergefault').exists():
+    sys.exit('fixture reached verified merge boundary')
 payload = json.loads(pathlib.Path(args[args.index('--input') + 1]).read_text()) if '--input' in args else None
 with (root / 'calls').open('a') as trace:
     trace.write(json.dumps({'endpoint':endpoint,'payload':payload}) + '\n')
@@ -82,8 +84,12 @@ elif '/pulls' in endpoint:
         result = pull
     else:
         result = [[json.loads(path.read_text())]] if path.exists() else [[]]
+elif '/check-runs' in endpoint and (root / 'mergefault').exists():
+    result = [{'check_runs':[{'name':'Guard','app':{'slug':'github-actions'},'head_sha':head(),'status':'completed','conclusion':'success','details_url':'https://github.com/Example/probe/actions/runs/17'}]}]
 elif '/check-runs' in endpoint:
     result = [{'check_runs':[json.loads((root/'guard.json').read_text())]}] if (root/'guard.json').exists() else [{'check_runs':[]}]
+elif '/actions/runs/' in endpoint and (root / 'mergefault').exists():
+    result = {'head_sha':head(),'path':'.github/workflows/guard.yml','event':'pull_request'}
 elif '/actions/runs/' in endpoint:
     result = json.loads((root/'run.json').read_text())
 elif '/comments' in endpoint:
@@ -91,6 +97,9 @@ elif '/comments' in endpoint:
     if payload:
         comments.append(dict(payload, user={"id":1}))
         (root / 'comments.json').write_text(json.dumps(comments))
+        issue = json.loads((root / 'issue.json').read_text())
+        issue['updated_at'] = f'2026-10-09T00:00:{len(comments):02d}Z'
+        (root / 'issue.json').write_text(json.dumps(issue))
         result = payload
     else:
         result = [comments]
@@ -158,5 +167,68 @@ impl Fixture {
         .unwrap();
         std::fs::write(self.root.path().join("discover"), "enabled").unwrap();
         (source, super::Seat::fixture(&home))
+    }
+}
+
+#[test]
+fn publication() {
+    if !super::isolated("fixture::publication") {
+        return;
+    }
+    plumb::depot::carry(crate::catalog::carried::FILES);
+    let fixture = Fixture::new(json!({}));
+    let source = fixture.repository("pub fn answer() -> u8 {\n    42\n}\n");
+    let seat = super::Seat::fixture(fixture.root.path());
+    let mut state = super::State {
+        repository: "Example/probe".into(),
+        issue: 17,
+        worktree: fixture.root.path().join("worktree"),
+        ..Default::default()
+    };
+    work::Work {
+        source: &source,
+        state: &state,
+    }
+    .open()
+    .unwrap();
+    let path = state.worktree.join("Cargo.toml");
+    let text = std::fs::read_to_string(&path).unwrap();
+    std::fs::write(path, format!("{text}description='publication recovery'\n")).unwrap();
+    work::git(&state.worktree, &["add", "Cargo.toml"]).unwrap();
+    work::git(&state.worktree, &["commit", "-q", "-m", "Refs #17."]).unwrap();
+    std::fs::write(fixture.root.path().join("mergefault"), "once").unwrap();
+    let error =
+        super::engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap_err();
+    assert!(
+        error.contains("fixture reached verified merge boundary"),
+        "{error}"
+    );
+    assert!(state.merged.is_none());
+    assert_eq!(fixture.provider().issue(17).unwrap()["state"], "open");
+    assert_eq!(
+        state.plan.unwrap().issue.updated,
+        issue::snapshot(&fixture.provider(), 17).unwrap().updated
+    );
+}
+
+#[test]
+fn policy() {
+    let fixture = Fixture::new(json!({}));
+    fixture.repository("pub fn answer() -> u8 { 42 }\n");
+    let path = fixture.root.path().join("issue.json");
+    let original = std::fs::read(&path).unwrap();
+    let provider = fixture.provider();
+    let snapshot = issue::snapshot(&provider, 17).unwrap();
+    for delta in [
+        json!({"title":"foreign title"}),
+        json!({"body":"foreign policy"}),
+        json!({"labels":[{"name":"needs:judgment"}]}),
+        json!({"state":"closed"}),
+    ] {
+        std::fs::write(&path, &original).unwrap();
+        provider
+            .patch("repos/Example/probe/issues/17", &delta)
+            .unwrap();
+        assert!(provider.published(&snapshot).is_err(), "{delta}");
     }
 }
