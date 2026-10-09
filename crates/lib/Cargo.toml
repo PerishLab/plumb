@@ -85,6 +85,10 @@ name = "runtime"
 path = "tests/runtime/mod.rs"
 
 [[test]]
+name = "lane"
+path = "tests/runtime/identity/lane/main.rs"
+
+[[test]]
 name = "proof"
 path = "tests/proof/mod.rs"
 required-features = ["radius"]
