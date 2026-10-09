@@ -1,6 +1,7 @@
 mod admission;
 mod artifact;
 mod capability;
+mod declaration;
 mod evidence;
 mod material;
 mod operation;
