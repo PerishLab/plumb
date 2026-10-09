@@ -95,7 +95,8 @@ pub(super) fn advance(
         pull: &narrative,
     };
     let authority = plumb::guard::Authority::running()?;
-    let plan = plumb::delivery::prepare(request, &authority).map_err(|error| error.to_string())?;
+    let mut plan =
+        plumb::delivery::prepare(request, &authority).map_err(|error| error.to_string())?;
     scope::check(&state.worktree, &plan.target, &plan.candidate)?;
     state.candidate = Some(plan.candidate.clone());
     state.plan = Some(plan.clone());
@@ -109,6 +110,8 @@ pub(super) fn advance(
         },
     )?;
     state.pushed = Some(plan.candidate.clone());
+    plan.issue = provider.published(&plan.issue)?;
+    state.plan = Some(plan.clone());
     seat.write(state)?;
     let guard = wait(provider, &plan.candidate)?;
     let latest = plumb::packages::Plan::read(&state.worktree, "follow")?;
