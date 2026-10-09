@@ -1,4 +1,5 @@
 use super::super::Digest;
+use super::super::operation::Operation;
 use super::Selection;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -10,19 +11,52 @@ pub struct Record(Parts);
 #[serde(deny_unknown_fields)]
 struct Parts {
     schema: u32,
-    selection: Selection,
+    entry: Entry,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(
+    tag = "kind",
+    content = "value",
+    rename_all = "lowercase",
+    deny_unknown_fields
+)]
+pub enum Entry {
+    Selection(Box<Selection>),
+    Operation(Box<Operation>),
 }
 
 impl Record {
     pub fn new(selection: Selection) -> Self {
         Self(Parts {
-            schema: 1,
-            selection,
+            schema: 2,
+            entry: Entry::Selection(Box::new(selection)),
         })
     }
 
-    pub fn selection(&self) -> &Selection {
-        &self.0.selection
+    pub fn execution(operation: Operation) -> Self {
+        Self(Parts {
+            schema: 2,
+            entry: Entry::Operation(Box::new(operation)),
+        })
+    }
+
+    pub fn entry(&self) -> &Entry {
+        &self.0.entry
+    }
+
+    pub fn selection(&self) -> Option<&Selection> {
+        match self.entry() {
+            Entry::Selection(selection) => Some(selection),
+            _ => None,
+        }
+    }
+
+    pub fn operation(&self) -> Option<&Operation> {
+        match self.entry() {
+            Entry::Operation(operation) => Some(operation),
+            _ => None,
+        }
     }
 
     pub fn encode(&self) -> Result<Vec<u8>, String> {
@@ -37,7 +71,7 @@ impl Record {
 impl<'de> Deserialize<'de> for Record {
     fn deserialize<D: Deserializer<'de>>(reader: D) -> Result<Self, D::Error> {
         let parts = Parts::deserialize(reader)?;
-        if parts.schema != 1 {
+        if parts.schema != 2 {
             return Err(serde::de::Error::custom("unsupported lane evidence schema"));
         }
         Ok(Self(parts))

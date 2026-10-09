@@ -43,11 +43,14 @@ fn roundtrip() {
     let record = matched();
     let bytes = record.encode().unwrap();
     assert_eq!(serde_json::from_slice::<Record>(&bytes).unwrap(), record);
-    assert_eq!(record.selection().policy(), Policy::Exact);
-    assert_eq!(record.selection().context().revision(), 1);
-    assert_eq!(record.selection().context().adaptor().value(), "static");
+    assert_eq!(record.selection().unwrap().policy(), Policy::Exact);
+    assert_eq!(record.selection().unwrap().context().revision(), 1);
     assert_eq!(
-        record.selection().context().request().value(),
+        record.selection().unwrap().context().adaptor().value(),
+        "static"
+    );
+    assert_eq!(
+        record.selection().unwrap().context().request().value(),
         "b".repeat(64)
     );
     let held = reference(&record);
@@ -58,6 +61,7 @@ fn roundtrip() {
     let verified = held.verify(&held, &bytes).unwrap();
     assert_eq!(verified.reference(), &held);
     assert_eq!(verified.record(), &record);
+    assert!(verified.settle(&super::operation::request()).is_err());
     assert_eq!(held.digest(), &record.digest().unwrap());
     assert_eq!(held.authority().value(), "wharf");
     assert_eq!(record.digest().unwrap().value(), plumb::depot::sha(&bytes));
@@ -72,16 +76,16 @@ fn exact() {
         };
         assert!(Selection::new(context(), observation).is_err());
         let mut value = serde_json::to_value(matched()).unwrap();
-        value["selection"]["observation"]["actual"]["lane"] = json!(lane);
+        value["entry"]["value"]["observation"]["actual"]["lane"] = json!(lane);
         assert!(serde_json::from_value::<Record>(value).is_err());
     }
     for (field, text) in [("repository", "PerishLab/design"), ("app", "design")] {
         let mut value = serde_json::to_value(matched()).unwrap();
-        value["selection"]["observation"]["actual"][field] = json!(text);
+        value["entry"]["value"]["observation"]["actual"][field] = json!(text);
         assert!(serde_json::from_value::<Record>(value).is_err());
     }
     let mut value = serde_json::to_value(matched()).unwrap();
-    value["selection"]["policy"] = json!("stable-latest");
+    value["entry"]["value"]["policy"] = json!("stable-latest");
     assert!(serde_json::from_value::<Record>(value).is_err());
 }
 
@@ -117,7 +121,7 @@ fn uncertainty() {
         json!({"outcome":"matched","actual":super::address("preview.a")}),
     ] {
         let mut value = serde_json::to_value(matched()).unwrap();
-        value["selection"]["observation"] = observation;
+        value["entry"]["value"]["observation"] = observation;
         assert!(serde_json::from_value::<Record>(value).is_err());
     }
 }
@@ -131,7 +135,7 @@ fn retrieval() {
     assert!(held.verify(&other, &bytes).is_err());
     assert!(held.verify(&held, b"missing").is_err());
     let mut changed = serde_json::to_value(&record).unwrap();
-    changed["selection"]["context"]["revision"] = json!(2);
+    changed["entry"]["value"]["context"]["revision"] = json!(2);
     let changed = serde_json::to_vec(&changed).unwrap();
     assert!(held.verify(&held, &changed).is_err());
     let pretty = serde_json::to_vec_pretty(&record).unwrap();
@@ -142,7 +146,7 @@ fn retrieval() {
     .unwrap();
     assert!(prettyref.verify(&prettyref, &pretty).is_err());
     let mut changed = serde_json::to_value(&record).unwrap();
-    changed["schema"] = json!(2);
+    changed["schema"] = json!(1);
     let changed = serde_json::to_vec(&changed).unwrap();
     let changedref = Reference::new(
         Name::read("wharf").unwrap(),
@@ -156,12 +160,13 @@ fn retrieval() {
 fn projection() {
     for path in [
         "",
-        "/selection",
-        "/selection/context",
-        "/selection/context/requested",
-        "/selection/observation",
-        "/selection/observation/artifact",
-        "/selection/observation/artifact/source",
+        "/entry",
+        "/entry/value",
+        "/entry/value/context",
+        "/entry/value/context/requested",
+        "/entry/value/observation",
+        "/entry/value/observation/artifact",
+        "/entry/value/observation/artifact/source",
     ] {
         for field in ["token", "credentials", "payload", "url", "stamp"] {
             let mut value = serde_json::to_value(matched()).unwrap();
@@ -173,7 +178,7 @@ fn projection() {
         }
     }
     let mut value = serde_json::to_value(matched()).unwrap();
-    value["selection"]["observation"]["artifact"]["build"] = json!({
+    value["entry"]["value"]["observation"]["artifact"]["build"] = json!({
         "inputs":"c".repeat(64), "world":"d".repeat(64), "credentials":"private"
     });
     assert!(serde_json::from_value::<Record>(value).is_err());
@@ -184,10 +189,10 @@ fn validation() {
     let original = serde_json::to_value(matched()).unwrap();
     for (path, value) in [
         ("/schema", json!(0)),
-        ("/selection/context/revision", json!(0)),
-        ("/selection/context/adaptor", json!("static.a")),
-        ("/selection/context/request", json!("b".repeat(63))),
-        ("/selection/policy", json!("fallback")),
+        ("/entry/value/context/revision", json!(0)),
+        ("/entry/value/context/adaptor", json!("static.a")),
+        ("/entry/value/context/request", json!("b".repeat(63))),
+        ("/entry/value/policy", json!("fallback")),
     ] {
         let mut held = original.clone();
         *held.pointer_mut(path).unwrap() = value;
@@ -212,7 +217,7 @@ fn validation() {
     }
     let repeated = String::from_utf8(matched().encode().unwrap())
         .unwrap()
-        .replacen("\"schema\":1", "\"schema\":1,\"schema\":1", 1);
+        .replacen("\"schema\":2", "\"schema\":2,\"schema\":2", 1);
     assert!(serde_json::from_str::<Record>(&repeated).is_err());
     let reference = format!(
         r#"{{"authority":"wharf","authority":"other","digest":"{}"}}"#,

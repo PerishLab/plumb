@@ -1,6 +1,11 @@
+mod admission;
 mod artifact;
 mod capability;
 mod evidence;
+mod material;
+mod operation;
+mod projection;
+mod receipt;
 
 use plumb::lane::{Address, Name};
 use serde_json::{Value, json};
