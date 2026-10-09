@@ -2,6 +2,8 @@ mod address;
 mod artifact;
 mod build;
 mod capability;
+#[path = "../declaration/mod.rs"]
+pub mod declaration;
 mod digest;
 #[path = "../evidence/mod.rs"]
 pub mod evidence;
