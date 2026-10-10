@@ -67,6 +67,9 @@ impl Source for Release<'_> {
 
 impl Source for Depot<'_> {
     fn resolve(&self, ask: &Ask) -> Result<fetch::Grant, Error> {
+        if ask.channel.trim() == "stable" && !fetch::belongs("stable", self.version) {
+            return Err(Error::Staged(self.version.to_string()));
+        }
         fetch::depot(
             self.source,
             self.product,
@@ -79,6 +82,6 @@ impl Source for Depot<'_> {
     }
 
     fn admits(&self, channel: &str) -> bool {
-        channel == "stable" || fetch::belongs(channel, self.version)
+        channel == "stable"
     }
 }
