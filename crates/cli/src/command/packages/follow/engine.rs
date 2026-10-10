@@ -28,6 +28,7 @@ pub(super) fn advance(
         let head = issue::text(&pull["head"], "sha")?;
         if let Err(error) = provider.guard(&head)
             && !error.starts_with("organization Guard is pending;")
+            && current(root, &head)?
         {
             return Err(error);
         }
@@ -145,6 +146,11 @@ pub(super) fn advance(
     state.guard = Some(guard);
     seat.write(state)?;
     super::closure::close(root, provider, seat, state)
+}
+
+fn current(root: &Path, head: &str) -> Result<bool, String> {
+    let base = work::git(root, &["rev-parse", "origin/main"])?;
+    Ok(work::git(root, &["merge-base", head, &base])? == base)
 }
 
 fn wait(provider: &Provider<'_>, head: &str) -> Result<String, String> {
