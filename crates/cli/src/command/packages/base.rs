@@ -222,3 +222,45 @@ fn advanced() {
         1
     );
 }
+
+#[test]
+fn stale() {
+    if !isolated("base::stale") {
+        return;
+    }
+    plumb::depot::carry(crate::catalog::carried::FILES);
+    let (fixture, source, mut state) = fixture();
+    state.schema = "plumb.auto-state/v1".into();
+    let seat = Seat::fixture(fixture.root.path());
+    let error = engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap_err();
+    assert!(error.contains("failed with"), "{error}");
+    state = seat.read("Example/probe").unwrap();
+    let old = state.pushed.clone().unwrap();
+    std::fs::write(
+        fixture.root.path().join("guard.json"),
+        json!({"name":"Guard","app":{"slug":"github-actions"},"head_sha":old,"status":"completed","conclusion":"failure","details_url":"https://github.com/Example/probe/actions/runs/17"}).to_string(),
+    )
+    .unwrap();
+    let error = engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap_err();
+    assert!(error.contains("organization Guard failed"), "{error}");
+    assert_eq!(fixture.provider().remote(17).unwrap().unwrap(), old);
+    commit(
+        &source,
+        "src/lib.rs",
+        "pub fn answer() -> u8 {\n    true\n}\n",
+    );
+    advance(&source);
+    let error = engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap_err();
+    assert!(error.contains("failed with"), "{error}");
+    let head = fixture.provider().remote(17).unwrap().unwrap();
+    let base = work::git(&source, &["rev-parse", "origin/main"]).unwrap();
+    assert_ne!(head, old);
+    assert_eq!(
+        work::git(&source, &["merge-base", &head, &base]).unwrap(),
+        base
+    );
+    assert_eq!(
+        work::git(&source, &["merge-base", &head, &old]).unwrap(),
+        old
+    );
+}
