@@ -105,7 +105,9 @@ pub(super) fn execute(
     let (program, args) = argv
         .split_first()
         .ok_or_else(|| "guard action has no command".to_string())?;
-    let cache = (program == "cargo")
+    let managed =
+        context.is_some_and(|context| context.environment.get("CARGO_TARGET_DIR").is_some());
+    let cache = (program == "cargo" && !managed)
         .then(|| super::cargo::Lease::new(root))
         .transpose()?;
     let mut command = match context {
@@ -118,12 +120,16 @@ pub(super) fn execute(
     }
     if let Some(context) = context {
         crate::execution::inspect(
-            crate::execution::family(program),
+            if managed {
+                "cargo"
+            } else {
+                crate::execution::family(program)
+            },
             root,
             &context.environment,
         )?;
     }
-    let compiler = if program == "cargo" {
+    let compiler = if program == "cargo" || managed {
         crate::cargo::cache(context)?
     } else {
         None

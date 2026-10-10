@@ -81,25 +81,6 @@ pub(super) fn execution(
     Ok(execution)
 }
 
-pub(super) fn environment(
-    commands: &[Vec<String>],
-    captured: Option<plumb::config::Environment>,
-) -> Result<plumb::config::Environment, String> {
-    if let Some(captured) = captured {
-        return Ok(captured);
-    }
-    let name = if commands
-        .iter()
-        .filter_map(|command| command.first())
-        .any(|program| crate::execution::family(program) == "pnpm")
-    {
-        "pnpm"
-    } else {
-        "probe"
-    };
-    crate::execution::environment(name)
-}
-
 fn version(tool: &str, execution: Option<&plumb::config::Execution>) -> Result<String, String> {
     let output = match execution {
         Some(execution) => execution.output(&[tool.into(), "--version".into()]),

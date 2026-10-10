@@ -87,3 +87,59 @@ fn declarations() {
             .unwrap();
     assert_eq!(duplicate.capture([]).is_err(), cfg!(windows));
 }
+
+#[test]
+fn composition() {
+    let cargo = plumb::config::contract("cargo").unwrap();
+    let pnpm = plumb::config::contract("pnpm").unwrap();
+    let inputs = [
+        ("PATH".into(), "tools".into()),
+        ("RUSTUP_HOME".into(), "rust".into()),
+        ("PNPM_HOME".into(), "node".into()),
+        ("VCToolsInstallDir".into(), "native".into()),
+        ("CARGO_TARGET_DIR".into(), "ambient".into()),
+    ];
+    let held = cargo
+        .capture(inputs.clone())
+        .unwrap()
+        .combine(pnpm.capture(inputs).unwrap())
+        .unwrap();
+    assert_eq!(held.get("RUSTUP_HOME"), Some("rust"));
+    assert_eq!(held.get("PNPM_HOME"), Some("node"));
+    assert_eq!(held.get("VCToolsInstallDir"), Some("native"));
+    assert_eq!(held.get("CARGO_TARGET_DIR"), None);
+    for key in [
+        "CARGO_PROFILE_DEV_DEBUG",
+        "NODE_OPTIONS",
+        "NPM_CONFIG_NODE_GYP",
+    ] {
+        let inputs = [(key.into(), "override".into())];
+        assert!(
+            cargo
+                .capture(inputs.clone())
+                .and_then(|held| { held.combine(pnpm.capture(inputs)?) })
+                .is_err()
+        );
+    }
+}
+
+#[test]
+fn conflicts() {
+    let capture = |binding: &str| {
+        toml::from_str::<Contract>(&format!(
+            "inherit=[]\nmanaged=[]\nreject=[]\n[bind]\nMODE={binding}\n"
+        ))
+        .unwrap()
+        .capture([])
+        .unwrap()
+    };
+    assert!(capture("'one'").combine(capture("'two'")).is_err());
+    assert!(capture("'tool'").combine(capture("{tool='tool'}")).is_err());
+    assert!(
+        capture("{tool='one'}")
+            .combine(capture("{tool='two'}"))
+            .is_err()
+    );
+    let held = capture("'one'").combine(capture("'one'")).unwrap();
+    assert_eq!(held.get("MODE"), Some("one"));
+}
