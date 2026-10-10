@@ -1,4 +1,4 @@
-use super::super::{Context, Evidence, Gate};
+use super::super::{Context, Evidence, Gate, Identity};
 use crate::landing::Refusal;
 use std::cell::Cell;
 use std::path::Path;
@@ -51,6 +51,7 @@ impl Repo {
 
 pub struct Check {
     pub calls: Cell<usize>,
+    pub identified: Cell<usize>,
     pub event: &'static str,
 }
 
@@ -58,6 +59,7 @@ impl Check {
     pub fn new(event: &'static str) -> Self {
         Self {
             calls: Cell::new(0),
+            identified: Cell::new(0),
             event,
         }
     }
@@ -69,6 +71,23 @@ impl Gate for Check {
         if self.event == "failure" {
             return Err(super::super::refuse("native", "gate failed"));
         }
+        Ok(self.observe(context))
+    }
+}
+
+impl Identity for Check {
+    fn identify(&self, context: &Context<'_>) -> Result<Evidence, Refusal> {
+        self.identified.set(self.identified.get() + 1);
+        let mut evidence = self.observe(context);
+        if self.event == "identity" {
+            evidence.digest = "2".repeat(64);
+        }
+        Ok(evidence)
+    }
+}
+
+impl Check {
+    fn observe(&self, context: &Context<'_>) -> Evidence {
         let mut evidence = Evidence {
             authority: "native.test/v1".to_string(),
             source: context.source.to_string(),
@@ -100,7 +119,7 @@ impl Gate for Check {
             }
             _ => {}
         }
-        Ok(evidence)
+        evidence
     }
 }
 

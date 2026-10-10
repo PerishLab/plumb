@@ -25,6 +25,10 @@ pub trait Gate {
     fn verify(&self, context: &Context<'_>) -> Result<Evidence, Refusal>;
 }
 
+pub trait Identity {
+    fn identify(&self, context: &Context<'_>) -> Result<Evidence, Refusal>;
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Plan {
@@ -44,81 +48,98 @@ pub struct Plan {
 }
 
 pub fn prepare(request: Request<'_>, gate: &impl Gate) -> Result<Plan, Refusal> {
-    let issue = declarations(&request)?;
-    let inspected = Landing {
-        root: request.root,
-        base: request.base,
-        title: &request.pull.title,
-        body: &request.pull.body,
+    request.build(|context| gate.verify(context))
+}
+
+impl Request<'_> {
+    fn build(
+        self,
+        observe: impl FnOnce(&Context<'_>) -> Result<Evidence, Refusal>,
+    ) -> Result<Plan, Refusal> {
+        let issue = declarations(&self)?;
+        let inspected = Landing {
+            root: self.root,
+            base: self.base,
+            title: &self.pull.title,
+            body: &self.pull.body,
+        }
+        .inspect()?;
+        let draft = inspected.draft();
+        let root = &draft.landing.repo.root;
+        evidence::admit(root, &draft.source)?;
+        evidence::admit(root, &draft.target)?;
+        let source = draft
+            .landing
+            .repo
+            .revision(&format!("{}^{{tree}}", draft.source))?;
+        if source != draft.tree {
+            return Err(refuse(
+                "native",
+                "projected tree differs from source; update from the exact base before native verification",
+            ));
+        }
+        let context = Context {
+            root,
+            source: &draft.source,
+            target: &draft.target,
+            tree: &draft.tree,
+        };
+        let evidence = observe(&context)?;
+        evidence.matches(&context)?;
+        draft.landing.repo.clean()?;
+        if draft.landing.repo.revision("HEAD")? != draft.source
+            || draft.landing.repo.revision(&draft.landing.upstream())? != draft.target
+            || draft.landing.repo.branch()? != draft.landing.branch
+        {
+            return Err(refuse("stale", "repository moved while native gate ran"));
+        }
+        let token = evidence.encode()?;
+        let message = format!(
+            "{}\n\n{}\n\nLand-Source: {}@{}\n{} {token}\n",
+            draft.story.title.trim(),
+            draft.story.body.trim(),
+            draft.landing.branch,
+            draft.source,
+            evidence::TRAILER
+        );
+        let candidate = draft.record(&message)?;
+        if evidence::read(root, &candidate)? != evidence {
+            return Err(refuse(
+                "native",
+                "candidate did not preserve the verified native evidence",
+            ));
+        }
+        Ok(Plan {
+            schema: SCHEMA.to_string(),
+            root: draft.landing.repo.root,
+            repository: self.repository.to_string(),
+            issue,
+            observed: self.observed,
+            base: draft.landing.base,
+            target: draft.target,
+            branch: draft.landing.branch,
+            projection: draft.projection,
+            source: draft.source,
+            candidate,
+            pull: self.pull.clone(),
+            evidence,
+        })
     }
-    .inspect()?;
-    let draft = inspected.draft();
-    let root = &draft.landing.repo.root;
-    evidence::admit(root, &draft.source)?;
-    evidence::admit(root, &draft.target)?;
-    let source = draft
-        .landing
-        .repo
-        .revision(&format!("{}^{{tree}}", draft.source))?;
-    if source != draft.tree {
-        return Err(refuse(
-            "native",
-            "projected tree differs from source; update from the exact base before native verification",
-        ));
-    }
-    let context = Context {
-        root,
-        source: &draft.source,
-        target: &draft.target,
-        tree: &draft.tree,
-    };
-    let evidence = gate.verify(&context)?;
-    evidence.matches(&context)?;
-    draft.landing.repo.clean()?;
-    if draft.landing.repo.revision("HEAD")? != draft.source
-        || draft.landing.repo.revision(&draft.landing.upstream())? != draft.target
-        || draft.landing.repo.branch()? != draft.landing.branch
-    {
-        return Err(refuse("stale", "repository moved while native gate ran"));
-    }
-    let token = evidence.encode()?;
-    let message = format!(
-        "{}\n\n{}\n\nLand-Source: {}@{}\n{} {token}\n",
-        draft.story.title.trim(),
-        draft.story.body.trim(),
-        draft.landing.branch,
-        draft.source,
-        evidence::TRAILER
-    );
-    let candidate = draft.record(&message)?;
-    if evidence::read(root, &candidate)? != evidence {
-        return Err(refuse(
-            "native",
-            "candidate did not preserve the verified native evidence",
-        ));
-    }
-    Ok(Plan {
-        schema: SCHEMA.to_string(),
-        root: draft.landing.repo.root,
-        repository: request.repository.to_string(),
-        issue,
-        observed: request.observed,
-        base: draft.landing.base,
-        target: draft.target,
-        branch: draft.landing.branch,
-        projection: draft.projection,
-        source: draft.source,
-        candidate,
-        pull: request.pull.clone(),
-        evidence,
-    })
 }
 
 pub fn revalidate(request: Request<'_>, plan: &Plan, gate: &impl Gate) -> Result<Plan, Refusal> {
+    settle(plan, || request.build(|context| gate.verify(context)))
+}
+
+pub fn confirm(request: Request<'_>, plan: &Plan, gate: &impl Identity) -> Result<Plan, Refusal> {
+    settle(plan, || request.build(|context| gate.identify(context)))
+}
+
+fn settle(plan: &Plan, observe: impl FnOnce() -> Result<Plan, Refusal>) -> Result<Plan, Refusal> {
     if plan.schema != SCHEMA {
         return Err(refuse("native", "unknown native delivery schema"));
     }
-    let mut current = prepare(request, gate)?;
+    let mut current = observe()?;
     current.observed = plan.observed;
     if &current != plan {
         return Err(refuse(

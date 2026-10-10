@@ -63,9 +63,14 @@ answers for.
   provider client: callers run its argument vector through their own command.
   Its distinct native-gate API accepts an explicit caller-owned verifier only
   for a source and base without Plumb governance. It binds native evidence to
-  the exact source tree, re-executes the verifier during revalidation, and
-  shares topology, candidate construction and squash readback with Guarded
-  delivery. The caller owns native authority admission and gate policy; no
+  the exact source tree and shares topology, candidate construction and squash
+  readback with Guarded delivery. Revalidation has two explicit forms:
+  `revalidate` re-executes the verifier, and `confirm` repeats every other
+  check while asking the gate only to recompute its identity evidence. Native
+  evidence names inputs rather than attesting a result, so `confirm` never
+  proves a pass on its own; the caller decides where an execution must
+  precede a mutation, and only a gate that also implements `Identity` can be
+  confirmed. The caller owns native authority admission and gate policy; no
   Plumb CLI switches to native delivery on a missing or invalid Guard proof.
   It is consumed by Concord. The registered `follow` operation observes only
   its automation-owned Auto Issue and pull; ordinary Issue delivery belongs
