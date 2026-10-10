@@ -183,12 +183,18 @@ fn family() {
     std::fs::write(root.path().join("Cargo.lock"), held(&["keel", "keel-gate"])).unwrap();
     let mut paths = vec![bin];
     paths.extend(std::env::split_paths(&std::env::var_os("PATH").unwrap()));
-    let output = std::process::Command::new(std::env::current_exe().unwrap())
+    let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+    command
         .args(["--exact", "packages::tests::family", "--nocapture"])
         .env("PLUMB_PACKAGE_FAMILY_ROOT", root.path())
-        .env("PATH", std::env::join_paths(paths).unwrap())
-        .output()
-        .unwrap();
+        .env("PATH", std::env::join_paths(paths).unwrap());
+    for (key, _) in std::env::vars() {
+        let ambient = key.starts_with("CARGO_") || key.starts_with("RUST");
+        if ambient && !["CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"].contains(&key.as_str()) {
+            command.env_remove(key);
+        }
+    }
+    let output = command.output().unwrap();
     let stdout = String::from_utf8(output.stdout).unwrap();
     let stderr = String::from_utf8(output.stderr).unwrap();
     assert!(output.status.success(), "{stdout}{stderr}");
