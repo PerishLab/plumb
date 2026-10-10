@@ -50,29 +50,41 @@ impl Lock<'_> {
     }
 
     pub(super) fn update(&self, packages: &[Package]) -> Result<(), String> {
+        let moves = self.moves(packages)?;
+        if moves.len() > 1 {
+            let mut argv = vec!["cargo".to_string(), "update".to_string()];
+            for (spec, _) in &moves {
+                argv.push("--package".to_string());
+                argv.push(spec.clone());
+            }
+            process::run(self.0, "cargo", &argv)?;
+        }
+        for (spec, version) in self.moves(packages)? {
+            let argv =
+                ["cargo", "update", "--package", &spec, "--precise", &version].map(str::to_string);
+            process::run(self.0, "cargo", &argv)?;
+        }
+        Ok(())
+    }
+
+    fn moves(&self, packages: &[Package]) -> Result<Vec<(String, String)>, String> {
+        let held = self.locked()?;
+        let mut moves = Vec::new();
         for wanted in packages
             .iter()
             .filter(|package| package.ecosystem == "cargo")
         {
-            for held in self
-                .locked()?
-                .into_iter()
+            for package in held
+                .iter()
                 .filter(|package| package.name == wanted.name && package.version != wanted.version)
             {
-                let spec = format!("{SOURCE}#{}@{}", held.name, held.version);
-                let argv = [
-                    "cargo",
-                    "update",
-                    "--package",
-                    &spec,
-                    "--precise",
-                    &wanted.version,
-                ]
-                .map(str::to_string);
-                process::run(self.0, "cargo", &argv)?;
+                moves.push((
+                    format!("{SOURCE}#{}@{}", package.name, package.version),
+                    wanted.version.clone(),
+                ));
             }
         }
-        Ok(())
+        Ok(moves)
     }
 
     pub(super) fn verify(&self, packages: &[Package]) -> Result<(), String> {
