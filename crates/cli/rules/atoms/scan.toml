@@ -44,26 +44,6 @@ tests = [
 ]
 
 [[set]]
-name = "tools-rust"
-include = [
-  "tools/**/*.rs",
-]
-exclude = [
-  "**/target/**",
-]
-roots = [
-  "tools/*/src",
-  "tools/*/tests",
-]
-tests = [
-  "tools/*/src/**/*.rs",
-  "tools/*/tests/**/*.rs",
-]
-environment = [
-  "tools/*/tests/**/*.rs",
-]
-
-[[set]]
 name = "runseal-scripts"
 include = [
   ".runseal/**",
