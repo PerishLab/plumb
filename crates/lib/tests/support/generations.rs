@@ -87,12 +87,44 @@ fn prerelease() {
         channel: channel.into(),
         ..Ask::default()
     };
+    for channel in ["alpha", "beta"] {
+        assert!(matches!(
+            beta.install(&asked(channel)),
+            Err(plumb::skill::Error::Managed(_))
+        ));
+        assert!(matches!(
+            beta.upgrade(&asked(channel)),
+            Err(plumb::skill::Error::Managed(_))
+        ));
+        assert!(matches!(
+            beta.status(&asked(channel)),
+            Err(plumb::skill::Error::Managed(_))
+        ));
+    }
     assert!(matches!(
-        beta.install(&asked("alpha")),
-        Err(plumb::skill::Error::Managed(_))
+        beta.install(&asked("stable")),
+        Err(plumb::skill::Error::Staged(_))
     ));
     assert!(matches!(
-        beta.status(&asked("beta")),
+        beta.upgrade(&asked("stable")),
+        Err(plumb::skill::Error::Staged(_))
+    ));
+    assert!(matches!(
+        beta.status(&asked("stable")),
+        Err(plumb::skill::Error::Staged(version)) if version == "v1.2.3-beta.1"
+    ));
+    assert!(matches!(
+        beta.stage(&Ask {
+            channel: "beta".into(),
+            version: Some("v1.2.3-beta.1".into()),
+            path: Some(fixture.path().join("staged/probe")),
+            ..Ask::default()
+        }),
+        Err(plumb::skill::Error::Fetch(..))
+    ));
+    assert!(matches!(
+        kit.depot("http://127.0.0.1:9", "probe", "v1.2.3")
+            .status(&asked("stable")),
         Err(plumb::skill::Error::Fetch(..))
     ));
 }

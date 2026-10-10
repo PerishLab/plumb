@@ -15,6 +15,7 @@ pub enum Error {
     Channel(String),
     Floating(String),
     Managed(String),
+    Staged(String),
     Stage,
     Version(String),
     Bare,
@@ -40,9 +41,13 @@ impl std::fmt::Display for Error {
                 write!(f, "non-stable channel {channel} requires an exact version")
             }
             Self::Managed(channel) => {
+                write!(f, "managed skills only admit stable, not {channel}")
+            }
+            Self::Staged(version) => {
                 write!(
                     f,
-                    "managed skills only admit stable or this binary's own channel, not {channel}"
+                    "this binary is the prerelease {version}, whose skill is staged-only; \
+                     stage it with an exact --version {version} and an explicit --path"
                 )
             }
             Self::Stage => write!(f, "stable belongs in managed skill seats, not staging"),
