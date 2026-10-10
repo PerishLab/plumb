@@ -150,6 +150,87 @@ fn program() {
 }
 
 #[cfg(unix)]
+#[test]
+fn family() {
+    if let Some(root) = std::env::var_os("PLUMB_PACKAGE_FAMILY_ROOT") {
+        let root = std::path::Path::new(&root);
+        let lock = cargo::Lock(root);
+        let wanted = |name: &str| Package {
+            ecosystem: "cargo".into(),
+            name: name.into(),
+            version: "0.2.0".into(),
+        };
+        let family = [wanted("keel"), wanted("keel-gate")];
+        lock.update(&family).unwrap();
+        lock.verify(&family).unwrap();
+        let log = std::fs::read_to_string(root.join("cargo.log")).unwrap();
+        assert_eq!(log.lines().count(), 1, "{log}");
+        assert!(!log.contains("--precise"), "{log}");
+        std::fs::write(root.join("Cargo.lock"), held(&["plumb"])).unwrap();
+        std::fs::remove_file(root.join("cargo.log")).unwrap();
+        lock.update(&[wanted("plumb")]).unwrap();
+        lock.verify(&[wanted("plumb")]).unwrap();
+        let log = std::fs::read_to_string(root.join("cargo.log")).unwrap();
+        assert_eq!(log.lines().count(), 1, "{log}");
+        assert!(log.contains("--precise 0.2.0"), "{log}");
+        println!("package-family-verified");
+        return;
+    }
+    let root = tempfile::tempdir().unwrap();
+    let bin = root.path().join("owned tools");
+    std::fs::create_dir(&bin).unwrap();
+    pinned(&bin);
+    std::fs::write(root.path().join("Cargo.lock"), held(&["keel", "keel-gate"])).unwrap();
+    let mut paths = vec![bin];
+    paths.extend(std::env::split_paths(&std::env::var_os("PATH").unwrap()));
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "packages::tests::family", "--nocapture"])
+        .env("PLUMB_PACKAGE_FAMILY_ROOT", root.path())
+        .env("PATH", std::env::join_paths(paths).unwrap())
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(output.status.success(), "{stdout}{stderr}");
+    assert!(stdout.contains("package-family-verified"), "{stdout}");
+}
+
+#[cfg(unix)]
+fn held(names: &[&str]) -> String {
+    let mut lock = String::from("version=4\n");
+    for name in names {
+        lock.push_str(&format!(
+            "[[package]]\nname=\"{name}\"\nversion=\"0.1.0\"\nsource=\"sparse+https://cargo.perish.uk/\"\n"
+        ));
+    }
+    lock
+}
+
+#[cfg(unix)]
+fn pinned(bin: &std::path::Path) {
+    use std::os::unix::fs::PermissionsExt;
+    let path = bin.join("cargo");
+    let script = r#"#!/bin/sh
+printf '%s\n' "$*" >> cargo.log
+old=$(grep -c 'version="0.1.0"' Cargo.lock)
+case "$*" in
+  *--precise*)
+    if [ "$old" -gt 1 ]; then
+      echo 'error: failed to select a version for the requirement `keel = "=0.1.0"`' >&2
+      exit 101
+    fi
+    eval "set -- $*"
+    while [ "$1" != --precise ]; do shift; done
+    sed "s/0.1.0/$2/" Cargo.lock > Cargo.next ;;
+  *) sed 's/0.1.0/0.2.0/' Cargo.lock > Cargo.next ;;
+esac
+mv Cargo.next Cargo.lock
+"#;
+    std::fs::write(&path, script).unwrap();
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700)).unwrap();
+}
+
+#[cfg(unix)]
 fn tool(bin: &std::path::Path) {
     use std::os::unix::fs::PermissionsExt;
     let path = bin.join("plumb-package-probe");
