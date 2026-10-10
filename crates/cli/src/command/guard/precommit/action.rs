@@ -15,13 +15,11 @@ struct Preparation {
     commands: Vec<Vec<String>>,
     probes: Vec<plumb::rule::Probe>,
     tools: Vec<String>,
-    environment: Option<plumb::config::Environment>,
     manifest: Option<String>,
     paths: Vec<String>,
 }
 
 struct Catalog<'a> {
-    root: &'a Path,
     tree: &'a Tree,
     product: &'a str,
 }
@@ -51,11 +49,15 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
     let manifest = captured.text("plumb.toml")?;
     let product = crate::shape::product::named(manifest.as_deref())?;
     let prepared = Catalog {
-        root,
         tree: &captured,
         product: &product,
     }
     .checks()?;
+    let workspace = captured.has("Cargo.toml");
+    let lease = workspace
+        .then(|| super::cargo::Lease::new(&index.root))
+        .transpose()?;
+    let inputs = std::env::vars_os().collect::<Vec<_>>();
     let mut checks = Vec::new();
     for Preparation {
         name,
@@ -63,12 +65,10 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
         commands,
         probes: declared,
         tools,
-        environment,
         manifest,
         paths,
     } in prepared
     {
-        let environment = super::world::environment(&commands, environment)?;
         let mut probes = manifest
             .as_deref()
             .map(|manifest| crate::catalog::probe::read(manifest, paths.iter().map(String::as_str)))
@@ -84,9 +84,17 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
                 .iter()
                 .filter_map(|command| command.first().cloned()),
         );
+        if workspace {
+            programs.push("cargo".into());
+        }
         if programs.iter().any(|program| program == "cargo") {
             programs.push("rustc".into());
         }
+        let environment = super::environment::capture(root, &programs, &inputs)?;
+        let environment = match &lease {
+            Some(lease) => super::environment::managed(environment, lease)?,
+            None => environment,
+        };
         let execution = Some(super::world::execution(
             &name,
             environment,
@@ -129,6 +137,9 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
                     },
                 )?;
                 tree::unchanged(&index)?;
+            }
+            if let Some(lease) = &lease {
+                lease.settle();
             }
             super::cache::record(&check.proof)?;
         }
@@ -175,18 +186,12 @@ impl Catalog<'_> {
                 continue;
             }
             let input = tree.digest(key);
-            let environment = commands
-                .iter()
-                .any(|command| command.first().is_some_and(|program| program == "cargo"))
-                .then(|| super::environment::cargo(self.root))
-                .transpose()?;
             checks.push(Preparation {
                 probes: held.probes(&name)?,
                 tools: held.tools(&name)?,
                 name,
                 input,
                 commands,
-                environment,
                 manifest: manifest.clone(),
                 paths: tree
                     .selection(&key.paths)

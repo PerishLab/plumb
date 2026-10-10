@@ -150,6 +150,19 @@ impl Contract {
 }
 
 impl Environment {
+    pub fn combine(mut self, other: Self) -> Result<Self, String> {
+        for (key, value) in other.values {
+            if let Some(held) = self.values.get(&key)
+                && (held != &value || self.tools.get(&key) != other.tools.get(&key))
+            {
+                return Err(format!("conflicting captured execution input {key}"));
+            }
+            self.values.insert(key, value);
+        }
+        self.tools.extend(other.tools);
+        Ok(self)
+    }
+
     pub fn search(&self, root: &std::path::Path) -> Result<super::execution::Search, String> {
         super::execution::Search::new(
             root,

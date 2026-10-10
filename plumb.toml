@@ -83,3 +83,12 @@ packages = ["@perishlab/plumb"]
 [release.cfworker]
 account = "a6776d8a453d1b84d01576245a9c4f8d"
 domain = "plumb.perish.uk"
+
+[[workflow.tool.guard.test]]
+program = "node"
+
+[[workflow.tool.guard.test]]
+program = "pnpm"
+
+[[workflow.tool.guard.test]]
+program = "git"
