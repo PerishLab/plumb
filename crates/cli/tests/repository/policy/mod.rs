@@ -271,4 +271,5 @@ description = "fixture"
 }
 
 mod loader;
+mod tools;
 mod web;
