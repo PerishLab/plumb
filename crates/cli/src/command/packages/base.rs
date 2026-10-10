@@ -149,10 +149,20 @@ fn conflict() {
     let (_fixture, source, state) = fixture();
     commit(&source, "Cargo.toml", "conflicting ordinary main payload\n");
     advance(&source);
-    assert!(refresh::prepare(&state).is_err());
+    let old = state.pushed.as_deref().unwrap();
+    let base = work::git(&source, &["rev-parse", "origin/main"]).unwrap();
+    let candidate = refresh::prepare(&state).unwrap().unwrap();
+    assert_eq!(
+        work::git(&source, &["show", "-s", "--format=%P", &candidate]).unwrap(),
+        format!("{old} {base}")
+    );
+    assert_eq!(
+        work::git(&source, &["rev-parse", &format!("{candidate}^{{tree}}")]).unwrap(),
+        work::git(&source, &["rev-parse", &format!("{base}^{{tree}}")]).unwrap()
+    );
     assert_eq!(
         work::git(&state.worktree, &["rev-parse", "HEAD"]).unwrap(),
-        state.pushed.as_deref().unwrap()
+        old
     );
     assert_eq!(
         work::git(&state.worktree, &["status", "--porcelain"]).unwrap(),
@@ -263,4 +273,13 @@ fn stale() {
         work::git(&source, &["merge-base", &head, &old]).unwrap(),
         old
     );
+}
+
+#[test]
+fn silent() {
+    let mut command = std::process::Command::new("sh");
+    command.args(["-c", "echo merge conflict on stdout; exit 1"]);
+    let error = super::super::super::provider::capture(command, std::time::Duration::from_secs(10))
+        .unwrap_err();
+    assert!(error.contains("merge conflict on stdout"), "{error}");
 }

@@ -17,8 +17,11 @@ pub(super) fn prepare(state: &State) -> Result<Option<String>, String> {
         return Err("Auto local head moved outside recorded recovery state".into());
     }
     scope::check(root, &common, &head)?;
-    let output = work::git(root, &["merge-tree", "--write-tree", &head, &base])?;
-    let tree = output.lines().next().ok_or("Auto base merge has no tree")?;
+    let tree = match merged(root, &head, &base)? {
+        Some(tree) => tree,
+        None => work::git(root, &["rev-parse", &format!("{base}^{{tree}}")])?,
+    };
+    let tree = tree.as_str();
     if !matches!(tree.len(), 40 | 64) || !tree.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         return Err("Auto base merge did not produce an exact clean tree".into());
     }
@@ -37,6 +40,29 @@ pub(super) fn prepare(state: &State) -> Result<Option<String>, String> {
     )?;
     scope::check(root, &base, &commit)?;
     Ok(Some(commit))
+}
+
+fn merged(root: &Path, head: &str, base: &str) -> Result<Option<String>, String> {
+    let output = plumb::config::detached("git")
+        .arg("-C")
+        .arg(root)
+        .args(["merge-tree", "--write-tree", head, base])
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .output()
+        .map_err(|error| error.to_string())?;
+    match output.status.code() {
+        Some(0) => String::from_utf8(output.stdout)
+            .map_err(|error| error.to_string())?
+            .lines()
+            .next()
+            .map(|tree| Some(tree.to_string()))
+            .ok_or_else(|| "Auto base merge has no tree".into()),
+        Some(1) => Ok(None),
+        _ => Err(format!(
+            "Auto base merge failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        )),
+    }
 }
 
 pub(super) fn apply(root: &Path, commit: &str) -> Result<(), String> {

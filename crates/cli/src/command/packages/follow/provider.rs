@@ -117,6 +117,9 @@ pub(super) fn capture(mut command: Command, limit: Duration) -> Result<Vec<u8>, 
         let mut message = String::new();
         err.read_to_string(&mut message)
             .map_err(|error| error.to_string())?;
+        if message.trim().is_empty() {
+            message = String::from_utf8_lossy(&bytes).into_owned();
+        }
         return Err(format!(
             "external command refused ({status}): {}",
             message.trim()
