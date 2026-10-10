@@ -1,4 +1,4 @@
-use super::{Gate, Plan, prepare, revalidate};
+use super::{Gate, Plan, confirm, prepare, revalidate};
 use crate::delivery::{Narrative, Request, Snapshot, Squash};
 
 #[path = "fixture.rs"]
@@ -140,20 +140,56 @@ fn stale() {
     let repo = Repo::new();
     let gate = Check::new("ok");
     let plan = plan(&repo, &gate);
+    let refused = |issue: &Snapshot, pull: &Narrative, held: &Plan| {
+        revalidate(request(&repo, issue, pull), held, &gate).is_err()
+            && confirm(request(&repo, issue, pull), held, &gate).is_err()
+    };
     let mut issue = issue();
     issue.updated.push_str("changed");
-    assert!(revalidate(request(&repo, &issue, &story()), &plan, &gate).is_err());
+    assert!(refused(&issue, &story(), &plan));
     let mut pull = story();
     pull.body.push_str(" changed");
-    assert!(revalidate(request(&repo, &plan.issue, &pull), &plan, &gate).is_err());
+    assert!(refused(&plan.issue, &pull, &plan));
     let mut changed = plan.clone();
     changed.evidence.digest = "2".repeat(64);
-    assert!(revalidate(request(&repo, &plan.issue, &story()), &changed, &gate).is_err());
+    assert!(refused(&plan.issue, &story(), &changed));
     changed = plan.clone();
     changed.evidence.authority = "unaccepted".to_string();
-    assert!(revalidate(request(&repo, &plan.issue, &story()), &changed, &gate).is_err());
+    assert!(refused(&plan.issue, &story(), &changed));
     repo.commit("new", "new");
-    assert!(revalidate(request(&repo, &plan.issue, &story()), &plan, &gate).is_err());
+    assert!(refused(&plan.issue, &story(), &plan));
+}
+
+#[test]
+fn confirmed() {
+    let repo = Repo::new();
+    let gate = Check::new("ok");
+    let plan = plan(&repo, &gate);
+    let current =
+        confirm(request(&repo, &plan.issue, &story()), &plan, &gate).expect("identity check");
+    assert_eq!(current, plan);
+    assert_eq!((gate.calls.get(), gate.identified.get()), (1, 1));
+    let drift = Check::new("identity");
+    assert!(confirm(request(&repo, &plan.issue, &story()), &plan, &drift).is_err());
+    assert_eq!((drift.calls.get(), drift.identified.get()), (0, 1));
+    let mut unknown = plan.clone();
+    unknown.schema.push_str("-unknown");
+    assert!(confirm(request(&repo, &plan.issue, &story()), &unknown, &gate).is_err());
+    assert_eq!((gate.calls.get(), gate.identified.get()), (1, 1));
+}
+
+#[test]
+fn drifted() {
+    for event in ["base", "branch", "dirty", "head"] {
+        let repo = Repo::new();
+        let plan = plan(&repo, &Check::new("ok"));
+        let gate = Check::new(event);
+        assert!(
+            confirm(request(&repo, &plan.issue, &story()), &plan, &gate).is_err(),
+            "{event}"
+        );
+        assert_eq!((gate.calls.get(), gate.identified.get()), (0, 1));
+    }
 }
 
 #[test]
