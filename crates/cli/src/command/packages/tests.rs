@@ -177,3 +177,59 @@ fn isolated(name: &str) -> bool {
     assert!(String::from_utf8_lossy(&output.stdout).contains("1 passed; 0 failed"));
     false
 }
+
+#[test]
+fn identity() {
+    if std::env::var("PLUMB_TEST_WRITER").as_deref() != Ok("isolated") {
+        let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+        command
+            .args([
+                "--exact",
+                "command::packages::follow::tests::identity",
+                "--nocapture",
+            ])
+            .env("PLUMB_TEST_WRITER", "isolated");
+        for key in [
+            "GIT_AUTHOR_NAME",
+            "GIT_AUTHOR_EMAIL",
+            "GIT_COMMITTER_NAME",
+            "GIT_COMMITTER_EMAIL",
+        ] {
+            command.env_remove(key);
+        }
+        let output = command.output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return;
+    }
+    plumb::depot::carry(crate::catalog::carried::FILES);
+    let fixture = Fixture::new(json!({}));
+    let root = fixture.repository("pub fn answer() -> u8 { 42 }\n");
+    let git = super::work::git;
+    for key in ["user.name", "user.email"] {
+        git(&root, &["config", key, ""]).unwrap();
+    }
+    let tree = git(&root, &["rev-parse", "HEAD^{tree}"]).unwrap();
+    let head = git(
+        &root,
+        &[
+            "commit-tree",
+            &tree,
+            "-p",
+            "HEAD",
+            "-m",
+            "Auto base refresh",
+        ],
+    )
+    .unwrap();
+    assert_eq!(
+        git(&root, &["show", "-s", "--format=%an|%ae|%cn|%ce", &head]).unwrap(),
+        "Plumb Auto|auto@plumb.invalid|Plumb Auto|auto@plumb.invalid"
+    );
+    assert_eq!(git(&root, &["config", "user.name"]).unwrap(), "");
+    assert_eq!(git(&root, &["config", "user.email"]).unwrap(), "");
+}
