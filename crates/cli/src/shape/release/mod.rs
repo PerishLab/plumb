@@ -2,6 +2,7 @@ mod attachment;
 mod deb;
 mod depot;
 mod executable;
+pub(crate) mod identity;
 mod shape;
 mod target;
 

@@ -31,6 +31,12 @@ impl Judge<'_> {
                 "Cargo.toml without target/ in .gitignore".to_string(),
             ));
         }
+        for unbound in &held.identity.unbound {
+            found.push(Seed::wrong(&release_rule::IDENTITY_BOUND, unbound.clone()));
+        }
+        for error in &held.identity.blind {
+            found.push(Seed::blind(&release_rule::IDENTITY_BOUND, error.clone()));
+        }
         spec(&held.release, &mut found);
         measured(&held.release, &mut found);
         found

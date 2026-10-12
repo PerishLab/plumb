@@ -10,4 +10,5 @@ rules! {
     LINE_CLOSED => "release.line-closed",
     MARKER_DISTRIBUTED => "release.marker-distributed",
     MARKER_ORDERED => "release.marker-ordered",
+    IDENTITY_BOUND => "release.identity-bound",
 }
