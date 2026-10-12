@@ -5,7 +5,7 @@ use std::path::Path;
 pub(super) fn latest(root: &Path, ecosystem: &str, name: &str) -> Result<String, String> {
     if ecosystem == "npm" {
         let argv = ["pnpm", "view", name, "dist-tags.latest", "--json"].map(str::to_string);
-        let bytes = process::run(root, "pnpm", &argv)?;
+        let bytes = process::run(root, "packages", &argv)?;
         let version: String = serde_json::from_slice(&bytes)
             .map_err(|error| format!("cannot read npm stable {name}: {error}"))?;
         stable(&version)?;
