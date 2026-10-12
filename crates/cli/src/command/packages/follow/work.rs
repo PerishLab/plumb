@@ -129,7 +129,11 @@ pub(super) fn git(root: &Path, args: &[&str]) -> Result<String, String> {
         .arg("-C")
         .arg(root)
         .args(args)
-        .env("GIT_TERMINAL_PROMPT", "0");
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_AUTHOR_NAME", "Plumb Auto")
+        .env("GIT_AUTHOR_EMAIL", "auto@plumb.invalid")
+        .env("GIT_COMMITTER_NAME", "Plumb Auto")
+        .env("GIT_COMMITTER_EMAIL", "auto@plumb.invalid");
     let bytes = super::provider::capture(command, std::time::Duration::from_secs(120))?;
     String::from_utf8(bytes)
         .map(|text| text.trim().into())
