@@ -50,7 +50,7 @@ pub fn prepare() -> Result<(), String> {
 fn covered(held: &Held) -> bool {
     rules::mechanisms()
         .iter()
-        .all(|mechanism| seek(&held.rules, mechanism.0).is_some())
+        .all(|id| seek(&held.rules, id).is_some())
 }
 
 pub(crate) fn seek<'a>(held: &'a [Rule], id: &str) -> Option<&'a Rule> {

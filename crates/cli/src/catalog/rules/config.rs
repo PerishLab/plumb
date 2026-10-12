@@ -1,7 +1,5 @@
-use super::{Mechanism, rule};
+use super::rules;
 
-rule!(PLUMB_CURRENT, "config.plumb-current-and-guarded");
-
-pub fn mechanisms() -> Vec<&'static Mechanism> {
-    vec![&PLUMB_CURRENT]
+rules! {
+    PLUMB_CURRENT => "config.plumb-current-and-guarded",
 }

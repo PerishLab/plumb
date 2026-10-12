@@ -56,7 +56,7 @@ mod tests {
             .collect::<BTreeSet<_>>();
         let implemented = crate::catalog::rules::mechanisms()
             .iter()
-            .map(|mechanism| mechanism.0.to_string())
+            .map(|id| id.to_string())
             .collect::<BTreeSet<_>>();
         assert_eq!(
             declared.difference(&implemented).collect::<Vec<_>>(),
