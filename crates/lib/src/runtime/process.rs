@@ -18,8 +18,8 @@ pub(crate) fn capture(command: &mut Command) -> Result<Output, String> {
         let refusal = match size {
             Err(error) => Some(format!("cannot inspect output: {error}")),
             Ok(size) if size > 65536 => Some("stdout exceeds 65536 bytes".to_string()),
-            _ if started.elapsed() >= Duration::from_secs(5) => {
-                Some("exceeded 5 second limit".to_string())
+            _ if started.elapsed() >= Duration::from_secs(10) => {
+                Some("exceeded 10 second limit".to_string())
             }
             _ => None,
         };

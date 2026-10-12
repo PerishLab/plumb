@@ -126,7 +126,11 @@ mod tests {
         std::fs::write(root.path().join("probe.cjs"),
             r#"const {spawnSync}=require('node:child_process'); if(!process.env.CARGO_TARGET_DIR)process.exit(9); const child=spawnSync('cargo',['--version'],{env:{...process.env,npm_config_node_gyp:'parent-generated'}}); process.stdout.write(child.stdout); process.stderr.write(child.stderr); process.exit(child.status ?? 8);"#).unwrap();
         let output = execution
-            .output(&["pnpm".into(), "run".into(), "probe".into()])
+            .command("pnpm")
+            .unwrap()
+            .args(["run", "probe"])
+            .stdin(std::process::Stdio::null())
+            .output()
             .unwrap();
         assert!(
             output.status.success(),
@@ -145,7 +149,11 @@ mod tests {
         std::fs::write(root.path().join("src/main.rs"),
             r#"fn main(){assert!(std::env::var_os("CARGO_TARGET_DIR").is_some());println!("mixed-world");}"#).unwrap();
         let output = execution
-            .output(&["cargo".into(), "run".into(), "--offline".into()])
+            .command("cargo")
+            .unwrap()
+            .args(["run", "--offline"])
+            .stdin(std::process::Stdio::null())
+            .output()
             .unwrap();
         assert!(
             output.status.success(),

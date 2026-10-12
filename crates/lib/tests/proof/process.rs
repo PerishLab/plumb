@@ -103,7 +103,7 @@ fn bounded() {
         stdout: String::new(),
         platform: None,
     };
-    for (mode, expected) in [("volume", "65536"), ("timeout", "5 second")] {
+    for (mode, expected) in [("volume", "65536"), ("timeout", "10 second")] {
         let mut command = probe.command().expect("command");
         command.env("PLUMB_PROBE_TEST", mode);
         let error = probe.observe(&mut command).err().expect("bounded refusal");
