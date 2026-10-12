@@ -37,8 +37,8 @@ fn packages() {
     crate::govern(&dir);
 
     std::fs::write(
-        dir.join("deno.json"),
-        "{\"name\":\"@perish/foo\",\"exports\":\"./mod.ts\"}",
+        dir.join("package.json"),
+        "{\"name\":\"@perish/foo\",\"publishConfig\":{}}",
     )
     .expect("manifest should be written");
     let root = crate::run(&["doctor", dir.to_str().expect("path should be utf8")]);
@@ -46,11 +46,11 @@ fn packages() {
         root.contains("publishable package @perish/foo at the root"),
         "{root}"
     );
-    std::fs::remove_file(dir.join("deno.json")).expect("manifest should be swept");
+    std::fs::remove_file(dir.join("package.json")).expect("manifest should be swept");
 
     std::fs::create_dir_all(dir.join("packages/bar")).expect("fixture should be made");
     std::fs::write(
-        dir.join("packages/bar/deno.json"),
+        dir.join("packages/bar/package.json"),
         "{\"name\":\"@perish/foo\"}",
     )
     .expect("manifest should be written");
@@ -62,7 +62,7 @@ fn packages() {
 
     std::fs::create_dir_all(dir.join("packages/foo")).expect("fixture should be made");
     std::fs::write(
-        dir.join("packages/foo/deno.json"),
+        dir.join("packages/foo/package.json"),
         "{\"name\":\"@perish/foo\"}",
     )
     .expect("manifest should be written");

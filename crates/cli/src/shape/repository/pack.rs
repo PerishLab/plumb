@@ -20,12 +20,6 @@ pub fn field(text: &str, key: &str) -> Option<String> {
 }
 
 pub fn name(dir: &Path) -> Option<String> {
-    for seat in ["deno.json", "package.json"] {
-        if let Ok(text) = std::fs::read_to_string(dir.join(seat))
-            && let Some(name) = field(&text, "name")
-        {
-            return Some(name);
-        }
-    }
-    None
+    let text = std::fs::read_to_string(dir.join("package.json")).ok()?;
+    field(&text, "name")
 }
