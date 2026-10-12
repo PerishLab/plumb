@@ -24,6 +24,13 @@ pub struct Tool {
     pub digest: String,
 }
 
+impl Tool {
+    pub fn at(path: PathBuf) -> Result<Self, String> {
+        let digest = fingerprint(&path)?;
+        Ok(Self { path, digest })
+    }
+}
+
 impl Execution {
     pub fn new(environment: Environment, programs: &[String], root: &Path) -> Result<Self, String> {
         let root = root
@@ -32,9 +39,8 @@ impl Execution {
         let mut tools = BTreeMap::new();
         let search = environment.search(&root)?;
         for program in programs.iter().chain(environment.tools.values()) {
-            let path = search.resolve(program)?;
-            let digest = fingerprint(&path)?;
-            tools.insert(program.clone(), Tool { path, digest });
+            let tool = Tool::at(search.resolve(program)?)?;
+            tools.insert(program.clone(), tool);
         }
         for (key, program) in &environment.tools {
             let supplied = environment.get(key).unwrap_or(program);

@@ -219,6 +219,7 @@ pub fn detached(program: impl AsRef<OsStr>) -> Command {
         "GIT_NO_REPLACE_OBJECTS",
         "GIT_REPLACE_REF_BASE",
         "GIT_PREFIX",
+        "GIT_QUARANTINE_PATH",
         "GIT_SHALLOW_FILE",
         "GIT_COMMON_DIR",
     ] {

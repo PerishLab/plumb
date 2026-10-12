@@ -81,13 +81,27 @@ fn rebases() {
 #[test]
 fn detached() {
     let command = config::detached("git");
-    for key in ["GIT_DIR", "GIT_INDEX_FILE"] {
+    for key in ["GIT_DIR", "GIT_INDEX_FILE", "GIT_QUARANTINE_PATH"] {
         let held = command
             .get_envs()
             .find(|(held, _)| *held == key)
             .unwrap_or_else(|| panic!("{key} is explicitly cleared"));
         assert!(held.1.is_none());
     }
+}
+
+#[test]
+fn tool() {
+    let root = tempfile::tempdir().expect("tool seat");
+    let path = root.path().join("probe");
+    std::fs::write(&path, "probe\n").expect("tool bytes");
+    let tool = config::Tool::at(path.clone()).expect("fingerprinted tool");
+    assert_eq!(tool.path, path);
+    assert_eq!(
+        tool.digest,
+        "25be323556dad377abb57fe7ec8c4b99a6527f488dda28d0c9b686528659c909"
+    );
+    assert!(config::Tool::at(root.path().join("absent")).is_err());
 }
 
 #[test]
