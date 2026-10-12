@@ -1,11 +1,26 @@
 use plumb::config::{Contract, Execution};
-use std::os::unix::fs::PermissionsExt;
+use std::io::Write;
 use std::path::Path;
+use std::process::{Command, Stdio};
+
+#[path = "parallel.rs"]
+mod parallel;
 
 fn tool(root: &Path, body: &str) {
     let path = root.join("probe");
-    std::fs::write(&path, body).expect("tool");
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).expect("executable");
+    let mut child = Command::new("/bin/sh")
+        .args(["-c", "cat > \"$1\" && chmod 755 \"$1\"", "fixture"])
+        .arg(path)
+        .stdin(Stdio::piped())
+        .spawn()
+        .expect("writer");
+    child
+        .stdin
+        .take()
+        .expect("input")
+        .write_all(body.as_bytes())
+        .expect("tool");
+    assert!(child.wait().expect("writer exit").success());
 }
 
 fn execution(root: &Path, paths: &[&Path]) -> Result<Execution, String> {
