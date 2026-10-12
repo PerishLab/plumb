@@ -1,24 +1,11 @@
-use super::super::{Mechanism, rule};
+use super::super::rules;
 
-rule!(RUST_BINARY_USES_CLAP, "deps.rust-binary-uses-clap");
-rule!(RUST_BINARY_USES_PLUMB, "deps.rust-binary-uses-plumb");
-rule!(CURRENT_DEPENDENCY_NAME, "deps.current-dependency-name");
-rule!(
-    SELF_BUILT_DEPENDENCY_UNPINNED,
-    "deps.self-built-dependency-unpinned"
-);
-rule!(FIRST_PARTY_STABLE_LATEST, "deps.first-party-stable-latest");
-rule!(STYLING_PACKAGE_ALLOWED, "deps.styling-package-allowed");
-rule!(LOADER_ABSENT, "deps.environment-loader-absent");
-
-pub fn mechanisms() -> Vec<&'static Mechanism> {
-    vec![
-        &CURRENT_DEPENDENCY_NAME,
-        &RUST_BINARY_USES_CLAP,
-        &RUST_BINARY_USES_PLUMB,
-        &SELF_BUILT_DEPENDENCY_UNPINNED,
-        &FIRST_PARTY_STABLE_LATEST,
-        &STYLING_PACKAGE_ALLOWED,
-        &LOADER_ABSENT,
-    ]
+rules! {
+    RUST_BINARY_USES_CLAP => "deps.rust-binary-uses-clap",
+    RUST_BINARY_USES_PLUMB => "deps.rust-binary-uses-plumb",
+    CURRENT_DEPENDENCY_NAME => "deps.current-dependency-name",
+    SELF_BUILT_DEPENDENCY_UNPINNED => "deps.self-built-dependency-unpinned",
+    FIRST_PARTY_STABLE_LATEST => "deps.first-party-stable-latest",
+    STYLING_PACKAGE_ALLOWED => "deps.styling-package-allowed",
+    LOADER_ABSENT => "deps.environment-loader-absent",
 }

@@ -714,15 +714,6 @@ owner = "web"
 tags = ["configuration", "web"]
 
 [[rule]]
-id = "web.design-plugin-dependency"
-summary = "Web carries the design plugin"
-law = "A Svelte/Vite app carries the design plugin through the design package."
-evidence = "The web package dependency maps."
-standing = "mechanized"
-owner = "web"
-tags = ["dependency", "web"]
-
-[[rule]]
 id = "web.hook-file-kind"
 summary = "Hooks are lowercase .ts files"
 law = "The web hook tree contains lowercase .ts files. The directory identifies a hook, so the file name does not carry a use- prefix; that spelling is two words and the single-word law refuses it. Name the file for the subject and let it export the hooks: health.ts exports useHealth."

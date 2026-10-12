@@ -1,4 +1,4 @@
-use super::model::{Mechanism, Rule};
+use super::model::Rule;
 
 pub mod config;
 pub mod dispatch;
@@ -10,14 +10,20 @@ pub mod web;
 
 pub use domain::{deps, vocabulary};
 
-macro_rules! rule {
-    ($name:ident, $id:literal) => {
-        pub static $name: $crate::catalog::model::Mechanism =
-            $crate::catalog::model::Mechanism($id);
+macro_rules! rules {
+    ($($name:ident => $id:literal),* $(,)?) => {
+        $(
+            pub static $name: $crate::catalog::model::Mechanism =
+                $crate::catalog::model::Mechanism($id);
+        )*
+
+        pub fn mechanisms() -> Vec<&'static str> {
+            vec![$($id),*]
+        }
     };
 }
 
-pub(crate) use rule;
+pub(crate) use rules;
 
 pub fn all() -> Vec<&'static Rule> {
     super::held().rules.iter().collect()
@@ -28,7 +34,7 @@ pub fn held(id: &str) -> &'static Rule {
         .unwrap_or_else(|| panic!("the catalogue holds no rule {id}"))
 }
 
-pub(super) fn mechanisms() -> Vec<&'static Mechanism> {
+pub(super) fn mechanisms() -> Vec<&'static str> {
     [
         config::mechanisms(),
         dispatch::mechanisms(),

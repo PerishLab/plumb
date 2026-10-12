@@ -1,33 +1,13 @@
-use super::{Mechanism, rule};
+use super::rules;
 
-rule!(SPEC_DECLARED, "release.spec-declared");
-
-rule!(DATUM_RECORDED, "release.datum-recorded");
-
-rule!(ATTACHMENT_PERMITTED, "release.attachment-permitted");
-
-rule!(ATTACHMENT_EXERCISED, "release.attachment-exercised");
-
-rule!(STABLE_REJOIN, "release.stable-rejoin");
-
-rule!(STABLE_LODGED, "release.stable-lodged");
-
-rule!(LINE_CLOSED, "release.line-closed");
-
-rule!(MARKER_DISTRIBUTED, "release.marker-distributed");
-
-rule!(MARKER_ORDERED, "release.marker-ordered");
-
-pub fn mechanisms() -> Vec<&'static Mechanism> {
-    vec![
-        &ATTACHMENT_EXERCISED,
-        &ATTACHMENT_PERMITTED,
-        &DATUM_RECORDED,
-        &LINE_CLOSED,
-        &MARKER_DISTRIBUTED,
-        &MARKER_ORDERED,
-        &SPEC_DECLARED,
-        &STABLE_LODGED,
-        &STABLE_REJOIN,
-    ]
+rules! {
+    SPEC_DECLARED => "release.spec-declared",
+    DATUM_RECORDED => "release.datum-recorded",
+    ATTACHMENT_PERMITTED => "release.attachment-permitted",
+    ATTACHMENT_EXERCISED => "release.attachment-exercised",
+    STABLE_REJOIN => "release.stable-rejoin",
+    STABLE_LODGED => "release.stable-lodged",
+    LINE_CLOSED => "release.line-closed",
+    MARKER_DISTRIBUTED => "release.marker-distributed",
+    MARKER_ORDERED => "release.marker-ordered",
 }

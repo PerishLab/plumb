@@ -1,58 +1,33 @@
-use super::{Mechanism, rule};
+use super::rules;
 
-rule!(ECTROPY_POLICY_PRESENT, "structure.ectropy-policy-present");
-rule!(PACKAGE_UNDER_PACKAGES, "structure.package-under-packages");
-rule!(PACKAGE_DIRECTORY_NAME, "structure.package-directory-name");
-rule!(
-    RESERVED_COMPONENTS_SEAT,
-    "structure.reserved-components-seat"
-);
-rule!(ECTROPY_POLICY_READABLE, "structure.ectropy-policy-readable");
-rule!(DEFAULT_OVERRIDDEN, "structure.default-overridden");
-rule!(ECTROPY_POLICY, "structure.ectropy-policy");
-rule!(KNOWN_FILE, "structure.known-file");
-rule!(SEAT_ANCHORED, "structure.seat-anchored");
-rule!(SEAT_MEMBER, "structure.seat-member");
-rule!(SEAT_AFFIRMED, "structure.seat-affirmed");
-rule!(KNOWN_DIRECTORY, "structure.known-directory");
-rule!(KNOWN_WORKFLOW, "structure.known-workflow");
-rule!(
-    COLLABORATION_SURFACE_INHERITED,
-    "structure.collaboration-surface-inherited"
-);
-
-rule!(DECLARATION_PRESENT, "structure.declaration-present");
-rule!(PREVIEW, "structure.preview-app");
-rule!(STATIC, "structure.preview-static");
-rule!(RETIRED_SEAT_ABSENT, "structure.retired-seat-absent");
-rule!(BOUNDARY_EXISTS, "structure.boundary-exists");
-rule!(ANCHOR_PRESENT, "structure.anchor-present");
-rule!(ANCHOR_UNIQUE, "structure.anchor-unique");
-rule!(API_ENTRYPOINT, "structure.api-entrypoint");
-rule!(
-    CASCADE_DERIVES_IN_ANCHOR,
-    "structure.cascade-derives-in-anchor"
-);
-rule!(CARGO_TARGET_IGNORED, "structure.cargo-target-ignored");
-rule!(SOURCE_EXPORT_EXPLICIT, "structure.source-export-explicit");
-rule!(TEST_UNDER_TESTS, "structure.test-under-tests");
-rule!(PACKAGE_MANAGER_ABSENT, "structure.package-manager-absent");
-rule!(ENGINES_ABSENT, "structure.engines-absent");
-rule!(TOOLCHAIN_FILE_ABSENT, "structure.toolchain-file-absent");
-#[rustfmt::skip]
-pub fn mechanisms() -> Vec<&'static Mechanism> {
-    vec![
-        &ANCHOR_PRESENT, &ANCHOR_UNIQUE, &API_ENTRYPOINT, &BOUNDARY_EXISTS,
-        &CARGO_TARGET_IGNORED, &CASCADE_DERIVES_IN_ANCHOR, &DEFAULT_OVERRIDDEN, &ECTROPY_POLICY,
-        &ECTROPY_POLICY_PRESENT, &ECTROPY_POLICY_READABLE,
-        &COLLABORATION_SURFACE_INHERITED, &DECLARATION_PRESENT,
-        &PREVIEW,
-        &STATIC,
-        &KNOWN_DIRECTORY, &KNOWN_FILE, &KNOWN_WORKFLOW,
-        &SEAT_AFFIRMED, &SEAT_ANCHORED, &SEAT_MEMBER,
-        &PACKAGE_DIRECTORY_NAME, &PACKAGE_UNDER_PACKAGES,
-        &RESERVED_COMPONENTS_SEAT,
-        &RETIRED_SEAT_ABSENT, &SOURCE_EXPORT_EXPLICIT, &TEST_UNDER_TESTS,
-        &PACKAGE_MANAGER_ABSENT, &ENGINES_ABSENT, &TOOLCHAIN_FILE_ABSENT,
-    ]
+rules! {
+    ECTROPY_POLICY_PRESENT => "structure.ectropy-policy-present",
+    PACKAGE_UNDER_PACKAGES => "structure.package-under-packages",
+    PACKAGE_DIRECTORY_NAME => "structure.package-directory-name",
+    RESERVED_COMPONENTS_SEAT => "structure.reserved-components-seat",
+    ECTROPY_POLICY_READABLE => "structure.ectropy-policy-readable",
+    DEFAULT_OVERRIDDEN => "structure.default-overridden",
+    ECTROPY_POLICY => "structure.ectropy-policy",
+    KNOWN_FILE => "structure.known-file",
+    SEAT_ANCHORED => "structure.seat-anchored",
+    SEAT_MEMBER => "structure.seat-member",
+    SEAT_AFFIRMED => "structure.seat-affirmed",
+    KNOWN_DIRECTORY => "structure.known-directory",
+    KNOWN_WORKFLOW => "structure.known-workflow",
+    COLLABORATION_SURFACE_INHERITED => "structure.collaboration-surface-inherited",
+    DECLARATION_PRESENT => "structure.declaration-present",
+    PREVIEW => "structure.preview-app",
+    STATIC => "structure.preview-static",
+    RETIRED_SEAT_ABSENT => "structure.retired-seat-absent",
+    BOUNDARY_EXISTS => "structure.boundary-exists",
+    ANCHOR_PRESENT => "structure.anchor-present",
+    ANCHOR_UNIQUE => "structure.anchor-unique",
+    API_ENTRYPOINT => "structure.api-entrypoint",
+    CASCADE_DERIVES_IN_ANCHOR => "structure.cascade-derives-in-anchor",
+    CARGO_TARGET_IGNORED => "structure.cargo-target-ignored",
+    SOURCE_EXPORT_EXPLICIT => "structure.source-export-explicit",
+    TEST_UNDER_TESTS => "structure.test-under-tests",
+    PACKAGE_MANAGER_ABSENT => "structure.package-manager-absent",
+    ENGINES_ABSENT => "structure.engines-absent",
+    TOOLCHAIN_FILE_ABSENT => "structure.toolchain-file-absent",
 }
