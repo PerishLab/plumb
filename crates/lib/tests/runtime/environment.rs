@@ -124,6 +124,36 @@ fn composition() {
 }
 
 #[test]
+fn credential() {
+    let inputs = [
+        ("NPM_CONFIG_USERCONFIG".into(), "npmrc".into()),
+        ("WHARF_PACKAGES_TOKEN".into(), "read".into()),
+        ("GH_TOKEN".into(), "write".into()),
+    ];
+    let packages = plumb::config::contract("packages").unwrap();
+    let held = packages.capture(inputs.clone()).unwrap();
+    assert_eq!(held.get("NPM_CONFIG_USERCONFIG"), Some("npmrc"));
+    assert_eq!(held.get("WHARF_PACKAGES_TOKEN"), Some("read"));
+    assert_eq!(held.get("GH_TOKEN"), None);
+    let pnpm = plumb::config::contract("pnpm").unwrap();
+    assert_eq!(
+        pnpm.capture(inputs).unwrap().get("WHARF_PACKAGES_TOKEN"),
+        None
+    );
+    for key in [
+        "NPM_CONFIG_REGISTRY",
+        "npm_config__authToken",
+        "PNPM_CONFIG",
+        "NODE_OPTIONS",
+    ] {
+        assert!(
+            packages.capture([(key.into(), "override".into())]).is_err(),
+            "{key}"
+        );
+    }
+}
+
+#[test]
 fn conflicts() {
     let capture = |binding: &str| {
         toml::from_str::<Contract>(&format!(

@@ -24,25 +24,33 @@ struct Held {
     reject: &'static [&'static str],
 }
 
+const NODE: [&str; 14] = [
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "NODE_ENV",
+    "NODE_EXTRA_CA_CERTS",
+    "NODE_ICU_DATA",
+    "NODE_PRESERVE_SYMLINKS",
+    "NODE_TLS_REJECT_UNAUTHORIZED",
+    "NODE_USE_ENV_PROXY",
+    "NODE_USE_SYSTEM_CA",
+    "NPM_CONFIG_*",
+    "npm_config_*",
+    "PNPM_*",
+    "LD_PRELOAD",
+    "DYLD_*",
+];
+
 const PNPM: Held = Held {
     inherit: &["PNPM_HOME", "NPM_CONFIG_USERCONFIG"],
     managed: &[],
-    reject: &[
-        "NODE_OPTIONS",
-        "NODE_PATH",
-        "NODE_ENV",
-        "NODE_EXTRA_CA_CERTS",
-        "NODE_ICU_DATA",
-        "NODE_PRESERVE_SYMLINKS",
-        "NODE_TLS_REJECT_UNAUTHORIZED",
-        "NODE_USE_ENV_PROXY",
-        "NODE_USE_SYSTEM_CA",
-        "NPM_CONFIG_*",
-        "npm_config_*",
-        "PNPM_*",
-        "LD_PRELOAD",
-        "DYLD_*",
-    ],
+    reject: &NODE,
+};
+
+const PACKAGES: Held = Held {
+    inherit: &["PNPM_HOME", "NPM_CONFIG_USERCONFIG", "WHARF_PACKAGES_TOKEN"],
+    managed: &[],
+    reject: &NODE,
 };
 
 const PROBE: Held = Held {
@@ -141,6 +149,7 @@ pub fn contract(name: &str) -> Result<Contract, String> {
     let held = match name {
         "cargo" => &CARGO,
         "oci" => &OCI,
+        "packages" => &PACKAGES,
         "pnpm" => &PNPM,
         "probe" => &PROBE,
         "registry" => &REGISTRY,

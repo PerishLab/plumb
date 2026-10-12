@@ -71,7 +71,7 @@ impl Lock<'_> {
             "@perishlab/*",
         ]
         .map(str::to_string);
-        process::run(self.0, "pnpm", &argv)?;
+        process::run(self.0, "packages", &argv)?;
         Ok(())
     }
 
