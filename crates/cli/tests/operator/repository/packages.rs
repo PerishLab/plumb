@@ -1,7 +1,7 @@
 use super::precommit::{Repo, cache};
 use super::support;
 use serde_json::Value;
-use std::os::unix::fs::PermissionsExt;
+
 use std::process::{Command, Output};
 
 struct Fixture {
@@ -22,7 +22,7 @@ impl Fixture {
         std::fs::write(tools.path().join("latest"), "\"0.2.0\"\n").unwrap();
         std::fs::write(tools.path().join("lock"), Self::lock("0.2.0")).unwrap();
         let pnpm = tools.path().join("pnpm");
-        std::fs::write(
+        support::executable(
             &pnpm,
             r#"#!/bin/sh
 seat=$(dirname "$0")
@@ -33,9 +33,7 @@ update) cp "$seat/lock" pnpm-lock.yaml ;;
 *) exit 91 ;;
 esac
 "#,
-        )
-        .unwrap();
-        std::fs::set_permissions(pnpm, std::fs::Permissions::from_mode(0o755)).unwrap();
+        );
         Self {
             root,
             home: support::home(),

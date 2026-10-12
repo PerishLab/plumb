@@ -1,11 +1,9 @@
 mod worker;
 
-use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
 fn file(path: &Path, text: &str) {
-    std::fs::write(path, text).expect("file");
-    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).expect("mode");
+    super::support::executable(path, text);
 }
 
 fn seed(root: &Path) {

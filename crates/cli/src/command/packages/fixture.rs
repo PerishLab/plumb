@@ -49,7 +49,9 @@ impl Fixture {
         work::git(&source, &["push", "-q", "origin", "main"]).unwrap();
         work::git(&source, &["fetch", "origin"]).unwrap();
         std::fs::write(self.root.path().join("issue.json"), json!({"number":17,"type":{"name":"Auto"},"body":issue::body("Example/probe"),"state":"open","labels":[],"node_id":"fixture-issue","html_url":"https://github.com/Example/probe/issues/17","title":"Follow","updated_at":"2026-10-08T00:00:00Z","user":{"id":1}}).to_string()).unwrap();
-        std::fs::write(&self.command, r#"#!/usr/bin/env python3
+        super::super::writer::executable(
+            &self.command,
+            r#"#!/usr/bin/env python3
 import json, pathlib, subprocess, sys
 root = pathlib.Path(__file__).parent
 args = sys.argv[1:]
@@ -122,7 +124,8 @@ else:
             print('fixture interrupted after closure write', file=sys.stderr)
             sys.exit(17)
 print(json.dumps(result))
-"#).unwrap();
+"#,
+        );
         source
     }
 }

@@ -33,7 +33,6 @@ struct Web {
 #[cfg(unix)]
 impl Web {
     fn new() -> Self {
-        use std::os::unix::fs::PermissionsExt as _;
         let held = Self {
             root: cache::fixture(),
             home: support::home(),
@@ -59,9 +58,7 @@ impl Web {
                 "#!/bin/sh\nif [ \"$1\" = --version ]; then echo fixture; exit 0; fi\nprintf '%s\\n' \"$*\" >> '{}'\n",
                 held.tools.path().join("calls").display()
             );
-            std::fs::write(&path, body).expect("stub");
-            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755))
-                .expect("executable");
+            support::executable(&path, &body);
         }
         std::fs::write(held.tools.path().join("corepack"), "#!/bin/sh\nexit 97\n")
             .expect("refuse package manager mutation");

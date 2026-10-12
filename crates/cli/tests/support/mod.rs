@@ -1,3 +1,8 @@
+#[cfg(unix)]
+mod script;
+#[cfg(unix)]
+#[allow(unused_imports)]
+pub use script::executable;
 #[path = "bucket.rs"]
 mod bucket;
 #[allow(unused_imports)]

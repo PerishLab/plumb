@@ -1,6 +1,7 @@
 use super::{Provider, issue};
 use serde_json::{Value, json};
-use std::os::unix::fs::PermissionsExt;
+#[path = "../../../tests/support/script.rs"]
+mod writer;
 
 #[path = "idle.rs"]
 mod noop;
@@ -16,7 +17,9 @@ impl Fixture {
         std::fs::write(root.path().join("routes.json"), routes.to_string()).unwrap();
         std::fs::write(root.path().join("comments.json"), "[]").unwrap();
         let command = root.path().join("gh");
-        std::fs::write(&command, r#"#!/usr/bin/env python3
+        writer::executable(
+            &command,
+            r#"#!/usr/bin/env python3
 import json, pathlib, sys
 root = pathlib.Path(__file__).parent
 args = sys.argv[1:]
@@ -36,8 +39,8 @@ if '/comments' in endpoint:
 else:
     result = json.loads((root / 'routes.json').read_text())[endpoint]
 print(json.dumps(result))
-"#).unwrap();
-        std::fs::set_permissions(&command, std::fs::Permissions::from_mode(0o755)).unwrap();
+"#,
+        );
         Self { root, command }
     }
 
@@ -232,4 +235,30 @@ fn identity() {
     );
     assert_eq!(git(&root, &["config", "user.name"]).unwrap(), "");
     assert_eq!(git(&root, &["config", "user.email"]).unwrap(), "");
+}
+
+#[test]
+fn parallel() {
+    std::thread::scope(|scope| {
+        for _ in 0..8 {
+            scope.spawn(concurrent);
+        }
+    });
+}
+
+fn concurrent() {
+    let body = format!("#!/bin/sh\nprintf fixture\n#{}\n", "x".repeat(131072));
+    for _ in 0..128 {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("probe");
+        writer::executable(&path, &body);
+        let output = std::process::Command::new(&path).output().unwrap();
+        assert!(output.status.success());
+        assert_eq!(output.stdout, b"fixture");
+        let fixture = Fixture::new(routes(vec![check("success")]));
+        assert_eq!(
+            fixture.provider().guard("exact").unwrap(),
+            "https://github.com/Example/probe/actions/runs/17"
+        );
+    }
 }

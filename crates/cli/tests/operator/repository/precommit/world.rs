@@ -63,7 +63,6 @@ fn msvc() {
 #[test]
 #[cfg(unix)]
 fn bounded() {
-    use std::os::unix::fs::PermissionsExt as _;
     let fixture = cache::fixture();
     let home = support::home();
     cache::success(&cache::run(fixture.path(), home.path()));
@@ -79,8 +78,7 @@ fn bounded() {
         ("while :; do :; done", "10 second"),
         ("printf '\\377'", "not UTF-8"),
     ] {
-        std::fs::write(&rustc, format!("#!/bin/sh\n{body}\n")).expect("probe tool");
-        std::fs::set_permissions(&rustc, std::fs::Permissions::from_mode(0o755)).unwrap();
+        support::executable(&rustc, &format!("#!/bin/sh\n{body}\n"));
         let output = super::support::plumb()
             .args(["guard", ".", "--json"])
             .current_dir(fixture.path())
@@ -98,7 +96,6 @@ fn bounded() {
 #[test]
 #[cfg(unix)]
 fn unread() {
-    use std::os::unix::fs::PermissionsExt as _;
     let version = std::process::Command::new("rustc")
         .arg("--version")
         .output()
@@ -111,8 +108,7 @@ fn unread() {
     cache::success(&cache::run(root, home.path()));
     let tools = tempfile::tempdir().expect("tools");
     let rustc = tools.path().join("rustc");
-    std::fs::write(&rustc, "#!/bin/sh\nexit 71\n").expect("unread tool");
-    std::fs::set_permissions(&rustc, std::fs::Permissions::from_mode(0o755)).expect("executable");
+    support::executable(&rustc, "#!/bin/sh\nexit 71\n");
     let mut paths = vec![tools.path().to_path_buf()];
     paths.extend(std::env::split_paths(
         &std::env::var_os("PATH").expect("PATH"),
