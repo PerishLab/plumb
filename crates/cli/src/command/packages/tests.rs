@@ -2,6 +2,9 @@ use super::{Provider, issue};
 use serde_json::{Value, json};
 use std::os::unix::fs::PermissionsExt;
 
+#[path = "idle.rs"]
+mod noop;
+
 struct Fixture {
     root: tempfile::TempDir,
     command: std::path::PathBuf,

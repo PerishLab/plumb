@@ -1,4 +1,5 @@
 use super::provider::Provider;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 const MARKER: &str = "<!-- plumb.auto/v1 operation=follow -->";
@@ -41,6 +42,12 @@ pub(super) fn create(provider: &Provider<'_>) -> Result<u64, String> {
 }
 
 pub(super) fn body(repository: &str) -> String {
+    legacy(repository)
+        .replace("The bounded change is merged through the required organization Guard.", "Any bounded dependency change is merged through the required organization Guard, or a qualified no-op records no remaining delta and no associated pull.")
+        .replace("Closure records the read-back merge commit and successful Guard run for the delivered change.", "Closure records the read-back merge and successful Guard for a delivered change, or exact current main, latest-stable resolution and owned empty-ref readback for a qualified no-op.")
+}
+
+pub(super) fn legacy(repository: &str) -> String {
     format!(
         "## Operation\nfollow\n\n## Target\n{repository}\n\n## Change\nSet first-party requirements to 0 and resolve crates from the perish registry and @perishlab npm packages to their latest stable. Allowed paths: Cargo.toml, package.json, Cargo.lock and pnpm-lock.yaml at the root or in repository packages. The pull request records the exact delta.\n\n## Acceptance\n- [ ] The bounded change is merged through the required organization Guard.\n- [ ] Closure records the read-back merge commit and successful Guard run for the delivered change.\n\n## Non-goals\nBusiness-source repair, unrelated third-party upgrades, releases and organization settings.\n\n{MARKER}\n"
     )
@@ -58,10 +65,11 @@ pub(super) fn snapshot(
     {
         return Err("Issue is not this repository's registered Auto follow".into());
     }
-    if issue["body"].as_str() != Some(body(provider.repository).as_str())
-        && issue["body"].as_str()
-            != Some(body(provider.repository).replace("- [ ]", "- [x]").as_str())
-    {
+    let accepted = [body(provider.repository), legacy(provider.repository)]
+        .into_iter()
+        .flat_map(|body| [body.replace("- [ ]", "- [x]"), body])
+        .any(|body| issue["body"].as_str() == Some(body.as_str()));
+    if !accepted {
         return Err("Auto follow body changed outside its operation contract".into());
     }
     let children = provider.pages(&format!(
@@ -125,5 +133,46 @@ impl Provider<'_> {
             return Err("Auto Issue policy changed during candidate publication".into());
         }
         Ok(current)
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Noop {
+    pub schema: String,
+    pub repository: String,
+    pub issue: u64,
+    pub main: String,
+    pub resolution: plumb::packages::Resolution,
+    pub retired: Option<String>,
+}
+
+impl Provider<'_> {
+    pub(super) fn completion(&self, number: u64) -> Result<Option<Noop>, String> {
+        let issue = self.issue(number)?;
+        let owner = issue["user"]["id"]
+            .as_u64()
+            .filter(|id| *id > 0)
+            .ok_or("closed Auto has no writer identity")?;
+        let comments = self.pages(&format!(
+            "repos/{}/issues/{}/comments?per_page=100",
+            self.repository, number
+        ))?;
+        let mut found = None;
+        for comment in comments {
+            let body = text(&comment, "body")?;
+            if !body.contains("<!-- plumb.auto-noop/") {
+                continue;
+            }
+            if comment["user"]["id"].as_u64() != Some(owner) {
+                return Err("Auto no-op receipt has another operation writer".into());
+            }
+            let value = body
+                .split_once("<!-- plumb.auto-noop/v1\n")
+                .and_then(|(_, value)| value.strip_suffix("\n-->"))
+                .ok_or("Auto no-op receipt has an unknown shape")?;
+            found = Some(serde_json::from_str::<Noop>(value).map_err(|error| error.to_string())?);
+        }
+        Ok(found)
     }
 }

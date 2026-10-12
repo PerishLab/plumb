@@ -2,7 +2,7 @@ use super::{Fixture, issue, work};
 use serde_json::json;
 
 impl Fixture {
-    pub(super) fn repository(&self, code: &str) -> std::path::PathBuf {
+    pub(in super::super) fn repository(&self, code: &str) -> std::path::PathBuf {
         let source = self.root.path().join("source");
         let origin = self.root.path().join("origin.git");
         std::fs::create_dir_all(source.join("src")).unwrap();
@@ -95,11 +95,18 @@ elif '/actions/runs/' in endpoint:
 elif '/comments' in endpoint:
     comments = json.loads((root / 'comments.json').read_text())
     if payload:
+        if 'plumb.auto-noop/v1' in payload['body'] and (root / 'commentfault').exists():
+            (root / 'commentfault').unlink()
+            sys.exit('fixture interrupted before no-op receipt')
         comments.append(dict(payload, user={"id":1}))
         (root / 'comments.json').write_text(json.dumps(comments))
         issue = json.loads((root / 'issue.json').read_text())
         issue['updated_at'] = f'2026-10-09T00:00:{len(comments):02d}Z'
         (root / 'issue.json').write_text(json.dumps(issue))
+        if 'plumb.auto-noop/v1' in payload['body'] and (root / 'move').exists():
+            target = (root / 'move').read_text().strip()
+            subprocess.run(['git','--git-dir',str(root/'origin.git'),'update-ref','refs/heads/main',target], check=True)
+            (root / 'move').unlink()
         result = payload
     else:
         result = [comments]

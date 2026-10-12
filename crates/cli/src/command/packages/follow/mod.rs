@@ -93,6 +93,9 @@ fn resume(
         return Err("follow requires a clean source checkout".into());
     }
     work::git(&input.root, &["fetch", "origin"])?;
+    if state.issue != 0 {
+        closure::resume(&input.root, provider, seat, state)?;
+    }
     if state.issue == 0 {
         state.issue = issue::find(provider)?.unwrap_or(0);
     }
