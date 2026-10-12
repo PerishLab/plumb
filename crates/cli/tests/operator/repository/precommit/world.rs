@@ -76,7 +76,7 @@ fn bounded() {
     let path = std::env::join_paths(paths).expect("PATH");
     for (body, expected) in [
         ("while :; do printf x; done", "65536"),
-        ("while :; do :; done", "5 second"),
+        ("while :; do :; done", "10 second"),
         ("printf '\\377'", "not UTF-8"),
     ] {
         std::fs::write(&rustc, format!("#!/bin/sh\n{body}\n")).expect("probe tool");
