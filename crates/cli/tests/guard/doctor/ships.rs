@@ -127,3 +127,58 @@ fn placed() {
         "{captured}"
     );
 }
+
+fn seated(dir: &std::path::Path, manifest: &str, main: &str) -> String {
+    std::fs::create_dir_all(dir.join("src")).expect("source seat");
+    std::fs::write(dir.join("Cargo.toml"), manifest).expect("manifest");
+    std::fs::write(dir.join("src/main.rs"), main).expect("main");
+    let locked = std::process::Command::new("cargo")
+        .args(["generate-lockfile", "--offline"])
+        .current_dir(dir)
+        .output()
+        .expect("cargo");
+    assert!(
+        locked.status.success(),
+        "{}",
+        String::from_utf8_lossy(&locked.stderr)
+    );
+    crate::run(&["doctor", dir.to_str().expect("path should be utf8")])
+}
+
+const PACKAGE: &str = "[package]\nname = \"bound\"\nversion = \"0.0.0\"\nedition = \"2024\"\n";
+
+#[test]
+fn identity() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let dir = fixture.path();
+    crate::govern(dir);
+    let unbound = seated(
+        dir,
+        PACKAGE,
+        "fn main() {\n    println!(\"{}\", plumb::version!());\n}\n",
+    );
+    assert!(
+        unbound.contains("crate bound reads plumb::version! but never invokes plumb::identity!"),
+        "{unbound}"
+    );
+    let bound = seated(
+        dir,
+        PACKAGE,
+        "plumb::identity!();\n\nfn main() {\n    println!(\"{}\", plumb::version!());\n}\n",
+    );
+    assert!(!bound.contains("plumb::identity!"), "{bound}");
+    std::fs::remove_file(dir.join("src/main.rs")).expect("binary removed");
+    std::fs::write(
+        dir.join("src/lib.rs"),
+        "pub fn held() -> &'static str {\n    plumb::version!()\n}\n",
+    )
+    .expect("library");
+    let library = crate::run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(!library.contains("plumb::identity!"), "{library}");
+    std::fs::write(dir.join("Cargo.toml"), "[package\n").expect("broken manifest");
+    let broken = crate::run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(
+        broken.contains("blind: cannot read Cargo targets"),
+        "{broken}"
+    );
+}

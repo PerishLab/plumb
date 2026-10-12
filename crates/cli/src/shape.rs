@@ -10,6 +10,7 @@ pub(crate) mod release;
 mod repository;
 pub mod workflow;
 
+pub(crate) use release::identity;
 pub use repository::dependency::{Dependencies, Dependency};
 pub use repository::layout;
 pub(crate) use repository::{dependency, policy, script, toolchain};
@@ -50,6 +51,7 @@ pub struct Shape {
     pub(crate) policy: Option<policy::Evidence>,
     pub(crate) script: script::Evidence,
     pub(crate) toolchain: toolchain::Evidence,
+    pub(crate) identity: identity::Evidence,
     pub layout: layout::Read,
     pub(crate) preview: Result<Vec<product::preview::App>, String>,
     pub(crate) qualification: Result<(), String>,
@@ -252,6 +254,7 @@ pub fn capture(
         policy,
         script: script::read(root, snapshot.as_ref()),
         toolchain: toolchain::read(root),
+        identity: identity::read(root),
         layout: held,
         preview,
         qualification,
