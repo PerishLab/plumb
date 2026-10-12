@@ -108,6 +108,12 @@ pub fn read(root: &Path, registry: &str, index: &str) -> Dependencies {
         }
     };
     for (manifest, name, requirement) in declarations {
+        if requirement != "^0" {
+            found.pinned.push(format!(
+                "cargo {name} requires {requirement}, expected 0 [{}]",
+                seat(root, &manifest)
+            ));
+        }
         let parsed = match VersionReq::parse(&requirement) {
             Ok(parsed) => parsed,
             Err(error) => {

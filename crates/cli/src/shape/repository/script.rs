@@ -11,8 +11,6 @@ pub struct Evidence {
 
 const SUFFIXES: [&str; 4] = [".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx"];
 
-const ANCHORS: [&str; 2] = ["package.json", "deno.json"];
-
 const PINS: [&str; 2] = ["rust-toolchain.toml", "rust-toolchain"];
 
 pub fn read(
@@ -102,7 +100,7 @@ impl Script<'_> {
 }
 
 fn anchored(dir: &Path) -> bool {
-    ANCHORS.iter().any(|name| dir.join(name).is_file())
+    dir.join("package.json").is_file()
 }
 
 fn declared(path: &Path) -> Option<Json> {

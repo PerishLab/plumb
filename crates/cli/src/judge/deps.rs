@@ -28,6 +28,12 @@ pub fn check(held: &shape::Shape) -> Found {
     for error in &held.dependencies.blind {
         found.push(blind(&rule::FIRST_PARTY_STABLE_LATEST, error.clone()));
     }
+    for pinned in &held.dependencies.pinned {
+        found.push(wrong(&rule::SELF_BUILT_DEPENDENCY_UNPINNED, pinned.clone()));
+    }
+    for error in &held.dependencies.illegible {
+        found.push(blind(&rule::SELF_BUILT_DEPENDENCY_UNPINNED, error.clone()));
+    }
     for dependency in &held.dependencies.held {
         currency(dependency, &mut found);
     }

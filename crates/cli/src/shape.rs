@@ -106,11 +106,6 @@ impl Root<'_> {
     }
 
     fn mint(&self) -> Option<String> {
-        if let Ok(text) = std::fs::read_to_string(self.0.join("deno.json"))
-            && text.contains("\"exports\"")
-        {
-            return pack::field(&text, "name");
-        }
         if pack::minted(&self.0.join("package.json"))
             && let Ok(text) = std::fs::read_to_string(self.0.join("package.json"))
         {
@@ -268,13 +263,7 @@ pub fn version(root: &Path) -> Option<String> {
     if let Some(found) = mark(&cargo) {
         return Some(found);
     }
-    for name in ["deno.json", "package.json"] {
-        let text = std::fs::read_to_string(root.join(name)).unwrap_or_default();
-        if let Some(found) = quoted(&text) {
-            return Some(found);
-        }
-    }
-    None
+    quoted(&std::fs::read_to_string(root.join("package.json")).unwrap_or_default())
 }
 
 fn mark(text: &str) -> Option<String> {
