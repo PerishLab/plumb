@@ -27,7 +27,7 @@ mod runtime;
 pub mod seat;
 #[cfg(feature = "depot")]
 pub use seat::bucket;
-pub use seat::depot;
+pub use seat::{depot, record, replace};
 #[cfg(feature = "skill")]
 pub mod skill;
 #[cfg(feature = "vendor")]

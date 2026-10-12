@@ -96,11 +96,7 @@ impl Seat {
             print!("{rendered}");
             return 0;
         }
-        let draft = path.with_extension(format!("toml.tmp-{}", std::process::id()));
-        if let Err(error) =
-            std::fs::write(&draft, rendered).and_then(|()| std::fs::rename(&draft, &path))
-        {
-            let _ = std::fs::remove_file(&draft);
+        if let Err(error) = plumb::replace::write(&path, rendered.as_bytes()) {
             eprintln!("plumb policy {}: {error}", self.0.display());
             return 1;
         }

@@ -1,5 +1,7 @@
 use super::agent::Seat;
+use super::state::SCHEMA;
 use super::{Error, Kit};
+use crate::record;
 use flate2::read::GzDecoder;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -10,7 +12,6 @@ const MARK: &str = "metadata.json";
 
 #[derive(Deserialize, Serialize)]
 pub struct Mark {
-    pub schema: u32,
     pub name: String,
     pub version: String,
     pub keeper: String,
@@ -21,14 +22,10 @@ pub fn owned(path: &Path, name: &str) -> bool {
 }
 
 pub fn marker(path: &Path, name: &str) -> Option<Mark> {
-    let text = match fs::read_to_string(path.join(MARK)) {
-        Ok(text) => text,
-        Err(_) => return None,
-    };
-    match serde_json::from_str::<Mark>(&text) {
-        Ok(mark) if mark.keeper == name && mark.name == name => Some(mark),
-        _ => None,
-    }
+    record::read::<Mark>(&path.join(MARK), SCHEMA)
+        .ok()
+        .flatten()
+        .filter(|mark| mark.keeper == name && mark.name == name)
 }
 
 pub fn place(kit: &Kit, seat: &Seat, bytes: &[u8], version: &str) -> Result<(), Error> {
@@ -41,7 +38,6 @@ pub fn place(kit: &Kit, seat: &Seat, bytes: &[u8], version: &str) -> Result<(), 
     fs::create_dir_all(&staging)
         .map_err(|error| Error::Write(staging.clone(), error.to_string()))?;
     let mark = Mark {
-        schema: super::state::SCHEMA,
         name: kit.name.clone(),
         version: version.to_string(),
         keeper: kit.name.clone(),
@@ -72,7 +68,6 @@ pub fn stage(kit: &Kit, seat: &Seat, bytes: &[u8], version: &str) -> Result<(), 
     fs::create_dir_all(&staging)
         .map_err(|error| Error::Write(staging.clone(), error.to_string()))?;
     let mark = Mark {
-        schema: super::state::SCHEMA,
         name: kit.name.clone(),
         version: version.to_string(),
         keeper: format!("{}-stage", kit.name),
@@ -110,10 +105,7 @@ fn build(staging: &Path, bytes: &[u8], mark: Mark) -> Result<PathBuf, Error> {
     if !root.join("SKILL.md").is_file() {
         return Err(Error::Unpack("archive lacks SKILL.md".to_string()));
     }
-    let text =
-        serde_json::to_string_pretty(&mark).map_err(|error| Error::Parse(error.to_string()))?;
-    fs::write(root.join(MARK), format!("{text}\n"))
-        .map_err(|error| Error::Write(root.join(MARK), error.to_string()))?;
+    record::write(&root.join(MARK), SCHEMA, &mark).map_err(super::state::fault)?;
     Ok(root)
 }
 
