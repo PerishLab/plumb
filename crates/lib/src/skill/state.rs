@@ -1,13 +1,12 @@
 use super::Error;
+use crate::{record, replace};
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::path::{Path, PathBuf};
 
 pub const SCHEMA: u32 = 1;
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct Ledger {
-    pub schema: u32,
     pub records: Vec<Record>,
 }
 
@@ -21,56 +20,25 @@ pub struct Record {
 }
 
 pub fn read(path: &Path) -> Result<Ledger, Error> {
-    let text = match fs::read_to_string(path) {
-        Ok(text) => text,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(Ledger {
-                schema: SCHEMA,
-                records: Vec::new(),
-            });
-        }
-        Err(error) => return Err(Error::Read(path.to_path_buf(), error.to_string())),
-    };
-    let ledger: Ledger =
-        serde_json::from_str(&text).map_err(|error| Error::Parse(error.to_string()))?;
-    if ledger.schema != SCHEMA {
-        return Err(Error::Schema(ledger.schema));
-    }
-    Ok(ledger)
+    record::read(path, SCHEMA)
+        .map(Option::unwrap_or_default)
+        .map_err(fault)
 }
 
 pub fn write(target: &Path, ledger: &Ledger) -> Result<(), Error> {
-    let text =
-        serde_json::to_string_pretty(ledger).map_err(|error| Error::Parse(error.to_string()))?;
-    if let Some(parent) = target.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|error| Error::Write(parent.to_path_buf(), error.to_string()))?;
-    }
-    let beside = target.with_extension("part");
-    private(&beside, format!("{text}\n").as_bytes())
-        .map_err(|error| Error::Write(beside.clone(), error.to_string()))?;
-    fs::rename(&beside, target)
+    let bytes = record::encode(SCHEMA, ledger).map_err(|error| Error::Parse(error.to_string()))?;
+    replace::private(target, &bytes)
         .map_err(|error| Error::Write(target.to_path_buf(), error.to_string()))
 }
 
-#[cfg(unix)]
-fn private(seat: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    use std::io::Write;
-    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
-
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .mode(0o600)
-        .open(seat)?;
-    file.set_permissions(fs::Permissions::from_mode(0o600))?;
-    file.write_all(bytes)
-}
-
-#[cfg(not(unix))]
-fn private(seat: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    fs::write(seat, bytes)
+pub(super) fn fault(error: record::Error) -> Error {
+    match error {
+        record::Error::Read(path, why) => Error::Read(path, why.to_string()),
+        record::Error::Parse(_, why) => Error::Parse(why.to_string()),
+        record::Error::Absent(path) => Error::Parse(format!("{} names no schema", path.display())),
+        record::Error::Schema(_, seen) => Error::Schema(seen),
+        record::Error::Write(path, why) => Error::Write(path, why.to_string()),
+    }
 }
 
 pub fn keep(ledger: &mut Ledger, record: Record) {

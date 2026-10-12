@@ -111,10 +111,6 @@ pub(super) fn read(path: &Path) -> Result<Option<Record>, String> {
 }
 
 pub(super) fn write(path: &Path, record: &Record) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|error| format!("cannot create {}: {error}", parent.display()))?;
-    }
     replace(
         path,
         &serde_json::to_vec_pretty(record).map_err(|error| error.to_string())?,
@@ -122,10 +118,7 @@ pub(super) fn write(path: &Path, record: &Record) -> Result<(), String> {
 }
 
 fn replace(path: &Path, bytes: &[u8]) -> Result<(), String> {
-    let beside = path.with_extension("part");
-    std::fs::write(&beside, bytes)
-        .map_err(|error| format!("cannot write {}: {error}", beside.display()))?;
-    std::fs::rename(&beside, path)
+    plumb::replace::write(path, bytes)
         .map_err(|error| format!("cannot replace {}: {error}", path.display()))
 }
 

@@ -5,17 +5,9 @@ use std::path::{Path, PathBuf};
 pub fn stage(root: &Path, proof: &Descriptor) -> Result<PathBuf, String> {
     proof.current(root)?;
     let path = Seat::new(root)?.pending(&proof.tree)?;
-    let parent = path
-        .parent()
-        .ok_or_else(|| "guard proof has no parent seat".to_string())?;
-    std::fs::create_dir_all(parent)
-        .map_err(|error| format!("cannot create {}: {error}", parent.display()))?;
     let text = serde_json::to_vec_pretty(proof)
         .map_err(|error| format!("cannot encode guard proof: {error}"))?;
-    let temporary = parent.join(format!(".{}.tmp", proof.tree));
-    std::fs::write(&temporary, text)
-        .map_err(|error| format!("cannot write {}: {error}", temporary.display()))?;
-    std::fs::rename(&temporary, &path)
+    crate::replace::write(&path, &text)
         .map_err(|error| format!("cannot publish {}: {error}", path.display()))?;
     Ok(path)
 }

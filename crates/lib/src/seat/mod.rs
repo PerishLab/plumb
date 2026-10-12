@@ -3,7 +3,9 @@ use std::path::{Path, PathBuf};
 #[cfg(feature = "depot")]
 pub mod bucket;
 pub mod depot;
+pub mod record;
 pub mod release;
+pub mod replace;
 
 pub use plumb_macro::{catalogue, resource};
 
