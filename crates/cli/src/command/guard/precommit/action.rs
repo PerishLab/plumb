@@ -245,3 +245,22 @@ impl Catalog<'_> {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pinned() {
+        let tree = Tree::default();
+        let catalog = Catalog {
+            tree: &tree,
+            product: "product",
+        };
+        assert_eq!(
+            catalog.commands(&tree, "product", "guard/test").unwrap(),
+            vec![vec!["cargo".to_string(), "test".into(), "--locked".into()]],
+            "Wharf skips its release cargo suite because guard/test runs exactly this on a virtual workspace (PerishLab/wharf#127); change both together"
+        );
+    }
+}
