@@ -219,7 +219,7 @@ fn advanced() {
         work::git(&state.worktree, &["merge-base", &head, &old]).unwrap(),
         old
     );
-    assert_eq!(fixture.provider().remote(17).unwrap(), recovered.candidate);
+    assert_eq!(fixture.provider().remote(17).unwrap(), Some(old.clone()));
     assert_eq!(fixture.provider().issue(17).unwrap()["state"], "open");
     assert!(recovered.merged.is_none());
     assert_eq!(

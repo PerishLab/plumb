@@ -135,3 +135,51 @@ pub(super) fn git(root: &Path, args: &[&str]) -> Result<String, String> {
         .map(|text| text.trim().into())
         .map_err(|error| format!("Auto git output is not UTF-8: {error}"))
 }
+
+pub(super) fn current(root: &Path, main: &str) -> Result<(), String> {
+    git(root, &["fetch", "origin"])?;
+    if git(root, &["rev-parse", "origin/main"])? != main {
+        return Err("current main moved during qualified Auto no-op; reread before retry".into());
+    }
+    Ok(())
+}
+
+impl Work<'_> {
+    pub fn retire(&self, tree: &str) -> Result<(), String> {
+        if self.state.worktree.as_os_str().is_empty() || !self.state.worktree.exists() {
+            return Ok(());
+        }
+        self.open()?;
+        let head = git(&self.state.worktree, &["rev-parse", "HEAD"])?;
+        if git(&self.state.worktree, &["rev-parse", "HEAD^{tree}"])? != tree
+            || !git(
+                &self.state.worktree,
+                &["status", "--porcelain", "--untracked-files=all"],
+            )?
+            .is_empty()
+        {
+            return Err("Auto no-op cleanup preserves valuable or changed local payload".into());
+        }
+        git(
+            self.source,
+            &[
+                "worktree",
+                "remove",
+                self.state
+                    .worktree
+                    .to_str()
+                    .ok_or("Auto worktree path is not UTF-8")?,
+            ],
+        )?;
+        git(
+            self.source,
+            &[
+                "update-ref",
+                "-d",
+                &format!("refs/heads/auto/{}", self.state.issue),
+                &head,
+            ],
+        )?;
+        Ok(())
+    }
+}

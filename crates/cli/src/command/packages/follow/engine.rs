@@ -55,9 +55,14 @@ pub(super) fn advance(
         source: root,
         state,
     };
-    crate::command::packages::resolve(&state.worktree, "follow")?;
-    let head = work.commit()?;
     let base = work::git(&state.worktree, &["rev-parse", "origin/main"])?;
+    crate::command::packages::resolve(&state.worktree, "follow")?;
+    if work::git(&state.worktree, &["write-tree"])?
+        == work::git(&state.worktree, &["rev-parse", &format!("{base}^{{tree}}")])?
+    {
+        return super::closure::idle(root, provider, seat, state);
+    }
+    let head = work.commit()?;
     scope::check(&state.worktree, &base, &head)?;
     state.candidate = Some(head.clone());
     seat.write(state)?;
