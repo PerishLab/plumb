@@ -103,7 +103,6 @@ fn declared() {
 #[test]
 #[cfg(unix)]
 fn once() {
-    use std::os::unix::fs::PermissionsExt as _;
     let fixture = cache::fixture();
     let root = fixture.path();
     manifest(root, "good");
@@ -127,8 +126,14 @@ fn once() {
         .unwrap();
     assert!(backend.status.success());
     let backend = String::from_utf8(backend.stdout).unwrap();
-    std::fs::write(&cargo, format!("#!/bin/sh\nif [ \"$1\" = --version ]; then printf 'probe\\n' >> '{}'; fi\nexec '{}' \"$@\"\n", counter.display(), backend.trim())).unwrap();
-    std::fs::set_permissions(&cargo, std::fs::Permissions::from_mode(0o755)).unwrap();
+    support::executable(
+        &cargo,
+        &format!(
+            "#!/bin/sh\nif [ \"$1\" = --version ]; then printf 'probe\\n' >> '{}'; fi\nexec '{}' \"$@\"\n",
+            counter.display(),
+            backend.trim()
+        ),
+    );
     let mut paths = vec![tools.path().to_path_buf()];
     paths.extend(std::env::split_paths(&std::env::var_os("PATH").unwrap()));
     let path = std::env::join_paths(paths).unwrap();

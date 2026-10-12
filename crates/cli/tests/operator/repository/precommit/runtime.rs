@@ -158,7 +158,6 @@ fn neutral() {
 
 #[cfg(unix)]
 fn noisy(fixture: &Runtime, mode: &str) -> tempfile::TempDir {
-    use std::os::unix::fs::PermissionsExt as _;
     let root = fixture.root.path();
     std::fs::write(
         root.join("plumb.toml"),
@@ -184,8 +183,7 @@ fn noisy(fixture: &Runtime, mode: &str) -> tempfile::TempDir {
         let body = format!(
             "#!/bin/sh\nif [ \"$1\" = --version ]; then echo fixture; exit 0; fi\nprintf '%s\\n' '{{\"ok\":true,\"schema\":\"child-output\"}}'\nprintf '%s\\n' 'child diagnostic' >&2\n{tail}\n"
         );
-        std::fs::write(&path, body).expect("child script");
-        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).expect("executable");
+        support::executable(&path, &body);
     }
     tools
 }
