@@ -93,9 +93,7 @@ impl Spec {
         let held: Manifest =
             toml::from_str(text).map_err(|error| format!("cannot parse {subject}: {error}"))?;
         let product = held.identity.ns;
-        if let Some(stated) = &held.release.product
-            && (product.is_empty() || stated.as_str() != Some(product.as_str()))
-        {
+        if held.release.product.is_some() {
             return Err(format!(
                 "{subject} declares [release] product; the product name moved to [identity] ns"
             ));

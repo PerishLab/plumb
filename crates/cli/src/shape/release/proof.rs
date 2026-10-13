@@ -198,5 +198,5 @@ fn identity() {
     );
     let stated = format!("[identity]\nns = \"foo\"\n[release]\nproduct = \"bar\"\n{tail}");
     refused(root, &stated, moved);
-    decode(root, &stated.replace("bar", "foo")).expect("redundant");
+    refused(root, &stated.replace("bar", "foo"), moved);
 }
