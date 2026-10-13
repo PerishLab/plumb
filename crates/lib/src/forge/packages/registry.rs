@@ -4,7 +4,15 @@ use std::path::Path;
 
 pub(super) fn latest(root: &Path, ecosystem: &str, name: &str) -> Result<String, String> {
     if ecosystem == "npm" {
-        let argv = ["pnpm", "view", name, "dist-tags.latest", "--json"].map(str::to_string);
+        let argv = [
+            "pnpm",
+            "--config.ignore-pnpmfile=true",
+            "view",
+            name,
+            "dist-tags.latest",
+            "--json",
+        ]
+        .map(str::to_string);
         let bytes = process::run(root, "packages", &argv)?;
         let version: String = serde_json::from_slice(&bytes)
             .map_err(|error| format!("cannot read npm stable {name}: {error}"))?;
@@ -76,5 +84,93 @@ fn route(name: &str) -> String {
         2 => format!("2/{name}"),
         3 => format!("3/{}/{name}", &name[..1]),
         _ => format!("{}/{}/{name}", &name[..2], &name[2..4]),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::time::{Duration, Instant};
+
+    fn null() -> &'static str {
+        if cfg!(windows) { "NUL" } else { "/dev/null" }
+    }
+
+    fn socket(listener: TcpListener) -> std::net::TcpStream {
+        let started = Instant::now();
+        loop {
+            match listener.accept() {
+                Ok((socket, _)) => return socket,
+                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                    assert!(
+                        started.elapsed() < Duration::from_secs(15),
+                        "npm query did not reach fixture registry"
+                    );
+                    std::thread::sleep(Duration::from_millis(20));
+                }
+                Err(error) => panic!("{error}"),
+            }
+        }
+    }
+
+    fn serve(listener: TcpListener) {
+        let mut socket = socket(listener);
+        socket
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .unwrap();
+        let mut request = [0; 8192];
+        let size = socket.read(&mut request).unwrap();
+        assert!(
+            !String::from_utf8_lossy(&request[..size])
+                .to_ascii_lowercase()
+                .contains("authorization:")
+        );
+        let body = r#"{"name":"@perishlab/probe","dist-tags":{"latest":"0.2.0"},"versions":{"0.2.0":{"name":"@perishlab/probe","version":"0.2.0"}}}"#;
+        write!(socket, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", body.len(), body).unwrap();
+    }
+
+    #[test]
+    fn npm() {
+        if std::env::var_os("PLUMB_REGISTRY_FIXTURE").is_none() {
+            let output = std::process::Command::new(std::env::current_exe().unwrap())
+                .args(["--exact", "packages::registry::tests::npm", "--nocapture"])
+                .env("PLUMB_REGISTRY_FIXTURE", "child")
+                .env("WHARF_PACKAGES_TOKEN", "SYNTHETIC_ONLY_ENV")
+                .env("NPM_CONFIG_USERCONFIG", null())
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}\n{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            return;
+        }
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let endpoint = listener.local_addr().unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let server = std::thread::spawn(move || serve(listener));
+        let root = tempfile::tempdir().unwrap();
+        std::fs::write(
+            root.path().join("package.json"),
+            r#"{"name":"fixture","private":true}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            root.path().join(".npmrc"),
+            format!("@perishlab:registry=http://{endpoint}/\n"),
+        )
+        .unwrap();
+        std::fs::write(
+            root.path().join(".pnpmfile.cjs"),
+            "throw new Error('repository code must not execute during query');",
+        )
+        .unwrap();
+        let result = latest(root.path(), "npm", "@perishlab/probe");
+        server.join().unwrap();
+        assert_eq!(result.unwrap(), "0.2.0");
     }
 }

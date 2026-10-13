@@ -26,6 +26,7 @@ impl Fixture {
             &pnpm,
             r#"#!/bin/sh
 seat=$(dirname "$0")
+if [ "$1" = --config.ignore-pnpmfile=true ]; then shift; fi
 case "$1" in
 view) cat "$seat/latest" ;;
 update) cp "$seat/lock" pnpm-lock.yaml ;;
@@ -176,6 +177,7 @@ fn graph() {
         fixture.tools.path().join("pnpm"),
         r#"#!/bin/sh
 seat=$(dirname "$0")
+if [ "$1" = --config.ignore-pnpmfile=true ]; then shift; fi
 case "$1" in
 view) cat "$seat/latest" ;;
 update)

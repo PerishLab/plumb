@@ -7,6 +7,14 @@ pub(super) fn capture(
     programs: &[String],
     inputs: &[(OsString, OsString)],
 ) -> Result<Environment, String> {
+    let inputs = inputs
+        .iter()
+        .filter(|(key, _)| {
+            !key.to_string_lossy()
+                .eq_ignore_ascii_case("NPM_CONFIG_USERCONFIG")
+        })
+        .cloned()
+        .collect::<Vec<_>>();
     let families = programs
         .iter()
         .map(|program| crate::execution::family(program))
@@ -17,10 +25,49 @@ pub(super) fn capture(
         environment = environment
             .combine(crate::execution::contract(family)?.capture(inputs.iter().cloned())?)?;
     }
+    environment = environment.combine(
+        Contract {
+            inherit: Vec::new(),
+            managed: Vec::new(),
+            reject: Vec::new(),
+            bind: [(
+                "NPM_CONFIG_USERCONFIG".into(),
+                Binding::Value(if cfg!(windows) {
+                    "NUL".into()
+                } else {
+                    "/dev/null".into()
+                }),
+            )]
+            .into(),
+        }
+        .capture([])?,
+    )?;
     if families.contains("cargo") {
         inspect(root, &environment)?;
     }
     Ok(environment)
+}
+
+pub(super) fn observed(
+    environment: Environment,
+    observation: Option<&plumb::packages::Observation>,
+) -> Result<Environment, String> {
+    let Some(observation) = observation else {
+        return Ok(environment);
+    };
+    let value = serde_json::to_string(observation).map_err(|error| error.to_string())?;
+    if value.len() > 8192 {
+        return Err("package observation exceeds execution input bound".into());
+    }
+    environment.combine(
+        Contract {
+            inherit: Vec::new(),
+            managed: Vec::new(),
+            reject: Vec::new(),
+            bind: [("PLUMB_PACKAGES_OBSERVATION".into(), Binding::Value(value))].into(),
+        }
+        .capture([])?,
+    )
 }
 
 fn inspect(root: &Path, environment: &Environment) -> Result<(), String> {
@@ -110,6 +157,21 @@ mod tests {
             })
             .collect::<Vec<_>>();
         inputs.push(("CARGO_HOME".into(), home.path().as_os_str().to_owned()));
+        let credential = root.path().join("credential.npmrc");
+        std::fs::write(
+            &credential,
+            "//npm.pkg.github.com/:_authToken=SYNTHETIC_ONLY_SAFE\n",
+        )
+        .unwrap();
+        inputs.retain(|(key, _)| {
+            !key.to_string_lossy()
+                .eq_ignore_ascii_case("NPM_CONFIG_USERCONFIG")
+        });
+        inputs.push((
+            "NPM_CONFIG_USERCONFIG".into(),
+            credential.as_os_str().to_owned(),
+        ));
+        inputs.push(("WHARF_PACKAGES_TOKEN".into(), "SYNTHETIC_ONLY_ENV".into()));
         let programs = ["cargo", "rustc", "node", "pnpm"].map(str::to_string);
         let environment = capture(root.path(), &programs, &inputs).unwrap();
         let lease = super::super::cargo::Lease::new(root.path()).unwrap();
@@ -124,7 +186,7 @@ mod tests {
         )
         .unwrap();
         std::fs::write(root.path().join("probe.cjs"),
-            r#"const {spawnSync}=require('node:child_process'); if(!process.env.CARGO_TARGET_DIR)process.exit(9); const child=spawnSync('cargo',['--version'],{env:{...process.env,npm_config_node_gyp:'parent-generated'}}); process.stdout.write(child.stdout); process.stderr.write(child.stderr); process.exit(child.status ?? 8);"#).unwrap();
+            r#"const fs=require('node:fs');if(process.env.WHARF_PACKAGES_TOKEN)process.exit(10);const p=process.env.NPM_CONFIG_USERCONFIG||process.env.npm_config_userconfig;if(!p||fs.readFileSync(p,'utf8').includes('SYNTHETIC_ONLY_SAFE'))process.exit(11); const {spawnSync}=require('node:child_process'); if(!process.env.CARGO_TARGET_DIR)process.exit(9); const child=spawnSync('cargo',['--version'],{env:{...process.env,npm_config_node_gyp:'parent-generated'}}); process.stdout.write(child.stdout); process.stderr.write(child.stderr); process.exit(child.status ?? 8);"#).unwrap();
         let output = execution
             .command("pnpm")
             .unwrap()
@@ -145,7 +207,7 @@ mod tests {
         )
         .unwrap();
         std::fs::write(root.path().join("build.rs"),
-            r#"fn main(){assert!(std::process::Command::new("node").arg("--version").status().unwrap().success());}"#).unwrap();
+            r#"fn main(){assert!(std::env::var_os("WHARF_PACKAGES_TOKEN").is_none());let p=std::env::var("NPM_CONFIG_USERCONFIG").unwrap();assert!(!std::fs::read_to_string(p).unwrap().contains("SYNTHETIC_ONLY_SAFE"));assert!(std::process::Command::new("node").arg("--version").status().unwrap().success());}"#).unwrap();
         std::fs::write(root.path().join("src/main.rs"),
             r#"fn main(){assert!(std::env::var_os("CARGO_TARGET_DIR").is_some());println!("mixed-world");}"#).unwrap();
         let output = execution

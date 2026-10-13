@@ -41,11 +41,13 @@ pub(super) fn resolved(root: &Path) -> Result<Descriptor, String> {
 fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
     let tree = plumb::guard::tree(root)?;
     let index = Index::new(root, &tree)?;
-    let resolution = Some(if latest {
-        crate::command::packages::resolve(&index.root, "ci-latest")?
+    let (locked, observed) = if latest {
+        let (locked, observed) = crate::command::packages::observed(&index.root, "ci-latest")?;
+        (locked, Some(plumb::packages::Observation::new(observed)))
     } else {
-        plumb::packages::locked(&index.root, "local-locked")?
-    });
+        (plumb::packages::locked(&index.root, "local-locked")?, None)
+    };
+    let resolution = Some(locked);
     let captured = Tree::read(&index.root, None)?;
     let manifest = captured.text("plumb.toml")?;
     let product = crate::shape::product::named(manifest.as_deref())?;
@@ -54,6 +56,14 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
         product: &product,
     }
     .checks()?;
+    let observation = if prepared.iter().any(|check| check.name == "guard/plumb") {
+        Some(match observed {
+            Some(observed) => observed,
+            None => plumb::packages::Observation::npm(&index.root, "local-locked")?,
+        })
+    } else {
+        None
+    };
     let workspace = captured.has("Cargo.toml");
     let lease = workspace
         .then(|| super::cargo::Lease::new(&index.root))
@@ -92,6 +102,11 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
             programs.push("rustc".into());
         }
         let environment = super::environment::capture(root, &programs, &inputs)?;
+        let environment = if name == "guard/plumb" {
+            super::environment::observed(environment, observation.as_ref())?
+        } else {
+            environment
+        };
         let environment = match &lease {
             Some(lease) => super::environment::managed(environment, lease)?,
             None => environment,
@@ -127,6 +142,10 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
         .filter(|check| !super::cache::contains(&check.proof))
         .collect::<Vec<_>>();
     if !pending.is_empty() {
+        if pending.iter().any(|check| check.proof.name == "guard/web") {
+            plumb::packages::fetch(&index.root)?;
+            tree::unchanged(&index)?;
+        }
         for check in pending {
             eprintln!("guard {}", check.proof.name);
             for command in &check.commands {
