@@ -1,7 +1,7 @@
 use super::Spec;
 use std::path::Path;
 
-const HEAD: &str = "[release]\nproduct = \"santi\"\nauthority = \"https://releases.santi.example\"\nbinaries = [\"santi\", \"santi-api\"]\n";
+const HEAD: &str = "[identity]\nns = \"santi\"\n[release]\nauthority = \"https://releases.santi.example\"\nbinaries = [\"santi\", \"santi-api\"]\n";
 const UNION: &str = "targets = [\"x86_64-unknown-linux-gnu\", \"aarch64-apple-darwin\"]\n";
 const NARROW: &str =
     "[release.binary.santi-api]\ntargets = [\"x86_64-unknown-linux-gnu\"]\ninstall = false\n";
@@ -163,14 +163,40 @@ fn targets() {
     let root = tempfile::tempdir().expect("root");
     for triple in super::target::TARGETS {
         let text = format!(
-            "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"{triple}\"]\n"
+            "[identity]\nns = \"foo\"\n[release]\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"{triple}\"]\n"
         );
         decode(root.path(), &text).expect(triple);
     }
-    let text = "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-apple-darwin\"]\n";
+    let text = "[identity]\nns = \"foo\"\n[release]\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-apple-darwin\"]\n";
     refused(
         root.path(),
         text,
         "unsupported release target x86_64-apple-darwin",
     );
+}
+
+#[test]
+fn identity() {
+    let root = Path::new(".");
+    let tail = "authority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n";
+    let spec = decode(
+        root,
+        &format!("[identity]\nns = \"foo\"\n[release]\n{tail}"),
+    )
+    .expect("named");
+    assert_eq!(spec.product, "foo");
+    refused(
+        root,
+        &format!("[release]\n{tail}"),
+        "[identity] ns cannot be empty",
+    );
+    let moved = "the product name moved to [identity] ns";
+    refused(
+        root,
+        &format!("[release]\nproduct = \"foo\"\n{tail}"),
+        moved,
+    );
+    let stated = format!("[identity]\nns = \"foo\"\n[release]\nproduct = \"bar\"\n{tail}");
+    refused(root, &stated, moved);
+    decode(root, &stated.replace("bar", "foo")).expect("redundant");
 }

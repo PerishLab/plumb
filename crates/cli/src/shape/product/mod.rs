@@ -13,8 +13,8 @@ pub fn named(manifest: Option<&str>) -> Result<String, String> {
         .parse()
         .map_err(|error| format!("cannot parse staged plumb.toml: {error}"))?;
     Ok(doc
-        .get("release")
-        .and_then(|held| held.get("product"))
+        .get("identity")
+        .and_then(|held| held.get("ns"))
         .and_then(toml::Value::as_str)
         .unwrap_or_default()
         .to_string())

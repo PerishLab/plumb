@@ -10,6 +10,7 @@ pub struct Release {
     pub placements: Vec<String>,
     pub widths: BTreeMap<String, usize>,
     pub refusal: Option<String>,
+    pub misnamed: Option<String>,
     pub blind: Option<String>,
     pub unsettled: Option<String>,
 }
@@ -52,6 +53,7 @@ impl Root<'_> {
             placements: spec.placements(),
             widths: widths(spec),
             refusal: None,
+            misnamed: misnamed(self.0, &spec.product),
             blind: identity::Seat(self.0).blind(&spec.product, plumb::commit!("PLUMB")),
             unsettled: rejoin::unsettled(self.0),
         }
@@ -66,6 +68,29 @@ fn seated(manifest: &Path) -> bool {
             Err(_) => true,
         })
         .unwrap_or(false)
+}
+
+fn misnamed(root: &Path, ns: &str) -> Option<String> {
+    if !root.join(".git").exists() {
+        return None;
+    }
+    let output = std::process::Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["remote", "get-url", "origin"])
+        .output()
+        .ok()
+        .filter(|output| output.status.success())?;
+    let origin = String::from_utf8_lossy(&output.stdout);
+    let repository = origin
+        .trim()
+        .trim_end_matches('/')
+        .trim_end_matches(".git")
+        .rsplit(['/', ':'])
+        .next()?;
+    (!ns.is_empty() && ns != repository).then(|| {
+        format!("[identity] ns {ns} differs from the repository name {repository}; Wharf names the product after the repository")
+    })
 }
 
 fn attachments(spec: &Spec) -> BTreeSet<String> {

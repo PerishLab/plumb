@@ -65,7 +65,7 @@ fn sites() {
     assert!(held.contains("sites     web"), "{held}");
 }
 
-const OCI: &str = "[release.oci]\nregistry = \"ghcr.io\"\nimage = \"perishlab/specimen\"\naccount = \"perishlab\"\n";
+const OCI: &str = "[identity]\nns = \"specimen\"\n[release.oci]\nregistry = \"ghcr.io\"\nimage = \"perishlab/specimen\"\naccount = \"perishlab\"\n";
 const WORKER: &str =
     "[release.cfworker]\naccount = \"perishlab\"\ndomain = \"specimen.perish.uk\"\n";
 

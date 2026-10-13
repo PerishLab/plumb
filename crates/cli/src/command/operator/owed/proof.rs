@@ -117,7 +117,7 @@ fn settlement() {
     git(fixture.path(), &["clone", "-q", "remote.git", "clone"]);
     let spec = Spec::decode(
         &clone,
-        "[release]\nproduct = \"demo\"\nauthority = \"https://releases.demo.example\"\nbinaries = [\"demo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
+        "[identity]\nns = \"demo\"\n[release]\nauthority = \"https://releases.demo.example\"\nbinaries = [\"demo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
         "fixture",
     )
     .expect("spec");
@@ -148,7 +148,7 @@ fn settlement() {
 fn closing() {
     let spec = Spec::decode(
         Path::new("."),
-        "[release]\nproduct = \"demo\"\nauthority = \"https://releases.demo.example\"\nbinaries = [\"demo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
+        "[identity]\nns = \"demo\"\n[release]\nauthority = \"https://releases.demo.example\"\nbinaries = [\"demo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
         "fixture",
     )
     .expect("spec");

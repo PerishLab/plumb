@@ -229,6 +229,9 @@ absorbed, or Plumb's own.
 
 Absorbed; every product inherits them:
 
+- A repository names its product once, as `[identity] ns` in `plumb.toml`,
+  equal to the repository name. Release, doctor and every later identity read
+  it from there; `[release]` carries no name of its own.
 - Human policy enters through the cascade. The substrate exports config
   mechanism; each binary declares its own sections and values, and owns the
   variables it supplies to a template whose grammar the substrate owns. A
