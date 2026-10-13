@@ -70,6 +70,12 @@ fn load(command: &str) -> Result<Option<Run>, String> {
         {
             return Ok(None);
         }
+        Err(plumb::config::Error::Parse { path, .. }) => {
+            return Err(format!(
+                "invalid observation configuration in {}; check [locus] settings",
+                path.display()
+            ));
+        }
         Err(error) => return Err(error.to_string()),
     };
     if !file.locus.enabled {
