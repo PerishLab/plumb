@@ -5,7 +5,7 @@ use std::process::Command;
 mod atoms;
 #[path = "doctor/datum.rs"]
 mod datum;
-#[path = "doctor/dependency.rs"]
+#[path = "doctor/dependency/main.rs"]
 mod dependency;
 #[path = "doctor/depot.rs"]
 mod depot;

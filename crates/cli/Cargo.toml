@@ -31,6 +31,10 @@ name = "operator-repository"
 path = "tests/operator/repository/main.rs"
 
 [[test]]
+name = "operator-observation"
+path = "tests/operator/observation/main.rs"
+
+[[test]]
 name = "repository"
 path = "tests/repository/main.rs"
 
@@ -42,6 +46,7 @@ clap = { version = "4", features = ["derive", "env"] }
 flate2 = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+serde_yaml_ng = "0.10"
 semver = "1"
 sha2 = "0.10"
 tar = "0.4"

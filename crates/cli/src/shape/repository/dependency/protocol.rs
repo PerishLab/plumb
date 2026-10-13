@@ -5,12 +5,14 @@ use std::collections::BTreeSet;
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Ecosystem {
     Cargo,
+    Npm,
 }
 
 impl Ecosystem {
     pub fn name(self) -> &'static str {
         match self {
             Self::Cargo => "cargo",
+            Self::Npm => "npm",
         }
     }
 }

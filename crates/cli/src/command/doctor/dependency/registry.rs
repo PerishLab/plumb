@@ -5,7 +5,12 @@ use plumb_cli::Ecosystem;
 use std::collections::BTreeMap;
 use std::process::Command;
 
-pub fn read(dependencies: &mut Dependencies) {
+pub fn read(dependencies: &mut Dependencies, root: &std::path::Path) {
+    let observed = std::env::var_os("PLUMB_PACKAGES_OBSERVATION").map(|text| {
+        text.into_string()
+            .map_err(|_| "package observation is not text".to_string())
+            .and_then(|text| plumb::packages::Observation::read(root, &text))
+    });
     let mut cache = BTreeMap::new();
     let mut blind = Vec::new();
     for dependency in &mut dependencies.held {
@@ -15,7 +20,10 @@ pub fn read(dependencies: &mut Dependencies) {
         let key = (dependency.ecosystem, dependency.name.clone());
         let latest = cache
             .entry(key)
-            .or_insert_with(|| fetch(dependency.ecosystem, &dependency.name));
+            .or_insert_with(|| match dependency.ecosystem {
+                Ecosystem::Cargo => fetch(dependency.ecosystem, &dependency.name),
+                Ecosystem::Npm => npm(root, &dependency.name, &observed),
+            });
         match latest {
             Ok(latest) => dependency.latest = Some(latest.clone()),
             Err(error) => blind.push(error.clone()),
@@ -24,8 +32,24 @@ pub fn read(dependencies: &mut Dependencies) {
     dependencies.blind.extend(blind);
 }
 
+fn npm(
+    root: &std::path::Path,
+    name: &str,
+    observed: &Option<Result<plumb::packages::Observation, String>>,
+) -> Result<String, String> {
+    match observed {
+        Some(Ok(held)) => held
+            .latest(name)
+            .map(str::to_string)
+            .ok_or_else(|| format!("npm observation has no answer for {name}")),
+        Some(Err(error)) => Err(error.clone()),
+        None => plumb::packages::latest(root, name),
+    }
+}
+
 fn fetch(ecosystem: Ecosystem, name: &str) -> Result<String, String> {
     let url = match ecosystem {
+        Ecosystem::Npm => return Err("npm observation must use packages".into()),
         Ecosystem::Cargo => format!(
             "{}/{}",
             set::CARGO

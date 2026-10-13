@@ -15,13 +15,13 @@ impl Observer<'_> {
     fn read(&mut self, root: &Path, line: Option<&str>) {
         match line {
             Some(version) => self.recorded(root, version),
-            None => self.current(),
+            None => self.current(root),
         }
         self.0.normalize();
     }
 
-    fn current(&mut self) {
-        registry::read(self.0);
+    fn current(&mut self, root: &Path) {
+        registry::read(self.0, root);
     }
 
     fn recorded(&mut self, root: &Path, version: &str) {
