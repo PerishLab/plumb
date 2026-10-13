@@ -4,6 +4,7 @@ pub(super) fn commands(tree: &Tree) -> Result<Vec<Vec<String>>, String> {
     let mut held = vec![vec![
         "pnpm".into(),
         "install".into(),
+        "--offline".into(),
         "--frozen-lockfile".into(),
     ]];
     if tree.has("biome.json") {

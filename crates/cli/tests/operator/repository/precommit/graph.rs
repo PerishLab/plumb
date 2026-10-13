@@ -94,7 +94,12 @@ fn working() {
     let first = fixture.run();
     cache::success(&first);
     let calls = std::fs::read_to_string(fixture.tools.path().join("calls")).expect("calls");
-    assert!(calls.starts_with("install --frozen-lockfile\n"), "{calls}");
+    assert!(
+        calls.starts_with(
+            "fetch --frozen-lockfile --ignore-scripts --ignore-pnpmfile --modules-dir "
+        ) && calls.contains("\ninstall --offline --frozen-lockfile\n"),
+        "{calls}"
+    );
     assert!(!calls.contains("enable"), "{calls}");
     assert!(calls.contains("biome ci ."), "{calls}");
     assert!(calls.contains("--filter staged build"), "{calls}");
@@ -141,7 +146,12 @@ fn standalone() {
         before
     );
     let calls = std::fs::read_to_string(fixture.tools.path().join("calls")).expect("calls");
-    assert!(calls.starts_with("install --frozen-lockfile\n"), "{calls}");
+    assert!(
+        calls.starts_with(
+            "fetch --frozen-lockfile --ignore-scripts --ignore-pnpmfile --modules-dir "
+        ) && calls.contains("\ninstall --offline --frozen-lockfile\n"),
+        "{calls}"
+    );
     assert!(!calls.contains("enable"), "{calls}");
 }
 

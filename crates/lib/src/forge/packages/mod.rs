@@ -1,7 +1,11 @@
 mod cargo;
+mod fetch;
+pub use fetch::run as fetch;
 mod manifest;
 mod npm;
+mod observation;
 mod process;
+pub use observation::{Observation, latest};
 mod registry;
 
 use serde::{Deserialize, Serialize};
@@ -80,6 +84,10 @@ impl Plan {
     }
 
     pub fn apply(&self, root: &Path) -> Result<(), String> {
+        self.settle(root).map(|_| ())
+    }
+
+    pub fn settle(&self, root: &Path) -> Result<Resolution, String> {
         let mut expanded = None;
         for _ in 0..4 {
             let plan = expanded.as_ref().unwrap_or(self);
@@ -100,7 +108,8 @@ impl Plan {
                 expanded = Some(Self::read(root, &self.resolution.context)?);
                 continue;
             }
-            return plan.verify(root);
+            plan.verify(root)?;
+            return Ok(plan.resolution.clone());
         }
         Err("first-party dependency graph did not settle within four resolutions".into())
     }

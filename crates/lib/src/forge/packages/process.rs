@@ -20,7 +20,7 @@ pub(super) fn git(root: &Path, args: &[&str]) -> Result<String, String> {
     String::from_utf8(bytes).map_err(|error| format!("git output is not UTF-8: {error}"))
 }
 
-fn capture(mut command: Command, program: &str) -> Result<Vec<u8>, String> {
+pub(super) fn capture(mut command: Command, program: &str) -> Result<Vec<u8>, String> {
     let secrets = secrets(&command);
     let mut out = tempfile::tempfile().map_err(|error| error.to_string())?;
     let mut err = tempfile::tempfile().map_err(|error| error.to_string())?;
@@ -87,6 +87,25 @@ fn secrets(command: &Command) -> Vec<String> {
         .filter(|value| !value.is_empty())
         .map(|value| value.to_string_lossy().into_owned())
         .collect::<Vec<_>>();
+    if let Some(path) = command
+        .get_envs()
+        .find(|(key, _)| {
+            key.to_string_lossy()
+                .eq_ignore_ascii_case("NPM_CONFIG_USERCONFIG")
+        })
+        .and_then(|(_, value)| value)
+        && let Ok(text) = std::fs::read_to_string(path)
+    {
+        values.extend(text.lines().filter_map(|line| {
+            let (key, value) = line.split_once('=')?;
+            let key = key.trim().to_ascii_lowercase();
+            let credential = ["_authtoken", "_auth", "_password"]
+                .iter()
+                .any(|name| key == *name || key.ends_with(&format!(":{name}")));
+            let value = value.trim().trim_matches(['\"', '\'']);
+            (credential && !value.is_empty() && !value.starts_with("${")).then(|| value.to_string())
+        }));
+    }
     values.sort_by_key(|value| std::cmp::Reverse(value.len()));
     values
 }
@@ -200,6 +219,19 @@ mod tests {
         assert!(message.len() < 15000, "{}", message.len());
         assert!(message.contains("[output truncated]"));
         assert!(message.contains("final actionable cause"));
+    }
+
+    #[test]
+    fn userconfig() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("npmrc");
+        std::fs::write(&path, "@perishlab:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=SYNTHETIC_ONLY_SAFE\n").unwrap();
+        let mut command = Command::new("fixture");
+        command.env("NPM_CONFIG_USERCONFIG", path);
+        assert_eq!(
+            message(b"rejected SYNTHETIC_ONLY_SAFE", &secrets(&command)),
+            "rejected [redacted]"
+        );
     }
 
     #[test]

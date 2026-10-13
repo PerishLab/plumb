@@ -3,8 +3,12 @@ use plumb::packages::{Plan, Resolution};
 use std::path::{Path, PathBuf};
 
 pub(crate) fn resolve(root: &Path, context: &str) -> Result<Resolution, String> {
+    observed(root, context).map(|(locked, _)| locked)
+}
+
+pub(crate) fn observed(root: &Path, context: &str) -> Result<(Resolution, Resolution), String> {
     let plan = Plan::read(root, context)?;
-    plan.apply(root)?;
+    let mut latest = plan.settle(root)?;
     let changes = super::guard::precommit::tree::git(
         root,
         &["diff", "--name-only", "HEAD"],
@@ -23,7 +27,9 @@ pub(crate) fn resolve(root: &Path, context: &str) -> Result<Resolution, String> 
         args.extend(paths);
         super::guard::precommit::tree::git(root, &args, "stage resolved dependencies")?;
     }
-    plumb::packages::locked(root, context)
+    let locked = plumb::packages::locked(root, context)?;
+    latest.tree = locked.tree.clone();
+    Ok((locked, latest))
 }
 
 pub(crate) fn lift(root: PathBuf, json: bool) -> i32 {

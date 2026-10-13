@@ -60,6 +60,12 @@ impl Lock<'_> {
         {
             return Ok(());
         }
+        if [".pnpmfile.cjs", ".pnpmfile.mjs"]
+            .iter()
+            .any(|name| self.0.join(name).exists())
+        {
+            return Err("authenticated npm lock update refuses repository pnpmfile; frozen product install still executes it without credentials".into());
+        }
         let argv = [
             "pnpm",
             "update",
@@ -67,6 +73,7 @@ impl Lock<'_> {
             "--workspace-root",
             "--lockfile-only",
             "--ignore-scripts",
+            "--ignore-pnpmfile",
             "--no-save",
             "@perishlab/*",
         ]
