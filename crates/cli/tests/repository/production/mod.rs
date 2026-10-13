@@ -8,8 +8,8 @@ use std::process::Command;
 
 #[test]
 fn boundary() {
-    let root = std::env::temp_dir().join("plumb-production-boundary");
-    let _ = std::fs::remove_dir_all(&root);
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let root = scratch.path().join("plumb-production-boundary");
     for path in [
         "apps/web",
         "crates/api/src",
@@ -53,14 +53,14 @@ fn boundary() {
 
 #[test]
 fn sites() {
-    let root = std::env::temp_dir().join("plumb-siteless");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let root = scratch.path().join("plumb-siteless");
     std::fs::create_dir_all(root.join("apps/web")).expect("fixture should be made");
     let bare = doctor(&root);
     assert!(!bare.contains("declares a site"), "{bare}");
 
     std::fs::write(root.join("apps/web/wrangler.jsonc"), "{}").expect("config should be written");
     let held = doctor(&root);
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(!held.contains("declares a site"), "{held}");
     assert!(held.contains("sites     web"), "{held}");
 }

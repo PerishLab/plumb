@@ -29,7 +29,7 @@ fn platforms() {
 
 #[test]
 fn repository() {
-    let dir = seat("plumb-release-repository");
+    let (_scratch, dir) = seat("plumb-release-repository");
     let path = dir.to_str().expect("path should be utf8");
     std::fs::write(dir.join("plumb.toml"), BINARY).expect("manifest should be written");
     for (origin, misnamed) in [("bar", true), ("foo", false)] {
@@ -43,17 +43,17 @@ fn repository() {
     }
 }
 
-fn seat(name: &str) -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(name);
-    let _ = std::fs::remove_dir_all(&dir);
+fn seat(name: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join(name);
     std::fs::create_dir_all(&dir).expect("fixture should be made");
     crate::govern(&dir);
-    dir
+    (scratch, dir)
 }
 
 #[test]
 fn refused() {
-    let dir = seat("plumb-release-declaration");
+    let (_scratch, dir) = seat("plumb-release-declaration");
     let path = dir.to_str().expect("path should be utf8");
 
     std::fs::write(dir.join("plumb.toml"), BINARY).expect("manifest should be written");
@@ -92,13 +92,11 @@ fn refused() {
             })),
         "{captured}"
     );
-
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
 
 #[test]
 fn deliverable() {
-    let dir = seat("plumb-release-attachment");
+    let (_scratch, dir) = seat("plumb-release-attachment");
     let path = dir.to_str().expect("path should be utf8");
 
     std::fs::write(dir.join("plumb.toml"), BINARY).expect("manifest should be written");
@@ -117,13 +115,11 @@ fn deliverable() {
     let held = crate::run(&["doctor", path]);
     assert!(held.contains("publishes binary oci"), "{held}");
     assert!(!held.contains("attachment is declared"), "{held}");
-
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
 
 #[test]
 fn carried() {
-    let dir = seat("plumb-release-cargo-only");
+    let (_scratch, dir) = seat("plumb-release-cargo-only");
     let path = dir.to_str().expect("path should be utf8");
 
     std::fs::write(
@@ -135,13 +131,11 @@ fn carried() {
     assert!(held.contains("publishes cargo"), "{held}");
     assert!(!held.contains("the current Plumb refuses"), "{held}");
     assert!(!held.contains("cargo attachment is declared"), "{held}");
-
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
 
 #[test]
 fn depot() {
-    let dir = seat("plumb-release-depot");
+    let (_scratch, dir) = seat("plumb-release-depot");
     let path = dir.to_str().expect("path should be utf8");
 
     std::fs::write(
@@ -161,13 +155,11 @@ fn depot() {
     .expect("manifest should be written");
     let unknown = crate::run(&["doctor", path]);
     assert!(unknown.contains("the current Plumb refuses"), "{unknown}");
-
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
 
 #[test]
 fn attached() {
-    let dir = seat("plumb-release-attachment-only");
+    let (_scratch, dir) = seat("plumb-release-attachment-only");
     let path = dir.to_str().expect("path should be utf8");
 
     std::fs::write(
@@ -195,13 +187,11 @@ fn attached() {
     .expect("manifest should be written");
     let skill = crate::run(&["doctor", path]);
     assert!(skill.contains("requires a binary release"), "{skill}");
-
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
 
 #[test]
 fn width() {
-    let dir = seat("plumb-release-width");
+    let (_scratch, dir) = seat("plumb-release-width");
     let path = dir.to_str().expect("path should be utf8");
     let names: Vec<String> = (1..=11).map(|index| format!("p{index}")).collect();
     for package in &names {

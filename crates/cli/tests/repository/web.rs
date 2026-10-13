@@ -10,9 +10,9 @@ fn run(root: &Path) -> String {
     String::from_utf8_lossy(&output.stdout).to_string()
 }
 
-fn fixture(name: &str) -> std::path::PathBuf {
-    let root = std::env::temp_dir().join(name);
-    let _ = std::fs::remove_dir_all(&root);
+fn fixture(name: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let root = scratch.path().join(name);
     for path in [
         "apps/web/src/views",
         "apps/web/src/lib/components",
@@ -52,20 +52,19 @@ fn fixture(name: &str) -> std::path::PathBuf {
         "name: guard\njobs:\n  guard:\n    steps:\n      - run: pnpm --filter @specimen/web build\n",
     )
     .expect("guard should be written");
-    root
+    (scratch, root)
 }
 
 #[test]
 fn standalone() {
-    let root = fixture("plumb-web-standalone");
+    let (_scratch, root) = fixture("plumb-web-standalone");
     let out = run(&root);
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(!out.contains("[web]"), "{out}");
 }
 
 #[test]
 fn hosted() {
-    let root = fixture("plumb-web-hosted");
+    let (_scratch, root) = fixture("plumb-web-hosted");
     std::fs::create_dir_all(root.join(".github/workflows")).expect("github should be made");
     std::fs::rename(
         root.join(".forgejo/workflows/guard.yml"),
@@ -73,13 +72,12 @@ fn hosted() {
     )
     .expect("guard should move");
     let out = run(&root);
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(!out.contains("[web]"), "{out}");
 }
 
 #[test]
 fn roles() {
-    let root = fixture("plumb-web-roles");
+    let (_scratch, root) = fixture("plumb-web-roles");
     std::fs::write(root.join("apps/web/src/views/helper.ts"), "")
         .expect("helper should be written");
     std::fs::write(root.join("apps/web/src/lib/Panel.svelte"), "")
@@ -93,7 +91,6 @@ fn roles() {
     std::fs::write(root.join("apps/web/src/lib/components/card.scss"), "")
         .expect("style should be written");
     let out = run(&root);
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     for line in [
         "web views only hold route svelte files",
         "web lib svelte must live under lib/components",

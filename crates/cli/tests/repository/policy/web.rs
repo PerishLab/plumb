@@ -3,7 +3,8 @@ use std::process::Command;
 
 #[test]
 fn svelte() {
-    let root = std::env::temp_dir().join("plumb-policy-svelte");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let root = scratch.path().join("plumb-policy-svelte");
     std::fs::create_dir_all(root.join("apps/docs/src")).expect("fixture should be made");
     std::fs::create_dir_all(root.join("packages/design/src")).expect("fixture should be made");
     std::fs::write(root.join("apps/docs/src/App.svelte"), "").expect("fixture should be made");
@@ -14,7 +15,6 @@ fn svelte() {
     assert!(output.status.success(), "{output:?}");
     let text = std::fs::read_to_string(root.join("ectropy.toml"))
         .expect("reconciled policy should be readable");
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(text.contains("apps/**/*.svelte"), "{text}");
     assert!(text.contains("packages/**/*.svelte"), "{text}");
     assert!(text.contains("**/.svelte-kit/**"), "{text}");
@@ -111,14 +111,14 @@ fn refusal() {
 
 #[test]
 fn malformed() {
-    let root = std::env::temp_dir().join("plumb-policy-malformed");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let root = scratch.path().join("plumb-policy-malformed");
     std::fs::create_dir_all(&root).expect("fixture should be made");
     govern(&root);
     let path = root.join("ectropy.toml");
     std::fs::write(&path, "[limit\n").expect("policy should be written");
     let output = policy(&root, true);
     let text = std::fs::read_to_string(&path).expect("policy should remain readable");
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(!output.status.success(), "{output:?}");
     assert_eq!(text, "[limit\n");
 }

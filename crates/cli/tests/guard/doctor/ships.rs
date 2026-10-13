@@ -1,7 +1,7 @@
 #[test]
 fn cargo() {
-    let dir = std::env::temp_dir().join("plumb-crate-seat");
-    let _ = std::fs::remove_dir_all(&dir);
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-crate-seat");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
     crate::govern(&dir);
     let path = dir.to_str().expect("path should be utf8");
@@ -26,13 +26,12 @@ fn cargo() {
     assert!(crates.contains("publishes cargo"), "{crates}");
     assert!(!crates.contains("publishes binary"), "{crates}");
     assert!(!crates.contains("release wrapper"), "{crates}");
-
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
 
 #[test]
 fn packages() {
-    let dir = std::env::temp_dir().join("plumb-packages");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-packages");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
     crate::govern(&dir);
 
@@ -76,7 +75,6 @@ fn packages() {
         reserved.contains("packages/components is reserved"),
         "{reserved}"
     );
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
 
 #[test]

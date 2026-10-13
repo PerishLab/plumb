@@ -14,13 +14,13 @@ use world::{govern, run};
 
 #[test]
 fn actions() {
-    let dir = std::env::temp_dir().join("plumb-actions");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-actions");
     std::fs::create_dir_all(dir.join("setup-tool")).expect("fixture should be made");
     govern(&dir);
     std::fs::write(dir.join("setup-tool/action.yml"), "name: setup\n")
         .expect("action should be written");
     let held = run(&dir);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(
         !held.contains("directory setup-tool has no shadow"),
         "{held}"
@@ -29,7 +29,8 @@ fn actions() {
 
 #[test]
 fn adoption() {
-    let dir = std::env::temp_dir().join("plumb-adoption");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-adoption");
     std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
     govern(&dir);
     std::fs::write(dir.join("runseal.toml"), "").expect("profile should be written");
@@ -52,7 +53,6 @@ fn adoption() {
     )
     .expect("guard should be written");
     let held = run(&dir);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("guard does not run plumb doctor"), "{held}");
     assert!(
         !held.contains("guard does not run ectropy explicitly"),
@@ -75,7 +75,8 @@ fn wrappers() {
 
 #[test]
 fn profile() {
-    let dir = std::env::temp_dir().join("plumb-profile");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-profile");
     std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
     govern(&dir);
     std::fs::write(dir.join("runseal.toml"), "").expect("profile should be written");
@@ -98,7 +99,6 @@ fn profile() {
     )
     .expect("guard should be written");
     let held = run(&dir);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(
         !held.contains("guard does not exercise the release profile"),
         "{held}"
@@ -107,7 +107,8 @@ fn profile() {
 
 #[test]
 fn obsolete() {
-    let dir = std::env::temp_dir().join("plumb-obsolete");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-obsolete");
     std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
     govern(&dir);
     std::fs::write(dir.join("runseal.toml"), "").expect("profile should be written");
@@ -117,7 +118,6 @@ fn obsolete() {
     )
     .expect("guard should be written");
     let held = run(&dir);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(
         !held.contains("guard uses an obsolete ectropy mode"),
         "{held}"

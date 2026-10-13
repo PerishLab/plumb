@@ -20,11 +20,9 @@ fn run(root: &Path) -> (bool, String) {
     )
 }
 
-fn fixture(name: &str) -> PathBuf {
-    let root = std::env::temp_dir().join(name);
-    if root.exists() {
-        std::fs::remove_dir_all(&root).expect("old fixture should be swept");
-    }
+fn fixture(name: &str) -> (tempfile::TempDir, PathBuf) {
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let root = scratch.path().join(name);
     for path in [
         "apps/web/src",
         "crates/api/src",
@@ -56,12 +54,12 @@ fn fixture(name: &str) -> PathBuf {
         "[package]\nname = \"api\"\nversion = \"0.1.0\"\n",
     )
     .expect("api manifest should be written");
-    root
+    (scratch, root)
 }
 
 #[test]
 fn complete() {
-    let root = fixture("plumb-dispatch-complete");
+    let (_scratch, root) = fixture("plumb-dispatch-complete");
     std::fs::write(
         root.join("Cargo.toml"),
         "[workspace.package]\nversion = \"0.1.0\"\nedition = \"2024\"\n",
@@ -226,12 +224,11 @@ inherits_env = [{ name = "SPECIMEN_API", from = "api.endpoint" }]
     ] {
         assert!(out.contains(&format!("{line} [dispatch]")), "{out}");
     }
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
 }
 
 #[test]
 fn incomplete() {
-    let root = fixture("plumb-dispatch-incomplete");
+    let (_scratch, root) = fixture("plumb-dispatch-incomplete");
     std::fs::write(
         root.join("Cargo.toml"),
         "[workspace.package]\nversion = \"0.1.0\"\nedition = \"2024\"\n",
@@ -251,7 +248,6 @@ export default { server: { port, proxy: { "/api": api } } };
     .expect("vite config should be written");
 
     let (success, out) = run(&root);
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(!success, "{out}");
     for line in [
         "vite does not activate the design plugin",
@@ -280,13 +276,12 @@ export default { server: { port, proxy: { "/api": api } } };
 
 #[test]
 fn malformed() {
-    let root = fixture("plumb-dispatch-blind");
+    let (_scratch, root) = fixture("plumb-dispatch-blind");
     std::fs::write(root.join("sidecar.toml"), "[[sidecars]\n").expect("sidecar should be written");
     std::fs::write(root.join("crates/api/src/main.rs"), "fn main() {}\n")
         .expect("api source should be written");
 
     let (_, out) = run(&root);
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(out.contains("cannot read sidecar.toml"), "{out}");
     assert!(out.contains("blind:"), "{out}");
     assert!(out.contains("[dispatch]"), "{out}");
