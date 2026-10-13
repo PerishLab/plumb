@@ -11,7 +11,8 @@ fn run(args: &[&str]) -> String {
 
 #[test]
 fn missing() {
-    let dir = std::env::temp_dir().join("plumb-anchorless");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-anchorless");
     std::fs::create_dir_all(dir.join("crates/other/src")).expect("fixture should be made");
     std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
     std::fs::write(
@@ -25,7 +26,6 @@ fn missing() {
     )
     .expect("manifest should be written");
     let bare = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(
         bare.contains("no crate is named plumb-anchorless, the anchor is missing"),
         "{bare}"
@@ -34,7 +34,8 @@ fn missing() {
 
 #[test]
 fn seated() {
-    let dir = std::env::temp_dir().join("plumb-anchored");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-anchored");
     std::fs::create_dir_all(dir.join("crates/anchor/src")).expect("fixture should be made");
     std::fs::create_dir_all(dir.join("crates/other/src")).expect("fixture should be made");
     std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
@@ -62,13 +63,13 @@ fn seated() {
     )
     .expect("source should be written");
     let seated = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!seated.contains("outside the anchor"), "{seated}");
 }
 
 #[test]
 fn declared() {
-    let dir = std::env::temp_dir().join("hostexecutor");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("hostexecutor");
     std::fs::create_dir_all(dir.join("crates/anchor/src")).expect("fixture should be made");
     std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
     std::fs::write(
@@ -83,13 +84,13 @@ fn declared() {
     )
     .expect("manifest should be written");
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("anchor is missing"), "{held}");
 }
 
 #[test]
 fn strayed() {
-    let dir = std::env::temp_dir().join("plumb-strayed");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-strayed");
     std::fs::create_dir_all(dir.join("crates/anchor/src")).expect("fixture should be made");
     std::fs::create_dir_all(dir.join("crates/other/src")).expect("fixture should be made");
     std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
@@ -125,13 +126,13 @@ fn strayed() {
     )
     .expect("manifest should be written");
     let exempt = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!exempt.contains("outside the anchor"), "{exempt}");
 }
 
 #[test]
 fn split() {
-    let dir = std::env::temp_dir().join("plumb-split");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-split");
     std::fs::create_dir_all(dir.join("crates/cli/src")).expect("fixture should be made");
     std::fs::create_dir_all(dir.join("crates/api/src")).expect("fixture should be made");
     std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
@@ -156,14 +157,14 @@ fn split() {
     )
     .expect("source should be written");
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("outside the anchor"), "{held}");
     assert!(!held.contains("is headless"), "{held}");
 }
 
 #[test]
 fn headless() {
-    let dir = std::env::temp_dir().join("plumb-headless");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-headless");
     std::fs::create_dir_all(dir.join("crates/cli/src")).expect("fixture should be made");
     std::fs::create_dir_all(dir.join("crates/api/src")).expect("fixture should be made");
     std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
@@ -188,7 +189,6 @@ fn headless() {
     )
     .expect("source should be written");
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(
         held.contains("api crate at crates/api is headless"),
         "{held}"
@@ -201,7 +201,8 @@ fn headless() {
 
 #[test]
 fn homed() {
-    let base = std::env::temp_dir().join("plumb-homed-fixture");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let base = scratch.path().join("plumb-homed-fixture");
     let home = base.join("plumb-homed");
     let seat = base.join("seats/line");
     std::fs::create_dir_all(home.join(".git/worktrees/line")).expect("fixture should be made");
@@ -236,6 +237,5 @@ fn homed() {
     )
     .expect("manifest should be written");
     let held = run(&["doctor", seat.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&base).expect("fixture should be swept");
     assert!(!held.contains("anchor is missing"), "{held}");
 }

@@ -10,12 +10,12 @@ struct Sample {
 
 #[test]
 fn loads() {
-    let dir = std::env::temp_dir().join("plumb-load");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-load");
     std::fs::create_dir_all(&dir).expect("fixture");
     let path = dir.join("sample.toml");
     std::fs::write(&path, "name = \"x\"\ncount = 3\n").expect("write");
     let got: Sample = config::load(&path).expect("load");
-    std::fs::remove_dir_all(&dir).expect("sweep");
     assert_eq!(
         got,
         Sample {
@@ -33,32 +33,32 @@ fn missing() {
 
 #[test]
 fn malformed() {
-    let dir = std::env::temp_dir().join("plumb-bad");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-bad");
     std::fs::create_dir_all(&dir).expect("fixture");
     let path = dir.join("bad.toml");
     std::fs::write(&path, "name = \n").expect("write");
     let err = config::load::<Sample>(&path).unwrap_err();
-    std::fs::remove_dir_all(&dir).expect("sweep");
     assert!(err.to_string().contains("cannot parse"), "{err}");
 }
 
 #[test]
 fn finds() {
-    let root = std::env::temp_dir().join("plumb-find");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let root = scratch.path().join("plumb-find");
     let nested = root.join("a/b");
     std::fs::create_dir_all(&nested).expect("fixture");
     std::fs::write(root.join("target.toml"), "").expect("write");
     let found = config::discover(&nested, "target.toml").expect("found");
-    std::fs::remove_dir_all(&root).expect("sweep");
     assert_eq!(found, root.join("target.toml"));
 }
 
 #[test]
 fn absent() {
-    let root = std::env::temp_dir().join("plumb-absent");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let root = scratch.path().join("plumb-absent");
     std::fs::create_dir_all(&root).expect("fixture");
     let searched = config::discover(&root, "nope-xyz.toml").unwrap_err();
-    std::fs::remove_dir_all(&root).expect("sweep");
     assert!(
         searched.iter().any(|path| path.ends_with("nope-xyz.toml")),
         "{searched:?}"

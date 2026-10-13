@@ -3,7 +3,8 @@ use std::path::Path;
 
 #[test]
 fn loader() {
-    let root = std::env::temp_dir().join("plumb-loader");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let root = scratch.path().join("plumb-loader");
     std::fs::create_dir_all(root.join("crates/cli")).expect("fixture should be made");
     std::fs::create_dir_all(root.join("tools/probe")).expect("fixture should be made");
     std::fs::write(
@@ -22,7 +23,6 @@ fn loader() {
     )
     .expect("manifest should be written");
     let out = run(&root);
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     let manifest = Path::new("crates").join("cli").join("Cargo.toml");
     let line = format!(
         "{} depends on .env loader dotenvy; declare settings through plumb Cascade",

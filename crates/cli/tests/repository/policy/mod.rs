@@ -144,7 +144,8 @@ pub(super) fn stock(home: &Path, limit: &str, scan: &str, shape: &str) {
 
 #[test]
 fn blacklist() {
-    let root = std::env::temp_dir().join("plumb-blacklist");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let root = scratch.path().join("plumb-blacklist");
     std::fs::create_dir_all(root.join("apps/web")).expect("fixture should be made");
     std::fs::write(
         root.join("apps/web/package.json"),
@@ -152,7 +153,6 @@ fn blacklist() {
     )
     .expect("manifest should be written");
     let out = run(&root);
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     let manifest = Path::new("apps").join("web").join("package.json");
     let line = format!(
         "{} depends on blacklisted styling package @stylexjs/stylex",
@@ -163,12 +163,12 @@ fn blacklist() {
 
 #[test]
 fn ban() {
-    let root = std::env::temp_dir().join("plumb-policy-ban");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let root = scratch.path().join("plumb-policy-ban");
     std::fs::create_dir_all(root.join("apps/web/src/lib/components"))
         .expect("fixture should be made");
     std::fs::write(root.join("ectropy.toml"), "").expect("policy should be written");
     let out = run(&root);
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(
         out.contains("missing ectropy style ban apps/web/src/lib/components/**"),
         "{out}"
@@ -177,20 +177,21 @@ fn ban() {
 
 #[test]
 fn blind() {
-    let root = std::env::temp_dir().join("plumb-blind");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let root = scratch.path().join("plumb-blind");
     std::fs::create_dir_all(&root).expect("fixture should be made");
     govern(&root);
     std::fs::write(root.join("runseal.toml"), "").expect("profile should be made");
     std::fs::write(root.join("ectropy.toml"), "[limit\n").expect("policy should be written");
     let out = run(&root);
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(out.contains("blind:"), "{out}");
     assert!(out.contains("cannot read ectropy.toml"), "{out}");
 }
 
 #[test]
 fn allowance() {
-    let root = std::env::temp_dir().join("plumb-allowance");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let root = scratch.path().join("plumb-allowance");
     std::fs::create_dir_all(&root).expect("fixture should be made");
     govern(&root);
     let policy = r#"
@@ -216,13 +217,13 @@ paths = ["packages/react-components/**"]
 "#;
     std::fs::write(root.join("ectropy.toml"), policy).expect("policy should be written");
     let out = run(&root);
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(!out.contains("out of true:"), "{out}");
 }
 
 #[test]
 fn reconciliation() {
-    let root = std::env::temp_dir().join("plumb-policy-reconciliation");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let root = scratch.path().join("plumb-policy-reconciliation");
     std::fs::create_dir_all(root.join("apps/web/src/lib/components"))
         .expect("fixture should be made");
     std::fs::create_dir_all(root.join("apps/web/tests")).expect("fixture should be made");
@@ -258,7 +259,6 @@ description = "fixture"
     let text = std::fs::read_to_string(root.join("ectropy.toml"))
         .expect("reconciled policy should be readable");
     let out = run(&root);
-    std::fs::remove_dir_all(&root).expect("fixture should be swept");
     assert!(text.contains("apps/**/*.ts"), "{text}");
     assert!(text.contains("apps/web/vite.config.ts"), "{text}");
     assert!(text.contains("packages/react-components/**"), "{text}");

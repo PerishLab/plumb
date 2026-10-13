@@ -131,7 +131,8 @@ fn authority() {
 
 #[test]
 fn filed() {
-    let dir = std::env::temp_dir().join("plumb-cascade-file");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-cascade-file");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
     let path = dir.join("rig.toml");
     std::fs::write(
@@ -140,7 +141,6 @@ fn filed() {
     )
     .expect("file should be written");
     let over = plumb::config::load::<RigPartial>(&path).expect("file should parse");
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     let held = Rig::default().merge(over);
     assert_eq!(held.name, "filed");
     assert_eq!(held.alias, "carried");
@@ -152,7 +152,8 @@ fn filed() {
 
 #[test]
 fn strict() {
-    let dir = std::env::temp_dir().join("plumb-cascade-strict");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-cascade-strict");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
     let path = dir.join("rig.toml");
 
@@ -162,7 +163,6 @@ fn strict() {
 
     std::fs::write(&path, "[listen]\nunknown = true\n").expect("file should be written");
     let section = Rig::resolve(Some(&path)).expect_err("unknown section field should fail");
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(section.to_string().contains("unknown field"), "{section}");
 }
 
@@ -261,12 +261,12 @@ fn blind() {
 
 #[test]
 fn onion() {
-    let dir = std::env::temp_dir().join("plumb-cascade-resolve");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-cascade-resolve");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
     let path = dir.join("rig.toml");
     std::fs::write(&path, "name = \"filed\"\ncount = 2\n").expect("file should be written");
     let held = Rig::resolve(Some(&path)).expect("the onion should resolve");
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert_eq!(held.name, "filed");
     assert_eq!(held.count, 2);
     assert_eq!(held.theme, "plain");

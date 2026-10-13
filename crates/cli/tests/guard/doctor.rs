@@ -61,7 +61,8 @@ fn itself() {
 
 #[test]
 fn governs() {
-    let bare = std::env::temp_dir().join("plumb-ungoverned");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let bare = scratch.path().join("plumb-ungoverned");
     std::fs::create_dir_all(&bare).expect("fixture should be made");
     govern(&bare);
     std::fs::write(bare.join("README.md"), "# bare\n").expect("readme should be written");
@@ -73,21 +74,22 @@ fn governs() {
 
     super::world::declare(&bare);
     let out = run(&["doctor", bare.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&bare).expect("fixture should be swept");
     assert!(!out.contains("nothing declares this repository"), "{out}");
     assert!(!out.contains("out of true:"), "{out}");
 
-    let seat = std::env::temp_dir().join("plumb-governed");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+
+    let seat = scratch.path().join("plumb-governed");
     std::fs::create_dir_all(seat.join(".runseal")).expect("fixture should be made");
     govern(&seat);
     let out = run(&["doctor", seat.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&seat).expect("fixture should be swept");
     assert!(out.contains("no ectropy.toml"), "{out}");
 }
 
 #[test]
 fn concurrency() {
-    let dir = std::env::temp_dir().join("plumb-concurrency");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-concurrency");
     std::fs::create_dir_all(dir.join(".forgejo/workflows")).expect("fixture should be made");
     govern(&dir);
     std::fs::write(dir.join("runseal.toml"), "").expect("profile should be written");
@@ -107,7 +109,6 @@ fn concurrency() {
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
     std::fs::write(&lane, complete.replace('\n', "\r\n")).expect("lane should be written");
     let windows = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("concurrency block"), "{held}");
     assert!(!windows.contains("concurrency block"), "{windows}");
 }
@@ -144,7 +145,8 @@ fn authorities() {
 
 #[test]
 fn edition() {
-    let dir = std::env::temp_dir().join("plumb-edition");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-edition");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
     govern(&dir);
     let cargo = dir.join("Cargo.toml");
@@ -160,13 +162,13 @@ fn edition() {
     std::fs::write(&cargo, "[workspace.package]\nedition = \"2024\"\n")
         .expect("manifest should be written");
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("edition is"), "{held}");
 }
 
 #[test]
 fn container() {
-    let dir = std::env::temp_dir().join("plumb-container");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-container");
     std::fs::create_dir_all(dir.join(".github/workflows")).expect("fixture should be made");
     govern(&dir);
     let lane = dir.join(".github/workflows/guard.yml");
@@ -197,12 +199,12 @@ fn container() {
             "{image}: {out}"
         );
     }
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
 }
 
 #[test]
 fn clap() {
-    let dir = std::env::temp_dir().join("plumb-clap");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-clap");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
     govern(&dir);
     std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
@@ -225,14 +227,14 @@ fn clap() {
 
     std::fs::write(&cargo, "[dependencies]\ntoml = \"0.9\"\n").expect("manifest should be written");
     let lib = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("without clap"), "{held}");
     assert!(!lib.contains("without clap"), "{lib}");
 }
 
 #[test]
 fn substrate() {
-    let dir = std::env::temp_dir().join("plumb-substrate");
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-substrate");
     std::fs::create_dir_all(&dir).expect("fixture should be made");
     govern(&dir);
     std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
@@ -252,7 +254,6 @@ fn substrate() {
     )
     .expect("lock should be written");
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    std::fs::remove_dir_all(&dir).expect("fixture should be swept");
     assert!(!held.contains("without plumb"), "{held}");
 }
 
