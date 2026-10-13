@@ -2,6 +2,8 @@ use plumb::config::{Binding, Contract, Environment};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
+const COMPILER: &str = "PLUMB_GUARD_COMPILER_CACHE";
+
 pub(super) fn capture(
     root: &Path,
     programs: &[String],
@@ -43,9 +45,37 @@ pub(super) fn capture(
         .capture([])?,
     )?;
     if families.contains("cargo") {
+        if compiler()? {
+            environment = environment.combine(
+                Contract {
+                    inherit: Vec::new(),
+                    managed: Vec::new(),
+                    reject: Vec::new(),
+                    bind: [
+                        (
+                            "RUSTC_WRAPPER".into(),
+                            Binding::Tool {
+                                tool: "sccache".into(),
+                            },
+                        ),
+                        ("CARGO_INCREMENTAL".into(), Binding::Value("0".into())),
+                    ]
+                    .into(),
+                }
+                .capture([])?,
+            )?;
+        }
         inspect(root, &environment)?;
     }
     Ok(environment)
+}
+
+fn compiler() -> Result<bool, String> {
+    match plumb::config::value(COMPILER).as_deref() {
+        None => Ok(false),
+        Some("sccache") => Ok(true),
+        Some(value) => Err(format!("{COMPILER} must be sccache, not {value:?}")),
+    }
 }
 
 pub(super) fn observed(

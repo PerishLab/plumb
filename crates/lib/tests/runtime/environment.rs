@@ -173,3 +173,16 @@ fn conflicts() {
     let held = capture("'one'").combine(capture("'one'")).unwrap();
     assert_eq!(held.get("MODE"), Some("one"));
 }
+
+#[test]
+fn compiler() {
+    let held = plumb::config::contract("cargo")
+        .unwrap()
+        .capture([
+            ("CARGO_INCREMENTAL".into(), "0".into()),
+            ("RUSTC_WRAPPER".into(), "/opt/sccache".into()),
+        ])
+        .unwrap();
+    assert!(held.get("CARGO_INCREMENTAL").is_none());
+    assert!(held.get("RUSTC_WRAPPER").is_none());
+}

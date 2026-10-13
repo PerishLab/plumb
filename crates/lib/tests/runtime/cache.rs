@@ -67,7 +67,7 @@ fn actual() {
     assert!(one.status().unwrap().success());
     let original = std::fs::read(root.path().join("libfixture.rlib")).unwrap();
     std::fs::remove_file(root.path().join("libfixture.rlib")).unwrap();
-    first.finish().unwrap();
+    drop(first);
     assert!(two.status().unwrap().success());
     assert!(
         original == std::fs::read(root.path().join("libfixture.rlib")).unwrap(),
@@ -88,7 +88,7 @@ fn actual() {
             > 0,
         "{stats}"
     );
-    second.finish().unwrap();
+    drop(second);
     let mut stopped = execution.command("sccache").unwrap();
     stopped
         .env("SCCACHE_SERVER_PORT", port(&one))

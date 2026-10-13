@@ -128,3 +128,84 @@ fn isolated() {
     success(&run(second.path(), home.path()));
     assert_eq!(seats(home.path()).len(), 2);
 }
+
+fn compiled(root: &Path, home: &Path, value: &str, path: &std::ffi::OsStr) -> Output {
+    super::support::plumb()
+        .args(["guard", ".", "--json"])
+        .current_dir(root)
+        .env("PLUMB_HOME", home)
+        .env("PLUMB_GUARD_CACHE_RESERVE", "0")
+        .env("PLUMB_GUARD_COMPILER_CACHE", value)
+        .env("PATH", path)
+        .output()
+        .expect("guard")
+}
+
+#[cfg(unix)]
+fn without(program: &str, seat: &Path) -> std::ffi::OsString {
+    for entry in std::env::split_paths(&std::env::var_os("PATH").expect("PATH")) {
+        let Ok(read) = std::fs::read_dir(&entry) else {
+            continue;
+        };
+        for tool in read.flatten() {
+            let link = seat.join(tool.file_name());
+            if tool.file_name() != program && !link.exists() {
+                std::os::unix::fs::symlink(tool.path(), link).expect("tool link");
+            }
+        }
+    }
+    seat.as_os_str().to_owned()
+}
+
+#[test]
+#[cfg(unix)]
+fn compiler() {
+    let fixture = fixture();
+    let home = support::home();
+    let path = std::env::var_os("PATH").expect("PATH");
+    let refused = compiled(fixture.path(), home.path(), "ccache", &path);
+    assert!(!refused.status.success());
+    assert!(
+        String::from_utf8_lossy(&refused.stderr)
+            .contains("PLUMB_GUARD_COMPILER_CACHE must be sccache"),
+        "{}{}",
+        String::from_utf8_lossy(&refused.stdout),
+        String::from_utf8_lossy(&refused.stderr)
+    );
+    let seat = tempfile::tempdir().expect("tools");
+    let absent = compiled(
+        fixture.path(),
+        home.path(),
+        "sccache",
+        &without("sccache", seat.path()),
+    );
+    assert!(!absent.status.success());
+    assert!(
+        String::from_utf8_lossy(&absent.stderr).contains("cannot resolve tool sccache"),
+        "{}{}",
+        String::from_utf8_lossy(&absent.stdout),
+        String::from_utf8_lossy(&absent.stderr)
+    );
+    assert!(!home.path().join("cache/compiler").exists());
+}
+
+#[test]
+#[ignore = "explicit integration with the canonical image's exact sccache binary"]
+fn routed() {
+    let fixture = fixture();
+    let home = support::home();
+    let path = std::env::var_os("PATH").expect("PATH");
+    success(&compiled(fixture.path(), home.path(), "sccache", &path));
+    let held = seats(home.path());
+    assert_eq!(held.len(), 1);
+    assert!(
+        std::fs::read_dir(held[0].join("debug/incremental"))
+            .map_or(true, |mut entries| entries.next().is_none())
+    );
+    assert!(
+        std::fs::read_dir(home.path().join("cache/compiler"))
+            .expect("compiler cache")
+            .next()
+            .is_some()
+    );
+}
