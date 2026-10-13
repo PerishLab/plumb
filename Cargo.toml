@@ -7,3 +7,6 @@ version = "0.0.0"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/PerishLab/plumb"
+
+[profile.dev.package.sha2]
+opt-level = 3
