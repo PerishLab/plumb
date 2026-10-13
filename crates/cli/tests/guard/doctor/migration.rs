@@ -48,7 +48,7 @@ fn seat() -> tempfile::TempDir {
     }
     std::fs::write(
         root.join("plumb.toml"),
-        "[[lock]]\nname = \"skill\"\npaths = [\"skills/tool\"]\nversion = \"1.0.0\"\nhash = \"held\"\n\n[skill]\nstrategy = \"brief\"\n\n[release]\nproduct = \"tool\"\n",
+        "[[lock]]\nname = \"skill\"\npaths = [\"skills/tool\"]\nversion = \"1.0.0\"\nhash = \"held\"\n\n[skill]\nstrategy = \"brief\"\n\n[identity]\nns = \"tool\"\n[release]\n",
     )
     .expect("manifest");
     fixture

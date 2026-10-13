@@ -1,6 +1,6 @@
 use std::process::Command;
 
-const BINARY: &str = "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n";
+const BINARY: &str = "[identity]\nns = \"foo\"\n[release]\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n";
 
 #[test]
 fn platforms() {
@@ -27,6 +27,22 @@ fn platforms() {
     }
 }
 
+#[test]
+fn repository() {
+    let dir = seat("plumb-release-repository");
+    let path = dir.to_str().expect("path should be utf8");
+    std::fs::write(dir.join("plumb.toml"), BINARY).expect("manifest should be written");
+    for (origin, misnamed) in [("bar", true), ("foo", false)] {
+        let url = format!("https://github.com/probe/{origin}.git");
+        let set = Command::new("git")
+            .args(["-C", path, "config", "remote.origin.url", &url])
+            .status();
+        assert!(set.expect("git should run").success());
+        let report = crate::run(&["doctor", path]);
+        assert_eq!(report.contains("repository name bar"), misnamed, "{report}");
+    }
+}
+
 fn seat(name: &str) -> std::path::PathBuf {
     let dir = std::env::temp_dir().join(name);
     let _ = std::fs::remove_dir_all(&dir);
@@ -47,7 +63,7 @@ fn refused() {
 
     std::fs::write(
         dir.join("plumb.toml"),
-        "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\n[release.npm]\nregistry = \"https://example.invalid/npm/\"\npackages = [\"@probe/foo\"]\n\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
+        "[identity]\nns = \"foo\"\n[release]\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\n[release.npm]\nregistry = \"https://example.invalid/npm/\"\npackages = [\"@probe/foo\"]\n\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
     )
     .expect("manifest should be written");
     let captured = crate::run(&["doctor", "--json", path]);
@@ -112,7 +128,7 @@ fn carried() {
 
     std::fs::write(
         dir.join("plumb.toml"),
-        "[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n",
+        "[identity]\nns = \"foo\"\n[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n",
     )
     .expect("manifest should be written");
     let held = crate::run(&["doctor", path]);
@@ -156,22 +172,25 @@ fn attached() {
 
     std::fs::write(
         dir.join("plumb.toml"),
-        "[release.oci]\nregistry = \"git.perish.top\"\nimage = \"owner/name\"\naccount = \"PerishFire\"\n",
+        "[identity]\nns = \"foo\"\n[release.oci]\nregistry = \"git.perish.top\"\nimage = \"owner/name\"\naccount = \"PerishFire\"\n",
     )
     .expect("manifest should be written");
     let image = crate::run(&["doctor", path]);
     assert!(image.contains("publishes oci"), "{image}");
     assert!(!image.contains("the current Plumb refuses"), "{image}");
 
-    std::fs::write(dir.join("plumb.toml"), "[release]\nskill = false\n")
-        .expect("manifest should be written");
+    std::fs::write(
+        dir.join("plumb.toml"),
+        "[identity]\nns = \"foo\"\n[release]\nskill = false\n",
+    )
+    .expect("manifest should be written");
     let empty = crate::run(&["doctor", path]);
     assert!(empty.contains("the current Plumb refuses"), "{empty}");
     assert!(empty.contains("at least one attachment"), "{empty}");
 
     std::fs::write(
         dir.join("plumb.toml"),
-        "[release]\nskill = true\n[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n",
+        "[identity]\nns = \"foo\"\n[release]\nskill = true\n[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n",
     )
     .expect("manifest should be written");
     let skill = crate::run(&["doctor", path]);

@@ -36,13 +36,21 @@ pub struct Spec {
 
 #[derive(Deserialize)]
 struct Manifest {
+    #[serde(default)]
+    identity: Identity,
     release: Raw,
+}
+
+#[derive(Default, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+struct Identity {
+    ns: String,
 }
 
 #[derive(Default, Deserialize)]
 #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
 struct Raw {
-    product: String,
+    product: Option<toml::Value>,
     authority: String,
     binaries: Vec<String>,
     targets: Vec<String>,
@@ -84,8 +92,15 @@ impl Spec {
     pub(crate) fn decode(root: &Path, text: &str, subject: &str) -> Result<Self, String> {
         let held: Manifest =
             toml::from_str(text).map_err(|error| format!("cannot parse {subject}: {error}"))?;
+        let product = held.identity.ns;
+        if let Some(stated) = &held.release.product
+            && (product.is_empty() || stated.as_str() != Some(product.as_str()))
+        {
+            return Err(format!(
+                "{subject} declares [release] product; the product name moved to [identity] ns"
+            ));
+        }
         let Raw {
-            product,
             authority,
             binaries,
             targets,
@@ -98,6 +113,7 @@ impl Spec {
             cfworker,
             deb,
             depot,
+            ..
         } = held.release;
         let spec = Self {
             root: root.to_path_buf(),
@@ -144,8 +160,8 @@ impl Spec {
         if !binary {
             self.standalone()?;
         }
-        if binary || !self.product.is_empty() || !self.authority.is_empty() {
-            token("product", &self.product, false)?;
+        token("[identity] ns", &self.product, false)?;
+        if binary || !self.authority.is_empty() {
             plumb::seat::release::Authority::new(&self.authority)?;
         }
         if binary {
@@ -171,7 +187,6 @@ impl Spec {
             }
         }
         if let Some(depot) = &self.depot {
-            token("product", &self.product, false)?;
             if self.authority.is_empty() {
                 return Err("a depot declaration requires release authority".into());
             }

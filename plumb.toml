@@ -48,6 +48,9 @@ note = "The pnpm workspace anchors."
 name = ["Containerfile"]
 note = "The image carrier the ship adaptor projects onto."
 
+[identity]
+ns = "plumb"
+
 [release]
 product = "plumb"
 authority = "https://releases.plumb.perish.uk"

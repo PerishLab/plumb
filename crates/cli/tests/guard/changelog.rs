@@ -56,8 +56,10 @@ fn generation() {
     fs::write(
         root.join("plumb.toml"),
         format!(
-            r#"[release]
-product = "probe"
+            r#"[identity]
+ns = "probe"
+
+[release]
 authority = "https://releases.probe.test"
 binaries = ["probe"]
 targets = ["x86_64-unknown-linux-gnu"]

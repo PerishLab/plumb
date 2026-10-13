@@ -4,8 +4,10 @@ use std::process::{Command, Output};
 pub fn repo(root: &Path, origin: &str) {
     std::fs::write(
         root.join("plumb.toml"),
-        r#"[release]
-product = "probe"
+        r#"[identity]
+ns = "probe"
+
+[release]
 authority = "https://releases.test"
 binaries = ["probe"]
 targets = ["x86_64-unknown-linux-gnu"]

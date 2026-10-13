@@ -8,7 +8,7 @@ fn cargo() {
 
     std::fs::write(
         dir.join("plumb.toml"),
-        "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
+        "[identity]\nns = \"foo\"\n[release]\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
     )
     .expect("manifest should be written");
     let binary = crate::run(&["doctor", path]);
@@ -19,7 +19,7 @@ fn cargo() {
 
     std::fs::write(
         dir.join("plumb.toml"),
-        "[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n",
+        "[identity]\nns = \"foo\"\n[release.cargo]\nregistry = \"perish\"\npackages = [\"foo\"]\n",
     )
     .expect("manifest should be written");
     let crates = crate::run(&["doctor", path]);
@@ -97,7 +97,7 @@ fn placed() {
         "[Service]\nExecStart=/usr/bin/foo-api\n",
     )
     .expect("unit");
-    let manifest = "[release]\nproduct = \"foo\"\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\", \"foo-api\"]\ntargets = [\"x86_64-unknown-linux-gnu\", \"aarch64-apple-darwin\"]\n[release.binary.foo-api]\ntargets = [\"x86_64-unknown-linux-gnu\"]\ninstall = false\n[release.deb]\nbinary = \"foo-api\"\nroot = \"packaging/deb\"\n";
+    let manifest = "[identity]\nns = \"foo\"\n[release]\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\", \"foo-api\"]\ntargets = [\"x86_64-unknown-linux-gnu\", \"aarch64-apple-darwin\"]\n[release.binary.foo-api]\ntargets = [\"x86_64-unknown-linux-gnu\"]\ninstall = false\n[release.deb]\nbinary = \"foo-api\"\nroot = \"packaging/deb\"\n";
     std::fs::write(dir.join("plumb.toml"), manifest).expect("manifest");
     let held = crate::run(&["doctor", path]);
     assert!(held.contains("publishes binary deb"), "{held}");

@@ -50,6 +50,9 @@ fn spec(release: &Release, found: &mut Found) {
             format!("plumb.toml declares a release the current Plumb refuses: {refusal}"),
         ));
     }
+    if let Some(misnamed) = &release.misnamed {
+        found.push(Seed::wrong(&release_rule::SPEC_DECLARED, misnamed.clone()));
+    }
     if let Some(blind) = &release.blind {
         found.push(Seed::blind(&release_rule::SPEC_DECLARED, blind));
     }

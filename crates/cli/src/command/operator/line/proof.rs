@@ -8,7 +8,7 @@ fn line() -> Line {
     let root = PathBuf::from(".");
     let spec = Spec::decode(
         &root,
-        "[release]\nproduct = \"demo\"\nauthority = \"https://releases.demo.example\"\nbinaries = [\"demo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
+        "[identity]\nns = \"demo\"\n[release]\nauthority = \"https://releases.demo.example\"\nbinaries = [\"demo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
         "fixture",
     )
     .expect("spec");
