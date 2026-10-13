@@ -24,6 +24,13 @@ plumb holds to the constitution ectropy enforces, and inherits it for shapes.
 If a repository in this ecosystem has no shadow here, plumb owes the shape:
 divergence is an error in the skeleton, never an exception in the repository.
 
+plumb also absorbs the practices products share. A practice each product writes
+for itself is one plumb has not absorbed yet: plumb owns its single default
+form, and a product declares only its identity and its values. A practice whose
+shape is clear but whose owner is uncertain goes up to plumb, as an Issue here
+or a question to its owner, never into a private copy in the product. A practice
+whose shape is still unsettled stays in the product until it settles.
+
 Guard is a staged-tree proof, not a repository workflow. Plumb carries the
 pre-commit and commit-message hooks in its binary; `configuration install`
 projects them and Doctor requires their presence.
@@ -217,23 +224,39 @@ changed it.
 ## Commitments
 
 These bind how Plumb is written rather than what a repository carries, so no
-tree answers them and the catalogue does not hold them.
+tree answers them and the catalogue does not hold them. Each is absorbed, being
+absorbed, or Plumb's own.
 
-- A stateful tool resolves one data home as ordinary four-layer configuration.
-- Machine state may be rewritten; human policy enters through the cascade.
-- Machine-written records live below the tool's data-home state directory, name
-  their shape version, and refuse a version they do not know.
-- A state write lands beside the target and replaces it whole.
-- Acting on a managed path requires both a registry record and an in-path
-  marker naming the tool.
-- The substrate exports config mechanism; each binary declares its own sections
-  and values, and owns the variables it supplies to a template whose grammar the
-  substrate owns. A manifest spells every injected environment key exactly as
-  the target product derives it.
-- Package subprocesses resolve and verify their tools through captured
-  `config::Execution` bindings. Executable lookup and platform invocation stay
-  inside that mechanism.
+Absorbed; every product inherits them:
+
+- Human policy enters through the cascade. The substrate exports config
+  mechanism; each binary declares its own sections and values, and owns the
+  variables it supplies to a template whose grammar the substrate owns. A
+  manifest spells every injected environment key exactly as the target product
+  derives it.
+
+Being absorbed; plumb owns the end form, and no product invents its own
+meanwhile:
+
+- A stateful tool keeps one data home, resolved as ordinary four-layer
+  configuration. The end form derives it from a declared identity, such as
+  `#[plumb.cli(ns = "santi", key = "cli")]` yielding the `SANTI_CLI_DATA_HOME`
+  layer; its default location, naming, the migration of existing variables and
+  its Windows placement are plumb's to decide. Until then a product adds no new
+  name or precedence for it.
 - A released skill never claims enforcement its matching binary does not
   provide. Install, status and upgrade keep the global skill ledger anchored to
   stable, and a non-stable skill takes an exact version and an explicit path,
   receives a staged marker, and never enters managed state.
+
+Plumb's own; a product may adopt the exports but is not judged against them:
+
+- Machine state may be rewritten. Machine-written records live below the tool's
+  data-home state directory, name their shape version, and refuse a version
+  they do not know.
+- A state write lands beside the target and replaces it whole.
+- Acting on a managed path requires both a registry record and an in-path
+  marker naming the tool.
+- Package subprocesses resolve and verify their tools through captured
+  `config::Execution` bindings. Executable lookup and platform invocation stay
+  inside that mechanism.
