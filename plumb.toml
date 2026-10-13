@@ -52,7 +52,6 @@ note = "The image carrier the ship adaptor projects onto."
 ns = "plumb"
 
 [release]
-product = "plumb"
 authority = "https://releases.plumb.perish.uk"
 binaries = ["plumb"]
 targets = [
