@@ -1,11 +1,14 @@
 mod bucket;
+mod disk;
 mod graph;
+mod plan;
 mod sweep;
 
 pub(crate) use bucket::{adopt, home, lease, seat};
 pub(crate) use sweep::{now, settle};
 
 use clap::Subcommand;
+use disk::Disk;
 use serde::Serialize;
 use std::path::Path;
 
@@ -13,12 +16,16 @@ const DAY: u64 = 24 * 60 * 60;
 
 #[derive(Subcommand)]
 pub enum Deed {
-    #[command(about = "Report every Guard build cache with its status, size and idle targets")]
+    #[command(
+        about = "Report every Guard build cache with its status, size and reclaimable targets"
+    )]
     Status {
         #[arg(long)]
         json: bool,
     },
-    #[command(about = "Preview, or with --apply remove, idle Guard build caches and units")]
+    #[command(
+        about = "Preview, or with --apply remove, idle, superseded and unmarked Guard build caches"
+    )]
     Reclaim {
         #[arg(long)]
         apply: bool,
@@ -31,6 +38,8 @@ pub enum Deed {
 struct Report {
     schema: &'static str,
     idle: u64,
+    span: u64,
+    disk: Disk,
     applied: bool,
     buckets: Vec<sweep::Entry>,
     reclaimable: u64,
@@ -66,16 +75,25 @@ pub fn run(deed: Deed) -> i32 {
 
 fn survey(apply: bool) -> Result<Report, String> {
     let home = bucket::home()?;
+    let root = bucket::root(&home);
     let now = sweep::now();
-    let buckets: Vec<sweep::Entry> = graph::Node(&bucket::root(&home))
+    let disk = Disk::read(&root)?;
+    let sweep = sweep::Sweep {
+        apply,
+        span: disk.span(),
+        operator: true,
+    };
+    let buckets: Vec<sweep::Entry> = graph::Node(&root)
         .listing()?
         .iter()
         .filter(|path| path.is_dir())
-        .map(|path| sweep::survey(&home, path, now, apply))
+        .map(|path| sweep::survey(&home, path, now, sweep))
         .collect();
     Ok(Report {
         schema: bucket::SCHEMA,
         idle: sweep::IDLE,
+        span: sweep.span,
+        disk,
         applied: apply,
         reclaimable: buckets.iter().map(|entry| entry.reclaimable).sum(),
         reclaimed: buckets.iter().map(|entry| entry.reclaimed).sum(),
@@ -87,10 +105,12 @@ fn render(report: &Report) {
     for entry in &report.buckets {
         let status = serde_json::to_value(entry.status).unwrap_or_default();
         println!(
-            "{:<12} {:<9} {:>10}  reclaimable {:>10} in {:>4} targets  {}",
+            "{:<12} {:<9} {:>10}  working {:>10}  superseded {:>10}  reclaimable {:>10} in {:>4} targets  {}",
             entry.bucket.chars().take(12).collect::<String>(),
             status.as_str().unwrap_or_default(),
             bytes(entry.bytes),
+            bytes(entry.working),
+            bytes(entry.superseded),
             bytes(entry.reclaimable),
             entry.targets.len(),
             entry.identity.as_deref().unwrap_or("-"),
@@ -106,10 +126,18 @@ fn render(report: &Report) {
     };
     println!();
     println!(
-        "{verb}: {} of {} reclaimable; idle after {} days",
+        "{verb}: {} of {} reclaimable; idle after {} days; a live bucket keeps {}x its working set",
         bytes(report.reclaimed),
         bytes(report.reclaimable),
-        report.idle / DAY
+        report.idle / DAY,
+        report.span
+    );
+    println!(
+        "disk: {} of {} available; pressure below {}%: {}",
+        bytes(report.disk.available),
+        bytes(report.disk.total),
+        report.disk.reserve,
+        if report.disk.pressure { "yes" } else { "no" }
     );
 }
 
@@ -119,18 +147,25 @@ fn bytes(count: u64) -> String {
 
 pub(crate) fn tour(own: &Path) -> Result<(), String> {
     let home = bucket::home()?;
+    let root = bucket::root(&home);
     let stamp = home.join("state").join("guard").join("cargo").join("tour");
     let now = sweep::now();
-    if now.saturating_sub(graph::Node(&stamp).stamp()) < DAY {
+    let disk = Disk::read(&root)?;
+    if !disk.pressure && now.saturating_sub(graph::Node(&stamp).stamp()) < DAY {
         return Ok(());
     }
     if let Some(parent) = stamp.parent() {
         std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     }
     std::fs::write(&stamp, now.to_string()).map_err(|error| error.to_string())?;
-    for path in graph::Node(&bucket::root(&home)).listing()? {
+    let sweep = sweep::Sweep {
+        apply: true,
+        span: disk.span(),
+        operator: false,
+    };
+    for path in graph::Node(&root).listing()? {
         if path.is_dir() && path != own {
-            sweep::survey(&home, &path, now, true);
+            sweep::survey(&home, &path, now, sweep);
         }
     }
     Ok(())

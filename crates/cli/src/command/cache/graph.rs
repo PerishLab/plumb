@@ -11,6 +11,7 @@ pub(super) struct Profile {
     pub name: String,
     pub units: BTreeMap<String, Unit>,
     prints: BTreeMap<String, String>,
+    outputs: BTreeMap<String, Vec<PathBuf>>,
 }
 
 enum Kind {
@@ -48,9 +49,15 @@ impl Profile {
             name: Node(path).name(),
             units: BTreeMap::new(),
             prints: BTreeMap::new(),
+            outputs: BTreeMap::new(),
         };
         for unit in Node(&path.join(".fingerprint")).listing()? {
             profile.absorb(&unit)?;
+        }
+        for entry in Node(&path.join("deps")).listing()? {
+            if let Some(hash) = suffix(&Node(&entry).name()) {
+                profile.outputs.entry(hash).or_default().push(entry);
+            }
         }
         Ok(profile)
     }
@@ -102,19 +109,16 @@ impl Profile {
         live
     }
 
-    pub fn files(&self, key: &str) -> Result<Vec<PathBuf>, String> {
+    pub fn files(&self, key: &str) -> Vec<PathBuf> {
         let mut found = vec![
             self.path.join(".fingerprint").join(key),
             self.path.join("build").join(key),
         ];
-        let hash = suffix(key);
-        for entry in Node(&self.path.join("deps")).listing()? {
-            if hash.is_some() && suffix(&Node(&entry).name()) == hash {
-                found.push(entry);
-            }
+        if let Some(outputs) = suffix(key).and_then(|hash| self.outputs.get(&hash)) {
+            found.extend(outputs.iter().cloned());
         }
         found.retain(|path| std::fs::symlink_metadata(path).is_ok());
-        Ok(found)
+        found
     }
 
     pub fn orphans(&self) -> Result<Vec<PathBuf>, String> {

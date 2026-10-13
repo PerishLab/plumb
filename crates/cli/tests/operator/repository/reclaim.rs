@@ -4,15 +4,25 @@ use super::support;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
+mod bound;
+
 const AGED: u64 = 8 * 24 * 60 * 60;
 
 fn reclaim(home: &Path, apply: bool) -> Value {
+    sweep(home, apply, "0")
+}
+
+fn sweep(home: &Path, apply: bool, reserve: &str) -> Value {
     let mut command = support::plumb();
     command.args(["cache", "reclaim", "--json"]);
     if apply {
         command.arg("--apply");
     }
-    let output = command.env("PLUMB_HOME", home).output().expect("reclaim");
+    let output = command
+        .env("PLUMB_HOME", home)
+        .env("PLUMB_GUARD_CACHE_RESERVE", reserve)
+        .output()
+        .expect("reclaim");
     success(&output);
     serde_json::from_slice(&output.stdout).expect("reclaim report")
 }
@@ -28,25 +38,45 @@ fn entry(report: &Value, bucket: &Path) -> Value {
         .expect("bucket entry")
 }
 
-fn ledger(home: &Path, bucket: &Path) -> PathBuf {
-    let name = bucket.file_name().expect("bucket name").to_string_lossy();
-    home.join("state/guard/cargo").join(format!("{name}.json"))
-}
+pub(super) struct Ledger(PathBuf);
 
-fn age(home: &Path, bucket: &Path, keys: Option<&[&str]>) {
-    let path = ledger(home, bucket);
-    let mut record: Value =
-        serde_json::from_slice(&std::fs::read(&path).expect("record")).expect("record json");
-    let units = record["units"].as_object_mut().expect("units");
-    for (key, used) in units.iter_mut() {
-        if keys.is_none_or(|keys| keys.contains(&key.as_str())) {
-            *used = (used.as_u64().expect("stamp") - AGED).into();
+impl Ledger {
+    fn of(home: &Path, bucket: &Path) -> Self {
+        let name = bucket.file_name().expect("bucket name").to_string_lossy();
+        Self(home.join("state/guard/cargo").join(format!("{name}.json")))
+    }
+
+    fn record(&self) -> Value {
+        serde_json::from_slice(&std::fs::read(&self.0).expect("record")).expect("record json")
+    }
+
+    fn age(&self, keys: Option<&[&str]>) {
+        self.shift(keys, AGED);
+    }
+
+    fn shift(&self, keys: Option<&[&str]>, by: u64) {
+        let mut record = self.record();
+        let units = record["units"].as_object_mut().expect("units");
+        for (key, used) in units.iter_mut() {
+            if keys.is_none_or(|keys| keys.contains(&key.as_str())) {
+                *used = (used.as_u64().expect("stamp") - by).into();
+            }
         }
+        if keys.is_none() {
+            record["used"] = (record["used"].as_u64().expect("used") - by).into();
+        }
+        std::fs::write(&self.0, serde_json::to_vec(&record).expect("record bytes")).expect("aged");
     }
-    if keys.is_none() {
-        record["used"] = (record["used"].as_u64().expect("used") - AGED).into();
+
+    fn probes(&self) -> Vec<String> {
+        self.record()["units"]
+            .as_object()
+            .expect("units")
+            .keys()
+            .filter(|key| key.starts_with("debug/probe-"))
+            .cloned()
+            .collect()
     }
-    std::fs::write(&path, serde_json::to_vec(&record).expect("record bytes")).expect("aged");
 }
 
 fn inode(path: &Path) -> u64 {
@@ -73,7 +103,7 @@ fn idle() {
     let lease = inode(&bucket.join("lease"));
     let fresh = reclaim(home.path(), false);
     assert_eq!(entry(&fresh, &bucket)["status"], "live");
-    age(home.path(), &bucket, None);
+    Ledger::of(home.path(), &bucket).age(None);
     let preview = entry(&reclaim(home.path(), false), &bucket);
     assert_eq!(preview["status"], "idle");
     assert!(preview["reclaimable"].as_u64().expect("bytes") > 0);
@@ -100,7 +130,7 @@ fn held() {
     let home = support::home();
     success(&run(fixture.path(), home.path()));
     let bucket = seats(home.path()).remove(0);
-    age(home.path(), &bucket, None);
+    Ledger::of(home.path(), &bucket).age(None);
     let lock = std::fs::File::open(bucket.join("lease")).expect("lease");
     lock.lock().expect("held lease");
     let refused = entry(&reclaim(home.path(), true), &bucket);
@@ -135,9 +165,7 @@ fn units() {
     let bucket = seats(home.path()).remove(0);
     let ghost = bucket.join("debug/deps/libghost-0123456789abcdef.rlib");
     std::fs::write(&ghost, "interrupted output").expect("orphan");
-    let record: Value =
-        serde_json::from_slice(&std::fs::read(ledger(home.path(), &bucket)).expect("record"))
-            .expect("record json");
+    let record = Ledger::of(home.path(), &bucket).record();
     let stale = record["units"]
         .as_object()
         .expect("units")
@@ -145,7 +173,7 @@ fn units() {
         .find(|key| key.starts_with("debug/probe-"))
         .cloned()
         .expect("probe unit");
-    age(home.path(), &bucket, Some(&[stale.as_str()]));
+    Ledger::of(home.path(), &bucket).age(Some(&[stale.as_str()]));
     let applied = entry(&reclaim(home.path(), true), &bucket);
     assert_eq!(applied["status"], "live");
     let targets: Vec<&str> = applied["targets"]
@@ -183,12 +211,30 @@ fn unknown() {
         "kept",
     )
     .expect("legacy unit");
-    let applied = entry(&reclaim(home.path(), true), &stranger);
-    assert_eq!(applied["status"], "unknown");
-    assert_eq!(applied["reclaimed"], 0);
+    change(fixture.path(), 48);
+    let toured = support::plumb()
+        .args(["guard", ".", "--json"])
+        .current_dir(fixture.path())
+        .env("PLUMB_HOME", home.path())
+        .env("PLUMB_GUARD_CACHE_RESERVE", "100")
+        .env("CARGO_TARGET_DIR", fixture.path().join("unowned"))
+        .output()
+        .expect("guard");
+    success(&toured);
     assert!(
         stranger
             .join("debug/deps/libold-0123456789abcdef.rlib")
             .is_file()
     );
+    let lock = std::fs::File::create(stranger.join("lease")).expect("legacy lease");
+    lock.lock().expect("held legacy lease");
+    let active = entry(&reclaim(home.path(), true), &stranger);
+    assert_eq!(active["status"], "active");
+    assert_eq!(active["reclaimed"], 0);
+    drop(lock);
+    let applied = entry(&reclaim(home.path(), true), &stranger);
+    assert_eq!(applied["status"], "unknown");
+    assert!(applied["reclaimed"].as_u64().expect("bytes") > 0);
+    assert!(!stranger.join("debug").exists());
+    assert!(stranger.join("lease").is_file());
 }
