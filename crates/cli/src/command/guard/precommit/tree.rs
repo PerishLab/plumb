@@ -96,6 +96,7 @@ pub(super) struct Execution<'a> {
     pub execution: Option<&'a plumb::config::Execution>,
 }
 
+#[locus::trace(with = crate::observation::view())]
 pub(super) fn execute(
     root: &Path,
     argv: &[String],

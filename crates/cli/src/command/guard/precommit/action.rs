@@ -37,6 +37,7 @@ pub(super) fn resolved(root: &Path) -> Result<Descriptor, String> {
     prepare(root, true)
 }
 
+#[locus::trace(with = crate::observation::view())]
 fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
     let tree = plumb::guard::tree(root)?;
     let index = Index::new(root, &tree)?;

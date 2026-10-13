@@ -1,6 +1,7 @@
 mod configuration;
 mod identity;
 mod metadata;
+mod observation;
 mod surface;
 
 use std::path::{Path, PathBuf};

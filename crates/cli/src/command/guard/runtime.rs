@@ -139,6 +139,7 @@ pub(super) fn refused(root: &Path, message: &str, json: bool) -> i32 {
     1
 }
 
+#[locus::trace(with = crate::observation::view())]
 fn prove(root: &Path) -> Result<Evidence, String> {
     let before = Head::read(root)?;
     before.clean(root)?;

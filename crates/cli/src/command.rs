@@ -13,6 +13,7 @@ pub use guard::{cookbook, land, precommit, radius, render};
 use crate::Command;
 use std::path::PathBuf;
 
+#[locus::trace(with = crate::observation::view())]
 pub(crate) fn execute(command: Command) -> i32 {
     match command {
         Command::Follow {
