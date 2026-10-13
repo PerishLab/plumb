@@ -73,6 +73,7 @@ struct Summary {
     noted: usize,
 }
 
+#[locus::trace(with = crate::observation::view())]
 pub fn run(root: PathBuf, json: bool) -> i32 {
     let snapshot = plumb::snapshot::Snapshot::read(&root);
     let mut held = shape::capture(&root, &snapshot);

@@ -3,7 +3,7 @@ mod catalog;
 mod command;
 mod consumption;
 mod execution;
-use execution::cargo;
+use execution::{cargo, observation};
 mod judge;
 mod shape;
 
@@ -12,7 +12,11 @@ use plumb::cli::Root;
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "plumb", version = plumb::version!("PLUMB"))]
+#[command(
+    name = "plumb",
+    version = plumb::version!("PLUMB"),
+    long_about = "Judge, prove, and deliver repositories.\n\nOptional Locus observation is disabled by default. Configure [locus] enabled = true in PLUMB_HOME/plumb.toml (default data home: .plumb under your home; LOCALAPPDATA/plumb on Windows). Set endpoint in that section to select a locus-api, otherwise LOCUS_API or http://127.0.0.1:43308 is used. Observation failures produce diagnostics and leave command results intact."
+)]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -203,6 +207,7 @@ fn main() {
             std::process::exit(code);
         }
     };
+    let observation = observation::Run::start(command.name());
     let prepared = plumb::identity::ready().and_then(|()| {
         consumption::prepare(&command).map_err(|error| {
             format!("cannot read installed rules: {error}\nrun plumb configuration install")
@@ -215,5 +220,34 @@ fn main() {
             1
         }
     };
+    if let Some(observation) = observation {
+        observation.finish(code);
+    }
     std::process::exit(code);
+}
+
+impl Command {
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Doctor { .. } => "doctor",
+            Self::Land { .. } => "land",
+            Self::Guard { .. } => "guard",
+            Self::Lift { .. } => "lift",
+            Self::Follow { .. } => "follow",
+            Self::Radius { .. } => "radius",
+            Self::Policy { .. } => "policy",
+            Self::Skill { .. } => "skill",
+            Self::Rule { .. } => "rule",
+            Self::Changelog { .. } => "changelog",
+            Self::Configuration { .. } => "configuration",
+            Self::Layout { .. } => "layout",
+            Self::Metadata { .. } => "metadata",
+            Self::Cookbook { .. } => "cookbook",
+            Self::Affirm { .. } => "affirm",
+            Self::Release { .. } => "release",
+            Self::Ship { .. } => "ship",
+            Self::Depot { .. } => "depot",
+            Self::Cache { .. } => "cache",
+        }
+    }
 }

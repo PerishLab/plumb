@@ -30,6 +30,7 @@ pub struct Input {
     pub json: bool,
 }
 
+#[locus::trace(with = crate::observation::view())]
 pub fn run(input: Input) -> i32 {
     let runtime = match super::runtime::Selection::read() {
         Ok(runtime) => runtime,

@@ -35,6 +35,7 @@ name = "repository"
 path = "tests/repository/main.rs"
 
 [dependencies]
+locus = { version = "0", registry = "perish" }
 plumb = { path = "../lib", features = ["radius", "skill", "vendor"] , version = "=0.0.0" }
 base64 = "0.22"
 clap = { version = "4", features = ["derive", "env"] }
