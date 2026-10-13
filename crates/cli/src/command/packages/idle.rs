@@ -245,3 +245,46 @@ fn concurrent() {
     engine::advance(&root, &fixture.provider(), &seat, &mut state).unwrap();
     assert_eq!(fixture.provider().issue(17).unwrap()["state"], "closed");
 }
+
+#[test]
+fn stranded() {
+    for variant in ["clean", "dirty", "commit"] {
+        let fixture = Fixture::new(json!({}));
+        let (root, seat, mut state) = fixture.held();
+        let head = fixture.publish(&root, &mut state);
+        std::fs::write(root.join("README.md"), "later main\n").unwrap();
+        work::git(&root, &["add", "README.md"]).unwrap();
+        work::git(&root, &["commit", "-qm", "Later main"]).unwrap();
+        work::git(&root, &["push", "-q", "origin", "HEAD:main"]).unwrap();
+        engine::advance(&root, &fixture.provider(), &seat, &mut state).unwrap();
+        fixture.completed(&root, &seat);
+        state.issue = 17;
+        state.pushed = Some(head);
+        state.worktree = fixture.root.path().join("worktree");
+        let worktree = state.worktree.clone();
+        work::Work {
+            source: &root,
+            state: &state,
+        }
+        .open()
+        .unwrap();
+        if variant != "clean" {
+            std::fs::write(worktree.join("valuable.txt"), "preserve me").unwrap();
+        }
+        if variant == "commit" {
+            work::git(&worktree, &["add", "valuable.txt"]).unwrap();
+            work::git(&worktree, &["commit", "-qm", "valuable local commit"]).unwrap();
+        }
+        let resumed = closure::resume(&root, &fixture.provider(), &seat, &mut state);
+        if variant == "clean" {
+            assert!(resumed.unwrap());
+            assert!(!worktree.exists());
+            assert_eq!(seat.read("Example/probe").unwrap().issue, 0);
+        } else {
+            let error = resumed.unwrap_err();
+            assert!(error.contains("preserves valuable"), "{variant}: {error}");
+            let kept = std::fs::read_to_string(worktree.join("valuable.txt")).unwrap();
+            assert_eq!(kept, "preserve me");
+        }
+    }
+}

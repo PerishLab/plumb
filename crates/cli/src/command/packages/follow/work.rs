@@ -155,7 +155,15 @@ impl Work<'_> {
         }
         self.open()?;
         let head = git(&self.state.worktree, &["rev-parse", "HEAD"])?;
-        if git(&self.state.worktree, &["rev-parse", "HEAD^{tree}"])? != tree
+        let settled = git(&self.state.worktree, &["rev-parse", "HEAD^{tree}"])? == tree
+            || std::process::Command::new("git")
+                .arg("-C")
+                .arg(self.source)
+                .args(["merge-base", "--is-ancestor", &head, "origin/main"])
+                .status()
+                .map_err(|error| error.to_string())?
+                .success();
+        if !settled
             || !git(
                 &self.state.worktree,
                 &["status", "--porcelain", "--untracked-files=all"],
