@@ -19,3 +19,8 @@ threshold = { above = 8192 }
 id = "span.prefix"
 mapping = { kind = "dominant-content-prefix-percent", group = "locus.span" }
 threshold = { above = 80 }
+
+[[analyzer]]
+id = "span.held"
+mapping = { kind = "held-time-nanoseconds", group = "locus.span" }
+threshold = { above = 60000000000 }
