@@ -249,3 +249,45 @@ fn tool(bin: &std::path::Path) {
     let path = bin.join("plumb-package-probe.cmd");
     std::fs::write(path, "@echo off\r\n@echo %~1\r\n").unwrap();
 }
+
+#[test]
+fn compressed() {
+    use std::io::{BufRead, BufReader, Write};
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}/pl/um/plumb", listener.local_addr().unwrap());
+    let server = std::thread::spawn(move || {
+        let (stream, _) = listener.accept().unwrap();
+        let mut reader = BufReader::new(stream);
+        let mut gzip = false;
+        let mut line = String::new();
+        while reader.read_line(&mut line).unwrap() > 2 {
+            let header = line.to_ascii_lowercase();
+            gzip |= header.starts_with("accept-encoding:") && header.contains("gzip");
+            line.clear();
+        }
+        let gzipped: &[u8] = &[
+            31, 139, 8, 0, 0, 0, 0, 0, 2, 3, 171, 86, 42, 75, 45, 42, 86, 178, 82, 50, 208, 51,
+            210, 51, 80, 170, 229, 2, 0, 44, 44, 102, 188, 17, 0, 0, 0,
+        ];
+        let (encoding, body) = match gzip {
+            true => ("Content-Encoding: gzip\r\n", gzipped),
+            false => ("", &b"{\"vers\":\"0.1.0\"}\n"[..]),
+        };
+        let mut stream = reader.into_inner();
+        write!(
+            stream,
+            "HTTP/1.1 200 OK\r\n{encoding}Content-Length: {}\r\nConnection: close\r\n\r\n",
+            body.len()
+        )
+        .unwrap();
+        stream.write_all(body).unwrap();
+    });
+    let argv = registry::probe(&url);
+    let output = std::process::Command::new(&argv[0])
+        .args(&argv[1..])
+        .output()
+        .unwrap();
+    server.join().unwrap();
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(registry::cargo(&output.stdout).unwrap(), "0.2.0");
+}

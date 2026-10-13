@@ -12,23 +12,27 @@ pub(super) fn latest(root: &Path, ecosystem: &str, name: &str) -> Result<String,
         return Ok(version);
     }
     let url = format!("https://cargo.perish.uk/{}", route(name));
-    let argv = [
+    let bytes = process::run(root, "probe", &probe(&url))?;
+    cargo(&bytes)
+}
+
+pub(super) fn probe(url: &str) -> [String; 13] {
+    [
         "curl",
         "--fail",
         "--silent",
         "--show-error",
         "--location",
+        "--compressed",
         "--retry",
         "1",
         "--connect-timeout",
         "5",
         "--max-time",
         "15",
-        &url,
+        url,
     ]
-    .map(str::to_string);
-    let bytes = process::run(root, "probe", &argv)?;
-    cargo(&bytes)
+    .map(str::to_string)
 }
 
 fn stable(text: &str) -> Result<Version, String> {

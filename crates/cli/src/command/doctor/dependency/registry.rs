@@ -35,20 +35,7 @@ fn fetch(ecosystem: Ecosystem, name: &str) -> Result<String, String> {
             plumb_cli::route(name)
         ),
     };
-    let output = Command::new("curl")
-        .args([
-            "--fail",
-            "--silent",
-            "--show-error",
-            "--location",
-            "--retry",
-            "2",
-            "--connect-timeout",
-            "5",
-            "--max-time",
-            "15",
-        ])
-        .arg(&url)
+    let output = probe(&url)
         .output()
         .map_err(|error| format!("cannot read {} stable {name}: {error}", ecosystem.name()))?;
     if !output.status.success() {
@@ -60,4 +47,33 @@ fn fetch(ecosystem: Ecosystem, name: &str) -> Result<String, String> {
     }
     plumb_cli::cargo(&output.stdout)
         .map_err(|error| format!("cannot read {} stable {name}: {error}", ecosystem.name()))
+}
+
+fn probe(url: &str) -> Command {
+    let mut command = Command::new("curl");
+    command
+        .args([
+            "--fail",
+            "--silent",
+            "--show-error",
+            "--location",
+            "--compressed",
+            "--retry",
+            "2",
+            "--connect-timeout",
+            "5",
+            "--max-time",
+            "15",
+        ])
+        .arg(url);
+    command
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn compressed() {
+        let command = super::probe("https://cargo.perish.uk/pl/um/plumb");
+        assert!(command.get_args().any(|arg| arg == "--compressed"));
+    }
 }
