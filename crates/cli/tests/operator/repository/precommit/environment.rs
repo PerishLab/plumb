@@ -1,4 +1,4 @@
-use super::{Repo, cache, support};
+use super::{Repo, cache};
 use std::path::Path;
 use std::process::Output;
 
@@ -145,77 +145,4 @@ fn node() {
         assert!(refused.contains(key));
         assert!(!refused.contains("private-override"));
     }
-}
-
-#[test]
-fn currency() {
-    let fixture = cache::fixture();
-    let root = fixture.path();
-    let home = support::home();
-    let tools = tempfile::tempdir().unwrap();
-    std::fs::write(
-        root.join("plumb.toml"),
-        "[workflow.hash.guard]\nplumb=['Cargo.toml','Cargo.lock','src','pnpm-lock.yaml']\n",
-    )
-    .unwrap();
-    std::fs::write(
-        root.join("pnpm-lock.yaml"),
-        "lockfileVersion: '9.0'\npackages:\n  '@perishlab/probe@0.1.0': {}\n",
-    )
-    .unwrap();
-    Repo::git(root, &["add", "."]);
-    let latest = tools.path().join("latest");
-    let calls = tools.path().join("calls");
-    std::fs::write(&latest, "\"0.2.0\"").unwrap();
-    support::executable(
-        &tools.path().join("pnpm"),
-        r#"#!/bin/sh
-seat=$(dirname "$0")
-if [ "$1" != --config.ignore-pnpmfile=true ]; then exit 91; fi
-shift
-if [ "$1" = view ]; then cat "$seat/latest"; else exit 92; fi
-"#,
-    );
-    support::executable(
-        &tools.path().join("plumb"),
-        r#"#!/bin/sh
-seat=$(dirname "$0")
-if [ "$1" = --version ]; then echo fixture; exit 0; fi
-if [ "$1" != doctor ] || [ -n "${WHARF_PACKAGES_TOKEN:-}" ] || [ "$NPM_CONFIG_USERCONFIG" != /dev/null ]; then exit 93; fi
-printf '%s\n' "$PLUMB_PACKAGES_OBSERVATION" >> "$seat/calls"
-"#,
-    );
-    let mut paths = vec![tools.path().to_path_buf()];
-    paths.extend(std::env::split_paths(&std::env::var_os("PATH").unwrap()));
-    let path = std::env::join_paths(paths).unwrap();
-    let run = || {
-        support::plumb()
-            .args(["guard", ".", "--json"])
-            .current_dir(root)
-            .env("PLUMB_HOME", home.path())
-            .env("PATH", &path)
-            .env("WHARF_PACKAGES_TOKEN", "SYNTHETIC_ONLY_ENV")
-            .output()
-            .unwrap()
-    };
-    let first = run();
-    cache::success(&first);
-    let observed = std::fs::read_to_string(&calls).unwrap();
-    assert!(observed.contains("0.2.0"));
-    let cached = run();
-    cache::success(&cached);
-    assert_eq!(first.stdout, cached.stdout);
-    assert_eq!(std::fs::read_to_string(&calls).unwrap(), observed);
-    std::fs::write(&latest, "\"0.3.0\"").unwrap();
-    let changed = run();
-    cache::success(&changed);
-    assert_ne!(first.stdout, changed.stdout);
-    let recorded = std::fs::read_to_string(&calls).unwrap();
-    assert_eq!(recorded.lines().count(), 2);
-    assert!(recorded.contains("0.3.0"));
-    std::fs::write(&latest, "\"0.4.0-rc.1\"").unwrap();
-    let unknown = run();
-    assert!(!unknown.status.success());
-    assert_eq!(std::fs::read_to_string(&calls).unwrap(), recorded);
-    assert!(String::from_utf8_lossy(&unknown.stderr).contains("prerelease"));
 }

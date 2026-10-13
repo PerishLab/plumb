@@ -1,6 +1,8 @@
 use plumb_cli::{Dependency, Ecosystem, Verdict};
 use std::path::Path;
 
+mod npm;
+
 fn specimen(ecosystem: Ecosystem, requirement: &str, resolution: &str) -> Dependency {
     Dependency {
         ecosystem,
@@ -134,7 +136,7 @@ fn pinned() {
         );
     }
     assert!(!out.contains("svelte requires"), "{out}");
-    assert!(!out.contains("blind:"), "{out}");
+    assert!(out.contains("blind: cannot read npm lock"), "{out}");
 }
 
 #[test]
