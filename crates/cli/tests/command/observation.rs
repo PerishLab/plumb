@@ -84,7 +84,7 @@ fn isolated() {
     let baseline = run(home.path(), "node.version");
     for config in [
         "[locus]\nenabled = true\nendpoint = 'http://127.0.0.1:0'\n",
-        "[locus]\nenabled = 'malformed'\n",
+        "[locus]\nenabled = 'private-sentinel'\n",
         "[locus]\nenabled = true\nendpoint = ''\n",
     ] {
         configure(home.path(), config);
@@ -92,5 +92,11 @@ fn isolated() {
         assert_eq!(result.status.code(), baseline.status.code());
         assert_eq!(result.stdout, baseline.stdout);
         assert!(!result.stderr.is_empty(), "diagnostic remains visible");
+        let diagnostic = String::from_utf8_lossy(&result.stderr);
+        assert!(!diagnostic.contains("private-sentinel"));
+        if config.contains("private-sentinel") {
+            assert!(diagnostic.contains(&home.path().join("plumb.toml").display().to_string()));
+            assert!(diagnostic.contains("check [locus] settings"));
+        }
     }
 }
