@@ -51,6 +51,7 @@ pub(crate) fn run(root: &Path, home: &Path) -> Output {
         .args(["guard", ".", "--json"])
         .current_dir(root)
         .env("PLUMB_HOME", home)
+        .env("PLUMB_GUARD_CACHE_RESERVE", "0")
         .env("CARGO_TARGET_DIR", root.join("unowned"))
         .output()
         .expect("guard")

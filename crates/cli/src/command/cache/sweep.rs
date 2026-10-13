@@ -1,5 +1,7 @@
 use super::bucket::{self, Record};
+use super::disk::Disk;
 use super::graph;
+use super::plan::{self, Plan, Seat};
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::fs::TryLockError;
@@ -24,6 +26,8 @@ pub(super) struct Entry {
     pub status: Status,
     pub used: Option<u64>,
     pub bytes: u64,
+    pub working: u64,
+    pub superseded: u64,
     pub targets: Vec<String>,
     pub reclaimable: u64,
     pub reclaimed: u64,
@@ -37,25 +41,32 @@ impl Entry {
     }
 }
 
-struct Target {
-    key: Option<String>,
-    paths: Vec<PathBuf>,
+#[derive(Clone, Copy)]
+pub(super) struct Sweep {
+    pub apply: bool,
+    pub span: u64,
+    pub operator: bool,
 }
 
-pub(super) fn survey(home: &Path, bucket: &Path, now: u64, apply: bool) -> Entry {
+pub(super) fn survey(home: &Path, bucket: &Path, now: u64, sweep: Sweep) -> Entry {
     let entry = Entry {
         bucket: graph::Node(bucket).name(),
         identity: bucket::identity(bucket),
         status: Status::Unknown,
         used: None,
         bytes: graph::Node(bucket).size(),
+        working: 0,
+        superseded: 0,
         targets: Vec::new(),
         reclaimable: 0,
         reclaimed: 0,
         refusal: None,
     };
     let Some(identity) = entry.identity.clone() else {
-        return entry.refuse("no Plumb marker; Plumb never reclaims an unmarked cache");
+        if !sweep.operator {
+            return entry.refuse("no Plumb marker; only plumb cache reclaim --apply removes it");
+        }
+        return legacy(bucket, sweep, entry);
     };
     let path = bucket::ledger(home, bucket);
     let record = match bucket::read(&path) {
@@ -73,7 +84,7 @@ pub(super) fn survey(home: &Path, bucket: &Path, now: u64, apply: bool) -> Entry
             Held {
                 path,
                 record,
-                apply,
+                sweep,
             },
             bucket,
             now,
@@ -91,7 +102,48 @@ pub(super) fn survey(home: &Path, bucket: &Path, now: u64, apply: bool) -> Entry
 struct Held {
     path: PathBuf,
     record: Record,
-    apply: bool,
+    sweep: Sweep,
+}
+
+fn legacy(bucket: &Path, sweep: Sweep, mut entry: Entry) -> Entry {
+    let lock = match bucket::lease(bucket) {
+        Ok(lock) => lock,
+        Err(error) => return entry.refuse(&error),
+    };
+    match lock.try_lock() {
+        Ok(()) => {}
+        Err(TryLockError::WouldBlock) => {
+            entry.status = Status::Active;
+            return entry;
+        }
+        Err(TryLockError::Error(error)) => {
+            return entry.refuse(&format!("cannot test lease: {error}"));
+        }
+    }
+    let plan = match Seat(bucket).whole() {
+        Ok(plan) => plan,
+        Err(error) => return entry.refuse(&error),
+    };
+    tally(bucket, &plan, &mut entry);
+    if sweep.apply {
+        let (freed, failure) = plan::execute(&plan.targets, &mut Record::new(""));
+        entry.reclaimed = freed;
+        if let Some(error) = failure {
+            return entry.refuse(&error);
+        }
+    }
+    entry
+}
+
+fn tally(bucket: &Path, plan: &Plan, entry: &mut Entry) {
+    entry.working = plan.working;
+    entry.superseded = plan.superseded;
+    for target in &plan.targets {
+        entry.reclaimable += target.bytes;
+        for path in &target.paths {
+            entry.targets.push(Seat(bucket).relative(path));
+        }
+    }
 }
 
 fn held(mut held: Held, bucket: &Path, now: u64, mut entry: Entry) -> Entry {
@@ -103,20 +155,20 @@ fn held(mut held: Held, bucket: &Path, now: u64, mut entry: Entry) -> Entry {
     } else {
         Status::Live
     };
-    let targets = match plan(bucket, &held.record, entry.status, now) {
-        Ok(targets) => targets,
+    let plan = if entry.status == Status::Live {
+        Seat(bucket).live(&held.record, now, held.sweep.span)
+    } else {
+        Seat(bucket).whole()
+    };
+    let plan = match plan {
+        Ok(plan) => plan,
         Err(error) => return entry.refuse(&error),
     };
-    for target in &targets {
-        for path in &target.paths {
-            entry.reclaimable += graph::Node(path).size();
-            entry.targets.push(relative(bucket, path));
-        }
-    }
-    if !held.apply {
+    tally(bucket, &plan, &mut entry);
+    if !held.sweep.apply {
         return entry;
     }
-    let (freed, failure) = execute(&targets, &mut held.record);
+    let (freed, failure) = plan::execute(&plan.targets, &mut held.record);
     if entry.status != Status::Live && failure.is_none() {
         held.record.units.clear();
     }
@@ -128,88 +180,6 @@ fn held(mut held: Held, bucket: &Path, now: u64, mut entry: Entry) -> Entry {
         Some(error) => entry.refuse(&error),
         None => entry,
     }
-}
-
-fn plan(bucket: &Path, record: &Record, status: Status, now: u64) -> Result<Vec<Target>, String> {
-    if status != Status::Live {
-        return Ok(graph::Node(bucket)
-            .listing()?
-            .into_iter()
-            .filter(|path| !matches!(graph::Node(path).name().as_str(), "lease" | "plumb.json"))
-            .map(|path| Target {
-                key: None,
-                paths: vec![path],
-            })
-            .collect());
-    }
-    let idle = |key: &str| {
-        record
-            .units
-            .get(key)
-            .is_some_and(|used| now.saturating_sub(*used) > IDLE)
-    };
-    let mut targets = Vec::new();
-    for profile in graph::profiles(bucket)? {
-        for key in profile.units.keys() {
-            let full = format!("{}/{key}", profile.name);
-            if idle(&full) {
-                targets.push(Target {
-                    paths: profile.files(key)?,
-                    key: Some(full),
-                });
-            }
-        }
-        for (key, path, _) in profile.incremental()? {
-            let full = format!("{}/{key}", profile.name);
-            if idle(&full) {
-                targets.push(Target {
-                    key: Some(full),
-                    paths: vec![path],
-                });
-            }
-        }
-        targets.extend(profile.orphans()?.into_iter().map(|path| Target {
-            key: None,
-            paths: vec![path],
-        }));
-    }
-    Ok(targets)
-}
-
-fn execute(targets: &[Target], record: &mut Record) -> (u64, Option<String>) {
-    let mut freed = 0;
-    for target in targets {
-        for path in &target.paths {
-            let bytes = graph::Node(path).size();
-            if let Err(error) = remove(path) {
-                return (
-                    freed,
-                    Some(format!("cannot remove {}: {error}", path.display())),
-                );
-            }
-            freed += bytes;
-        }
-        if let Some(key) = &target.key {
-            record.units.remove(key);
-        }
-    }
-    (freed, None)
-}
-
-fn remove(path: &Path) -> std::io::Result<()> {
-    let metadata = std::fs::symlink_metadata(path)?;
-    if metadata.is_dir() {
-        std::fs::remove_dir_all(path)
-    } else {
-        std::fs::remove_file(path)
-    }
-}
-
-fn relative(bucket: &Path, path: &Path) -> String {
-    path.strip_prefix(bucket)
-        .unwrap_or(path)
-        .to_string_lossy()
-        .replace('\\', "/")
 }
 
 pub(crate) fn settle(bucket: &Path, identity: &str, since: u64) -> Result<u64, String> {
@@ -236,8 +206,9 @@ pub(crate) fn settle(bucket: &Path, identity: &str, since: u64) -> Result<u64, S
     }
     record.units = seen;
     record.used = now;
-    let targets = plan(bucket, &record, Status::Live, now)?;
-    let (freed, failure) = execute(&targets, &mut record);
+    let span = Disk::read(bucket)?.span();
+    let plan = Seat(bucket).live(&record, now, span)?;
+    let (freed, failure) = plan::execute(&plan.targets, &mut record);
     bucket::write(&path, &record)?;
     failure.map_or(Ok(freed), Err)
 }
