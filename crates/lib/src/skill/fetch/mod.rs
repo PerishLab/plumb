@@ -1,8 +1,11 @@
+mod transport;
+
 use super::Error;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::io::Write;
+use transport::draw;
 
 #[derive(Clone, Debug)]
 pub struct Grant {
@@ -196,17 +199,6 @@ fn exact(url: &str, sha: &str) -> Result<Vec<u8>, Error> {
     if seen != sha {
         return Err(Error::Digest(sha.to_string(), seen));
     }
-    Ok(bytes)
-}
-
-fn draw(url: &str) -> Result<Vec<u8>, Error> {
-    let mut body = ureq::get(url)
-        .call()
-        .map_err(|error| Error::Fetch(url.to_string(), error.to_string()))?
-        .into_body();
-    let mut bytes = Vec::new();
-    std::io::Read::read_to_end(&mut body.as_reader(), &mut bytes)
-        .map_err(|error| Error::Fetch(url.to_string(), error.to_string()))?;
     Ok(bytes)
 }
 
