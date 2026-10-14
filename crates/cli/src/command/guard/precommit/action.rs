@@ -76,11 +76,14 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
     } in prepared
     {
         let exclusions = if name == "guard/web" {
-            let flags = plumb::packages::exclusions(&index.root)?;
-            commands
-                .first_mut()
-                .ok_or("web Guard has no install command")?
-                .extend(flags.clone());
+            let mut flags = plumb::packages::exclusions(&index.root)?;
+            flags.push("--config.verify-deps-before-run=error".into());
+            for command in commands
+                .iter_mut()
+                .filter(|command| command.first().is_some_and(|program| program == "pnpm"))
+            {
+                command.splice(1..1, flags.iter().cloned());
+            }
             flags
         } else {
             Vec::new()
