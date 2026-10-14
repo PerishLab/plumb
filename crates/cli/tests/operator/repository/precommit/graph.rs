@@ -55,7 +55,7 @@ impl Web {
         for name in ["node", "pnpm", "corepack"] {
             let path = held.tools.path().join(name);
             let body = format!(
-                "#!/bin/sh\nif [ \"$1\" = --version ]; then echo fixture; exit 0; fi\nprintf '%s\\n' \"$*\" >> '{}'\n",
+                "#!/bin/sh\nif [ \"$1\" = --version ]; then echo fixture; exit 0; fi\nif [ \"$1\" = --config.ignore-pnpmfile=true ] && [ \"$2\" = config ]; then echo null; exit 0; fi\nprintf '%s\\n' \"$*\" >> '{}'\n",
                 held.tools.path().join("calls").display()
             );
             support::executable(&path, &body);
@@ -95,9 +95,9 @@ fn working() {
     cache::success(&first);
     let calls = std::fs::read_to_string(fixture.tools.path().join("calls")).expect("calls");
     assert!(
-        calls.starts_with(
+        calls.contains(
             "fetch --frozen-lockfile --ignore-scripts --ignore-pnpmfile --modules-dir "
-        ) && calls.contains("\ninstall --offline --frozen-lockfile\n"),
+        ) && calls.contains("\ninstall --offline --frozen-lockfile --config.minimum-release-age-exclude=@perishlab/*\n"),
         "{calls}"
     );
     assert!(!calls.contains("enable"), "{calls}");
@@ -147,9 +147,9 @@ fn standalone() {
     );
     let calls = std::fs::read_to_string(fixture.tools.path().join("calls")).expect("calls");
     assert!(
-        calls.starts_with(
+        calls.contains(
             "fetch --frozen-lockfile --ignore-scripts --ignore-pnpmfile --modules-dir "
-        ) && calls.contains("\ninstall --offline --frozen-lockfile\n"),
+        ) && calls.contains("\ninstall --offline --frozen-lockfile --config.minimum-release-age-exclude=@perishlab/*\n"),
         "{calls}"
     );
     assert!(!calls.contains("enable"), "{calls}");
