@@ -144,10 +144,8 @@ pub(super) fn execute(
     let status = command
         .status()
         .map_err(|error| format!("cannot run {}: {error}", argv.join(" ")))?;
+    drop(compiler);
     if status.success() {
-        if let Some(compiler) = compiler {
-            compiler.finish()?;
-        }
         if let Some(cache) = &cache {
             cache.settle();
         }

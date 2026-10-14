@@ -30,6 +30,16 @@ reported unknown; Guard leaves it alone, and only `reclaim --apply` removes its
 content. A cache is acceleration, not evidence: a reclaimed unit is rebuilt by
 the next Guard, and no proof depends on it.
 
+PLUMB_GUARD_COMPILER_CACHE=sccache additionally routes Guard's Cargo actions
+through an sccache disk cache at PLUMB_HOME/cache/compiler, with incremental
+compilation off. It is off by default. Each Guard checks out a fresh path, and
+sccache keys a workspace crate by its path, so only dependencies hit: it pays
+when the Cargo bucket starts empty, as on a fresh CI runner, and rarely
+locally, where the bucket usually holds them already. sccache bounds the directory at 2 GiB,
+evicting least recently used entries. Enabled without sccache on PATH, Guard
+refuses; any other value is refused. Enabling it changes the execution world,
+so earlier proofs do not apply.
+
 `status` reports every bucket with its working set, superseded bytes and the
 current disk pressure. `reclaim` previews the same targets, and
 `reclaim --apply` removes them and reports the bytes reclaimed.

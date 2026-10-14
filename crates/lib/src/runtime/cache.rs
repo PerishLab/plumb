@@ -2,6 +2,8 @@ use super::execution::Execution;
 use std::path::Path;
 use std::process::Command;
 
+const SIZE: u64 = 2 << 30;
+
 pub struct Cache<'a> {
     execution: &'a Execution,
     directory: tempfile::TempDir,
@@ -38,7 +40,10 @@ impl<'a> Cache<'a> {
             .map_err(|error| format!("cannot resolve compiler cache: {error}"))?;
         let configuration = toml::to_string(&serde_json::json!({
             "server_startup_timeout_ms": 4000,
-            "cache": {"disk": {"dir": directory.to_str().ok_or("compiler cache path is not UTF-8")?}},
+            "cache": {"disk": {
+                "dir": directory.to_str().ok_or("compiler cache path is not UTF-8")?,
+                "size": SIZE,
+            }},
         }))
         .map_err(|error| format!("cannot encode compiler cache configuration: {error}"))?;
         let temporary = tempfile::tempdir()
@@ -76,12 +81,6 @@ impl<'a> Cache<'a> {
             .env("SCCACHE_CACHED_CONF", self.directory.path().join("cached"))
             .env("SCCACHE_SERVER_PORT", self.port.to_string())
             .env("SCCACHE_IDLE_TIMEOUT", "30");
-    }
-
-    pub fn finish(mut self) -> Result<(), String> {
-        self.control("--stop-server")?;
-        self.active = false;
-        Ok(())
     }
 
     fn control(&self, verb: &str) -> Result<Vec<u8>, String> {

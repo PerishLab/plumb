@@ -92,6 +92,8 @@ const CARGO: Held = Held {
     managed: &[
         "CARGO",
         "CARGO_TARGET_DIR",
+        "CARGO_INCREMENTAL",
+        "RUSTC_WRAPPER",
         "CARGO_MANIFEST_*",
         "CARGO_PKG_*",
         "CARGO_REGISTRIES_*",
