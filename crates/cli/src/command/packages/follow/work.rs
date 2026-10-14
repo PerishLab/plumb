@@ -1,4 +1,4 @@
-use super::state::State;
+use super::State;
 use std::path::Path;
 
 pub(super) struct Work<'a> {

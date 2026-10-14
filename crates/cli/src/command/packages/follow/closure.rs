@@ -109,12 +109,17 @@ pub(super) fn idle(
     seat: &Seat,
     state: &mut State,
 ) -> Result<String, String> {
+    if state.pull != 0 {
+        return super::absorb::Absorption {
+            root,
+            provider,
+            seat,
+        }
+        .absorb(state);
+    }
     let main = work::git(root, &["rev-parse", "origin/main"])?;
     let resolution = plumb::packages::locked(&state.worktree, "follow")?;
     let snapshot = issue::snapshot(provider, state.issue)?;
-    if state.pull != 0 {
-        return Err("Auto candidate contributes no tree changes; an existing unmerged pull cannot settle a qualified no-op".into());
-    }
     if snapshot.state != "OPEN" || state.plan.is_some() {
         return Err(
             "qualified Auto no-op requires a failed preflight with no associated pull or delivery"
@@ -213,6 +218,15 @@ pub(super) fn resume(
     let issue = provider.issue(state.issue)?;
     if issue["state"] != "closed" {
         return Ok(false);
+    }
+    if provider.absorption(state.issue)?.is_some() {
+        super::absorb::Absorption {
+            root,
+            provider,
+            seat,
+        }
+        .settle(state)?;
+        return Ok(true);
     }
     let found = provider.completion(state.issue)?;
     let Some(receipt) = found else {
