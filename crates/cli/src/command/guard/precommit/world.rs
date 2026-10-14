@@ -1,5 +1,12 @@
 use sha2::{Digest as _, Sha256};
 
+pub(super) struct Check {
+    pub proof: plumb::guard::Action,
+    pub commands: Vec<Vec<String>>,
+    pub exclusions: Vec<String>,
+    pub execution: Option<plumb::config::Execution>,
+}
+
 pub(super) fn digest(
     name: &str,
     input: &str,

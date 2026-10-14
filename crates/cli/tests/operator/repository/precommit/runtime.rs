@@ -181,7 +181,7 @@ fn noisy(fixture: &Runtime, mode: &str) -> tempfile::TempDir {
     for name in ["node", "pnpm"] {
         let path = tools.path().join(name);
         let body = format!(
-            "#!/bin/sh\nif [ \"$1\" = --version ]; then echo fixture; exit 0; fi\nif [ \"$1\" = fetch ]; then exit 0; fi\nprintf '%s\\n' '{{\"ok\":true,\"schema\":\"child-output\"}}'\nprintf '%s\\n' 'child diagnostic' >&2\n{tail}\n"
+            "#!/bin/sh\nif [ \"$1\" = --version ]; then echo fixture; exit 0; fi\nif [ \"$1\" = --config.ignore-pnpmfile=true ] && [ \"$2\" = config ]; then echo null; exit 0; fi\nif [ \"$1\" = fetch ]; then exit 0; fi\nprintf '%s\\n' '{{\"ok\":true,\"schema\":\"child-output\"}}'\nprintf '%s\\n' 'child diagnostic' >&2\n{tail}\n"
         );
         support::executable(&path, &body);
     }

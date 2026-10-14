@@ -1,11 +1,11 @@
 use super::process;
 use std::path::Path;
 
-pub fn run(root: &Path) -> Result<(), String> {
+pub fn run(root: &Path, exclusions: &[String]) -> Result<(), String> {
     let staging = tempfile::tempdir().map_err(|error| error.to_string())?;
     let modules = staging.path().join("modules");
     let virtuals = staging.path().join("virtual");
-    let argv = vec![
+    let mut argv = vec![
         "pnpm".into(),
         "fetch".into(),
         "--frozen-lockfile".into(),
@@ -22,6 +22,7 @@ pub fn run(root: &Path) -> Result<(), String> {
             .ok_or("npm preparation path is not text")?
             .into(),
     ];
+    argv.extend_from_slice(exclusions);
     process::run(root, "packages", &argv)?;
     Ok(())
 }
@@ -151,7 +152,7 @@ mod tests {
         );
         std::fs::remove_file(&events).unwrap();
         std::fs::remove_dir_all(root.path().join("node_modules")).unwrap();
-        run(root.path()).unwrap();
+        run(root.path(), &super::super::exclusions(root.path()).unwrap()).unwrap();
         assert!(
             !events.exists(),
             "authenticated fetch must not execute repository code"

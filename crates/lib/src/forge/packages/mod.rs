@@ -1,4 +1,5 @@
 mod age;
+pub use age::exclusions;
 mod cargo;
 mod fetch;
 pub use fetch::run as fetch;

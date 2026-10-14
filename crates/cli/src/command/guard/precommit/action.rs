@@ -1,13 +1,8 @@
 use super::super::workflow::tree::Tree;
 use super::tree::{self, Index};
+use super::world::Check;
 use plumb::guard::{Action, Descriptor};
 use std::path::Path;
-
-struct Check {
-    proof: Action,
-    commands: Vec<Vec<String>>,
-    execution: Option<plumb::config::Execution>,
-}
 
 struct Preparation {
     name: String,
@@ -73,13 +68,23 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
     for Preparation {
         name,
         input,
-        commands,
+        mut commands,
         probes: declared,
         tools,
         manifest,
         paths,
     } in prepared
     {
+        let exclusions = if name == "guard/web" {
+            let flags = plumb::packages::exclusions(&index.root)?;
+            commands
+                .first_mut()
+                .ok_or("web Guard has no install command")?
+                .extend(flags.clone());
+            flags
+        } else {
+            Vec::new()
+        };
         let mut probes = manifest
             .as_deref()
             .map(|manifest| crate::catalog::probe::read(manifest, paths.iter().map(String::as_str)))
@@ -125,6 +130,7 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
         checks.push(Check {
             proof: Action { name, input, world },
             commands,
+            exclusions,
             execution,
         });
     }
@@ -142,8 +148,8 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
         .filter(|check| !super::cache::contains(&check.proof))
         .collect::<Vec<_>>();
     if !pending.is_empty() {
-        if pending.iter().any(|check| check.proof.name == "guard/web") {
-            plumb::packages::fetch(&index.root)?;
+        if let Some(check) = pending.iter().find(|check| check.proof.name == "guard/web") {
+            plumb::packages::fetch(&index.root, &check.exclusions)?;
             tree::unchanged(&index)?;
         }
         for check in pending {
