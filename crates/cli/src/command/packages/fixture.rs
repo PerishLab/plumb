@@ -90,7 +90,7 @@ elif '/check-runs' in endpoint and (root / 'mergefault').exists():
     result = [{'check_runs':[{'name':'Guard','app':{'slug':'github-actions'},'head_sha':head(),'status':'completed','conclusion':'success','details_url':'https://github.com/Example/probe/actions/runs/17'}]}]
 elif '/check-runs' in endpoint:
     result = [{'check_runs':[json.loads((root/'guard.json').read_text())]}] if (root/'guard.json').exists() else [{'check_runs':[]}]
-elif '/actions/runs/' in endpoint and (root / 'mergefault').exists():
+elif '/actions/runs/' in endpoint and not (root / 'run.json').exists():
     result = {'head_sha':head(),'path':'.github/workflows/guard.yml','event':'pull_request'}
 elif '/actions/runs/' in endpoint:
     result = json.loads((root/'run.json').read_text())

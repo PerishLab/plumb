@@ -7,6 +7,7 @@ pub(super) fn advance(
     seat: &Seat,
     state: &mut State,
 ) -> Result<String, String> {
+    let mut failed = None;
     if let Some(pull) = provider.find(state.issue)? {
         state.pull = pull["number"].as_u64().ok_or("Auto pull has no number")?;
         if pull["merged_at"].is_string() {
@@ -26,14 +27,21 @@ pub(super) fn advance(
             return super::closure::close(root, provider, seat, state);
         }
         let head = issue::text(&pull["head"], "sha")?;
+        if pull["state"] != "open" {
+            return Err("Auto pull was closed without merge; human judgment required".into());
+        }
         if let Err(error) = provider.guard(&head)
             && !error.starts_with("organization Guard is pending;")
             && current(root, &head)?
         {
-            return Err(error);
-        }
-        if pull["state"] != "open" {
-            return Err("Auto pull was closed without merge; human judgment required".into());
+            let work = work::Work {
+                source: root,
+                state,
+            };
+            if !error.starts_with("organization Guard failed:") || !work.changed(provider, &head)? {
+                return Err(error);
+            }
+            failed = Some((head, error));
         }
     }
     let snapshot = issue::snapshot(provider, state.issue)?;
@@ -57,6 +65,12 @@ pub(super) fn advance(
     };
     let base = work::git(&state.worktree, &["rev-parse", "origin/main"])?;
     crate::command::packages::resolve(&state.worktree, "follow")?;
+    if let Some((head, error)) = failed
+        && work::git(&state.worktree, &["write-tree"])?
+            == work::git(&state.worktree, &["rev-parse", &format!("{head}^{{tree}}")])?
+    {
+        return Err(error);
+    }
     if work::git(&state.worktree, &["write-tree"])?
         == work::git(&state.worktree, &["rev-parse", &format!("{base}^{{tree}}")])?
     {

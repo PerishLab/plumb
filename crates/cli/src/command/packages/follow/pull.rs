@@ -142,9 +142,10 @@ impl Provider<'_> {
         if run["status"] != "completed" {
             return Err("organization Guard is pending; rerun follow after it completes".into());
         }
-        if run["conclusion"] != "success" {
-            return Err(format!("organization Guard failed: {}", run["conclusion"]));
-        }
+        let conclusion = run["conclusion"]
+            .as_str()
+            .filter(|text| !text.is_empty())
+            .ok_or("completed organization Guard has no readable conclusion")?;
         let url = text(run, "details_url")?;
         let id = url
             .split("/actions/runs/")
@@ -164,6 +165,9 @@ impl Provider<'_> {
             )
         {
             return Err("Guard check is not the organization workflow on this exact head".into());
+        }
+        if conclusion != "success" {
+            return Err(format!("organization Guard failed: {}", run["conclusion"]));
         }
         Ok(url)
     }

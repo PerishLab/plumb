@@ -82,6 +82,35 @@ impl Work<'_> {
         Ok(())
     }
 
+    pub fn changed(&self, provider: &super::Provider<'_>, head: &str) -> Result<bool, String> {
+        let state = self.state;
+        if state.pushed.as_deref() != Some(head)
+            || provider.remote(state.issue)?.as_deref() != Some(head)
+        {
+            return Err("failed Auto head moved outside recorded publication".into());
+        }
+        self.open()?;
+        let root = &state.worktree;
+        if !git(root, &["status", "--porcelain", "--untracked-files=all"])?.is_empty() {
+            return Err("failed Auto has preserved local payload".into());
+        }
+        let local = git(root, &["rev-parse", "HEAD"])?;
+        let source = state.plan.as_ref().map(|plan| plan.source.as_str());
+        if local != head && source != Some(local.as_str()) {
+            return Err("failed Auto local head moved outside recorded recovery state".into());
+        }
+        let tree = git(root, &["rev-parse", "HEAD^{tree}"])?;
+        if tree != git(root, &["rev-parse", &format!("{head}^{{tree}}")])? {
+            return Err("failed Auto source and published trees disagree".into());
+        }
+        let base = git(root, &["rev-parse", "origin/main"])?;
+        super::scope::check(root, &base, head)?;
+        let index = crate::command::guard::precommit::tree::Index::new(root, &tree)?;
+        let held = plumb::packages::locked(&index.root, "follow")?;
+        let latest = crate::command::packages::resolve(&index.root, "follow")?;
+        Ok(held.packages != latest.packages && tree != latest.tree)
+    }
+
     pub fn commit(&self) -> Result<String, String> {
         let root = &self.state.worktree;
         let tree = plumb::guard::tree(root)?;
