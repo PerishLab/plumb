@@ -40,9 +40,19 @@ fn inspect(root: &Path, base: &str, head: &str) -> Result<(), String> {
             .into_iter()
             .filter(|path| !plumb::packages::allowed(path)),
     );
+    if outside.contains("plumb.toml") && migrated(root, base, head)? {
+        outside.remove("plumb.toml");
+    }
     if outside.is_empty() {
         Ok(())
     } else {
         Err(format!("Auto candidate has forbidden paths: {outside:?}"))
     }
+}
+
+fn migrated(root: &Path, base: &str, head: &str) -> Result<bool, String> {
+    let before = work::git(root, &["show", &format!("{base}:plumb.toml")])?;
+    let after = work::git(root, &["show", &format!("{head}:plumb.toml")])?;
+    let expected = crate::shape::release::migration::rewrite(&format!("{before}\n"))?;
+    Ok(expected.is_some_and(|expected| expected.trim() == after))
 }

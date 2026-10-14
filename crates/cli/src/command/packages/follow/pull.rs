@@ -87,7 +87,7 @@ impl Provider<'_> {
         if let Some(pull) = self.find(issue)? {
             return Ok(pull);
         }
-        self.api(&format!("repos/{}/pulls", self.repository), Some(&json!({"title":"Follow the latest first-party packages", "head":branch, "base":"main", "body":format!("Refs #{issue}.\n\n## Outcome\nFirst-party manifests and locks follow latest stable.\n\n## Change\nRegistered follow operation; manifests and lockfiles only.\n\n## Verification\nRequired organization Guard must pass on this exact head before merge.\n\n## Boundary\nOnly the registered follow paths may change." )})))
+        self.api(&format!("repos/{}/pulls", self.repository), Some(&json!({"title":"Follow the latest first-party packages", "head":branch, "base":"main", "body":format!("Refs #{issue}.\n\n## Outcome\nFirst-party manifests and locks follow latest stable.\n\n## Change\nRegistered follow operation; manifests and lockfiles only, plus the mechanical move of plumb.toml [release] product to [identity] ns.\n\n## Verification\nRequired organization Guard must pass on this exact head before merge.\n\n## Boundary\nOnly the registered follow paths may change." )})))
     }
 
     pub(super) fn remote(&self, issue: u64) -> Result<Option<String>, String> {
