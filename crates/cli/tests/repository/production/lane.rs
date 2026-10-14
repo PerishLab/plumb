@@ -10,34 +10,41 @@ fn bindings() {
         .split_once("[lane.app.crest.binding.preview]")
         .unwrap()
         .1;
-    for key in ["preview", "preview.a", "preview.crest-a"] {
+    for key in ["a", "design", "review", "preview", "a0", "lane"] {
         let text = PREVIEW.replace("binding.preview", &format!("binding.'{key}'"));
         write(root.path(), "plumb.toml", &text);
         assert!(previewed(root.path()).is_empty(), "{text}");
     }
-    let keyed = format!("[lane.app.crest.binding.'preview.a']{binding}").replace(
+    let keyed = format!("[lane.app.crest.binding.'design']{binding}").replace(
         "binding.preview.authorities",
-        "binding.'preview.a'.authorities",
+        "binding.'design'.authorities",
     );
     write(root.path(), "plumb.toml", &format!("{PREVIEW}{keyed}"));
     assert!(previewed(root.path()).is_empty());
     for key in [
+        "",
+        "1",
+        "1a",
+        "A",
         "Preview",
         "preview.",
+        "preview.a",
         "preview.a.b",
         "preview-a",
+        "a_b",
         "lane.a",
+        "é",
         "v1.2.3-lane.a",
     ] {
         let text = PREVIEW.replace("binding.preview", &format!("binding.'{key}'"));
         write(root.path(), "plumb.toml", &text);
         assert!(!previewed(root.path()).is_empty(), "{text}");
     }
-    write(
-        root.path(),
-        "plumb.toml",
-        &PREVIEW.replace("binding.preview", "binding.preview.a"),
-    );
+    let text = PREVIEW.replace("binding.preview", &format!("binding.'{}'", "a".repeat(48)));
+    write(root.path(), "plumb.toml", &text);
+    assert!(previewed(root.path()).is_empty());
+    let text = PREVIEW.replace("binding.preview", &format!("binding.'{}'", "a".repeat(49)));
+    write(root.path(), "plumb.toml", &text);
     assert!(!previewed(root.path()).is_empty());
 }
 
@@ -122,6 +129,9 @@ fn separation() {
             "['dispose', 'deploy', 'inspect', 'build']",
         ),
         PREVIEW.replace("'ensign'", "'wharf'"),
+        PREVIEW
+            .replace("'ensign'", "'ensign-read'")
+            .replace("'wharf'", "'wharf-public'"),
     ] {
         write(world.root.path(), "plumb.toml", &text);
         assert!(previewed(world.root.path()).is_empty());

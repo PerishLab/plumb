@@ -1,5 +1,6 @@
 mod address;
 mod artifact;
+mod atom;
 mod build;
 mod capability;
 #[path = "../declaration/mod.rs"]
@@ -14,6 +15,7 @@ mod source;
 
 pub use address::Address;
 pub use artifact::Artifact;
+pub use atom::Atom;
 pub use build::Build;
 pub use capability::{Action, Capabilities};
 pub use digest::Digest;

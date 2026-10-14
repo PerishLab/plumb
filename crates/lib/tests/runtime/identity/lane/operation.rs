@@ -3,7 +3,7 @@ use plumb::lane::operation::{
     Assessment, Authorization, Conditions, Intent, Material, Operation, Outcome, Request, State,
     Writer,
 };
-use plumb::lane::{Action, Address, Artifact, Capabilities, Digest, Name};
+use plumb::lane::{Action, Address, Artifact, Atom, Capabilities, Digest, Name};
 use serde_json::json;
 
 pub(super) fn context() -> Context {
@@ -11,12 +11,12 @@ pub(super) fn context() -> Context {
         Address::new(
             "PerishLab/crest".into(),
             "crest".into(),
-            Name::read("preview.a").unwrap(),
+            Name::read("design").unwrap(),
         )
         .unwrap(),
         Digest::read(&"b".repeat(64)).unwrap(),
         2,
-        Name::read("static").unwrap(),
+        Atom::read("static").unwrap(),
     )
     .unwrap()
 }
@@ -38,7 +38,7 @@ pub(super) fn assessment(action: Action, state: State) -> Assessment {
 
 pub(super) fn bound(request: &Request, action: Action, state: State) -> Assessment {
     let evidence = Reference::new(
-        Name::read("wharf").unwrap(),
+        Atom::read("wharf").unwrap(),
         Digest::read(&"c".repeat(64)).unwrap(),
     )
     .unwrap();

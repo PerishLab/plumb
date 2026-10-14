@@ -6,27 +6,22 @@ pub struct Name(String);
 
 impl Name {
     pub fn read(value: &str) -> Result<Self, String> {
-        let mut parts = value.split('.');
-        atom(parts.next().unwrap_or_default())?;
-        if let Some(key) = parts.next() {
-            atom(key)?;
-        }
-        if parts.next().is_some() {
-            return Err("lane name admits only a family and optional key".into());
+        if value.len() > 48
+            || !value.starts_with(|char: char| char.is_ascii_lowercase())
+            || !value
+                .bytes()
+                .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
+        {
+            return Err(
+                "lane name needs 1..48 lowercase ASCII letters or digits, starting with a letter"
+                    .into(),
+            );
         }
         Ok(Self(value.into()))
     }
 
     pub fn value(&self) -> &str {
         &self.0
-    }
-
-    pub fn family(&self) -> &str {
-        self.0.split_once('.').map_or(&self.0, |(family, _)| family)
-    }
-
-    pub fn key(&self) -> Option<&str> {
-        self.0.split_once('.').map(|(_, key)| key)
     }
 }
 

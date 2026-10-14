@@ -58,13 +58,13 @@ fn profiles() {
             refused: Action::Build,
         },
         Profile {
-            name: "lane.focus",
+            name: "focus",
             actions: vec![Action::Inspect, Action::Install, Action::Uninstall],
             allowed: Action::Uninstall,
             refused: Action::Dispose,
         },
         Profile {
-            name: "lane.focus",
+            name: "focus",
             actions: vec![Action::Inspect, Action::Publish, Action::Install],
             allowed: Action::Publish,
             refused: Action::Dispose,
@@ -88,7 +88,7 @@ fn profiles() {
 
 #[test]
 fn representations() {
-    let lane = Name::read("lane.focus").unwrap();
+    let lane = Name::read("focus").unwrap();
     let artifact = super::artifact::sample();
     let binary = json!({"lane":lane,"representation":"lane.focus","artifact":artifact});
     let package = json!({"lane":lane,"representation":"v1.2.3-lane.focus","artifact":artifact});

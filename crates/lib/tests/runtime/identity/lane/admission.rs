@@ -11,7 +11,7 @@ fn replay() {
     for (path, value) in [
         ("/context/revision", json!(3)),
         ("/context/request", json!("d".repeat(64))),
-        ("/context/requested/lane", json!("preview.b")),
+        ("/context/requested/lane", json!("review")),
         ("/context/adaptor", json!("binary")),
         ("/intent/artifact/digest", json!("d".repeat(64))),
     ] {

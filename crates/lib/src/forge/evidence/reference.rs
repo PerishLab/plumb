@@ -1,4 +1,4 @@
-use super::super::{Digest, Name};
+use super::super::{Atom, Digest};
 use super::Record;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -9,7 +9,7 @@ pub struct Reference(Parts);
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 struct Parts {
-    authority: Name,
+    authority: Atom,
     digest: Digest,
 }
 
@@ -20,11 +20,11 @@ pub struct Verified {
 }
 
 impl Reference {
-    pub fn new(authority: Name, digest: Digest) -> Result<Self, String> {
+    pub fn new(authority: Atom, digest: Digest) -> Result<Self, String> {
         checked(Parts { authority, digest })
     }
 
-    pub fn authority(&self) -> &Name {
+    pub fn authority(&self) -> &Atom {
         &self.0.authority
     }
 
@@ -69,8 +69,5 @@ impl Verified {
 }
 
 fn checked(parts: Parts) -> Result<Reference, String> {
-    if parts.authority.key().is_some() {
-        return Err("lane evidence authority needs one identity atom".into());
-    }
     Ok(Reference(parts))
 }
