@@ -1,5 +1,6 @@
 use plumb::config::{Contract, Execution};
 use plumb::rule::Probe;
+use std::time::Duration;
 
 fn execution(root: &std::path::Path, program: &str, mode: Option<&str>) -> Execution {
     let mut values = std::env::vars_os().collect::<Vec<_>>();
@@ -45,13 +46,30 @@ fn bound() {
         stdout: "true\r\n".into(),
         platform: None,
     };
-    assert!(probe.run(&held).expect("bound observation").matches);
+    assert!(
+        probe
+            .run(&held, Probe::LIMIT)
+            .expect("bound observation")
+            .matches
+    );
     probe.stdout = "false\n".into();
-    assert!(!probe.run(&held).expect("mismatch").matches);
+    assert!(!probe.run(&held, Probe::LIMIT).expect("mismatch").matches);
     probe.argv[0] = "unbound-tool".into();
-    assert!(probe.run(&held).err().unwrap().contains("no resolved tool"));
+    assert!(
+        probe
+            .run(&held, Probe::LIMIT)
+            .err()
+            .unwrap()
+            .contains("no resolved tool")
+    );
     probe.argv.clear();
-    assert!(probe.run(&held).err().unwrap().contains("nonempty program"));
+    assert!(
+        probe
+            .run(&held, Probe::LIMIT)
+            .err()
+            .unwrap()
+            .contains("nonempty program")
+    );
     assert!(
         held.output(&[])
             .err()
@@ -72,14 +90,14 @@ fn direct() {
         platform: None,
     };
     let seen = probe
-        .observe(&mut probe.command().expect("command"))
+        .observe(&mut probe.command().expect("command"), Probe::LIMIT)
         .expect("observe");
     assert!(seen.matches);
     let mut wrong = probe.command().expect("command");
     wrong.arg("extra");
     assert!(
         probe
-            .observe(&mut wrong)
+            .observe(&mut wrong, Probe::LIMIT)
             .err()
             .expect("different argv")
             .contains("differs")
@@ -103,14 +121,22 @@ fn bounded() {
         stdout: String::new(),
         platform: None,
     };
-    for (mode, expected) in [("volume", "65536"), ("timeout", "10 second")] {
+    assert_eq!(Probe::LIMIT, Duration::from_secs(10));
+    let brief = Duration::from_millis(200);
+    for (mode, limit, expected) in [
+        ("volume", Probe::LIMIT, "65536"),
+        ("timeout", brief, "exceeded 200 millisecond limit"),
+    ] {
         let mut command = probe.command().expect("command");
         command.env("PLUMB_PROBE_TEST", mode);
-        let error = probe.observe(&mut command).err().expect("bounded refusal");
+        let error = probe
+            .observe(&mut command, limit)
+            .err()
+            .expect("bounded refusal");
         assert!(error.contains(expected), "{error}");
         let root = tempfile::tempdir().expect("execution root");
         let held = execution(root.path(), &probe.argv[0], Some(mode));
-        let error = probe.run(&held).err().expect("bound refusal");
+        let error = probe.run(&held, limit).err().expect("bound refusal");
         assert!(error.contains(expected), "{error}");
     }
 }

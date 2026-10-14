@@ -19,10 +19,8 @@ fn unix() {
 }
 
 #[test]
+#[ignore = "requires pwsh"]
 fn windows() {
-    if Command::new("pwsh").arg("--version").output().is_err() {
-        return;
-    }
     let fixture = seat();
     let (_held, script) = script("migration.ps1", PS1);
     let output = Command::new("pwsh")

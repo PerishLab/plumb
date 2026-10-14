@@ -1,6 +1,7 @@
 use super::Probe;
-use crate::runtime::process::capture;
+use crate::runtime::process::{LIMIT, capture};
 use std::process::{Command, Output};
+use std::time::Duration;
 
 #[derive(serde::Serialize)]
 pub struct Observation {
@@ -9,6 +10,8 @@ pub struct Observation {
 }
 
 impl Probe {
+    pub const LIMIT: Duration = LIMIT;
+
     pub fn command(&self) -> Result<Command, String> {
         self.validate()?;
         let mut command = crate::config::detached(&self.argv[0]);
@@ -16,21 +19,26 @@ impl Probe {
         Ok(command)
     }
 
-    pub fn observe(&self, command: &mut Command) -> Result<Observation, String> {
+    pub fn observe(&self, command: &mut Command, limit: Duration) -> Result<Observation, String> {
         self.validate()?;
         let actual = std::iter::once(command.get_program()).chain(command.get_args());
         if !actual.eq(self.argv.iter().map(std::ffi::OsStr::new)) {
             return Err("probe command differs from its rule".into());
         }
         let output =
-            capture(command).map_err(|error| format!("probe {}: {error}", self.argv[0]))?;
+            capture(command, limit).map_err(|error| format!("probe {}: {error}", self.argv[0]))?;
         self.observation(output)
     }
 
-    pub fn run(&self, execution: &crate::config::Execution) -> Result<Observation, String> {
+    pub fn run(
+        &self,
+        execution: &crate::config::Execution,
+        limit: Duration,
+    ) -> Result<Observation, String> {
         self.validate()?;
         let output = execution
-            .output(&self.argv)
+            .command(&self.argv[0])
+            .and_then(|mut command| capture(command.args(&self.argv[1..]), limit))
             .map_err(|error| format!("probe {}: {error}", self.argv[0]))?;
         self.observation(output)
     }

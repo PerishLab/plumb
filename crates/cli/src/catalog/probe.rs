@@ -27,7 +27,7 @@ pub(crate) fn evidence(
     let mut observations = BTreeMap::new();
     for (name, rules) in probes {
         let probe = Probe::select(rules, &plumb::config::platform())?;
-        let observed = probe.run(execution)?;
+        let observed = probe.run(execution, Probe::LIMIT)?;
         if !observed.matches {
             return Err(format!(
                 "{name} probe {:?} expected stdout {:?}, observed {:?}",

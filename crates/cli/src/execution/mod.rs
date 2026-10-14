@@ -36,5 +36,5 @@ pub(crate) fn observe(probe: &Probe, root: &Path) -> Result<Observation, String>
     let environment = environment(family)?;
     inspect(family, root, &environment)?;
     let execution = Execution::new(environment, &[probe.argv[0].clone()], root)?;
-    probe.run(&execution)
+    probe.run(&execution, Probe::LIMIT)
 }
