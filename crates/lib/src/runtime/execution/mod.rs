@@ -68,7 +68,7 @@ impl Execution {
             .ok_or_else(|| "execution requires a program".to_string())?;
         let mut command = self.command(program)?;
         command.args(args);
-        super::process::capture(&mut command)
+        super::process::capture(&mut command, super::process::LIMIT)
     }
 
     pub fn command(&self, program: &str) -> Result<Command, String> {

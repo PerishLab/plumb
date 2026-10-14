@@ -87,7 +87,7 @@ impl<'a> Cache<'a> {
         let mut command = self.execution.command("sccache")?;
         self.apply(&mut command);
         command.arg(verb);
-        let output = super::process::capture(&mut command)?;
+        let output = super::process::capture(&mut command, super::process::LIMIT)?;
         if !output.status.success() {
             return Err(format!("compiler cache {verb} failed"));
         }

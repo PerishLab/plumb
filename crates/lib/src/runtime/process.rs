@@ -2,7 +2,9 @@ use std::io::{Read, Seek, SeekFrom};
 use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
-pub(crate) fn capture(command: &mut Command) -> Result<Output, String> {
+pub(crate) const LIMIT: Duration = Duration::from_secs(10);
+
+pub(crate) fn capture(command: &mut Command, limit: Duration) -> Result<Output, String> {
     let mut file =
         tempfile::tempfile().map_err(|error| format!("cannot reserve probe output: {error}"))?;
     command
@@ -18,9 +20,7 @@ pub(crate) fn capture(command: &mut Command) -> Result<Output, String> {
         let refusal = match size {
             Err(error) => Some(format!("cannot inspect output: {error}")),
             Ok(size) if size > 65536 => Some("stdout exceeds 65536 bytes".to_string()),
-            _ if started.elapsed() >= Duration::from_secs(10) => {
-                Some("exceeded 10 second limit".to_string())
-            }
+            _ if started.elapsed() >= limit => Some(format!("exceeded {} limit", span(limit))),
             _ => None,
         };
         if let Some(error) = refusal {
@@ -52,4 +52,12 @@ pub(crate) fn capture(command: &mut Command) -> Result<Output, String> {
         stdout,
         stderr: Vec::new(),
     })
+}
+
+fn span(limit: Duration) -> String {
+    if limit.subsec_nanos() == 0 {
+        format!("{} second", limit.as_secs())
+    } else {
+        format!("{} millisecond", limit.as_millis())
+    }
 }
