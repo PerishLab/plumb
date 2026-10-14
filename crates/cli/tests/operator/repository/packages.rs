@@ -28,6 +28,7 @@ impl Fixture {
 seat=$(dirname "$0")
 if [ "$1" = --config.ignore-pnpmfile=true ]; then shift; fi
 case "$1" in
+config) echo null ;;
 view) cat "$seat/latest" ;;
 update) cp "$seat/lock" pnpm-lock.yaml ;;
 --version) echo fixture ;;
@@ -179,6 +180,7 @@ fn graph() {
 seat=$(dirname "$0")
 if [ "$1" = --config.ignore-pnpmfile=true ]; then shift; fi
 case "$1" in
+config) echo null ;;
 view) cat "$seat/latest" ;;
 update)
 if grep -q transitive pnpm-lock.yaml; then cp "$seat/lock" pnpm-lock.yaml

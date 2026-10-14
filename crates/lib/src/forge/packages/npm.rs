@@ -66,18 +66,20 @@ impl Lock<'_> {
         {
             return Err("authenticated npm lock update refuses repository pnpmfile; frozen product install still executes it without credentials".into());
         }
-        let argv = [
+        let mut argv = [
             "pnpm",
             "update",
             "--recursive",
-            "--workspace-root",
+            "--include-workspace-root",
             "--lockfile-only",
             "--ignore-scripts",
             "--ignore-pnpmfile",
             "--no-save",
-            "@perishlab/*",
         ]
-        .map(str::to_string);
+        .map(str::to_string)
+        .to_vec();
+        argv.extend(super::age::exclusions(self.0)?);
+        argv.push("@perishlab/*".into());
         process::run(self.0, "packages", &argv)?;
         Ok(())
     }

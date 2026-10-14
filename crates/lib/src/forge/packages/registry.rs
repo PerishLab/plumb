@@ -88,6 +88,37 @@ fn route(name: &str) -> String {
 }
 
 #[cfg(test)]
+pub(super) fn fixture(route: &str, endpoint: &str, fresh: &str) -> Vec<u8> {
+    if let Some((name, file)) = route.rsplit_once('/')
+        && let Some(version) = file.strip_suffix(".tgz")
+    {
+        return archive(name, version);
+    }
+    use base64::Engine;
+    use sha2::Digest;
+    let versions = ["0.1.0", "0.2.0"].into_iter().map(|version| {
+        let digest = sha2::Sha512::digest(archive(route, version));
+        let integrity = format!("sha512-{}", base64::engine::general_purpose::STANDARD.encode(digest));
+        (version.to_string(), serde_json::json!({"name":route,"version":version,"dist":{"tarball":format!("{endpoint}/{route}/{version}.tgz"),"integrity":integrity}}))
+    }).collect::<serde_json::Map<_,_>>();
+    serde_json::to_vec(&serde_json::json!({"name":route,"dist-tags":{"latest":"0.2.0"},"versions":versions,"time":{"0.1.0":"2020-01-01T00:00:00Z","0.2.0":fresh}})).unwrap()
+}
+
+#[cfg(test)]
+fn archive(name: &str, version: &str) -> Vec<u8> {
+    let encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+    let mut tar = tar::Builder::new(encoder);
+    let bytes = serde_json::to_vec(&serde_json::json!({"name":name,"version":version})).unwrap();
+    let mut header = tar::Header::new_gnu();
+    header.set_size(bytes.len() as u64);
+    header.set_mode(0o644);
+    header.set_cksum();
+    tar.append_data(&mut header, "package/package.json", bytes.as_slice())
+        .unwrap();
+    tar.into_inner().unwrap().finish().unwrap()
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::io::{Read, Write};
