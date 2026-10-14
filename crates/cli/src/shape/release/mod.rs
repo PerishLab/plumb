@@ -3,6 +3,7 @@ mod deb;
 mod depot;
 mod executable;
 pub(crate) mod identity;
+pub(crate) mod migration;
 mod shape;
 mod target;
 

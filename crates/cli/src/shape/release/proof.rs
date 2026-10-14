@@ -200,3 +200,21 @@ fn identity() {
     refused(root, &stated, moved);
     refused(root, &stated.replace("bar", "foo"), moved);
 }
+
+#[test]
+fn migration() {
+    use super::migration::rewrite;
+    let tail = "authority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n";
+    let migrated = format!("[layout]\nnote = 1\n\n[identity]\nns = \"foo\"\n\n[release]\n{tail}");
+    let old = format!("[layout]\nnote = 1\n\n[release]\nproduct = \"foo\"\n{tail}");
+    assert_eq!(rewrite(&old).expect("old"), Some(migrated.clone()));
+    let both = format!("[identity]\nns = \"foo\"\n\n[release]\nproduct = \"foo\"\n{tail}");
+    let kept = format!("[identity]\nns = \"foo\"\n\n[release]\n{tail}");
+    assert_eq!(rewrite(&both).expect("both"), Some(kept.clone()));
+    assert_eq!(rewrite(&kept).expect("current"), None);
+    let commented = old.replace("[release]\n", "[release] # spec\n");
+    let rewritten = rewrite(&commented).expect("commented").expect("moved");
+    decode(Path::new("."), &rewritten).expect("migrated manifest decodes");
+    assert!(rewrite(&both.replace("ns = \"foo\"", "ns = \"bar\"")).is_err());
+    decode(Path::new("."), &migrated).expect("migrated manifest decodes");
+}

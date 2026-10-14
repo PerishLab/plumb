@@ -3,7 +3,15 @@ use plumb::packages::{Plan, Resolution};
 use std::path::{Path, PathBuf};
 
 pub(crate) fn resolve(root: &Path, context: &str) -> Result<Resolution, String> {
-    observed(root, context).map(|(locked, _)| locked)
+    let (locked, _) = observed(root, context)?;
+    if crate::shape::release::migration::migrate(root)? {
+        super::guard::precommit::tree::git(
+            root,
+            &["add", "--", "plumb.toml"],
+            "stage identity migration",
+        )?;
+    }
+    Ok(locked)
 }
 
 pub(crate) fn observed(root: &Path, context: &str) -> Result<(Resolution, Resolution), String> {
