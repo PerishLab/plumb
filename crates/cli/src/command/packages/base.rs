@@ -4,6 +4,9 @@ use super::{Fixture, Seat, State, engine, isolated, work};
 use serde_json::json;
 use std::path::Path;
 
+#[path = "candidate/absorbed.rs"]
+mod absorbed;
+
 fn commit(root: &Path, path: &str, text: &str) -> String {
     std::fs::write(root.join(path), text).unwrap();
     work::git(root, &["add", path]).unwrap();
@@ -196,6 +199,7 @@ fn advanced() {
     let (fixture, source, mut state) = fixture();
     state.schema = "plumb.auto-state/v1".into();
     let seat = Seat::fixture(fixture.root.path());
+    absorbed::intent(&fixture, &source, &state);
     let error = engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap_err();
     assert!(error.contains("failed with"), "{error}");
     state = seat.read("Example/probe").unwrap();
@@ -208,29 +212,9 @@ fn advanced() {
         "pub fn answer() -> u8 {\n    42\n}\n",
     );
     advance(&source);
-    let error = engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap_err();
-    assert!(error.contains("contributes no tree changes"), "{error}");
-    let recovered = seat.read("Example/probe").unwrap();
-    assert_eq!(recovered.pull, 18);
-    let head = work::git(&state.worktree, &["rev-parse", "HEAD"]).unwrap();
-    let base = work::git(&state.worktree, &["rev-parse", "origin/main"]).unwrap();
-    scope::check(&state.worktree, &base, &head).unwrap();
-    assert_eq!(
-        work::git(&state.worktree, &["merge-base", &head, &old]).unwrap(),
-        old
-    );
-    assert_eq!(fixture.provider().remote(17).unwrap(), Some(old.clone()));
-    assert_eq!(fixture.provider().issue(17).unwrap()["state"], "open");
-    assert!(recovered.merged.is_none());
-    assert_eq!(
-        fixture
-            .calls()
-            .iter()
-            .filter(|call| call["endpoint"] == "repos/Example/probe/pulls"
-                && !call["payload"].is_null())
-            .count(),
-        1
-    );
+    let message = engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap();
+    assert!(message.contains("was absorbed by main"), "{message}");
+    absorbed::settled(&fixture, &source, &seat, &old);
 }
 
 #[test]

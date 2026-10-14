@@ -76,7 +76,12 @@ elif '/git/ref/' in endpoint:
     result = {'object':{'sha':head()}}
 elif '/pulls' in endpoint:
     path = root / 'pull.json'
-    if payload:
+    if payload and not endpoint.endswith('/pulls'):
+        pull = json.loads(path.read_text())
+        pull.update(payload)
+        path.write_text(json.dumps(pull))
+        result = pull
+    elif payload:
         pull = {'number':18,'state':'open','head':{'ref':'auto/17','sha':head(),'repo':{'full_name':'Example/probe'}},'base':{'ref':'main'},'body':payload['body']}
         path.write_text(json.dumps(pull))
         if (root / 'fault').exists():

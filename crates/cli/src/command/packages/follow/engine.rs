@@ -26,6 +26,14 @@ pub(super) fn advance(
             seat.write(state)?;
             return super::closure::close(root, provider, seat, state);
         }
+        if pull["state"] != "open" && provider.absorption(state.issue)?.is_some() {
+            return super::absorb::Absorption {
+                root,
+                provider,
+                seat,
+            }
+            .settle(state);
+        }
         let head = issue::text(&pull["head"], "sha")?;
         if pull["state"] != "open" {
             return Err("Auto pull was closed without merge; human judgment required".into());
