@@ -68,6 +68,7 @@ fn wakes() {
 #[test]
 fn cooperates() {
     let (cancel, context) = Cancel::child();
+    let (started, ready) = std::sync::mpsc::channel();
     let worker = std::thread::spawn(move || {
         support::block(context.carry(async {
             let mut rounds = 0u32;
@@ -77,11 +78,14 @@ fn cooperates() {
                     return rounds;
                 }
                 rounds += 1;
+                if rounds == 1 {
+                    started.send(()).unwrap();
+                }
                 support::rest().await;
             }
         }))
     });
-    std::thread::sleep(Duration::from_millis(20));
+    ready.recv_timeout(Duration::from_secs(5)).unwrap();
     cancel.cancel();
     assert!(worker.join().unwrap() > 0);
 }
