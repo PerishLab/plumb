@@ -96,9 +96,22 @@ fn guard() {
     let error = duplicate.provider().guard("exact").unwrap_err();
     assert!(error.contains("multiple"));
     assert!(!error.contains("pending"));
-    let mut unrelated = routes(vec![check("success")]);
-    unrelated["repos/Example/probe/actions/runs/17"]["path"] = "other.yml".into();
-    assert!(Fixture::new(unrelated).provider().guard("exact").is_err());
+    let mut unreadable = check("failure");
+    unreadable["conclusion"] = Value::Null;
+    let error = Fixture::new(routes(vec![unreadable]))
+        .provider()
+        .guard("exact")
+        .unwrap_err();
+    assert!(error.contains("no readable conclusion"), "{error}");
+    for conclusion in ["success", "failure"] {
+        let mut unrelated = routes(vec![check(conclusion)]);
+        unrelated["repos/Example/probe/actions/runs/17"]["path"] = "other.yml".into();
+        let error = Fixture::new(unrelated)
+            .provider()
+            .guard("exact")
+            .unwrap_err();
+        assert!(error.contains("not the organization workflow"), "{error}");
+    }
 }
 
 #[test]
@@ -147,6 +160,9 @@ fn duplicates() {
 
 #[path = "recovery.rs"]
 mod recovery;
+
+#[path = "candidate/stale.rs"]
+mod stale;
 
 fn isolated(name: &str) -> bool {
     if std::env::var("PLUMB_TEST_RECOVERY").as_deref() == Ok(name) {

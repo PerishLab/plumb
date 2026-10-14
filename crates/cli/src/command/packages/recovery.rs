@@ -5,7 +5,7 @@ use serde_json::json;
 #[path = "fixture.rs"]
 mod fixture;
 
-#[path = "authority.rs"]
+#[path = "candidate/authority.rs"]
 mod authority;
 
 #[path = "refusal.rs"]
