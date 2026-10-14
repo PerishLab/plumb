@@ -46,7 +46,7 @@ fn provider() {
         format!("registry={endpoint}/\n@perishlab:registry={endpoint}/\n"),
     )
     .unwrap();
-    std::fs::write(root.path().join("package.json"), r#"{"name":"age-fixture","private":true,"dependencies":{"@perishlab/ageprobe":"0","aged-third":"0","exempt-third":"0","locked-third":"0"}}"#).unwrap();
+    std::fs::write(root.path().join("package.json"), r#"{"name":"age-fixture","private":true,"scripts":{"check":"node -e \"console.log(12345)\""},"dependencies":{"@perishlab/ageprobe":"0","aged-third":"0","exempt-third":"0","locked-third":"0"}}"#).unwrap();
     std::fs::write(
         root.path().join("pnpm-workspace.yaml"),
         "packages:\n  - child\nminimumReleaseAgeExclude:\n  - exempt-third\n  - named@0.2.0\n",

@@ -1,5 +1,4 @@
-minimumReleaseAgeExclude:
-  - "@perishlab/*"
+minimumReleaseAgeExclude: "@perishlab/*"
 
 packages:
   - apps/*

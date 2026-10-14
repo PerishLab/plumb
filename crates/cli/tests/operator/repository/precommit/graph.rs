@@ -97,7 +97,7 @@ fn working() {
     assert!(
         calls.contains(
             "fetch --frozen-lockfile --ignore-scripts --ignore-pnpmfile --modules-dir "
-        ) && calls.contains("\ninstall --offline --frozen-lockfile --config.minimum-release-age-exclude=@perishlab/*\n"),
+        ) && calls.contains("\n--config.minimum-release-age-exclude=@perishlab/* --config.verify-deps-before-run=error install --offline --frozen-lockfile\n"),
         "{calls}"
     );
     assert!(!calls.contains("enable"), "{calls}");
@@ -149,7 +149,7 @@ fn standalone() {
     assert!(
         calls.contains(
             "fetch --frozen-lockfile --ignore-scripts --ignore-pnpmfile --modules-dir "
-        ) && calls.contains("\ninstall --offline --frozen-lockfile --config.minimum-release-age-exclude=@perishlab/*\n"),
+        ) && calls.contains("\n--config.minimum-release-age-exclude=@perishlab/* --config.verify-deps-before-run=error install --offline --frozen-lockfile\n"),
         "{calls}"
     );
     assert!(!calls.contains("enable"), "{calls}");
