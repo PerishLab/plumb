@@ -1,6 +1,6 @@
 use super::evidence::{Reason, Receipt, Verified};
 use super::operation::{Assessment, Authorization, Request};
-use super::{Address, Capabilities, Digest, Name};
+use super::{Address, Atom, Capabilities, Digest};
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -10,28 +10,23 @@ pub struct Authorities(Seats);
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 struct Seats {
-    authorization: Name,
-    publication: Name,
+    authorization: Atom,
+    publication: Atom,
 }
 
 impl Authorities {
-    pub fn new(authorization: Name, publication: Name) -> Result<Self, String> {
-        for name in [&authorization, &publication] {
-            if name.key().is_some() {
-                return Err("lane authority needs one identity atom".into());
-            }
-        }
+    pub fn new(authorization: Atom, publication: Atom) -> Result<Self, String> {
         Ok(Self(Seats {
             authorization,
             publication,
         }))
     }
 
-    pub fn authorization(&self) -> &Name {
+    pub fn authorization(&self) -> &Atom {
         &self.0.authorization
     }
 
-    pub fn publication(&self) -> &Name {
+    pub fn publication(&self) -> &Atom {
         &self.0.publication
     }
 }
@@ -51,7 +46,7 @@ pub struct Declaration(Parts);
 #[serde(deny_unknown_fields)]
 struct Parts {
     target: Address,
-    adaptor: Name,
+    adaptor: Atom,
     capabilities: Capabilities,
     authorities: Authorities,
 }
@@ -59,13 +54,10 @@ struct Parts {
 impl Declaration {
     pub fn new(
         target: Address,
-        adaptor: Name,
+        adaptor: Atom,
         capabilities: Capabilities,
         authorities: Authorities,
     ) -> Result<Self, String> {
-        if adaptor.key().is_some() {
-            return Err("lane declaration adaptor needs one identity atom".into());
-        }
         Ok(Self(Parts {
             target,
             adaptor,
@@ -78,7 +70,7 @@ impl Declaration {
         &self.0.target
     }
 
-    pub fn adaptor(&self) -> &Name {
+    pub fn adaptor(&self) -> &Atom {
         &self.0.adaptor
     }
 

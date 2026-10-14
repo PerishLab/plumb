@@ -1,4 +1,4 @@
-use super::super::{Address, Digest, Name};
+use super::super::{Address, Atom, Digest};
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -11,7 +11,7 @@ struct Parts {
     requested: Address,
     request: Digest,
     revision: u64,
-    adaptor: Name,
+    adaptor: Atom,
 }
 
 impl Context {
@@ -19,7 +19,7 @@ impl Context {
         requested: Address,
         request: Digest,
         revision: u64,
-        adaptor: Name,
+        adaptor: Atom,
     ) -> Result<Self, String> {
         checked(Parts {
             requested,
@@ -41,7 +41,7 @@ impl Context {
         self.0.revision
     }
 
-    pub fn adaptor(&self) -> &Name {
+    pub fn adaptor(&self) -> &Atom {
         &self.0.adaptor
     }
 }
@@ -55,9 +55,6 @@ impl<'de> Deserialize<'de> for Context {
 fn checked(parts: Parts) -> Result<Context, String> {
     if parts.revision == 0 {
         return Err("lane evidence needs a positive revision".into());
-    }
-    if parts.adaptor.key().is_some() {
-        return Err("lane evidence adaptor needs one identity atom".into());
     }
     Ok(Context(parts))
 }

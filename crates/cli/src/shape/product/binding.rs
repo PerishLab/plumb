@@ -1,20 +1,18 @@
 use plumb::lane::declaration::{Authorities, Declaration};
-use plumb::lane::{Action, Address, Capabilities, Name};
+use plumb::lane::{Action, Address, Atom, Capabilities};
 
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct Binding {
-    adaptor: Name,
+    adaptor: Atom,
     capabilities: Capabilities,
     authorities: Authorities,
 }
 
 impl Binding {
     pub fn judge(&self, target: Address) -> Result<(), String> {
-        if target.lane().family() != "preview" || self.adaptor.value() != "static" {
-            return Err(
-                "first static binding requires preview or preview.<key> and static adaptor".into(),
-            );
+        if self.adaptor.value() != "static" {
+            return Err("static binding requires the static adaptor".into());
         }
         let declaration = Declaration::new(
             target,

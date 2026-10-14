@@ -1,5 +1,5 @@
 use plumb::lane::evidence::{Context, Observation, Policy, Reason, Record, Reference, Selection};
-use plumb::lane::{Address, Digest, Name};
+use plumb::lane::{Address, Atom, Digest, Name};
 use serde_json::{Value, json};
 
 fn address(lane: &str) -> Address {
@@ -13,10 +13,10 @@ fn address(lane: &str) -> Address {
 
 fn context() -> Context {
     Context::new(
-        address("preview.a"),
+        address("design"),
         Digest::read(&"b".repeat(64)).unwrap(),
         1,
-        Name::read("static").unwrap(),
+        Atom::read("static").unwrap(),
     )
     .unwrap()
 }
@@ -26,7 +26,7 @@ fn matched() -> Record {
         Selection::new(
             context(),
             Observation::Matched {
-                actual: address("preview.a"),
+                actual: address("design"),
                 artifact: Box::new(super::artifact::sample()),
             },
         )
@@ -35,7 +35,7 @@ fn matched() -> Record {
 }
 
 fn reference(record: &Record) -> Reference {
-    Reference::new(Name::read("wharf").unwrap(), record.digest().unwrap()).unwrap()
+    Reference::new(Atom::read("wharf").unwrap(), record.digest().unwrap()).unwrap()
 }
 
 #[test]
@@ -69,7 +69,7 @@ fn roundtrip() {
 
 #[test]
 fn exact() {
-    for lane in ["preview", "preview.b", "preview-a"] {
+    for lane in ["preview", "review", "other"] {
         let observation = Observation::Matched {
             actual: address(lane),
             artifact: Box::new(super::artifact::sample()),
@@ -118,7 +118,7 @@ fn uncertainty() {
         json!({"outcome":"unknown","reason":"missing"}),
         json!({"outcome":"unmet","reason":"unavailable"}),
         json!({"outcome":"unknown","reason":"timeout","actual":null}),
-        json!({"outcome":"matched","actual":super::address("preview.a")}),
+        json!({"outcome":"matched","actual":super::address("design")}),
     ] {
         let mut value = serde_json::to_value(matched()).unwrap();
         value["entry"]["value"]["observation"] = observation;
@@ -131,7 +131,7 @@ fn retrieval() {
     let record = matched();
     let held = reference(&record);
     let bytes = record.encode().unwrap();
-    let other = Reference::new(Name::read("foreign").unwrap(), held.digest().clone()).unwrap();
+    let other = Reference::new(Atom::read("foreign").unwrap(), held.digest().clone()).unwrap();
     assert!(held.verify(&other, &bytes).is_err());
     assert!(held.verify(&held, b"missing").is_err());
     let mut changed = serde_json::to_value(&record).unwrap();
@@ -140,7 +140,7 @@ fn retrieval() {
     assert!(held.verify(&held, &changed).is_err());
     let pretty = serde_json::to_vec_pretty(&record).unwrap();
     let prettyref = Reference::new(
-        Name::read("wharf").unwrap(),
+        Atom::read("wharf").unwrap(),
         Digest::read(&plumb::depot::sha(&pretty)).unwrap(),
     )
     .unwrap();
@@ -149,7 +149,7 @@ fn retrieval() {
     changed["schema"] = json!(1);
     let changed = serde_json::to_vec(&changed).unwrap();
     let changedref = Reference::new(
-        Name::read("wharf").unwrap(),
+        Atom::read("wharf").unwrap(),
         Digest::read(&plumb::depot::sha(&changed)).unwrap(),
     )
     .unwrap();
@@ -203,11 +203,11 @@ fn validation() {
             address("preview"),
             Digest::read(&"a".repeat(64)).unwrap(),
             0,
-            Name::read("static").unwrap()
+            Atom::read("static").unwrap()
         )
         .is_err()
     );
-    assert!(Reference::new(Name::read("wharf.a").unwrap(), matched().digest().unwrap()).is_err());
+    assert!(Atom::read("wharf.a").is_err());
     for value in [
         json!({"authority":"wharf.a","digest":"a".repeat(64)}),
         json!({"authority":"wharf","digest":"A".repeat(64)}),

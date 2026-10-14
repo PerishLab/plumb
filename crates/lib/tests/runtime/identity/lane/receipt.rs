@@ -1,10 +1,10 @@
 use plumb::lane::evidence::{Reason, Record, Reference};
 use plumb::lane::operation::{Operation, Outcome, Request, State};
-use plumb::lane::{Action, Name};
+use plumb::lane::{Action, Atom};
 use serde_json::json;
 
 fn reference(record: &Record) -> Reference {
-    Reference::new(Name::read("wharf").unwrap(), record.digest().unwrap()).unwrap()
+    Reference::new(Atom::read("wharf").unwrap(), record.digest().unwrap()).unwrap()
 }
 
 #[test]

@@ -1,7 +1,7 @@
 use plumb::lane::declaration::{Authorities, Declaration};
 use plumb::lane::evidence::{Reason, Record, Reference};
 use plumb::lane::operation::{Assessment, Request, State};
-use plumb::lane::{Action, Capabilities, Name};
+use plumb::lane::{Action, Atom, Capabilities};
 use serde_json::{Value, json};
 
 fn declaration() -> Declaration {
@@ -10,7 +10,7 @@ fn declaration() -> Declaration {
         request.context().requested().clone(),
         request.context().adaptor().clone(),
         Capabilities::new(vec![Action::Deploy]).unwrap(),
-        Authorities::new(Name::read("wharf").unwrap(), Name::read("public").unwrap()).unwrap(),
+        Authorities::new(Atom::read("wharf").unwrap(), Atom::read("public").unwrap()).unwrap(),
     )
     .unwrap()
 }
@@ -74,7 +74,7 @@ fn projection() {
 fn admission() {
     let original = serde_json::to_value(declaration()).unwrap();
     for (path, value, reason) in [
-        ("/target/lane", json!("preview.b"), Reason::Conflict),
+        ("/target/lane", json!("review"), Reason::Conflict),
         ("/target/app", json!("design"), Reason::Conflict),
         (
             "/target/repository",
@@ -133,7 +133,7 @@ fn completion() {
     let bytes = record.encode().unwrap();
     for (authority, accepted) in [("public", true), ("wharf", false), ("foreign", false)] {
         let reference =
-            Reference::new(Name::read(authority).unwrap(), record.digest().unwrap()).unwrap();
+            Reference::new(Atom::read(authority).unwrap(), record.digest().unwrap()).unwrap();
         let verified = reference.verify(&reference, &bytes).unwrap();
         let receipt = declaration().settle(&super::operation::request(), &verified);
         assert_eq!(receipt.is_ok(), accepted);
@@ -166,10 +166,11 @@ fn unsupported() {
         Err(Reason::Unsupported)
     );
     for name in ["wharf.key", "public.key"] {
-        assert!(
-            Authorities::new(Name::read(name).unwrap(), Name::read("public").unwrap()).is_err()
-        );
-        assert!(Authorities::new(Name::read("wharf").unwrap(), Name::read(name).unwrap()).is_err());
+        assert!(Atom::read(name).is_err());
+        let value = json!({"authorization":name,"publication":"public"});
+        assert!(serde_json::from_value::<Authorities>(value).is_err());
+        let value = json!({"authorization":"wharf","publication":name});
+        assert!(serde_json::from_value::<Authorities>(value).is_err());
     }
     let duplicate = r#"{"authorization":"wharf","publication":"public","publication":"foreign"}"#;
     assert!(serde_json::from_str::<Authorities>(duplicate).is_err());
@@ -182,14 +183,10 @@ fn profiles() {
         ("static", "preview", json!(["inspect", "deploy", "dispose"])),
         (
             "binary",
-            "lane.focus",
+            "focus",
             json!(["inspect", "install", "uninstall"]),
         ),
-        (
-            "package",
-            "lane.focus",
-            json!(["inspect", "publish", "install"]),
-        ),
+        ("package", "focus", json!(["inspect", "publish", "install"])),
     ] {
         let mut held = original.clone();
         held["adaptor"] = json!(adaptor);
