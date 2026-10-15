@@ -13,7 +13,7 @@ pub struct Seed {
 
 #[derive(Serialize)]
 pub struct Finding {
-    pub code: String,
+    pub code: &'static str,
     pub grade: &'static str,
     pub scope: &'static str,
     pub evidence: String,
@@ -59,7 +59,7 @@ impl Seed {
 impl Finding {
     pub fn new(seed: Seed) -> Self {
         Self {
-            code: seed.rule.id.to_string(),
+            code: &seed.rule.id,
             grade: seed.grade,
             scope: seed.rule.namespace(),
             evidence: seed.evidence,

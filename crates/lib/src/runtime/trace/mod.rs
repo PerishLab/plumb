@@ -5,6 +5,9 @@ use std::time::SystemTime;
 
 pub use plumb_macro::span;
 
+#[cfg(feature = "observation")]
+pub mod observation;
+
 static NEXT: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Clone, Debug)]

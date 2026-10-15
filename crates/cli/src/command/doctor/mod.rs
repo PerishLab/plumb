@@ -104,6 +104,12 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
     findings.extend(judge::depot::runtime());
     let summary = Summary::new(&findings);
     let ok = summary.wrong == 0 && summary.blind == 0;
+    if let Some(finding) = findings
+        .iter()
+        .find(|finding| matches!(finding.grade, "out of true" | "blind"))
+    {
+        crate::observation::fault(finding.code);
+    }
     if json {
         let report = Report {
             operation: "doctor",

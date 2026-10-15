@@ -17,6 +17,7 @@ pub struct Finding {
 
 impl Finding {
     pub fn render(&self, json: bool) {
+        crate::observation::fault(self.code);
         if json {
             println!(
                 "{}",
