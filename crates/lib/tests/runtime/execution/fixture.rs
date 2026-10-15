@@ -20,7 +20,7 @@ pub fn binary() -> &'static Path {
 
 pub fn tool(root: &Path, name: &str) -> PathBuf {
     let path = root.join(name);
-    std::fs::hard_link(binary().join("probe.exe"), &path).unwrap();
+    plumb::testing::link(&binary().join("probe.exe"), &path);
     path
 }
 
