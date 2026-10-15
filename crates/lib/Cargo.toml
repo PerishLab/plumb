@@ -11,6 +11,7 @@ schema = 1
 depot = "6429d75b3e4b64b465ca730797c97f45f3054ce7af0c8251b7f2bef0db82c4b7"
 
 [features]
+default = ["testing"]
 depot = [
   "dep:ureq",
 ]

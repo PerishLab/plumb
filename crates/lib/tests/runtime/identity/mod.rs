@@ -89,14 +89,7 @@ fn runs() {
         identity.marker = marker.into();
         let bound = plumb::identity::bind(&original, &identity).unwrap();
         let path = target.path().join(marker);
-        fs::write(&path, bound).unwrap();
-        fs::set_permissions(
-            &path,
-            fs::metadata(std::env::current_exe().unwrap())
-                .unwrap()
-                .permissions(),
-        )
-        .unwrap();
+        plumb::testing::executable(&path, &bound);
         let result = Command::new(path)
             .args(["--exact", "probe", "--nocapture"])
             .output()

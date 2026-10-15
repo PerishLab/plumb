@@ -214,7 +214,6 @@ fn held(names: &[&str]) -> String {
 
 #[cfg(unix)]
 fn pinned(bin: &std::path::Path) {
-    use std::os::unix::fs::PermissionsExt;
     let path = bin.join("cargo");
     let script = r#"#!/bin/sh
 printf '%s\n' "$*" >> cargo.log
@@ -232,22 +231,19 @@ case "$*" in
 esac
 mv Cargo.next Cargo.lock
 "#;
-    std::fs::write(&path, script).unwrap();
-    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700)).unwrap();
+    plumb::testing::executable(&path, script);
 }
 
 #[cfg(unix)]
 fn tool(bin: &std::path::Path) {
-    use std::os::unix::fs::PermissionsExt;
-    let path = bin.join("plumb-package-probe");
-    std::fs::write(&path, "#!/bin/sh\nprintf '%s\\n' \"$1\"\n").unwrap();
-    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700)).unwrap();
+    let body = concat!("#!/bin/sh\n", "printf '%s\n' \"$1\"\n");
+    plumb::testing::executable(&bin.join("plumb-package-probe"), body);
 }
 
 #[cfg(windows)]
 fn tool(bin: &std::path::Path) {
-    let path = bin.join("plumb-package-probe.cmd");
-    std::fs::write(path, "@echo off\r\n@echo %~1\r\n").unwrap();
+    let body = concat!("@echo off\r\n", "@echo %~1\r\n");
+    std::fs::write(bin.join("plumb-package-probe.cmd"), body).unwrap();
 }
 
 #[test]

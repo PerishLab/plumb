@@ -35,8 +35,7 @@ fn executable() {
         let inspected = plumb::identity::inspect(&bound).unwrap();
         assert_eq!(inspected, (origin.clone(), Some(identity)));
         let path = directory.path().join(marker);
-        fs::write(&path, bound).unwrap();
-        fs::set_permissions(&path, fs::metadata(source).unwrap().permissions()).unwrap();
+        plumb::testing::executable(&path, &bound);
         let result = Command::new(&path).arg("--version").output().unwrap();
         assert!(result.status.success());
         assert_eq!(

@@ -1,26 +1,11 @@
 use plumb::config::{Contract, Execution};
-use std::io::Write;
 use std::path::Path;
-use std::process::{Command, Stdio};
 
 #[path = "parallel.rs"]
 mod parallel;
 
 fn tool(root: &Path, body: &str) {
-    let path = root.join("probe");
-    let mut child = Command::new("/bin/sh")
-        .args(["-c", "cat > \"$1\" && chmod 755 \"$1\"", "fixture"])
-        .arg(path)
-        .stdin(Stdio::piped())
-        .spawn()
-        .expect("writer");
-    child
-        .stdin
-        .take()
-        .expect("input")
-        .write_all(body.as_bytes())
-        .expect("tool");
-    assert!(child.wait().expect("writer exit").success());
+    plumb::testing::executable(&root.join("probe"), body);
 }
 
 fn execution(root: &Path, paths: &[&Path]) -> Result<Execution, String> {
