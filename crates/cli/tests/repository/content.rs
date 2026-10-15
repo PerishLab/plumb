@@ -44,7 +44,7 @@ fn fields() {
     let rule = "[[member.entry.fields]]\ndeny = ['packageManager']";
     for text in [
         r#"{"packageManager":null}"#,
-        "{\n\"packageManager\": \"pnpm@11.13.0\"\n}",
+        "{\n\"packageManager\": \"pnpm@11.28.5\"\n}",
     ] {
         let held = inspect(rule, "package.json", Some(text.as_bytes()));
         assert!(held.contains("unapproved field"), "{held}");

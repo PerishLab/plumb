@@ -61,7 +61,7 @@ fn output() {
 fn fields() {
     let rule: Fields = toml::from_str("deny = ['packageManager']").expect("rule");
     for text in [
-        r#"{"packageManager":"pnpm@11.13.0"}"#,
+        r#"{"packageManager":"pnpm@11.28.5"}"#,
         "{\n  \"packageManager\" : null\n}",
     ] {
         let doc = document("package.json", text.as_bytes()).expect("document");

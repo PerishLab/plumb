@@ -29,7 +29,7 @@ pub fn judge(held: &shape::Shape) -> Found {
     }
     for (tool, version, held) in &held.toolchain {
         let seen = match held {
-            Ok(seen) if seen == version => continue,
+            Ok(seen) if crate::consumption::metadata::accepts(tool, seen) => continue,
             Ok(seen) => format!("reports {seen}"),
             Err(error) => format!("does not run ({error})"),
         };
