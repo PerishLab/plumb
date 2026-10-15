@@ -207,7 +207,7 @@ fn main() {
             std::process::exit(code);
         }
     };
-    let observation = observation::Run::start(command.name());
+    let observation = observation::start(command.name());
     let prepared = plumb::identity::ready().and_then(|()| {
         consumption::prepare(&command).map_err(|error| {
             format!("cannot read installed rules: {error}\nrun plumb configuration install")

@@ -181,6 +181,7 @@ fn render(report: Report, json: bool) -> i32 {
 }
 
 fn rejected(root: &PathBuf, refusal: Refusal, json: bool) -> i32 {
+    crate::observation::fault(refusal.kind);
     if json {
         let report = Failed {
             schema: plumb::boundary::SCHEMA,

@@ -247,6 +247,14 @@ meanwhile:
   layer; its default location, naming, the migration of existing variables and
   its Windows placement are plumb's to decide. Until then a product adds no new
   name or precedence for it.
+- A CLI run has one observation: `plumb::observation` (feature
+  `observation`) records `cli.start`, then `cli.finish` with the exit code and,
+  for a non-zero exit, the `<producer>.fault` role holding the first failure
+  code the run noted. A product declares its producer, the file holding its
+  `[locus]` section and its buffer, and notes faults at its refusal sites. A
+  fault is a `'static` stable identifier (a Cookbook code, a catalogue rule id
+  or a refusal kind), never message text, arguments or paths. Each product
+  moves its own copy onto it as its own change.
 - A released skill never claims enforcement its matching binary does not
   provide. Install, status and upgrade keep the global skill ledger anchored to
   stable, and a non-stable skill takes an exact version and an explicit path,
