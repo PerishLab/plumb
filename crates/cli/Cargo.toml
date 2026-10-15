@@ -40,7 +40,7 @@ path = "tests/repository/main.rs"
 
 [dependencies]
 locus = { version = "0", registry = "perish" }
-plumb = { path = "../lib", features = ["observation", "radius", "skill", "testing", "vendor"] , version = "=0.0.0" }
+plumb = { path = "../lib", features = ["observation", "radius", "skill", "vendor"] , version = "=0.0.0" }
 base64 = "0.22"
 clap = { version = "4", features = ["derive", "env"] }
 flate2 = "1"
@@ -57,4 +57,5 @@ toml_edit = "0.23"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
+plumb = { path = "../lib", features = ["observation", "radius", "skill", "testing", "vendor"], version = "=0.0.0" }
 tempfile = "3"

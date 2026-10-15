@@ -11,7 +11,6 @@ schema = 1
 depot = "6429d75b3e4b64b465ca730797c97f45f3054ce7af0c8251b7f2bef0db82c4b7"
 
 [features]
-default = ["testing"]
 depot = [
   "dep:ureq",
 ]
@@ -52,6 +51,7 @@ toml_edit = "0.23"
 serde_yaml_ng = "0.10"
 
 [dev-dependencies]
+plumb = { path = ".", features = ["testing"] }
 serde_json = "1"
 clap = { version = "4", features = ["derive"] }
 flate2 = "1"
