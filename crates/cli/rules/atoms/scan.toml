@@ -40,6 +40,10 @@ roots = [
   "crates/*/src",
   "crates/*/tests",
 ]
+# Each crate directory holding TypeScript outside src/tests is its own root.
+derive = [
+  "crates/*",
+]
 
 [[set]]
 name = "app-rust"

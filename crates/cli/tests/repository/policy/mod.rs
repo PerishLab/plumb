@@ -33,6 +33,7 @@ name = "crates-ts"
 include = ["crates/**/*.ts", "crates/**/*.tsx"]
 exclude = ["**/target/**", "**/node_modules/**"]
 roots = ["crates/*/src", "crates/*/tests"]
+derive = ["crates/*"]
 
 [[set]]
 name = "docs-md"
