@@ -27,6 +27,21 @@ environment = [
 ]
 
 [[set]]
+name = "crates-ts"
+include = [
+  "crates/**/*.ts",
+  "crates/**/*.tsx",
+]
+exclude = [
+  "**/target/**",
+  "**/node_modules/**",
+]
+roots = [
+  "crates/*/src",
+  "crates/*/tests",
+]
+
+[[set]]
 name = "app-rust"
 include = [
   "app/src/**/*.rs",
