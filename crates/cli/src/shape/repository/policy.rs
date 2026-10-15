@@ -70,14 +70,14 @@ impl Expected {
                 .iter()
                 .all(|path| root.join(path).is_dir())
             {
-                held.select(table, "use");
+                held.select(root, table, "use");
                 if table.contains_key("tsx")
                     && list(table, "when").iter().any(|path| {
                         let base = root.join(path);
                         extension(&base, "ts") || extension(&base, "tsx")
                     })
                 {
-                    held.select(table, "tsx");
+                    held.select(root, table, "tsx");
                 }
             }
         }
@@ -93,25 +93,26 @@ impl Expected {
             if !base.is_dir() {
                 continue;
             }
-            held.select(table, "use");
+            held.select(root, table, "use");
             let svelte = extension(&base, "svelte");
             if svelte {
-                held.select(table, "svelte");
+                held.select(root, table, "svelte");
             }
             if !svelte || extension(&base, "tsx") {
-                held.select(table, "tsx");
+                held.select(root, table, "tsx");
             }
         }
         held
     }
 
-    fn select(&mut self, table: &toml::Table, key: &str) {
+    fn select(&mut self, root: &Path, table: &toml::Table, key: &str) {
         for held in list(table, key) {
             let set = crate::catalog::member::scan(&held)
                 .unwrap_or_else(|error| panic!("rules/suites/shape.toml names {held}: {error}"));
             self.apply(&set, "include", Part::Include);
             self.apply(&set, "exclude", Part::Exclude);
             self.apply(&set, "roots", Part::Root);
+            self.roots.extend(Tree { root }.derive(&set));
             self.apply(&set, "tests", Part::Test);
             self.reads(&set, "tests");
             self.apply(&set, "bans", Part::Ban);
@@ -168,6 +169,85 @@ fn list(table: &toml::Table, key: &str) -> BTreeSet<String> {
             .collect(),
         None => BTreeSet::new(),
     }
+}
+
+struct Tree<'a> {
+    root: &'a Path,
+}
+
+impl Tree<'_> {
+    fn derive(&self, set: &toml::Table) -> BTreeSet<String> {
+        let statics = list(set, "roots");
+        let suffixes: BTreeSet<String> = list(set, "include")
+            .iter()
+            .filter_map(|glob| glob.rsplit_once("*.").map(|(_, tail)| tail.to_string()))
+            .collect();
+        list(set, "derive")
+            .iter()
+            .flat_map(|pattern| self.expand(pattern))
+            .flat_map(|parent| self.children(&parent))
+            .filter(|child| !statics.iter().any(|glob| matches(glob, child)))
+            .filter(|child| {
+                suffixes
+                    .iter()
+                    .any(|suffix| extension(&self.root.join(child), suffix))
+            })
+            .collect()
+    }
+
+    fn children(&self, parent: &str) -> Vec<String> {
+        let Ok(entries) = std::fs::read_dir(self.root.join(parent)) else {
+            return Vec::new();
+        };
+        let mut names: Vec<String> = entries
+            .flatten()
+            .filter(|entry| entry.path().is_dir())
+            .map(|entry| entry.file_name().to_string_lossy().into_owned())
+            .map(|name| join(parent, &name))
+            .collect();
+        names.sort();
+        names
+    }
+
+    fn expand(&self, pattern: &str) -> Vec<String> {
+        pattern
+            .split('/')
+            .fold(vec![String::new()], |held, segment| {
+                held.iter()
+                    .flat_map(|prefix| self.step(prefix, segment))
+                    .collect()
+            })
+    }
+
+    fn step(&self, prefix: &str, segment: &str) -> Vec<String> {
+        if segment == "*" {
+            return self.children(prefix);
+        }
+        let path = join(prefix, segment);
+        if self.root.join(&path).is_dir() {
+            vec![path]
+        } else {
+            Vec::new()
+        }
+    }
+}
+
+fn join(prefix: &str, name: &str) -> String {
+    if prefix.is_empty() {
+        name.to_string()
+    } else {
+        format!("{prefix}/{name}")
+    }
+}
+
+fn matches(glob: &str, path: &str) -> bool {
+    let left: Vec<&str> = glob.split('/').collect();
+    let right: Vec<&str> = path.split('/').collect();
+    left.len() == right.len()
+        && left
+            .iter()
+            .zip(&right)
+            .all(|(want, have)| *want == "*" || want == have)
 }
 
 fn extension(root: &Path, suffix: &str) -> bool {
