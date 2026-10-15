@@ -10,9 +10,10 @@ while this process still has it mapped.
 
 ## Solution
 
-Enable `plumb` with `features = ["testing"]` (usually under
-`[dev-dependencies]`) and call `plumb::testing::executable(path, body)` on
-Unix. Signature: `pub fn executable(path: &Path, body: impl AsRef<[u8]>)`.
+Enable `plumb` with `features = ["testing"]` under `[dev-dependencies]`
+(not a default feature) and call `plumb::testing::executable(path, body)` on
+Unix. Plumb itself enables that feature for its own tests via a path
+dev-dependency on `plumb` with `features = ["testing"]`. Signature: `pub fn executable(path: &Path, body: impl AsRef<[u8]>)`.
 It writes and chmods through a `/bin/sh` child so this process never holds the
 executable open. When a prebuilt binary already exists, call
 `plumb::testing::link(source, path)` instead (`pub fn link(source: &Path,

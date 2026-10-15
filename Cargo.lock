@@ -480,6 +480,7 @@ dependencies = [
  "locus",
  "object",
  "pin-project-lite",
+ "plumb",
  "plumb-macro",
  "semver",
  "serde",
