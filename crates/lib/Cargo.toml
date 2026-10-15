@@ -28,6 +28,7 @@ skill = [
   "dep:flate2",
   "dep:tar",
 ]
+testing = []
 
 [dependencies]
 base64 = "0.22"
@@ -105,3 +106,4 @@ required-features = ["skill"]
 name = "bucket"
 path = "tests/support/bucket.rs"
 required-features = ["depot"]
+

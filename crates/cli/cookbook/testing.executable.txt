@@ -1,0 +1,31 @@
+# testing.executable
+
+## Trigger
+
+A test or test-support function writes a file in-process and then makes it
+executable with `set_permissions` or `Permissions::from_mode` in the same
+process. Ectropy refuses that shape (PerishLab/ectropy#44 rule 3) because
+multi-threaded test runners hit `ETXTBSY` when another thread execs the file
+while this process still has it mapped.
+
+## Solution
+
+Enable `plumb` with `features = ["testing"]` (usually under
+`[dev-dependencies]`) and call `plumb::testing::executable(path, body)` on
+Unix. Signature: `pub fn executable(path: &Path, body: impl AsRef<[u8]>)`.
+It writes and chmods through a `/bin/sh` child so this process never holds the
+executable open. When a prebuilt binary already exists, call
+`plumb::testing::link(source, path)` instead (`pub fn link(source: &Path,
+path: &Path)` hard-links without rewriting bytes).
+
+## Evidence
+
+Plumb itself used the child-process pattern in
+`crates/cli/tests/support/script.rs` and
+`crates/lib/tests/runtime/execution/unix.rs`, and hard_link in
+`crates/lib/tests/runtime/execution/fixture.rs`. Products had been copying
+those locally; this surface is the shared replacement.
+
+## EXIT
+
+Remove this entry when ectropy rule 3 retires or names a different helper.

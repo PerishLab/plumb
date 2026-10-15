@@ -9,6 +9,7 @@ const SOURCES: &[&str] = &[
     plumb::seat::resource!("cookbook/structure.seat-affirmed.txt"),
     plumb::seat::resource!("cookbook/structure.seat-anchored.txt"),
     plumb::seat::resource!("cookbook/structure.seat-member.txt"),
+    plumb::seat::resource!("cookbook/testing.executable.txt"),
 ];
 
 pub fn run(code: Option<String>, json: bool) -> i32 {
