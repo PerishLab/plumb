@@ -23,6 +23,18 @@ pub(super) const SCAN: &str = r#"
 rule = "structure.ectropy-policy"
 
 [[set]]
+name = "crates-rust"
+include = ["crates/**/*.rs"]
+exclude = ["**/target/**"]
+roots = ["crates/*/src", "crates/*/tests"]
+
+[[set]]
+name = "crates-ts"
+include = ["crates/**/*.ts", "crates/**/*.tsx"]
+exclude = ["**/target/**", "**/node_modules/**"]
+roots = ["crates/*/src", "crates/*/tests"]
+
+[[set]]
 name = "docs-md"
 include = ["docs/**/*.md"]
 roots = ["docs"]
@@ -66,6 +78,11 @@ include = ["packages/**/*.tsx"]
 "#;
 
 pub(super) const SHAPE: &str = r#"
+[[shape]]
+when = ["crates"]
+use = ["rule://scan/crates-rust"]
+tsx = ["rule://scan/crates-ts"]
+
 [[shape]]
 when = ["docs"]
 use = ["rule://scan/docs-md"]
@@ -270,5 +287,6 @@ description = "fixture"
     assert!(!out.contains("unexpected ectropy"), "{out}");
 }
 
+mod crates;
 mod loader;
 mod web;
