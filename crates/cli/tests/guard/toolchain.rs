@@ -7,7 +7,7 @@ const ALIGNED: [(&str, &str); 4] = [
     ("cargo", "cargo 1.96.1 (ea2d97820 2026-06-26)"),
     ("rustc", "rustc 1.96.1 (31fca3adb 2026-06-26)"),
     ("node", "v24.18.0"),
-    ("pnpm", "11.13.0"),
+    ("pnpm", "11.28.5"),
 ];
 
 fn binary() -> &'static Path {
@@ -71,6 +71,14 @@ fn aligned() {
 }
 
 #[test]
+fn transitional() {
+    let (root, tools) = specimen(&["Cargo.toml", "package.json"]);
+    stub(tools.path(), "pnpm", "11.13.0");
+    let out = doctor(root.path(), tools.path());
+    assert!(!out.contains(COOKBOOK), "{out}");
+}
+
+#[test]
 fn diverged() {
     let (root, tools) = specimen(&["Cargo.toml", "package.json"]);
     stub(tools.path(), "rustc", "rustc 1.95.0 (abc 2026-05-01)");
@@ -83,7 +91,7 @@ fn diverged() {
     let out = doctor(root.path(), tools.path());
     for line in [
         "rustc reports 1.95.0, the domain runs 1.96.1",
-        "pnpm reports 11.13.1, the domain runs 11.13.0",
+        "pnpm reports 11.13.1, the domain runs 11.28.5",
         "cargo does not run (error: rustup could not choose a version of cargo to run), the domain runs 1.96.1",
     ] {
         assert!(

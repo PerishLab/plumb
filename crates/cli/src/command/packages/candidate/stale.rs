@@ -24,7 +24,7 @@ case "$1" in
 config) echo null ;;
 view) cat "$seat/latest" ;;
 update) cp "$seat/lock" pnpm-lock.yaml ;;
---version) echo 11.13.0 ;;
+--version) echo 11.28.5 ;;
 *) exit 91 ;;
 esac
 "#,

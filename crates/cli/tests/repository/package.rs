@@ -67,16 +67,16 @@ fn engines() {
     for (manifest, engines, manager) in [
         (r#"{}"#, false, false),
         (
-            r#"{"engines":{"node":">=24","pnpm":"^11.13.0"}}"#,
+            r#"{"engines":{"node":">=24","pnpm":"^11.28.5"}}"#,
             true,
             false,
         ),
         (
-            r#"{"engines":{"node":"24.18.0","pnpm":"11.13.0"}}"#,
+            r#"{"engines":{"node":"24.18.0","pnpm":"11.28.5"}}"#,
             true,
             false,
         ),
-        (r#"{"packageManager":"pnpm@11.13.0"}"#, false, true),
+        (r#"{"packageManager":"pnpm@11.28.5"}"#, false, true),
     ] {
         write(root.path(), "package.json", manifest);
         let out = doctor(root.path());

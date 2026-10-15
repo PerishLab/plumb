@@ -18,7 +18,7 @@ fn metadata(args: &[&str]) -> (i32, String, String) {
 fn keys() {
     for (key, version) in [
         ("node.version", "24.18.0"),
-        ("pnpm.version", "11.13.0"),
+        ("pnpm.version", "11.28.5"),
         ("rust.version", "1.96.1"),
     ] {
         assert_eq!(metadata(&[key]), (0, format!("{version}\n"), String::new()));
@@ -31,7 +31,7 @@ fn json() {
     assert_eq!(code, 0);
     let held: serde_json::Value = serde_json::from_str(&out).expect("json");
     assert_eq!(held["node.version"], "24.18.0");
-    assert_eq!(held["pnpm.version"], "11.13.0");
+    assert_eq!(held["pnpm.version"], "11.28.5");
     assert_eq!(held["rust.version"], "1.96.1");
 }
 
