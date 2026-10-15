@@ -4,6 +4,7 @@
 [[shape]]
 when = ["crates"]
 use = ["rule://scan/crates-rust"]
+tsx = ["rule://scan/crates-ts"]
 
 [[shape]]
 when = ["app"]

@@ -71,6 +71,14 @@ impl Expected {
                 .all(|path| root.join(path).is_dir())
             {
                 held.select(table, "use");
+                if table.contains_key("tsx")
+                    && list(table, "when").iter().any(|path| {
+                        let base = root.join(path);
+                        extension(&base, "ts") || extension(&base, "tsx")
+                    })
+                {
+                    held.select(table, "tsx");
+                }
             }
         }
         for row in rows(policy, "web") {
