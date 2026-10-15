@@ -25,6 +25,9 @@ pub use proof::guard::landing;
 mod proof;
 mod runtime;
 pub mod seat;
+#[cfg(any(feature = "testing", test))]
+#[path = "knowledge/testing.rs"]
+pub mod testing;
 #[cfg(feature = "depot")]
 pub use seat::bucket;
 pub use seat::{depot, record, replace};
