@@ -71,11 +71,16 @@ fn aligned() {
 }
 
 #[test]
-fn transitional() {
+fn retired() {
     let (root, tools) = specimen(&["Cargo.toml", "package.json"]);
     stub(tools.path(), "pnpm", "11.13.0");
     let out = doctor(root.path(), tools.path());
-    assert!(!out.contains(COOKBOOK), "{out}");
+    assert!(
+        out.contains(&format!(
+            "pnpm reports 11.13.0, the domain runs 11.28.5; {COOKBOOK}"
+        )),
+        "{out}"
+    );
 }
 
 #[test]

@@ -4,19 +4,8 @@ pub const VERSIONS: [(&str, &str); 3] = [
     ("rust.version", "1.96.1"),
 ];
 
-pub const TRANSITIONAL: [(&str, &str); 1] = [("pnpm.version", "11.13.0")];
-
 pub fn accepts(tool: &str, seen: &str) -> bool {
-    let key = match tool {
-        "cargo" | "rustc" => "rust.version",
-        "node" => "node.version",
-        "pnpm" => "pnpm.version",
-        _ => return false,
-    };
     expected(tool) == Some(seen)
-        || TRANSITIONAL
-            .iter()
-            .any(|(name, version)| *name == key && *version == seen)
 }
 
 pub fn expected(tool: &str) -> Option<&'static str> {
