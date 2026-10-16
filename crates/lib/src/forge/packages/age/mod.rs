@@ -1,38 +1,67 @@
 use super::process;
 use std::path::Path;
 
+#[derive(Default)]
+pub struct Policy {
+    pub flags: Vec<String>,
+    minimum: Option<u64>,
+}
+
 pub fn exclusions(root: &Path) -> Result<Vec<String>, String> {
-    let bytes = read(root, "minimumReleaseAgeExclude")?;
-    let mut patterns = patterns(&bytes)?;
-    if !patterns.iter().any(|pattern| pattern == "@perishlab/*") {
-        patterns.push("@perishlab/*".into());
+    Ok(Policy::read(root)?.flags)
+}
+
+impl Policy {
+    pub fn read(root: &Path) -> Result<Self, String> {
+        let bytes = read(root, "minimumReleaseAgeExclude")?;
+        let mut patterns = patterns(&bytes)?;
+        if !patterns.iter().any(|pattern| pattern == "@perishlab/*") {
+            patterns.push("@perishlab/*".into());
+        }
+        let bytes = read(root, "minimumReleaseAge")?;
+        let minimum = if bytes.iter().all(u8::is_ascii_whitespace) {
+            None
+        } else {
+            serde_json::from_slice::<Option<u64>>(&bytes)
+                .map_err(|_| "unsupported effective npm minimum release age")?
+        };
+        use sha2::Digest;
+        let encoded = serde_json::to_vec(&patterns).map_err(|_| "cannot encode npm age policy")?;
+        let digest = sha2::Sha256::digest(encoded);
+        let label = minimum.map_or_else(
+            || "provider default".into(),
+            |value| format!("{value} minutes"),
+        );
+        eprintln!(
+            "npm release-age policy: minimum={label}; exclusions={} sha256={digest:x}; first-party=@perishlab/*",
+            patterns.len()
+        );
+        let flags = patterns
+            .into_iter()
+            .map(|pattern| format!("--config.minimum-release-age-exclude={pattern}"))
+            .collect();
+        Ok(Self { flags, minimum })
     }
-    let bytes = read(root, "minimumReleaseAge")?;
-    let minimum = if bytes.iter().all(u8::is_ascii_whitespace) {
-        None
-    } else {
-        serde_json::from_slice::<Option<u64>>(&bytes)
-            .map_err(|_| "unsupported effective npm minimum release age")?
-    };
-    use sha2::Digest;
-    let encoded = serde_json::to_vec(&patterns).map_err(|_| "cannot encode npm age policy")?;
-    let digest = sha2::Sha256::digest(encoded);
-    let label = minimum.map_or_else(
-        || "provider default".into(),
-        |value| format!("{value} minutes"),
-    );
-    eprintln!(
-        "npm release-age policy: minimum={label}; exclusions={} sha256={digest:x}; first-party=@perishlab/*",
-        patterns.len()
-    );
-    let mut flags = patterns
-        .into_iter()
-        .map(|pattern| format!("--config.minimum-release-age-exclude={pattern}"))
-        .collect::<Vec<_>>();
-    if let Some(value) = minimum {
-        flags.push(format!("--config.minimum-release-age={value}"));
+
+    pub fn environment(&self) -> Result<crate::config::Environment, String> {
+        let bind = self
+            .minimum
+            .map(|value| {
+                (
+                    "pnpm_config_minimum_release_age".to_string(),
+                    crate::config::Binding::Value(value.to_string()),
+                )
+            })
+            .into_iter()
+            .collect();
+        crate::config::Contract {
+            inherit: Vec::new(),
+            managed: Vec::new(),
+            reject: Vec::new(),
+            bind,
+        }
+        .capture([])
     }
-    Ok(flags)
 }
 
 pub fn cache(home: &Path) -> Result<String, String> {
@@ -76,6 +105,8 @@ fn patterns(bytes: &[u8]) -> Result<Vec<String>, String> {
     }
 }
 
+#[cfg(test)]
+mod declared;
 #[cfg(test)]
 mod frozen;
 #[cfg(test)]

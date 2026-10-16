@@ -40,7 +40,7 @@ fn provider() {
     let fresh = String::from_utf8(process::run(root.path(), "pnpm", &date).unwrap()).unwrap();
     let stop = Arc::new(AtomicBool::new(false));
     let stopped = stop.clone();
-    let server = std::thread::spawn(move || serve(listener, stopped, fresh));
+    let server = std::thread::spawn(move || serve(listener, stopped, fresh, false));
     std::fs::write(
         root.path().join(".npmrc"),
         format!("registry={endpoint}/\n@perishlab:registry={endpoint}/\n"),
@@ -166,10 +166,13 @@ fn exercise(root: &Path) {
         serde_json::from_slice::<u64>(&read(root, "minimumReleaseAge").unwrap()).unwrap(),
         15
     );
+    let policy = Policy::read(root).unwrap();
+    assert_eq!(policy.minimum, Some(15));
     assert!(
-        exclusions(root)
-            .unwrap()
-            .contains(&"--config.minimum-release-age=15".into())
+        !policy
+            .flags
+            .iter()
+            .any(|flag| flag.starts_with("--config.minimum-release-age="))
     );
     assert_eq!(
         std::fs::read_to_string(root.join("pnpm-workspace.yaml")).unwrap(),
@@ -190,11 +193,16 @@ fn importer(root: &Path, seat: &str, name: &str) -> String {
         .into()
 }
 
-fn serve(listener: std::net::TcpListener, stop: Arc<AtomicBool>, fresh: String) {
+pub(super) fn serve(
+    listener: std::net::TcpListener,
+    stop: Arc<AtomicBool>,
+    fresh: String,
+    modified: bool,
+) {
     let started = Instant::now();
     while !stop.load(Ordering::Relaxed) && started.elapsed() < Duration::from_secs(120) {
         match listener.accept() {
-            Ok((stream, _)) => reply(stream, fresh.trim()),
+            Ok((stream, _)) => reply(stream, fresh.trim(), modified),
             Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                 std::thread::sleep(Duration::from_millis(10))
             }
@@ -203,7 +211,7 @@ fn serve(listener: std::net::TcpListener, stop: Arc<AtomicBool>, fresh: String) 
     }
 }
 
-fn reply(stream: std::net::TcpStream, fresh: &str) {
+fn reply(stream: std::net::TcpStream, fresh: &str, modified: bool) {
     let endpoint = format!("http://{}", stream.local_addr().unwrap());
     stream
         .set_read_timeout(Some(Duration::from_secs(5)))
@@ -222,7 +230,12 @@ fn reply(stream: std::net::TcpStream, fresh: &str) {
         assert!(!line.to_ascii_lowercase().starts_with("authorization:"));
         line.clear();
     }
-    let body = super::super::registry::fixture(&name, &endpoint, fresh);
+    let mut body = super::super::registry::fixture(&name, &endpoint, fresh);
+    if modified && !name.ends_with(".tgz") {
+        let mut value: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        value["modified"] = fresh.into();
+        body = serde_json::to_vec(&value).unwrap();
+    }
     let mut stream = reader.into_inner();
     write!(
         stream,
