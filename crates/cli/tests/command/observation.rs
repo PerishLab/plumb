@@ -8,6 +8,7 @@ struct Home(tempfile::TempDir);
 
 impl Home {
     fn new() -> Self {
+        isolate();
         Self(tempfile::tempdir().expect("home"))
     }
 
@@ -22,6 +23,8 @@ impl Home {
     fn invoke(&self, args: &[&str]) -> Output {
         Command::new(env!("CARGO_BIN_EXE_plumb"))
             .env("PLUMB_HOME", self.path())
+            .env_remove("LOCUS_API")
+            .env_remove(locus::collector::PARENT)
             .args(args)
             .output()
             .expect("command")
@@ -54,6 +57,13 @@ impl Home {
             }
         }
         records
+    }
+}
+
+fn isolate() {
+    unsafe {
+        std::env::remove_var("LOCUS_API");
+        std::env::remove_var(locus::collector::PARENT);
     }
 }
 
@@ -200,4 +210,25 @@ fn intact() {
         assert_eq!(result.status.code(), baseline.status.code());
         assert_eq!(result.stdout, baseline.stdout);
     }
+}
+
+#[test]
+fn parent() {
+    let home = Home::new();
+    let baseline = home.run("node.version");
+    home.configure(BUFFERED);
+    let result = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .env("PLUMB_HOME", home.path())
+        .env_remove("LOCUS_API")
+        .env(locus::collector::PARENT, "")
+        .args(["metadata", "node.version"])
+        .output()
+        .expect("command");
+    assert_eq!(result.status.code(), baseline.status.code());
+    assert_eq!(result.stdout, baseline.stdout);
+    let diagnostic = String::from_utf8_lossy(&result.stderr);
+    assert!(
+        diagnostic.contains("plumb locus:") && diagnostic.contains("collector"),
+        "invalid LOCUS_PARENT stays on the observation diagnostic path: {diagnostic}"
+    );
 }
