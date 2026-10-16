@@ -1,5 +1,5 @@
 use crate::catalog::rules::structure as rule;
-use crate::judge::finding::{Found, wrong};
+use crate::judge::finding::{Found, Seed, wrong};
 use crate::shape::policy::Evidence;
 use std::collections::BTreeSet;
 
@@ -54,10 +54,17 @@ pub fn judge(evidence: &Evidence) -> Found {
         want.bans.clone(),
         &mut found,
     );
-    found
+    let mut seeds: Found = found
         .into_iter()
         .map(|line| wrong(&rule::ECTROPY_POLICY, line))
-        .collect()
+        .collect();
+    seeds.extend(want.declared.iter().map(|(seat, glob)| {
+        Seed::noted(
+            &rule::ECTROPY_POLICY,
+            format!("ectropy scan include {glob} is declared by layout seat {seat}, not by the canonical shape"),
+        )
+    }));
+    seeds
 }
 
 struct Policy<'a>(&'a toml::Value);

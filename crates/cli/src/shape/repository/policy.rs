@@ -43,14 +43,31 @@ pub(crate) struct Expected {
     pub tests: BTreeSet<String>,
     pub environment: BTreeSet<String>,
     pub bans: BTreeSet<String>,
+    pub declared: Vec<(String, String)>,
 }
 
 impl Expected {
     pub(crate) fn read(root: &Path) -> Self {
-        Self::from(
+        let mut held = Self::from(
             root,
             crate::catalog::set::policy().expect("policy access must follow depot preparation"),
-        )
+        );
+        if let super::layout::Held::Stated(layout) = super::layout::stated(root) {
+            held.declare(&layout);
+        }
+        held
+    }
+
+    fn declare(&mut self, layout: &super::layout::Declared) {
+        for seat in layout.seats.iter().filter(|seat| !seat.retired) {
+            if !seat.scan.is_empty() {
+                self.roots.insert(seat.path.clone());
+            }
+            for glob in &seat.scan {
+                self.include.insert(glob.clone());
+                self.declared.push((seat.path.clone(), glob.clone()));
+            }
+        }
     }
 
     fn from(root: &Path, policy: &toml::Table) -> Self {
@@ -61,6 +78,7 @@ impl Expected {
             tests: BTreeSet::new(),
             environment: BTreeSet::new(),
             bans: BTreeSet::new(),
+            declared: Vec::new(),
         };
         for row in rows(policy, "shape") {
             let table = row

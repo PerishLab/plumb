@@ -290,5 +290,6 @@ description = "fixture"
 
 mod crates;
 mod loader;
+mod seat;
 mod tools;
 mod web;
