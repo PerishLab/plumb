@@ -2,9 +2,11 @@ use locus::{Candidate, Config, Context, Engine, Key, Policy, Role};
 use serde::Deserialize;
 use serde_json::json;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::{OnceLock, RwLock};
 
 const ENDPOINT: &str = "http://127.0.0.1:43308";
+const PARENT: &str = "parent";
 
 #[derive(Default, Deserialize)]
 struct File {
@@ -84,6 +86,15 @@ pub fn fault(code: &'static str) {
     }
 }
 
+pub fn parent(command: &mut Command, frame: &Context) {
+    if view().is_none() {
+        return;
+    }
+    if let Some(span) = frame.read(&Role::span()) {
+        command.env(locus::collector::PARENT, span.text());
+    }
+}
+
 fn active() -> Option<&'static Seat> {
     *ACTIVE.read().unwrap_or_else(|error| error.into_inner())
 }
@@ -129,13 +140,22 @@ fn build(
     endpoint: String,
 ) -> Result<(Seat, Context), locus::Error> {
     let producer = declaration.producer;
-    let engine = Engine::bootstrap(Config::new(Policy::default().producer(producer).reporter(
-        locus::reporter::Spec::api(endpoint, declaration.buffer.clone()),
-    )))?;
-    let candidate = Candidate::context().ensure(Role::trace()).explicit(
-        Role::new(format!("{producer}.command"))?,
-        Key::new(command)?,
-    );
+    let engine = Engine::bootstrap(Config::new(
+        Policy::default()
+            .producer(producer)
+            .collector(PARENT, locus::collector::Spec::parent())
+            .reporter(locus::reporter::Spec::api(
+                endpoint,
+                declaration.buffer.clone(),
+            )),
+    ))?;
+    let candidate = Candidate::context()
+        .ensure(Role::trace())
+        .explicit(
+            Role::new(format!("{producer}.command"))?,
+            Key::new(command)?,
+        )
+        .collect(Role::parent(), PARENT);
     let context = engine.append(&Context::empty(), candidate)?.context();
     let cycle = engine
         .append(

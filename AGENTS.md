@@ -250,14 +250,17 @@ meanwhile:
 - A CLI run has one observation: `plumb::observation` (feature
   `observation`) records `cli.start`, then `cli.finish` with the exit code and,
   for a non-zero exit, the `<producer>.fault` role holding the first failure
-  code the run noted. A product declares its producer, the file holding its
-  `[locus]` section and its buffer, and notes faults at its refusal sites. A
-  fault is a `'static` stable identifier (a Cookbook code, a catalogue rule id
-  or a refusal kind), never message text, arguments or paths. Each `Run` owns
-  its engine, context and fault, so a process may observe several runs in turn;
-  free `view()`/`fault()` address the run started last and not yet finished,
-  and `Run::view`/`Run::fault` address that run only. Each product
-  moves its own copy onto it as its own change.
+  code the run noted. The shared observation binds Locus's parent-link collector
+  on the start record only, so a set `LOCUS_PARENT` appears as `locus.parent`
+  there; `parent` writes the caller's current frame span onto a child
+  `Command` and writes nothing when observation is off. A product declares its
+  producer, the file holding its `[locus]` section and its buffer, and notes
+  faults at its refusal sites. A fault is a `'static` stable identifier (a
+  Cookbook code, a catalogue rule id or a refusal kind), never message text,
+  arguments or paths. Each `Run` owns its engine, context and fault, so a
+  process may observe several runs in turn; free `view()`/`fault()` address the
+  run started last and not yet finished, and `Run::view`/`Run::fault` address
+  that run only. Each product moves its own copy onto it as its own change.
 - A released skill never claims enforcement its matching binary does not
   provide. Install, status and upgrade keep the global skill ledger anchored to
   stable, and a non-stable skill takes an exact version and an explicit path,
