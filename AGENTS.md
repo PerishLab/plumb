@@ -253,7 +253,10 @@ meanwhile:
   code the run noted. A product declares its producer, the file holding its
   `[locus]` section and its buffer, and notes faults at its refusal sites. A
   fault is a `'static` stable identifier (a Cookbook code, a catalogue rule id
-  or a refusal kind), never message text, arguments or paths. Each product
+  or a refusal kind), never message text, arguments or paths. Each `Run` owns
+  its engine, context and fault, so a process may observe several runs in turn;
+  free `view()`/`fault()` address the run started last and not yet finished,
+  and `Run::view`/`Run::fault` address that run only. Each product
   moves its own copy onto it as its own change.
 - A released skill never claims enforcement its matching binary does not
   provide. Install, status and upgrade keep the global skill ledger anchored to

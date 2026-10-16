@@ -1,5 +1,8 @@
 use super::support;
 
+#[cfg(feature = "observation")]
+mod observation;
+
 use plumb::context::Context;
 use plumb::trace::{Ledger, Sink, Span};
 use std::sync::Arc;
