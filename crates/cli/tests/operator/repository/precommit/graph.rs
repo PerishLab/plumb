@@ -65,6 +65,27 @@ impl Web {
         held
     }
 
+    fn cache(&self) -> String {
+        format!(
+            "--config.cache-dir={}",
+            self.home.path().join("cache/guard/pnpm").display()
+        )
+    }
+
+    fn install(&self) -> String {
+        format!(
+            "\n--config.minimum-release-age-exclude=@perishlab/* {} --config.verify-deps-before-run=error install --offline --frozen-lockfile\n",
+            self.cache()
+        )
+    }
+
+    fn prepared(&self, calls: &str) -> bool {
+        calls.lines().any(|line| {
+            line.starts_with("fetch --frozen-lockfile ")
+                && line.contains(&format!(" {} ", self.cache()))
+        })
+    }
+
     fn run(&self) -> std::process::Output {
         let mut paths = vec![self.tools.path().to_path_buf()];
         paths.extend(std::env::split_paths(
@@ -95,11 +116,11 @@ fn working() {
     cache::success(&first);
     let calls = std::fs::read_to_string(fixture.tools.path().join("calls")).expect("calls");
     assert!(
-        calls.contains(
-            "fetch --frozen-lockfile --ignore-scripts --ignore-pnpmfile --modules-dir "
-        ) && calls.contains("\n--config.minimum-release-age-exclude=@perishlab/* --config.verify-deps-before-run=error install --offline --frozen-lockfile\n"),
+        calls.contains("fetch --frozen-lockfile --ignore-scripts --ignore-pnpmfile --modules-dir ")
+            && calls.contains(&fixture.install()),
         "{calls}"
     );
+    assert!(fixture.prepared(&calls), "{calls}");
     assert!(!calls.contains("enable"), "{calls}");
     assert!(calls.contains("biome ci ."), "{calls}");
     assert!(calls.contains("--filter staged build"), "{calls}");
@@ -147,11 +168,11 @@ fn standalone() {
     );
     let calls = std::fs::read_to_string(fixture.tools.path().join("calls")).expect("calls");
     assert!(
-        calls.contains(
-            "fetch --frozen-lockfile --ignore-scripts --ignore-pnpmfile --modules-dir "
-        ) && calls.contains("\n--config.minimum-release-age-exclude=@perishlab/* --config.verify-deps-before-run=error install --offline --frozen-lockfile\n"),
+        calls.contains("fetch --frozen-lockfile --ignore-scripts --ignore-pnpmfile --modules-dir ")
+            && calls.contains(&fixture.install()),
         "{calls}"
     );
+    assert!(fixture.prepared(&calls), "{calls}");
     assert!(!calls.contains("enable"), "{calls}");
 }
 

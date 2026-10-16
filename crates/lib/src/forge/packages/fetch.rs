@@ -188,4 +188,46 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(phases, ["preinstall", "install", "postinstall", "prepare"]);
     }
+
+    #[test]
+    fn shadowed() {
+        let root = tempfile::tempdir().unwrap();
+        let home = tempfile::tempdir().unwrap();
+        let default = tempfile::tempdir().unwrap();
+        archive(root.path(), "");
+        std::fs::write(root.path().join("package.json"), serde_json::json!({"name":"fixture","private":true,"dependencies":{"fixture-dependency":"file:dependency.tgz"}}).to_string()).unwrap();
+        std::fs::write(root.path().join("pnpm-workspace.yaml"), "packages: []\n").unwrap();
+        let plain = |args: &[&str]| {
+            let mut command = std::process::Command::new("pnpm");
+            command
+                .args(args)
+                .current_dir(root.path())
+                .env("NPM_CONFIG_USERCONFIG", "/dev/null")
+                .env("XDG_CACHE_HOME", default.path());
+            process::capture(command, "plain pnpm").unwrap()
+        };
+        plain(&["install", "--lockfile-only", "--ignore-scripts"]);
+        let mut flags = super::super::exclusions(root.path()).unwrap();
+        flags.push(super::super::cache(home.path()).unwrap());
+        run(root.path(), &flags).unwrap();
+        plain(&["install", "--frozen-lockfile", "--ignore-scripts"]);
+        std::fs::remove_dir_all(root.path().join("node_modules")).unwrap();
+        let product = product(root.path());
+        let mut command = product.command("pnpm").unwrap();
+        command
+            .args(&flags)
+            .args([
+                "install",
+                "--offline",
+                "--frozen-lockfile",
+                "--ignore-scripts",
+            ])
+            .current_dir(root.path());
+        let output =
+            String::from_utf8(process::capture(command, "guard install").unwrap()).unwrap();
+        assert!(
+            output.contains("supply-chain policies (verified"),
+            "Guard's install must reuse its preparation's verification: {output}"
+        );
+    }
 }
