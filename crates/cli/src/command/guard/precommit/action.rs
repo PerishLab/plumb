@@ -75,8 +75,9 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
         paths,
     } in prepared
     {
-        let exclusions = if name == "guard/web" {
-            let mut flags = plumb::packages::exclusions(&index.root)?;
+        let (exclusions, policy) = if name == "guard/web" {
+            let policy = plumb::packages::Policy::read(&index.root)?;
+            let mut flags = policy.flags.clone();
             let home = plumb::config::value("PLUMB_HOME")
                 .map(std::path::PathBuf::from)
                 .or_else(|| plumb::config::data("plumb"))
@@ -89,9 +90,9 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
             {
                 command.splice(1..1, flags.iter().cloned());
             }
-            flags
+            (flags, policy)
         } else {
-            Vec::new()
+            Default::default()
         };
         let mut probes = manifest
             .as_deref()
@@ -115,10 +116,9 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
             programs.push("rustc".into());
         }
         let environment = super::environment::capture(root, &programs, &inputs)?;
-        let environment = if name == "guard/plumb" {
-            super::environment::observed(environment, observation.as_ref())?
-        } else {
-            environment
+        let environment = match name.as_str() {
+            "guard/plumb" => super::environment::observed(environment, observation.as_ref())?,
+            _ => environment.combine(policy.environment()?)?,
         };
         let environment = match &lease {
             Some(lease) => super::environment::managed(environment, lease)?,
