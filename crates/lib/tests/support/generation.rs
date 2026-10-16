@@ -94,19 +94,13 @@ fn pointer() {
 
 #[test]
 fn source() {
-    #[cfg(unix)]
-    use std::os::unix::fs::PermissionsExt as _;
-
     let root = tempfile::tempdir().expect("source");
     std::fs::create_dir(root.path().join("rules")).expect("rules");
     std::fs::write(root.path().join("rules/probe.toml"), "answer = 42\n").expect("rule");
-    std::fs::write(root.path().join("SKILL.md"), "# Probe\n").expect("skill");
     #[cfg(unix)]
-    std::fs::set_permissions(
-        root.path().join("SKILL.md"),
-        std::fs::Permissions::from_mode(0o755),
-    )
-    .expect("mode");
+    plumb::testing::executable(&root.path().join("SKILL.md"), "# Probe\n");
+    #[cfg(not(unix))]
+    std::fs::write(root.path().join("SKILL.md"), "# Probe\n").expect("skill");
     let bundle = v3::Bundle::read(
         root.path(),
         v3::Identity {
