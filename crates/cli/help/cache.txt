@@ -16,11 +16,26 @@ Retention has three bounds:
   fingerprint owns.
 - Working set, 2x. A live bucket keeps superseded units, most recently used
   first, only while the bucket stays within twice its working set.
-- Disk pressure. When the filesystem holding the caches has less than
-  PLUMB_GUARD_CACHE_RESERVE percent available (default 30), a live bucket
-  keeps only its working set.
+- Disk pressure. When the filesystem holding the caches has less than the
+  reserve percent available, a live bucket keeps only its working set. If the
+  filesystem is still below that line, whole live buckets are reclaimed, least
+  recently used first, until it is back above the line or none is left. Guard
+  never reclaims the bucket it is running in this way, and `reclaim` never
+  reclaims the most recently used bucket.
 Guard applies these to its own bucket after each action, and to every other
 bucket at most once a day, or after every action under pressure.
+
+The reserve is `reserve` in the [cache] section of PLUMB_HOME/plumb.toml, a
+percentage from 0 to 100; PLUMB_GUARD_CACHE_RESERVE overrides it, and the
+default is 30. The line is both where pressure starts and what it reclaims
+toward, so it should sit above every gate that other tools enforce on the
+same filesystem, with room for what they write. Concord's Artifact preflight,
+for one, refuses unless the larger of a quarter of the filesystem and 1 GiB
+stays available beyond the Artifact itself; the default 30 keeps 5% of the
+filesystem above that gate for the Artifact and for what builds write between
+sweeps. Raise the reserve when Artifacts are larger than that. Guard caches
+can only restore the line when they are what holds the filesystem below it;
+`status` says which.
 
 Reclamation holds the bucket's lease without waiting. A held lease reports the
 bucket active and leaves it alone. The lease file and the bucket's marker are
@@ -41,5 +56,8 @@ refuses; any other value is refused. Enabling it changes the execution world,
 so earlier proofs do not apply.
 
 `status` reports every bucket with its working set, superseded bytes and the
-current disk pressure. `reclaim` previews the same targets, and
-`reclaim --apply` removes them and reports the bytes reclaimed.
+current disk pressure: the line in bytes, how far below it the filesystem
+is, and whether reclaiming Guard caches restores it or the rest is held
+outside them. A bucket that pressure reclaims whole is marked. `reclaim`
+previews the same targets, and `reclaim --apply` removes them and reports the
+bytes reclaimed.
