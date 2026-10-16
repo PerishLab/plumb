@@ -18,6 +18,12 @@ use = ["rule://scan/app-rust"]
 when = ["app", ".runseal"]
 use = ["rule://scan/runseal-scripts"]
 
+# A .runseal seat holding TypeScript earns its scan set without app/; one
+# holding only data keeps its policy unchanged.
+[[shape]]
+when = [".runseal"]
+tsx = ["rule://scan/runseal-scripts"]
+
 [[shape]]
 when = ["lib"]
 use = ["rule://scan/lib-ts"]
