@@ -2,6 +2,7 @@ mod bucket;
 mod disk;
 mod graph;
 mod plan;
+mod pressure;
 mod sweep;
 
 pub(crate) use bucket::{adopt, home, lease, seat};
@@ -10,7 +11,7 @@ pub(crate) use sweep::{now, settle};
 use clap::Subcommand;
 use disk::Disk;
 use serde::Serialize;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const DAY: u64 = 24 * 60 * 60;
 
@@ -77,18 +78,30 @@ fn survey(apply: bool) -> Result<Report, String> {
     let home = bucket::home()?;
     let root = bucket::root(&home);
     let now = sweep::now();
-    let disk = Disk::read(&root)?;
+    let disk = Disk::read(&home, &root)?;
     let sweep = sweep::Sweep {
         apply,
         span: disk.span(),
         operator: true,
     };
-    let buckets: Vec<sweep::Entry> = graph::Node(&root)
+    let mut held: Vec<(PathBuf, sweep::Entry)> = graph::Node(&root)
         .listing()?
-        .iter()
+        .into_iter()
         .filter(|path| path.is_dir())
-        .map(|path| sweep::survey(&home, path, now, sweep))
+        .map(|path| {
+            let entry = sweep::survey(&home, &path, now, sweep);
+            (path, entry)
+        })
         .collect();
+    let keep = pressure::recent(&held);
+    let relief = pressure::Relief {
+        home: &home,
+        root: &root,
+        apply,
+        keep: keep.as_deref(),
+    };
+    relief.run(disk, &mut held)?;
+    let buckets: Vec<sweep::Entry> = held.into_iter().map(|(_, entry)| entry).collect();
     Ok(Report {
         schema: bucket::SCHEMA,
         idle: sweep::IDLE,
@@ -115,6 +128,9 @@ fn render(report: &Report) {
             entry.targets.len(),
             entry.identity.as_deref().unwrap_or("-"),
         );
+        if entry.evicted {
+            println!("             pressure: whole bucket, least recently used first");
+        }
         if let Some(refusal) = &entry.refusal {
             println!("             refused: {refusal}");
         }
@@ -133,12 +149,26 @@ fn render(report: &Report) {
         report.span
     );
     println!(
-        "disk: {} of {} available; pressure below {}%: {}",
+        "disk: {} of {} available; pressure below {}% ({}): {}",
         bytes(report.disk.available),
         bytes(report.disk.total),
         report.disk.reserve,
+        bytes(report.disk.line),
         if report.disk.pressure { "yes" } else { "no" }
     );
+    if report.disk.pressure {
+        let short = bytes(report.disk.deficit);
+        if report.reclaimable >= report.disk.deficit {
+            println!(
+                "pressure: {short} below the line; Guard caches hold it, and reclaiming these targets restores the line"
+            );
+        } else {
+            println!(
+                "pressure: {short} below the line; Guard caches can free {} of it, the rest is outside them",
+                bytes(report.reclaimable)
+            );
+        }
+    }
 }
 
 fn bytes(count: u64) -> String {
@@ -150,7 +180,7 @@ pub(crate) fn tour(own: &Path) -> Result<(), String> {
     let root = bucket::root(&home);
     let stamp = home.join("state").join("guard").join("cargo").join("tour");
     let now = sweep::now();
-    let disk = Disk::read(&root)?;
+    let disk = Disk::read(&home, &root)?;
     if !disk.pressure && now.saturating_sub(graph::Node(&stamp).stamp()) < DAY {
         return Ok(());
     }
@@ -163,10 +193,20 @@ pub(crate) fn tour(own: &Path) -> Result<(), String> {
         span: disk.span(),
         operator: false,
     };
-    for path in graph::Node(&root).listing()? {
-        if path.is_dir() && path != own {
-            sweep::survey(&home, &path, now, sweep);
-        }
-    }
-    Ok(())
+    let mut held: Vec<(PathBuf, sweep::Entry)> = graph::Node(&root)
+        .listing()?
+        .into_iter()
+        .filter(|path| path.is_dir() && path != own)
+        .map(|path| {
+            let entry = sweep::survey(&home, &path, now, sweep);
+            (path, entry)
+        })
+        .collect();
+    let relief = pressure::Relief {
+        home: &home,
+        root: &root,
+        apply: true,
+        keep: None,
+    };
+    relief.run(disk, &mut held)
 }

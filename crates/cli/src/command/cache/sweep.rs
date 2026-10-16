@@ -31,6 +31,7 @@ pub(super) struct Entry {
     pub targets: Vec<String>,
     pub reclaimable: u64,
     pub reclaimed: u64,
+    pub evicted: bool,
     pub refusal: Option<String>,
 }
 
@@ -60,6 +61,7 @@ pub(super) fn survey(home: &Path, bucket: &Path, now: u64, sweep: Sweep) -> Entr
         targets: Vec::new(),
         reclaimable: 0,
         reclaimed: 0,
+        evicted: false,
         refusal: None,
     };
     let Some(identity) = entry.identity.clone() else {
@@ -206,11 +208,61 @@ pub(crate) fn settle(bucket: &Path, identity: &str, since: u64) -> Result<u64, S
     }
     record.units = seen;
     record.used = now;
-    let span = Disk::read(bucket)?.span();
+    let span = Disk::read(&home, bucket)?.span();
     let plan = Seat(bucket).live(&record, now, span)?;
     let (freed, failure) = plan::execute(&plan.targets, &mut record);
     bucket::write(&path, &record)?;
     failure.map_or(Ok(freed), Err)
+}
+
+pub(super) fn evict(home: &Path, bucket: &Path, apply: bool, entry: &mut Entry) -> u64 {
+    let Some(identity) = bucket::identity(bucket) else {
+        return 0;
+    };
+    let path = bucket::ledger(home, bucket);
+    let mut record = match bucket::read(&path) {
+        Ok(Some(record)) if record.identity == identity => record,
+        _ => return 0,
+    };
+    let Ok(lock) = bucket::lease(bucket) else {
+        return 0;
+    };
+    if lock.try_lock().is_err() {
+        return 0;
+    }
+    let plan = match Seat(bucket).whole() {
+        Ok(plan) => plan,
+        Err(error) => {
+            entry.refusal = Some(error);
+            return 0;
+        }
+    };
+    let bytes: u64 = plan.targets.iter().map(|target| target.bytes).sum();
+    let targets = plan
+        .targets
+        .iter()
+        .flat_map(|target| &target.paths)
+        .map(|path| Seat(bucket).relative(path));
+    entry.evicted = true;
+    if !apply {
+        let extra = bytes.saturating_sub(entry.reclaimable);
+        entry.targets = targets.collect();
+        entry.reclaimable = bytes;
+        return extra;
+    }
+    entry.targets.extend(targets);
+    entry.reclaimable += bytes;
+    let (freed, failure) = plan::execute(&plan.targets, &mut record);
+    entry.reclaimed += freed;
+    if failure.is_none() {
+        record.units.clear();
+    }
+    if let Err(error) = bucket::write(&path, &record) {
+        entry.refusal = Some(error);
+    } else if let Some(error) = failure {
+        entry.refusal = Some(error);
+    }
+    freed
 }
 
 pub(crate) fn now() -> u64 {
