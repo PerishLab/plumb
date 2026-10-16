@@ -77,6 +77,11 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
     {
         let exclusions = if name == "guard/web" {
             let mut flags = plumb::packages::exclusions(&index.root)?;
+            let home = plumb::config::value("PLUMB_HOME")
+                .map(std::path::PathBuf::from)
+                .or_else(|| plumb::config::data("plumb"))
+                .ok_or("cannot own the Guard pnpm cache: no PLUMB_HOME")?;
+            flags.push(plumb::packages::cache(&home)?);
             flags.push("--config.verify-deps-before-run=error".into());
             for command in commands
                 .iter_mut()

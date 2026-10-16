@@ -35,6 +35,12 @@ pub fn exclusions(root: &Path) -> Result<Vec<String>, String> {
     Ok(flags)
 }
 
+pub fn cache(home: &Path) -> Result<String, String> {
+    let path = home.join("cache").join("guard").join("pnpm");
+    let path = path.to_str().ok_or("Guard pnpm cache path is not text")?;
+    Ok(format!("--config.cache-dir={path}"))
+}
+
 fn read(root: &Path, setting: &str) -> Result<Vec<u8>, String> {
     let argv = [
         "pnpm",
