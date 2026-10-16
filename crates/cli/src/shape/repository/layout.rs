@@ -35,6 +35,7 @@ pub struct Seat {
     pub path: String,
     pub anchor: Option<Vec<String>>,
     pub rule: Vec<String>,
+    pub scan: Vec<String>,
     pub retired: bool,
 }
 

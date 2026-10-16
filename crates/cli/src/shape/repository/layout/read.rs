@@ -130,17 +130,30 @@ impl<'a> Fields<'a> {
 fn seat(value: &toml::Value) -> Result<Seat, String> {
     let table = value.as_table().ok_or("a layout seat must be a table")?;
     let held = Fields(table);
-    held.known(&["path", "anchor", "rule", "kind", "note"])?;
+    held.known(&["path", "anchor", "rule", "scan", "kind", "note"])?;
     let path = held.text("path")?;
     if path.is_empty() || path.starts_with('/') || path.contains("//") {
         return Err(format!("layout seat {path} is not a seat path"));
     }
+    let scan = within(&path, held.names("scan")?.unwrap_or_default())?;
     Ok(Seat {
         path,
         anchor: held.names("anchor")?,
         rule: held.names("rule")?.unwrap_or_default(),
+        scan,
         retired: held.retired()?,
     })
+}
+
+fn within(path: &str, globs: Vec<String>) -> Result<Vec<String>, String> {
+    let prefix = format!("{path}/");
+    match globs
+        .iter()
+        .find(|glob| !glob.starts_with(&prefix) || glob.split('/').any(|part| part == ".."))
+    {
+        Some(glob) => Err(format!("layout seat {path} scan {glob} leaves its seat")),
+        None => Ok(globs),
+    }
 }
 
 fn group(value: &toml::Value) -> Result<Group, String> {

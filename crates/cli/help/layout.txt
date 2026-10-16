@@ -15,3 +15,9 @@ leniently, it has not been judged.
 anchor = [] governs a level while leaving its members unjudged, so a shape that
 is real and undecided stays visible as data instead of as a gap. A retired seat
 keeps its row and stops judging, and the name it held becomes unknown again.
+
+scan = ["types/**/*.d.ts"] on a seat brings a location the repository owns into
+Ectropy's scan: each glob must stay inside its seat, joins the expected include,
+and makes the seat path a module root. Plumb's canonical shape still owns the
+defaults; a seat-declared glob is reported as noted on every doctor run, so the
+deviation stays visible instead of hiding behind an exclude.
