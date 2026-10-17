@@ -122,7 +122,7 @@ impl Seat<'_> {
         ))
     }
 
-    pub fn report(&self, marker: Option<&str>) -> Result<String, String> {
+    pub fn report(&self, marker: Option<&str>, home: Option<&Path>) -> Result<String, String> {
         let stable = match marker {
             Some(marker) => below(self.listing, marker),
             None => plumb::land::rejoin::latest(tags(self.listing)),
@@ -130,16 +130,12 @@ impl Seat<'_> {
         let Some(stable) = stable else {
             return Ok("no stable marker stands below; nothing is owed".to_string());
         };
-        let mut said = vec![format!("stable {} at {}", stable.marker, stable.commit)];
-        for (obligation, settled) in self.statuses(&stable)? {
-            let state = if settled { "settled" } else { "owed" };
-            let mut line = format!("  {state:<8} {} [{}]", obligation.name, obligation.rule.0);
-            if !settled {
-                line.push_str(&format!(": run {}", obligation.hint(&stable)));
-            }
-            said.push(line);
-        }
-        Ok(said.join("\n"))
+        let statuses = self.statuses(&stable)?;
+        Ok(said(
+            &stable,
+            &statuses,
+            observed(self.spec, &stable.marker, home),
+        ))
     }
 
     pub fn rejoined(&self, stable: &Stable) -> Result<bool, String> {
@@ -206,6 +202,51 @@ impl Seat<'_> {
         .map(|found| found.is_some())
         .map_err(|error| format!("cannot read {source} for {}: {error}", stable.marker))
     }
+}
+
+pub fn said(
+    stable: &Stable,
+    statuses: &[(&Obligation, bool)],
+    observation: Option<String>,
+) -> String {
+    let mut said = vec![format!("stable {} at {}", stable.marker, stable.commit)];
+    for (obligation, settled) in statuses {
+        let state = if *settled { "settled" } else { "owed" };
+        let mut line = format!("  {state:<8} {} [{}]", obligation.name, obligation.rule.0);
+        if !settled {
+            line.push_str(&format!(": run {}", obligation.hint(stable)));
+        }
+        said.push(line);
+    }
+    said.extend(observation);
+    said.join("\n")
+}
+
+pub fn observed(spec: &Spec, marker: &str, home: Option<&Path>) -> Option<String> {
+    let home = home.filter(|_| spec.skill)?;
+    let product = &spec.product;
+    let lagging = plumb::skill::briefs(home, product)
+        .into_iter()
+        .filter(|brief| brief.below(marker))
+        .map(|brief| {
+            let held = brief.version.as_deref().map_or_else(
+                || "no brief".to_string(),
+                |version| format!("the {version} brief, below {marker}"),
+            );
+            format!(
+                "  {} seat {} holds {held}: install {product} {marker}, then run {product} skill upgrade",
+                brief.seat.agent,
+                brief.seat.path.display()
+            )
+        })
+        .collect::<Vec<_>>();
+    if lagging.is_empty() {
+        return None;
+    }
+    Some(format!(
+        "observed on this machine, not owed:\n{}",
+        lagging.join("\n")
+    ))
 }
 
 pub fn shipped(record: Option<&Distribution>, commit: &str) -> bool {

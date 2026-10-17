@@ -211,3 +211,42 @@ fn drift() {
     assert_eq!(hits.archive.load(Ordering::SeqCst), 0);
     let _ = fs::remove_dir_all(seat);
 }
+
+fn worn(home: &Path, version: &str, keeper: &str) -> PathBuf {
+    let path = home.join(".grok").join("skills").join("plumb");
+    fs::create_dir_all(&path).expect("seat");
+    fs::write(
+        path.join("metadata.json"),
+        format!(r#"{{"schema":1,"name":"plumb","version":"{version}","keeper":"{keeper}"}}"#),
+    )
+    .expect("mark");
+    path
+}
+
+#[test]
+fn briefs() {
+    let home = root("briefs");
+    assert!(plumb::skill::briefs(&home, "plumb").is_empty());
+    fs::create_dir_all(home.join(".codex")).expect("codex");
+    let path = worn(&home, "v1.0.0", "plumb");
+    let found = plumb::skill::briefs(&home, "plumb");
+    let held = |agent: &str| {
+        found
+            .iter()
+            .find(|brief| brief.seat.agent == agent)
+            .unwrap_or_else(|| panic!("{agent} seat"))
+    };
+    assert_eq!(found.len(), 2);
+    assert_eq!(held("grok").seat.path, path);
+    assert_eq!(held("grok").version.as_deref(), Some("v1.0.0"));
+    assert_eq!(held("codex").version, None);
+    assert!(held("codex").below("v1.0.0"));
+    assert!(held("grok").below("v1.0.1-rc.1"));
+    assert!(held("grok").below("v1.1.0"));
+    assert!(!held("grok").below("v1.0.0"));
+    assert!(!held("grok").below("v0.9.0"));
+    worn(&home, "v1.0.0", "plumb-stage");
+    let staged = plumb::skill::briefs(&home, "plumb");
+    assert!(staged.iter().all(|brief| brief.version.is_none()));
+    assert!(!home.join("state").exists());
+}

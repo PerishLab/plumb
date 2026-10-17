@@ -1,7 +1,7 @@
-use super::{Ask, Error, Kit, Record, fetch, place, state};
+use super::{Ask, Error, Kit, Record, Seat, agent, fetch, place, state};
 use semver::Version;
 use serde::Serialize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Target {
@@ -192,6 +192,31 @@ impl Survey<'_> {
         };
         Ok(status(record, standing, action, note))
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Brief {
+    pub seat: Seat,
+    pub version: Option<String>,
+}
+
+impl Brief {
+    pub fn below(&self, marker: &str) -> bool {
+        let Some(held) = self.version.as_deref().and_then(|raw| version(raw).ok()) else {
+            return true;
+        };
+        version(marker).is_ok_and(|ceiling| held < ceiling)
+    }
+}
+
+pub fn briefs(home: &Path, name: &str) -> Vec<Brief> {
+    agent::seats(home, name)
+        .into_iter()
+        .map(|seat| {
+            let version = place::marker(&seat.path, name).map(|mark| mark.version);
+            Brief { seat, version }
+        })
+        .collect()
 }
 
 fn version(raw: &str) -> Result<Version, Error> {

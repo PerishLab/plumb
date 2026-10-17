@@ -1,4 +1,4 @@
-use super::{OBLIGATIONS, Seat, below, shipped};
+use super::{OBLIGATIONS, Seat, below, observed, said, shipped};
 use crate::shape::release::Spec;
 use clap::CommandFactory as _;
 use plumb::land::rejoin::{Stable, latest, tags};
@@ -165,4 +165,69 @@ fn closing() {
     assert!(seat(LISTING).closed(&stable).expect("read"));
     let open = format!("{LISTING}x\trefs/heads/release/v1.1.0\n");
     assert!(!seat(&open).closed(&stable).expect("read"));
+}
+
+fn skilled(skill: bool) -> Spec {
+    let manifest = format!(
+        "[identity]\nns = \"demo\"\n[release]\nauthority = \"https://releases.demo.example\"\nbinaries = [\"demo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\nskill = {skill}\n"
+    );
+    Spec::decode(Path::new("."), &manifest, "fixture").expect("spec")
+}
+
+fn brief(home: &Path, version: &str) {
+    let path = home.join(".grok/skills/demo");
+    std::fs::create_dir_all(&path).expect("seat");
+    std::fs::write(
+        path.join("metadata.json"),
+        format!(r#"{{"schema":1,"name":"demo","version":"{version}","keeper":"demo"}}"#),
+    )
+    .expect("mark");
+}
+
+#[test]
+fn observation() {
+    let spec = skilled(true);
+    let stable = latest(tags(LISTING)).expect("stable");
+    let statuses = OBLIGATIONS
+        .iter()
+        .filter(|held| (held.applies)(&spec))
+        .enumerate()
+        .map(|(index, obligation)| (obligation, index % 2 == 0))
+        .collect::<Vec<_>>();
+    let home = tempfile::tempdir().expect("home");
+    brief(home.path(), "v1.0.0");
+    let seen = observed(&spec, &stable.marker, Some(home.path()));
+    let plain = said(&stable, &statuses, None);
+    let report = said(&stable, &statuses, seen);
+    assert_eq!(statuses.len(), OBLIGATIONS.len());
+    assert!(
+        plain.contains("owed     its skill lodged on Depot"),
+        "{plain}"
+    );
+    assert!(
+        plain.contains("settled  its release line closed"),
+        "{plain}"
+    );
+    let observed = report
+        .strip_prefix(&format!("{plain}\n"))
+        .unwrap_or_else(|| panic!("obligations changed: {report}"));
+    assert_eq!(
+        observed,
+        format!(
+            "observed on this machine, not owed:\n  grok seat {} holds the v1.0.0 brief, below v1.1.0: install demo v1.1.0, then run demo skill upgrade",
+            home.path().join(".grok/skills/demo").display()
+        )
+    );
+}
+
+#[test]
+fn unobserved() {
+    let home = tempfile::tempdir().expect("home");
+    assert_eq!(observed(&skilled(true), "v1.1.0", Some(home.path())), None);
+    assert_eq!(observed(&skilled(true), "v1.1.0", None), None);
+    brief(home.path(), "v1.1.0");
+    assert_eq!(observed(&skilled(true), "v1.1.0", Some(home.path())), None);
+    brief(home.path(), "v1.0.0");
+    assert_eq!(observed(&skilled(false), "v1.1.0", Some(home.path())), None);
+    assert!(observed(&skilled(true), "v1.1.0", Some(home.path())).is_some());
 }
