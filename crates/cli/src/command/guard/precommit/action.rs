@@ -1,22 +1,22 @@
 use super::super::workflow::tree::Tree;
 use super::tree::{self, Index};
-use super::world::Check;
-use plumb::guard::{Action, Descriptor};
+use super::world::Prepared;
+use plumb::guard::Descriptor;
 use std::path::Path;
 
-struct Preparation {
-    name: String,
-    input: String,
-    commands: Vec<Vec<String>>,
-    probes: Vec<plumb::rule::Probe>,
-    tools: Vec<String>,
-    manifest: Option<String>,
-    paths: Vec<String>,
+pub(super) struct Preparation {
+    pub name: String,
+    pub input: String,
+    pub commands: Vec<Vec<String>>,
+    pub probes: Vec<plumb::rule::Probe>,
+    pub tools: Vec<String>,
+    pub manifest: Option<String>,
+    pub paths: Vec<String>,
 }
 
-struct Catalog<'a> {
-    tree: &'a Tree,
-    product: &'a str,
+pub(super) struct Catalog<'a> {
+    pub tree: &'a Tree,
+    pub product: &'a str,
 }
 
 pub(super) struct Binding<'a> {
@@ -35,122 +35,24 @@ pub(super) fn resolved(root: &Path) -> Result<Descriptor, String> {
 #[locus::trace(with = crate::observation::view())]
 fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
     let tree = plumb::guard::tree(root)?;
-    let index = Index::new(root, &tree)?;
-    let (locked, observed) = if latest {
-        let (locked, observed) = crate::command::packages::observed(&index.root, "ci-latest")?;
-        (locked, Some(plumb::packages::Observation::new(observed)))
-    } else {
-        (plumb::packages::locked(&index.root, "local-locked")?, None)
-    };
-    let resolution = Some(locked);
-    let captured = Tree::read(&index.root, None)?;
-    let manifest = captured.text("plumb.toml")?;
-    let product = crate::shape::product::named(manifest.as_deref())?;
-    let prepared = Catalog {
-        tree: &captured,
-        product: &product,
+    let seat = super::cargo::seat(root, &tree)?;
+    if plumb::guard::staged(root, &tree).is_ok() {
+        let index = Index::new(root, &tree)?;
+        let prepared = Prepared::new(root, &index, latest, seat.as_deref())?;
+        if let Some(proof) = prepared.reused(root, &tree) {
+            return Ok(proof);
+        }
     }
-    .checks()?;
-    let observation = if prepared.iter().any(|check| check.name == "guard/plumb") {
-        Some(match observed {
-            Some(observed) => observed,
-            None => plumb::packages::Observation::npm(&index.root, "local-locked")?,
-        })
-    } else {
-        None
-    };
-    let workspace = captured.has("Cargo.toml");
-    let lease = workspace
-        .then(|| super::cargo::Lease::new(&index.root))
+    let lease = seat
+        .is_some()
+        .then(|| super::cargo::Lease::new(root))
         .transpose()?;
-    let inputs = std::env::vars_os().collect::<Vec<_>>();
-    let mut checks = Vec::new();
-    for Preparation {
-        name,
-        input,
-        mut commands,
-        probes: declared,
-        tools,
-        manifest,
-        paths,
-    } in prepared
-    {
-        let (exclusions, policy) = if name == "guard/web" {
-            let policy = plumb::packages::Policy::read(&index.root)?;
-            let mut flags = policy.flags.clone();
-            let home = plumb::config::value("PLUMB_HOME")
-                .map(std::path::PathBuf::from)
-                .or_else(|| plumb::config::data("plumb"))
-                .ok_or("cannot own the Guard pnpm cache: no PLUMB_HOME")?;
-            flags.push(plumb::packages::cache(&home)?);
-            flags.push("--config.verify-deps-before-run=error".into());
-            for command in commands
-                .iter_mut()
-                .filter(|command| command.first().is_some_and(|program| program == "pnpm"))
-            {
-                command.splice(1..1, flags.iter().cloned());
-            }
-            (flags, policy)
-        } else {
-            Default::default()
-        };
-        let mut probes = manifest
-            .as_deref()
-            .map(|manifest| crate::catalog::probe::read(manifest, paths.iter().map(String::as_str)))
-            .transpose()?
-            .unwrap_or_default();
-        for (at, probe) in declared.into_iter().enumerate() {
-            probes.insert(format!("workflow.probe.{name}.{at}"), vec![probe]);
-        }
-        let mut programs = crate::catalog::probe::programs(&probes)?;
-        programs.extend(tools);
-        programs.extend(
-            commands
-                .iter()
-                .filter_map(|command| command.first().cloned()),
-        );
-        if workspace {
-            programs.push("cargo".into());
-        }
-        if programs.iter().any(|program| program == "cargo") {
-            programs.push("rustc".into());
-        }
-        let environment = super::environment::capture(root, &programs, &inputs)?;
-        let environment = match name.as_str() {
-            "guard/plumb" => super::environment::observed(environment, observation.as_ref())?,
-            _ => environment.combine(policy.environment()?)?,
-        };
-        let environment = match &lease {
-            Some(lease) => super::environment::managed(environment, lease)?,
-            None => environment,
-        };
-        let execution = Some(super::world::execution(
-            &name,
-            environment,
-            &index.root,
-            &programs,
-        )?);
-        let binding = Binding {
-            execution: execution.as_ref(),
-            probes: &probes,
-        };
-        let world = super::world::digest(&name, &input, &commands, &binding)?;
-        checks.push(Check {
-            proof: Action { name, input, world },
-            commands,
-            exclusions,
-            execution,
-        });
-    }
-    if let Ok(proof) = plumb::guard::staged(root, &tree)
-        && proof
-            .actions
-            .iter()
-            .eq(checks.iter().map(|check| &check.proof))
-        && proof.resolution == resolution
-    {
+    let index = Index::new(root, &tree)?;
+    let prepared = Prepared::new(root, &index, latest, seat.as_deref())?;
+    if let Some(proof) = prepared.reused(root, &tree) {
         return Ok(proof);
     }
+    let Prepared { checks, resolution } = prepared;
     let pending = checks
         .iter()
         .filter(|check| !super::cache::contains(&check.proof))
@@ -190,7 +92,7 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
 }
 
 impl Catalog<'_> {
-    fn checks(&self) -> Result<Vec<Preparation>, String> {
+    pub(super) fn checks(&self) -> Result<Vec<Preparation>, String> {
         let tree = self.tree;
         let manifest = tree.text("plumb.toml")?;
         let mut held = manifest

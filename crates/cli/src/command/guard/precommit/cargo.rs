@@ -9,6 +9,18 @@ pub(super) struct Lease {
     _lock: File,
 }
 
+pub fn seat(root: &Path, tree: &str) -> Result<Option<PathBuf>, String> {
+    let listed = super::tree::git(
+        root,
+        &["ls-tree", "--name-only", tree, "--", "Cargo.toml"],
+        "read the staged tree",
+    )?;
+    if listed.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(cache::seat(&cache::home()?, &identity(root)?)))
+}
+
 impl Lease {
     pub fn new(root: &Path) -> Result<Self, String> {
         let identity = identity(root)?;
