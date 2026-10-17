@@ -1,6 +1,20 @@
+use std::collections::BTreeSet;
+use std::fs::File;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, MutexGuard};
+use std::time::{Duration, SystemTime};
 
 pub const PREFIX: &str = "guard-";
+
+const AGE: Duration = Duration::from_secs(3600);
+
+static LIVE: Mutex<Vec<(PathBuf, PathBuf)>> = Mutex::new(Vec::new());
+
+pub struct Claim {
+    pub root: PathBuf,
+    path: PathBuf,
+    _lock: File,
+}
 
 pub fn root() -> Option<PathBuf> {
     crate::config::value("PLUMB_HOME")
@@ -23,6 +37,142 @@ pub fn contains(root: &Path, path: &Path) -> bool {
             .file_name()
             .and_then(|name| name.to_str())
             .is_some_and(|name| name.starts_with(PREFIX))
+}
+
+impl Claim {
+    pub fn new(base: &Path, source: &Path) -> Result<Self, String> {
+        loop {
+            let (lock, path) = tempfile::Builder::new()
+                .prefix(PREFIX)
+                .suffix(".lock")
+                .tempfile_in(base)
+                .and_then(|file| file.keep().map_err(|error| error.error))
+                .map_err(|error| format!("cannot reserve guard worktree: {error}"))?;
+            lock.lock()
+                .map_err(|error| format!("cannot hold guard worktree: {error}"))?;
+            if same(&path, &lock) {
+                let root = path.with_extension("");
+                live().push((source.to_path_buf(), root.clone()));
+                return Ok(Self {
+                    root,
+                    path,
+                    _lock: lock,
+                });
+            }
+        }
+    }
+}
+
+impl Drop for Claim {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+        live().retain(|(_, root)| root != &self.root);
+    }
+}
+
+pub fn held() -> bool {
+    !live().is_empty()
+}
+
+pub fn abandon() {
+    for (source, root) in live().drain(..) {
+        let _ = crate::config::detached("git")
+            .arg("-C")
+            .arg(&source)
+            .args(["worktree", "remove", "--force"])
+            .arg(&root)
+            .output();
+        let _ = std::fs::remove_file(root.with_extension("lock"));
+    }
+}
+
+pub fn reap(base: &Path) {
+    let Ok(entries) = std::fs::read_dir(base) else {
+        return;
+    };
+    let trees = entries
+        .flatten()
+        .filter_map(|entry| entry.file_name().into_string().ok())
+        .filter(|name| name.starts_with(PREFIX))
+        .map(|name| base.join(name.strip_suffix(".lock").unwrap_or(&name)))
+        .collect::<BTreeSet<_>>();
+    for tree in trees {
+        sweep(&tree);
+    }
+}
+
+fn sweep(tree: &Path) {
+    let path = tree.with_extension("lock");
+    if !path.exists() && young(tree) {
+        return;
+    }
+    let Ok(lock) = File::options()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(&path)
+    else {
+        return;
+    };
+    if lock.try_lock().is_err() || !same(&path, &lock) {
+        return;
+    }
+    remove(tree);
+    let _ = std::fs::remove_file(&path);
+}
+
+fn young(tree: &Path) -> bool {
+    std::fs::metadata(tree)
+        .and_then(|metadata| metadata.modified())
+        .ok()
+        .and_then(|modified| SystemTime::now().duration_since(modified).ok())
+        .is_none_or(|age| age < AGE)
+}
+
+fn remove(tree: &Path) {
+    let common = std::fs::read_to_string(tree.join(".git"))
+        .ok()
+        .and_then(|link| {
+            link.trim()
+                .strip_prefix("gitdir:")
+                .map(|admin| tree.join(admin.trim()))
+        })
+        .and_then(|admin| admin.parent().and_then(Path::parent).map(Path::to_path_buf));
+    if let Some(common) = &common {
+        git(common, &["worktree", "remove", "--force"], Some(tree));
+    }
+    let _ = std::fs::remove_dir_all(tree);
+    if let Some(common) = &common {
+        git(common, &["worktree", "prune"], None);
+    }
+}
+
+fn git(common: &Path, args: &[&str], tree: Option<&Path>) {
+    let mut command = crate::config::detached("git");
+    command.arg("--git-dir").arg(common).args(args);
+    if let Some(tree) = tree {
+        command.arg(tree);
+    }
+    let _ = command.output();
+}
+
+fn live() -> MutexGuard<'static, Vec<(PathBuf, PathBuf)>> {
+    LIVE.lock().unwrap_or_else(|held| held.into_inner())
+}
+
+#[cfg(unix)]
+fn same(path: &Path, file: &File) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    match (std::fs::metadata(path), file.metadata()) {
+        (Ok(named), Ok(held)) => named.dev() == held.dev() && named.ino() == held.ino(),
+        _ => false,
+    }
+}
+
+#[cfg(not(unix))]
+fn same(path: &Path, _: &File) -> bool {
+    path.exists()
 }
 
 #[cfg(test)]

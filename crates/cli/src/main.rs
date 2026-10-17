@@ -220,6 +220,7 @@ fn main() {
             1
         }
     };
+    let code = execution::signal::received().unwrap_or(code);
     if let Some(observation) = observation {
         observation.finish(code);
     }

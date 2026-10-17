@@ -1,5 +1,6 @@
 pub(crate) mod cargo;
 pub(crate) mod observation;
+pub(crate) mod signal;
 
 use plumb::config::{Contract, Environment, Execution};
 use plumb::rule::{Observation, Probe};

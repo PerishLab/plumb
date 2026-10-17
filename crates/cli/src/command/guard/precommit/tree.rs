@@ -6,6 +6,7 @@ use std::process::{Command, Output};
 pub(crate) struct Index {
     pub root: PathBuf,
     source: PathBuf,
+    _claim: plumb::integration::staging::Claim,
 }
 
 impl Index {
@@ -47,14 +48,10 @@ impl Index {
             .ok_or_else(|| "cannot stage guard worktree: no PLUMB_HOME".to_string())?;
         std::fs::create_dir_all(&base)
             .map_err(|error| format!("cannot create {}: {error}", base.display()))?;
-        let temporary = tempfile::Builder::new()
-            .prefix(plumb::integration::staging::PREFIX)
-            .tempdir_in(&base)
-            .map_err(|error| format!("cannot reserve guard worktree: {error}"))?;
-        let root = temporary.path().to_path_buf();
-        temporary
-            .close()
-            .map_err(|error| format!("cannot prepare guard worktree: {error}"))?;
+        crate::execution::signal::watch();
+        let claim = plumb::integration::staging::Claim::new(&base, source)?;
+        plumb::integration::staging::reap(&base);
+        let root = claim.root.clone();
         let _ = plumb::config::detached("git")
             .arg("-C")
             .arg(source)
@@ -77,6 +74,7 @@ impl Index {
         Ok(Self {
             root,
             source: source.to_path_buf(),
+            _claim: claim,
         })
     }
 }
@@ -144,9 +142,10 @@ pub(super) fn execute(
     command.args(args).current_dir(root);
     command.stdout(std::io::stderr());
     unhook(&mut command);
-    let status = command
-        .status()
+    let mut child = command
+        .spawn()
         .map_err(|error| format!("cannot run {}: {error}", argv.join(" ")))?;
+    let status = crate::execution::signal::wait(&mut child, argv)?;
     drop(compiler);
     if status.success() {
         if let Some(cache) = &cache {
