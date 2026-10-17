@@ -112,12 +112,9 @@ fn inspect(root: &Path, environment: &Environment) -> Result<(), String> {
     crate::execution::inspect("cargo", &home.join("tmp/guard"), environment)
 }
 
-pub(super) fn managed(
-    environment: Environment,
-    lease: &super::cargo::Lease,
-) -> Result<Environment, String> {
+pub(super) fn managed(environment: Environment, seat: &Path) -> Result<Environment, String> {
     let mut command = crate::cargo::command();
-    command.env("CARGO_TARGET_DIR", &lease.root);
+    command.env("CARGO_TARGET_DIR", seat);
     let bind = command
         .get_envs()
         .filter_map(|(key, value)| value.map(|value| (key, value)))
@@ -205,7 +202,7 @@ mod tests {
         let programs = ["cargo", "rustc", "node", "pnpm"].map(str::to_string);
         let environment = capture(root.path(), &programs, &inputs).unwrap();
         let lease = super::super::cargo::Lease::new(root.path()).unwrap();
-        let environment = managed(environment, &lease).unwrap();
+        let environment = managed(environment, &lease.root).unwrap();
         assert_eq!(environment.get("CARGO_TARGET_DIR"), lease.root.to_str());
         let execution =
             super::super::world::execution("guard/web", environment, root.path(), &programs)
