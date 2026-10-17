@@ -1,5 +1,7 @@
+mod coherent;
 use super::process;
-use semver::Version;
+pub(super) use coherent::select as coherent;
+use semver::{Version, VersionReq};
 use std::path::Path;
 
 pub(super) fn latest(root: &Path, ecosystem: &str, name: &str) -> Result<String, String> {
@@ -19,9 +21,12 @@ pub(super) fn latest(root: &Path, ecosystem: &str, name: &str) -> Result<String,
         stable(&version)?;
         return Ok(version);
     }
+    cargo(&index(root, name)?)
+}
+
+pub(super) fn index(root: &Path, name: &str) -> Result<Vec<u8>, String> {
     let url = format!("https://cargo.perish.uk/{}", route(name));
-    let bytes = process::run(root, "probe", &probe(&url))?;
-    cargo(&bytes)
+    process::run(root, "probe", &probe(&url))
 }
 
 pub(super) fn probe(url: &str) -> [String; 13] {
@@ -52,9 +57,14 @@ fn stable(text: &str) -> Result<Version, String> {
     Ok(version)
 }
 
-pub(super) fn cargo(bytes: &[u8]) -> Result<String, String> {
+pub(super) struct Entry {
+    pub(super) version: Version,
+    pub(super) requires: Vec<(String, VersionReq)>,
+}
+
+pub(super) fn entries(bytes: &[u8]) -> Result<Vec<Entry>, String> {
     let text = std::str::from_utf8(bytes).map_err(|error| error.to_string())?;
-    let mut latest = None;
+    let mut entries = Vec::new();
     for line in text.lines().filter(|line| !line.trim().is_empty()) {
         let item: serde_json::Value = serde_json::from_str(line)
             .map_err(|error| format!("invalid registry line: {error}"))?;
@@ -68,12 +78,33 @@ pub(super) fn cargo(bytes: &[u8]) -> Result<String, String> {
         {
             continue;
         }
-        if latest.as_ref().is_none_or(|held| &version > held) {
-            latest = Some(version);
+        let mut requires = Vec::new();
+        for dep in item
+            .get("deps")
+            .and_then(serde_json::Value::as_array)
+            .into_iter()
+            .flatten()
+        {
+            let field = |key: &str| dep.get(key).and_then(serde_json::Value::as_str);
+            if field("kind") == Some("dev") || field("registry").is_some() {
+                continue;
+            }
+            let (Some(name), Some(req)) = (field("package").or(field("name")), field("req")) else {
+                return Err(format!("registry line {text} has an unreadable dependency"));
+            };
+            let req = VersionReq::parse(req).map_err(|error| error.to_string())?;
+            requires.push((name.to_string(), req));
         }
+        entries.push(Entry { version, requires });
     }
-    latest
-        .map(|version| version.to_string())
+    entries.sort_by(|left, right| right.version.cmp(&left.version));
+    Ok(entries)
+}
+
+pub(super) fn cargo(bytes: &[u8]) -> Result<String, String> {
+    entries(bytes)?
+        .first()
+        .map(|entry| entry.version.to_string())
         .ok_or_else(|| "registry exposes no stable version".into())
 }
 

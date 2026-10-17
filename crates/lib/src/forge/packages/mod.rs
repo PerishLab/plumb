@@ -66,10 +66,22 @@ impl Plan {
         {
             return Err("first-party npm resolution requires a committed pnpm lockfile".into());
         }
+        let mut indexes = std::collections::BTreeMap::new();
+        for (_, name) in names.iter().filter(|(family, _)| family == "cargo") {
+            indexes.insert(
+                name.clone(),
+                registry::entries(&registry::index(root, name)?)?,
+            );
+        }
+        let mut crates = registry::coherent(&indexes)?;
         let mut packages = Vec::new();
         for (ecosystem, name) in names {
+            let version = match crates.remove(&name).filter(|_| ecosystem == "cargo") {
+                Some(version) => version,
+                None => registry::latest(root, &ecosystem, &name)?,
+            };
             packages.push(Package {
-                version: registry::latest(root, &ecosystem, &name)?,
+                version,
                 ecosystem,
                 name,
             });
