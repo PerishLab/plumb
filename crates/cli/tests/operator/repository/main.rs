@@ -5,6 +5,8 @@ mod packages;
 mod precommit;
 #[cfg(unix)]
 mod reclaim;
+#[cfg(unix)]
+mod staging;
 mod world;
 
 #[path = "../../support/mod.rs"]

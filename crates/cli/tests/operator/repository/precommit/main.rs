@@ -208,7 +208,7 @@ fn integration() {
     }
 }
 
-fn atoms(home: &Path) -> Vec<Value> {
+pub(super) fn atoms(home: &Path) -> Vec<Value> {
     let mut atoms = Vec::new();
     for entry in std::fs::read_dir(home.join("state/locus")).expect("buffer") {
         let path = entry.expect("entry").path();
