@@ -16,7 +16,7 @@ pub use source::Depot;
 use state::Ledger;
 pub use state::Record;
 use std::path::PathBuf;
-pub use survey::{Action, Report, Standing, Status, Target};
+pub use survey::{Action, Brief, Report, Standing, Status, Target, briefs};
 
 pub struct Kit {
     pub name: String,

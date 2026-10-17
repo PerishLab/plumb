@@ -1,5 +1,5 @@
 use super::course::Course;
-use super::owed::Seat;
+use super::owed::{Seat, observed};
 use super::value;
 use super::wharf::{git, reference, repository, text};
 use crate::shape::release::Spec;
@@ -168,15 +168,22 @@ pub(in crate::command) fn close(
     if course.dry() {
         return Ok(course.plan());
     }
-    Ok(format!(
-        "closed {branch} at {head}; its markers keep its history"
-    ))
+    let closed = format!("closed {branch} at {head}; its markers keep its history");
+    if abandon {
+        return Ok(closed);
+    }
+    let home = plumb::config::home();
+    Ok(match observed(&line.spec, &version, home.as_deref()) {
+        Some(seen) => format!("{closed}\n{seen}"),
+        None => closed,
+    })
 }
 
 pub(in crate::command) fn owed(version: Option<&str>, remote: &str) -> Result<String, String> {
     let line = Line::read(remote)?;
     let marker = version.map(named);
-    line.seat().report(marker.as_deref())
+    let home = plumb::config::home();
+    line.seat().report(marker.as_deref(), home.as_deref())
 }
 
 fn released(line: &Line, version: &str, commit: &str, head: &str) -> Result<(), String> {

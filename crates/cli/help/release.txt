@@ -41,6 +41,10 @@ refuse any later version, on any channel, while the highest stable below it
 still owes one, and name the command that settles each: ship dispatch, release
 rejoin, depot consign and release close. Owed
 reports each obligation of that stable marker, settled or owed.
+Where the product declares a skill, owed and a successful close also observe,
+apart from the obligations, each agent seat on this machine whose brief is
+missing or below that stable marker, and name the install and skill upgrade
+that bring it current; the observation never fails owed or refuses a version.
 
 Release never builds, compiles, publishes, or edits a version line. Wharf decides
 release identity at distribution time, so sources declare version 0.0.0 and a

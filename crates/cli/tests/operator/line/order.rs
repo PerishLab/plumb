@@ -5,12 +5,12 @@ use std::process::{Command, Output};
 const ORIGIN: &str = "git@github.com:PerishLab/probe.git";
 const TRANSPORT: &str = "#!/bin/sh\nwhile [ \"$#\" -gt 1 ]; do shift; done\ncd \"$(dirname \"$0\")\" && eval \"git ${1#git-}\"\n";
 
-struct Hub {
+pub(super) struct Hub {
     fixture: tempfile::TempDir,
 }
 
 impl Hub {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         let held = Self {
             fixture: tempfile::tempdir().expect("fixture"),
         };
@@ -29,7 +29,7 @@ impl Hub {
         self.fixture.path().join("transport.sh")
     }
 
-    fn work(&self) -> PathBuf {
+    pub(super) fn work(&self) -> PathBuf {
         self.fixture.path().join("work")
     }
 
@@ -54,24 +54,28 @@ impl Hub {
         self.git(&["push", "-q", bare.to_str().expect("utf8"), reference]);
     }
 
-    fn mark(&self, marker: &str) {
+    pub(super) fn mark(&self, marker: &str) {
         self.git(&["tag", "-a", marker, "-m", marker]);
         self.push(&format!("refs/tags/{marker}"));
     }
 
-    fn line(&self, version: &str) {
+    pub(super) fn line(&self, version: &str) {
         self.push(&format!("HEAD:refs/heads/release/{version}"));
     }
 
-    fn plumb(&self, args: &[&str]) -> Output {
-        super::command::plumb(&self.work(), args)
+    pub(super) fn command(&self, args: &[&str]) -> Command {
+        let mut command = super::command::plumb(&self.work(), args);
+        command
             .env(
                 "GIT_SSH_COMMAND",
                 format!("sh {}", self.transport().display()),
             )
-            .env("GIT_SSH_VARIANT", "simple")
-            .output()
-            .expect("plumb")
+            .env("GIT_SSH_VARIANT", "simple");
+        command
+    }
+
+    fn plumb(&self, args: &[&str]) -> Output {
+        self.command(args).output().expect("plumb")
     }
 
     fn refused(&self, args: &[&str], highest: &str) {
