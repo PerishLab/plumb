@@ -162,14 +162,12 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
         }
         for check in pending {
             eprintln!("guard {}", check.proof.name);
+            let execution = tree::Execution {
+                execution: check.execution.as_ref(),
+                observation: crate::observation::bind("check", &check.proof.name),
+            };
             for command in &check.commands {
-                tree::execute(
-                    &index.root,
-                    command,
-                    &tree::Execution {
-                        execution: check.execution.as_ref(),
-                    },
-                )?;
+                tree::execute(&index.root, command, &execution)?;
                 tree::unchanged(&index)?;
             }
             if let Some(lease) = &lease {

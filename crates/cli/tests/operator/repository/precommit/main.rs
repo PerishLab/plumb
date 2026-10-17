@@ -9,6 +9,7 @@ mod refresh;
 mod runtime;
 mod world;
 use serde_json::Value;
+use std::path::Path;
 use std::process::{Command, Output};
 pub(super) struct Repo {
     fixture: tempfile::TempDir,
@@ -205,4 +206,64 @@ fn integration() {
                 .contains("Issue-managed topic worktree")
         );
     }
+}
+
+fn atoms(home: &Path) -> Vec<Value> {
+    let mut atoms = Vec::new();
+    for entry in std::fs::read_dir(home.join("state/locus")).expect("buffer") {
+        let path = entry.expect("entry").path();
+        let name = path.file_name().expect("name").to_string_lossy();
+        if name == "active.jsonl" || name.starts_with("sealed-") {
+            let content = std::fs::read_to_string(path).expect("records");
+            atoms.extend(
+                content
+                    .lines()
+                    .map(|line| serde_json::from_str::<Value>(line).expect("atom")),
+            );
+        }
+    }
+    atoms
+}
+
+#[test]
+fn observed() {
+    let root = cache::fixture();
+    let home = support::home();
+    std::fs::write(
+        home.path().join("plumb.toml"),
+        "[locus]\nenabled = true\nendpoint = 'http://127.0.0.1:0'\n",
+    )
+    .expect("observation");
+    let output = cache::run(root.path(), home.path());
+    cache::success(&output);
+    assert!(String::from_utf8_lossy(&output.stderr).contains("guard guard/rust"));
+    let atoms = atoms(home.path());
+    let spans = atoms
+        .iter()
+        .filter(|atom| {
+            atom["source"]["module"] == "plumb::command::guard::precommit::tree"
+                && atom["source"]["function"] == "execute"
+        })
+        .collect::<Vec<_>>();
+    for edge in ["enter", "return"] {
+        assert!(
+            spans.iter().any(|atom| atom["source"]["edge"] == edge),
+            "tree::execute {edge} is observed: {atoms:?}"
+        );
+    }
+    for atom in &spans {
+        assert_eq!(atom["context"]["plumb.check"], "guard/rust", "{atom}");
+        assert_eq!(atom["context"]["plumb.command"], "guard", "{atom}");
+    }
+    let prepared = atoms
+        .iter()
+        .filter(|atom| atom["source"]["function"] == "prepare")
+        .collect::<Vec<_>>();
+    assert!(!prepared.is_empty(), "action::prepare is observed");
+    assert!(
+        prepared
+            .iter()
+            .all(|atom| atom["context"].get("plumb.check").is_none()),
+        "the check name stays on the check's own spans"
+    );
 }

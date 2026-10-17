@@ -94,15 +94,18 @@ impl Drop for Index {
 
 pub(super) struct Execution<'a> {
     pub execution: Option<&'a plumb::config::Execution>,
+    pub observation: Option<crate::observation::Frame>,
 }
 
-#[locus::trace(with = crate::observation::view())]
+#[locus::trace(with = execution.observation.as_ref().map(|(engine, context)| (*engine, context)))]
 pub(super) fn execute(
     root: &Path,
     argv: &[String],
     execution: &Execution<'_>,
 ) -> Result<(), String> {
-    let Execution { execution: context } = *execution;
+    let Execution {
+        execution: context, ..
+    } = *execution;
     let (program, args) = argv
         .split_first()
         .ok_or_else(|| "guard action has no command".to_string())?;
