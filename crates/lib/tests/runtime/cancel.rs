@@ -69,23 +69,23 @@ fn wakes() {
 fn cooperates() {
     let (cancel, context) = Cancel::child();
     let (started, ready) = std::sync::mpsc::channel();
-    let worker = std::thread::spawn(move || {
-        support::block(context.carry(async {
-            let mut rounds = 0u32;
-            loop {
-                let held = Context::current().get::<Cancel>().unwrap();
-                if held.cancelled() {
-                    return rounds;
-                }
-                rounds += 1;
-                if rounds == 1 {
-                    started.send(()).unwrap();
-                }
-                support::rest().await;
-            }
-        }))
-    });
+    let worker = std::thread::spawn(move || support::block(context.carry(spin(started))));
     ready.recv_timeout(Duration::from_secs(5)).unwrap();
     cancel.cancel();
     assert!(worker.join().unwrap() > 0);
+}
+
+async fn spin(started: std::sync::mpsc::Sender<()>) -> u32 {
+    let mut rounds = 0u32;
+    loop {
+        let held = Context::current().get::<Cancel>().unwrap();
+        if held.cancelled() {
+            return rounds;
+        }
+        rounds += 1;
+        if rounds == 1 {
+            started.send(()).unwrap();
+        }
+        support::rest().await;
+    }
 }
