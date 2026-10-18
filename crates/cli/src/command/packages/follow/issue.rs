@@ -1,8 +1,10 @@
+use super::State;
 use super::provider::Provider;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 const MARKER: &str = "<!-- plumb.auto/v1 operation=follow -->";
+const RECOVERY: &str = "see: plumb cookbook follow.foreign-writer";
 
 pub(super) fn find(provider: &Provider<'_>) -> Result<Option<u64>, String> {
     let issues = provider.pages(&format!(
@@ -149,24 +151,8 @@ pub(super) struct Noop {
 
 impl Provider<'_> {
     pub(super) fn completion(&self, number: u64) -> Result<Option<Noop>, String> {
-        let issue = self.issue(number)?;
-        let owner = issue["user"]["id"]
-            .as_u64()
-            .filter(|id| *id > 0)
-            .ok_or("closed Auto has no writer identity")?;
-        let comments = self.pages(&format!(
-            "repos/{}/issues/{}/comments?per_page=100",
-            self.repository, number
-        ))?;
         let mut found = None;
-        for comment in comments {
-            let body = text(&comment, "body")?;
-            if !body.contains("<!-- plumb.auto-noop/") {
-                continue;
-            }
-            if comment["user"]["id"].as_u64() != Some(owner) {
-                return Err("Auto no-op receipt has another operation writer".into());
-            }
+        for body in self.evidence(number, "<!-- plumb.auto-noop/", "Auto no-op receipt")? {
             let value = body
                 .split_once("<!-- plumb.auto-noop/v1\n")
                 .and_then(|(_, value)| value.strip_suffix("\n-->"))
@@ -174,5 +160,97 @@ impl Provider<'_> {
             found = Some(serde_json::from_str::<Noop>(value).map_err(|error| error.to_string())?);
         }
         Ok(found)
+    }
+
+    pub(super) fn owner(&self, issue: u64) -> Result<u64, String> {
+        self.issue(issue)?["user"]["id"]
+            .as_u64()
+            .filter(|id| *id > 0)
+            .ok_or_else(|| "Auto issue has no operation writer identity".into())
+    }
+
+    fn operator(&self) -> Result<String, String> {
+        let query = ["api", "graphql", "-f", "query=query{viewer{login}}"];
+        let bytes = self.command(&query.map(String::from))?;
+        let value: Value = serde_json::from_slice(&bytes)
+            .map_err(|error| format!("provider identity is unreadable: {error}"))?;
+        value["data"]["viewer"]["login"]
+            .as_str()
+            .filter(|login| !login.is_empty())
+            .map(str::to_string)
+            .ok_or_else(|| "provider identity is unreadable".into())
+    }
+
+    pub(super) fn writer(&self, issue: u64) -> Result<(), String> {
+        let held = self.issue(issue)?;
+        let writer = held["user"]["login"]
+            .as_str()
+            .filter(|login| !login.is_empty())
+            .ok_or("Auto issue has no operation writer identity")?;
+        let operator = self.operator()?;
+        if operator != writer {
+            return Err(format!(
+                "Auto #{issue} has operation writer {writer}, but this follow runs as {operator}; only the writer settles its automation-owned Auto, so nothing was written; rerun follow as {writer}"
+            ));
+        }
+        Ok(())
+    }
+
+    pub(super) fn evidence(
+        &self,
+        issue: u64,
+        marker: &str,
+        what: &str,
+    ) -> Result<Vec<String>, String> {
+        let owner = self.owner(issue)?;
+        let comments = self.pages(&format!(
+            "repos/{}/issues/{issue}/comments?per_page=100",
+            self.repository
+        ))?;
+        let (mut held, mut foreign) = (Vec::new(), Vec::new());
+        for comment in comments {
+            let body = comment["body"]
+                .as_str()
+                .ok_or("Auto comment is unreadable")?;
+            if !body.contains(marker) {
+                continue;
+            }
+            if comment["user"]["id"].as_u64() == Some(owner) {
+                held.push(body.to_string());
+            } else {
+                foreign.push(body.to_string());
+            }
+        }
+        if foreign.iter().any(|body| !held.contains(body)) {
+            return Err(format!("{what} has another operation writer; {RECOVERY}"));
+        }
+        Ok(held)
+    }
+
+    pub(super) fn stopped(&self, state: &State, error: String) -> String {
+        if state.issue == 0 {
+            return format!(
+                "{error}; no Auto issue or pull could be recorded; reread the provider before retry"
+            );
+        }
+        if let Err(refusal) = self.writer(state.issue) {
+            return if refusal == error {
+                error
+            } else {
+                format!("{error}; {refusal}")
+            };
+        }
+        let body = format!(
+            "Auto follow stopped: {error}\n\nExisting pull: {}. Registered paths and required Guard remain unchanged. Resolve the blocker, then rerun plumb follow.",
+            if state.pull == 0 {
+                "none could be recorded; reread the provider before resuming".into()
+            } else {
+                format!("#{}", state.pull)
+            }
+        );
+        if let Err(recording) = self.comment(state.issue, &body) {
+            return format!("{error}; failure comment could not be recorded: {recording}");
+        }
+        error
     }
 }

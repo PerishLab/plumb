@@ -205,25 +205,11 @@ impl Absorption<'_, '_> {
 
 impl Provider<'_> {
     pub(super) fn absorption(&self, number: u64) -> Result<Option<Receipt>, String> {
-        let owner = self.issue(number)?["user"]["id"]
-            .as_u64()
-            .filter(|id| *id > 0)
-            .ok_or("Auto issue has no operation writer identity")?;
-        let comments = self.pages(&format!(
-            "repos/{}/issues/{number}/comments?per_page=100",
-            self.repository
-        ))?;
         let mut found = None;
-        for comment in comments {
-            let body = issue::text(&comment, "body")?;
-            let Some((_, tail)) = body.split_once(MARKER) else {
-                continue;
-            };
-            if comment["user"]["id"].as_u64() != Some(owner) {
-                return Err("Auto absorption receipt has another operation writer".into());
-            }
-            let value = tail
-                .strip_suffix("\n-->")
+        for body in self.evidence(number, MARKER, "Auto absorption receipt")? {
+            let value = body
+                .split_once(MARKER)
+                .and_then(|(_, tail)| tail.strip_suffix("\n-->"))
                 .ok_or("Auto absorption receipt has an unknown shape")?;
             let held: Receipt = serde_json::from_str(value)
                 .map_err(|error| format!("Auto absorption receipt is unreadable: {error}"))?;

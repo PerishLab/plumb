@@ -18,5 +18,11 @@ blocker, foreign branch movement, permissions refusal or failing Guard stops
 the operation. A stopped operation records the available Issue, pull and failure
 evidence. Repair the blocker and rerun this same command.
 
+Only the Auto Issue's author, its operation writer, runs or settles it. Any
+other identity refuses before its first write, naming the writer and itself.
+Another identity's marker comment refuses every run until it is resolved,
+unless the writer posted the identical comment itself; see plumb cookbook
+follow.foreign-writer.
+
 --github-command selects the caller's gh-compatible provider executable. Auto
 has no Concord Member and does not repair business source or perform releases.

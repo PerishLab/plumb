@@ -1,6 +1,9 @@
 use super::{Fixture, Seat, State, isolated, work};
 use serde_json::json;
 
+#[path = "candidate/operator.rs"]
+mod operator;
+
 #[test]
 fn moved() {
     let fixture = Fixture::new(json!({}));

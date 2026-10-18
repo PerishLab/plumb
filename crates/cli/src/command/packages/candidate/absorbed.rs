@@ -1,7 +1,7 @@
 use super::super::super::super::closure;
 use super::super::super::super::provider::Intent;
 use super::{Fixture, Seat, State, advance, commit, engine, fixture, isolated, work};
-use serde_json::Value;
+use serde_json::{Value, json};
 use std::path::Path;
 
 pub(super) fn settled(fixture: &Fixture, source: &Path, seat: &Seat, old: &str) {
@@ -115,4 +115,52 @@ fn foreign() {
     assert_eq!(provider.issue(17).unwrap()["state"], "open");
     assert_eq!(provider.remote(17).unwrap(), Some(old));
     assert!(provider.absorption(17).unwrap().is_none());
+}
+
+#[test]
+fn shadowed() {
+    if !isolated("base::absorbed::shadowed") {
+        return;
+    }
+    let (fixture, source, seat) = held();
+    let (mut state, old) = stopped(&fixture, &source, &seat);
+    std::fs::write(fixture.root.path().join("receiptfault"), "once").unwrap();
+    let error = engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap_err();
+    assert!(
+        error.contains("interrupted after absorption receipt"),
+        "{error}"
+    );
+    let path = fixture.root.path().join("comments.json");
+    let mut comments: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    let receipt = comments
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|comment| {
+            comment["body"]
+                .as_str()
+                .unwrap()
+                .contains("plumb.auto-absorbed/v1")
+        })
+        .unwrap();
+    receipt["user"] = json!({"id":2,"login":"foreign-operator"});
+    let body = receipt["body"].clone();
+    std::fs::write(&path, comments.to_string()).unwrap();
+    let mut state = seat.read("Example/probe").unwrap();
+    let message = engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap();
+    assert!(message.contains("was absorbed by main"), "{message}");
+    let comments: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    let authors = comments
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|comment| comment["body"] == body)
+        .map(|comment| comment["user"]["id"].as_u64().unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(authors, [2, 1]);
+    let provider = fixture.provider();
+    assert_eq!(provider.absorption(17).unwrap().unwrap().head, old);
+    assert_eq!(provider.issue(17).unwrap()["state"], "closed");
+    assert!(provider.remote(17).unwrap().is_none());
+    assert_eq!(seat.read("Example/probe").unwrap().issue, 0);
 }
