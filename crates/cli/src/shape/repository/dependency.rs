@@ -16,6 +16,7 @@ pub struct Dependencies {
     pub missing: Option<String>,
     pub direct: Vec<(String, String)>,
     pub unread: Vec<String>,
+    pub locked: bool,
 }
 
 impl Dependencies {

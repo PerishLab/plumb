@@ -50,8 +50,8 @@ tags = ["configuration", "dependency"]
 [[rule]]
 id = "deps.first-party-stable-latest"
 summary = "First-party dependencies resolve to stable latest"
-law = "A direct dependency published by perish.code resolves exactly to the live latest non-prerelease, non-yanked version at its compiled registry authority, except the plumb substrate, whose currency the depot floor decides."
-evidence = "Direct first-party Cargo declarations in the root, app and crates manifests, their exact Cargo.lock resolutions, and live registry metadata."
+law = "A direct dependency published by perish.code resolves exactly to the live latest non-prerelease, non-yanked version at its compiled registry authority, except the plumb substrate, whose currency the depot floor decides. Under a local-locked Guard observation a lagging lock is noted, not refused: the local Guard verifies the committed lock while the organization Guard late-binds first-party packages to latest, so lag is never a defect of the change, and Auto follow lifts it."
+evidence = "Direct first-party Cargo declarations in the root, app and crates manifests, their exact Cargo.lock resolutions, live registry metadata, and the resolution context of a valid Guard package observation."
 standing = "mechanized"
 owner = "plumb"
 tags = ["dependency"]

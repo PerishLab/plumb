@@ -133,7 +133,10 @@ seat=$(dirname "$0")
 if [ "$1" = --version ]; then exec {candidate} "$@"; fi
 if [ "$1" != doctor ] || [ -n "${{WHARF_PACKAGES_TOKEN:-}}" ] || [ "$NPM_CONFIG_USERCONFIG" != /dev/null ]; then exit 93; fi
 printf '%s\n' "$PLUMB_PACKAGES_OBSERVATION" >> "$seat/calls"
-exec {candidate} "$@"
+{candidate} "$@" > "$seat/said"
+status=$?
+cat "$seat/said"
+exit $status
 "#
         ),
     );
@@ -159,12 +162,27 @@ exec {candidate} "$@"
     assert_eq!(first.stdout, cached.stdout);
     assert_eq!(std::fs::read_to_string(&calls).unwrap(), recorded);
     std::fs::write(&latest, "\"0.2.0\"").unwrap();
-    let stale = run();
-    assert!(!stale.status.success());
-    let said = String::from_utf8_lossy(&stale.stderr);
+    let message = tools.path().join("message");
+    std::fs::write(&message, "Lagging lock\n").unwrap();
+    let attached = support::plumb()
+        .args(["guard", ".", "--attach"])
+        .arg(&message)
+        .current_dir(root)
+        .env("PLUMB_HOME", home.path())
+        .env("PATH", &path)
+        .env("WHARF_PACKAGES_TOKEN", "SYNTHETIC_ONLY_ENV")
+        .output()
+        .unwrap();
+    world::success(&attached);
+    assert_eq!(std::fs::read_to_string(&calls).unwrap().lines().count(), 2);
+    let said = std::fs::read_to_string(tools.path().join("said")).unwrap();
     assert!(
-        said.contains("0.1.0") && said.contains("0.2.0") && said.contains("out of true"),
+        said.contains("noted: npm @perishlab/probe is locked at 0.1.0, stable latest is 0.2.0; the organization Guard late-binds it")
+            && !said.contains("out of true:"),
         "{said}"
     );
+    let stale = run();
+    world::success(&stale);
+    assert!(String::from_utf8_lossy(&stale.stdout).contains("local-locked"));
     assert_eq!(std::fs::read_to_string(&calls).unwrap().lines().count(), 2);
 }

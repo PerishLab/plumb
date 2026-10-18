@@ -1,4 +1,4 @@
-use super::finding::{Found, blind, wrong};
+use super::finding::{Found, Seed, blind, wrong};
 use crate::catalog::rules::deps as rule;
 use crate::catalog::rules::release::DATUM_RECORDED;
 use crate::catalog::set;
@@ -35,7 +35,7 @@ pub fn check(held: &shape::Shape) -> Found {
         found.push(blind(&rule::SELF_BUILT_DEPENDENCY_UNPINNED, error.clone()));
     }
     for dependency in &held.dependencies.held {
-        currency(dependency, &mut found);
+        currency(dependency, held.dependencies.locked, &mut found);
     }
     loaders(&held.dependencies, &mut found);
     for (seat, name) in &held.node {
@@ -67,7 +67,7 @@ fn loaders(held: &shape::Dependencies, found: &mut Found) {
 
 const SUBSTRATE: [&str; 2] = ["plumb", "@perishlab/plumb"];
 
-fn currency(dependency: &Dependency, found: &mut Found) {
+fn currency(dependency: &Dependency, locked: bool, found: &mut Found) {
     if let Some((_, current)) = set::current()
         .retired
         .iter()
@@ -82,6 +82,15 @@ fn currency(dependency: &Dependency, found: &mut Found) {
     for verdict in plumb_cli::judge(dependency) {
         match verdict {
             Verdict::Stale { .. } if SUBSTRATE.contains(&dependency.name.as_str()) => {}
+            Verdict::Stale { resolution, latest } if locked => found.push(Seed::noted(
+                &rule::FIRST_PARTY_STABLE_LATEST,
+                format!(
+                    "{} {} is locked at {resolution}, stable latest is {latest}; the organization Guard late-binds it [{}]",
+                    dependency.ecosystem.name(),
+                    dependency.name,
+                    dependency.seat
+                ),
+            )),
             Verdict::Stale { resolution, latest } => found.push(wrong(
                 &rule::FIRST_PARTY_STABLE_LATEST,
                 format!(
