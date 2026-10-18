@@ -18,11 +18,11 @@ pub(crate) fn execute(command: Command) -> i32 {
     match command {
         Command::Follow {
             target,
-            github_command,
+            github,
             json,
         } => packages::follow::run(packages::follow::Input {
             root: PathBuf::from(target.root),
-            github: github_command,
+            github,
             json,
         }),
         Command::Lift { target, json } => packages::lift(PathBuf::from(target.root), json),
