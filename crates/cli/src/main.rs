@@ -84,8 +84,12 @@ pub(crate) enum Command {
     Follow {
         #[command(flatten)]
         target: Root,
-        #[arg(long, default_value = "gh")]
-        github_command: PathBuf,
+        #[arg(
+            long = "github-command",
+            value_name = "GITHUB_COMMAND",
+            default_value = "gh"
+        )]
+        github: PathBuf,
         #[arg(long)]
         json: bool,
     },

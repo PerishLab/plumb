@@ -21,8 +21,8 @@ pub enum Deed {
         channel: String,
         #[arg(long)]
         version: Option<String>,
-        #[arg(long)]
-        dry_run: bool,
+        #[arg(long = "dry-run")]
+        dry: bool,
         #[arg(long)]
         json: bool,
     },
@@ -73,7 +73,7 @@ impl Command<'_> {
             Deed::Upgrade {
                 channel,
                 version,
-                dry_run,
+                dry,
                 json,
             } => {
                 let ask = Ask {
@@ -81,7 +81,7 @@ impl Command<'_> {
                     version,
                     ..Ask::default()
                 };
-                if dry_run {
+                if dry {
                     self.report("upgrade_dry_run", kit.status(&ask), json)
                 } else {
                     self.told("upgraded", kit.upgrade(&ask), json)
