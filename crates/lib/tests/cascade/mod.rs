@@ -270,4 +270,11 @@ fn onion() {
     assert_eq!(held.name, "filed");
     assert_eq!(held.count, 2);
     assert_eq!(held.theme, "plain");
+    let over = RigPartial {
+        count: Some(9),
+        ..RigPartial::default()
+    };
+    let held = Rig::layered(Some(&path), over).expect("the top layer should resolve");
+    assert_eq!(held.name, "filed");
+    assert_eq!(held.count, 9);
 }

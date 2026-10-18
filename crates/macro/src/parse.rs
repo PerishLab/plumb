@@ -168,9 +168,9 @@ fn app(item: &DeriveInput, partial: &Ident) -> TokenStream {
             #vis fn resolve(
                 file: ::core::option::Option<&::std::path::Path>,
             ) -> ::core::result::Result<Self, ::plumb::config::Error> {
-                Self::resolve_with(file, ::core::default::Default::default())
+                Self::layered(file, ::core::default::Default::default())
             }
-            #vis fn resolve_with(
+            #vis fn layered(
                 file: ::core::option::Option<&::std::path::Path>,
                 over: #partial,
             ) -> ::core::result::Result<Self, ::plumb::config::Error> {
