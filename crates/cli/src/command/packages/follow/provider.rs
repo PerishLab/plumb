@@ -71,10 +71,11 @@ impl Provider<'_> {
 
     pub fn comment(&self, number: u64, body: &str) -> Result<(), String> {
         let endpoint = format!("repos/{}/issues/{number}/comments", self.repository);
+        let owner = self.owner(number)?;
         if self
             .pages(&format!("{endpoint}?per_page=100"))?
             .iter()
-            .any(|comment| comment["body"] == body)
+            .any(|comment| comment["body"] == body && comment["user"]["id"].as_u64() == Some(owner))
         {
             return Ok(());
         }
@@ -181,25 +182,8 @@ impl Provider<'_> {
     }
 
     pub(super) fn recorded(&self, issue: u64) -> Result<Option<Intent>, String> {
-        let owner = self.issue(issue)?["user"]["id"]
-            .as_u64()
-            .filter(|id| *id > 0)
-            .ok_or("Auto issue has no operation writer identity")?;
-        let comments = self.pages(&format!(
-            "repos/{}/issues/{issue}/comments?per_page=100",
-            self.repository
-        ))?;
         let mut standing = None;
-        for comment in comments {
-            let body = comment["body"]
-                .as_str()
-                .ok_or("Auto comment is unreadable")?;
-            if !body.contains("<!-- plumb.auto-push/") {
-                continue;
-            }
-            if comment["user"]["id"].as_u64() != Some(owner) {
-                return Err("Auto publication intent has another operation writer".into());
-            }
+        for body in self.evidence(issue, "<!-- plumb.auto-push/", "Auto publication intent")? {
             let value = body
                 .split_once("<!-- plumb.auto-push/v1\n")
                 .and_then(|(_, value)| value.strip_suffix("\n-->"))

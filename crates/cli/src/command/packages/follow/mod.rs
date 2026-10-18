@@ -54,30 +54,7 @@ fn execute(input: &Input) -> Result<String, String> {
     };
     let seat = Seat::open(&repository)?;
     let mut state = seat.read(&repository)?;
-    match resume(input, &provider, &seat, &mut state) {
-        Ok(message) => Ok(message),
-        Err(error) => {
-            if state.issue == 0 {
-                return Err(format!(
-                    "{error}; no Auto issue or pull could be recorded; reread the provider before retry"
-                ));
-            }
-            let body = format!(
-                "Auto follow stopped: {error}\n\nExisting pull: {}. Registered paths and required Guard remain unchanged. Resolve the blocker, then rerun plumb follow.",
-                if state.pull == 0 {
-                    "none could be recorded; reread the provider before resuming".into()
-                } else {
-                    format!("#{}", state.pull)
-                }
-            );
-            if let Err(recording) = provider.comment(state.issue, &body) {
-                return Err(format!(
-                    "{error}; failure comment could not be recorded: {recording}"
-                ));
-            }
-            Err(error)
-        }
-    }
+    resume(input, &provider, &seat, &mut state).map_err(|error| provider.stopped(&state, error))
 }
 
 fn resume(
@@ -96,10 +73,14 @@ fn resume(
     }
     work::git(&input.root, &["fetch", "origin"])?;
     if state.issue != 0 {
+        provider.writer(state.issue)?;
         closure::resume(&input.root, provider, seat, state)?;
     }
     if state.issue == 0 {
         state.issue = issue::find(provider)?.unwrap_or(0);
+        if state.issue != 0 {
+            provider.writer(state.issue)?;
+        }
     }
     if state.issue == 0 {
         let tree = work::git(&input.root, &["rev-parse", "origin/main^{tree}"])?;

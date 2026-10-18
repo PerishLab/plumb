@@ -1,0 +1,44 @@
+# follow.foreign-writer
+
+## Trigger
+
+`plumb follow` refused because an Auto follow Issue holds a marker comment (a
+`plumb.auto-push` publication intent, a `plumb.auto-absorbed` receipt or a
+`plumb.auto-noop` receipt) whose author is not the Issue's author, its
+operation writer, and the writer posted no identical comment itself. Only the
+writer's comments are Auto evidence. A foreign one is foreign progress, so
+every identity refuses at it, the writer included, until it is resolved. A
+follow run under a non-writer identity could leave one before Plumb refused
+such a run ahead of its first write.
+
+## Solution
+
+Resolve the foreign comment on the provider; never settle the Auto under
+another identity.
+
+1. Find the marker comment whose author differs from the Issue author. Leave
+   the writer's own comments untouched.
+2. Withdraw it by editing its body so the marker is gone and the edit says
+   why, for example
+   `gh api -X PATCH repos/<owner>/<repo>/issues/comments/<id> -f body='Withdrawn: written by <login>, not this Auto's operation writer <writer>.'`
+   Editing keeps the audit trail that deleting would lose.
+3. If the non-writer run also closed the Auto pull without merge, reopen it
+   while `auto/<number>` still stands at its recorded head. A closed unmerged
+   pull otherwise stops the writer for human judgment.
+4. Rerun follow as the writer. For an App-written Auto, rerun its Wharf follow
+   run or let the next main push dispatch one.
+5. If the writer cannot run, settle by hand with the evidence the writer would
+   record: comment the current main, its tree, and the pull head that adds no
+   change beyond it; close the Auto; then retire `auto/<number>` with
+   `git push --force-with-lease=refs/heads/auto/<number>:<head> origin :refs/heads/auto/<number>`.
+
+## Evidence
+
+PerishLab/santi#155 (PerishLab/plumb#395): a local follow under a user
+identity posted an absorption receipt on an Auto written by the Wharf follow
+App, then refused at its own readback. The App's run, twenty seconds behind,
+refused at the same receipt and could not settle the Auto.
+
+## EXIT
+
+Remove this entry when no open Auto Issue holds a marker comment from an identity other than its writer.

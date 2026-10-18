@@ -31,7 +31,7 @@ with (root / 'calls').open('a') as trace:
 if '/comments' in endpoint:
     comments = json.loads((root / 'comments.json').read_text())
     if payload:
-        comments.append(payload)
+        comments.append(dict(payload, user={'id': 1}))
         (root / 'comments.json').write_text(json.dumps(comments))
         result = payload
     else:
@@ -116,7 +116,8 @@ fn guard() {
 
 #[test]
 fn comments() {
-    let fixture = Fixture::new(json!({"repos/Example/probe/issues/17": {"state":"closed"}}));
+    let fixture =
+        Fixture::new(json!({"repos/Example/probe/issues/17": {"state":"closed","user":{"id":1}}}));
     let provider = fixture.provider();
     provider.comment(17, "same failure\nsecond line").unwrap();
     provider.comment(17, "same failure\nsecond line").unwrap();
@@ -127,19 +128,30 @@ fn comments() {
         )
         .unwrap();
     let calls = fixture.calls();
-    assert_eq!(
+    let posted = |body: &str| {
         calls
             .iter()
-            .filter(|call| call["payload"]["body"] == "same failure\nsecond line")
+            .filter(|call| call["payload"]["body"] == body)
+            .count()
+    };
+    assert_eq!(posted("same failure\nsecond line"), 1);
+    let patch = calls.last().unwrap();
+    assert_eq!(patch["payload"]["body"], "accepted\nexact body");
+    assert!(patch["args"].as_array().unwrap().contains(&json!("PATCH")));
+    let foreign = json!([{"body":"foreign copy","user":{"id":2}}]);
+    std::fs::write(
+        fixture.root.path().join("comments.json"),
+        foreign.to_string(),
+    )
+    .unwrap();
+    provider.comment(17, "foreign copy").unwrap();
+    assert_eq!(
+        fixture
+            .calls()
+            .iter()
+            .filter(|call| call["payload"]["body"] == "foreign copy")
             .count(),
         1
-    );
-    assert_eq!(calls[3]["payload"]["body"], "accepted\nexact body");
-    assert!(
-        calls[3]["args"]
-            .as_array()
-            .unwrap()
-            .contains(&json!("PATCH"))
     );
 }
 
