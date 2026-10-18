@@ -48,7 +48,7 @@ impl Fixture {
         work::git(&source, &["commit", "-q", "-m", "base"]).unwrap();
         work::git(&source, &["push", "-q", "origin", "main"]).unwrap();
         work::git(&source, &["fetch", "origin"]).unwrap();
-        std::fs::write(self.root.path().join("issue.json"), json!({"number":17,"type":{"name":"Auto"},"body":issue::body("Example/probe"),"state":"open","labels":[],"node_id":"fixture-issue","html_url":"https://github.com/Example/probe/issues/17","title":"Follow","updated_at":"2026-10-08T00:00:00Z","user":{"id":1,"login":"fixture-writer"}}).to_string()).unwrap();
+        std::fs::write(self.root.path().join("issue.json"), json!({"number":17,"type":{"name":"Auto"},"body":issue::body("Example/probe"),"state":"open","labels":[],"node_id":"fixture-issue","html_url":"https://github.com/Example/probe/issues/17","title":"Follow","updated_at":"2026-10-08T00:00:00Z","user":{"id":1,"login":"fixture-writer[bot]","type":"Bot"}}).to_string()).unwrap();
         super::super::writer::executable(
             &self.command,
             r#"#!/usr/bin/env python3
@@ -65,7 +65,7 @@ def head():
     return subprocess.check_output(['git','--git-dir',str(root/'origin.git'),'rev-parse','refs/heads/auto/17'], text=True).strip()
 if endpoint == 'graphql':
     viewer = root / 'viewer'
-    result = {'data':{'viewer':{'login':viewer.read_text() if viewer.exists() else 'fixture-writer'}}}
+    result = {'data':{'viewer':json.loads(viewer.read_text()) if viewer.exists() else {'databaseId':1,'login':'fixture-writer'}}}
 elif '/issues?' in endpoint:
     issue = json.loads((root / 'issue.json').read_text())
     result = [[issue]] if (root / 'discover').exists() and issue['state'] == 'open' else [[]]
@@ -108,7 +108,7 @@ elif '/comments' in endpoint:
         if 'plumb.auto-noop/v1' in payload['body'] and (root / 'commentfault').exists():
             (root / 'commentfault').unlink()
             sys.exit('fixture interrupted before no-op receipt')
-        comments.append(dict(payload, user={"id":1,"login":"fixture-writer"}))
+        comments.append(dict(payload, user={"id":1,"login":"fixture-writer[bot]","type":"Bot"}))
         (root / 'comments.json').write_text(json.dumps(comments))
         if 'plumb.auto-absorbed/v1' in payload['body'] and (root / 'receiptfault').exists():
             (root / 'receiptfault').unlink()

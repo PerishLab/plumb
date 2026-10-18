@@ -123,6 +123,12 @@ pub(super) fn text(value: &Value, key: &str) -> Result<String, String> {
         .ok_or_else(|| format!("provider field {key} is missing"))
 }
 
+fn actor(value: &Value, key: &str) -> Option<(u64, String)> {
+    let login = value["login"].as_str().filter(|login| !login.is_empty())?;
+    let id = value[key].as_u64().filter(|id| *id > 0)?;
+    Some((id, login.to_string()))
+}
+
 impl Provider<'_> {
     pub(super) fn published(
         &self,
@@ -169,28 +175,27 @@ impl Provider<'_> {
             .ok_or_else(|| "Auto issue has no operation writer identity".into())
     }
 
-    fn operator(&self) -> Result<String, String> {
-        let query = ["api", "graphql", "-f", "query=query{viewer{login}}"];
+    fn operator(&self) -> Result<(u64, String), String> {
+        let query = [
+            "api",
+            "graphql",
+            "-f",
+            "query=query{viewer{databaseId login}}",
+        ];
         let bytes = self.command(&query.map(String::from))?;
         let value: Value = serde_json::from_slice(&bytes)
             .map_err(|error| format!("provider identity is unreadable: {error}"))?;
-        value["data"]["viewer"]["login"]
-            .as_str()
-            .filter(|login| !login.is_empty())
-            .map(str::to_string)
+        actor(&value["data"]["viewer"], "databaseId")
             .ok_or_else(|| "provider identity is unreadable".into())
     }
 
     pub(super) fn writer(&self, issue: u64) -> Result<(), String> {
-        let held = self.issue(issue)?;
-        let writer = held["user"]["login"]
-            .as_str()
-            .filter(|login| !login.is_empty())
+        let (owner, writer) = actor(&self.issue(issue)?["user"], "id")
             .ok_or("Auto issue has no operation writer identity")?;
-        let operator = self.operator()?;
-        if operator != writer {
+        let (id, operator) = self.operator()?;
+        if id != owner {
             return Err(format!(
-                "Auto #{issue} has operation writer {writer}, but this follow runs as {operator}; only the writer settles its automation-owned Auto, so nothing was written; rerun follow as {writer}"
+                "Auto #{issue} has operation writer {writer} (id {owner}), but this follow runs as {operator} (id {id}); only the writer settles its automation-owned Auto, so nothing was written; rerun follow as {writer}"
             ));
         }
         Ok(())

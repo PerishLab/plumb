@@ -43,7 +43,8 @@ fn operator() {
             if !adopted {
                 seat.write(&held).unwrap();
             }
-            std::fs::write(fixture.root.path().join("viewer"), "foreign-operator").unwrap();
+            let viewer = json!({"databaseId":2,"login":"foreign-operator"});
+            std::fs::write(fixture.root.path().join("viewer"), viewer.to_string()).unwrap();
             let provider = fixture.provider();
             let remote = provider.remote(17).unwrap();
             let before = fixture.calls().len();
@@ -58,7 +59,7 @@ fn operator() {
             let error = provider.stopped(&state, error);
             assert!(
                 error.contains(
-                    "operation writer fixture-writer, but this follow runs as foreign-operator"
+                    "operation writer fixture-writer[bot] (id 1), but this follow runs as foreign-operator (id 2)"
                 ),
                 "{name} {adopted}: {error}"
             );
@@ -82,5 +83,53 @@ fn operator() {
                 if adopted { (0, 0) } else { (17, held.pull) }
             );
         }
+    }
+}
+
+#[test]
+fn bot() {
+    let fixture = Fixture::new(json!({}));
+    fixture.repository("pub fn answer() -> u8 { 42 }\n");
+    let provider = fixture.provider();
+    let state = State {
+        repository: "Example/probe".into(),
+        issue: 17,
+        pull: 18,
+        ..Default::default()
+    };
+    let written = || {
+        fixture
+            .calls()
+            .iter()
+            .filter(|call| !call["payload"].is_null())
+            .count()
+    };
+    assert_eq!(
+        provider.issue(17).unwrap()["user"]["login"],
+        "fixture-writer[bot]"
+    );
+    provider.writer(17).unwrap();
+    assert_eq!(provider.stopped(&state, "probe".into()), "probe");
+    assert_eq!(written(), 1);
+    let comments = std::fs::read_to_string(fixture.root.path().join("comments.json")).unwrap();
+    assert!(
+        comments.contains("Auto follow stopped: probe"),
+        "{comments}"
+    );
+    for (viewer, refusal) in [
+        (
+            json!({"databaseId":2,"login":"fixture-writer[bot]"}),
+            "operation writer fixture-writer[bot] (id 1), but this follow runs as fixture-writer[bot] (id 2)",
+        ),
+        (
+            json!({"login":"fixture-writer"}),
+            "provider identity is unreadable",
+        ),
+        (json!(null), "provider identity is unreadable"),
+    ] {
+        std::fs::write(fixture.root.path().join("viewer"), viewer.to_string()).unwrap();
+        let error = provider.stopped(&state, "probe".into());
+        assert!(error.contains(refusal), "{viewer}: {error}");
+        assert_eq!(written(), 1, "{viewer}");
     }
 }
