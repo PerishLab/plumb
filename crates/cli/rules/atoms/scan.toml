@@ -82,6 +82,28 @@ environment = [
   "tools/*/tests/**/*.rs",
 ]
 
+# A tool's resources/ is the data it reads at run time, so it is excluded, not read.
+[[set]]
+name = "tools-js"
+include = [
+  "tools/**/*.cjs",
+  "tools/**/*.cts",
+  "tools/**/*.js",
+  "tools/**/*.jsx",
+  "tools/**/*.mjs",
+  "tools/**/*.mts",
+]
+exclude = [
+  "**/target/**",
+  "**/node_modules/**",
+  "tools/*/resources/**",
+]
+roots = [
+  "tools/*",
+  "tools/*/src",
+  "tools/*/tests",
+]
+
 [[set]]
 name = "runseal-scripts"
 include = [
@@ -172,6 +194,25 @@ tests = [
 ]
 
 [[set]]
+name = "apps-web-js"
+include = [
+  "apps/**/*.cjs",
+  "apps/**/*.cts",
+  "apps/**/*.js",
+  "apps/**/*.jsx",
+  "apps/**/*.mjs",
+  "apps/**/*.mts",
+]
+tests = [
+  "apps/*/tests/**/*.test.cjs",
+  "apps/*/tests/**/*.test.cts",
+  "apps/*/tests/**/*.test.js",
+  "apps/*/tests/**/*.test.jsx",
+  "apps/*/tests/**/*.test.mjs",
+  "apps/*/tests/**/*.test.mts",
+]
+
+[[set]]
 name = "packages-web"
 include = [
   "packages/**/*.ts",
@@ -207,4 +248,23 @@ include = [
 ]
 tests = [
   "packages/*/tests/**/*.test.tsx",
+]
+
+[[set]]
+name = "packages-web-js"
+include = [
+  "packages/**/*.cjs",
+  "packages/**/*.cts",
+  "packages/**/*.js",
+  "packages/**/*.jsx",
+  "packages/**/*.mjs",
+  "packages/**/*.mts",
+]
+tests = [
+  "packages/*/tests/**/*.test.cjs",
+  "packages/*/tests/**/*.test.cts",
+  "packages/*/tests/**/*.test.js",
+  "packages/*/tests/**/*.test.jsx",
+  "packages/*/tests/**/*.test.mjs",
+  "packages/*/tests/**/*.test.mts",
 ]

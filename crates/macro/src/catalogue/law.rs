@@ -1,8 +1,8 @@
 use super::walk::Held;
 use std::collections::{BTreeMap, BTreeSet};
 
-const SELECTS: [&str; 10] = [
-    "layout", "seat", "file", "shape", "web", "when", "use", "svelte", "tsx", "path",
+const SELECTS: [&str; 11] = [
+    "layout", "seat", "file", "shape", "web", "when", "use", "svelte", "tsx", "js", "path",
 ];
 const TELLS: [&str; 3] = ["name", "note", "kind"];
 

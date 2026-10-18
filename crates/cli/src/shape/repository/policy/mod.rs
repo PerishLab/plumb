@@ -1,5 +1,8 @@
+mod tracked;
+
 use std::collections::BTreeSet;
 use std::path::Path;
+use tracked::{Tracked, earning, suffixes};
 
 pub fn bounds(doc: Option<&toml::Value>) -> Vec<String> {
     let mut found = Vec::new();
@@ -52,13 +55,13 @@ impl Expected {
             root,
             crate::catalog::set::policy().expect("policy access must follow depot preparation"),
         );
-        if let super::layout::Held::Stated(layout) = super::layout::stated(root) {
+        if let crate::shape::layout::Held::Stated(layout) = crate::shape::layout::stated(root) {
             held.declare(&layout);
         }
         held
     }
 
-    fn declare(&mut self, layout: &super::layout::Declared) {
+    fn declare(&mut self, layout: &crate::shape::layout::Declared) {
         for seat in layout.seats.iter().filter(|seat| !seat.retired) {
             if !seat.scan.is_empty() {
                 self.roots.insert(seat.path.clone());
@@ -80,6 +83,7 @@ impl Expected {
             bans: BTreeSet::new(),
             declared: Vec::new(),
         };
+        let tracked = Tracked::list(root);
         for row in rows(policy, "shape") {
             let table = row
                 .as_table()
@@ -96,6 +100,9 @@ impl Expected {
                     })
                 {
                     held.select(root, table, "tsx");
+                }
+                if tracked.holds(&list(table, "when"), &earning(table)) {
+                    held.select(root, table, "js");
                 }
             }
         }
@@ -118,6 +125,9 @@ impl Expected {
             }
             if !svelte || extension(&base, "tsx") {
                 held.select(root, table, "tsx");
+            }
+            if tracked.holds(&BTreeSet::from([seat.to_string()]), &earning(table)) {
+                held.select(root, table, "js");
             }
         }
         held
@@ -196,10 +206,7 @@ struct Tree<'a> {
 impl Tree<'_> {
     fn derive(&self, set: &toml::Table) -> BTreeSet<String> {
         let statics = list(set, "roots");
-        let suffixes: BTreeSet<String> = list(set, "include")
-            .iter()
-            .filter_map(|glob| glob.rsplit_once("*.").map(|(_, tail)| tail.to_string()))
-            .collect();
+        let suffixes = suffixes(set);
         list(set, "derive")
             .iter()
             .flat_map(|pattern| self.expand(pattern))

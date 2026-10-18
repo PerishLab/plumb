@@ -9,6 +9,7 @@ tsx = ["rule://scan/crates-ts"]
 [[shape]]
 when = ["tools"]
 use = ["rule://scan/tools-rust"]
+js = ["rule://scan/tools-js"]
 
 [[shape]]
 when = ["app"]
@@ -45,9 +46,11 @@ seat = "apps"
 use = ["rule://scan/apps-web"]
 svelte = ["rule://scan/apps-web-svelte"]
 tsx = ["rule://scan/apps-web-tsx"]
+js = ["rule://scan/apps-web-js"]
 
 [[web]]
 seat = "packages"
 use = ["rule://scan/packages-web"]
 svelte = ["rule://scan/packages-web-svelte"]
 tsx = ["rule://scan/packages-web-tsx"]
+js = ["rule://scan/packages-web-js"]
