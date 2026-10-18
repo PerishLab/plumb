@@ -13,15 +13,16 @@ struct Observer<'a>(&'a mut Dependencies);
 
 impl Observer<'_> {
     fn read(&mut self, root: &Path, line: Option<&str>) {
+        let observed = registry::observed(root);
+        self.0.locked = matches!(
+            &observed,
+            Some(Ok(held)) if held.resolution.context == "local-locked"
+        );
         match line {
             Some(version) => self.recorded(root, version),
-            None => self.current(root),
+            None => registry::read(self.0, root, &observed),
         }
         self.0.normalize();
-    }
-
-    fn current(&mut self, root: &Path) {
-        registry::read(self.0, root);
     }
 
     fn recorded(&mut self, root: &Path, version: &str) {

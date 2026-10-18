@@ -5,12 +5,17 @@ use plumb_cli::Ecosystem;
 use std::collections::BTreeMap;
 use std::process::Command;
 
-pub fn read(dependencies: &mut Dependencies, root: &std::path::Path) {
-    let observed = std::env::var_os("PLUMB_PACKAGES_OBSERVATION").map(|text| {
+pub type Observed = Option<Result<plumb::packages::Observation, String>>;
+
+pub fn observed(root: &std::path::Path) -> Observed {
+    std::env::var_os("PLUMB_PACKAGES_OBSERVATION").map(|text| {
         text.into_string()
             .map_err(|_| "package observation is not text".to_string())
             .and_then(|text| plumb::packages::Observation::read(root, &text))
-    });
+    })
+}
+
+pub fn read(dependencies: &mut Dependencies, root: &std::path::Path, observed: &Observed) {
     let mut cache = BTreeMap::new();
     let mut blind = Vec::new();
     for dependency in &mut dependencies.held {
@@ -22,7 +27,7 @@ pub fn read(dependencies: &mut Dependencies, root: &std::path::Path) {
             .entry(key)
             .or_insert_with(|| match dependency.ecosystem {
                 Ecosystem::Cargo => fetch(dependency.ecosystem, &dependency.name),
-                Ecosystem::Npm => npm(root, &dependency.name, &observed),
+                Ecosystem::Npm => npm(root, &dependency.name, observed),
             });
         match latest {
             Ok(latest) => dependency.latest = Some(latest.clone()),
@@ -32,11 +37,7 @@ pub fn read(dependencies: &mut Dependencies, root: &std::path::Path) {
     dependencies.blind.extend(blind);
 }
 
-fn npm(
-    root: &std::path::Path,
-    name: &str,
-    observed: &Option<Result<plumb::packages::Observation, String>>,
-) -> Result<String, String> {
+fn npm(root: &std::path::Path, name: &str, observed: &Observed) -> Result<String, String> {
     match observed {
         Some(Ok(held)) => held
             .latest(name)
