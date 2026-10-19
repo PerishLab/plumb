@@ -1,8 +1,12 @@
-use super::{Package, process};
-use std::collections::BTreeSet;
+mod graph;
+use super::{Package, manifest, process};
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 const SOURCE: &str = "sparse+https://cargo.perish.uk/";
+
+type Moves = BTreeSet<(String, String)>;
+type Pin = (std::path::PathBuf, String, String);
 
 pub(super) struct Lock<'a>(pub(super) &'a Path);
 
@@ -49,27 +53,61 @@ impl Lock<'_> {
         Ok(())
     }
 
-    pub(super) fn update(&self, packages: &[Package]) -> Result<(), String> {
+    pub(super) fn update(&self, packages: &[Package], manifests: &[String]) -> Result<(), String> {
         let moves = self.moves(packages)?;
-        if moves.len() > 1 {
-            let mut argv = vec!["cargo".to_string(), "update".to_string()];
-            for (spec, _) in &moves {
-                argv.push("--package".to_string());
-                argv.push(spec.clone());
+        if moves.is_empty() {
+            return Ok(());
+        }
+        let wanted = packages
+            .iter()
+            .filter(|package| package.ecosystem == "cargo")
+            .filter(|package| moves.iter().any(|(name, _)| name == &package.name))
+            .map(|package| (package.name.clone(), package.version.clone()))
+            .collect::<BTreeMap<_, _>>();
+        let mut held = Vec::new();
+        for seat in manifests {
+            let file = self.0.join(seat);
+            let text = std::fs::read_to_string(&file).map_err(|error| error.to_string())?;
+            let pinned = manifest::edit(&text, &mut manifest::pin(&wanted))?;
+            if pinned != text {
+                held.push((file, text, pinned));
             }
-            process::run(self.0, "cargo", &argv)?;
         }
-        for (spec, version) in self.moves(packages)? {
-            let argv =
-                ["cargo", "update", "--package", &spec, "--precise", &version].map(str::to_string);
-            process::run(self.0, "cargo", &argv)?;
+        let path = self.0.join("Cargo.lock");
+        let before = std::fs::read_to_string(&path).map_err(|error| error.to_string())?;
+        let settled = self.settle(&before, &moves, &held);
+        if settled.is_err() {
+            std::fs::write(&path, &before).map_err(|error| error.to_string())?;
         }
-        Ok(())
+        settled
     }
 
-    fn moves(&self, packages: &[Package]) -> Result<Vec<(String, String)>, String> {
+    fn settle(&self, before: &str, moves: &Moves, held: &[Pin]) -> Result<(), String> {
+        let path = self.0.join("Cargo.lock");
+        std::fs::write(&path, graph::without(before, moves)?).map_err(|error| error.to_string())?;
+        let resolved = self.resolve(held);
+        for (file, text, _) in held {
+            std::fs::write(file, text).map_err(|error| error.to_string())?;
+        }
+        resolved?;
+        let argv = ["cargo", "metadata", "--format-version", "1", "--locked"].map(str::to_string);
+        process::run(self.0, "cargo", &argv)
+            .map_err(|error| format!("Cargo lock does not hold the restored manifests: {error}"))?;
+        let after = std::fs::read_to_string(&path).map_err(|error| error.to_string())?;
+        graph::forced(before, &after)
+    }
+
+    fn resolve(&self, held: &[Pin]) -> Result<(), String> {
+        for (file, _, pinned) in held {
+            std::fs::write(file, pinned).map_err(|error| error.to_string())?;
+        }
+        let argv = ["cargo", "metadata", "--format-version", "1"].map(str::to_string);
+        process::run(self.0, "cargo", &argv).map(|_| ())
+    }
+
+    fn moves(&self, packages: &[Package]) -> Result<Moves, String> {
         let held = self.locked()?;
-        let mut moves = Vec::new();
+        let mut moves = BTreeSet::new();
         for wanted in packages
             .iter()
             .filter(|package| package.ecosystem == "cargo")
@@ -78,10 +116,7 @@ impl Lock<'_> {
                 .iter()
                 .filter(|package| package.name == wanted.name && package.version != wanted.version)
             {
-                moves.push((
-                    format!("{SOURCE}#{}@{}", package.name, package.version),
-                    wanted.version.clone(),
-                ));
+                moves.insert((package.name.clone(), package.version.clone()));
             }
         }
         Ok(moves)
@@ -108,3 +143,6 @@ impl Lock<'_> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests;

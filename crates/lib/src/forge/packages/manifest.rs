@@ -1,6 +1,6 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
-use toml_edit::{DocumentMut, Item};
+use toml_edit::{DocumentMut, Item, TableLike};
 
 pub(super) struct Edit {
     path: String,
@@ -52,44 +52,63 @@ impl Edit {
     }
 }
 
+type Visit<'a> = dyn FnMut(String, &mut dyn TableLike) + 'a;
+
 fn cargo(text: &str, names: &mut Names) -> Result<String, String> {
+    edit(text, &mut |name, spec| {
+        names.insert(("cargo".into(), name));
+        if spec.get("version").and_then(Item::as_str) != Some("0") {
+            spec.insert("version", toml_edit::value("0"));
+        }
+    })
+}
+
+pub(super) fn pin(
+    versions: &BTreeMap<String, String>,
+) -> impl FnMut(String, &mut dyn TableLike) + '_ {
+    |name, spec| {
+        if let Some(version) = versions.get(&name) {
+            spec.insert("version", toml_edit::value(format!("={version}")));
+        }
+    }
+}
+
+pub(super) fn edit(text: &str, visit: &mut Visit) -> Result<String, String> {
     let mut document = text
         .parse::<DocumentMut>()
         .map_err(|error| error.to_string())?;
-    walk(document.as_item_mut(), names)?;
+    walk(document.as_item_mut(), visit);
     Ok(document.to_string())
 }
 
-fn walk(item: &mut Item, names: &mut Names) -> Result<(), String> {
+fn walk(item: &mut Item, visit: &mut Visit) {
     let Some(table) = item.as_table_like_mut() else {
-        return Ok(());
+        return;
     };
     for (key, value) in table.iter_mut() {
         match key.get() {
             "dependencies" | "dev-dependencies" | "build-dependencies" => {
-                dependencies(value, names)?
+                dependencies(value, visit)
             }
-            "workspace" => walk(value, names)?,
-            "target" => targets(value, names)?,
+            "workspace" => walk(value, visit),
+            "target" => targets(value, visit),
             _ => {}
         }
     }
-    Ok(())
 }
 
-fn targets(item: &mut Item, names: &mut Names) -> Result<(), String> {
+fn targets(item: &mut Item, visit: &mut Visit) {
     let Some(table) = item.as_table_like_mut() else {
-        return Ok(());
+        return;
     };
     for (_, value) in table.iter_mut() {
-        walk(value, names)?;
+        walk(value, visit);
     }
-    Ok(())
 }
 
-fn dependencies(item: &mut Item, names: &mut Names) -> Result<(), String> {
+fn dependencies(item: &mut Item, visit: &mut Visit) {
     let Some(table) = item.as_table_like_mut() else {
-        return Ok(());
+        return;
     };
     for (key, item) in table.iter_mut() {
         let Some(spec) = item.as_table_like_mut() else {
@@ -105,12 +124,8 @@ fn dependencies(item: &mut Item, names: &mut Names) -> Result<(), String> {
             .and_then(Item::as_str)
             .unwrap_or(key.get())
             .to_string();
-        names.insert(("cargo".into(), name));
-        if spec.get("version").and_then(Item::as_str) != Some("0") {
-            spec.insert("version", toml_edit::value("0"));
-        }
+        visit(name, spec);
     }
-    Ok(())
 }
 
 fn npm(text: &str, names: &mut Names) -> Result<String, String> {
