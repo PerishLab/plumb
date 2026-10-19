@@ -6,14 +6,17 @@
 	"license": "MIT",
 	"main": "dist/index.js",
 	"exports": {
-		".": "./dist/index.js"
+		".": {
+			"source": "./src/index.js",
+			"default": "./dist/index.js"
+		}
 	},
 	"files": [
 		"dist"
 	],
 	"scripts": {
-		"build": "vite build",
-		"test": "vitest run",
+		"build": "vite build --config src/vite.config.js",
+		"test": "vitest run --config tests/vitest.config.js",
 		"typecheck": "tsc --noEmit",
 		"prepack": "pnpm build"
 	},
