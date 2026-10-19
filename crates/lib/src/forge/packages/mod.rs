@@ -32,6 +32,7 @@ pub struct Resolution {
 
 pub struct Plan {
     edits: Vec<manifest::Edit>,
+    manifests: Vec<String>,
     required: BTreeSet<(String, String)>,
     pub resolution: Resolution,
 }
@@ -40,8 +41,12 @@ impl Plan {
     pub fn read(root: &Path, context: &str) -> Result<Self, String> {
         let paths = process::git(root, &["ls-files", "-z"])?;
         let mut edits = Vec::new();
+        let mut manifests = Vec::new();
         let mut names = BTreeSet::new();
         for path in paths.split('\0').filter(|path| !path.is_empty()) {
+            if path.rsplit('/').next() == Some("Cargo.toml") {
+                manifests.push(path.to_string());
+            }
             if let Some(edit) = manifest::read(root, path, &mut names)? {
                 edits.push(edit);
             }
@@ -88,6 +93,7 @@ impl Plan {
         }
         Ok(Self {
             edits,
+            manifests,
             required,
             resolution: Resolution {
                 context: context.into(),
@@ -108,7 +114,7 @@ impl Plan {
             for edit in &plan.edits {
                 edit.write(root)?;
             }
-            cargo::Lock(root).update(&plan.resolution.packages)?;
+            cargo::Lock(root).update(&plan.resolution.packages, &plan.manifests)?;
             npm::Lock(root).update(
                 &plan.resolution.packages,
                 plan.edits.iter().any(|edit| edit.npm()),

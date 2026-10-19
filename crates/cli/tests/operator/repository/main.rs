@@ -1,4 +1,6 @@
 #[cfg(unix)]
+mod cargo;
+#[cfg(unix)]
 mod packages;
 #[cfg(unix)]
 #[path = "precommit/main.rs"]
