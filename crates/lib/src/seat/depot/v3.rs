@@ -11,7 +11,7 @@ mod source;
 mod value;
 
 pub use kind::Kind;
-pub use local::{generation as local_generation, install};
+pub use local::install;
 pub use manifest::Manifest;
 pub use pointer::Pointer;
 #[cfg(feature = "depot")]
