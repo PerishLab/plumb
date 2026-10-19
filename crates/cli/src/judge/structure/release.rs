@@ -1,4 +1,4 @@
-use crate::catalog::rules::release as release_rule;
+use crate::catalog::rules::release;
 
 use crate::catalog::rules::structure as rule;
 use crate::judge::finding::{Found, Seed};
@@ -32,10 +32,10 @@ impl Judge<'_> {
             ));
         }
         for unbound in &held.identity.unbound {
-            found.push(Seed::wrong(&release_rule::IDENTITY_BOUND, unbound.clone()));
+            found.push(Seed::wrong(&release::IDENTITY_BOUND, unbound.clone()));
         }
         for error in &held.identity.blind {
-            found.push(Seed::blind(&release_rule::IDENTITY_BOUND, error.clone()));
+            found.push(Seed::blind(&release::IDENTITY_BOUND, error.clone()));
         }
         spec(&held.release, &mut found);
         measured(&held.release, &mut found);
@@ -46,18 +46,18 @@ impl Judge<'_> {
 fn spec(release: &Release, found: &mut Found) {
     if let Some(refusal) = &release.refusal {
         found.push(Seed::wrong(
-            &release_rule::SPEC_DECLARED,
+            &release::SPEC_DECLARED,
             format!("plumb.toml declares a release the current Plumb refuses: {refusal}"),
         ));
     }
     if let Some(misnamed) = &release.misnamed {
-        found.push(Seed::wrong(&release_rule::SPEC_DECLARED, misnamed.clone()));
+        found.push(Seed::wrong(&release::SPEC_DECLARED, misnamed.clone()));
     }
     if let Some(blind) = &release.blind {
-        found.push(Seed::blind(&release_rule::SPEC_DECLARED, blind));
+        found.push(Seed::blind(&release::SPEC_DECLARED, blind));
     }
     if let Some(evidence) = &release.unsettled {
-        found.push(Seed::noted(&release_rule::STABLE_REJOIN, evidence));
+        found.push(Seed::noted(&release::STABLE_REJOIN, evidence));
     }
 }
 
@@ -71,7 +71,7 @@ fn measured(release: &Release, found: &mut Found) {
             .unwrap_or(rules.ceiling);
         if *held > permitted {
             found.push(Seed::wrong(
-                &release_rule::ATTACHMENT_PERMITTED,
+                &release::ATTACHMENT_PERMITTED,
                 format!(
                     "the {attachment} attachment declares {held} packages and Plumb permits {permitted}; widening it is a change to Plumb"
                 ),
@@ -81,7 +81,7 @@ fn measured(release: &Release, found: &mut Found) {
         let exercised = exercised(attachment);
         if *held > exercised {
             found.push(Seed::noted(
-                &release_rule::ATTACHMENT_EXERCISED,
+                &release::ATTACHMENT_EXERCISED,
                 format!(
                     "the {attachment} attachment declares {held} packages and the skeleton has released {exercised}; this width has never run"
                 ),
