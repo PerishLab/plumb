@@ -4,6 +4,7 @@
 		"lib": ["ES2022"],
 		"module": "ESNext",
 		"moduleResolution": "bundler",
+		"customConditions": ["source"],
 		"allowJs": true,
 		"checkJs": true,
 		"strict": true,
@@ -12,5 +13,10 @@
 		"skipLibCheck": true,
 		"types": ["vitest/globals"]
 	},
-	"include": ["index.js", "index.test.js", "vite.config.js"]
+	"include": [
+		"src/index.js",
+		"tests/index.test.js",
+		"tests/vitest.config.js",
+		"src/vite.config.js"
+	]
 }

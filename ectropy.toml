@@ -95,6 +95,10 @@ include = [
 single = true
 
 [[vocabulary.term]]
+description = "Foreign Vite library option callback; the carrier build passes it and cannot choose its name."
+name = "fileName"
+
+[[vocabulary.term]]
 description = "The native structural children carried by one external Issue snapshot."
 name = "sub_issues"
 
