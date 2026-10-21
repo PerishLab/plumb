@@ -28,8 +28,7 @@ impl Claim {
     }
 
     pub fn retain(base: &Path, source: &Path) -> Result<Self, String> {
-        let base = base
-            .canonicalize()
+        let base = dunce::canonicalize(base)
             .map_err(|error| format!("cannot resolve Guard source home: {error}"))?;
         let owner = Owner::new(source)?;
         let root = owner.path(&base)?;

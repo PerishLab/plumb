@@ -89,3 +89,42 @@ fn disagreement() {
         "{\"schema\":\"foreign\"}"
     );
 }
+
+#[test]
+#[cfg(windows)]
+fn verbatim() {
+    use std::path::{Component, Prefix};
+    let root = repository();
+    let home = tempfile::tempdir().unwrap();
+    let base = home.path().join("with spaces");
+    std::fs::create_dir(&base).unwrap();
+    let extended = base.canonicalize().unwrap();
+    let claim = Claim::retain(&extended, root.path()).unwrap();
+    let Some(Component::Prefix(prefix)) = claim.root.components().next() else {
+        panic!("absolute Windows source seat");
+    };
+    assert!(!matches!(
+        prefix.kind(),
+        Prefix::VerbatimDisk(_) | Prefix::VerbatimUNC(_, _) | Prefix::Verbatim(_)
+    ));
+    git(
+        root.path(),
+        &[
+            "worktree",
+            "add",
+            "--detach",
+            "--quiet",
+            claim.root.to_str().unwrap(),
+        ],
+    );
+    assert!(claim.verify());
+    git(
+        root.path(),
+        &[
+            "worktree",
+            "remove",
+            "--force",
+            claim.root.to_str().unwrap(),
+        ],
+    );
+}
