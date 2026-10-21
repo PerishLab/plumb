@@ -1,4 +1,5 @@
 use super::super::workflow::tree::Tree;
+pub(super) use super::super::world::Binding;
 use super::tree::{self, Index};
 use super::world::Prepared;
 use plumb::guard::Descriptor;
@@ -17,11 +18,6 @@ pub(super) struct Preparation {
 pub(super) struct Catalog<'a> {
     pub tree: &'a Tree,
     pub product: &'a str,
-}
-
-pub(super) struct Binding<'a> {
-    pub execution: Option<&'a plumb::config::Execution>,
-    pub probes: &'a std::collections::BTreeMap<String, Vec<plumb::rule::Probe>>,
 }
 
 pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {

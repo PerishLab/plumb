@@ -1,7 +1,7 @@
 use super::super::workflow::tree::Tree;
+pub(super) use super::super::world::{digest, execution};
 use super::tree::Index;
 use crate::command::cache::transport::Context;
-use sha2::{Digest as _, Sha256};
 use std::path::Path;
 
 pub(super) struct Check {
@@ -107,7 +107,7 @@ impl Prepared {
             }
             let environment = super::environment::capture(root, &programs, &inputs)?;
             let environment = match name.as_str() {
-                "guard/plumb" => super::environment::observed(environment, observation.as_ref())?,
+                "guard/plumb" => environment,
                 _ => environment.combine(policy.environment()?)?,
             };
             let environment = match &context {
@@ -118,18 +118,27 @@ impl Prepared {
                 Some(seat) => super::environment::managed(environment, seat)?,
                 None => environment,
             };
-            let execution = Some(super::world::execution(
-                &name,
-                environment,
-                &index.root,
-                &programs,
-            )?);
+            let mut execution =
+                super::world::execution(&name, environment, &index.root, &programs)?;
+            let material = if name == "guard/plumb" {
+                let binding = super::action::Binding {
+                    execution: Some(&execution),
+                    probes: &probes,
+                };
+                let material = super::world::digest(&name, &input, &commands, &binding)?.material;
+                execution.environment =
+                    super::environment::observed(execution.environment, observation.as_ref())?;
+                Some(material)
+            } else {
+                None
+            };
+            let execution = Some(execution);
             let binding = super::action::Binding {
                 execution: execution.as_ref(),
                 probes: &probes,
             };
             let world = super::world::digest(&name, &input, &commands, &binding)?;
-            materials.push(world.material);
+            materials.push(material.unwrap_or(world.material));
             checks.push(Check {
                 proof: plumb::guard::Action {
                     name,
@@ -141,8 +150,13 @@ impl Prepared {
                 execution,
             });
         }
-        let material =
-            plumb::depot::sha(&serde_json::to_vec(&materials).map_err(|error| error.to_string())?);
+        let material = super::super::world::material(
+            &materials,
+            &resolution
+                .as_ref()
+                .expect("resolution was captured")
+                .packages,
+        )?;
         Ok(Self {
             checks,
             resolution,
@@ -162,116 +176,110 @@ impl Prepared {
     }
 }
 
-pub(super) struct Fingerprint {
-    material: String,
-    proof: String,
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-pub(super) fn digest(
-    name: &str,
-    input: &str,
-    commands: &[Vec<String>],
-    binding: &super::action::Binding<'_>,
-) -> Result<Fingerprint, String> {
-    let mut sponge = Sha256::new();
-    sponge.update(name.as_bytes());
-    sponge.update([0]);
-    sponge.update(serde_json::to_vec(commands).map_err(|error| error.to_string())?);
-    sponge.update([0]);
-    sponge.update(plumb::version!("PLUMB").as_bytes());
-    if let Some(commit) = plumb::commit!("PLUMB") {
-        sponge.update([0]);
-        sponge.update(commit.as_bytes());
-    }
-    sponge.update([0]);
-    sponge.update(plumb::depot::rules()?.mark().as_bytes());
-    sponge.update([0]);
-    sponge.update(plumb::config::platform().as_bytes());
-    if let Some(execution) = binding.execution {
-        sponge.update([0]);
-        sponge.update(execution.evidence()?);
-        sponge.update([0]);
-        sponge.update(crate::catalog::probe::evidence(binding.probes, execution)?);
-    }
-    for tool in tools(name) {
-        if binding.execution.is_some()
-            && crate::catalog::probe::covers(binding.probes, &[tool, "--version"])?
-        {
-            continue;
-        }
-        sponge.update([0]);
-        sponge.update(tool.as_bytes());
-        sponge.update([0]);
-        sponge.update(version(tool, binding.execution)?.as_bytes());
-    }
-    let material = format!("{:x}", sponge.clone().finalize());
-    sponge.update([0]);
-    sponge.update(input.as_bytes());
-    Ok(Fingerprint {
-        material,
-        proof: format!("{:x}", sponge.finalize()),
-    })
-}
-
-fn tools(name: &str) -> &'static [&'static str] {
-    match name {
-        "guard/rust" | "guard/test" => &["cargo", "rustc"],
-        "guard/web" => &["node", "pnpm"],
-        "guard/ectropy" => &["ectropy"],
-        "guard/plumb" => &["plumb"],
-        _ => &[],
-    }
-}
-
-pub(super) fn execution(
-    name: &str,
-    mut environment: plumb::config::Environment,
-    root: &std::path::Path,
-    selected: &[String],
-) -> Result<plumb::config::Execution, String> {
-    let mut programs = tools(name)
-        .iter()
-        .map(|name| name.to_string())
-        .collect::<Vec<_>>();
-    programs.extend(selected.iter().cloned());
-    let cargo = programs.iter().any(|program| program == "cargo");
-    if cargo {
-        crate::execution::cargo::msvc::environment(&mut environment)?;
-        programs.extend(
-            crate::execution::cargo::msvc::programs()
-                .iter()
-                .map(|program| (*program).to_string()),
+    fn git(root: &Path, args: &[&str]) {
+        let output = plumb::config::detached("git")
+            .arg("-C")
+            .arg(root)
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
         );
     }
-    programs.sort();
-    programs.dedup();
-    let execution = plumb::config::Execution::new(environment, &programs, root)?;
-    if cargo {
-        crate::execution::cargo::msvc::tools(&execution)?;
-    }
-    Ok(execution)
-}
 
-fn version(tool: &str, execution: Option<&plumb::config::Execution>) -> Result<String, String> {
-    let output = match execution {
-        Some(execution) => execution.output(&[tool.into(), "--version".into()]),
-        None => plumb::config::detached(tool)
-            .arg("--version")
-            .output()
-            .map_err(|error| error.to_string()),
+    fn prepare(root: &Path) -> (String, String, String) {
+        let tree = plumb::guard::tree(root).unwrap();
+        let index = Index::new(root, &tree).unwrap();
+        let seat = super::super::cargo::seat(root, &tree).unwrap();
+        let prepared = Prepared::new(root, &index, false, seat.as_deref()).unwrap();
+        let check = prepared
+            .checks
+            .iter()
+            .find(|check| check.proof.name == "guard/plumb")
+            .unwrap();
+        let text = check
+            .execution
+            .as_ref()
+            .unwrap()
+            .environment
+            .get("PLUMB_PACKAGES_OBSERVATION")
+            .unwrap();
+        let observation = plumb::packages::Observation::read(&index.root, text).unwrap();
+        assert_eq!(observation.resolution.tree, tree);
+        (
+            prepared.material,
+            check.proof.world.clone(),
+            observation.resolution.tree,
+        )
     }
-    .map_err(|error| format!("cannot run {tool} --version: {error}"))?;
-    if output.status.success() {
-        let stdout = std::str::from_utf8(&output.stdout)
-            .map_err(|_| format!("{tool} --version stdout is not UTF-8"))?;
-        Ok(stdout
-            .replace("\r\n", "\n")
-            .trim_end_matches('\n')
-            .to_string())
-    } else {
-        Err(format!(
-            "{tool} --version failed: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
-        ))
+
+    #[test]
+    fn source() {
+        if std::env::var_os("PLUMB_WORLD_TEST").is_none() {
+            let home = tempfile::tempdir().unwrap();
+            let output = std::process::Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "command::guard::precommit::world::tests::source",
+                    "--nocapture",
+                ])
+                .env("PLUMB_WORLD_TEST", "child")
+                .env("PLUMB_HOME", home.path())
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            return;
+        }
+        plumb::depot::carry(crate::catalog::carried::FILES);
+        let root = tempfile::tempdir().unwrap();
+        git(root.path(), &["init", "-q"]);
+        std::fs::create_dir(root.path().join("src")).unwrap();
+        std::fs::write(
+            root.path().join("Cargo.toml"),
+            "[package]\nname='probe'\nversion='0.1.0'\nedition='2024'\n",
+        )
+        .unwrap();
+        std::fs::write(root.path().join("plumb.toml"), "[identity]\nns='probe'\n[workflow.hash.guard]\nrust=['Cargo.toml','Cargo.lock','src']\nplumb=['Cargo.toml','Cargo.lock','src']\n").unwrap();
+        std::fs::write(
+            root.path().join("src/lib.rs"),
+            "pub fn answer() -> u8 { 1 }\n",
+        )
+        .unwrap();
+        let output = std::process::Command::new("cargo")
+            .args(["generate-lockfile", "--offline"])
+            .current_dir(root.path())
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        git(root.path(), &["add", "."]);
+        let first = prepare(root.path());
+        std::fs::write(
+            root.path().join("src/lib.rs"),
+            "pub fn answer() -> u8 { 2 }\n",
+        )
+        .unwrap();
+        git(root.path(), &["add", "src/lib.rs"]);
+        let next = prepare(root.path());
+        assert_ne!(
+            first.2, next.2,
+            "current observations must bind distinct source trees"
+        );
+        assert_ne!(first.1, next.1, "current Guard proof must change");
+        assert_eq!(
+            first.0, next.0,
+            "source-only Doctor tree changes must preserve compilation identity"
+        );
     }
 }
