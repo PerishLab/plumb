@@ -1,5 +1,6 @@
 mod configuration;
 mod identity;
+mod lane;
 mod metadata;
 mod observation;
 mod surface;

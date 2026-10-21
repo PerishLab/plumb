@@ -1,4 +1,5 @@
 mod fixtures;
+mod public;
 use object::{Object, ObjectSection};
 use plumb::identity::{Binding, Region};
 use std::fs;

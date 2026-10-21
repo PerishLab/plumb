@@ -214,7 +214,7 @@ pub fn capture(
             (path, exists)
         })
         .collect();
-    let preview = product::preview::read(root, snapshot.as_ref());
+    let preview = product::preview::Seat::new(root).read(snapshot.as_ref());
     let qualification = product::qualification::read(root, &preview, snapshot.as_ref());
     Shape {
         wrappers: seat.names(".runseal/wrappers", ".ts"),
