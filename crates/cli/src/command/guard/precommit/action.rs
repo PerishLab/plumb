@@ -52,11 +52,33 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
     if let Some(proof) = prepared.reused(root, &tree) {
         return Ok(proof);
     }
-    let Prepared { checks, resolution } = prepared;
+    let Prepared {
+        checks,
+        resolution,
+        material,
+        context,
+    } = prepared;
     let pending = checks
         .iter()
         .filter(|check| !super::cache::contains(&check.proof))
         .collect::<Vec<_>>();
+    let session = if pending.is_empty() {
+        None
+    } else {
+        lease
+            .as_ref()
+            .zip(context.as_ref())
+            .map(|(lease, context)| {
+                crate::command::cache::transport::Session::begin(
+                    &index.root,
+                    lease,
+                    &material,
+                    context,
+                )
+            })
+            .transpose()?
+            .flatten()
+    };
     if !pending.is_empty() {
         if let Some(check) = pending.iter().find(|check| check.proof.name == "guard/web") {
             plumb::packages::fetch(&index.root, &check.exclusions)?;
@@ -77,6 +99,11 @@ fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
             }
             super::cache::record(&check.proof)?;
         }
+    }
+    if let Some(session) = session
+        && let Err(error) = session.seal()
+    {
+        eprintln!("guard material: {error}");
     }
     let proof = Descriptor::new(
         root,

@@ -2,7 +2,7 @@ use crate::command::cache;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-pub(super) struct Lease {
+pub(crate) struct Lease {
     pub root: PathBuf,
     identity: String,
     since: u64,
@@ -25,6 +25,13 @@ impl Lease {
     pub fn new(root: &Path) -> Result<Self, String> {
         let identity = identity(root)?;
         let root = cache::seat(&cache::home()?, &identity);
+        if let Ok(metadata) = std::fs::symlink_metadata(&root)
+            && (!metadata.is_dir() || metadata.file_type().is_symlink())
+        {
+            return Err(
+                "Guard cache root is foreign; preserve or relocate it before retrying".into(),
+            );
+        }
         std::fs::create_dir_all(&root)
             .map_err(|error| format!("cannot create {}: {error}", root.display()))?;
         let lock = cache::lease(&root)?;
@@ -48,7 +55,7 @@ impl Lease {
     }
 }
 
-fn identity(root: &Path) -> Result<String, String> {
+pub(crate) fn identity(root: &Path) -> Result<String, String> {
     let common = super::tree::git(
         root,
         &["rev-parse", "--path-format=absolute", "--git-common-dir"],

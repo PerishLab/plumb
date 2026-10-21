@@ -1,9 +1,12 @@
 mod bucket;
 mod disk;
 mod graph;
+mod parcel;
 mod plan;
 mod pressure;
 mod sweep;
+mod transfer;
+pub(crate) mod transport;
 
 pub(crate) use bucket::{adopt, home, lease, seat};
 pub(crate) use sweep::{now, settle};
@@ -17,6 +20,8 @@ const DAY: u64 = 24 * 60 * 60;
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(about = "Declare owned Guard compilation transport", long_about = plumb::seat::resource!("help/cache.txt"))]
+    Transport(transport::Input),
     #[command(
         about = "Report every Guard build cache with its status, size and reclaimable targets"
     )]
@@ -49,6 +54,7 @@ struct Report {
 
 pub fn run(deed: Deed) -> i32 {
     let (apply, json) = match deed {
+        Deed::Transport(input) => return transport::run(input),
         Deed::Status { json } => (false, json),
         Deed::Reclaim { apply, json } => (apply, json),
     };

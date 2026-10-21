@@ -79,6 +79,7 @@ impl Drop for Claim {
             let _ = std::fs::remove_file(&self.path);
         }
         live().retain(|(_, root)| root != &self.root);
+        let _ = self._lock.unlock();
     }
 }
 
@@ -108,4 +109,36 @@ fn reserve(path: &Path) -> Result<(File, bool), String> {
 
 fn touch(file: &File) {
     let _ = file.set_times(FileTimes::new().set_modified(std::time::SystemTime::now()));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Claim;
+
+    #[test]
+    fn release() {
+        let repository = tempfile::tempdir().unwrap();
+        let home = tempfile::tempdir().unwrap();
+        let output = crate::config::detached("git")
+            .arg("-C")
+            .arg(repository.path())
+            .args(["init", "--quiet"])
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        let claim = Claim::retain(home.path(), repository.path()).unwrap();
+        let inherited = claim._lock.try_clone().unwrap();
+        let path = claim.root.with_extension("lock");
+        drop(claim);
+        let peer = std::fs::File::options()
+            .read(true)
+            .write(true)
+            .open(path)
+            .unwrap();
+        assert!(
+            peer.try_lock().is_ok(),
+            "a copied descriptor must not retain a released source lease"
+        );
+        drop(inherited);
+    }
 }

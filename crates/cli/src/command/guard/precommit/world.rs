@@ -1,5 +1,6 @@
 use super::super::workflow::tree::Tree;
 use super::tree::Index;
+use crate::command::cache::transport::Context;
 use sha2::{Digest as _, Sha256};
 use std::path::Path;
 
@@ -13,6 +14,8 @@ pub(super) struct Check {
 pub(super) struct Prepared {
     pub checks: Vec<Check>,
     pub resolution: Option<plumb::packages::Resolution>,
+    pub material: String,
+    pub context: Option<Context>,
 }
 
 impl Prepared {
@@ -46,6 +49,8 @@ impl Prepared {
         } else {
             None
         };
+        let context = Context::read(&index.root)?;
+        let mut materials = Vec::new();
         let inputs = std::env::vars_os().collect::<Vec<_>>();
         let mut checks = Vec::new();
         for super::action::Preparation {
@@ -105,6 +110,10 @@ impl Prepared {
                 "guard/plumb" => super::environment::observed(environment, observation.as_ref())?,
                 _ => environment.combine(policy.environment()?)?,
             };
+            let environment = match &context {
+                Some(context) => context.bind(environment)?,
+                None => environment,
+            };
             let environment = match seat {
                 Some(seat) => super::environment::managed(environment, seat)?,
                 None => environment,
@@ -120,14 +129,26 @@ impl Prepared {
                 probes: &probes,
             };
             let world = super::world::digest(&name, &input, &commands, &binding)?;
+            materials.push(world.material);
             checks.push(Check {
-                proof: plumb::guard::Action { name, input, world },
+                proof: plumb::guard::Action {
+                    name,
+                    input,
+                    world: world.proof,
+                },
                 commands,
                 exclusions,
                 execution,
             });
         }
-        Ok(Self { checks, resolution })
+        let material =
+            plumb::depot::sha(&serde_json::to_vec(&materials).map_err(|error| error.to_string())?);
+        Ok(Self {
+            checks,
+            resolution,
+            material,
+            context,
+        })
     }
 
     pub fn reused(&self, root: &Path, tree: &str) -> Option<plumb::guard::Descriptor> {
@@ -141,16 +162,19 @@ impl Prepared {
     }
 }
 
+pub(super) struct Fingerprint {
+    material: String,
+    proof: String,
+}
+
 pub(super) fn digest(
     name: &str,
     input: &str,
     commands: &[Vec<String>],
     binding: &super::action::Binding<'_>,
-) -> Result<String, String> {
+) -> Result<Fingerprint, String> {
     let mut sponge = Sha256::new();
     sponge.update(name.as_bytes());
-    sponge.update([0]);
-    sponge.update(input.as_bytes());
     sponge.update([0]);
     sponge.update(serde_json::to_vec(commands).map_err(|error| error.to_string())?);
     sponge.update([0]);
@@ -180,7 +204,13 @@ pub(super) fn digest(
         sponge.update([0]);
         sponge.update(version(tool, binding.execution)?.as_bytes());
     }
-    Ok(format!("{:x}", sponge.finalize()))
+    let material = format!("{:x}", sponge.clone().finalize());
+    sponge.update([0]);
+    sponge.update(input.as_bytes());
+    Ok(Fingerprint {
+        material,
+        proof: format!("{:x}", sponge.finalize()),
+    })
 }
 
 fn tools(name: &str) -> &'static [&'static str] {
