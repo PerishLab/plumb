@@ -28,6 +28,7 @@ impl Prepared {
         } else {
             (plumb::packages::locked(&index.root, "local-locked")?, None)
         };
+        index.settle()?;
         let resolution = Some(locked);
         let captured = Tree::read(&index.root, None)?;
         let manifest = captured.text("plumb.toml")?;

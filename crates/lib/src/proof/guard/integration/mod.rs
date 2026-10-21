@@ -1,5 +1,7 @@
+mod claim;
 mod inventory;
 mod model;
+mod owner;
 mod process;
 mod repo;
 pub mod staging;

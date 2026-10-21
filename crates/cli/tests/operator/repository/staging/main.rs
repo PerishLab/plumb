@@ -1,3 +1,8 @@
+mod owner;
+#[cfg(target_os = "linux")]
+mod parallel;
+mod source;
+
 use super::precommit::{Repo, atoms, cache};
 use super::support;
 use std::path::{Path, PathBuf};
@@ -110,9 +115,19 @@ fn signal(guard: &Child, name: &str, group: bool) {
     assert!(status.success());
 }
 
-fn clean(home: &Path, root: &Path) {
-    assert_eq!(staged(home), Vec::<PathBuf>::new(), "staging root is clean");
-    assert_eq!(registered(root), Vec::<PathBuf>::new(), "no registration");
+fn retained(home: &Path, root: &Path) {
+    let trees = registered(root);
+    assert_eq!(trees.len(), 1, "one retained registration");
+    assert!(trees[0].join("src/lib.rs").is_file());
+    assert!(staged(home).contains(&trees[0].with_extension("lock")));
+    assert!(
+        Repo::git(
+            &trees[0],
+            &["status", "--porcelain", "--untracked-files=no"]
+        )
+        .stdout
+        .is_empty()
+    );
 }
 
 #[test]
@@ -130,7 +145,7 @@ fn killed() {
     assert_eq!(leaked.len(), 1, "a killed guard leaves its tree");
     assert_eq!(registered(gated.root()).len(), 1, "and its registration");
     cache::success(&cache::run(gated.root(), home.path()));
-    clean(home.path(), gated.root());
+    retained(home.path(), gated.root());
 }
 
 #[test]
@@ -158,11 +173,12 @@ fn legacy() {
         .and_then(|tree| tree.set_modified(SystemTime::now() - Duration::from_secs(7200)))
         .expect("aged tree");
     cache::success(&cache::run(root, home.path()));
-    assert_eq!(staged(home.path()), vec![base.join("guard-young")]);
+    assert!(base.join("guard-young").is_dir());
+    assert!(!base.join("guard-legacy").exists());
     assert_eq!(
         registered(root).len(),
-        1,
-        "only the young tree stays registered"
+        2,
+        "the young tree and retained source stay registered"
     );
 }
 
@@ -185,8 +201,8 @@ fn live() {
     );
     gated.open();
     cache::success(&guard.wait_with_output().expect("gated guard"));
-    clean(home.path(), gated.root());
-    clean(home.path(), other.path());
+    retained(home.path(), gated.root());
+    retained(home.path(), other.path());
 }
 
 #[test]
@@ -213,7 +229,9 @@ fn terminated() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    clean(home.path(), gated.root());
+    retained(home.path(), gated.root());
+    cache::success(&cache::run(gated.root(), home.path()));
+    retained(home.path(), gated.root());
     let atoms = atoms(home.path());
     let edges = |edge: &str| {
         atoms
