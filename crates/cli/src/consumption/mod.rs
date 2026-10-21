@@ -1,6 +1,7 @@
 use super::Command;
 
 pub mod configuration;
+pub mod lane;
 pub mod metadata;
 pub mod skill;
 

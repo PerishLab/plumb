@@ -16,6 +16,7 @@ use std::path::PathBuf;
 #[locus::trace(with = crate::observation::view())]
 pub(crate) fn execute(command: Command) -> i32 {
     match command {
+        Command::Lane { deed } => crate::consumption::lane::run(deed),
         Command::Follow {
             target,
             github,

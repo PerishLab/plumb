@@ -10,16 +10,20 @@ pub(super) struct Binding {
 }
 
 impl Binding {
-    pub fn judge(&self, target: Address) -> Result<(), String> {
-        if self.adaptor.value() != "static" {
-            return Err("static binding requires the static adaptor".into());
-        }
-        let declaration = Declaration::new(
+    pub fn declaration(&self, target: Address) -> Result<Declaration, String> {
+        Declaration::new(
             target,
             self.adaptor.clone(),
             self.capabilities.clone(),
             self.authorities.clone(),
-        )?;
+        )
+    }
+
+    pub fn judge(&self, target: Address) -> Result<(), String> {
+        if self.adaptor.value() != "static" {
+            return Err("static binding requires the static adaptor".into());
+        }
+        let declaration = self.declaration(target)?;
         for action in [Action::Inspect, Action::Deploy] {
             declaration.capabilities().require(action)?;
         }

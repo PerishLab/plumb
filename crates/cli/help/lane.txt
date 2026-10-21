@@ -1,0 +1,29 @@
+Read exact lane declarations and immutable public evidence.
+
+plumb lane status [ROOT] --app APP --lane LANE [--require ACTION] [--json]
+plumb lane inspect --repository OWNER/REPOSITORY --app APP --lane LANE
+  --authority AUTHORITY --digest SHA256 --origin https://HOST
+  [--request SHA256 --revision REVISION] [--json]
+
+Every app and lane is explicit. Flat lane names are independent; preview has no
+default, family, key, alias or fallback role. A lane is not a release stamp.
+
+Status reads the judged static declaration and exact clean local Git source.
+Capabilities are declared support, never authorization. --require only checks
+that support; it executes no action. Source path, package and Worker mapping do
+not replace app identity. Artifact and remote current state remain unknown.
+
+Inspect fetches one anonymous HTTPS record from the explicit publication origin,
+at lane/v1/evidence/SHA256.json. It follows no redirect, sends no credential and
+uses no proxy or private fallback. The bounded HTTP representation must match
+the exact digest and canonical shared record schema. Transport content decoding
+does not replace the canonical JSON digest check. Exact target and any supplied
+request/revision must match. Applied, refused, unmet and unknown records retain
+their original meaning. Historical evidence proves neither current provider
+state, ownership nor permission to mutate. A label alone authenticates no origin.
+
+These commands run no product build, provider writer, deployment, deletion,
+registration, repair or formal release. Unsupported mutation commands do not
+exist. Status and inspect have distinct JSON schemas; failures exit nonzero with
+a diagnostic on stderr and no success JSON. A valid unknown record may be
+inspected successfully; successful retrieval does not make its operation applied.

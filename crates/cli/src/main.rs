@@ -24,6 +24,12 @@ struct Cli {
 
 #[derive(Subcommand)]
 pub(crate) enum Command {
+    #[command(about = "Read exact lane declarations and immutable public evidence",
+        long_about = plumb::seat::resource!("help/lane.txt"))]
+    Lane {
+        #[command(subcommand)]
+        deed: consumption::lane::Deed,
+    },
     #[command(about = "Judge this repository against the skeleton and report every finding")]
     Doctor {
         #[command(flatten)]
@@ -234,6 +240,7 @@ fn main() {
 impl Command {
     fn name(&self) -> &'static str {
         match self {
+            Self::Lane { .. } => "lane",
             Self::Doctor { .. } => "doctor",
             Self::Land { .. } => "land",
             Self::Guard { .. } => "guard",

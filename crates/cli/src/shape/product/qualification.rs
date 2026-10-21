@@ -13,10 +13,7 @@ pub(crate) fn read(
     if apps.is_empty() {
         return Ok(());
     }
-    let source = Source {
-        root,
-        snapshot: snapshot.map_err(|error| error.to_string())?,
-    };
+    let source = Source::new(root, snapshot.map_err(|error| error.to_string())?);
     for app in apps {
         source
             .judge(app)
@@ -25,14 +22,18 @@ pub(crate) fn read(
     Ok(())
 }
 
-struct Source<'a> {
+pub(crate) struct Source<'a> {
     root: &'a Path,
     snapshot: &'a Snapshot,
 }
 
-impl Source<'_> {
+impl<'a> Source<'a> {
+    pub(crate) fn new(root: &'a Path, snapshot: &'a Snapshot) -> Self {
+        Self { root, snapshot }
+    }
+
     fn document(&self, path: &str, comments: bool) -> Result<serde_json::Value, String> {
-        super::preview::regular(self.root, self.snapshot, path)?;
+        super::preview::Seat::new(self.root).regular(self.snapshot, path)?;
         let entry = self
             .snapshot
             .entries()
@@ -42,7 +43,7 @@ impl Source<'_> {
         super::document::read(entry.bytes(), comments).map_err(|error| format!("{path}: {error}"))
     }
 
-    fn judge(&self, app: &App) -> Result<(), String> {
+    pub(crate) fn judge(&self, app: &App) -> Result<(), String> {
         let package = format!("{}/package.json", app.path);
         super::package::judge(&self.document(&package, false)?, &app.package)?;
         let path = format!("{}/wrangler.jsonc", app.path);
