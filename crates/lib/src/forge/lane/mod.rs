@@ -6,6 +6,7 @@ mod capability;
 #[path = "../declaration/mod.rs"]
 pub mod declaration;
 mod digest;
+pub mod dispatch;
 #[path = "../evidence/mod.rs"]
 pub mod evidence;
 mod name;

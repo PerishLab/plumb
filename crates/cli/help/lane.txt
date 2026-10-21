@@ -1,9 +1,15 @@
-Read exact lane declarations and immutable public evidence.
+Read exact lane declarations, prepare static operations and consume Wharf evidence.
 
 plumb lane status [ROOT] --app APP --lane LANE [--require ACTION] [--json]
 plumb lane inspect --repository OWNER/REPOSITORY --app APP --lane LANE
   --authority AUTHORITY --digest SHA256 --origin https://HOST
   [--request SHA256 --revision REVISION] [--json]
+
+plumb lane plan [ROOT] --app APP --lane LANE --input DISPATCH.json [--json]
+plumb lane apply [ROOT] --plan PLAN.json --digest SHA256 [--json]
+plumb lane discard [ROOT] --plan PLAN.json --digest SHA256 [--json]
+plumb lane result --plan PLAN.json --digest SHA256 --evidence SHA256
+  --origin https://HOST [--json]
 
 Every app and lane is explicit. Flat lane names are independent; preview has no
 default, family, key, alias or fallback role. A lane is not a release stamp.
@@ -22,8 +28,49 @@ request/revision must match. Applied, refused, unmet and unknown records retain
 their original meaning. Historical evidence proves neither current provider
 state, ownership nor permission to mutate. A label alone authenticates no origin.
 
-These commands run no product build, provider writer, deployment, deletion,
-registration, repair or formal release. Unsupported mutation commands do not
-exist. Status and inspect have distinct JSON schemas; failures exit nonzero with
-a diagnostic on stderr and no success JSON. A valid unknown record may be
-inspected successfully; successful retrieval does not make its operation applied.
+Plan reads an explicit bounded wharf.lane.dispatch/v1 document, with schema,
+target, operation, request, revision, expected, source, registration, caller and
+workflow. Operations are apply or dispose; remote inspect dispatch is unsupported.
+The request and registration are exact SHA256 values, revision is positive, and
+expected is explicit settled absent or present material. Disposal requires present
+material. Apply requires exact commit/tree/declaration generation; dispose requires
+source:null. These externally prepared registration/generation/state observations
+are inputs to review, never guessed defaults or proof that remote state is idle.
+Wharf independently revalidates them before reservation and execution.
+
+Plan judges the explicit local binding, capabilities and clean committed source,
+then independently reads github.com for the actual caller, current Wharf main
+and exact pushed product commit/tree. It performs no build or dispatch. Its JSON
+report contains plan, digest and unknown current state. Keep the report outside
+the product repository. Review the entire plan and pass its exact digest explicitly;
+the digest binds the typed canonical plan, not report whitespace. A digest proves
+identity, never permission. A plan is not a remote reservation or authorization.
+
+Apply and discard require the corresponding reviewed operation. They repeat source,
+declaration, pushed source, caller and control-main observations, then submit one
+request to PerishLab/wharf/.github/workflows/lane.yml at main through the external
+gh CLI. The prepared workflow identity pins the exact main commit; Wharf checks
+that identity again. GitHub credentials are isolated from provider and package
+credentials. Each GitHub process has a 30-second/65536-byte output bound. This
+fixed dispatch reaches no release workflow, parent provision or alternate writer.
+An acknowledged submission leaves operation and current unknown. A failed or lost
+acknowledgment exits nonzero and also proves no absence or refusal of execution.
+Do not retry, replay or repair an uncertain operation. There is no automatic retry,
+workflow cancellation, expired reservation takeover or state cleanup.
+
+Result anonymously reads an explicit immutable evidence digest at the supplied
+publication origin, using the same bounded reader as inspect. It requires an
+operation record matching the reviewed target/request/revision/adaptor,
+precondition, static intent, exact source/build presence, declared capabilities
+and authority. The public record does not independently reproduce the registration,
+configuration generation, caller or control workflow admission; those remain
+Wharf's independently checked execution inputs. It preserves applied, refused and
+unknown outcomes without claiming current state; it neither waits for nor infers completion from a workflow verdict.
+No public reference is synthesized from a request, URL or successful dispatch.
+
+Status, inspect, plan and result run no product build or provider writer. Apply
+and discard hand execution to Wharf alone. No command provisions registration,
+repairs unknown operations, changes formal releases or claims installed behavior.
+Each report has its own schema; failures exit nonzero with a sanitized diagnostic
+on stderr and no success JSON. Valid unknown evidence may be read successfully;
+successful retrieval does not make its operation applied.
