@@ -1,20 +1,18 @@
+pub use super::claim::Claim;
+use super::owner;
 use std::collections::BTreeSet;
+
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, SystemTime};
 
 pub const PREFIX: &str = "guard-";
+pub(super) const RETAINED: &str = "guard-source-";
 
 const AGE: Duration = Duration::from_secs(3600);
 
 static LIVE: Mutex<Vec<(PathBuf, PathBuf)>> = Mutex::new(Vec::new());
-
-pub struct Claim {
-    pub root: PathBuf,
-    path: PathBuf,
-    _lock: File,
-}
 
 pub fn root() -> Option<PathBuf> {
     crate::config::value("PLUMB_HOME")
@@ -39,50 +37,27 @@ pub fn contains(root: &Path, path: &Path) -> bool {
             .is_some_and(|name| name.starts_with(PREFIX))
 }
 
-impl Claim {
-    pub fn new(base: &Path, source: &Path) -> Result<Self, String> {
-        loop {
-            let (lock, path) = tempfile::Builder::new()
-                .prefix(PREFIX)
-                .suffix(".lock")
-                .tempfile_in(base)
-                .and_then(|file| file.keep().map_err(|error| error.error))
-                .map_err(|error| format!("cannot reserve guard worktree: {error}"))?;
-            lock.lock()
-                .map_err(|error| format!("cannot hold guard worktree: {error}"))?;
-            if same(&path, &lock) {
-                let root = path.with_extension("");
-                live().push((source.to_path_buf(), root.clone()));
-                return Ok(Self {
-                    root,
-                    path,
-                    _lock: lock,
-                });
-            }
-        }
-    }
-}
-
-impl Drop for Claim {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.path);
-        live().retain(|(_, root)| root != &self.root);
-    }
-}
-
 pub fn held() -> bool {
     !live().is_empty()
 }
 
 pub fn abandon() {
     for (source, root) in live().drain(..) {
+        if owner::Owner::retained(&root)
+            && !owner::Owner::read(&root.with_extension("lock"))
+                .is_ok_and(|owner| owner.owns(&root))
+        {
+            continue;
+        }
         let _ = crate::config::detached("git")
             .arg("-C")
             .arg(&source)
             .args(["worktree", "remove", "--force"])
             .arg(&root)
             .output();
-        let _ = std::fs::remove_file(root.with_extension("lock"));
+        if !owner::Owner::retained(&root) {
+            let _ = std::fs::remove_file(root.with_extension("lock"));
+        }
     }
 }
 
@@ -103,6 +78,11 @@ pub fn reap(base: &Path) {
 
 fn sweep(tree: &Path) {
     let path = tree.with_extension("lock");
+    if owner::Owner::retained(tree)
+        && (!owner::Owner::read(&path).is_ok_and(|owner| owner.matches(tree)) || young(&path))
+    {
+        return;
+    }
     if !path.exists() && young(tree) {
         return;
     }
@@ -116,6 +96,11 @@ fn sweep(tree: &Path) {
         return;
     };
     if lock.try_lock().is_err() || !same(&path, &lock) {
+        return;
+    }
+    if owner::Owner::retained(tree)
+        && !owner::Owner::read(&path).is_ok_and(|owner| owner.matches(tree))
+    {
         return;
     }
     remove(tree);
@@ -157,12 +142,12 @@ fn git(common: &Path, args: &[&str], tree: Option<&Path>) {
     let _ = command.output();
 }
 
-fn live() -> MutexGuard<'static, Vec<(PathBuf, PathBuf)>> {
+pub(super) fn live() -> MutexGuard<'static, Vec<(PathBuf, PathBuf)>> {
     LIVE.lock().unwrap_or_else(|held| held.into_inner())
 }
 
 #[cfg(unix)]
-fn same(path: &Path, file: &File) -> bool {
+pub(super) fn same(path: &Path, file: &File) -> bool {
     use std::os::unix::fs::MetadataExt;
     match (std::fs::metadata(path), file.metadata()) {
         (Ok(named), Ok(held)) => named.dev() == held.dev() && named.ino() == held.ino(),
@@ -171,7 +156,7 @@ fn same(path: &Path, file: &File) -> bool {
 }
 
 #[cfg(not(unix))]
-fn same(path: &Path, _: &File) -> bool {
+pub(super) fn same(path: &Path, _: &File) -> bool {
     path.exists()
 }
 

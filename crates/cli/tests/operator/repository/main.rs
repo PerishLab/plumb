@@ -8,6 +8,7 @@ mod precommit;
 #[cfg(unix)]
 mod reclaim;
 #[cfg(unix)]
+#[path = "staging/main.rs"]
 mod staging;
 mod world;
 

@@ -1,5 +1,8 @@
+use plumb::guard::Descriptor;
 use serde::Serialize;
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use super::tree;
 
@@ -117,7 +120,7 @@ impl Refresh<'_> {
                 proof.tree, before.tree
             ));
         }
-        let head = tree::bind(self.0, &before, &proof)?;
+        let head = before.bind(self.0, &proof)?;
         let after = Snapshot::read(self.0)?;
         if after.branch != before.branch || after.head != head || after.tree != before.tree {
             return Err("refreshed HEAD does not retain the exact branch and tree".into());
@@ -193,4 +196,72 @@ impl Snapshot {
             )?,
         })
     }
+}
+
+impl Snapshot {
+    fn bind(&self, root: &Path, proof: &Descriptor) -> Result<String, String> {
+        let mut message = tempfile::NamedTempFile::new()
+            .map_err(|error| format!("cannot reserve Guard message: {error}"))?;
+        message
+            .write_all(
+                tree::git(
+                    root,
+                    &["show", "-s", "--format=%B", &self.head],
+                    "read HEAD message",
+                )?
+                .as_bytes(),
+            )
+            .map_err(|error| format!("cannot stage Guard message: {error}"))?;
+        plumb::guard::attach(root, message.path())?;
+        let parents = tree::git(
+            root,
+            &["rev-list", "--parents", "-n", "1", &self.head],
+            "read HEAD parent set",
+        )?;
+        let mut parts = parents.split_whitespace();
+        if parts.next().unwrap_or_default() != self.head {
+            return Err("cannot read the exact HEAD parent set".into());
+        }
+        let mut arguments = vec!["commit-tree".to_string(), proof.tree.clone()];
+        for parent in parts {
+            arguments.extend(["-p".to_string(), parent.to_string()]);
+        }
+        arguments.extend([
+            "-F".to_string(),
+            message.path().to_string_lossy().into_owned(),
+        ]);
+        let mut command = plumb::config::detached("git");
+        command.arg("-C").arg(root).args(arguments);
+        for (key, shape) in [
+            ("GIT_AUTHOR_NAME", "%an"),
+            ("GIT_AUTHOR_EMAIL", "%ae"),
+            ("GIT_AUTHOR_DATE", "%aI"),
+            ("GIT_COMMITTER_NAME", "%cn"),
+            ("GIT_COMMITTER_EMAIL", "%ce"),
+            ("GIT_COMMITTER_DATE", "%cI"),
+        ] {
+            command.env(
+                key,
+                tree::git(
+                    root,
+                    &["show", "-s", &format!("--format={shape}"), &self.head],
+                    "read HEAD identity",
+                )?,
+            );
+        }
+        let head = output(command, "create refreshed Guard commit")?;
+        tree::git(
+            root,
+            &["update-ref", &self.branch, &head, &self.head],
+            "bind refreshed Guard commit",
+        )?;
+        Ok(head)
+    }
+}
+
+fn output(mut command: Command, action: &str) -> Result<String, String> {
+    let output = command
+        .output()
+        .map_err(|error| format!("cannot run git to {action}: {error}"))?;
+    tree::text(output, action)
 }
