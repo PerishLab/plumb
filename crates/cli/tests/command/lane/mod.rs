@@ -1,3 +1,5 @@
+#[cfg(unix)]
+mod dispatch;
 mod status;
 
 use std::path::Path;
@@ -83,10 +85,10 @@ fn surface() {
     let output = run(&["lane", "--help"]);
     assert!(output.status.success());
     let text = String::from_utf8(output.stdout).unwrap();
-    for command in ["status", "inspect"] {
+    for command in ["status", "inspect", "plan", "apply", "discard", "result"] {
         assert!(text.contains(command), "{text}");
     }
-    for command in ["apply", "dispose", "build", "discard", "plan"] {
+    for command in ["dispose", "build", "publish", "repair"] {
         assert!(!run(&["lane", command, "--help"]).status.success());
     }
     assert!(!run(&["lane", "status", "--json"]).status.success());

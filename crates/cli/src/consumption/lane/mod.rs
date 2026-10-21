@@ -1,5 +1,10 @@
+mod dispatch;
+mod hub;
 mod inspect;
+mod plan;
+mod result;
 mod status;
+mod transport;
 
 use clap::{Args, Subcommand};
 use plumb::cli::Root;
@@ -10,6 +15,14 @@ use serde_json::Value;
 pub enum Deed {
     #[command(about = "Read one explicit local lane declaration and exact clean source")]
     Status(Status),
+    #[command(about = "Prepare an exact static Wharf dispatch without executing it")]
+    Plan(Planning),
+    #[command(about = "Submit one explicitly reviewed static apply plan to Wharf")]
+    Apply(Execution),
+    #[command(about = "Submit one explicitly reviewed static disposal plan to Wharf")]
+    Discard(Execution),
+    #[command(about = "Read immutable operation evidence for the exact reviewed static operation")]
+    Result(Reading),
     #[command(about = "Read one anonymous immutable public record for an exact target")]
     Inspect(Inspection),
 }
@@ -68,8 +81,66 @@ pub struct Inspection {
     json: bool,
 }
 
+#[derive(Args)]
+pub struct Planning {
+    #[command(flatten)]
+    target: Root,
+    #[command(flatten)]
+    selection: Selection,
+    #[arg(
+        long,
+        help = "Bounded wharf.lane.dispatch/v1 document; exact independently prepared registration and state"
+    )]
+    input: std::path::PathBuf,
+    #[arg(long)]
+    json: bool,
+}
+
+#[derive(Args)]
+pub struct Reviewed {
+    #[arg(long, help = "Previously reviewed plumb.lane.plan/v1 JSON")]
+    plan: std::path::PathBuf,
+    #[arg(
+        long,
+        help = "SHA256 of the canonical plan value, excluding its report wrapper"
+    )]
+    digest: String,
+}
+
+#[derive(Args)]
+pub struct Execution {
+    #[command(flatten)]
+    target: Root,
+    #[command(flatten)]
+    reviewed: Reviewed,
+    #[arg(long)]
+    json: bool,
+}
+
+#[derive(Args)]
+pub struct Reading {
+    #[command(flatten)]
+    reviewed: Reviewed,
+    #[arg(long, help = "Exact canonical public operation record SHA256")]
+    evidence: String,
+    #[arg(long, help = "Explicit bare HTTPS publication origin")]
+    origin: String,
+    #[arg(long)]
+    json: bool,
+}
+
 pub fn run(deed: Deed) -> i32 {
     let (json, result) = match deed {
+        Deed::Plan(options) => (options.json, plan::prepare(options)),
+        Deed::Apply(options) => (
+            options.json,
+            dispatch::execute(options, plumb::lane::dispatch::Operation::Apply),
+        ),
+        Deed::Discard(options) => (
+            options.json,
+            dispatch::execute(options, plumb::lane::dispatch::Operation::Dispose),
+        ),
+        Deed::Result(options) => (options.json, result::read(options)),
         Deed::Status(options) => (options.json, status::read(options)),
         Deed::Inspect(options) => (options.json, inspect::read(options)),
     };
@@ -104,6 +175,8 @@ fn render(report: &Value) {
         println!("capabilities {}", declaration["capabilities"]);
         println!("source {}", report["source"]);
         println!("current unknown: no live state was read");
+    } else if report["schema"] != "plumb.lane.inspection/v1" {
+        println!("{report}");
     } else {
         println!("public evidence {}", report["reference"]);
         println!("historical record {}", report["record"]);
