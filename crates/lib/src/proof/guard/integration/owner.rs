@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fs::File;
+use std::io::Seek;
 use std::path::{Path, PathBuf};
 
 #[derive(Deserialize, Eq, PartialEq, Serialize)]
@@ -46,7 +47,9 @@ impl Owner {
         Self::load(&file)
     }
 
-    pub fn load(file: &File) -> Result<Self, String> {
+    pub fn load(mut file: &File) -> Result<Self, String> {
+        file.rewind()
+            .map_err(|error| format!("cannot rewind Guard source owner: {error}"))?;
         let owner: Self = serde_json::from_reader(file)
             .map_err(|error| format!("cannot decode Guard source owner: {error}"))?;
         if owner.schema != "plumb.guard-source/v1" {

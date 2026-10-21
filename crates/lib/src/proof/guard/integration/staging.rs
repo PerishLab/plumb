@@ -155,9 +155,22 @@ pub(super) fn same(path: &Path, file: &File) -> bool {
     }
 }
 
-#[cfg(not(unix))]
-pub(super) fn same(path: &Path, _: &File) -> bool {
-    path.exists()
+#[cfg(windows)]
+pub(super) fn same(path: &Path, file: &File) -> bool {
+    let named = File::open(path).and_then(winapi_util::file::information);
+    let held = winapi_util::file::information(file);
+    match (named, held) {
+        (Ok(named), Ok(held)) => {
+            named.volume_serial_number() == held.volume_serial_number()
+                && named.file_index() == held.file_index()
+        }
+        _ => false,
+    }
+}
+
+#[cfg(not(any(unix, windows)))]
+pub(super) fn same(_: &Path, _: &File) -> bool {
+    false
 }
 
 #[cfg(test)]

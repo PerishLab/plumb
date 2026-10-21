@@ -109,3 +109,6 @@ name = "bucket"
 path = "tests/support/bucket.rs"
 required-features = ["depot"]
 
+
+[target.'cfg(windows)'.dependencies]
+winapi-util = "0.1"

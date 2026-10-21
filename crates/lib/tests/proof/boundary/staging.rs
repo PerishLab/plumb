@@ -46,6 +46,7 @@ fn retained() {
         ],
     );
     assert!(claim.verify());
+    assert!(claim.verify(), "owner reads rewind the held lease");
     let stamp = std::fs::metadata(path.join("source"))
         .unwrap()
         .modified()
@@ -62,6 +63,7 @@ fn retained() {
     let claim = Claim::retain(home.path(), root.path()).unwrap();
     assert_eq!(claim.root, path);
     assert!(claim.verify());
+    assert!(claim.verify(), "owner reads rewind the held lease");
     assert_eq!(
         std::fs::metadata(path.join("source"))
             .unwrap()
@@ -118,6 +120,7 @@ fn verbatim() {
         ],
     );
     assert!(claim.verify());
+    assert!(claim.verify(), "owner reads rewind the held lease");
     git(
         root.path(),
         &[
@@ -126,5 +129,38 @@ fn verbatim() {
             "--force",
             claim.root.to_str().unwrap(),
         ],
+    );
+}
+
+#[test]
+fn replacement() {
+    let root = repository();
+    let home = tempfile::tempdir().unwrap();
+    let claim = Claim::retain(home.path(), root.path()).unwrap();
+    let path = claim.root.with_extension("lock");
+    drop(claim);
+    let record = std::fs::read(&path).unwrap();
+    let claim = Claim::retain(home.path(), root.path()).unwrap();
+    assert!(claim.verify());
+    std::fs::rename(&path, path.with_extension("saved")).unwrap();
+    std::fs::write(&path, &record).unwrap();
+    assert!(!claim.verify(), "a replacement file is not the held owner");
+    drop(claim);
+    assert_eq!(std::fs::read(path).unwrap(), record);
+}
+
+#[test]
+#[cfg(unix)]
+fn linked() {
+    let root = repository();
+    let home = tempfile::tempdir().unwrap();
+    let claim = Claim::retain(home.path(), root.path()).unwrap();
+    let path = claim.root.with_extension("lock");
+    let saved = path.with_extension("saved");
+    std::fs::rename(&path, &saved).unwrap();
+    std::os::unix::fs::symlink(&saved, &path).unwrap();
+    assert!(
+        !claim.verify(),
+        "an owner record must remain a regular file"
     );
 }
