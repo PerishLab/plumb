@@ -8,6 +8,7 @@ pub struct Claim {
     path: PathBuf,
     retained: bool,
     _lock: File,
+    read: std::sync::Mutex<()>,
 }
 
 impl Claim {
@@ -54,8 +55,14 @@ impl Claim {
     }
 
     pub fn verify(&self) -> bool {
-        same(&self.path, &self._lock)
-            && Owner::read(&self.path).is_ok_and(|owner| owner.owns(&self.root))
+        let Ok(_read) = self.read.lock() else {
+            return false;
+        };
+        self.path
+            .symlink_metadata()
+            .is_ok_and(|metadata| metadata.is_file())
+            && same(&self.path, &self._lock)
+            && Owner::load(&self._lock).is_ok_and(|owner| owner.owns(&self.root))
     }
 
     fn held(source: &Path, path: PathBuf, lock: File, retained: bool) -> Self {
@@ -66,6 +73,7 @@ impl Claim {
             path,
             retained,
             _lock: lock,
+            read: std::sync::Mutex::new(()),
         }
     }
 }
@@ -113,6 +121,36 @@ fn touch(file: &File) {
 #[cfg(test)]
 mod tests {
     use super::Claim;
+
+    #[test]
+    fn reads() {
+        let repository = tempfile::tempdir().unwrap();
+        let home = tempfile::tempdir().unwrap();
+        let output = crate::config::detached("git")
+            .arg("-C")
+            .arg(repository.path())
+            .args(["init", "--quiet"])
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        let claim = std::sync::Arc::new(Claim::retain(home.path(), repository.path()).unwrap());
+        let threads = (0..8)
+            .map(|_| {
+                let claim = claim.clone();
+                std::thread::spawn(move || {
+                    for _ in 0..16 {
+                        assert!(
+                            claim.verify(),
+                            "concurrent owner reads keep their complete record"
+                        );
+                    }
+                })
+            })
+            .collect::<Vec<_>>();
+        for thread in threads {
+            thread.join().unwrap();
+        }
+    }
 
     #[test]
     fn release() {
