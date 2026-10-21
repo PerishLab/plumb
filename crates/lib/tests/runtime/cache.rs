@@ -1,4 +1,4 @@
-use plumb::config::{Cache, Contract, Execution};
+use plumb::config::{Binding, Cache, Contract, Execution};
 
 #[test]
 fn absent() {
@@ -94,4 +94,188 @@ fn actual() {
         .env("SCCACHE_SERVER_PORT", port(&one))
         .arg("--stop-server");
     assert!(!stopped.output().unwrap().status.success());
+}
+
+fn invoke(execution: &Execution, cache: &Cache<'_>, argv: &[&str]) -> std::process::Output {
+    let mut command = execution.command(argv[0]).unwrap();
+    cache.apply(&mut command);
+    command.args(&argv[1..]).output().unwrap()
+}
+
+struct Case {
+    name: &'static str,
+    lint: &'static str,
+    changed: bool,
+    expected: i32,
+}
+
+#[test]
+#[ignore = "explicit integration with the canonical image's exact Clippy and sccache binaries"]
+fn clippy() {
+    let root = tempfile::tempdir().unwrap();
+    std::fs::create_dir(root.path().join("src")).unwrap();
+    std::fs::write(
+        root.path().join("Cargo.toml"),
+        "[package]\nname='probe'\nversion='0.0.0'\nedition='2024'\n",
+    )
+    .unwrap();
+    let source = "pub fn choose(flag: bool) -> bool { if flag { true } else { false } }\npub fn value() -> u8 { 1 }\n";
+    std::fs::write(root.path().join("src/lib.rs"), source).unwrap();
+    let contract = plumb::config::contract("cargo").unwrap();
+    let inherited = std::env::vars_os()
+        .filter(|(key, _)| contract.inherit.iter().any(|name| key == name.as_str()));
+    let environment = contract
+        .capture(inherited)
+        .unwrap()
+        .combine(
+            Contract {
+                inherit: vec![],
+                managed: vec![],
+                reject: vec![],
+                bind: [
+                    (
+                        "RUSTC".into(),
+                        Binding::Tool {
+                            tool: "rustc".into(),
+                        },
+                    ),
+                    (
+                        "RUSTC_WRAPPER".into(),
+                        Binding::Tool {
+                            tool: "sccache".into(),
+                        },
+                    ),
+                    ("CARGO_INCREMENTAL".into(), Binding::Value("0".into())),
+                    (
+                        "CARGO_TARGET_DIR".into(),
+                        Binding::Value(root.path().join("target").display().to_string()),
+                    ),
+                ]
+                .into(),
+            }
+            .capture([])
+            .unwrap(),
+        )
+        .unwrap();
+    let execution =
+        Execution::new(environment, &["cargo".into(), "rustc".into()], root.path()).unwrap();
+    assert!(execution.tools().unwrap()["rustc"].path.is_absolute());
+    let directory = root.path().join("compiler");
+    let cache = Cache::start(&execution, &directory).unwrap().unwrap();
+    for Case {
+        name,
+        lint,
+        changed,
+        expected,
+    } in [
+        Case {
+            name: "cold",
+            lint: "-W",
+            changed: false,
+            expected: 0,
+        },
+        Case {
+            name: "repeat",
+            lint: "-W",
+            changed: false,
+            expected: 0,
+        },
+        Case {
+            name: "changed",
+            lint: "-W",
+            changed: true,
+            expected: 0,
+        },
+        Case {
+            name: "changed-repeat",
+            lint: "-W",
+            changed: true,
+            expected: 0,
+        },
+        Case {
+            name: "deny",
+            lint: "-D",
+            changed: true,
+            expected: 101,
+        },
+    ] {
+        if root.path().join("target").exists() {
+            std::fs::remove_dir_all(root.path().join("target")).unwrap();
+        }
+        if changed {
+            std::fs::write(
+                root.path().join("src/lib.rs"),
+                source.replace("{ 1 }", "{ 2 }"),
+            )
+            .unwrap();
+        }
+        assert!(
+            invoke(&execution, &cache, &["sccache", "--zero-stats"])
+                .status
+                .success()
+        );
+        let output = invoke(
+            &execution,
+            &cache,
+            &[
+                "cargo",
+                "clippy",
+                "--offline",
+                "--lib",
+                "--",
+                lint,
+                "clippy::needless_bool",
+            ],
+        );
+        assert_eq!(
+            output.status.code(),
+            Some(expected),
+            "{name}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("needless_bool"),
+            "{name}: diagnostics must survive cache hits"
+        );
+        let output = invoke(
+            &execution,
+            &cache,
+            &["sccache", "--show-stats", "--stats-format", "json"],
+        );
+        assert!(output.status.success());
+        let stats: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        let hits = stats["stats"]["cache_hits"]["counts"]["Rust"]
+            .as_u64()
+            .unwrap_or(0);
+        let misses = stats["stats"]["cache_misses"]["counts"]["Rust"]
+            .as_u64()
+            .unwrap_or(0);
+        println!("{name}: hits={hits}, misses={misses}, exit={expected}");
+        if name == "repeat" || name == "changed-repeat" {
+            assert!(hits > 0, "{name}: {stats}");
+        } else {
+            assert_eq!(hits, 0, "{name}: {stats}");
+            if expected == 0 {
+                assert!(misses > 0, "{name}: {stats}");
+            } else {
+                assert!(
+                    stats["stats"]["compile_fails"].as_u64().unwrap_or(0) > 0,
+                    "{stats}"
+                );
+            }
+        }
+    }
+    std::fs::remove_dir_all(root.path().join("target")).unwrap();
+    let mut plain = execution.command("cargo").unwrap();
+    plain.env_remove("RUSTC_WRAPPER").args([
+        "clippy",
+        "--offline",
+        "--lib",
+        "--",
+        "-D",
+        "clippy::needless_bool",
+    ]);
+    let output = plain.output().unwrap();
+    assert_eq!(output.status.code(), Some(101));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("needless_bool"));
 }
