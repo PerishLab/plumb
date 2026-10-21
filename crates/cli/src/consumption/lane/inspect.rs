@@ -40,6 +40,11 @@ impl Expected {
         let context = match record.entry() {
             Entry::Selection(selection) => selection.context(),
             Entry::Operation(operation) => operation.request().context(),
+            Entry::Confirmation(_) => {
+                return Err(
+                    "lane confirmation needs an explicit public authorization consumer".into(),
+                );
+            }
         };
         if context.requested() != &self.target
             || self.context.as_ref().is_some_and(|(request, revision)| {
@@ -159,5 +164,27 @@ mod tests {
         options.request = Some("private-provider-value".into());
         options.revision = Some(0);
         assert!(Expected::new(&options).is_err());
+    }
+
+    #[test]
+    fn confirmation() {
+        let options = options();
+        let target = json!({"repository":"PerishLab/crest","app":"crest","lane":"design"});
+        let context =
+            json!({"requested":target,"request":"b".repeat(64),"revision":2,"adaptor":"static"});
+        let expected = json!({"state":"present","revision":1,"digest":"1".repeat(64)});
+        let request = json!({"context":context,"intent":{"action":"dispose"},"expected":expected});
+        let request: plumb::lane::operation::Request = serde_json::from_value(request).unwrap();
+        let authorization =
+            json!({"state":"granted","evidence":{"authority":"wharf","digest":"a".repeat(64)}});
+        let assessment = json!({"request":request.digest().unwrap(),"capabilities":["dispose"],"conditions":{"authorization":authorization,"writer":"idle","observed":expected}});
+        let operation = json!({"request":request,"assessment":assessment,"outcome":{"outcome":"applied","material":{"state":"absent"},"writer":"idle"}});
+        let value = json!({"original":{"authority":"wharf","digest":"c".repeat(64)},"authorization":{"authority":"wharf","digest":"d".repeat(64)},"operation":operation});
+        let record: Record = serde_json::from_value(
+            json!({"schema":3,"entry":{"kind":"confirmation","value":value}}),
+        )
+        .unwrap();
+        let error = Expected::new(&options).unwrap().check(&record).unwrap_err();
+        assert!(error.contains("explicit public authorization consumer"));
     }
 }

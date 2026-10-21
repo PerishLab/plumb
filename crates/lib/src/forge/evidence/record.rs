@@ -1,6 +1,6 @@
 use super::super::Digest;
 use super::super::operation::Operation;
-use super::Selection;
+use super::{Confirmation, Selection};
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -24,6 +24,7 @@ struct Parts {
 pub enum Entry {
     Selection(Box<Selection>),
     Operation(Box<Operation>),
+    Confirmation(Box<Confirmation>),
 }
 
 impl Record {
@@ -39,6 +40,20 @@ impl Record {
             schema: 2,
             entry: Entry::Operation(Box::new(operation)),
         })
+    }
+
+    pub fn confirmed(confirmation: Confirmation) -> Self {
+        Self(Parts {
+            schema: 3,
+            entry: Entry::Confirmation(Box::new(confirmation)),
+        })
+    }
+
+    pub fn confirmation(&self) -> Option<&Confirmation> {
+        match self.entry() {
+            Entry::Confirmation(confirmation) => Some(confirmation),
+            _ => None,
+        }
     }
 
     pub fn entry(&self) -> &Entry {
@@ -71,7 +86,11 @@ impl Record {
 impl<'de> Deserialize<'de> for Record {
     fn deserialize<D: Deserializer<'de>>(reader: D) -> Result<Self, D::Error> {
         let parts = Parts::deserialize(reader)?;
-        if parts.schema != 2 {
+        let expected = match &parts.entry {
+            Entry::Confirmation(_) => 3,
+            _ => 2,
+        };
+        if parts.schema != expected {
             return Err(serde::de::Error::custom("unsupported lane evidence schema"));
         }
         Ok(Self(parts))

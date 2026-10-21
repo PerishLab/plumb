@@ -129,6 +129,21 @@ answers for.
   the Issue that owns the work. A document nobody must read and no
   mechanism keeps true is the worst of the four.
 
+## Lane evidence
+
+Schema2 selection/operation evidence retains its canonical bytes. Schema3
+confirmation links an immutable original unknown, a distinct new public
+Authorization Reference and an exact applied mutation observation. The new
+reference also differs from the original admission reference. Explicit
+linked readback preserves the entire request and original assessment. Ordinary
+operation access and settlement do not consume confirmation. The generic types
+bind references and supplied observations; they authenticate no authorization
+receipt, observer, physical writer idle or live publication/settlement. The
+consumer must independently fetch and validate the new public receipt under its
+prepared authority, prove current authority/quiescence and order evidence before
+state writes. Authority-specific execution details remain in that consumer's
+public receipt. Source support alone does not qualify an installed consumer.
+
 ## Distribution
 
 - `release` only stamps its immutable marker on the head of a release line.
