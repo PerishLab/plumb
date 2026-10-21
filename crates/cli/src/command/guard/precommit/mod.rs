@@ -1,7 +1,7 @@
 mod action;
 pub(crate) mod branch;
 mod cache;
-mod cargo;
+pub(crate) mod cargo;
 mod environment;
 pub(crate) mod hook;
 pub(crate) mod tree;

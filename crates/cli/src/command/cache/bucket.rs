@@ -79,6 +79,17 @@ pub(crate) fn adopt(bucket: &Path, identity: &str) -> Result<(), String> {
             bucket.display()
         )),
         None => {
+            if std::fs::symlink_metadata(bucket.join(MARKER)).is_ok() {
+                return Err(
+                    "Guard cache has an unknown owner record; preserve it before retrying".into(),
+                );
+            }
+            if std::fs::read_dir(bucket)
+                .map_err(|error| error.to_string())?
+                .any(|entry| !entry.is_ok_and(|entry| entry.file_name() == "lease"))
+            {
+                return Err("Guard cache contains unowned material; preserve or relocate it before retrying".into());
+            }
             let marker = Marker {
                 schema: SCHEMA.to_string(),
                 keeper: "plumb".to_string(),
@@ -144,6 +155,22 @@ pub(crate) fn lease(bucket: &Path) -> Result<File, String> {
 #[cfg(test)]
 mod tests {
     use std::path::Path;
+
+    #[test]
+    fn foreign() {
+        let root = tempfile::tempdir().unwrap();
+        let marker = root.path().join("plumb.json");
+        std::fs::write(&marker, b"unknown owner").unwrap();
+        assert!(super::adopt(root.path(), "requested").is_err());
+        assert_eq!(std::fs::read(&marker).unwrap(), b"unknown owner");
+        std::fs::remove_file(marker).unwrap();
+        std::fs::write(root.path().join("foreign"), b"preserve").unwrap();
+        assert!(super::adopt(root.path(), "requested").is_err());
+        assert_eq!(
+            std::fs::read(root.path().join("foreign")).unwrap(),
+            b"preserve"
+        );
+    }
 
     #[test]
     fn bounded() {
