@@ -194,7 +194,13 @@ mod tests {
         );
     }
 
-    fn prepare(root: &Path) -> (String, String, String) {
+    struct Frame {
+        material: String,
+        proof: String,
+        observation: String,
+    }
+
+    fn prepare(root: &Path) -> Frame {
         let tree = plumb::guard::tree(root).unwrap();
         let index = Index::new(root, &tree).unwrap();
         let seat = super::super::cargo::seat(root, &tree).unwrap();
@@ -213,11 +219,11 @@ mod tests {
             .unwrap();
         let observation = plumb::packages::Observation::read(&index.root, text).unwrap();
         assert_eq!(observation.resolution.tree, tree);
-        (
-            prepared.material,
-            check.proof.world.clone(),
-            observation.resolution.tree,
-        )
+        Frame {
+            material: prepared.material,
+            proof: check.proof.world.clone(),
+            observation: text.to_owned(),
+        }
     }
 
     #[test]
@@ -273,12 +279,14 @@ mod tests {
         git(root.path(), &["add", "src/lib.rs"]);
         let next = prepare(root.path());
         assert_ne!(
-            first.2, next.2,
+            first.observation, next.observation,
             "current observations must bind distinct source trees"
         );
-        assert_ne!(first.1, next.1, "current Guard proof must change");
+        assert_ne!(first.proof, next.proof, "current Guard proof must change");
+        assert!(plumb::packages::Observation::read(root.path(), &first.observation).is_err());
+        assert!(plumb::packages::Observation::read(root.path(), &next.observation).is_ok());
         assert_eq!(
-            first.0, next.0,
+            first.material, next.material,
             "source-only Doctor tree changes must preserve compilation identity"
         );
     }
