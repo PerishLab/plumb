@@ -58,10 +58,15 @@ impl Lock<'_> {
         if moves.is_empty() {
             return Ok(());
         }
+        let released = self
+            .locked()?
+            .into_iter()
+            .map(|package| (package.name, package.version))
+            .collect::<Moves>();
         let wanted = packages
             .iter()
             .filter(|package| package.ecosystem == "cargo")
-            .filter(|package| moves.iter().any(|(name, _)| name == &package.name))
+            .filter(|package| released.iter().any(|(name, _)| name == &package.name))
             .map(|package| (package.name.clone(), package.version.clone()))
             .collect::<BTreeMap<_, _>>();
         let mut held = Vec::new();
@@ -75,7 +80,7 @@ impl Lock<'_> {
         }
         let path = self.0.join("Cargo.lock");
         let before = std::fs::read_to_string(&path).map_err(|error| error.to_string())?;
-        let settled = self.settle(&before, &moves, &held);
+        let settled = self.settle(&before, &released, &held);
         if settled.is_err() {
             std::fs::write(&path, &before).map_err(|error| error.to_string())?;
         }
