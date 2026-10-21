@@ -1,4 +1,4 @@
-use super::Contract;
+use super::{Binding, Contract};
 
 const BASE: [&str; 15] = [
     "PATH",
@@ -157,5 +157,18 @@ pub fn contract(name: &str) -> Result<Contract, String> {
         "registry" => &REGISTRY,
         _ => return Err(format!("plumb runs nothing under a {name} contract")),
     };
-    Ok(held.contract())
+    let mut contract = held.contract();
+    if name == "cargo" && cfg!(target_os = "linux") {
+        for (key, value) in [
+            ("CARGO_PROFILE_DEV_DEBUG", "0"),
+            ("CARGO_PROFILE_TEST_DEBUG", "0"),
+            ("CARGO_PROFILE_DEV_STRIP", "debuginfo"),
+            ("CARGO_PROFILE_TEST_STRIP", "debuginfo"),
+        ] {
+            contract
+                .bind
+                .insert(key.into(), Binding::Value(value.into()));
+        }
+    }
+    Ok(contract)
 }

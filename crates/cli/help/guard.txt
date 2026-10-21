@@ -1,5 +1,12 @@
 Prove the staged tree, exact CI HEAD, or one committed task boundary.
 
+On Linux, the owned Cargo execution contract omits dev/test debug information
+and strips linked debug sections, including standard-library debug information.
+Optimization level, debug assertions and function symbols remain intact. Both
+direct and nested Cargo inherit these fixed inputs, which join the execution
+world; ambient profile overrides are refused. Ordinary Cargo outside the Plumb
+execution contract and Windows/macOS profiles retain their existing behavior.
+
 With no runtime selectors, guard keeps its local contract: it proves the staged
 tree for commit attachment, or checks an explicit --base/--head/--write task
 boundary.
