@@ -131,6 +131,10 @@ pub(super) fn material(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::command::cache::transport::{Context, Session};
+    use crate::command::guard::precommit::cargo::Lease;
+    use std::path::Path;
+    use std::process::{Command, Output};
 
     fn package(version: &str) -> plumb::packages::Package {
         plumb::packages::Package {
@@ -155,5 +159,135 @@ mod tests {
             first,
             material(&["same-execution".into()], &[package("0.1.0")]).unwrap()
         );
+    }
+    fn git(root: &Path, args: &[&str]) {
+        let output = plumb::config::detached("git")
+            .arg("-C")
+            .arg(root)
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    fn cargo(root: &Path, lease: &Lease) -> Output {
+        Command::new("cargo")
+            .args(["check", "--locked", "--offline"])
+            .current_dir(root)
+            .env("CARGO_TARGET_DIR", &lease.root)
+            .env("CARGO_INCREMENTAL", "0")
+            .env_remove("RUSTC_WRAPPER")
+            .env_remove("RUSTC_WORKSPACE_WRAPPER")
+            .output()
+            .unwrap()
+    }
+
+    #[test]
+    fn retained() {
+        if std::env::var_os("PLUMB_NATIVE_TEST").is_none() {
+            let home = tempfile::tempdir().unwrap();
+            let output = Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "command::guard::world::tests::retained",
+                    "--nocapture",
+                ])
+                .env("PLUMB_NATIVE_TEST", "child")
+                .env("PLUMB_HOME", home.path())
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            return;
+        }
+        plumb::depot::carry(crate::catalog::carried::FILES);
+        let root = tempfile::tempdir().unwrap();
+        git(root.path(), &["init", "-q"]);
+        std::fs::create_dir(root.path().join("src")).unwrap();
+        std::fs::create_dir_all(root.path().join("support/src")).unwrap();
+        std::fs::write(root.path().join("Cargo.toml"), "[package]\nname='probe'\nversion='0.1.0'\nedition='2024'\n[dependencies]\nsupport={path='support'}\n").unwrap();
+        std::fs::write(
+            root.path().join("support/Cargo.toml"),
+            "[package]\nname='support'\nversion='0.1.0'\nedition='2024'\n",
+        )
+        .unwrap();
+        std::fs::write(
+            root.path().join("support/src/lib.rs"),
+            "pub fn value() -> u8 { 1 }\n",
+        )
+        .unwrap();
+        std::fs::write(
+            root.path().join("src/lib.rs"),
+            "pub fn value() -> u8 { support::value() }\n",
+        )
+        .unwrap();
+        let output = Command::new("cargo")
+            .args(["generate-lockfile", "--offline"])
+            .current_dir(root.path())
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        git(root.path(), &["add", "."]);
+        let lease = Lease::new(root.path()).unwrap();
+        let context = Context {
+            image: format!("sha256:{}", "e".repeat(64)),
+        };
+        let first = Session::begin(root.path(), &lease, "same-compile-conditions", &context)
+            .unwrap()
+            .unwrap();
+        let output = cargo(root.path(), &lease);
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let sentinel = lease.root.join("debug/retained");
+        std::fs::write(&sentinel, "owned compilation material").unwrap();
+        first.seal().unwrap();
+        std::fs::write(
+            root.path().join("src/lib.rs"),
+            "pub fn value() -> u8 { support::value() + 1 }\n",
+        )
+        .unwrap();
+        git(root.path(), &["add", "src/lib.rs"]);
+        let next = Session::begin(root.path(), &lease, "same-compile-conditions", &context)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&sentinel).unwrap(),
+            "owned compilation material"
+        );
+        let output = cargo(root.path(), &lease);
+        let text = String::from_utf8_lossy(&output.stderr);
+        assert!(output.status.success(), "{text}");
+        assert!(
+            text.contains("Checking probe"),
+            "changed root must recheck: {text}"
+        );
+        assert!(
+            !text.contains("Checking support"),
+            "unchanged dependency must remain fresh: {text}"
+        );
+        next.seal().unwrap();
+        std::fs::write(
+            root.path().join("support/src/lib.rs"),
+            "pub fn renamed() -> u8 { 1 }\n",
+        )
+        .unwrap();
+        git(root.path(), &["add", "support/src/lib.rs"]);
+        let _invalid = Session::begin(root.path(), &lease, "same-compile-conditions", &context)
+            .unwrap()
+            .unwrap();
+        let output = cargo(root.path(), &lease);
+        assert!(!output.status.success());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("E0425"));
     }
 }
