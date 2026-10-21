@@ -197,3 +197,23 @@ fn malformed() {
     assert!(!error.contains("invalid private content"));
     assert!(!fixture.tools.path().join("calls").exists());
 }
+
+#[test]
+#[cfg(target_os = "linux")]
+fn profile() {
+    let fixture = Web::new();
+    let root = fixture.root.path();
+    std::fs::write(
+        root.join("src/lib.rs"),
+        "#[test]\nfn nested() { assert!(cfg!(debug_assertions)); }\n",
+    )
+    .unwrap();
+    Repo::git(root, &["add", "src/lib.rs"]);
+    let path = fixture.tools.path().join("pnpm");
+    let mut body = std::fs::read_to_string(&path).unwrap();
+    body.push_str("\ncase \" $* \" in *\" build \"*)\n test \"$CARGO_PROFILE_DEV_DEBUG\" = 0 || exit 91\n test \"$CARGO_PROFILE_TEST_DEBUG\" = 0 || exit 92\n test \"$CARGO_PROFILE_DEV_STRIP\" = debuginfo || exit 93\n test \"$CARGO_PROFILE_TEST_STRIP\" = debuginfo || exit 94\n cargo test --offline || exit $?\n ;; esac\n");
+    support::executable(&path, &body);
+    let output = fixture.run();
+    cache::success(&output);
+    assert!(String::from_utf8_lossy(&output.stderr).contains("test nested ... ok"));
+}

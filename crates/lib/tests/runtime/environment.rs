@@ -186,3 +186,100 @@ fn compiler() {
     assert!(held.get("CARGO_INCREMENTAL").is_none());
     assert!(held.get("RUSTC_WRAPPER").is_none());
 }
+
+#[test]
+#[cfg(target_os = "linux")]
+fn profile() {
+    use object::{Object as _, ObjectSection as _, ObjectSymbol as _};
+    let root = tempfile::tempdir().unwrap();
+    std::fs::create_dir(root.path().join("src")).unwrap();
+    std::fs::write(
+        root.path().join("Cargo.toml"),
+        "[package]\nname='profile-probe'\nversion='0.1.0'\nedition='2024'\n",
+    )
+    .unwrap();
+    std::fs::write(root.path().join("src/lib.rs"), "#[unsafe(no_mangle)]\npub extern \"C\" fn profile_symbol() -> u8 { 42 }\n#[test]\nfn assertions() { assert!(cfg!(debug_assertions)); assert_eq!(profile_symbol(), 42); }\n").unwrap();
+    let contract = plumb::config::contract("cargo").unwrap();
+    for (key, value) in [
+        ("CARGO_PROFILE_DEV_DEBUG", "0"),
+        ("CARGO_PROFILE_TEST_DEBUG", "0"),
+        ("CARGO_PROFILE_DEV_STRIP", "debuginfo"),
+        ("CARGO_PROFILE_TEST_STRIP", "debuginfo"),
+    ] {
+        let held = contract.capture([]).unwrap();
+        assert_eq!(held.get(key), Some(value));
+        assert!(contract.capture([(key.into(), "override".into())]).is_err());
+    }
+    let inputs = std::env::vars_os()
+        .filter(|(key, _)| contract.inherit.iter().any(|name| key == name.as_str()));
+    let execution = plumb::config::Execution::new(
+        contract.capture(inputs).unwrap(),
+        &["cargo".into()],
+        root.path(),
+    )
+    .unwrap();
+    let evidence: serde_json::Value =
+        serde_json::from_slice(&execution.evidence().unwrap()).unwrap();
+    assert_eq!(evidence[0]["CARGO_PROFILE_DEV_DEBUG"], "0");
+    assert_eq!(evidence[0]["CARGO_PROFILE_TEST_STRIP"], "debuginfo");
+    let output = execution
+        .command("cargo")
+        .unwrap()
+        .args(["test", "--offline", "--message-format=json"])
+        .current_dir(root.path())
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let artifacts = String::from_utf8(output.stdout).unwrap();
+    let artifact = artifacts
+        .lines()
+        .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+        .find(|row| row["executable"].is_string())
+        .unwrap();
+    assert_eq!(artifact["profile"]["debuginfo"], 0);
+    assert_eq!(artifact["profile"]["opt_level"], "0");
+    assert_eq!(artifact["profile"]["debug_assertions"], true);
+    let path = artifact["executable"].as_str().unwrap();
+    let bytes = std::fs::read(path).unwrap();
+    let object = object::File::parse(bytes.as_slice()).unwrap();
+    assert!(!object.sections().any(|section| {
+        let name = section.name().unwrap_or_default();
+        name.starts_with(".debug_") && name != ".debug_gdb_scripts"
+    }));
+    assert!(
+        object
+            .symbols()
+            .any(|symbol| symbol.name().unwrap_or_default() == "profile_symbol")
+    );
+    std::fs::write(
+        root.path().join("src/lib.rs"),
+        "#[test]\nfn assertions() { debug_assert!(false); }\n",
+    )
+    .unwrap();
+    let failed = execution
+        .command("cargo")
+        .unwrap()
+        .args(["test", "--offline"])
+        .current_dir(root.path())
+        .output()
+        .unwrap();
+    assert!(
+        !failed.status.success(),
+        "debug assertion failures remain failures"
+    );
+}
+
+#[test]
+#[cfg(not(target_os = "linux"))]
+fn profile() {
+    let held = plumb::config::contract("cargo")
+        .unwrap()
+        .capture([])
+        .unwrap();
+    assert_eq!(held.get("CARGO_PROFILE_DEV_DEBUG"), None);
+    assert_eq!(held.get("CARGO_PROFILE_TEST_STRIP"), None);
+}
