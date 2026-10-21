@@ -104,4 +104,21 @@ mod tests {
         changed["entry"]["value"]["assessment"]["capabilities"] = json!(["inspect", "dispose"]);
         assert!(check(&plan, &serde_json::from_value(changed).unwrap()).is_err());
     }
+
+    #[test]
+    fn confirmation() {
+        let (plan, record) = fixture();
+        let mut operation = record["entry"]["value"].clone();
+        operation["outcome"] =
+            json!({"outcome":"applied","material":{"state":"absent"},"writer":"idle"});
+        let value = json!({"original":{"authority":"wharf","digest":"a".repeat(64)},"authorization":{"authority":"wharf","digest":"b".repeat(64)},"operation":operation});
+        let record = serde_json::from_value(
+            json!({"schema":3,"entry":{"kind":"confirmation","value":value}}),
+        )
+        .unwrap();
+        assert_eq!(
+            check(&plan, &record).unwrap_err(),
+            "lane result requires an operation record"
+        );
+    }
 }
