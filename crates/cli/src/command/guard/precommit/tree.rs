@@ -20,6 +20,7 @@ impl Index {
         let root = claim.root.clone();
         if root.exists() {
             clean(&root)?;
+            plumb::integration::staging::lock(source, &root);
             git(
                 &root,
                 &[
@@ -32,11 +33,15 @@ impl Index {
                 "refresh Guard source",
             )?;
         } else {
+            plumb::integration::staging::unlock(source, &root);
             let _ = git(source, &["worktree", "prune"], "prune absent worktrees");
             let output = plumb::config::detached("git")
                 .arg("-C")
                 .arg(source)
-                .args(["worktree", "add", "--detach", "--quiet"])
+                .args([
+                    "worktree", "add", "--detach", "--quiet", "--lock", "--reason",
+                ])
+                .arg(plumb::integration::staging::REASON)
                 .arg(&root)
                 .arg(&commit)
                 .output()
@@ -83,6 +88,7 @@ impl Index {
 impl Drop for Index {
     fn drop(&mut self) {
         if self._claim.verify() && clean(&self.root).is_err() {
+            plumb::integration::staging::unlock(&self.source, &self.root);
             let _ = plumb::config::detached("git")
                 .arg("-C")
                 .arg(&self.source)

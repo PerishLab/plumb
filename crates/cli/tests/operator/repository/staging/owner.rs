@@ -25,7 +25,13 @@ fn foreign() {
     let source = seat(home.path());
     Repo::git(
         fixture.path(),
-        &["worktree", "remove", "--force", source.to_str().unwrap()],
+        &[
+            "worktree",
+            "remove",
+            "--force",
+            "--force",
+            source.to_str().unwrap(),
+        ],
     );
     Repo::git(other.path(), &["commit", "-qm", "foreign source"]);
     Repo::git(
@@ -79,7 +85,13 @@ fn alias() {
     let source = seat(home.path());
     Repo::git(
         fixture.path(),
-        &["worktree", "remove", "--force", source.to_str().unwrap()],
+        &[
+            "worktree",
+            "remove",
+            "--force",
+            "--force",
+            source.to_str().unwrap(),
+        ],
     );
     let other = tempfile::tempdir().unwrap();
     std::fs::write(other.path().join("held"), "foreign content").unwrap();

@@ -1,3 +1,4 @@
+mod locked;
 mod owner;
 #[cfg(target_os = "linux")]
 mod parallel;
