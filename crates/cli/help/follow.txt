@@ -8,6 +8,12 @@ required organization Guard, and revalidates before the ordinary squash merge.
 Closure reads back the merge commit and successful Guard run before accepting
 and closing the Issue.
 
+If main already holds the Auto's own exact published pull and latest-stable
+resolution leaves no registered delta, follow records a writer-qualified
+absorption receipt, closes the pull unmerged, retires its branch by lease and
+accepts the Issue, reading back each step without a new merge or Guard.
+Rerunning an interrupted settlement resumes from that receipt.
+
 State and one local repository lease live under PLUMB_HOME. A disposable clone
 and empty home recover from the registered GitHub Issue, exact publication
 intent, branch and pull. New local proof and delivery preparation replace old
