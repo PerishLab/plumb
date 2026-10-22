@@ -16,10 +16,13 @@ impl Fixture {
     }
 
     fn run(&self, args: &[&str], report: Option<&Path>) -> Output {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
+        let mut command = super::configuration::support::plumb();
         command
             .current_dir(self.root.path())
             .env("PLUMB_HOME", self.home.path())
+            .env_remove("PLUMB_GUARD_STRENGTH")
+            .env_remove("PLUMB_GUARD_BOUNDARY")
+            .env_remove("PLUMB_GUARD_CONTAINER")
             .env("GH_TOKEN", "private-sentinel-token")
             .args(args);
         if let Some(report) = report {
@@ -129,4 +132,74 @@ fn unwritable() {
     assert_eq!(result.status.code(), Some(0));
     assert_eq!(result.stdout, baseline.stdout);
     assert_eq!(std::fs::read_to_string(held).unwrap(), "preserved");
+}
+
+#[test]
+fn proved() {
+    let fixture = Fixture::new();
+    let root = fixture.root.path();
+    std::fs::create_dir(root.join("src")).unwrap();
+    for (path, text) in [
+        (
+            "Cargo.toml",
+            "[package]\nname=\"probe\"\nversion=\"0.1.0\"\nedition=\"2024\"\n",
+        ),
+        (
+            "src/lib.rs",
+            "#[test]\nfn answer() {\n    assert_eq!(2 + 2, 4);\n}\n",
+        ),
+        (
+            "plumb.toml",
+            "[identity]\nns=\"probe\"\n[workflow.hash.guard]\ntest=[\"Cargo.toml\",\"Cargo.lock\",\"src\"]\n",
+        ),
+    ] {
+        std::fs::write(root.join(path), text).unwrap();
+    }
+    let git = |args: &[&str]| {
+        let result = Command::new("git")
+            .args(args)
+            .current_dir(root)
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        result.stdout
+    };
+    git(&["init", "-q", "-b", "feature/probe"]);
+    git(&[
+        "remote",
+        "add",
+        "origin",
+        "https://github.com/Example/probe.git",
+    ]);
+    let lock = super::configuration::support::outside("cargo")
+        .args(["generate-lockfile", "--offline"])
+        .current_dir(root)
+        .output()
+        .unwrap();
+    assert!(lock.status.success());
+    git(&["add", "."]);
+    let tree = String::from_utf8(git(&["write-tree"])).unwrap();
+    let report = fixture.home.path().join("guard.jsonl");
+    let result = fixture.run(&["guard", "--json"], Some(&report));
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let proof: Value = serde_json::from_slice(&result.stdout).unwrap();
+    assert_eq!(proof["tree"], tree.trim());
+    let records = fixture.records(&report);
+    assert!(records.iter().any(|record| record["kind"] == "guard.proof"
+        && record["data"]["proof"]["repository"] == "Example/probe"));
+    assert!(
+        records
+            .iter()
+            .any(|record| record["kind"] == "command.exit" && record["data"]["code"] == 0)
+    );
+    assert_eq!(records.last().unwrap()["data"]["exit_code"], 0);
+    assert_eq!(records.last().unwrap()["data"]["capture"], "complete");
 }
