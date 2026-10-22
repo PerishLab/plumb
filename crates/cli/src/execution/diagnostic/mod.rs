@@ -4,6 +4,7 @@ mod span;
 
 use serde_json::{Value, json};
 use sink::Sink;
+use std::io::Write as _;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
@@ -19,7 +20,7 @@ impl Run {
         let sink = match Sink::new(path) {
             Ok(sink) => Arc::new(Mutex::new(sink)),
             Err(_) => {
-                eprintln!("plumb diagnostic: cannot create new diagnostic file");
+                warn("cannot create new diagnostic file");
                 return None;
             }
         };
@@ -68,4 +69,8 @@ fn active() -> Option<Arc<Mutex<Sink>>> {
 
 fn number(key: &str) -> Option<u64> {
     std::env::var(key).ok()?.parse().ok()
+}
+
+fn warn(message: &str) {
+    let _ = writeln!(std::io::stderr(), "plumb diagnostic: {message}");
 }
