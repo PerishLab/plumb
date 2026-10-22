@@ -109,6 +109,39 @@ impl Owner {
             && self.verify(root).is_ok()
     }
 
+    pub fn orphaned(&self, root: &Path) -> bool {
+        if !std::fs::symlink_metadata(&self.common)
+            .is_err_and(|error| error.kind() == std::io::ErrorKind::NotFound)
+        {
+            return false;
+        }
+        if !root
+            .parent()
+            .is_some_and(|base| self.path(base).is_ok_and(|path| path == root))
+        {
+            return false;
+        }
+        if !std::fs::symlink_metadata(root)
+            .is_ok_and(|metadata| metadata.is_dir() && !metadata.file_type().is_symlink())
+        {
+            return false;
+        }
+        let link = root.join(".git");
+        if !std::fs::symlink_metadata(&link)
+            .is_ok_and(|metadata| metadata.is_file() && !metadata.file_type().is_symlink())
+        {
+            return false;
+        }
+        std::fs::read_to_string(link).is_ok_and(|link| {
+            link.trim()
+                .strip_prefix("gitdir:")
+                .map(|admin| Path::new(admin.trim()))
+                .is_some_and(|admin| {
+                    admin.parent() == Some(self.common.join("worktrees").as_path())
+                })
+        })
+    }
+
     pub fn matches(&self, root: &Path) -> bool {
         if !self.owns(root) {
             return false;

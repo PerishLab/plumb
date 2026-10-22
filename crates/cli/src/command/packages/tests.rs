@@ -176,8 +176,15 @@ mod recovery;
 #[path = "candidate/stale.rs"]
 mod stale;
 
+#[path = "candidate/ambient.rs"]
+mod ambient;
+
 fn isolated(name: &str) -> bool {
-    if std::env::var("PLUMB_TEST_RECOVERY").as_deref() == Ok(name) {
+    alone(&format!("recovery::{name}"))
+}
+
+fn alone(test: &str) -> bool {
+    if std::env::var("PLUMB_TEST_RECOVERY").as_deref() == Ok(test) {
         return true;
     }
     let home = tempfile::tempdir().unwrap();
@@ -185,10 +192,10 @@ fn isolated(name: &str) -> bool {
     command
         .args([
             "--exact",
-            &format!("command::packages::follow::tests::recovery::{name}"),
+            &format!("command::packages::follow::tests::{test}"),
             "--nocapture",
         ])
-        .env("PLUMB_TEST_RECOVERY", name)
+        .env("PLUMB_TEST_RECOVERY", test)
         .env("PLUMB_TEST_HOME", home.path())
         .env("PLUMB_HOME", home.path())
         .env_remove("CI");

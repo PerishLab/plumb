@@ -92,3 +92,22 @@ fn alias() {
         "foreign content"
     );
 }
+
+#[test]
+fn gone() {
+    let fixture = cache::fixture();
+    let home = support::home();
+    cache::success(&cache::run(fixture.path(), home.path()));
+    let source = seat(home.path());
+    let record = source.with_extension("lock");
+    drop(fixture);
+    plumb::integration::staging::reap(&home.path().join("tmp"));
+    assert!(source.join("src/lib.rs").is_file());
+    std::fs::File::open(&record)
+        .unwrap()
+        .set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(7200))
+        .unwrap();
+    plumb::integration::staging::reap(&home.path().join("tmp"));
+    assert!(!source.exists());
+    assert!(!record.exists());
+}

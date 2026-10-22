@@ -1,5 +1,5 @@
 use super::super::{Seat, State, closure, engine, provider::Intent, work};
-use super::{Fixture, issue};
+use super::{Fixture, alone, issue};
 use serde_json::{Value, json};
 use std::path::Path;
 
@@ -222,6 +222,9 @@ fn refused() {
 
 #[test]
 fn concurrent() {
+    if !alone("noop::concurrent") {
+        return;
+    }
     let fixture = Fixture::new(json!({}));
     let (root, seat, mut state) = fixture.held();
     fixture.publish(&root, &mut state);
@@ -248,6 +251,9 @@ fn concurrent() {
 
 #[test]
 fn stranded() {
+    if !alone("noop::stranded") {
+        return;
+    }
     for variant in ["clean", "dirty", "commit"] {
         let fixture = Fixture::new(json!({}));
         let (root, seat, mut state) = fixture.held();

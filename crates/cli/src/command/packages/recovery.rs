@@ -198,6 +198,9 @@ fn closed() {
 
 #[test]
 fn current() {
+    if !isolated("current") {
+        return;
+    }
     plumb::depot::carry(crate::catalog::carried::FILES);
     let fixture = Fixture::new(json!({}));
     let source = fixture.repository("pub fn answer() -> u8 {\n    42\n}\n");

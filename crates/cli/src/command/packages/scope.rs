@@ -69,6 +69,9 @@ fn removed() {
 
 #[test]
 fn projected() {
+    if !isolated("scope::projected") {
+        return;
+    }
     let fixture = Fixture::new(json!({}));
     let root = fixture.repository("pub fn answer() -> u8 { 42 }\n");
     let base = work::git(&root, &["rev-parse", "HEAD"]).unwrap();
@@ -228,6 +231,9 @@ fn issueonly() {
 
 #[test]
 fn stopped() {
+    if !isolated("scope::stopped") {
+        return;
+    }
     for reason in ["failure", "closed"] {
         let fixture = Fixture::new(json!({}));
         let source = fixture.repository("pub fn answer() -> u8 { 42 }\n");
