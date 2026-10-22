@@ -26,7 +26,9 @@ impl Prepared {
         seat: Option<&Path>,
     ) -> Result<Self, String> {
         let (locked, observed) = if latest {
-            let (locked, observed) = crate::command::packages::observed(&index.root, "ci-latest")?;
+            let (locked, observed) = crate::diagnostic::measure("packages.resolve", || {
+                crate::command::packages::observed(&index.root, "ci-latest")
+            })?;
             (locked, Some(plumb::packages::Observation::new(observed)))
         } else {
             (plumb::packages::locked(&index.root, "local-locked")?, None)

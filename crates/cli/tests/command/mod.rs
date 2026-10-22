@@ -1,4 +1,5 @@
 mod configuration;
+mod diagnostic;
 mod identity;
 mod lane;
 mod metadata;

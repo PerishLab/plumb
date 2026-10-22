@@ -47,9 +47,10 @@ impl Lease {
     }
 
     pub fn settle(&self) {
-        if let Err(error) = cache::settle(&self.root, &self.identity, self.since)
-            .and_then(|_| cache::tour(&self.root))
-        {
+        if let Err(error) = crate::diagnostic::measure("material.settle", || {
+            cache::settle(&self.root, &self.identity, self.since)
+                .and_then(|_| cache::tour(&self.root))
+        }) {
             eprintln!("plumb guard: Guard cache bookkeeping failed: {error}");
         }
     }

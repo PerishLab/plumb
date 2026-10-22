@@ -45,6 +45,8 @@ struct Report {
 
 #[derive(clap::Args)]
 pub struct Input {
+    #[arg(long, value_name = "NEW_FILE")]
+    pub(crate) diagnostic: Option<PathBuf>,
     #[arg(default_value = ".")]
     root: PathBuf,
     #[arg(long)]
@@ -58,6 +60,11 @@ pub struct Input {
 }
 
 pub(super) fn run(input: Input) -> i32 {
+    crate::diagnostic::event("material.mode", || {
+        serde_json::json!({
+            "restore":input.restore,"fetch":input.fetch,"save":input.save
+        })
+    });
     let action = if input.restore {
         Action::Restore { fetch: input.fetch }
     } else if input.save {
@@ -65,7 +72,7 @@ pub(super) fn run(input: Input) -> i32 {
     } else {
         Action::Inspect
     };
-    match report(&input.root, action) {
+    match crate::diagnostic::measure("material.transport", || report(&input.root, action)) {
         Ok(report) if input.json => {
             println!(
                 "{}",
@@ -108,6 +115,12 @@ fn report(root: &Path, action: Action) -> Result<Report, String> {
         plumb: plumb::version!("PLUMB"),
         depot: depot.mark(),
     };
+    crate::diagnostic::event("material.identity", || {
+        serde_json::json!({
+            "repository_key":plumb::depot::sha(repository.as_bytes()),"image":identity.image,"platform":platform,
+            "tree":tree,"producer":identity.plumb,"depot":identity.depot
+        })
+    });
     let bytes = serde_json::to_vec(&identity).map_err(|error| error.to_string())?;
     let digest = plumb::depot::sha(&bytes);
     let restore = format!("guard-material-v1-{digest}-");
@@ -128,6 +141,13 @@ fn report(root: &Path, action: Action) -> Result<Report, String> {
         }
         .run(action)?;
     }
+    crate::diagnostic::event("material.receipt", || {
+        serde_json::json!({
+            "cargo":receipt.cargo,"compiler":receipt.compiler,
+            "bytes":std::fs::metadata(&parcel).ok().map(|metadata|metadata.len()),
+            "avoided_rebuild":null
+        })
+    });
     Ok(Report {
         schema: SCHEMA,
         image: context.map(|context| context.image),

@@ -153,59 +153,86 @@ pub(super) fn execute(
     argv: &[String],
     execution: &Execution<'_>,
 ) -> Result<(), String> {
-    let Execution {
-        execution: context, ..
-    } = *execution;
-    let (program, args) = argv
-        .split_first()
-        .ok_or_else(|| "guard action has no command".to_string())?;
-    let managed =
-        context.is_some_and(|context| context.environment.get("CARGO_TARGET_DIR").is_some());
-    let cache = (program == "cargo" && !managed)
-        .then(|| super::cargo::Lease::new(root))
-        .transpose()?;
-    let mut command = match context {
-        Some(context) => context.command(program)?,
-        None => plumb::config::detached(program),
-    };
-    if let Some(cache) = &cache {
-        crate::cargo::configure(&mut command);
-        command.env("CARGO_TARGET_DIR", &cache.root);
+    crate::diagnostic::measure(operation(argv), || execution.run(root, argv))
+}
+
+fn operation(argv: &[String]) -> &'static str {
+    match (
+        argv.first().map(String::as_str),
+        argv.get(1).map(String::as_str),
+    ) {
+        (Some("cargo"), Some("fmt")) => "cargo.fmt",
+        (Some("cargo"), Some("clippy")) => "cargo.clippy",
+        (Some("cargo"), Some("check")) => "cargo.check",
+        (Some("cargo"), Some("test")) => "cargo.test",
+        (Some("cargo"), Some("run")) => "cargo.run",
+        (Some("pnpm"), _) => "pnpm.command",
+        (Some("plumb"), _) => "plumb.command",
+        (Some("ectropy"), _) => "ectropy.command",
+        _ => "guard.command",
     }
-    if let Some(context) = context {
-        crate::execution::inspect(
-            if managed {
-                "cargo"
-            } else {
-                crate::execution::family(program)
-            },
-            root,
-            &context.environment,
-        )?;
-    }
-    let compiler = if program == "cargo" || managed {
-        crate::cargo::cache(context)?
-    } else {
-        None
-    };
-    if let Some(compiler) = &compiler {
-        compiler.apply(&mut command);
-    }
-    command.args(args).current_dir(root);
-    command.stdout(std::io::stderr());
-    unhook(&mut command);
-    let mut child = command
-        .spawn()
-        .map_err(|error| format!("cannot run {}: {error}", argv.join(" ")))?;
-    let status = crate::execution::signal::wait(&mut child, argv)?;
-    drop(compiler);
-    if status.success() {
+}
+
+impl Execution<'_> {
+    fn run(&self, root: &Path, argv: &[String]) -> Result<(), String> {
+        let Execution {
+            execution: context, ..
+        } = *self;
+        let (program, args) = argv
+            .split_first()
+            .ok_or_else(|| "guard action has no command".to_string())?;
+        let managed =
+            context.is_some_and(|context| context.environment.get("CARGO_TARGET_DIR").is_some());
+        let cache = (program == "cargo" && !managed)
+            .then(|| super::cargo::Lease::new(root))
+            .transpose()?;
+        let mut command = match context {
+            Some(context) => context.command(program)?,
+            None => plumb::config::detached(program),
+        };
         if let Some(cache) = &cache {
-            cache.settle();
+            crate::cargo::configure(&mut command);
+            command.env("CARGO_TARGET_DIR", &cache.root);
         }
-        Ok(())
-    } else {
-        Err(format!("{} failed with {status}", argv.join(" ")))
+        if let Some(context) = context {
+            crate::execution::inspect(
+                if managed {
+                    "cargo"
+                } else {
+                    crate::execution::family(program)
+                },
+                root,
+                &context.environment,
+            )?;
+        }
+        let compiler = if program == "cargo" || managed {
+            crate::cargo::cache(context)?
+        } else {
+            None
+        };
+        if let Some(compiler) = &compiler {
+            compiler.apply(&mut command);
+        }
+        command.args(args).current_dir(root);
+        command.stdout(std::io::stderr());
+        unhook(&mut command);
+        let mut child = command
+            .spawn()
+            .map_err(|error| format!("cannot run {}: {error}", argv.join(" ")))?;
+        let status = crate::execution::signal::wait(&mut child, argv)?;
+        crate::diagnostic::event(
+            "command.exit",
+            || serde_json::json!({"code":status.code(),"success":status.success()}),
+        );
+        drop(compiler);
+        if status.success() {
+            if let Some(cache) = &cache {
+                cache.settle();
+            }
+            Ok(())
+        } else {
+            Err(format!("{} failed with {status}", argv.join(" ")))
+        }
     }
 }
 

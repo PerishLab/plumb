@@ -3,7 +3,7 @@ mod catalog;
 mod command;
 mod consumption;
 mod execution;
-use execution::{cargo, observation};
+use execution::{cargo, diagnostic, observation};
 mod judge;
 mod shape;
 
@@ -76,6 +76,8 @@ pub(crate) enum Command {
         refresh: bool,
         #[arg(long)]
         json: bool,
+        #[arg(long, value_name = "NEW_FILE")]
+        diagnostic: Option<PathBuf>,
     },
     #[command(about = "Resolve first-party manifests and locks to the latest stable",
         long_about = plumb::seat::resource!("help/lift.txt"))]
@@ -218,6 +220,7 @@ fn main() {
         }
     };
     let observation = observation::start(command.name());
+    let diagnostic = diagnostic::Run::start(command.diagnostic(), command.name());
     let prepared = plumb::identity::ready().and_then(|()| {
         consumption::prepare(&command).map_err(|error| {
             format!("cannot read installed rules: {error}\nrun plumb configuration install")
@@ -234,10 +237,23 @@ fn main() {
     if let Some(observation) = observation {
         observation.finish(code);
     }
+    if let Some(diagnostic) = diagnostic {
+        diagnostic.finish(code);
+    }
     std::process::exit(code);
 }
 
 impl Command {
+    fn diagnostic(&self) -> Option<&std::path::Path> {
+        match self {
+            Self::Guard { diagnostic, .. } => diagnostic.as_deref(),
+            Self::Cache {
+                deed: command::cache::Deed::Transport(input),
+            } => input.diagnostic.as_deref(),
+            _ => None,
+        }
+    }
+
     fn name(&self) -> &'static str {
         match self {
             Self::Lane { .. } => "lane",

@@ -1,5 +1,34 @@
 Prove the staged tree, exact CI HEAD, or one committed task boundary.
 
+--diagnostic NEW_FILE writes a separate plumb.guard-diagnostic/v1 JSON-lines
+diagnostic without requiring Locus. Use a path outside the guarded worktree. The parent directory must exist; an
+existing file or symlink is never overwritten. File creation or collection
+failure prints a diagnostic and preserves validation output and exit status.
+The same option is available on plumb cache transport; use a distinct file for
+each invocation and publish diagnostics separately from guard-runtime proof.
+
+Records include a start, monotonic enter/leave intervals, available source,
+prepared action worlds and package resolution, material operations, and a
+finish with the original exit code. Intervals are inclusive and nested; never
+sum children into their parent. Reused proof is explicitly recorded rather
+than pretending checks executed. Provider run/attempt values are numeric
+caller observations, not authenticated evidence; obtain Job identity and
+queue/step/upload timing from the provider. Identity can remain unknown after
+early failure. No environment, arbitrary command arguments or output is stored.
+
+The file is bounded to 1 MiB, each record to 64 KiB, reserving space for finish.
+Dropped records mark capture partial. An absent finish, interrupted span,
+trailing partial line, failed upload or unsupported schema is partial/unknown,
+never successful proof. SIGKILL, runner loss and full disks cannot guarantee
+finalization. Diagnostic capture completeness is separate from check outcome.
+
+Linux start/finish resources describe the process and reaped children in kernel
+clock ticks, plus process peak RSS in KiB. Children peak RSS, IO wait, exclusive
+cgroup limits and other platforms remain unavailable; these are not whole-tree
+measurements. Suite results stay in inherited CI output, not in this report;
+no unstable libtest flag, output redirection or test concurrency change is
+introduced. Unit/codegen/link critical paths remain specialist diagnostics.
+
 On Linux, the owned Cargo execution contract omits dev/test debug information
 and strips linked debug sections, including standard-library debug information.
 Optimization level, debug assertions and function symbols remain intact. Both

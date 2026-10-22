@@ -116,16 +116,25 @@ impl Artifact {
     }
 
     fn download(&self, client: &Client, repository: &str, target: &Path) -> Result<(), String> {
+        crate::diagnostic::event(
+            "material.candidate",
+            || serde_json::json!({"artifact":self.id,"bytes":self.size,"run":self.run.as_ref().map(|run|run.id)}),
+        );
         let parent = target.parent().ok_or("cache artifact has no parent")?;
         std::fs::create_dir_all(parent).map_err(|_| "cannot stage cache artifact")?;
         let archive =
             tempfile::NamedTempFile::new_in(parent).map_err(|_| "cannot stage cache artifact")?;
-        client.download(
-            &format!("repos/{repository}/actions/artifacts/{}/zip", self.id),
-            archive.path(),
-            self.size,
-        )?;
-        let sha = format!("sha256:{}", digest(archive.path())?);
+        crate::diagnostic::measure("material.download", || {
+            client.download(
+                &format!("repos/{repository}/actions/artifacts/{}/zip", self.id),
+                archive.path(),
+                self.size,
+            )
+        })?;
+        let sha = format!(
+            "sha256:{}",
+            crate::diagnostic::measure("material.digest", || digest(archive.path()))?
+        );
         if self.digest.as_deref() != Some(&sha) {
             return Err("GitHub cache artifact digest mismatch".into());
         }

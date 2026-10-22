@@ -30,3 +30,8 @@ from repository execution and is never forwarded to artifact storage. The
 artifact digest, parcel identity and native content are independently checked.
 Metadata, download or cache rejection falls back to ordinary compilation.
 This fetch supplies compilation material; current Guard checks still execute.
+
+For diagnostic export, --diagnostic NEW_FILE on transport writes bounded
+plumb.guard-diagnostic/v1 JSON-lines independently of the material receipt.
+Use a new file outside the guarded worktree for each invocation. See plumb guard
+--help for timing, resource, completeness and proof-separation semantics.

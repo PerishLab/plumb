@@ -30,88 +30,145 @@ pub(super) fn resolved(root: &Path) -> Result<Descriptor, String> {
 
 #[locus::trace(with = crate::observation::view())]
 fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
-    let tree = plumb::guard::tree(root)?;
-    let seat = super::cargo::seat(root, &tree)?;
-    if plumb::guard::staged(root, &tree).is_ok() {
-        let index = Index::new(root, &tree)?;
-        let prepared = Prepared::new(root, &index, latest, seat.as_deref())?;
+    crate::diagnostic::measure("guard.prove", || Proof { root, latest }.run())
+}
+
+struct Proof<'a> {
+    root: &'a Path,
+    latest: bool,
+}
+
+impl Proof<'_> {
+    fn run(&self) -> Result<Descriptor, String> {
+        let Self { root, latest } = *self;
+        let tree = plumb::guard::tree(root)?;
+        crate::diagnostic::event("staged", || serde_json::json!({"tree":tree}));
+        let seat = super::cargo::seat(root, &tree)?;
+        if plumb::guard::staged(root, &tree).is_ok() {
+            let index = crate::diagnostic::measure("source.prepare", || Index::new(root, &tree))?;
+            let prepared = crate::diagnostic::measure("guard.prepare", || {
+                Prepared::new(root, &index, latest, seat.as_deref())
+            })?;
+            record(&prepared);
+            if let Some(proof) = prepared.reused(root, &tree) {
+                crate::diagnostic::event("guard.reused", || serde_json::json!({"proof":proof}));
+                return Ok(proof);
+            }
+        }
+        let lease = seat
+            .is_some()
+            .then(|| super::cargo::Lease::new(root))
+            .transpose()?;
+        let index = crate::diagnostic::measure("source.prepare", || Index::new(root, &tree))?;
+        let prepared = crate::diagnostic::measure("guard.prepare", || {
+            Prepared::new(root, &index, latest, seat.as_deref())
+        })?;
+        record(&prepared);
         if let Some(proof) = prepared.reused(root, &tree) {
+            crate::diagnostic::event("guard.reused", || serde_json::json!({"proof":proof}));
             return Ok(proof);
         }
-    }
-    let lease = seat
-        .is_some()
-        .then(|| super::cargo::Lease::new(root))
-        .transpose()?;
-    let index = Index::new(root, &tree)?;
-    let prepared = Prepared::new(root, &index, latest, seat.as_deref())?;
-    if let Some(proof) = prepared.reused(root, &tree) {
-        return Ok(proof);
-    }
-    let Prepared {
-        checks,
-        resolution,
-        material,
-        context,
-    } = prepared;
-    let pending = checks
-        .iter()
-        .filter(|check| !super::cache::contains(&check.proof))
-        .collect::<Vec<_>>();
-    let session = if pending.is_empty() {
-        None
-    } else {
-        lease
-            .as_ref()
-            .zip(context.as_ref())
-            .map(|(lease, context)| {
-                crate::command::cache::transport::Session::begin(
-                    &index.root,
-                    lease,
-                    &material,
-                    context,
-                )
+        let Prepared {
+            checks,
+            resolution,
+            material,
+            context,
+        } = prepared;
+        let pending = checks
+            .iter()
+            .filter(|check| {
+                let reused = super::cache::contains(&check.proof);
+                if reused {
+                    crate::diagnostic::event(
+                        "action.reused",
+                        || serde_json::json!({"action":check.proof}),
+                    );
+                }
+                !reused
             })
-            .transpose()?
-            .flatten()
-    };
-    if !pending.is_empty() {
-        if let Some(check) = pending.iter().find(|check| check.proof.name == "guard/web") {
-            plumb::packages::fetch(&index.root, &check.exclusions)?;
-            tree::unchanged(&index)?;
-        }
-        for check in pending {
-            eprintln!("guard {}", check.proof.name);
-            let execution = tree::Execution {
-                execution: check.execution.as_ref(),
-                observation: crate::observation::bind("check", &check.proof.name),
-            };
-            for command in &check.commands {
-                tree::execute(&index.root, command, &execution)?;
+            .collect::<Vec<_>>();
+        let session = if pending.is_empty() {
+            None
+        } else {
+            lease
+                .as_ref()
+                .zip(context.as_ref())
+                .map(|(lease, context)| {
+                    crate::command::cache::transport::Session::begin(
+                        &index.root,
+                        lease,
+                        &material,
+                        context,
+                    )
+                })
+                .transpose()?
+                .flatten()
+        };
+        if !pending.is_empty() {
+            if let Some(check) = pending.iter().find(|check| check.proof.name == "guard/web") {
+                crate::diagnostic::measure("packages.fetch", || {
+                    plumb::packages::fetch(&index.root, &check.exclusions)
+                })?;
                 tree::unchanged(&index)?;
             }
-            if let Some(lease) = &lease {
-                lease.settle();
+            for check in pending {
+                let mut span = crate::diagnostic::Span::new(operation(&check.proof.name));
+                eprintln!("guard {}", check.proof.name);
+                let execution = tree::Execution {
+                    execution: check.execution.as_ref(),
+                    observation: crate::observation::bind("check", &check.proof.name),
+                };
+                for command in &check.commands {
+                    tree::execute(&index.root, command, &execution)?;
+                    tree::unchanged(&index)?;
+                }
+                if let Some(lease) = &lease {
+                    lease.settle();
+                }
+                super::cache::record(&check.proof)?;
+                span.complete(true);
             }
-            super::cache::record(&check.proof)?;
         }
+        if let Some(session) = session
+            && let Err(error) = session.seal()
+        {
+            eprintln!("guard material: {error}");
+        }
+        let proof = Descriptor::new(
+            root,
+            tree,
+            checks.into_iter().map(|check| check.proof).collect(),
+        )?;
+        let proof = match resolution {
+            Some(resolution) => proof.resolved(resolution)?,
+            None => proof,
+        };
+        crate::diagnostic::event("guard.proof", || serde_json::json!({"proof":proof}));
+        plumb::guard::stage(root, &proof)?;
+        Ok(proof)
     }
-    if let Some(session) = session
-        && let Err(error) = session.seal()
-    {
-        eprintln!("guard material: {error}");
+}
+
+fn record(prepared: &Prepared) {
+    crate::diagnostic::event("guard.identity", || {
+        serde_json::json!({
+            "prepared_tree":prepared.resolution.as_ref().map(|resolution|&resolution.tree),
+            "actions":prepared.checks.iter().map(|check|&check.proof).collect::<Vec<_>>(),
+            "resolution":prepared.resolution,
+            "image":prepared.context.as_ref().map(|context|&context.image)
+        })
+    });
+}
+
+fn operation(name: &str) -> &'static str {
+    match name {
+        "guard/rust" => "guard.rust",
+        "guard/test" => "guard.test",
+        "guard/web" => "guard.web",
+        "guard/plumb" => "guard.plumb",
+        "guard/ectropy" => "guard.ectropy",
+        _ => "guard.action",
     }
-    let proof = Descriptor::new(
-        root,
-        tree,
-        checks.into_iter().map(|check| check.proof).collect(),
-    )?;
-    let proof = match resolution {
-        Some(resolution) => proof.resolved(resolution)?,
-        None => proof,
-    };
-    plumb::guard::stage(root, &proof)?;
-    Ok(proof)
 }
 
 impl Catalog<'_> {

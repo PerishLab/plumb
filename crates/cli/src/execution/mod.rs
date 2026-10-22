@@ -1,4 +1,5 @@
 pub(crate) mod cargo;
+pub(crate) mod diagnostic;
 pub(crate) mod observation;
 pub(crate) mod signal;
 

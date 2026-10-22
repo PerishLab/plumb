@@ -49,12 +49,16 @@ impl<'a> Session<'a> {
         match valid {
             Some(hint) => Inputs(root).restore(&inputs, &hint.files, hint.stamp.fresh()?)?,
             None => {
+                crate::diagnostic::event(
+                    "material.reset",
+                    || serde_json::json!({"reason":"snapshot-missing-pending-or-mismatched","files":actual.files}),
+                );
                 if actual.files != 0 {
                     eprintln!(
                         "guard material: snapshot missing, pending or mismatched; recompiling native Cargo material"
                     );
                 }
-                Target(bucket).reset()?;
+                crate::diagnostic::measure("material.reset", || Target(bucket).reset())?;
             }
         }
         session.pending()?.write(bucket)?;
