@@ -1,3 +1,5 @@
+mod source;
+
 use std::path::Path;
 use std::process::Command;
 
@@ -56,9 +58,7 @@ fn tests() {
             "{out}"
         );
     }
-    for path in ["tests/y.test.ts", "index.test.js"] {
-        assert!(!out.contains(&format!("packages/kit/{path}")), "{out}");
-    }
+    assert!(!out.contains("packages/kit/tests/y.test.ts"), "{out}");
 }
 
 #[test]

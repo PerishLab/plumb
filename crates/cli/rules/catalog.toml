@@ -642,6 +642,15 @@ owner = "plumb"
 tags = ["repository"]
 
 [[rule]]
+id = "structure.source-under-src"
+summary = "Package implementation lives under src or tests"
+law = "Tracked implementation in packages/<name> lives under that package's src/ or tests/. Source extensions and the exact root tool configuration filenames are carried in the structure atom. Root configurations are tooling entry points; their names do not exempt implementation nested elsewhere. node_modules trees and package-root dist, target and .svelte-kit are dependency or generated-output trees, not implementation roots. This first stage governs packages, including packages without package.json, rather than applications or repository-root Python. A historical packages/*/lib scan-root declaration grants no permission to put implementation there."
+evidence = "Tracked package source paths compared with src/tests and root tool configuration names."
+standing = "mechanized"
+owner = "plumb"
+tags = ["repository"]
+
+[[rule]]
 id = "structure.source-export-explicit"
 summary = "A package exports src by explicit subpath"
 law = "A package manifest (package.json at the root, apps/* or packages/*) exposes its src tree only through explicit subpaths. An exports target, at any depth of its condition maps and fallbacks, that carries a * wildcard and either names a src segment (./src/*, ./src/lib/*, ./src/**/*.ts) or has a fixed prefix whose directory holds src (./* over a package with src/) is refused, because package self-reference would then reach every internal module and reopen the climb ectropy's reach law closes. Explicit subpaths and condition maps, a source condition included, pass, and so does a wildcard into a tree without src, such as ./dist/*, which exposes built output rather than source."

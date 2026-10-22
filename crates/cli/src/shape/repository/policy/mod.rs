@@ -43,6 +43,7 @@ pub(crate) struct Expected {
     pub include: BTreeSet<String>,
     pub exclude: BTreeSet<String>,
     pub roots: BTreeSet<String>,
+    pub retired: BTreeSet<String>,
     pub tests: BTreeSet<String>,
     pub environment: BTreeSet<String>,
     pub bans: BTreeSet<String>,
@@ -78,6 +79,7 @@ impl Expected {
             include: BTreeSet::new(),
             exclude: BTreeSet::new(),
             roots: BTreeSet::new(),
+            retired: BTreeSet::new(),
             tests: BTreeSet::new(),
             environment: BTreeSet::new(),
             bans: BTreeSet::new(),
@@ -140,6 +142,7 @@ impl Expected {
             self.apply(&set, "include", Part::Include);
             self.apply(&set, "exclude", Part::Exclude);
             self.apply(&set, "roots", Part::Root);
+            self.apply(&set, "retired", Part::Retired);
             self.roots.extend(Tree { root }.derive(&set));
             self.apply(&set, "tests", Part::Test);
             self.reads(&set, "tests");
@@ -157,6 +160,7 @@ impl Expected {
             Part::Include => &mut self.include,
             Part::Exclude => &mut self.exclude,
             Part::Root => &mut self.roots,
+            Part::Retired => &mut self.retired,
             Part::Test => &mut self.tests,
             Part::Environment => &mut self.environment,
             Part::Ban => &mut self.bans,
@@ -169,6 +173,7 @@ enum Part {
     Include,
     Exclude,
     Root,
+    Retired,
     Test,
     Environment,
     Ban,
