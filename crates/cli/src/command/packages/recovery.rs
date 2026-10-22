@@ -16,6 +16,9 @@ mod scope;
 #[path = "base.rs"]
 mod base;
 
+#[path = "candidate/merge.rs"]
+mod merge;
+
 #[test]
 fn interrupted() {
     if !isolated("interrupted") {

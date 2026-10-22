@@ -8,6 +8,20 @@ use std::time::{Duration, Instant};
 pub(super) struct Provider<'a> {
     pub command: &'a Path,
     pub repository: &'a str,
+    pub patience: Patience,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct Patience {
+    pub deadline: Duration,
+    pub pause: Duration,
+}
+
+impl Patience {
+    pub const MERGE: Self = Self {
+        deadline: Duration::from_secs(300),
+        pause: Duration::from_secs(10),
+    };
 }
 
 impl Provider<'_> {

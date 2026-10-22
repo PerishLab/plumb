@@ -48,6 +48,10 @@ print(json.dumps(result))
         Provider {
             command: &self.command,
             repository: "Example/probe",
+            patience: super::provider::Patience {
+                deadline: std::time::Duration::from_secs(5),
+                pause: std::time::Duration::from_millis(50),
+            },
         }
     }
 
@@ -66,7 +70,7 @@ fn check(conclusion: &str) -> Value {
 
 fn routes(runs: Vec<Value>) -> Value {
     json!({"repos/Example/probe/commits/exact/check-runs?per_page=100":[{"check_runs":runs}],
-        "repos/Example/probe/actions/runs/17":{"head_sha":"exact", "path":".github/workflows/guard.yml", "event":"pull_request"}})
+        "repos/Example/probe/actions/runs/17":{"head_sha":"exact", "path":".github/workflows/guard.yml", "event":"pull_request", "status":"completed", "conclusion":"success"}})
 }
 
 #[test]
@@ -76,41 +80,37 @@ fn guard() {
         success.provider().guard("exact").unwrap(),
         "https://github.com/Example/probe/actions/runs/17"
     );
-    let failed = Fixture::new(routes(vec![check("failure")]));
-    assert!(
-        failed
-            .provider()
-            .guard("exact")
-            .unwrap_err()
-            .contains("failed")
-    );
-    let missing = Fixture::new(routes(vec![]));
-    assert!(
-        missing
-            .provider()
-            .guard("exact")
-            .unwrap_err()
-            .contains("pending")
-    );
-    let duplicate = Fixture::new(routes(vec![check("success"), check("success")]));
-    let error = duplicate.provider().guard("exact").unwrap_err();
-    assert!(error.contains("multiple"));
-    assert!(!error.contains("pending"));
     let mut unreadable = check("failure");
     unreadable["conclusion"] = Value::Null;
-    let error = Fixture::new(routes(vec![unreadable]))
-        .provider()
-        .guard("exact")
-        .unwrap_err();
-    assert!(error.contains("no readable conclusion"), "{error}");
-    for conclusion in ["success", "failure"] {
-        let mut unrelated = routes(vec![check(conclusion)]);
-        unrelated["repos/Example/probe/actions/runs/17"]["path"] = "other.yml".into();
-        let error = Fixture::new(unrelated)
-            .provider()
-            .guard("exact")
-            .unwrap_err();
-        assert!(error.contains("not the organization workflow"), "{error}");
+    let workflow = |conclusion: &str, patch: Value| {
+        let mut routes = routes(vec![check(conclusion)]);
+        for (field, value) in patch.as_object().unwrap() {
+            routes["repos/Example/probe/actions/runs/17"][field] = value.clone();
+        }
+        routes
+    };
+    let pending = "organization Guard is pending;";
+    let failed = "organization Guard failed:";
+    let foreign = "Guard check is not the organization workflow";
+    let running = json!({"status":"in_progress","conclusion":null});
+    let queued = json!({"status":"queued","conclusion":null});
+    let other = json!({"path":"other.yml"});
+    for (routes, expected) in [
+        (routes(vec![check("failure")]), failed),
+        (routes(vec![]), pending),
+        (routes(vec![check("success"); 2]), "exact Auto head"),
+        (routes(vec![unreadable]), "completed organization Guard"),
+        (workflow("success", running), pending),
+        (workflow("success", queued), pending),
+        (
+            workflow("success", json!({"conclusion":"cancelled"})),
+            failed,
+        ),
+        (workflow("success", other.clone()), foreign),
+        (workflow("failure", other), foreign),
+    ] {
+        let error = Fixture::new(routes).provider().guard("exact").unwrap_err();
+        assert!(error.starts_with(expected), "{error}");
     }
 }
 

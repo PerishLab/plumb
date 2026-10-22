@@ -248,7 +248,7 @@ fn remote() {
     let old = probe.state.pushed.as_deref().unwrap();
     std::fs::write(
         probe.fixture.root.path().join("run.json"),
-        json!({"head_sha":old,"path":".github/workflows/guard.yml","event":"pull_request"})
+        json!({"head_sha":old,"path":".github/workflows/guard.yml","event":"pull_request","status":"completed","conclusion":"failure"})
             .to_string(),
     )
     .unwrap();

@@ -52,7 +52,7 @@ impl Fixture {
         super::super::writer::executable(
             &self.command,
             r#"#!/usr/bin/env python3
-import json, pathlib, subprocess, sys
+import json, os, pathlib, subprocess, sys
 root = pathlib.Path(__file__).parent
 args = sys.argv[1:]
 endpoint = args[1]
@@ -60,10 +60,33 @@ if args[:2] == ['pr', 'merge'] and (root / 'mergefault').exists():
     sys.exit('fixture reached verified merge boundary')
 payload = json.loads(pathlib.Path(args[args.index('--input') + 1]).read_text()) if '--input' in args else None
 with (root / 'calls').open('a') as trace:
-    trace.write(json.dumps({'endpoint':endpoint,'payload':payload}) + '\n')
+    trace.write(json.dumps({'endpoint':endpoint,'payload':payload,'args':args}) + '\n')
 def head():
     return subprocess.check_output(['git','--git-dir',str(root/'origin.git'),'rev-parse','refs/heads/auto/17'], text=True).strip()
-if endpoint == 'graphql':
+def git(*command):
+    actor = {'GIT_AUTHOR_NAME':'GitHub','GIT_AUTHOR_EMAIL':'noreply@github.com','GIT_COMMITTER_NAME':'GitHub','GIT_COMMITTER_EMAIL':'noreply@github.com'}
+    return subprocess.check_output(['git','--git-dir',str(root/'origin.git'),*command], text=True, env={**os.environ, **actor}).strip()
+if args[:2] == ['pr', 'view']:
+    path = root / 'ready.json'
+    states = json.loads(path.read_text()) if path.exists() else ['CLEAN']
+    if len(states) > 1:
+        path.write_text(json.dumps(states[1:]))
+    result = {'headRefOid':head(),'mergeStateStatus':states[0]}
+elif args[:2] == ['pr', 'merge']:
+    if (root / 'policyfault').exists():
+        (root / 'policyfault').unlink()
+        sys.exit('X Pull request Example/probe#18 is not mergeable: the base branch policy prohibits the merge.')
+    candidate = args[args.index('--match-head-commit') + 1]
+    assert candidate == head(), (candidate, head())
+    subject, body = (args[args.index(flag) + 1] for flag in ('--subject', '--body'))
+    merge = git('commit-tree', candidate + '^{tree}', '-p', candidate + '^', '-m', subject + '\n\n' + body)
+    git('update-ref', 'refs/heads/main', merge, candidate + '^')
+    git('update-ref', 'refs/pull/18/head', candidate)
+    pull = json.loads((root / 'pull.json').read_text())
+    pull.update({'state':'closed','merged':True,'merged_at':'2026-10-09T00:00:00Z','merge_commit_sha':merge})
+    (root / 'pull.json').write_text(json.dumps(pull))
+    result = {}
+elif endpoint == 'graphql':
     viewer = root / 'viewer'
     result = {'data':{'viewer':json.loads(viewer.read_text()) if viewer.exists() else {'databaseId':1,'login':'fixture-writer'}}}
 elif '/issues?' in endpoint:
@@ -84,6 +107,8 @@ elif '/pulls' in endpoint:
         pull.update(payload)
         path.write_text(json.dumps(pull))
         result = pull
+    elif endpoint.endswith('/pulls/18'):
+        result = json.loads(path.read_text())
     elif payload:
         pull = {'number':18,'state':'open','head':{'ref':'auto/17','sha':head(),'repo':{'full_name':'Example/probe'}},'base':{'ref':'main'},'body':payload['body']}
         path.write_text(json.dumps(pull))
@@ -94,12 +119,12 @@ elif '/pulls' in endpoint:
         result = pull
     else:
         result = [[json.loads(path.read_text())]] if path.exists() else [[]]
-elif '/check-runs' in endpoint and (root / 'mergefault').exists():
+elif '/check-runs' in endpoint and ((root / 'mergefault').exists() or (root / 'passing').exists()):
     result = [{'check_runs':[{'name':'Guard','app':{'slug':'github-actions'},'head_sha':head(),'status':'completed','conclusion':'success','details_url':'https://github.com/Example/probe/actions/runs/17'}]}]
 elif '/check-runs' in endpoint:
     result = [{'check_runs':[json.loads((root/'guard.json').read_text())]}] if (root/'guard.json').exists() else [{'check_runs':[]}]
 elif '/actions/runs/' in endpoint and not (root / 'run.json').exists():
-    result = {'head_sha':head(),'path':'.github/workflows/guard.yml','event':'pull_request'}
+    result = {'head_sha':head(),'path':'.github/workflows/guard.yml','event':'pull_request','status':'completed','conclusion':'success'}
 elif '/actions/runs/' in endpoint:
     result = json.loads((root/'run.json').read_text())
 elif '/comments' in endpoint:

@@ -169,6 +169,18 @@ impl Provider<'_> {
         if conclusion != "success" {
             return Err(format!("organization Guard failed: {}", run["conclusion"]));
         }
+        if workflow["status"] != "completed" {
+            return Err(format!(
+                "organization Guard is pending; workflow run {id} is {} after its Guard check completed",
+                workflow["status"]
+            ));
+        }
+        if workflow["conclusion"] != "success" {
+            return Err(format!(
+                "organization Guard failed: workflow run {id} concluded {}",
+                workflow["conclusion"]
+            ));
+        }
         Ok(url)
     }
 }
