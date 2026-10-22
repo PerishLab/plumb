@@ -10,6 +10,9 @@ use std::time::{Duration, SystemTime};
 pub const PREFIX: &str = "guard-";
 pub(super) const RETAINED: &str = "guard-source-";
 
+pub const REASON: &str =
+    "plumb guard source seat (plumb#415); reaped by plumb after 1h idle; do not remove by hand";
+
 const AGE: Duration = Duration::from_secs(3600);
 
 static LIVE: Mutex<Vec<(PathBuf, PathBuf)>> = Mutex::new(Vec::new());
@@ -49,6 +52,7 @@ pub fn abandon() {
         {
             continue;
         }
+        unlock(&source, &root);
         let _ = crate::config::detached("git")
             .arg("-C")
             .arg(&source)
@@ -59,6 +63,24 @@ pub fn abandon() {
             let _ = std::fs::remove_file(root.with_extension("lock"));
         }
     }
+}
+
+pub fn lock(source: &Path, root: &Path) {
+    let _ = crate::config::detached("git")
+        .arg("-C")
+        .arg(source)
+        .args(["worktree", "lock", "--reason", REASON])
+        .arg(root)
+        .output();
+}
+
+pub fn unlock(source: &Path, root: &Path) {
+    let _ = crate::config::detached("git")
+        .arg("-C")
+        .arg(source)
+        .args(["worktree", "unlock"])
+        .arg(root)
+        .output();
 }
 
 pub fn reap(base: &Path) {
@@ -123,6 +145,7 @@ fn remove(tree: &Path) {
         })
         .and_then(|admin| admin.parent().and_then(Path::parent).map(Path::to_path_buf));
     if let Some(common) = &common {
+        git(common, &["worktree", "unlock"], Some(tree));
         git(common, &["worktree", "remove", "--force"], Some(tree));
     }
     let _ = std::fs::remove_dir_all(tree);
