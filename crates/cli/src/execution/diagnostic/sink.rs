@@ -90,7 +90,7 @@ impl Sink {
         self.bytes += bytes.len();
         if self.file.write_all(&bytes).is_err() {
             self.failed = true;
-            eprintln!("plumb diagnostic: diagnostic write failed; partial evidence only");
+            super::warn("diagnostic write failed; partial evidence only");
         }
     }
 

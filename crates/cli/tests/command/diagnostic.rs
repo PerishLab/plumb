@@ -101,3 +101,32 @@ fn transport() {
     );
     assert_eq!(records.last().unwrap()["data"]["exit_code"], 0);
 }
+
+#[test]
+fn unwritable() {
+    let fixture = Fixture::new();
+    assert!(
+        Command::new("git")
+            .args(["init", "-q", "-b", "main"])
+            .current_dir(fixture.root.path())
+            .status()
+            .unwrap()
+            .success()
+    );
+    let held = fixture.home.path().join("held");
+    std::fs::write(&held, "preserved").unwrap();
+    let baseline = fixture.run(&["cache", "transport", "--json"], None);
+    let result = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .current_dir(fixture.root.path())
+        .env("PLUMB_HOME", fixture.home.path())
+        .args(["cache", "transport", "--json", "--diagnostic"])
+        .arg(&held)
+        .stderr(std::process::Stdio::from(
+            std::fs::File::open(&held).unwrap(),
+        ))
+        .output()
+        .unwrap();
+    assert_eq!(result.status.code(), Some(0));
+    assert_eq!(result.stdout, baseline.stdout);
+    assert_eq!(std::fs::read_to_string(held).unwrap(), "preserved");
+}
