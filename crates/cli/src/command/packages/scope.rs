@@ -172,7 +172,7 @@ fn cold() {
     std::fs::write(fixture.root.path().join("guard.json"), json!({"name":"Guard","app":{"slug":"github-actions"},"head_sha":candidate,"status":"completed","conclusion":"success","details_url":"https://github.com/Example/probe/actions/runs/17"}).to_string()).unwrap();
     std::fs::write(
         fixture.root.path().join("run.json"),
-        json!({"head_sha":candidate,"path":".github/workflows/guard.yml","event":"pull_request"})
+        json!({"head_sha":candidate,"path":".github/workflows/guard.yml","event":"pull_request","status":"completed","conclusion":"success"})
             .to_string(),
     )
     .unwrap();

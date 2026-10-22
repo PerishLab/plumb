@@ -51,6 +51,7 @@ fn execute(input: &Input) -> Result<String, String> {
     let provider = Provider {
         command: &input.github,
         repository: &repository,
+        patience: provider::Patience::MERGE,
     };
     let seat = Seat::open(&repository)?;
     let mut state = seat.read(&repository)?;
