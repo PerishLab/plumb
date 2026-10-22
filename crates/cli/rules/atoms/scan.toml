@@ -214,6 +214,7 @@ tests = [
 
 [[set]]
 name = "packages-web"
+retired = ["packages/*/lib"]
 include = [
   "packages/**/*.ts",
   "packages/**/*.css",
@@ -224,7 +225,6 @@ exclude = [
   "**/dist/**",
 ]
 roots = [
-  "packages/*/lib",
   "packages/*/src",
   "packages/*/tests",
 ]

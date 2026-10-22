@@ -21,7 +21,11 @@ pub fn judge(evidence: &Evidence) -> Found {
     );
     compare(
         "module roots",
-        policy.list("module", "roots"),
+        policy
+            .list("module", "roots")
+            .difference(&want.retired)
+            .cloned()
+            .collect(),
         want.roots.clone(),
         &mut found,
     );

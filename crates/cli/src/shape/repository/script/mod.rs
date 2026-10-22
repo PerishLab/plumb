@@ -1,9 +1,12 @@
+mod source;
+
 use serde_json::Value as Json;
 use std::path::Path;
 
 pub struct Evidence {
     pub exports: Vec<(String, String, String)>,
     pub tests: Vec<(String, String)>,
+    pub sources: Vec<String>,
     pub manager: Option<String>,
     pub engines: Option<String>,
     pub pins: Vec<String>,
@@ -22,6 +25,7 @@ pub fn read(
     Evidence {
         exports: seat.exports(),
         tests: snapshot.map(|held| seat.tests(held)).unwrap_or_default(),
+        sources: snapshot.map(source::read).unwrap_or_default(),
         manager: manifest
             .as_ref()
             .and_then(|doc| doc.get("packageManager").map(Json::to_string)),

@@ -10,6 +10,12 @@ pub fn judge(evidence: &Evidence) -> Found {
             format!("{manifest} exports {key} as {target}, a wildcard into src; name each subpath"),
         ));
     }
+    for path in &evidence.sources {
+        found.push(wrong(
+            &rule::SOURCE_UNDER_SRC,
+            format!("package implementation {path} sits outside src/ or tests/"),
+        ));
+    }
     for (test, package) in &evidence.tests {
         let seat = if package == "." {
             "tests/".to_string()

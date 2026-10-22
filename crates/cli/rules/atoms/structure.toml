@@ -45,3 +45,27 @@ note = "Host declarations. hardrig."
 [[dir.member]]
 name = "packages"
 note = "Publishable node packages. crest, design, plumb, sidecar."
+
+[source]
+rule = "structure.source-under-src"
+extensions = ["cjs", "cts", "js", "jsx", "mjs", "mts", "ts", "tsx", "svelte", "css", "scss", "less", "py", "rs"]
+configurations = [
+  "vite.config.cjs",
+  "vite.config.cts",
+  "vite.config.js",
+  "vite.config.mjs",
+  "vite.config.mts",
+  "vite.config.ts",
+  "vitest.config.cjs",
+  "vitest.config.cts",
+  "vitest.config.js",
+  "vitest.config.mjs",
+  "vitest.config.mts",
+  "vitest.config.ts",
+  "svelte.config.cjs",
+  "svelte.config.cts",
+  "svelte.config.js",
+  "svelte.config.mjs",
+  "svelte.config.mts",
+  "svelte.config.ts",
+]
