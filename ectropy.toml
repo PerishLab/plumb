@@ -61,7 +61,6 @@ roots = [
     "apps/*/tests",
     "crates/*/src",
     "crates/*/tests",
-    "packages/*/lib",
     "packages/*/src",
     "packages/*/tests",
 ]
