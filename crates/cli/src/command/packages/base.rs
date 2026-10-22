@@ -46,6 +46,9 @@ fn advance(source: &Path) {
 
 #[test]
 fn incorporated() {
+    if !isolated("base::incorporated") {
+        return;
+    }
     let (_fixture, source, state) = fixture();
     let old = state.pushed.as_deref().unwrap();
     let text = std::fs::read_to_string(state.worktree.join("Cargo.toml")).unwrap();
@@ -81,6 +84,9 @@ fn incorporated() {
 
 #[test]
 fn retained() {
+    if !isolated("base::retained") {
+        return;
+    }
     let (_fixture, source, state) = fixture();
     commit(&source, "src/lib.rs", "pub fn answer() -> u8 { 43 }\n");
     advance(&source);
@@ -149,6 +155,9 @@ fn foreign() {
 
 #[test]
 fn conflict() {
+    if !isolated("base::conflict") {
+        return;
+    }
     let (_fixture, source, state) = fixture();
     commit(&source, "Cargo.toml", "conflicting ordinary main payload\n");
     advance(&source);

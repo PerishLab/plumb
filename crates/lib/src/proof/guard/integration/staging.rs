@@ -78,9 +78,9 @@ pub fn reap(base: &Path) {
 
 fn sweep(tree: &Path) {
     let path = tree.with_extension("lock");
-    if owner::Owner::retained(tree)
-        && (!owner::Owner::read(&path).is_ok_and(|owner| owner.matches(tree)) || young(&path))
-    {
+    let reapable =
+        || owner::Owner::read(&path).is_ok_and(|owner| owner.matches(tree) || owner.orphaned(tree));
+    if owner::Owner::retained(tree) && (!reapable() || young(&path)) {
         return;
     }
     if !path.exists() && young(tree) {
@@ -98,9 +98,7 @@ fn sweep(tree: &Path) {
     if lock.try_lock().is_err() || !same(&path, &lock) {
         return;
     }
-    if owner::Owner::retained(tree)
-        && !owner::Owner::read(&path).is_ok_and(|owner| owner.matches(tree))
-    {
+    if owner::Owner::retained(tree) && !reapable() {
         return;
     }
     remove(tree);
