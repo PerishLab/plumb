@@ -53,6 +53,7 @@ pub(crate) fn execute(command: Command) -> i32 {
             attach,
             refresh,
             json,
+            diagnostic: _,
         } => precommit::run(precommit::Input {
             root: PathBuf::from(target.root),
             base,

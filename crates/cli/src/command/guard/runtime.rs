@@ -142,6 +142,10 @@ pub(super) fn refused(root: &Path, message: &str, json: bool) -> i32 {
 #[locus::trace(with = crate::observation::view())]
 fn prove(root: &Path) -> Result<Evidence, String> {
     let before = Head::read(root)?;
+    crate::diagnostic::event(
+        "source",
+        || serde_json::json!({"commit":before.commit,"tree":before.tree,"strength":"full","boundary":"head"}),
+    );
     before.clean(root)?;
     let guard = super::precommit::prove(root)?;
     let after = Head::read(root)?;

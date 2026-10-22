@@ -37,8 +37,10 @@ impl Transfer<'_> {
         lease.lock().map_err(|error| error.to_string())?;
         match action {
             Action::Inspect => Ok(Receipt::default()),
-            Action::Save => self.save(),
-            Action::Restore { fetch } => self.fetch(fetch),
+            Action::Save => crate::diagnostic::measure("material.save", || self.save()),
+            Action::Restore { fetch } => {
+                crate::diagnostic::measure("material.restore", || self.fetch(fetch))
+            }
         }
     }
 
@@ -47,7 +49,9 @@ impl Transfer<'_> {
         if receipt.cargo || !fetch {
             return Ok(receipt);
         }
-        match super::transport::provider::fetch(self.root, self.parcel, self.identity) {
+        match crate::diagnostic::measure("material.lookup", || {
+            super::transport::provider::fetch(self.root, self.parcel, self.identity)
+        }) {
             Ok(true) => self.restore(),
             Ok(false) => Ok(receipt),
             Err(error) => {
@@ -76,16 +80,29 @@ impl Transfer<'_> {
     }
 
     fn restore(&self) -> Result<Receipt, String> {
-        let snapshot = match Parcel(self.parcel).read(self.identity) {
+        let snapshot = match crate::diagnostic::measure("material.verify", || {
+            Parcel(self.parcel).read(self.identity)
+        }) {
             Ok(Some(snapshot)) => snapshot,
-            Ok(None) => return Ok(Receipt::default()),
+            Ok(None) => {
+                crate::diagnostic::event(
+                    "material.absent",
+                    || serde_json::json!({"reason":"parcel-missing"}),
+                );
+                return Ok(Receipt::default());
+            }
             Err(error) => {
+                crate::diagnostic::event(
+                    "material.rejected",
+                    || serde_json::json!({"reason":"parcel-invalid"}),
+                );
                 eprintln!("guard material: rejected parcel; compiling normally: {error}");
                 return Ok(Receipt::default());
             }
         };
         let lease = Lease::new(self.root)?;
-        let cargo = self.native(&snapshot, &lease)?;
+        let cargo =
+            crate::diagnostic::measure("material.native", || self.native(&snapshot, &lease))?;
         let compiler = if snapshot.manifest.compiler {
             Copy {
                 source: snapshot.root.path().join("compiler"),
@@ -188,112 +205,4 @@ impl Copy {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{Action, Copy, Transfer};
-
-    #[test]
-    fn existing() {
-        let root = tempfile::tempdir().unwrap();
-        let source = root.path().join("source");
-        let target = root.path().join("target");
-        std::fs::create_dir_all(source.join("nested")).unwrap();
-        std::fs::create_dir(&target).unwrap();
-        std::fs::write(source.join("held"), "incoming").unwrap();
-        std::fs::write(source.join("nested/new"), "new").unwrap();
-        std::fs::write(target.join("held"), "existing").unwrap();
-        assert_eq!(
-            Copy {
-                source,
-                target: target.clone()
-            }
-            .merge()
-            .unwrap(),
-            1
-        );
-        assert_eq!(
-            std::fs::read_to_string(target.join("held")).unwrap(),
-            "existing"
-        );
-        assert_eq!(
-            std::fs::read_to_string(target.join("nested/new")).unwrap(),
-            "new"
-        );
-    }
-
-    #[test]
-    fn foreign() {
-        let root = tempfile::tempdir().unwrap();
-        let target = root.path().join("foreign");
-        std::fs::write(&target, "owned elsewhere").unwrap();
-        let parcel = target.join("material.tar.zst");
-        let transfer = Transfer {
-            root: root.path(),
-            home: root.path(),
-            context: None,
-            parcel: &parcel,
-            identity: "unused",
-        };
-        assert!(
-            transfer
-                .run(Action::Inspect)
-                .err()
-                .unwrap()
-                .contains("foreign slot")
-        );
-        assert!(
-            Copy {
-                source: root.path().join("absent"),
-                target: target.clone()
-            }
-            .merge()
-            .unwrap_err()
-            .contains("foreign directory")
-        );
-        assert_eq!(std::fs::read_to_string(target).unwrap(), "owned elsewhere");
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn symlink() {
-        let root = tempfile::tempdir().unwrap();
-        let source = root.path().join("source");
-        let target = root.path().join("target");
-        let foreign = root.path().join("foreign");
-        std::fs::create_dir(&source).unwrap();
-        std::fs::create_dir(&target).unwrap();
-        std::fs::write(&foreign, "owned elsewhere").unwrap();
-        std::fs::write(source.join("entry"), "incoming").unwrap();
-        std::os::unix::fs::symlink(&foreign, target.join("entry")).unwrap();
-        assert!(
-            Copy {
-                source: source.clone(),
-                target: target.clone()
-            }
-            .merge()
-            .unwrap_err()
-            .contains("foreign entry")
-        );
-        assert_eq!(
-            std::fs::read_to_string(&foreign).unwrap(),
-            "owned elsewhere"
-        );
-        std::fs::remove_file(target.join("entry")).unwrap();
-        std::fs::remove_dir(&target).unwrap();
-        std::os::unix::fs::symlink(&source, &target).unwrap();
-        assert!(
-            Copy {
-                source,
-                target: target.clone()
-            }
-            .merge()
-            .unwrap_err()
-            .contains("foreign directory")
-        );
-        assert!(
-            std::fs::symlink_metadata(target)
-                .unwrap()
-                .file_type()
-                .is_symlink()
-        );
-    }
-}
+mod tests;
