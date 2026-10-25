@@ -19,6 +19,9 @@ mod base;
 #[path = "candidate/merge.rs"]
 mod merge;
 
+#[path = "candidate/retire.rs"]
+mod retire;
+
 #[test]
 fn interrupted() {
     if !isolated("interrupted") {

@@ -5,13 +5,14 @@ mod issue;
 mod provider;
 mod pull;
 mod refresh;
-mod scope;
+mod retire;
 #[cfg(all(test, unix))]
 #[path = "../tests.rs"]
 mod tests;
 mod work;
 
 use provider::Provider;
+use refresh::scope;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fs::{File, OpenOptions};
@@ -29,6 +30,24 @@ pub(crate) fn run(input: Input) -> i32 {
         Ok(message) => report(&input, &message),
         Err(error) => {
             eprintln!("plumb follow: {error}");
+            1
+        }
+    }
+}
+
+pub(crate) fn retire(input: Input) -> i32 {
+    let retired = repository(&input.root).and_then(|repository| {
+        let provider = Provider {
+            command: &input.github,
+            repository: &repository,
+            patience: provider::Patience::MERGE,
+        };
+        retire::run(&input.root, &provider)
+    });
+    match retired {
+        Ok(message) => report(&input, &message),
+        Err(error) => {
+            eprintln!("plumb follow --retire: {error}");
             1
         }
     }

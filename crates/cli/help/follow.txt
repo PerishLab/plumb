@@ -24,6 +24,14 @@ blocker, foreign branch movement, permissions refusal or failing Guard stops
 the operation. A stopped operation records the available Issue, pull and failure
 evidence. Repair the blocker and rerun this same command.
 
+Closing the Auto Issue and pull by hand stops follow on purpose; it never
+retires them itself. When that close is final, --retire clears the seat: it
+refuses unless the recorded Issue and pull are both closed, the pull is not
+merged, no absorption or no-op receipt is recorded and no other follow holds
+the lease. It then removes the owned auto/<number> branch by exact lease and its
+worktree, clears the seat and prints what it retired, so the next plain run
+opens a fresh Auto from current main.
+
 Only the Auto Issue's author, its operation writer, runs or settles it. Any
 other identity refuses before its first write, naming the writer and itself.
 Another identity's marker comment refuses every run until it is resolved,
