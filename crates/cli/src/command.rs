@@ -21,11 +21,19 @@ pub(crate) fn execute(command: Command) -> i32 {
             target,
             github,
             json,
-        } => packages::follow::run(packages::follow::Input {
-            root: PathBuf::from(target.root),
-            github,
-            json,
-        }),
+            retire,
+        } => {
+            let input = packages::follow::Input {
+                root: PathBuf::from(target.root),
+                github,
+                json,
+            };
+            if retire {
+                packages::follow::retire(input)
+            } else {
+                packages::follow::run(input)
+            }
+        }
         Command::Lift { target, json } => packages::lift(PathBuf::from(target.root), json),
         Command::Doctor { target, json } => doctor::run(PathBuf::from(target.root), json),
         Command::Land {

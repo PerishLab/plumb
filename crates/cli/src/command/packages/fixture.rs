@@ -61,8 +61,8 @@ if args[:2] == ['pr', 'merge'] and (root / 'mergefault').exists():
 payload = json.loads(pathlib.Path(args[args.index('--input') + 1]).read_text()) if '--input' in args else None
 with (root / 'calls').open('a') as trace:
     trace.write(json.dumps({'endpoint':endpoint,'payload':payload,'args':args}) + '\n')
-def head():
-    return subprocess.check_output(['git','--git-dir',str(root/'origin.git'),'rev-parse','refs/heads/auto/17'], text=True).strip()
+number = json.loads((root / 'issue.json').read_text())['number']; auto = f'refs/heads/auto/{number}'
+def head(): return subprocess.check_output(['git','--git-dir',str(root/'origin.git'),'rev-parse',auto], text=True).strip()
 def git(*command):
     actor = {'GIT_AUTHOR_NAME':'GitHub','GIT_AUTHOR_EMAIL':'noreply@github.com','GIT_COMMITTER_NAME':'GitHub','GIT_COMMITTER_EMAIL':'noreply@github.com'}
     return subprocess.check_output(['git','--git-dir',str(root/'origin.git'),*command], text=True, env={**os.environ, **actor}).strip()
@@ -81,7 +81,7 @@ elif args[:2] == ['pr', 'merge']:
     subject, body = (args[args.index(flag) + 1] for flag in ('--subject', '--body'))
     merge = git('commit-tree', candidate + '^{tree}', '-p', candidate + '^', '-m', subject + '\n\n' + body)
     git('update-ref', 'refs/heads/main', merge, candidate + '^')
-    git('update-ref', 'refs/pull/18/head', candidate)
+    git('update-ref', f'refs/pull/{number + 1}/head', candidate)
     pull = json.loads((root / 'pull.json').read_text())
     pull.update({'state':'closed','merged':True,'merged_at':'2026-10-09T00:00:00Z','merge_commit_sha':merge})
     (root / 'pull.json').write_text(json.dumps(pull))
@@ -93,8 +93,8 @@ elif '/issues?' in endpoint:
     issue = json.loads((root / 'issue.json').read_text())
     result = [[issue]] if (root / 'discover').exists() and issue['state'] == 'open' else [[]]
 elif '/git/matching-refs/' in endpoint:
-    probe = subprocess.run(['git','--git-dir',str(root/'origin.git'),'show-ref','--verify','--hash','refs/heads/auto/17'], capture_output=True, text=True)
-    result = [[{'ref':'refs/heads/auto/17','object':{'sha':probe.stdout.strip()}}]] if probe.returncode == 0 else [[]]
+    probe = subprocess.run(['git','--git-dir',str(root/'origin.git'),'show-ref','--verify','--hash',auto], capture_output=True, text=True)
+    result = [[{'ref':auto,'object':{'sha':probe.stdout.strip()}}]] if probe.returncode == 0 else [[]]
 elif '/git/ref/' in endpoint:
     if (root / 'pushfault').exists():
         (root / 'pushfault').unlink()
@@ -107,10 +107,10 @@ elif '/pulls' in endpoint:
         pull.update(payload)
         path.write_text(json.dumps(pull))
         result = pull
-    elif endpoint.endswith('/pulls/18'):
+    elif endpoint.endswith(f'/pulls/{number + 1}'):
         result = json.loads(path.read_text())
     elif payload:
-        pull = {'number':18,'state':'open','head':{'ref':'auto/17','sha':head(),'repo':{'full_name':'Example/probe'}},'base':{'ref':'main'},'body':payload['body']}
+        pull = {'number':number + 1,'state':'open','head':{'ref':auto[11:],'sha':head(),'repo':{'full_name':'Example/probe'}},'base':{'ref':'main'},'body':payload['body']}
         path.write_text(json.dumps(pull))
         if (root / 'fault').exists():
             (root / 'fault').unlink()

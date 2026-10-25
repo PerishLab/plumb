@@ -100,6 +100,8 @@ pub(crate) enum Command {
         github: PathBuf,
         #[arg(long)]
         json: bool,
+        #[arg(long)]
+        retire: bool,
     },
     #[command(about = "Report which repositories a candidate version would reach")]
     Radius {

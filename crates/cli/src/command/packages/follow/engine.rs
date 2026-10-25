@@ -38,7 +38,7 @@ pub(super) fn advance(
         }
         let head = issue::text(&pull["head"], "sha")?;
         if pull["state"] != "open" {
-            return Err("Auto pull was closed without merge; human judgment required".into());
+            return Err("Auto pull was closed without merge; human judgment required; if the close is final, run plumb follow --retire, then rerun plumb follow".into());
         }
         if let Err(error) = provider.guard(&head)
             && !error.starts_with("organization Guard is pending;")
@@ -56,7 +56,7 @@ pub(super) fn advance(
     }
     let snapshot = issue::snapshot(provider, state.issue)?;
     if snapshot.state != "OPEN" {
-        return Err("Auto issue is closed without a verified merged pull".into());
+        return Err("Auto issue is closed without a verified merged pull; human judgment required; if the close is final, run plumb follow --retire, then rerun plumb follow".into());
     }
     let work = work::Work {
         source: root,
