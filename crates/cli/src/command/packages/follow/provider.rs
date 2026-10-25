@@ -12,18 +12,7 @@ pub(super) struct Provider<'a> {
     pub sources: plumb::packages::Sources,
 }
 
-#[derive(Clone, Copy)]
-pub(super) struct Patience {
-    pub deadline: Duration,
-    pub pause: Duration,
-}
-
-impl Patience {
-    pub const MERGE: Self = Self {
-        deadline: Duration::from_secs(300),
-        pause: Duration::from_secs(10),
-    };
-}
+pub(super) use plumb::delivery::Patience;
 
 impl Provider<'_> {
     pub fn api(&self, endpoint: &str, body: Option<&Value>) -> Result<Value, String> {
@@ -78,6 +67,16 @@ impl Provider<'_> {
                 item => vec![item],
             })
             .collect())
+    }
+
+    pub fn settle<T>(&self, then: impl FnOnce(&plumb::delivery::Settle<'_>) -> T) -> T {
+        let gh = |args: &[String]| self.command(args);
+        then(&plumb::delivery::Settle {
+            repository: self.repository,
+            noun: "Auto",
+            patience: self.patience,
+            gh: &gh,
+        })
     }
 
     pub fn issue(&self, number: u64) -> Result<Value, String> {

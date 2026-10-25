@@ -92,7 +92,10 @@ pub fn plan(request: Request<'_>) -> Result<Plan, Refusal> {
             "gh api -X POST repos/{seat}/statuses/<candidate> (context=guard / guard (pull_request), state=success)"
         ),
         format!(
-            "gh pr merge <n> -R {seat} --squash --match-head-commit <candidate> --subject <its subject> --body <its body>"
+            "wait up to 300 s for the organization Guard workflow run on <candidate> to complete with success, then for gh pr view <n> -R {seat} to read headRefOid <candidate> and mergeStateStatus CLEAN"
+        ),
+        format!(
+            "gh pr merge <n> -R {seat} --squash --match-head-commit <candidate> --subject <its subject> --body <its body>, retrying a policy refusal only inside that wait; never --admin or --auto"
         ),
         format!(
             "fetch origin and verify origin/{base} is one squash carrying <candidate>'s parent, tree and Guard proof"

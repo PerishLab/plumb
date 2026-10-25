@@ -2,8 +2,11 @@ use crate::landing::{Refusal, refuse};
 use std::path::Path;
 use std::process::Command;
 
+mod settle;
 #[cfg(test)]
 mod tests;
+
+pub use settle::{Patience, Settle};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Squash {

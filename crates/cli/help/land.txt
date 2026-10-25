@@ -6,10 +6,15 @@ the gh CLI, whose authority comes from the caller's Runseal profile
 sender of its own.
 
 What lands is a one-commit projection at land/<branch>. Plumb verifies the
-projection carries the staged-tree Guard proof, posts that as the required guard
-status, and squash-merges the pull, bound to the exact candidate the guard
-passed and carrying the candidate's own subject and body, Guard proof trailer
-included. It then reads main back: the new head must sit on the candidate's
+projection carries the staged-tree Guard proof and posts it as an informational
+guard status; that status is not what the organization ruleset requires. The
+ruleset requires the organization Guard workflow run, so land waits, bounded to
+300 seconds, for that run on the exact candidate to complete with success and
+for the pull to read back at the candidate with mergeStateStatus CLEAN. Only
+then does it squash-merge the pull, bound to the exact candidate and carrying
+the candidate's own subject and body, Guard proof trailer included. A policy
+refusal is retried only inside that wait; a failed run, a moved head or any
+other merge state refuses. Land never merges with --admin or --auto. It then reads main back: the new head must sit on the candidate's
 parent, hold the candidate's tree, and carry its Guard proof, or land refuses
 and names the commits. A base that moved under the merge leaves main holding a
 tree no Guard proved, which land reports and cannot undo. The caller supplies

@@ -1,5 +1,6 @@
+use crate::delivery::{Patience, Settle, Squash};
 use serde_json::Value;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub struct Remote {
@@ -51,12 +52,16 @@ fn parse(raw: &str) -> Result<Remote, String> {
 
 pub struct Client {
     seat: String,
+    command: PathBuf,
+    patience: Patience,
 }
 
 impl Client {
     pub fn new(remote: &Remote) -> Self {
         Self {
             seat: format!("{}/{}", remote.owner, remote.repo),
+            command: PathBuf::from("gh"),
+            patience: Patience::MERGE,
         }
     }
 
@@ -107,33 +112,36 @@ impl Client {
         .map(|_| ())
     }
 
-    pub fn settle(&self, number: u64, squash: &crate::delivery::Squash) -> Result<(), String> {
-        let arguments = squash.arguments(&self.seat, number);
-        let arguments = arguments.iter().map(String::as_str).collect::<Vec<_>>();
-        let mut last = String::new();
-        for turn in 1..=6 {
-            match self.gh(&arguments) {
-                Ok(_) => return Ok(()),
-                Err(error) if pending(&error) => last = error,
-                Err(error) => return Err(error),
-            }
-            std::thread::sleep(std::time::Duration::from_secs(turn));
-        }
-        Err(last)
+    pub fn settle(&self, number: u64, squash: &Squash) -> Result<(), String> {
+        let gh = |args: &[String]| self.run(args);
+        let settle = Settle {
+            repository: &self.seat,
+            noun: "land",
+            patience: self.patience,
+            gh: &gh,
+        };
+        settle.wait(&squash.candidate)?;
+        settle.merge(number, squash)
     }
 
     fn gh(&self, args: &[&str]) -> Result<String, String> {
-        let output = Command::new("gh")
+        let args = args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>();
+        self.run(&args)
+            .map(|bytes| String::from_utf8_lossy(&bytes).trim().to_string())
+    }
+
+    fn run(&self, args: &[String]) -> Result<Vec<u8>, String> {
+        let output = Command::new(&self.command)
             .args(args)
             .output()
             .map_err(|error| format!("cannot run gh: {error}"))?;
         if output.status.success() {
-            return Ok(String::from_utf8_lossy(&output.stdout).trim().to_string());
+            return Ok(output.stdout);
         }
         let named = args
             .iter()
             .take_while(|arg| !arg.starts_with('-'))
-            .copied()
+            .map(String::as_str)
             .collect::<Vec<_>>()
             .join(" ");
         Err(format!(
@@ -163,45 +171,5 @@ fn pull(value: &Value) -> Option<Pull> {
     })
 }
 
-fn pending(error: &str) -> bool {
-    ["not mergeable", "is expected", "mergeability"]
-        .iter()
-        .any(|held| error.contains(held))
-}
-
 #[cfg(test)]
-mod tests {
-    use super::{parse, pull};
-
-    #[test]
-    fn remotes() {
-        for raw in [
-            "git@github.com:PerishLab/plumb.git",
-            "ssh://git@github.com/PerishLab/plumb.git",
-            "https://github.com/PerishLab/plumb",
-        ] {
-            let held = parse(raw).expect(raw);
-            assert_eq!(
-                (held.owner.as_str(), held.repo.as_str()),
-                ("PerishLab", "plumb")
-            );
-        }
-        let refused = parse("ssh://git@git.perish.top/PerishLab/plumb.git").err();
-        assert!(refused.is_some_and(|error| error.contains("Forgejo is archived")));
-    }
-
-    #[test]
-    fn pulls() {
-        let value = serde_json::json!({
-            "id": "PR_one",
-            "number": 23,
-            "url": "https://github.com/PerishLab/plumb/pull/23",
-            "headRefOid": "abc",
-            "title": "Delivery",
-            "body": "Refs PerishLab/plumb#20"
-        });
-        let pull = pull(&value).expect("pull");
-        assert_eq!(pull.node, "PR_one");
-        assert_eq!(pull.number, 23);
-    }
-}
+mod tests;
