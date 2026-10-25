@@ -1,4 +1,6 @@
 use super::{Package, cargo, manifest, npm, registry};
+#[cfg(feature = "depot")]
+use super::{Sources, section};
 use std::collections::BTreeSet;
 
 #[test]
@@ -201,4 +203,42 @@ fn compressed() {
     server.join().unwrap();
     assert!(output.status.success(), "{output:?}");
     assert_eq!(registry::cargo(&output.stdout).unwrap(), "0.2.0");
+}
+
+#[cfg(feature = "depot")]
+#[test]
+fn delta() {
+    let held = |name: &str, version: &str| Package {
+        ecosystem: "cargo".into(),
+        name: name.into(),
+        version: version.into(),
+    };
+    let sources = Sources {
+        depot: "http://127.0.0.1:9/{product}".into(),
+        index: "http://127.0.0.1:9".into(),
+    };
+    let root = tempfile::tempdir().unwrap();
+    let base = [
+        held("alpha", "1.2.0"),
+        held("beta", "0.3.0"),
+        held("gamma", "0.0.1"),
+    ];
+    let head = [
+        held("alpha", "1.4.0"),
+        held("gamma", "0.0.2"),
+        held("delta", "0.1.0"),
+    ];
+    let text = section(root.path(), &base, &head, &sources);
+    for expected in [
+        "- cargo alpha 1.2.0 → 1.4.0 compatible\n  - released versions unreadable",
+        "- cargo beta 0.3.0 removed\n",
+        "- cargo delta added 0.1.0\n  - v0.1.0 changelog: missing (delta Depot: ",
+        "- cargo gamma 0.0.1 → 0.0.2 incompatible\n",
+    ] {
+        assert!(text.contains(expected), "{expected}\n---\n{text}");
+    }
+    assert_eq!(
+        section(root.path(), &head, &head, &sources),
+        "## Delta\nNo first-party package moved.\n"
+    );
 }

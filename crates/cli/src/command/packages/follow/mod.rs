@@ -41,6 +41,7 @@ pub(crate) fn retire(input: Input) -> i32 {
             command: &input.github,
             repository: &repository,
             patience: provider::Patience::MERGE,
+            sources: Default::default(),
         };
         retire::run(&input.root, &provider)
     });
@@ -71,6 +72,7 @@ fn execute(input: &Input) -> Result<String, String> {
         command: &input.github,
         repository: &repository,
         patience: provider::Patience::MERGE,
+        sources: Default::default(),
     };
     let seat = Seat::open(&repository)?;
     let mut state = seat.read(&repository)?;

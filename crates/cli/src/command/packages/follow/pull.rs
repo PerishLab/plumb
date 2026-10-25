@@ -84,10 +84,17 @@ impl Provider<'_> {
         if actual["object"]["sha"] != head {
             return Err("Auto push readback disagrees".into());
         }
+        let base = workgit(root, &["merge-base", "origin/main", head])?;
+        let body = body(issue, &delta(root, &base, head, &self.sources)?);
         if let Some(pull) = self.find(issue)? {
-            return Ok(pull);
+            if pull["body"].as_str() == Some(body.as_str()) {
+                return Ok(pull);
+            }
+            let number = pull["number"].as_u64().ok_or("Auto pull has no number")?;
+            let endpoint = format!("repos/{}/pulls/{number}", self.repository);
+            return self.patch(&endpoint, &json!({"body":body}));
         }
-        self.api(&format!("repos/{}/pulls", self.repository), Some(&json!({"title":"Follow the latest first-party packages", "head":branch, "base":"main", "body":format!("Refs #{issue}.\n\n## Outcome\nFirst-party manifests and locks follow latest stable.\n\n## Change\nRegistered follow operation; manifests and lockfiles only, plus the mechanical move of plumb.toml [release] product to [identity] ns.\n\n## Verification\nRequired organization Guard must pass on this exact head before merge.\n\n## Boundary\nOnly the registered follow paths may change." )})))
+        self.api(&format!("repos/{}/pulls", self.repository), Some(&json!({"title":"Follow the latest first-party packages", "head":branch, "base":"main", "body":body})))
     }
 
     pub(super) fn remote(&self, issue: u64) -> Result<Option<String>, String> {
@@ -103,6 +110,35 @@ impl Provider<'_> {
             .map(|reference| text(&reference["object"], "sha"))
             .transpose()
     }
+}
+
+fn body(issue: u64, delta: &str) -> String {
+    format!(
+        "Refs #{issue}.\n\n## Outcome\nFirst-party manifests and locks follow latest stable.\n\n## Change\nRegistered follow operation; manifests and lockfiles only, plus the mechanical move of plumb.toml [release] product to [identity] ns.\n\n{delta}\n## Verification\nRequired organization Guard must pass on this exact head before merge.\n\n## Boundary\nOnly the registered follow paths may change."
+    )
+}
+
+fn delta(
+    root: &std::path::Path,
+    base: &str,
+    head: &str,
+    sources: &plumb::packages::Sources,
+) -> Result<String, String> {
+    let mut sides = Vec::new();
+    for commit in [base, head] {
+        let held = tempfile::tempdir().map_err(|error| error.to_string())?;
+        for file in ["Cargo.lock", "pnpm-lock.yaml"] {
+            if workgit(root, &["ls-tree", "--name-only", commit, "--", file])?.is_empty() {
+                continue;
+            }
+            let text = workgit(root, &["show", &format!("{commit}:{file}")])?;
+            std::fs::write(held.path().join(file), text).map_err(|error| error.to_string())?;
+        }
+        sides.push(plumb::packages::held(held.path())?);
+    }
+    Ok(plumb::packages::section(
+        root, &sides[0], &sides[1], sources,
+    ))
 }
 
 fn workgit(root: &std::path::Path, args: &[&str]) -> Result<String, String> {

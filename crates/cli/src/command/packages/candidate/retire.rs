@@ -28,6 +28,7 @@ fn provider(command: &Path) -> Provider<'_> {
             deadline: std::time::Duration::from_secs(5),
             pause: std::time::Duration::from_millis(50),
         },
+        sources: Default::default(),
     }
 }
 
