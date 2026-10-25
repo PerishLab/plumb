@@ -9,6 +9,9 @@ mod observation;
 mod process;
 pub use observation::{Observation, latest};
 mod registry;
+pub use cargo::compatible;
+#[cfg(feature = "depot")]
+pub use registry::delta::{Sources, section};
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -163,11 +166,16 @@ pub fn allowed(path: &str) -> bool {
 #[cfg(test)]
 mod tests;
 
-pub fn locked(root: &Path, context: &str) -> Result<Resolution, String> {
+pub fn held(root: &Path) -> Result<Vec<Package>, String> {
     let mut packages = cargo::Lock(root).locked()?;
     packages.extend(npm::Lock(root).locked()?);
     packages.sort();
     packages.dedup();
+    Ok(packages)
+}
+
+pub fn locked(root: &Path, context: &str) -> Result<Resolution, String> {
+    let packages = held(root)?;
     let tree = process::git(root, &["write-tree"])?;
     Ok(Resolution {
         context: context.into(),

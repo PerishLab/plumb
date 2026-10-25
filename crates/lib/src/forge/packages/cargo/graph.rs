@@ -122,17 +122,15 @@ impl Change<'_> {
 }
 
 fn slot(left: &Id, right: &Id) -> bool {
-    if left.0 != right.0 || left.2 != right.2 {
-        return false;
-    }
-    match (
-        semver::Version::parse(&left.1),
-        semver::Version::parse(&right.1),
-    ) {
+    left.0 == right.0 && left.2 == right.2 && compatible(&left.1, &right.1)
+}
+
+pub fn compatible(left: &str, right: &str) -> bool {
+    match (semver::Version::parse(left), semver::Version::parse(right)) {
         (Ok(one), Ok(two)) if one.major > 0 => one.major == two.major,
         (Ok(one), Ok(two)) if one.minor > 0 => two.major == 0 && one.minor == two.minor,
         (Ok(one), Ok(two)) => two.major == 0 && two.minor == 0 && one.patch == two.patch,
-        _ => left.1 == right.1,
+        _ => left == right,
     }
 }
 

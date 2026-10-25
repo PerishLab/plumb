@@ -1,5 +1,6 @@
 mod graph;
 use super::{Package, manifest, process};
+pub use graph::compatible;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 

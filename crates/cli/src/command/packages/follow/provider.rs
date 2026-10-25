@@ -9,6 +9,7 @@ pub(super) struct Provider<'a> {
     pub command: &'a Path,
     pub repository: &'a str,
     pub patience: Patience,
+    pub sources: plumb::packages::Sources,
 }
 
 #[derive(Clone, Copy)]

@@ -1,4 +1,6 @@
 mod coherent;
+#[cfg(feature = "depot")]
+pub(super) mod delta;
 use super::process;
 pub(super) use coherent::select as coherent;
 use semver::{Version, VersionReq};
