@@ -1,7 +1,5 @@
-use super::provider::Patience;
 use super::{Provider, Seat, State, issue, pull, refresh, scope, work};
 use std::path::Path;
-use std::time::Instant;
 
 pub(super) fn advance(
     root: &Path,
@@ -143,7 +141,7 @@ pub(super) fn advance(
     plan.issue = provider.published(&plan.issue)?;
     state.plan = Some(plan.clone());
     seat.write(state)?;
-    let guard = wait(provider, &plan.candidate)?;
+    let guard = provider.settle(|settle| settle.wait(&plan.candidate))?;
     let latest = plumb::packages::Plan::read(&state.worktree, "follow")?;
     latest.verify(&state.worktree)?;
     let snapshot = issue::snapshot(provider, state.issue)?;
@@ -159,7 +157,7 @@ pub(super) fn advance(
     plumb::delivery::revalidate(request, &plan, &authority).map_err(|error| error.to_string())?;
     let squash = plumb::delivery::Squash::read(&state.worktree, &plan.candidate)
         .map_err(|error| error.to_string())?;
-    merge(provider, state.pull, &squash)?;
+    provider.settle(|settle| settle.merge(state.pull, &squash))?;
     let merged = provider.api(
         &format!("repos/{}/pulls/{}", provider.repository, state.pull),
         None,
@@ -180,86 +178,4 @@ pub(super) fn advance(
 fn current(root: &Path, head: &str) -> Result<bool, String> {
     let base = work::git(root, &["rev-parse", "origin/main"])?;
     Ok(work::git(root, &["merge-base", head, &base])? == base)
-}
-
-fn merge(
-    provider: &Provider<'_>,
-    pull: u64,
-    squash: &plumb::delivery::Squash,
-) -> Result<(), String> {
-    let Patience { deadline, pause } = provider.patience;
-    let deadline = Instant::now() + deadline;
-    loop {
-        ready(provider, pull, &squash.candidate, deadline)?;
-        match provider.command(&squash.arguments(provider.repository, pull)) {
-            Ok(_) => return Ok(()),
-            Err(error) if refused(&error) && Instant::now() + pause < deadline => {
-                std::thread::sleep(pause)
-            }
-            Err(error) => return Err(error),
-        }
-    }
-}
-
-fn ready(
-    provider: &Provider<'_>,
-    pull: u64,
-    candidate: &str,
-    deadline: Instant,
-) -> Result<(), String> {
-    let pause = provider.patience.pause;
-    loop {
-        let bytes = provider.command(
-            &[
-                "pr",
-                "view",
-                &pull.to_string(),
-                "-R",
-                provider.repository,
-                "--json",
-                "headRefOid,mergeStateStatus",
-            ]
-            .map(str::to_string),
-        )?;
-        let view: serde_json::Value = serde_json::from_slice(&bytes)
-            .map_err(|error| format!("Auto pull readiness is unreadable: {error}"))?;
-        let head = issue::text(&view, "headRefOid")?;
-        let status = issue::text(&view, "mergeStateStatus")?;
-        if head != candidate {
-            return Err(format!(
-                "Auto pull head {head} is not the exact candidate {candidate}; merge refused"
-            ));
-        }
-        match status.as_str() {
-            "CLEAN" => return Ok(()),
-            "BLOCKED" | "UNKNOWN" if Instant::now() + pause < deadline => std::thread::sleep(pause),
-            "BLOCKED" | "UNKNOWN" => {
-                return Err(format!(
-                    "Auto pull did not become mergeable within the bounded wait; last mergeStateStatus {status}"
-                ));
-            }
-            _ => {
-                return Err(format!(
-                    "Auto pull is not mergeable: mergeStateStatus {status}; merge refused"
-                ));
-            }
-        }
-    }
-}
-
-fn refused(error: &str) -> bool {
-    error.contains("base branch policy prohibits the merge") || error.contains("not mergeable")
-}
-
-fn wait(provider: &Provider<'_>, head: &str) -> Result<String, String> {
-    for _ in 0..90 {
-        match provider.guard(head) {
-            Ok(run) => return Ok(run),
-            Err(error) if error.starts_with("organization Guard is pending;") => {
-                std::thread::sleep(std::time::Duration::from_secs(10))
-            }
-            Err(error) => return Err(error),
-        }
-    }
-    Err("organization Guard did not settle within the bounded wait".into())
 }
