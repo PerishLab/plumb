@@ -94,3 +94,6 @@ program = "pnpm"
 
 [[workflow.tool.guard.test]]
 program = "git"
+
+[release.windows]
+scope = "user"
