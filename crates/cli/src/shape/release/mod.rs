@@ -11,7 +11,7 @@ pub use attachment::{Cargo, Cfworker, Chart, Npm, Oci};
 pub use deb::Deb;
 pub use depot::Depot;
 pub use executable::{Binary, Executable};
-pub use target::Target;
+pub use target::{Target, Windows};
 
 use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
@@ -33,6 +33,7 @@ pub struct Spec {
     pub cfworker: Option<Cfworker>,
     pub deb: Option<Deb>,
     pub depot: Option<Depot>,
+    pub windows: Option<Windows>,
 }
 
 #[derive(Deserialize)]
@@ -64,6 +65,7 @@ struct Raw {
     cfworker: Option<Cfworker>,
     deb: Option<Deb>,
     depot: Option<Depot>,
+    windows: Option<Windows>,
 }
 impl Spec {
     pub(crate) fn controller(root: &Path) -> Result<Self, String> {
@@ -112,6 +114,7 @@ impl Spec {
             cfworker,
             deb,
             depot,
+            windows,
             ..
         } = held.release;
         let spec = Self {
@@ -132,6 +135,7 @@ impl Spec {
             cfworker,
             deb,
             depot,
+            windows,
         };
         spec.validate()?;
         Ok(spec)
@@ -184,6 +188,9 @@ impl Spec {
                 }
                 self.carried(target)?;
             }
+        }
+        if let Some(windows) = &self.windows {
+            windows.validate(self)?;
         }
         if let Some(depot) = &self.depot {
             if self.authority.is_empty() {
