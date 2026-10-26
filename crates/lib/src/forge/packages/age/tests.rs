@@ -56,6 +56,7 @@ fn provider() {
     command
         .args(["--exact", "packages::age::tests::provider", "--nocapture"])
         .env("PLUMB_AGE_FIXTURE", root.path())
+        .env("PNPM_HOME", root.path().join("pnpm"))
         .env(
             "NPM_CONFIG_USERCONFIG",
             if cfg!(windows) { "NUL" } else { "/dev/null" },

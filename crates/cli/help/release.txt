@@ -56,3 +56,8 @@ producer, vX.Y.Z@commit, and its Depot mark. Wharf records it as the guard field
 of that release's seal, which is where Authority::stable() reads it.
 
 A marker never moves. A stable marker refuses a version that already stands.
+
+The optional [release.windows] table sets scope = "user" or "machine" for the
+Windows manager. It requires at least one installed x86_64-pc-windows-msvc
+executable. Without the table, the manager uses user scope. Wharf resolves the
+platform directories; the declaration carries no arbitrary installation paths.
