@@ -7,7 +7,7 @@ pub mod record;
 pub mod release;
 pub mod replace;
 
-pub use plumb_macro::{catalogue, resource};
+pub use plumb_macro::{bytes, catalogue, resource};
 
 pub const TMP: &str = ".tmp";
 

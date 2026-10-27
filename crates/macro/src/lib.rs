@@ -25,7 +25,69 @@ pub fn catalogue(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn resource(input: TokenStream) -> TokenStream {
     let path = parse_macro_input!(input as LitStr);
-    resource::expand(path)
+    resource::expand(path, quote::quote!(include_str))
+        .unwrap_or_else(|err| err.to_compile_error())
+        .into()
+}
+
+#[doc = r#"Carries a crate-relative resource as bytes, with the anchoring law of `resource!`.
+
+Paths are nonempty slash-separated components and cannot contain `.` or `..`.
+Absolute paths, backslashes and empty components are refused.
+
+```compile_fail
+let _ = plumb_macro::bytes!("");
+```
+
+```compile_fail
+let _ = plumb_macro::bytes!("/held");
+```
+
+```compile_fail
+let _ = plumb_macro::bytes!("\\held");
+```
+
+```compile_fail
+let _ = plumb_macro::bytes!("held\\file");
+```
+
+```compile_fail
+let _ = plumb_macro::bytes!(".");
+```
+
+```compile_fail
+let _ = plumb_macro::bytes!("..");
+```
+
+```compile_fail
+let _ = plumb_macro::bytes!("./tests/held/kept.txt");
+```
+
+```compile_fail
+let _ = plumb_macro::bytes!("../macro/tests/held/kept.txt");
+```
+
+```compile_fail
+let _ = plumb_macro::bytes!("tests/held/../held/kept.txt");
+```
+
+```compile_fail
+let _ = plumb_macro::bytes!("tests/./held/kept.txt");
+```
+
+```compile_fail
+let _ = plumb_macro::bytes!("tests//held/kept.txt");
+```
+
+```compile_fail
+let _ = plumb_macro::bytes!("held/");
+```
+
+"#]
+#[proc_macro]
+pub fn bytes(input: TokenStream) -> TokenStream {
+    let path = parse_macro_input!(input as LitStr);
+    resource::expand(path, quote::quote!(include_bytes))
         .unwrap_or_else(|err| err.to_compile_error())
         .into()
 }
