@@ -49,7 +49,10 @@ fn provider() {
     std::fs::write(root.path().join("package.json"), r#"{"name":"age-fixture","private":true,"scripts":{"check":"node -e \"console.log(12345)\""},"dependencies":{"@perishlab/ageprobe":"0","aged-third":"0","exempt-third":"0","locked-third":"0"}}"#).unwrap();
     std::fs::write(
         root.path().join("pnpm-workspace.yaml"),
-        "packages:\n  - child\nminimumReleaseAgeExclude:\n  - exempt-third\n  - named@0.2.0\n",
+        format!(
+            "packages:\n  - child\ncacheDir: {}\nminimumReleaseAgeExclude:\n  - exempt-third\n  - named@0.2.0\n",
+            serde_json::to_string(&root.path().join("cache")).unwrap()
+        ),
     )
     .unwrap();
     let mut command = std::process::Command::new(std::env::current_exe().unwrap());
