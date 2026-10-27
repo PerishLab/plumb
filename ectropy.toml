@@ -1,4 +1,9 @@
 [[boundary]]
+allow = ["receiver"]
+note = "Rust procedural macros must be free functions at the proc-macro crate root accepting TokenStream; these compiler entry points cannot become receiver methods or namespace statics."
+paths = ["crates/macro/src/lib.rs"]
+
+[[boundary]]
 allow = ["word"]
 note = "The isolated which::Sys adapter implements the upstream trait's required associated type and method names."
 paths = ["crates/lib/src/runtime/execution/system.rs"]

@@ -2,13 +2,13 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Error, LitStr};
 
-pub fn expand(path: LitStr) -> Result<TokenStream, Error> {
+pub fn expand(path: LitStr, carrier: TokenStream) -> Result<TokenStream, Error> {
     let held = path.value();
     if let Err(why) = anchored(&held) {
         return Err(Error::new(path.span(), why));
     }
     Ok(quote! {
-        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/", #held))
+        #carrier!(concat!(env!("CARGO_MANIFEST_DIR"), "/", #held))
     })
 }
 
