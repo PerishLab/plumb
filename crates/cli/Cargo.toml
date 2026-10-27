@@ -8,7 +8,7 @@ publish = false
 
 [lib]
 name = "plumb_cli"
-path = "src/shape/repository/dependency/protocol.rs"
+path = "src/command/library/mod.rs"
 
 [[bin]]
 name = "plumb"
