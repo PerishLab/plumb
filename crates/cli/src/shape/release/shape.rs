@@ -2,7 +2,7 @@ use super::Spec;
 
 impl Spec {
     pub fn binary(&self) -> bool {
-        !self.binaries.is_empty() || !self.target.is_empty()
+        !self.binaries.is_empty()
     }
 
     pub fn attached(&self) -> bool {
