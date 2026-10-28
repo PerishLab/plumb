@@ -7,12 +7,11 @@ mod authority;
 mod index;
 pub mod landing;
 pub(crate) mod running;
-#[cfg(all(test, feature = "skill"))]
-mod stable;
+pub mod seatrial;
 mod store;
-mod transit;
 #[cfg(test)]
-mod verify;
+mod tests;
+mod transit;
 
 pub use authority::{Authority, Expected, Verified};
 pub use index::tree;

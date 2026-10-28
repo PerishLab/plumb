@@ -64,3 +64,10 @@ worlds into one evidence digest.
 Selectors are explicit and provider-neutral. CI, GITHUB_ACTIONS, and other
 provider variables do not select or alter this contract. A partial, unknown, or
 contradictory declaration is refused.
+
+Products may declare [guard.seatrial] in plumb.toml with scenes (authority,
+product, channel), explicit case names and a runtime image. This is a static
+contract for observing published non-stable artifacts after ship is ready.
+Guard validates it without running Seatrial or waiting for black-box PR tests.
+Scene programs stay independently distributed on Depot. This declaration alone
+does not enable stable-promotion blocking.

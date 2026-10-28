@@ -16,6 +16,7 @@ rules! {
     KNOWN_WORKFLOW => "structure.known-workflow",
     COLLABORATION_SURFACE_INHERITED => "structure.collaboration-surface-inherited",
     DECLARATION_PRESENT => "structure.declaration-present",
+    SEATRIAL => "structure.seatrial",
     PREVIEW => "structure.preview-app",
     STATIC => "structure.preview-static",
     RETIRED_SEAT_ABSENT => "structure.retired-seat-absent",

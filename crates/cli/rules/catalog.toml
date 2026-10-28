@@ -820,3 +820,12 @@ evidence = "The layered layout's overridden seat paths, file names and keys."
 standing = "mechanized"
 owner = "plumb"
 tags = ["repository"]
+
+[[rule]]
+id = "structure.seatrial"
+summary = "Products declare their published-artifact Seatrial suite"
+law = "An optional guard.seatrial table declares only scenes, explicit nonempty unique case names and a runtime image. Scenes name a normalized HTTPS Depot authority, product and channel; first-party references never pin a version. Third-party runtime images require an immutable digest. The default lifecycle observes non-stable artifacts after ship distribution is ready. Source Guard validates declarations only and never executes the suite or adds a PR wait. Declaration does not enable stable promotion blocking."
+evidence = "The tracked regular plumb.toml declaration parsed by the shared Seatrial declaration reader."
+standing = "mechanized"
+owner = "plumb"
+tags = ["configuration", "repository", "release"]

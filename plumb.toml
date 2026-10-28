@@ -97,3 +97,12 @@ program = "git"
 
 [release.windows]
 scope = "user"
+
+[guard.seatrial]
+cases = ["writer"]
+image = "ghcr.io/perishlab/images:stable"
+
+[guard.seatrial.scenes]
+authority = "https://depot.seatrial.perish.uk"
+product = "seatrial"
+channel = "stable"
