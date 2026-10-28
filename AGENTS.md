@@ -148,7 +148,7 @@ public receipt. Source support alone does not qualify an installed consumer.
 
 - `release` only stamps its immutable marker on the head of a release line.
   `ship` hands that marker to wharf, which publishes every medium. `depot
-  consign` places a marker's changelog or skill in wharf's yard, dispatches
+  consign` places a marker's changelog, skill or scenes in wharf's yard, dispatches
   wharf to lodge it, and reads Depot back; wharf is Depot's only writer.
   Neither is a phase inside the other.
 - A release is one marker and one seal over every executable it carries, so a
@@ -205,8 +205,9 @@ public receipt. Source support alone does not qualify an installed consumer.
 - A marker names identity, not capability. Reading a historical marker does not
   authorize producing its targets today; wharf refuses what the product's own
   manifests no longer support.
-- Depot carries changelog and skill generations and nothing else;
-  configuration travels inside the binary. Generations remain immutable and
+- Depot consigns changelog, skill and scene generations;
+  configuration travels inside the binary. Scenes carry regular file materials,
+  not an admission to execute them; Seatrial owns their execution semantics. Generations remain immutable and
   addressable. A latest pointer may move, but every movement names the release
   marker and uses conditional readback. A product's own `plumb.toml` declares
   whether it owes a skill (`skill = true`) and, where it differs from

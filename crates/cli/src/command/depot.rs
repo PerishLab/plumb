@@ -3,7 +3,7 @@ use clap::Subcommand;
 #[derive(Subcommand)]
 pub enum Deed {
     #[command(
-        about = "Consign a release's changelog or skill to wharf's yard and lodge it on Depot"
+        about = "Consign a release's changelog, skill or scenes to wharf's yard and lodge it on Depot"
     )]
     Consign {
         #[command(flatten)]

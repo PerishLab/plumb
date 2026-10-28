@@ -75,3 +75,65 @@ fn replace() {
         assert_eq!(mode & 0o777, 0o600);
     }
 }
+
+#[test]
+fn scene() {
+    use plumb::depot::v3;
+    let source = tempfile::tempdir().expect("source");
+    std::fs::write(source.path().join("writer.toml"), "command = []\n").expect("scene");
+    let bundle = v3::Bundle::read(
+        source.path(),
+        v3::Identity {
+            product: "seatrial".into(),
+            channel: "rc".into(),
+            version: "v1.2.3-rc.1".into(),
+            marker: v3::Marker {
+                name: "v1.2.3-rc.1".into(),
+                sha256: "a".repeat(64),
+            },
+            kind: v3::Kind::Scene,
+        },
+    )
+    .expect("scene material does not judge execution semantics");
+    let bytes = bundle.manifest.encode().expect("encoded scene");
+    let held = v3::Manifest::parse(&bytes).expect("scene manifest");
+    assert_eq!(held.kind, v3::Kind::Scene);
+    assert_eq!(held.kind.label(), "scene");
+    assert_eq!(
+        serde_json::to_string(&held.kind).expect("kind"),
+        "\"scene\""
+    );
+    let pointer = v3::Pointer::new(
+        &held,
+        v3::Publication {
+            source: "https://depot.seatrial.example",
+            prior: None,
+            created: "2026-10-28T00:00:00Z".into(),
+        },
+    )
+    .expect("pointer");
+    assert!(
+        pointer
+            .manifest
+            .url
+            .contains("/rc/scenes/versions/v1.2.3-rc.1/")
+    );
+    pointer.bind(&held, &bytes).expect("binding");
+    held.verify("writer.toml", b"command = []\n", false)
+        .expect("object");
+    assert!(held.verify("writer.toml", b"changed", false).is_err());
+    assert!(held.verify("writer.toml", b"command = []\n", true).is_err());
+    let mut foreign = held.clone();
+    foreign.kind = v3::Kind::Skill;
+    assert!(
+        pointer
+            .bind(&foreign, &foreign.encode().expect("foreign"))
+            .is_err()
+    );
+    let target = tempfile::tempdir().expect("target");
+    let placed = v3::install(target.path(), &pointer, &bundle).expect("materialize");
+    assert_eq!(
+        std::fs::read(placed.join("writer.toml")).expect("scene bytes"),
+        b"command = []\n"
+    );
+}
