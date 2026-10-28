@@ -41,6 +41,11 @@ pub fn good(path: String, body: &[u8], executable: bool) -> Good {
 }
 
 pub fn directory(root: &Path) -> Result<Vec<Good>, String> {
+    let kind = std::fs::symlink_metadata(root)
+        .map_err(|error| format!("cannot inspect {}: {error}", root.display()))?;
+    if !kind.is_dir() {
+        return Err(format!("{} is not a plain directory", root.display()));
+    }
     let mut held = Vec::new();
     walk(root, root, &mut held)?;
     if held.is_empty() {
@@ -71,8 +76,19 @@ fn walk(root: &Path, at: &Path, held: &mut Vec<Good>) -> Result<(), String> {
         let relative = path
             .strip_prefix(root)
             .map_err(|_| format!("{} escapes {}", path.display(), root.display()))?
-            .to_string_lossy()
-            .replace('\\', "/");
+            .components()
+            .map(|part| {
+                let value = part
+                    .as_os_str()
+                    .to_str()
+                    .ok_or_else(|| format!("{} is not a UTF-8 depot path", path.display()))?;
+                if !matches!(part, std::path::Component::Normal(_)) || value.contains('\\') {
+                    return Err(format!("{} is not an anchored depot path", path.display()));
+                }
+                Ok(value)
+            })
+            .collect::<Result<Vec<_>, String>>()?
+            .join("/");
         held.push(good(relative, &body, executable(&kind)));
     }
     Ok(())

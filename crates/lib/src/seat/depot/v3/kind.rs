@@ -6,6 +6,7 @@ pub enum Kind {
     Configuration,
     Changelog,
     Skill,
+    Scene,
     Worker,
     Manager,
 }
@@ -16,6 +17,7 @@ impl Kind {
             Self::Configuration => "configuration",
             Self::Changelog => "changelog",
             Self::Skill => "skill",
+            Self::Scene => "scene",
             Self::Worker => "worker",
             Self::Manager => "manager",
         }
@@ -26,6 +28,7 @@ impl Kind {
             Self::Configuration => "configurations",
             Self::Changelog => "changelogs",
             Self::Skill => "skills",
+            Self::Scene => "scenes",
             Self::Worker => "workers",
             Self::Manager => "managers",
         }

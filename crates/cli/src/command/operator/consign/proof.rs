@@ -85,3 +85,92 @@ fn encoded() {
     assert_eq!(held["objects"][0]["body"], "bm90ZXMK");
     assert_eq!(held["objects"][0]["executable"], false);
 }
+
+#[test]
+fn scenes() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let root = fixture.path();
+    assert!(
+        goods::directory(root)
+            .expect_err("empty")
+            .contains("nothing")
+    );
+    write(
+        root,
+        "writer.toml",
+        "command = [\"sh\", \"run.sh\"]\n",
+        0o644,
+    );
+    write(root, "run.sh", "exit 91\n", 0o755);
+    let options = super::Consign {
+        version: "v1.2.3".into(),
+        kind: "scene".into(),
+        dir: Some(root.into()),
+        unwatched: false,
+        dry: true,
+    };
+    let spec = crate::shape::release::Spec::decode(
+        root,
+        "[identity]\nns = \"probe\"\n[release]\nauthority = \"https://releases.probe.example\"\nbinaries = [\"probe\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n",
+        "scene fixture",
+    )
+    .expect("release declaration");
+    let (objects, kind) = super::gathered(&options, root, &spec, "v1.2.3")
+        .expect("scenes do not require a skill or execute their commands");
+    assert_eq!(kind, plumb::depot::v3::Kind::Scene);
+    assert_eq!(objects.len(), 2);
+    assert_eq!(objects[0].path, "run.sh");
+    assert!(objects[0].executable);
+    assert_eq!(
+        objects[0].sha256,
+        format!("{:x}", Sha256::digest(b"exit 91\n"))
+    );
+    let missing = super::Consign {
+        dir: None,
+        ..options
+    };
+    assert!(
+        super::gathered(&missing, root, &spec, "v1.2.3")
+            .expect_err("explicit directory")
+            .contains("--dir")
+    );
+}
+
+#[test]
+fn objects() {
+    use std::os::unix::ffi::OsStringExt as _;
+    use std::os::unix::net::UnixListener;
+    let fixture = tempfile::tempdir().expect("fixture");
+    let root = fixture.path();
+    write(root, "held", "data", 0o644);
+    let alias = root.join("alias");
+    std::os::unix::fs::symlink(root, &alias).expect("root alias");
+    assert!(
+        goods::directory(&alias)
+            .expect_err("root link")
+            .contains("plain directory")
+    );
+    std::fs::remove_file(alias).expect("unlink");
+    let socket = root.join("socket");
+    let _listener = UnixListener::bind(&socket).expect("socket");
+    assert!(
+        goods::directory(root)
+            .expect_err("socket")
+            .contains("plain file")
+    );
+    std::fs::remove_file(socket).expect("remove socket");
+    let invalid = root.join(std::ffi::OsString::from_vec(vec![0xff]));
+    std::fs::write(&invalid, "data").expect("non UTF-8");
+    assert!(
+        goods::directory(root)
+            .expect_err("non UTF-8")
+            .contains("UTF-8")
+    );
+    std::fs::remove_file(invalid).expect("remove invalid");
+    write(root, "a\\b", "data", 0o644);
+    assert!(
+        goods::directory(root)
+            .expect_err("backslash")
+            .contains("anchored")
+    );
+}

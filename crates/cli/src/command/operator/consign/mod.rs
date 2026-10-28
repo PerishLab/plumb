@@ -19,7 +19,7 @@ const WORKFLOW: &str = "depot.yml";
 pub struct Consign {
     #[arg(long)]
     version: String,
-    #[arg(long, value_parser = ["changelog", "skill"])]
+    #[arg(long, value_parser = ["changelog", "skill", "scene"])]
     kind: String,
     #[arg(long, value_name = "DIR")]
     dir: Option<PathBuf>,
@@ -103,23 +103,28 @@ fn gathered(
     spec: &Spec,
     marker: &str,
 ) -> Result<(Vec<Good>, Kind), String> {
-    if options.kind == "skill" {
-        if !spec.skill {
-            return Err(format!("{} declares no skill to consign", spec.product));
-        }
-        let dir = options
-            .dir
-            .as_deref()
-            .ok_or("a skill consigns the brief in --dir")?;
-        brief(dir)?;
-        return Ok((goods::directory(dir)?, Kind::Skill));
+    let kind = match options.kind.as_str() {
+        "scene" => Kind::Scene,
+        "skill" => Kind::Skill,
+        "changelog" => Kind::Changelog,
+        _ => return Err(format!("unknown depot kind {}", options.kind)),
+    };
+    if kind == Kind::Skill && !spec.skill {
+        return Err(format!("{} declares no skill to consign", spec.product));
     }
     let dir = options
         .dir
         .as_deref()
-        .ok_or("a changelog consigns the notes in --dir")?;
-    crate::command::changelog::prove(root, dir, marker)?;
-    Ok((goods::directory(dir)?, Kind::Changelog))
+        .ok_or_else(|| format!("a {} consigns its materials in --dir", options.kind))?;
+    match kind {
+        Kind::Skill => brief(dir)?,
+        Kind::Changelog => {
+            crate::command::changelog::prove(root, dir, marker)?;
+        }
+        Kind::Scene => {}
+        _ => return Err(format!("{} cannot be consigned", kind.label())),
+    }
+    Ok((goods::directory(dir)?, kind))
 }
 
 fn brief(dir: &Path) -> Result<(), String> {
