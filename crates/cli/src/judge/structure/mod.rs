@@ -109,7 +109,7 @@ impl Structure<'_> {
 
     fn anchored(&self, found: &mut Found) {
         let held = self.0;
-        if !held.rust {
+        if !held.rust || held.topology.root == Some(true) {
             return;
         }
         let Some(repo) = &held.repo else {

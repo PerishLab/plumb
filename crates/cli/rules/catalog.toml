@@ -418,9 +418,9 @@ tags = ["skill", "adoption"]
 
 [[rule]]
 id = "structure.anchor-present"
-summary = "Rust repositories carry an anchor crate"
-law = "A Rust repository has one crate named after the repository."
-evidence = "Cargo package names across the workspace."
+summary = "Rust products carry an anchor crate"
+law = "A Rust repository has one crate named after the repository unless it explicitly declares independent library roots, whose closed topology replaces the product anchor."
+evidence = "Cargo package names across the workspace and the explicit independent-root declaration."
 standing = "mechanized"
 owner = "plumb"
 tags = ["cargo", "repository"]
@@ -428,7 +428,7 @@ tags = ["cargo", "repository"]
 [[rule]]
 id = "structure.anchor-unique"
 summary = "The anchor crate is unique"
-law = "Exactly one workspace crate is named after the repository."
+law = "Where a product anchor is required, exactly one workspace crate is named after the repository."
 evidence = "Cargo package names across the workspace."
 standing = "mechanized"
 owner = "plumb"

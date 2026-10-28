@@ -77,6 +77,36 @@ fn independent() {
     assert_eq!(topology["refusals"], serde_json::json!([]), "{report}");
     assert_eq!(topology["nodes"].as_array().unwrap().len(), 2);
     assert!(topology["input"].as_str().unwrap().len() == 64);
+    assert!(
+        !report["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|finding| { finding["code"] == "structure.anchor-present" }),
+        "{report}"
+    );
+}
+
+#[test]
+fn ordinary() {
+    let root = fixture();
+    let declaration = root.path().join("plumb.toml");
+    let held = std::fs::read_to_string(&declaration).unwrap();
+    for text in [
+        held.replace("\n[dependency]\nroot=true\n", "\n"),
+        held.replace("root=true", "root=false"),
+    ] {
+        std::fs::write(&declaration, text).unwrap();
+        let report = observe(root.path());
+        assert!(
+            report["findings"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|finding| { finding["code"] == "structure.anchor-present" }),
+            "{report}"
+        );
+    }
 }
 
 #[test]
