@@ -51,13 +51,18 @@ fn fixture() -> tempfile::TempDir {
 }
 
 fn observe(root: &Path) -> serde_json::Value {
+    read(root, |_| {})
+}
+
+fn read(root: &Path, bind: impl FnOnce(&mut std::process::Command)) -> serde_json::Value {
     let home = crate::support::home();
-    let output = crate::support::plumb()
+    let mut command = crate::support::plumb();
+    command
         .args(["doctor", root.to_str().unwrap(), "--json"])
         .env_remove("PLUMB_RELEASE_VERSION")
-        .env("PLUMB_HOME", home.path())
-        .output()
-        .unwrap();
+        .env("PLUMB_HOME", home.path());
+    bind(&mut command);
+    let output = command.output().unwrap();
     serde_json::from_slice(&output.stdout).unwrap_or_else(|error| {
         panic!(
             "{error}: {} {}",
@@ -65,6 +70,54 @@ fn observe(root: &Path) -> serde_json::Value {
             String::from_utf8_lossy(&output.stderr)
         )
     })
+}
+
+#[cfg(unix)]
+#[test]
+fn budget() {
+    let root = fixture();
+    let tools = tempfile::tempdir().unwrap();
+    let metadata = crate::support::outside("cargo")
+        .args([
+            "metadata",
+            "--frozen",
+            "--all-features",
+            "--format-version",
+            "1",
+        ])
+        .current_dir(root.path())
+        .output()
+        .unwrap();
+    assert!(metadata.status.success());
+    std::fs::write(tools.path().join("metadata.json"), metadata.stdout).unwrap();
+    crate::support::executable(
+        &tools.path().join("cargo"),
+        "#!/bin/sh\nif [ \"$1\" = --version ]; then printf 'cargo 1.96.1\\n'; exit 0; fi\ncat \"${0%/*}/metadata.json\"\nhead -c 65537 /dev/zero >&2\n",
+    );
+    let mut paths = vec![tools.path().to_path_buf()];
+    paths.extend(std::env::split_paths(&std::env::var_os("PATH").unwrap()));
+    let path = std::env::join_paths(paths).unwrap();
+    let report = read(root.path(), |command| {
+        command.env("PATH", path);
+    });
+    let unknown = report["shape"]["topology"]["unknown"].as_array().unwrap();
+    assert!(
+        unknown
+            .iter()
+            .any(|value| value.as_str().unwrap().contains("budget")),
+        "{report}"
+    );
+    assert!(
+        report["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|finding| {
+                finding["code"] == "deps.root-library-closed" && finding["grade"] == "blind"
+            }),
+        "{report}"
+    );
+    assert_eq!(report["ok"], false);
 }
 
 #[test]
