@@ -22,6 +22,7 @@ A repository opts into strict library roots with this plumb.toml declaration:
 deps.root-library-closed then refuses binary workspace targets and every path
 from a workspace library to another domain package, including another library
 in the same repository. Third-party intermediates do not hide the path.
+Independent-root repositories do not require a crate named after the repository.
 Normal, build, optional, platform and the root's own dev dependencies participate.
 A dependency package's own dev dependencies do not propagate to its consumer;
 those edges remain visible with propagated=false. Unknown relevant branches
