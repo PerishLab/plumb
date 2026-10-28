@@ -13,12 +13,14 @@ mod tests;
 use model::{Edge, Node, Refusal};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
 use std::path::Path;
 
 #[derive(Clone, Serialize)]
 pub(crate) struct Report {
     pub schema: &'static str,
     pub root: Option<bool>,
+    pub groups: BTreeMap<String, Vec<String>>,
     pub context: &'static str,
     pub input: String,
     pub source: Option<String>,
@@ -32,10 +34,12 @@ pub(crate) struct Report {
     pub tests: Vec<Edge>,
 }
 
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Declaration {
     root: bool,
+    #[serde(default)]
+    groups: BTreeMap<String, Vec<String>>,
 }
 
 impl Report {
@@ -53,7 +57,10 @@ impl Report {
             }
         };
         report.root = match declared(&declaration) {
-            Ok(value) => Some(value),
+            Ok(value) => {
+                report.groups = value.groups;
+                Some(value.root)
+            }
             Err(error) => {
                 report.unknown.push(error);
                 None
@@ -129,8 +136,9 @@ impl Report {
 
     pub fn empty() -> Self {
         Self {
-            schema: "plumb.topology/v1",
+            schema: "plumb.topology/v2",
             root: Some(false),
+            groups: BTreeMap::new(),
             context: "frozen-all-features",
             input: String::new(),
             source: None,
@@ -146,14 +154,14 @@ impl Report {
     }
 }
 
-fn declared(bytes: &[u8]) -> Result<bool, String> {
+fn declared(bytes: &[u8]) -> Result<Declaration, String> {
     if bytes.is_empty() {
-        return Ok(false);
+        return Ok(Declaration::default());
     }
     let text = std::str::from_utf8(bytes).map_err(|error| error.to_string())?;
     let document: toml::Table = toml::from_str(text).map_err(|error| error.to_string())?;
     let Some(value) = document.get("dependency") else {
-        return Ok(false);
+        return Ok(Declaration::default());
     };
     let declaration: Declaration = value
         .clone()
@@ -162,7 +170,54 @@ fn declared(bytes: &[u8]) -> Result<bool, String> {
     if !declaration.root {
         return Err("dependency.root must be true; false is not a root exemption".into());
     }
-    Ok(true)
+    Ok(declaration)
+}
+
+impl read::Graph {
+    fn group(&mut self, report: &Report) -> Result<(), String> {
+        if report.groups.is_empty() {
+            return Ok(());
+        }
+        let mut assigned = BTreeMap::new();
+        for (group, members) in &report.groups {
+            if group.trim().is_empty() || members.is_empty() {
+                return Err("root capability groups must have a name and actual members".into());
+            }
+            for name in members {
+                let id = self.identify(name)?;
+                if assigned.insert(id, group.clone()).is_some() {
+                    return Err(format!(
+                        "root capability member {name} occurs more than once"
+                    ));
+                }
+            }
+        }
+        if assigned.len() != self.roots.len() {
+            return Err("root capability groups must assign every workspace library".into());
+        }
+        self.groups = assigned;
+        Ok(())
+    }
+
+    fn identify(&self, name: &str) -> Result<String, String> {
+        let matches = self
+            .nodes
+            .values()
+            .filter(|node| node.name == name && self.roots.contains(&node.id))
+            .collect::<Vec<_>>();
+        match matches.as_slice() {
+            [node] => Ok(node.id.clone()),
+            _ => Err(format!(
+                "root capability member {name} is not one exact workspace library"
+            )),
+        }
+    }
+
+    fn internal(&self, edge: &Edge) -> bool {
+        self.groups
+            .get(&edge.from)
+            .is_some_and(|group| self.groups.get(&edge.to) == Some(group))
+    }
 }
 
 fn fingerprint(parts: [&[u8]; 4]) -> String {

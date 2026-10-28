@@ -1,14 +1,15 @@
 use super::{Report, declared, read::Graph};
 use serde_json::{Value, json};
+use std::collections::BTreeMap;
 
-struct Fixture {
-    packages: Vec<Value>,
+pub(super) struct Fixture {
+    pub(super) packages: Vec<Value>,
     nodes: Vec<Value>,
     workspace: Vec<String>,
 }
 
 impl Fixture {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self {
             packages: Vec::new(),
             nodes: Vec::new(),
@@ -16,7 +17,7 @@ impl Fixture {
         }
     }
 
-    fn package(&mut self, id: &str, name: &str, source: Option<&str>) {
+    pub(super) fn package(&mut self, id: &str, name: &str, source: Option<&str>) {
         self.packages.push(json!({
             "id":id,"name":name,"version":"1.0.0","source":source,
             "manifest_path":format!("/fixture/{id}/Cargo.toml"),
@@ -28,7 +29,7 @@ impl Fixture {
         }
     }
 
-    fn edge(&mut self, from: &str, to: &str, kind: Option<&str>) {
+    pub(super) fn edge(&mut self, from: &str, to: &str, kind: Option<&str>) {
         let target = self
             .packages
             .iter()
@@ -50,7 +51,11 @@ impl Fixture {
             }));
     }
 
-    fn report(&self, root: bool) -> Report {
+    pub(super) fn report(&self, root: bool) -> Report {
+        self.named(root, BTreeMap::new())
+    }
+
+    pub(super) fn named(&self, root: bool, groups: BTreeMap<String, Vec<String>>) -> Report {
         let bytes = serde_json::to_vec(&json!({
             "packages":self.packages,"workspace_members":self.workspace,
             "resolve":{"nodes":self.nodes}
@@ -59,13 +64,33 @@ impl Fixture {
         let graph = Graph::parse(&bytes, Some("PerishLab/specimen")).unwrap();
         let mut report = Report::empty();
         report.root = Some(root);
+        report.groups = groups;
         graph.fill(&mut report);
         report
     }
 }
 
-const DOMAIN: &str = "sparse+https://cargo.perish.uk/";
-const FOREIGN: &str = "registry+https://github.com/rust-lang/crates.io-index";
+pub(super) const DOMAIN: &str = "sparse+https://cargo.perish.uk/";
+pub(super) const FOREIGN: &str = "registry+https://github.com/rust-lang/crates.io-index";
+
+#[test]
+fn technical() {
+    for kind in [None, Some("dev"), Some("build")] {
+        let mut fixture = Fixture::new();
+        fixture.package("runtime", "runtime", None);
+        fixture.package("macros", "macros", None);
+        fixture.edge("runtime", "macros", kind);
+        fixture.packages[0]["dependencies"][0]["optional"] = json!(true);
+        fixture.packages[0]["dependencies"][0]["target"] = json!("cfg(windows)");
+        fixture.nodes[0]["deps"][0]["dep_kinds"][0]["target"] = json!("cfg(windows)");
+        let groups = BTreeMap::from([("lock".into(), vec!["runtime".into(), "macros".into()])]);
+        let report = fixture.named(true, groups);
+        assert!(report.unknown.is_empty());
+        assert!(report.refusals.is_empty());
+        assert_eq!(report.edges[0].target.as_deref(), Some("cfg(windows)"));
+        assert!(report.edges[0].optional);
+    }
+}
 
 #[test]
 fn orthogonal() {
@@ -178,8 +203,8 @@ fn aliases() {
 
 #[test]
 fn declaration() {
-    assert!(!declared(b"[identity]\nns='specimen'\n").unwrap());
-    assert!(declared(b"[dependency]\nroot=true\n").unwrap());
+    assert!(!declared(b"[identity]\nns='specimen'\n").unwrap().root);
+    assert!(declared(b"[dependency]\nroot=true\n").unwrap().root);
     for text in [
         "[dependency]\nroot=false\n",
         "[dependency]\nroot='true'\n",

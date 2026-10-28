@@ -40,8 +40,8 @@ tags = ["dependency"]
 
 [[rule]]
 id = "deps.root-library-closed"
-summary = "Declared root libraries have no domain library dependencies"
-law = "A repository declaring dependency.root = true carries independent libraries. Their complete normal, build, development, macro, optional and platform dependency closure reaches no other domain package, including another workspace library. Missing closure evidence refuses judgment. Ordinary package topology remains observational."
+summary = "Declared root capabilities have no external domain dependencies"
+law = "A repository declaring dependency.root = true carries independent public capabilities. Their complete normal, build, development, macro, optional and platform dependency closure reaches no other domain package. Explicit dependency.groups may assign every workspace library to exactly one named capability and admit direct technical edges within it, while rejecting group cycles. Without groups every library is independent. Cross-group edges, published domain packages and third-party bridges receive no exemption. Missing closure evidence refuses judgment. Ordinary package topology remains observational."
 evidence = "The source root declaration, qualified workspace identity, frozen all-feature Cargo metadata, complete dependency declarations and exact source identities, with retained unresolved branches and path witnesses."
 standing = "mechanized"
 owner = "plumb"
