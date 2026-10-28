@@ -133,7 +133,7 @@ fn held() {
     let bucket = seats(home.path()).remove(0);
     Ledger::of(home.path(), &bucket).age(None);
     let lock = std::fs::File::open(bucket.join("lease")).expect("lease");
-    lock.lock().expect("held lease");
+    radicula_lock::lock(&lock, radicula_lock::Mode::Exclusive).expect("held lease");
     let refused = entry(&reclaim(home.path(), true), &bucket);
     assert_eq!(refused["status"], "active");
     assert_eq!(refused["reclaimed"], 0);
@@ -228,7 +228,7 @@ fn unknown() {
             .is_file()
     );
     let lock = std::fs::File::create(stranger.join("lease")).expect("legacy lease");
-    lock.lock().expect("held legacy lease");
+    radicula_lock::lock(&lock, radicula_lock::Mode::Exclusive).expect("held legacy lease");
     let active = entry(&reclaim(home.path(), true), &stranger);
     assert_eq!(active["status"], "active");
     assert_eq!(active["reclaimed"], 0);

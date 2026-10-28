@@ -1,4 +1,5 @@
 use crate::command::cache;
+use radicula_lock::Mode;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -35,7 +36,7 @@ impl Lease {
         std::fs::create_dir_all(&root)
             .map_err(|error| format!("cannot create {}: {error}", root.display()))?;
         let lock = cache::lease(&root)?;
-        lock.lock()
+        radicula_lock::lock(&lock, Mode::Exclusive)
             .map_err(|error| format!("cannot hold Guard compilation lease: {error}"))?;
         cache::adopt(&root, &identity)?;
         Ok(Self {

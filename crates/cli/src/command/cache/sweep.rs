@@ -2,9 +2,9 @@ use super::bucket::{self, Record};
 use super::disk::Disk;
 use super::graph;
 use super::plan::{self, Plan, Seat};
+use radicula_lock::{Mode, TryLockError};
 use serde::Serialize;
 use std::collections::BTreeMap;
-use std::fs::TryLockError;
 use std::path::{Path, PathBuf};
 
 pub(super) const IDLE: u64 = 7 * 24 * 60 * 60;
@@ -81,7 +81,7 @@ pub(super) fn survey(home: &Path, bucket: &Path, now: u64, sweep: Sweep) -> Entr
         Ok(lock) => lock,
         Err(error) => return entry.refuse(&error),
     };
-    match lock.try_lock() {
+    match radicula_lock::attempt(&lock, Mode::Exclusive) {
         Ok(()) => held(
             Held {
                 path,
@@ -112,7 +112,7 @@ fn legacy(bucket: &Path, sweep: Sweep, mut entry: Entry) -> Entry {
         Ok(lock) => lock,
         Err(error) => return entry.refuse(&error),
     };
-    match lock.try_lock() {
+    match radicula_lock::attempt(&lock, Mode::Exclusive) {
         Ok(()) => {}
         Err(TryLockError::WouldBlock) => {
             entry.status = Status::Active;
@@ -227,7 +227,7 @@ pub(super) fn evict(home: &Path, bucket: &Path, apply: bool, entry: &mut Entry) 
     let Ok(lock) = bucket::lease(bucket) else {
         return 0;
     };
-    if lock.try_lock().is_err() {
+    if radicula_lock::attempt(&lock, Mode::Exclusive).is_err() {
         return 0;
     }
     let plan = match Seat(bucket).whole() {

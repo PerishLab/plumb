@@ -1,5 +1,6 @@
 use super::owner::Owner;
 use super::staging::{PREFIX, live, same};
+use radicula_lock::Mode;
 use std::fs::{File, FileTimes};
 use std::path::{Path, PathBuf};
 
@@ -20,7 +21,7 @@ impl Claim {
                 .tempfile_in(base)
                 .and_then(|file| file.keep().map_err(|error| error.error))
                 .map_err(|error| format!("cannot reserve guard worktree: {error}"))?;
-            lock.lock()
+            radicula_lock::lock(&lock, Mode::Exclusive)
                 .map_err(|error| format!("cannot hold guard worktree: {error}"))?;
             if same(&path, &lock) {
                 return Ok(Self::held(source, path, lock, false));
@@ -35,7 +36,7 @@ impl Claim {
         let root = owner.path(&base)?;
         let path = root.with_extension("lock");
         let (lock, created) = reserve(&path)?;
-        lock.lock()
+        radicula_lock::lock(&lock, Mode::Exclusive)
             .map_err(|error| format!("cannot hold retained Guard source: {error}"))?;
         if !same(&path, &lock) {
             return Err("Guard source owner moved while acquiring its lease".into());
@@ -86,7 +87,7 @@ impl Drop for Claim {
             let _ = std::fs::remove_file(&self.path);
         }
         live().retain(|(_, root)| root != &self.root);
-        let _ = self._lock.unlock();
+        let _ = radicula_lock::unlock(&self._lock);
     }
 }
 
@@ -173,7 +174,7 @@ mod tests {
             .open(path)
             .unwrap();
         assert!(
-            peer.try_lock().is_ok(),
+            radicula_lock::attempt(&peer, radicula_lock::Mode::Exclusive).is_ok(),
             "a copied descriptor must not retain a released source lease"
         );
         drop(inherited);

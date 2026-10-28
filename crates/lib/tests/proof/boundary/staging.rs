@@ -56,10 +56,13 @@ fn retained() {
         .write(true)
         .open(path.with_extension("lock"))
         .unwrap();
-    assert!(lease.try_lock().is_err(), "the source lease is exclusive");
+    assert!(
+        radicula_lock::attempt(&lease, radicula_lock::Mode::Exclusive).is_err(),
+        "the source lease is exclusive"
+    );
     drop(claim);
-    lease.try_lock().unwrap();
-    lease.unlock().unwrap();
+    radicula_lock::attempt(&lease, radicula_lock::Mode::Exclusive).unwrap();
+    radicula_lock::unlock(&lease).unwrap();
     let claim = Claim::retain(home.path(), root.path()).unwrap();
     assert_eq!(claim.root, path);
     assert!(claim.verify());

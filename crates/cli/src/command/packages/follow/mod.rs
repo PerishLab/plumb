@@ -241,7 +241,7 @@ impl Seat {
             .truncate(false)
             .open(root.join("lease"))
             .map_err(|error| error.to_string())?;
-        lock.try_lock()
+        radicula_lock::attempt(&lock, radicula_lock::Mode::Exclusive)
             .map_err(|error| format!("follow already holds this repository: {error}"))?;
         Ok(Self {
             path: root.join("state.json"),
