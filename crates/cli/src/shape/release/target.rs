@@ -115,6 +115,17 @@ mod tests {
     }
 
     #[test]
+    fn placement() {
+        let head = "[identity]\nns='demo'\n[release]\nauthority='https://example.invalid'\ntargets=['x86_64-pc-windows-msvc']\n";
+        let cargo = "[release.cargo]\nregistry='perish'\npackages=['demo-lock']\n";
+        for scope in ["user", "machine"] {
+            let text = format!("{head}{cargo}[release.windows]\nscope='{scope}'\n");
+            let error = Spec::decode(Path::new("."), &text, "library").unwrap_err();
+            assert!(error.contains("requires an installed"), "{error}");
+        }
+    }
+
+    #[test]
     fn declarations() {
         let head = "[identity]\nns='demo'\n[release]\nauthority='https://example.invalid'\n";
         let cargo = "[release.cargo]\nregistry='perish'\npackages=['demo-lock']\n";
