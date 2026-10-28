@@ -2,6 +2,7 @@ use plumb_cli::{Dependency, Ecosystem, Verdict};
 use std::path::Path;
 
 mod npm;
+mod topology;
 
 fn specimen(ecosystem: Ecosystem, requirement: &str, resolution: &str) -> Dependency {
     Dependency {

@@ -39,6 +39,15 @@ owner = "plumb"
 tags = ["dependency"]
 
 [[rule]]
+id = "deps.root-library-closed"
+summary = "Declared root libraries have no domain library dependencies"
+law = "A repository declaring dependency.root = true carries independent libraries. Their complete normal, build, development, macro, optional and platform dependency closure reaches no other domain package, including another workspace library. Missing closure evidence refuses judgment. Ordinary package topology remains observational."
+evidence = "The source root declaration, qualified workspace identity, frozen all-feature Cargo metadata, complete dependency declarations and exact source identities, with retained unresolved branches and path witnesses."
+standing = "mechanized"
+owner = "plumb"
+tags = ["dependency"]
+
+[[rule]]
 id = "deps.environment-loader-absent"
 summary = "Configuration does not load .env files"
 law = "A Rust manifest does not depend on a .env loader. Settings enter through plumb Cascade, whose file, environment and argument layers are the only way in; a loader writes whatever .env sits in the working directory into the process environment, feeds that layer unseen and is inherited by every child."

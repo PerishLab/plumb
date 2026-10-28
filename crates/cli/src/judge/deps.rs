@@ -7,6 +7,7 @@ use plumb_cli::Verdict;
 
 pub fn check(held: &shape::Shape) -> Found {
     let mut found = Found::new();
+    topology(&held.topology, &mut found);
     if held.binary && !held.clap {
         found.push(wrong(
             &rule::RUST_BINARY_USES_CLAP,
@@ -47,6 +48,32 @@ pub fn check(held: &shape::Shape) -> Found {
         }
     }
     found
+}
+
+fn topology(report: &shape::topology::Report, found: &mut Found) {
+    if report.root == Some(false) {
+        return;
+    }
+    for refusal in &report.refusals {
+        let path = refusal
+            .path
+            .iter()
+            .map(|edge| {
+                format!(
+                    "{} -> {} ({}, {:?})",
+                    edge.from, edge.to, edge.kind, edge.target
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
+        found.push(wrong(
+            &rule::ROOT_LIBRARY_CLOSED,
+            format!("{}: {path}", refusal.reason),
+        ));
+    }
+    for unknown in &report.unknown {
+        found.push(blind(&rule::ROOT_LIBRARY_CLOSED, unknown));
+    }
 }
 
 fn loaders(held: &shape::Dependencies, found: &mut Found) {

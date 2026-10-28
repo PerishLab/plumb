@@ -30,7 +30,8 @@ pub(crate) enum Command {
         #[command(subcommand)]
         deed: consumption::lane::Deed,
     },
-    #[command(about = "Judge this repository against the skeleton and report every finding")]
+    #[command(about = "Judge this repository against the skeleton and report every finding",
+        long_about = plumb::seat::resource!("help/doctor.txt"))]
     Doctor {
         #[command(flatten)]
         target: Root,
