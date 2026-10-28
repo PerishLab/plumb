@@ -117,7 +117,8 @@ fn sweep(tree: &Path) {
     else {
         return;
     };
-    if lock.try_lock().is_err() || !same(&path, &lock) {
+    if radicula_lock::attempt(&lock, radicula_lock::Mode::Exclusive).is_err() || !same(&path, &lock)
+    {
         return;
     }
     if owner::Owner::retained(tree) && !reapable() {

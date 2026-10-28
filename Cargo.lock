@@ -507,6 +507,7 @@ dependencies = [
  "pin-project-lite",
  "plumb",
  "plumb-macro",
+ "radicula-lock",
  "semver",
  "serde",
  "serde_json",
@@ -531,6 +532,7 @@ dependencies = [
  "fs4",
  "locus",
  "plumb",
+ "radicula-lock",
  "semver",
  "serde",
  "serde_json",
@@ -584,6 +586,12 @@ name = "r-efi"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
+
+[[package]]
+name = "radicula-lock"
+version = "0.1.0"
+source = "sparse+https://cargo.perish.uk/"
+checksum = "f07775bf16066fbdea135676faa9b0f996379cc9442491ea3802e0804041f61d"
 
 [[package]]
 name = "ring"

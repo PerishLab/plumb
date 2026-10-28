@@ -141,13 +141,13 @@ fn waiting() {
         .write(true)
         .open(seat.join("lease"))
         .expect("lease");
-    lease.lock().expect("held lease");
+    radicula_lock::lock(&lease, radicula_lock::Mode::Exclusive).expect("held lease");
     let mut guard = spawned(&own, home.path());
     assert!(blocked(&mut guard), "guard finished under a held lease");
     touch(&seat);
-    lease.unlock().expect("released lease");
+    radicula_lock::unlock(&lease).expect("released lease");
     cache::success(&guard.wait_with_output().expect("waited guard"));
-    lease.lock().expect("held lease");
+    radicula_lock::lock(&lease, radicula_lock::Mode::Exclusive).expect("held lease");
     let mut proved = spawned(&own, home.path());
     assert!(!blocked(&mut proved), "a proved tree waited on the lease");
     cache::success(&proved.wait_with_output().expect("proved guard"));

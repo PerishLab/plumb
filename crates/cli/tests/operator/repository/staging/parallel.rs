@@ -76,9 +76,9 @@ fn shared() {
     );
     let source = super::source::seat(home.path());
     let lease = std::fs::File::open(source.with_extension("lock")).unwrap();
-    lease.lock().unwrap();
+    radicula_lock::lock(&lease, radicula_lock::Mode::Exclusive).unwrap();
     let mut reused = spawn(&other, home.path());
     waiting(&mut reused);
-    lease.unlock().unwrap();
+    radicula_lock::unlock(&lease).unwrap();
     cache::success(&reused.wait_with_output().unwrap());
 }

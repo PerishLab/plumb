@@ -34,7 +34,8 @@ impl Transfer<'_> {
         }
         std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
         let lease = super::lease(parent)?;
-        lease.lock().map_err(|error| error.to_string())?;
+        radicula_lock::lock(&lease, radicula_lock::Mode::Exclusive)
+            .map_err(|error| error.to_string())?;
         match action {
             Action::Inspect => Ok(Receipt::default()),
             Action::Save => crate::diagnostic::measure("material.save", || self.save()),
