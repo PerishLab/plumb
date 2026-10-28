@@ -356,7 +356,7 @@ tags = ["cargo", "release"]
 [[rule]]
 id = "release.spec-declared"
 summary = "Products declare release inputs once"
-law = "One strict product spec owns authority, version probe, binaries, platform archives, Windows manager installation scope, and extra assets, and the current Plumb reads it whole or refuses it by name. The product is named once, by [identity] ns, and that name is the repository's, because Wharf names the product after the repository."
+law = "One strict product spec owns authority, version probe, binaries, platform archives, Windows manager installation scope, and extra assets, and the current Plumb reads it whole or refuses it by name. Without binaries, only a Cargo library release may list native suite targets; that list creates no executable identity, archive or manager. Explicit targets are nonempty, distinct and supported. The product is named once, by [identity] ns, and that name is the repository's, because Wharf names the product after the repository."
 evidence = "The identity and release tables in plumb.toml read by the same strict spec reader every release verb uses, and the identity's ns against the name in the origin remote."
 standing = "mechanized"
 owner = "release"

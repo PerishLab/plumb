@@ -92,4 +92,49 @@ mod tests {
             assert!(error.contains("requires an installed"), "{error}");
         }
     }
+
+    #[test]
+    fn libraries() {
+        let head = "[identity]\nns='demo'\n[release]\nauthority='https://example.invalid'\n";
+        let cargo = "[release.cargo]\nregistry='perish'\npackages=['demo-lock','demo-token']\n";
+        for targets in [
+            vec!["x86_64-unknown-linux-gnu"],
+            vec!["x86_64-pc-windows-msvc"],
+            super::TARGETS.to_vec(),
+        ] {
+            let text = format!("{head}targets={targets:?}\n{cargo}");
+            let spec = Spec::decode(Path::new("."), &text, "library").unwrap();
+            assert!(!spec.binary());
+            assert!(spec.binaries.is_empty() && spec.executables.is_empty());
+            assert_eq!(spec.surface(), vec!["cargo"]);
+            assert_eq!(spec.target.len(), targets.len());
+            assert!(spec.primary().is_none() && spec.image().is_none());
+        }
+        let implicit = Spec::decode(Path::new("."), &format!("{head}{cargo}"), "legacy").unwrap();
+        assert!(!implicit.binary() && implicit.target.is_empty());
+    }
+
+    #[test]
+    fn declarations() {
+        let head = "[identity]\nns='demo'\n[release]\nauthority='https://example.invalid'\n";
+        let cargo = "[release.cargo]\nregistry='perish'\npackages=['demo-lock']\n";
+        for (targets, reason) in [
+            ("[]", "at least one target"),
+            (
+                "['x86_64-unknown-linux-gnu','x86_64-unknown-linux-gnu']",
+                "duplicate target",
+            ),
+            ("['x86_64-apple-darwin']", "unsupported release target"),
+        ] {
+            let text = format!("{head}targets={targets}\n{cargo}");
+            let error = Spec::decode(Path::new("."), &text, "library").unwrap_err();
+            assert!(error.contains(reason), "{error}");
+        }
+        let other =
+            "[release.oci]\nregistry='ghcr.io'\nimage='perishlab/demo'\naccount='PerishLab'\n";
+        let text = format!("{head}targets=['x86_64-unknown-linux-gnu']\n{other}");
+        let error = Spec::decode(Path::new("."), &text, "attachment").unwrap_err();
+        assert!(error.contains("require a Cargo library"), "{error}");
+        assert!(Spec::decode(Path::new("."), &format!("{head}{other}"), "attachment").is_ok());
+    }
 }

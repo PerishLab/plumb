@@ -15,7 +15,7 @@ mod json;
 mod layout;
 #[path = "doctor/migration.rs"]
 mod migration;
-#[path = "doctor/release.rs"]
+#[path = "doctor/release/mod.rs"]
 mod release;
 #[path = "doctor/rule.rs"]
 mod rule;

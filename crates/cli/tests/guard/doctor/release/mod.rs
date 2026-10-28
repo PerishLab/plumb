@@ -1,3 +1,5 @@
+mod library;
+
 use std::process::Command;
 
 const BINARY: &str = "[identity]\nns = \"foo\"\n[release]\nauthority = \"https://example.invalid\"\nbinaries = [\"foo\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n";

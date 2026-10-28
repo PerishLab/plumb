@@ -55,7 +55,7 @@ struct Raw {
     product: Option<toml::Value>,
     authority: String,
     binaries: Vec<String>,
-    targets: Vec<String>,
+    targets: Option<Vec<String>>,
     binary: BTreeMap<String, Binary>,
     skill: bool,
     cargo: Option<Cargo>,
@@ -117,6 +117,10 @@ impl Spec {
             windows,
             ..
         } = held.release;
+        if targets.as_ref().is_some_and(Vec::is_empty) {
+            return Err("release must declare at least one target when targets is present".into());
+        }
+        let targets = targets.unwrap_or_default();
         let spec = Self {
             root: root.to_path_buf(),
             target: targets
@@ -162,15 +166,17 @@ impl Spec {
         let binary = self.binary();
         if !binary {
             self.standalone()?;
+            if !self.target.is_empty() && self.cargo.is_none() {
+                return Err(
+                    "release targets without binaries require a Cargo library declaration".into(),
+                );
+            }
         }
         token("[identity] ns", &self.product, false)?;
         if binary || !self.authority.is_empty() {
             plumb::seat::release::Authority::new(&self.authority)?;
         }
         if binary {
-            if self.binaries.is_empty() {
-                return Err("release must declare at least one binary".into());
-            }
             let mut binaries = BTreeSet::new();
             for binary in &self.binaries {
                 token("binary", binary, false)?;
@@ -181,11 +187,13 @@ impl Spec {
             if self.target.is_empty() {
                 return Err("release must declare at least one target".into());
             }
-            let mut triples = BTreeSet::new();
-            for target in &self.target {
-                if !triples.insert(&target.triple) {
-                    return Err(format!("duplicate target {}", target.triple));
-                }
+        }
+        let mut triples = BTreeSet::new();
+        for target in &self.target {
+            if !triples.insert(&target.triple) {
+                return Err(format!("duplicate target {}", target.triple));
+            }
+            if binary {
                 self.carried(target)?;
             }
         }
