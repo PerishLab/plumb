@@ -1,0 +1,32 @@
+Judge this repository against the skeleton and report every finding.
+
+--json includes shape.topology (plumb.topology/v1): package identities and
+qualified sources, workspace membership, resolved features, declared edges,
+dependency kinds, target conditions, optionality, requirements and aliases.
+Its input digest binds the declaration, lock, Cargo metadata, origin, staged
+Git tree and Cargo version. This observation is freshly captured on every run.
+It is not a reusable Guard proof. Cargo metadata runs frozen with all features;
+it does not fetch packages or rewrite the lock. Incomplete or unsupported
+sources, resolution, parsing and resource exhaustion remain unknown.
+
+Cycles project PerishLab registry packages across versions by package identity,
+retaining each exact package and source in the witness. Ordinary repositories
+observe cycles without enforcing a general domain order. Exact-package dev
+self-tests appear separately in tests; they do not excuse a root violation.
+
+A repository opts into strict library roots with this plumb.toml declaration:
+
+  [dependency]
+  root = true
+
+deps.root-library-closed then refuses binary workspace targets and every path
+from a workspace library to another domain package, including another library
+in the same repository. Third-party intermediates do not hide the path.
+Normal, build, optional, platform and the root's own dev dependencies participate.
+A dependency package's own dev dependencies do not propagate to its consumer;
+those edges remain visible with propagated=false. Unknown relevant branches
+prevent a clean root verdict while preserving any known violations.
+
+There is no root=false exemption. CLI execution outside the library graph does
+not create a library dependency. Node root closures are not yet supported and
+an opted-in repository carrying package.json reports unknown.

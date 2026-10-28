@@ -1,6 +1,7 @@
 mod cargo;
 mod direct;
 mod npm;
+pub(crate) mod topology;
 
 use crate::catalog::set;
 use std::path::Path;

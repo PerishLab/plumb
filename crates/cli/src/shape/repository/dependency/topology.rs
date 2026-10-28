@@ -1,0 +1,175 @@
+#[path = "graph.rs"]
+mod graph;
+#[path = "model.rs"]
+mod model;
+#[path = "probe.rs"]
+mod probe;
+#[path = "read.rs"]
+mod read;
+#[cfg(test)]
+#[path = "tests.rs"]
+mod tests;
+
+use model::{Edge, Node, Refusal};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::path::Path;
+
+#[derive(Clone, Serialize)]
+pub(crate) struct Report {
+    pub schema: &'static str,
+    pub root: Option<bool>,
+    pub context: &'static str,
+    pub input: String,
+    pub source: Option<String>,
+    pub tree: Option<String>,
+    pub tool: Option<String>,
+    pub nodes: Vec<Node>,
+    pub edges: Vec<Edge>,
+    pub cycles: Vec<Vec<Edge>>,
+    pub refusals: Vec<Refusal>,
+    pub unknown: Vec<String>,
+    pub tests: Vec<Edge>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Declaration {
+    root: bool,
+}
+
+impl Report {
+    pub fn read(root: &Path) -> Self {
+        let mut report = Self::empty();
+        let declaration = match std::fs::read(root.join("plumb.toml")) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+            Err(error) => {
+                report.root = None;
+                report
+                    .unknown
+                    .push(format!("cannot read root declaration: {error}"));
+                return report;
+            }
+        };
+        report.root = match declared(&declaration) {
+            Ok(value) => Some(value),
+            Err(error) => {
+                report.unknown.push(error);
+                None
+            }
+        };
+        let lock = std::fs::read(root.join("Cargo.lock")).unwrap_or_default();
+        if root.join("package.json").exists() && report.root != Some(false) {
+            report
+                .unknown
+                .push("Node root closure is not yet supported".into());
+        }
+        if !root.join("Cargo.toml").exists() {
+            if report.root == Some(true) {
+                report
+                    .unknown
+                    .push("root declaration has no Cargo workspace".into());
+            }
+            return report;
+        }
+        let probe = probe::Probe { root };
+        match probe.source() {
+            Ok(source) => report.source = Some(source),
+            Err(error) => report.unknown.push(error),
+        }
+        match probe.tree() {
+            Ok(tree) => report.tree = Some(tree),
+            Err(error) => report.unknown.push(error),
+        }
+        match probe.version() {
+            Ok(tool) => report.tool = Some(tool),
+            Err(error) => report.unknown.push(error),
+        }
+        match probe.read() {
+            Ok(bytes) => {
+                let scope = format!("{:?}{:?}{:?}", report.source, report.tree, report.tool);
+                report.input =
+                    fingerprint([declaration.as_slice(), &lock, &bytes, scope.as_bytes()]);
+                if let Err(error) = read::Graph::parse(&bytes, report.source.as_deref())
+                    .map(|graph| graph.fill(&mut report))
+                {
+                    report.unknown.push(error);
+                }
+                report.confirm(&probe, [&declaration, &lock, &bytes]);
+            }
+            Err(error) => report.unknown.push(error),
+        }
+        report.unknown.sort();
+        report.unknown.dedup();
+        report
+    }
+
+    fn confirm(&mut self, probe: &probe::Probe<'_>, inputs: [&[u8]; 3]) {
+        for (name, before) in ["plumb.toml", "Cargo.lock"].into_iter().zip(inputs) {
+            if std::fs::read(probe.root.join(name)).unwrap_or_default() != before {
+                self.unknown
+                    .push(format!("topology input changed during capture: {name}"));
+            }
+        }
+        match probe.read() {
+            Ok(bytes) if bytes == inputs[2] => {}
+            Ok(_) => self
+                .unknown
+                .push("topology metadata changed during capture".into()),
+            Err(error) => self.unknown.push(error),
+        }
+        let before = (self.source.clone(), self.tree.clone(), self.tool.clone());
+        let after = (probe.source().ok(), probe.tree().ok(), probe.version().ok());
+        if before != after {
+            self.unknown
+                .push("topology source, tree or tool changed during capture".into());
+        }
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            schema: "plumb.topology/v1",
+            root: Some(false),
+            context: "frozen-all-features",
+            input: String::new(),
+            source: None,
+            tree: None,
+            tool: None,
+            nodes: Vec::new(),
+            edges: Vec::new(),
+            cycles: Vec::new(),
+            refusals: Vec::new(),
+            unknown: Vec::new(),
+            tests: Vec::new(),
+        }
+    }
+}
+
+fn declared(bytes: &[u8]) -> Result<bool, String> {
+    if bytes.is_empty() {
+        return Ok(false);
+    }
+    let text = std::str::from_utf8(bytes).map_err(|error| error.to_string())?;
+    let document: toml::Table = toml::from_str(text).map_err(|error| error.to_string())?;
+    let Some(value) = document.get("dependency") else {
+        return Ok(false);
+    };
+    let declaration: Declaration = value
+        .clone()
+        .try_into()
+        .map_err(|error| format!("invalid dependency declaration: {error}"))?;
+    if !declaration.root {
+        return Err("dependency.root must be true; false is not a root exemption".into());
+    }
+    Ok(true)
+}
+
+fn fingerprint(parts: [&[u8]; 4]) -> String {
+    let mut hash = Sha256::new();
+    for part in parts {
+        hash.update(part.len().to_le_bytes());
+        hash.update(part);
+    }
+    format!("{:x}", hash.finalize())
+}

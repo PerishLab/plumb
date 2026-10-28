@@ -46,6 +46,16 @@ pub fn render(seen: Held<'_>) {
             dependency.seat,
         );
     }
+    if !held.topology.nodes.is_empty() || !held.topology.unknown.is_empty() {
+        println!(
+            "  topology  {} packages, {} edges, {} architectural cycles, {} unknown (root {:?})",
+            held.topology.nodes.len(),
+            held.topology.edges.len(),
+            held.topology.cycles.len(),
+            held.topology.unknown.len(),
+            held.topology.root,
+        );
+    }
     match (held.block, held.path) {
         (Some(block), Some(path)) => println!(
             "  law       block={block} path={path} grants={}",

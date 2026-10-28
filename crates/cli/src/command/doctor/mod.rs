@@ -43,6 +43,7 @@ struct Shape {
     publishes: Vec<String>,
     sites: Vec<String>,
     dependencies: Vec<Dependency>,
+    topology: crate::shape::topology::Report,
     law: Law,
 }
 
@@ -211,6 +212,7 @@ impl Shape {
             lanes: held.lanes.iter().cloned().collect(),
             publishes: held.ships.iter().cloned().collect(),
             sites: held.sites.iter().cloned().collect(),
+            topology: held.topology.clone(),
             dependencies: held
                 .dependencies
                 .held

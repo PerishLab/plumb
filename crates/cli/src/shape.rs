@@ -11,6 +11,7 @@ mod repository;
 pub mod workflow;
 
 pub(crate) use release::identity;
+pub(crate) use repository::dependency::topology;
 pub use repository::dependency::{Dependencies, Dependency};
 pub use repository::layout;
 pub(crate) use repository::{dependency, policy, script, toolchain};
@@ -39,6 +40,7 @@ pub struct Shape {
     pub clap: bool,
     pub substrate: bool,
     pub dependencies: Dependencies,
+    pub(crate) topology: topology::Report,
     pub mint: Option<String>,
     pub packages: Vec<(String, String)>,
     pub node: Vec<(String, String)>,
@@ -242,6 +244,7 @@ pub fn capture(
         }),
         substrate: seat.substrate(),
         dependencies: dependency::read(root),
+        topology: topology::Report::read(root),
         mint: seat.mint(),
         packages: seat.packages(),
         node: node::read(root),

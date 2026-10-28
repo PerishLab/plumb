@@ -8,4 +8,5 @@ rules! {
     FIRST_PARTY_STABLE_LATEST => "deps.first-party-stable-latest",
     STYLING_PACKAGE_ALLOWED => "deps.styling-package-allowed",
     LOADER_ABSENT => "deps.environment-loader-absent",
+    ROOT_LIBRARY_CLOSED => "deps.root-library-closed",
 }
