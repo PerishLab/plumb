@@ -178,3 +178,111 @@ impl Declared {
         }
     }
 }
+
+#[cfg(test)]
+mod groups {
+    use super::super::tests::{DOMAIN, FOREIGN, Fixture};
+    use super::super::{Report, declared};
+
+    const GROUP: &str = "[dependency]\nroot=true\n[dependency.groups]\nlock=['lock','macros']\n";
+
+    fn fixture() -> Fixture {
+        let mut fixture = Fixture::new();
+        fixture.package("runtime", "lock", None);
+        fixture.package("derive", "macros", None);
+        fixture.packages[1]["targets"][0]["kind"] = serde_json::json!(["proc-macro"]);
+        fixture.edge("runtime", "derive", None);
+        fixture
+    }
+
+    fn report(fixture: &Fixture, text: &str) -> Report {
+        let declaration = declared(text.as_bytes()).unwrap();
+        fixture.named(declaration.root, declaration.groups)
+    }
+
+    #[test]
+    fn internal() {
+        let fixture = fixture();
+        assert!(!fixture.report(true).refusals.is_empty());
+        let report = report(&fixture, GROUP);
+        assert!(report.refusals.is_empty());
+        assert!(report.unknown.is_empty());
+        assert_eq!(report.edges.len(), 1);
+        assert_eq!(report.groups["lock"], ["lock", "macros"]);
+    }
+
+    #[test]
+    fn crossed() {
+        let mut fixture = fixture();
+        fixture.package("other", "token", None);
+        fixture.edge("derive", "other", Some("build"));
+        let text = format!("{GROUP}token=['token']\n");
+        let report = report(&fixture, &text);
+        assert!(report.unknown.is_empty());
+        assert!(
+            report
+                .refusals
+                .iter()
+                .any(|refusal| refusal.path.len() == 2)
+        );
+    }
+
+    #[test]
+    fn bridge() {
+        let mut fixture = fixture();
+        fixture.package("bridge", "bridge", Some(FOREIGN));
+        fixture.edge("runtime", "bridge", None);
+        fixture.edge("bridge", "derive", Some("build"));
+        let report = report(&fixture, GROUP);
+        assert!(report.unknown.is_empty());
+        assert!(
+            report
+                .refusals
+                .iter()
+                .any(|refusal| refusal.path.len() == 2)
+        );
+    }
+
+    #[test]
+    fn domain() {
+        let mut fixture = fixture();
+        fixture.package("published", "macros", Some(DOMAIN));
+        fixture.edge("runtime", "published", None);
+        assert!(!report(&fixture, GROUP).refusals.is_empty());
+    }
+
+    #[test]
+    fn cycle() {
+        let mut fixture = fixture();
+        fixture.edge("derive", "runtime", Some("dev"));
+        let report = report(&fixture, GROUP);
+        assert_eq!(report.cycles.len(), 1);
+        assert!(
+            report
+                .refusals
+                .iter()
+                .any(|refusal| refusal.reason.contains("cycle"))
+        );
+    }
+
+    #[test]
+    fn invalid() {
+        let fixture = fixture();
+        for members in [
+            "lock=['lock']",
+            "lock=[]",
+            "lock=['lock','unknown']",
+            "lock=['lock','lock','macros']",
+            "lock=['lock','macros']\nother=['macros']",
+            "''=['lock','macros']",
+        ] {
+            let text = format!("[dependency]\nroot=true\n[dependency.groups]\n{members}\n");
+            let report = report(&fixture, &text);
+            assert!(!report.unknown.is_empty(), "{members}");
+            assert!(
+                !report.refusals.is_empty(),
+                "invalid groups grant no internal exemptions"
+            );
+        }
+    }
+}

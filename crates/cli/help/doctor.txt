@@ -1,6 +1,6 @@
 Judge this repository against the skeleton and report every finding.
 
---json includes shape.topology (plumb.topology/v1): package identities and
+--json includes shape.topology (plumb.topology/v2): package identities and
 qualified sources, workspace membership, resolved features, declared edges,
 dependency kinds, target conditions, optionality, requirements and aliases.
 Its input digest binds the declaration, lock, Cargo metadata, origin, staged
@@ -27,6 +27,20 @@ Normal, build, optional, platform and the root's own dev dependencies participat
 A dependency package's own dev dependencies do not propagate to its consumer;
 those edges remain visible with propagated=false. Unknown relevant branches
 prevent a clean root verdict while preserving any known violations.
+
+One public capability may require several technical workspace crates. Declare
+their exact package names explicitly, for example:
+
+  [dependency.groups]
+  lock = ["radicula-lock", "radicula-lock-macros"]
+
+When groups are present, every workspace library belongs to exactly one nonempty
+named group. Missing, duplicate, overlapping, unknown or ambiguous membership
+prevents a clean verdict. Only direct edges between members of the same group
+are admitted. All actual edges remain visible; a third-party intermediary,
+another capability or a published domain package is not an internal exemption.
+Group cycles refuse judgment. With no groups, each library retains the original
+independent-root contract. Group declarations create no package or release.
 
 There is no root=false exemption. CLI execution outside the library graph does
 not create a library dependency. Node root closures are not yet supported and

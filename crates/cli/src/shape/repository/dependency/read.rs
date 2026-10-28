@@ -8,6 +8,7 @@ pub(super) struct Graph {
     pub roots: BTreeSet<String>,
     pub unknown: Vec<String>,
     pub binaries: Vec<String>,
+    pub groups: BTreeMap<String, String>,
 }
 
 impl Graph {
@@ -28,6 +29,7 @@ impl Graph {
             roots: BTreeSet::new(),
             unknown: Vec::new(),
             binaries: Vec::new(),
+            groups: BTreeMap::new(),
         };
         let owned = source.is_some_and(|value| value.starts_with("PerishLab/"));
         for package in &metadata.packages {
@@ -192,6 +194,11 @@ impl Graph {
     }
 
     pub fn fill(mut self, report: &mut Report) {
+        if report.root == Some(true)
+            && let Err(error) = self.group(report)
+        {
+            report.unknown.push(error);
+        }
         for edge in &mut self.edges {
             edge.propagated = edge.kind != "dev" || self.nodes[&edge.from].workspace;
         }
@@ -199,6 +206,16 @@ impl Graph {
         report.cycles = self.cycles(report);
         if report.root == Some(true) {
             report.refusals = self.refusals(&mut report.unknown);
+            for cycle in &report.cycles {
+                if !self.groups.is_empty()
+                    && cycle.iter().any(|edge| self.roots.contains(&edge.from))
+                {
+                    report.refusals.push(super::model::Refusal {
+                        reason: "root capability has a dependency cycle".into(),
+                        path: cycle.clone(),
+                    });
+                }
+            }
             if self.roots.is_empty() {
                 report
                     .unknown

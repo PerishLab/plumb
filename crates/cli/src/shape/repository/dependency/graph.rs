@@ -104,7 +104,7 @@ impl Walk<'_> {
 
     fn follow(&mut self, edge: &Edge) -> Result<Option<Refusal>, String> {
         let target = &self.graph.nodes[&edge.to];
-        if target.domain || target.workspace {
+        if (target.domain || target.workspace) && !self.graph.internal(edge) {
             return Ok(Some(Refusal {
                 reason: format!(
                     "root library {} reaches domain package {}",
