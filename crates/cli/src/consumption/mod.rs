@@ -4,11 +4,13 @@ pub mod configuration;
 pub mod lane;
 pub mod metadata;
 pub mod skill;
+pub mod windtun;
 
 pub fn prepare(command: &Command) -> Result<(), String> {
     if matches!(
         command,
         Command::Configuration { .. }
+            | Command::Windtun { .. }
             | Command::Metadata { .. }
             | Command::Release { .. }
             | Command::Ship { .. }
