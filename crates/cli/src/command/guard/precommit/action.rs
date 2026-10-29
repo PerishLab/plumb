@@ -175,7 +175,7 @@ impl Catalog<'_> {
     pub(super) fn checks(&self) -> Result<Vec<Preparation>, String> {
         let tree = self.tree;
         let manifest = tree.text("plumb.toml")?;
-        plumb::guard::seatrial::parse(manifest.as_deref().unwrap_or_default())?;
+        plumb::windtun::parse(manifest.as_deref().unwrap_or_default())?;
         let mut held = manifest
             .as_deref()
             .map(crate::shape::workflow::parse)

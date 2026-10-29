@@ -5,6 +5,7 @@ mod lane;
 mod metadata;
 mod observation;
 mod surface;
+mod windtun;
 
 use std::path::{Path, PathBuf};
 use std::process::Command;

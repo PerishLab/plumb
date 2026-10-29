@@ -24,6 +24,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 pub(crate) enum Command {
+    #[command(about = "Read the product's independent Windtun contract from plumb.toml")]
+    Windtun {
+        #[command(subcommand)]
+        deed: consumption::windtun::Deed,
+    },
     #[command(about = "Read exact lane declarations and immutable public evidence",
         long_about = plumb::seat::resource!("help/lane.txt"))]
     Lane {
@@ -259,6 +264,7 @@ impl Command {
 
     fn name(&self) -> &'static str {
         match self {
+            Self::Windtun { .. } => "windtun",
             Self::Lane { .. } => "lane",
             Self::Doctor { .. } => "doctor",
             Self::Land { .. } => "land",

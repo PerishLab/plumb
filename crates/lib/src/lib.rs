@@ -19,6 +19,8 @@ pub mod lane;
 pub mod packages;
 #[path = "forge/preview/mod.rs"]
 pub mod preview;
+#[path = "knowledge/windtun.rs"]
+pub mod windtun;
 #[cfg(feature = "vendor")]
 pub use forge::land;
 pub use proof::guard::landing;

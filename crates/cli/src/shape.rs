@@ -57,7 +57,7 @@ pub struct Shape {
     pub layout: layout::Read,
     pub(crate) preview: Result<Vec<product::preview::App>, String>,
     pub(crate) qualification: Result<(), String>,
-    pub(crate) seatrial: Option<Result<(), String>>,
+    pub(crate) windtun: Option<Result<(), String>>,
 }
 
 struct Root<'a>(&'a Path);
@@ -219,10 +219,10 @@ pub fn capture(
         .collect();
     let preview = product::preview::Seat::new(root).read(snapshot.as_ref());
     let qualification = product::qualification::read(root, &preview, snapshot.as_ref());
-    let seatrial = snapshot
+    let windtun = snapshot
         .as_ref()
         .ok()
-        .map(|snapshot| plumb::guard::seatrial::declared(snapshot).map(|_| ()));
+        .map(|snapshot| plumb::windtun::declared(snapshot).map(|_| ()));
     Shape {
         wrappers: seat.names(".runseal/wrappers", ".ts"),
         dirs: snapshot.as_ref().map(Root::dirs).unwrap_or_default(),
@@ -266,7 +266,7 @@ pub fn capture(
         layout: held,
         preview,
         qualification,
-        seatrial,
+        windtun,
     }
 }
 
