@@ -230,3 +230,53 @@ fn identity() {
     );
     assert!(report.to_string().contains("deps.root-library-closed"));
 }
+
+#[test]
+fn grouping() {
+    let root = fixture();
+    let path = root.path();
+    let manifest = path.join("crates/lock/Cargo.toml");
+    let held = std::fs::read_to_string(&manifest).unwrap();
+    std::fs::write(
+        manifest,
+        format!("{held}\n[dependencies]\npeer={{path='../peer'}}\n"),
+    )
+    .unwrap();
+    command(path, "cargo", &["generate-lockfile", "--offline"]);
+    let declaration = path.join("plumb.toml");
+    let held = std::fs::read_to_string(&declaration).unwrap();
+    let baseline = observe(path);
+    assert_eq!(
+        baseline["shape"]["topology"]["refusals"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    for (groups, refusals, unknown) in [
+        ("lock=['lock','peer']", 0, false),
+        ("lock=['lock']\nother=['peer']", 1, false),
+        ("lock=['lock']", 1, true),
+    ] {
+        std::fs::write(
+            &declaration,
+            format!("{held}\n[dependency.groups]\n{groups}\n"),
+        )
+        .unwrap();
+        let report = observe(path);
+        let topology = &report["shape"]["topology"];
+        assert_eq!(topology["schema"], "plumb.topology/v2", "{report}");
+        assert_eq!(topology["edges"].as_array().unwrap().len(), 1, "{report}");
+        assert_eq!(
+            topology["refusals"].as_array().unwrap().len(),
+            refusals,
+            "{report}"
+        );
+        assert_eq!(
+            !topology["unknown"].as_array().unwrap().is_empty(),
+            unknown,
+            "{report}"
+        );
+        assert_ne!(topology["input"], baseline["shape"]["topology"]["input"]);
+    }
+}
