@@ -98,11 +98,11 @@ program = "git"
 [release.windows]
 scope = "user"
 
-[guard.seatrial]
+[windtun]
 cases = ["writer"]
 image = "ghcr.io/perishlab/images:stable"
 
-[guard.seatrial.scenes]
+[windtun.scenes]
 authority = "https://depot.seatrial.perish.uk"
 product = "seatrial"
 channel = "stable"
