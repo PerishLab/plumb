@@ -79,6 +79,7 @@ pub(crate) struct Node {
     pub manifest: Option<PathBuf>,
     pub features: Vec<String>,
     pub aliases: Vec<String>,
+    pub candidates: Vec<super::registry::Candidate>,
 }
 
 #[derive(Clone, Serialize)]
@@ -93,6 +94,7 @@ pub(crate) struct Edge {
     pub optional: bool,
     pub features: Vec<String>,
     pub default: bool,
+    pub versions: Vec<String>,
     pub resolved: bool,
     pub propagated: bool,
     pub seat: PathBuf,
@@ -104,7 +106,7 @@ pub(crate) struct Refusal {
     pub path: Vec<Edge>,
 }
 
-#[derive(Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub(super) struct Binding {
     alias: String,
     requirement: String,
@@ -172,6 +174,7 @@ impl Declared {
             optional: self.optional,
             features: self.features.clone(),
             default: self.default,
+            versions: Vec::new(),
             resolved,
             propagated: true,
             seat: from.manifest.clone(),

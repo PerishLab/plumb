@@ -1,6 +1,7 @@
 mod cargo;
 mod direct;
 mod npm;
+#[path = "../topology/mod.rs"]
 pub(crate) mod topology;
 
 use crate::catalog::set;

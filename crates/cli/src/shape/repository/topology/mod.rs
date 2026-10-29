@@ -1,3 +1,5 @@
+mod closure;
+mod evidence;
 #[path = "graph.rs"]
 mod graph;
 #[path = "model.rs"]
@@ -6,6 +8,7 @@ mod model;
 mod probe;
 #[path = "read.rs"]
 mod read;
+mod registry;
 #[cfg(test)]
 #[path = "tests.rs"]
 mod tests;
@@ -32,6 +35,7 @@ pub(crate) struct Report {
     pub refusals: Vec<Refusal>,
     pub unknown: Vec<String>,
     pub tests: Vec<Edge>,
+    pub closure: Option<evidence::Evidence>,
 }
 
 #[derive(Default, Deserialize)]
@@ -40,6 +44,28 @@ struct Declaration {
     root: bool,
     #[serde(default)]
     groups: BTreeMap<String, Vec<String>>,
+}
+
+pub(crate) fn world(root: &Path, manifest: Option<&str>) -> Result<Option<String>, String> {
+    if !declared(manifest.unwrap_or_default().as_bytes())?.root {
+        return Ok(None);
+    }
+    let report = Report::read(root);
+    if !report.unknown.is_empty() || !report.refusals.is_empty() {
+        return Err(format!(
+            "strict root topology refuses reuse: {} unknown, {} violations; run plumb doctor --json",
+            report.unknown.len(),
+            report.refusals.len()
+        ));
+    }
+    Ok(Some(report.input))
+}
+
+pub(crate) fn bind(name: &str, input: String, topology: Option<&str>) -> String {
+    match (name, topology) {
+        ("guard/plumb", Some(topology)) => fingerprint([input.as_bytes(), topology.as_bytes()]),
+        _ => input,
+    }
 }
 
 impl Report {
@@ -98,18 +124,44 @@ impl Report {
                 let scope = format!("{:?}{:?}{:?}", report.source, report.tree, report.tool);
                 report.input =
                     fingerprint([declaration.as_slice(), &lock, &bytes, scope.as_bytes()]);
-                if let Err(error) = read::Graph::parse(&bytes, report.source.as_deref())
-                    .map(|graph| graph.fill(&mut report))
-                {
+                if let Err(error) = report.capture(root, &bytes, &lock) {
                     report.unknown.push(error);
                 }
                 report.confirm(&probe, [&declaration, &lock, &bytes]);
             }
             Err(error) => report.unknown.push(error),
         }
+        if let Some(closure) = &report.closure {
+            report.context = "frozen-all-features+declaration-candidates";
+            report.input = fingerprint([report.input.as_bytes(), closure.input.as_bytes()]);
+            if let Err(error) = registry::unmodified(root) {
+                report.unknown.push(error);
+            }
+        }
         report.unknown.sort();
         report.unknown.dedup();
         report
+    }
+
+    fn capture(&mut self, root: &Path, bytes: &[u8], lock: &[u8]) -> Result<(), String> {
+        let mut graph = read::Graph::parse(bytes, self.source.as_deref())?;
+        if self.root == Some(true)
+            && graph
+                .edges
+                .iter()
+                .any(|edge| !edge.resolved && edge.source.as_deref() == Some(registry::SOURCE))
+        {
+            match registry::unmodified(root).and_then(|()| evidence::Reader::new()) {
+                Ok(mut reader) => {
+                    let metadata =
+                        serde_json::from_slice(bytes).map_err(|error| error.to_string())?;
+                    self.closure = Some(graph.supplement(&metadata, lock, &mut reader));
+                }
+                Err(error) => graph.unknown.push(error),
+            }
+        }
+        graph.fill(self);
+        Ok(())
     }
 
     fn confirm(&mut self, probe: &probe::Probe<'_>, inputs: [&[u8]; 3]) {
@@ -136,7 +188,7 @@ impl Report {
 
     pub fn empty() -> Self {
         Self {
-            schema: "plumb.topology/v2",
+            schema: "plumb.topology/v3",
             root: Some(false),
             groups: BTreeMap::new(),
             context: "frozen-all-features",
@@ -150,6 +202,7 @@ impl Report {
             refusals: Vec::new(),
             unknown: Vec::new(),
             tests: Vec::new(),
+            closure: None,
         }
     }
 }
@@ -220,7 +273,7 @@ impl read::Graph {
     }
 }
 
-fn fingerprint(parts: [&[u8]; 4]) -> String {
+fn fingerprint<const N: usize>(parts: [&[u8]; N]) -> String {
     let mut hash = Sha256::new();
     for part in parts {
         hash.update(part.len().to_le_bytes());
