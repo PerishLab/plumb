@@ -265,7 +265,7 @@ fn grouping() {
         .unwrap();
         let report = observe(path);
         let topology = &report["shape"]["topology"];
-        assert_eq!(topology["schema"], "plumb.topology/v2", "{report}");
+        assert_eq!(topology["schema"], "plumb.topology/v3", "{report}");
         assert_eq!(topology["edges"].as_array().unwrap().len(), 1, "{report}");
         assert_eq!(
             topology["refusals"].as_array().unwrap().len(),

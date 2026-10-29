@@ -48,7 +48,7 @@ pub fn render(seen: Held<'_>) {
     }
     if !held.topology.nodes.is_empty() || !held.topology.unknown.is_empty() {
         println!(
-            "  topology  {} packages, {} edges, {} architectural cycles, {} unknown (root {:?})",
+            "  topology  {} nodes, {} edges, {} architectural cycles, {} unknown (root {:?})",
             held.topology.nodes.len(),
             held.topology.edges.len(),
             held.topology.cycles.len(),

@@ -4,8 +4,8 @@ use std::collections::BTreeMap;
 
 pub(super) struct Fixture {
     pub(super) packages: Vec<Value>,
-    nodes: Vec<Value>,
-    workspace: Vec<String>,
+    pub(super) nodes: Vec<Value>,
+    pub(super) workspace: Vec<String>,
 }
 
 impl Fixture {
@@ -258,5 +258,38 @@ fn targets() {
             .refusals
             .iter()
             .any(|refusal| refusal.reason.contains("binary"))
+    );
+}
+
+pub(super) fn dependency(name: &str, registry: Option<&str>) -> serde_json::Value {
+    json!({"name":name,"req":"^1","features":[],"optional":true,"default_features":true,"target":"cfg(unix)","kind":"normal","registry":registry})
+}
+
+pub(super) fn entry(name: &str, version: &str, deps: Vec<serde_json::Value>) -> serde_json::Value {
+    json!({"name":name,"vers":version,"cksum":"0".repeat(64),"deps":deps,"features":{},"yanked":false})
+}
+
+#[test]
+fn worlds() {
+    let first = super::bind("guard/plumb", "tree".into(), Some("index-a"));
+    assert_eq!(first.len(), 64);
+    assert_ne!(
+        first,
+        super::bind("guard/plumb", "tree".into(), Some("index-b"))
+    );
+    assert_eq!(
+        super::bind("guard/rust", "tree".into(), Some("index-a")),
+        "tree"
+    );
+    assert_eq!(
+        super::world(std::path::Path::new("absent"), None).unwrap(),
+        None
+    );
+    assert!(
+        super::world(
+            std::path::Path::new("absent"),
+            Some("[dependency]\nroot=false")
+        )
+        .is_err()
     );
 }

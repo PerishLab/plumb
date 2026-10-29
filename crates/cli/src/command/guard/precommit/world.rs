@@ -38,6 +38,7 @@ impl Prepared {
         let captured = Tree::read(&index.root, None)?;
         let manifest = captured.text("plumb.toml")?;
         let product = crate::shape::product::named(manifest.as_deref())?;
+        let topology = crate::shape::topology::world(&index.root, manifest.as_deref())?;
         let prepared = super::action::Catalog {
             tree: &captured,
             product: &product,
@@ -65,6 +66,7 @@ impl Prepared {
             paths,
         } in prepared
         {
+            let input = crate::shape::topology::bind(&name, input, topology.as_deref());
             let (exclusions, policy) = if name == "guard/web" {
                 let policy = plumb::packages::Policy::read(&index.root)?;
                 let mut flags = policy.flags.clone();

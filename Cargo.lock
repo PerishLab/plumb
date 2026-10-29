@@ -544,6 +544,7 @@ dependencies = [
  "tempfile",
  "toml",
  "toml_edit",
+ "ureq",
  "zip",
  "zstd",
 ]

@@ -1,5 +1,5 @@
 use super::Report;
-use super::model::{Declared, Dependency, Edge, Metadata, Node, Package, Resolve};
+use super::model::{Binding, Declared, Dependency, Edge, Metadata, Node, Package, Resolve};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub(super) struct Graph {
@@ -7,8 +7,19 @@ pub(super) struct Graph {
     pub edges: Vec<Edge>,
     pub roots: BTreeSet<String>,
     pub unknown: Vec<String>,
+    pub pending: BTreeMap<(String, Binding), String>,
     pub binaries: Vec<String>,
     pub groups: BTreeMap<String, String>,
+}
+
+#[derive(serde::Serialize)]
+struct Key<'a> {
+    from: &'a str,
+    to: &'a str,
+    binding: Binding,
+    optional: bool,
+    features: &'a [String],
+    default: bool,
 }
 
 impl Graph {
@@ -28,6 +39,7 @@ impl Graph {
             edges: Vec::new(),
             roots: BTreeSet::new(),
             unknown: Vec::new(),
+            pending: BTreeMap::new(),
             binaries: Vec::new(),
             groups: BTreeMap::new(),
         };
@@ -46,6 +58,7 @@ impl Graph {
                 features: features
                     .map(|node| node.features.clone())
                     .unwrap_or_default(),
+                candidates: Vec::new(),
                 aliases: package
                     .targets
                     .iter()
@@ -171,6 +184,7 @@ impl Graph {
                     manifest: None,
                     features: Vec::new(),
                     aliases: Vec::new(),
+                    candidates: Vec::new(),
                 });
                 self.unbound(package, declared);
                 id
@@ -182,14 +196,36 @@ impl Graph {
     fn unbound(&mut self, package: &Package, declared: &Declared) {
         let propagated = declared.kind() != "dev" || self.nodes[&package.id].workspace;
         if propagated {
-            self.unknown.push(format!(
-                "unbound declared dependency {} {} of {} ({}, {:?})",
-                declared.name,
-                declared.req,
-                package.id,
-                declared.kind(),
-                declared.target
-            ));
+            self.pending.insert(
+                (package.id.clone(), declared.binding()),
+                format!(
+                    "unbound declared dependency {} {} of {} ({}, {:?})",
+                    declared.name,
+                    declared.req,
+                    package.id,
+                    declared.kind(),
+                    declared.target
+                ),
+            );
+        }
+    }
+
+    pub fn merge(&mut self, edge: Edge, seen: &mut BTreeMap<String, usize>) {
+        let key = serde_json::to_string(&Key {
+            from: &edge.from,
+            to: &edge.to,
+            binding: edge.binding(),
+            optional: edge.optional,
+            features: &edge.features,
+            default: edge.default,
+        })
+        .expect("declaration identity");
+        match seen.get(&key).copied() {
+            Some(index) => self.edges[index].versions.extend(edge.versions),
+            None => {
+                seen.insert(key, self.edges.len());
+                self.edges.push(edge);
+            }
         }
     }
 
@@ -203,6 +239,9 @@ impl Graph {
             edge.propagated = edge.kind != "dev" || self.nodes[&edge.from].workspace;
         }
         report.unknown.append(&mut self.unknown);
+        report
+            .unknown
+            .extend(std::mem::take(&mut self.pending).into_values());
         report.cycles = self.cycles(report);
         if report.root == Some(true) {
             report.refusals = self.refusals(&mut report.unknown);
