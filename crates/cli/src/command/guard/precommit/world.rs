@@ -39,6 +39,7 @@ impl Prepared {
         let manifest = captured.text("plumb.toml")?;
         let product = crate::shape::product::named(manifest.as_deref())?;
         let topology = crate::shape::topology::world(&index.root, manifest.as_deref())?;
+        index.settle()?;
         let prepared = super::action::Catalog {
             tree: &captured,
             product: &product,

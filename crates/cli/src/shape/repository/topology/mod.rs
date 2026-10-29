@@ -50,6 +50,9 @@ pub(crate) fn world(root: &Path, manifest: Option<&str>) -> Result<Option<String
     if !declared(manifest.unwrap_or_default().as_bytes())?.root {
         return Ok(None);
     }
+    if root.join("Cargo.toml").exists() && !root.join("package.json").exists() {
+        crate::diagnostic::measure("topology.prepare", || plumb::packages::cargo::fetch(root))?;
+    }
     let report = Report::read(root);
     if !report.unknown.is_empty() || !report.refusals.is_empty() {
         return Err(format!(

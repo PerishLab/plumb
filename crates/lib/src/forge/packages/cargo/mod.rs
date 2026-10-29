@@ -1,4 +1,6 @@
 mod graph;
+#[cfg(test)]
+mod preparation;
 use super::{Package, manifest, process};
 pub use graph::compatible;
 use std::collections::{BTreeMap, BTreeSet};
@@ -8,6 +10,11 @@ const SOURCE: &str = "sparse+https://cargo.perish.uk/";
 
 type Moves = BTreeSet<(String, String)>;
 type Pin = (std::path::PathBuf, String, String);
+
+pub fn fetch(root: &Path) -> Result<(), String> {
+    let argv = ["cargo", "fetch", "--locked"].map(str::to_string);
+    process::run(root, "cargo", &argv).map(|_| ())
+}
 
 pub(super) struct Lock<'a>(pub(super) &'a Path);
 

@@ -1,6 +1,6 @@
 mod age;
 pub use age::{Policy, cache, exclusions};
-mod cargo;
+pub mod cargo;
 mod fetch;
 pub use fetch::run as fetch;
 mod manifest;
