@@ -93,6 +93,17 @@ impl Walker<'_> {
         });
     }
 
+    pub fn payload(&mut self, span: Span, form: &Form) -> &'static str {
+        if form.first() != Form::Unit {
+            return "data";
+        }
+        self.gap(
+            span,
+            "unit lock payload identifies a candidate execution zone; external data and poison protocols require caller review".into(),
+        );
+        "candidate"
+    }
+
     pub fn typed(
         &mut self,
         span: Span,
@@ -106,8 +117,7 @@ impl Walker<'_> {
         let role = match family {
             Family::Radicula => "radicula",
             Family::Descriptor => "primitive",
-            Family::Mutex if found.first() == Form::Unit => "zone",
-            Family::Mutex => "data",
+            Family::Mutex => self.payload(span, &found),
             Family::Semaphore => "zone",
             Family::Init => "init",
             _ => "atomic",

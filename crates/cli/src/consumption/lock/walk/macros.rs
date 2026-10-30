@@ -1,20 +1,7 @@
 use super::Walker;
-use super::method::SUSPECT;
 use crate::consumption::lock::form::Form;
-use proc_macro2::{TokenStream, TokenTree};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-
-const TOKENS: [&str; 8] = [
-    "Mutex",
-    "RwLock",
-    "ReentrantMutex",
-    "Semaphore",
-    "flock",
-    "radicula_lock",
-    "FileExt",
-    "Flock",
-];
 
 const PARSED: [&str; 22] = [
     "vec",
@@ -65,24 +52,10 @@ impl Walker<'_> {
                 return Form::Opaque;
             }
         }
-        self.hidden(mac, "lock tokens inside a macro body that is not parsed");
+        self.gap(
+            mac.span(),
+            "macro expansion is not inspected; its generated lock behavior is unknown".into(),
+        );
         Form::Opaque
     }
-
-    pub fn hidden(&mut self, mac: &syn::Macro, reason: &str) {
-        if suspicious(&mac.tokens) {
-            self.gap(mac.span(), reason.to_string());
-        }
-    }
-}
-
-fn suspicious(tokens: &TokenStream) -> bool {
-    tokens.clone().into_iter().any(|tree| match tree {
-        TokenTree::Ident(ident) => {
-            let word = ident.to_string();
-            SUSPECT.contains(&word.as_str()) || TOKENS.contains(&word.as_str())
-        }
-        TokenTree::Group(group) => suspicious(&group.stream()),
-        _ => false,
-    })
 }

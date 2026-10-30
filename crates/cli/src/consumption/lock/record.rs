@@ -2,12 +2,13 @@ use serde::Serialize;
 
 pub const SCHEMA: &str = "plumb.lock.inspection/v1";
 
-pub const LIMITS: [&str; 7] = [
+pub const LIMITS: [&str; 8] = [
+    "unit Mutex and RwLock payloads are execution candidates, never proof that caller data or poison protocols can be removed",
     "only Rust sources are read; every other code file is listed as unscanned",
     "roles come from resolved paths and inferred receiver types, never from text matches",
     "receivers that cannot be typed are reported as unknown when they call a lock-named method",
     "read and write calls are classified only on resolved lock types",
-    "macro bodies other than parsed expression macros are reported as unknown when they carry lock tokens",
+    "macro bodies other than parsed expression macros are reported as unknown even without visible lock tokens",
     "indirect consumption follows first-party crates in the workspace and the Perish registry only",
     "attribute macros other than the Radicula guard are read as written",
 ];

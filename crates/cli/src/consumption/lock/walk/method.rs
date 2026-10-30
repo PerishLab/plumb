@@ -105,11 +105,7 @@ impl Walker<'_> {
         let path = form.path().unwrap_or_default().to_string();
         match form.family() {
             Some(Family::Mutex) if ACQUIRE.contains(&name) => {
-                let role = if form.first() == Form::Unit {
-                    "zone"
-                } else {
-                    "data"
-                };
+                let role = self.payload(site.span, form);
                 self.emit(
                     site,
                     (form, whole),

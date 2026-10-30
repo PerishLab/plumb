@@ -1,3 +1,5 @@
+mod carrier;
+
 use std::path::Path;
 use std::process::Command;
 
@@ -12,7 +14,7 @@ const CASES: [(&str, &str, &str); 12] = [
     (
         "alias",
         "use std::sync::Mutex;\ntype Gate = Mutex<()>;\npub static GATE: Gate = Mutex::new(());\npub fn zone() {\n    let _held = GATE.lock();\n}\n",
-        "src/lib.rs:5:22 zone[acquire] std::sync::Mutex::lock hold=binding (production)",
+        "src/lib.rs:5:22 candidate[acquire] std::sync::Mutex::lock hold=binding (production)",
     ),
     (
         "extension",
@@ -22,7 +24,7 @@ const CASES: [(&str, &str, &str); 12] = [
     (
         "awaited",
         "use std::sync::Arc;\nuse tokio::sync::Mutex;\npub struct Service {\n    gate: Arc<Mutex<()>>,\n}\nimpl Service {\n    pub async fn run(&self) {\n        let _held = self.gate.lock().await;\n        work().await;\n    }\n}\nasync fn work() {}\n",
-        "src/lib.rs:8:31 zone[acquire] tokio::sync::Mutex::lock hold=binding (production)",
+        "src/lib.rs:8:31 candidate[acquire] tokio::sync::Mutex::lock hold=binding (production)",
     ),
     (
         "data",
@@ -234,5 +236,32 @@ fn stable() {
             .as_array()
             .is_some_and(|gaps| !gaps.is_empty()),
         "{result:#}"
+    );
+}
+
+#[test]
+fn poison() {
+    let source = "use std::sync::Mutex;\nstatic GATE: Mutex<()> = Mutex::new(());\npub fn append() -> Result<(), &'static str> {\n    let _held = GATE.lock().map_err(|_| \"store lock is poisoned\")?;\n    Ok(())\n}\n";
+    let root = plant(&[("Cargo.toml", MANIFEST), ("src/lib.rs", source)]);
+    let result: serde_json::Value =
+        serde_json::from_str(&inspect(root.path(), true)).expect("inspection should be json");
+    let findings = result["findings"].as_array().expect("findings");
+    assert!(
+        findings
+            .iter()
+            .any(|finding| finding["role"] == "candidate")
+    );
+    assert!(!findings.iter().any(|finding| finding["role"] == "zone"));
+    assert_eq!(result["summary"]["complete"], false);
+    assert!(
+        result["unknown"]
+            .as_array()
+            .expect("gaps")
+            .iter()
+            .any(|gap| {
+                gap["reason"]
+                    .as_str()
+                    .is_some_and(|reason| reason.contains("poison protocols"))
+            })
     );
 }

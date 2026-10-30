@@ -18,7 +18,7 @@ const WATCHED: [&str; 13] = [
     "rustix",
 ];
 
-const LANGUAGES: [(&str, &str); 19] = [
+const LANGUAGES: [(&str, &str); 30] = [
     ("py", "python"),
     ("ts", "typescript"),
     ("tsx", "typescript"),
@@ -38,6 +38,17 @@ const LANGUAGES: [(&str, &str); 19] = [
     ("cpp", "cpp"),
     ("java", "java"),
     ("swift", "swift"),
+    ("ps1", "powershell"),
+    ("m", "objective-c"),
+    ("metal", "metal"),
+    ("uc", "ucode"),
+    ("sql", "sql"),
+    ("html", "html"),
+    ("tpl", "template"),
+    ("pt", "template"),
+    ("in", "template"),
+    ("g4", "grammar"),
+    ("grammar", "grammar"),
 ];
 
 pub struct Source {
