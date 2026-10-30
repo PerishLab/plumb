@@ -29,6 +29,11 @@ pub(crate) enum Command {
         #[command(subcommand)]
         deed: consumption::windtun::Deed,
     },
+    #[command(about = "Inventory lock usage across a repository without changing it")]
+    Lock {
+        #[command(subcommand)]
+        deed: consumption::lock::Deed,
+    },
     #[command(about = "Read exact lane declarations and immutable public evidence",
         long_about = plumb::seat::resource!("help/lane.txt"))]
     Lane {
@@ -265,6 +270,7 @@ impl Command {
     fn name(&self) -> &'static str {
         match self {
             Self::Windtun { .. } => "windtun",
+            Self::Lock { .. } => "lock",
             Self::Lane { .. } => "lane",
             Self::Doctor { .. } => "doctor",
             Self::Land { .. } => "land",

@@ -2,6 +2,7 @@ mod configuration;
 mod diagnostic;
 mod identity;
 mod lane;
+mod lock;
 mod metadata;
 mod observation;
 mod surface;

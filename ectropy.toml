@@ -8,6 +8,11 @@ allow = ["word"]
 note = "The isolated which::Sys adapter implements the upstream trait's required associated type and method names."
 paths = ["crates/lib/src/runtime/execution/system.rs"]
 
+[[boundary]]
+allow = ["word"]
+note = "The isolated syn::visit::Visit adapter implements the upstream trait's required method names for the lock inspection walker."
+paths = ["crates/cli/src/consumption/lock/walk/visit.rs"]
+
 [[ban]]
 paths = ["apps/web/src/lib/components/**"]
 syntax = "style"
