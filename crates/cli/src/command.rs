@@ -99,6 +99,7 @@ pub(crate) fn execute(command: Command) -> i32 {
         Command::Layout { target } => render::Seat::new(PathBuf::from(target.root)).layout(),
         Command::Metadata { key, json } => crate::consumption::metadata::run(key, json),
         Command::Windtun { deed } => crate::consumption::windtun::run(deed),
+        Command::Lock { deed } => crate::consumption::lock::run(deed),
         Command::Cookbook { entry, json } => cookbook::run(entry, json),
         Command::Affirm { target, write } => {
             render::Seat::new(PathBuf::from(target.root)).affirm(write)

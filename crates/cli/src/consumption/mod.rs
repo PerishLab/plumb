@@ -2,6 +2,7 @@ use super::Command;
 
 pub mod configuration;
 pub mod lane;
+pub mod lock;
 pub mod metadata;
 pub mod skill;
 pub mod windtun;
@@ -11,6 +12,7 @@ pub fn prepare(command: &Command) -> Result<(), String> {
         command,
         Command::Configuration { .. }
             | Command::Windtun { .. }
+            | Command::Lock { .. }
             | Command::Metadata { .. }
             | Command::Release { .. }
             | Command::Ship { .. }
