@@ -18,7 +18,7 @@ const STDIO: [(&str, &str); 3] = [
     ("std::io::stderr", "std::io::Stderr"),
 ];
 
-const RADICULA: [(&str, &str); 19] = [
+const RADICULA: [(&str, &str); 20] = [
     ("lock", "manual"),
     ("attempt", "manual"),
     ("unlock", "release"),
@@ -38,6 +38,7 @@ const RADICULA: [(&str, &str); 19] = [
     ("hold", "scoped"),
     ("run", "scoped"),
     ("attach", "scoped"),
+    ("during", "scoped"),
 ];
 
 impl Walker<'_> {
@@ -149,7 +150,20 @@ impl Walker<'_> {
             .functions
             .get(&call)
             .map(|function| function.output.clone());
-        let Some((_, lifecycle)) = RADICULA.iter().find(|(known, _)| *known == name) else {
+        let binding = name == "file" && call.ends_with("::Factory::file");
+        let lifecycle = if binding {
+            Some(&"gate")
+        } else {
+            RADICULA
+                .iter()
+                .find(|(known, _)| *known == name)
+                .map(|(_, lifecycle)| lifecycle)
+        };
+        let Some(lifecycle) = lifecycle else {
+            self.gap(
+                site.span,
+                format!("unmodeled Radicula call {call}; its lock lifecycle is unknown"),
+            );
             return modeled.unwrap_or(Form::Opaque);
         };
         let hold = match *lifecycle {
@@ -191,6 +205,7 @@ fn synthesized(name: &str) -> Form {
         )
     };
     match name {
+        "file" => result("radicula_lock::file::Gate"),
         "gate" | "shared" => result("radicula_lock::Gate"),
         "acquire" => result("radicula_lock::Permit"),
         "wait" | "tokio" | "asynchronous" => Form::Named("radicula_lock::Gate".into(), Vec::new()),
