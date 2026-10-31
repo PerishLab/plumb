@@ -185,6 +185,28 @@ fn compiler() {
     assert!(clean["messages"]["findings"].as_array().unwrap().is_empty());
     put(
         root,
+        "app/src/lib.rs",
+        "pub fn data(value: &std::sync::Mutex<()>) { drop(value.lock()); }\n",
+    );
+    put(
+        root,
+        "clippy.toml",
+        "disallowed-methods=[{path=\"std::mem::drop\",reason=\"plumb.lock/std::fs::File::lock\"}]\n",
+    );
+    git(root, &["add", "."]);
+    let mismatch = run(root, home.path());
+    assert_eq!(
+        mismatch.status.code(),
+        Some(2),
+        "{}",
+        String::from_utf8_lossy(&mismatch.stderr)
+    );
+    assert!(mismatch.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&mismatch.stderr).contains("managed lock marker differs"));
+    std::fs::remove_file(root.join("clippy.toml")).unwrap();
+    git(root, &["add", "clippy.toml"]);
+    put(
+        root,
         "plumb.toml",
         "[identity]\nns=\"probe\"\n[workflow.hash.guard]\nrust=[\"suite://cargo\"]\ntest=[\"suite://cargo\"]\n[[workflow.tool.guard.test]]\nprogram=\"missing-lock-test-prerequisite\"\n",
     );

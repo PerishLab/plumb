@@ -44,7 +44,7 @@ fn collision() {
 }
 
 fn diagnostic() -> serde_json::Value {
-    serde_json::from_str(r#"{"reason":"compiler-message", "package_id":"path+file:///app#app@0.0.0", "target":{"name":"app", "kind":["lib"]}, "message":{"code":{"code":"clippy::disallowed_methods"}, "children":[{"message":"plumb.lock/std::fs::File::try_lock"}], "spans":[{"file_name":"carrier/src/lib.rs","is_primary":true,"expansion":{"span":{"file_name":"app/src/lib.rs","line_start":9}}}]}}"#).unwrap()
+    serde_json::from_str(r#"{"reason":"compiler-message", "package_id":"path+file:///app#app@0.0.0", "target":{"name":"app", "kind":["lib"]}, "message":{"message":"use of a disallowed method `std::fs::File::try_lock`","code":{"code":"clippy::disallowed_methods"}, "children":[{"message":"plumb.lock/std::fs::File::try_lock"}], "spans":[{"file_name":"carrier/src/lib.rs","is_primary":true,"expansion":{"span":{"file_name":"app/src/lib.rs","line_start":9}}}]}}"#).unwrap()
 }
 
 #[test]
@@ -89,6 +89,14 @@ fn unrelated() {
 fn malformed() {
     let mut message = diagnostic();
     message["message"]["spans"] = json!([]);
+    let text = format!("{message}\n{{\"reason\":\"build-finished\",\"success\":true}}\n");
+    assert!(messages::read(text.as_bytes()).is_err());
+}
+
+#[test]
+fn mismatch() {
+    let mut message = diagnostic();
+    message["message"]["message"] = json!("use of a disallowed method `std::mem::drop`");
     let text = format!("{message}\n{{\"reason\":\"build-finished\",\"success\":true}}\n");
     assert!(messages::read(text.as_bytes()).is_err());
 }
