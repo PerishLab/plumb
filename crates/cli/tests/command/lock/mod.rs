@@ -1,4 +1,5 @@
 mod carrier;
+mod compiler;
 
 use std::path::Path;
 use std::process::Command;

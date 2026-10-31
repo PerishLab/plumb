@@ -1,5 +1,6 @@
 use super::super::workflow::tree::Tree;
 pub(super) use super::super::world::{digest, execution};
+use super::Selection;
 use super::tree::Index;
 use crate::command::cache::transport::Context;
 use std::path::Path;
@@ -22,10 +23,10 @@ impl Prepared {
     pub fn new(
         root: &Path,
         index: &Index,
-        latest: bool,
+        selection: Selection,
         seat: Option<&Path>,
     ) -> Result<Self, String> {
-        let (locked, observed) = if latest {
+        let (locked, observed) = if matches!(selection, Selection::Latest) {
             let (locked, observed) = crate::diagnostic::measure("packages.resolve", || {
                 crate::command::packages::observed(&index.root, "ci-latest")
             })?;
@@ -40,11 +41,7 @@ impl Prepared {
         let product = crate::shape::product::named(manifest.as_deref())?;
         let topology = crate::shape::topology::world(&index.root, manifest.as_deref())?;
         index.settle()?;
-        let prepared = super::action::Catalog {
-            tree: &captured,
-            product: &product,
-        }
-        .checks()?;
+        let prepared = selection.checks(&captured, &product)?;
         let observation = if prepared.iter().any(|check| check.name == "guard/plumb") {
             Some(match observed {
                 Some(observed) => observed,
@@ -209,7 +206,7 @@ mod tests {
         let tree = plumb::guard::tree(root).unwrap();
         let index = Index::new(root, &tree).unwrap();
         let seat = super::super::cargo::seat(root, &tree).unwrap();
-        let prepared = Prepared::new(root, &index, false, seat.as_deref()).unwrap();
+        let prepared = Prepared::new(root, &index, Selection::Local, seat.as_deref()).unwrap();
         let check = prepared
             .checks
             .iter()

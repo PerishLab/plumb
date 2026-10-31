@@ -29,7 +29,7 @@ pub(crate) enum Command {
         #[command(subcommand)]
         deed: consumption::windtun::Deed,
     },
-    #[command(about = "Inventory lock usage across a repository without changing it")]
+    #[command(about = "Inspect source locks and resolve staged Rust file-lock references", long_about = plumb::seat::resource!("help/lock.txt"))]
     Lock {
         #[command(subcommand)]
         deed: consumption::lock::Deed,
