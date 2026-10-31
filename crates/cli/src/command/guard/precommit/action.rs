@@ -47,7 +47,12 @@ impl Proof<'_> {
         if plumb::guard::staged(root, &tree).is_ok() {
             let index = crate::diagnostic::measure("source.prepare", || Index::new(root, &tree))?;
             let prepared = crate::diagnostic::measure("guard.prepare", || {
-                Prepared::new(root, &index, latest, seat.as_deref())
+                Prepared::new(
+                    root,
+                    &index,
+                    super::Selection::guard(latest),
+                    seat.as_deref(),
+                )
             })?;
             record(&prepared);
             if let Some(proof) = prepared.reused(root, &tree) {
@@ -61,7 +66,12 @@ impl Proof<'_> {
             .transpose()?;
         let index = crate::diagnostic::measure("source.prepare", || Index::new(root, &tree))?;
         let prepared = crate::diagnostic::measure("guard.prepare", || {
-            Prepared::new(root, &index, latest, seat.as_deref())
+            Prepared::new(
+                root,
+                &index,
+                super::Selection::guard(latest),
+                seat.as_deref(),
+            )
         })?;
         record(&prepared);
         if let Some(proof) = prepared.reused(root, &tree) {

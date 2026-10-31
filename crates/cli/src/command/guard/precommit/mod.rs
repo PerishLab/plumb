@@ -77,6 +77,67 @@ pub(super) fn prove(root: &Path) -> Result<plumb::guard::Descriptor, String> {
     action::resolved(root)
 }
 
+#[derive(Clone, Copy)]
+enum Selection {
+    Local,
+    Latest,
+    Compiler,
+}
+
+impl Selection {
+    fn guard(latest: bool) -> Self {
+        if latest { Self::Latest } else { Self::Local }
+    }
+
+    fn checks(
+        self,
+        tree: &super::workflow::tree::Tree,
+        product: &str,
+    ) -> Result<Vec<action::Preparation>, String> {
+        let mut checks = action::Catalog { tree, product }.checks()?;
+        if matches!(self, Self::Compiler) {
+            checks.retain(|check| check.name == "guard/rust");
+        }
+        Ok(checks)
+    }
+}
+
+pub(crate) struct Compiler<'a>(pub &'a Path);
+
+impl Compiler<'_> {
+    pub(crate) fn resolve(&self) -> Result<crate::execution::lock::Report, String> {
+        let root = self.0;
+        crate::catalog::prepare()?;
+        crate::catalog::set::prepare()?;
+        let source = plumb::guard::tree(root)?;
+        let lease = cargo::Lease::new(root)?;
+        let index = tree::Index::new(root, &source)?;
+        let prepared = world::Prepared::new(root, &index, Selection::Compiler, Some(&lease.root))?;
+        let check = prepared
+            .checks
+            .iter()
+            .find(|check| check.proof.name == "guard/rust")
+            .ok_or("lock resolve requires the standard guard/rust action")?;
+        let execution = check
+            .execution
+            .as_ref()
+            .ok_or("lock resolve requires managed Cargo execution")?;
+        let scope = crate::execution::lock::Scope {
+            source,
+            tree: tree::git(
+                &index.root,
+                &["rev-parse", "HEAD^{tree}"],
+                "read compiled lock source",
+            )?,
+            resolution: prepared.resolution,
+        };
+        let report = crate::execution::lock::resolve(&index.root, execution, scope)?;
+        tree::unchanged(&index)?;
+        lease.settle();
+        Ok(report)
+    }
+}
+
 pub(crate) fn hooks(root: &Path) -> Vec<hook::Finding> {
     hook::audit(root)
 }

@@ -1,0 +1,37 @@
+Inspect lock syntax and collect compiler-confirmed Rust file-lock references.
+
+inspect reads repository source without compiling it. It retains candidates,
+inferred roles, hold intervals, unknowns and unscanned inputs. Unit Mutex/RwLock
+payloads are candidates, never proof that data or poison protocols can be removed.
+
+resolve compiles the staged Rust workspace through the existing Guard source
+seat, Cargo lease, locked package preparation and execution environment. It runs
+Clippy offline for the workspace, explicitly selecting rustc's host triple
+and all target kinds, with
+default features and no dependency linting. Stage the intended inputs first;
+unstaged edits are not compiled. Normal compiler prerequisites still apply.
+It prepares the Rust action and its declared prerequisite probes, then compiles
+the workspace. Normal compilation may execute build scripts and proc macros;
+application tests and Windtun suites are not run. No Guard action is activated.
+
+The current compiler collector covers the five std::fs::File locking methods:
+lock, lock_shared, try_lock, try_lock_shared and unlock. It recognizes their
+resolved references through aliases, function values and macro expansion.
+Existing root Clippy settings are retained in an isolated configuration; the
+collector's methods cannot be suppressed by source allow attributes.
+
+--json identifies the actual collector executable and its version/commit, and
+binds the original staged and effective source trees, locked resolution,
+execution digest, tool identities, actual rustc/Clippy versions, configuration
+digest and command. Findings retain package, target and complete compiler spans,
+including expansion chains. Environment values are not emitted. Cargo artifacts
+include dependencies and may be cached; they are not proof that dependency
+methods were linted. Diagnostics may repeat across lib/test compilation units.
+
+Exit zero means collection succeeded in that exact scope, even when references
+were found. Compilation failure, malformed/incomplete machine output and
+unavailable prerequisites refuse with exit 2. A report is not an admission
+judgment: roles, cleanup, hold intervals and precise dispositions need review.
+Other locking APIs, languages, target triples, features and unselected cfg
+branches remain outside this compiler scope. This command creates no Guard
+proof and does not turn an incomplete global inventory into a pass.
