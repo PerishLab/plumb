@@ -17,13 +17,16 @@ mod walk;
 #[derive(Subcommand)]
 pub enum Deed {
     #[command(
-        about = "Collect compiler-confirmed native file-lock references from the staged Rust workspace; no Guard activation"
+        about = "Collect compiler-confirmed native file-lock references from the staged Rust workspace",
+        long_about = plumb::seat::resource!("help/lock.txt")
     )]
     Resolve {
         #[command(flatten)]
         target: Root,
         #[arg(long)]
         json: bool,
+        #[arg(long = "all-features")]
+        all: bool,
     },
     #[command(
         about = "Inventory every lock use in a repository with resolved roles, holds, and gaps"
@@ -41,11 +44,12 @@ pub fn run(deed: Deed) -> i32 {
         Deed::Inspect { target, json } => {
             inspect(Path::new(&target.root)).and_then(|held| render(&held, json))
         }
-        Deed::Resolve { target, json } => {
-            crate::command::precommit::Compiler(Path::new(&target.root))
-                .resolve()
-                .and_then(|held| held.render(json))
+        Deed::Resolve { target, json, all } => crate::command::precommit::Compiler {
+            root: Path::new(&target.root),
+            all,
         }
+        .resolve()
+        .and_then(|held| held.render(json)),
     };
     match result {
         Ok(text) => {

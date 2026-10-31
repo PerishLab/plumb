@@ -24,12 +24,14 @@ pub(crate) struct Report {
     clippy: String,
     argv: Vec<String>,
     guard: bool,
-    limits: [&'static str; 5],
+    limits: [&'static str; 6],
     messages: Messages,
 }
 
 #[derive(Serialize)]
 pub(crate) struct Scope {
+    #[serde(skip)]
+    pub all: bool,
     pub source: String,
     pub tree: String,
     pub resolution: Option<plumb::packages::Resolution>,
@@ -40,8 +42,13 @@ impl Report {
         if json {
             return serde_json::to_string_pretty(self).map_err(|error| error.to_string());
         }
+        let features = if self.scope.all {
+            "all workspace"
+        } else {
+            "default"
+        };
         Ok(format!(
-            "lock resolution: {} compiler-confirmed native references; staged tree {}; host/default features, workspace/all-targets, no dependency linting; no Guard activation",
+            "lock resolution: {} compiler-confirmed native references; staged tree {}; host/{features} features, workspace/all-targets, no dependency linting; no Guard activation",
             self.messages.findings.len(),
             self.scope.tree
         ))
@@ -66,7 +73,7 @@ pub(crate) fn resolve(root: &Path, execution: &Execution, scope: Scope) -> Resul
     if host.is_empty() {
         return Err("rustc compilation host is empty".into());
     }
-    let argv = [
+    let mut argv = [
         "cargo",
         "clippy",
         "--offline",
@@ -82,6 +89,18 @@ pub(crate) fn resolve(root: &Path, execution: &Execution, scope: Scope) -> Resul
     ]
     .map(str::to_string)
     .to_vec();
+    if scope.all {
+        let at = argv
+            .iter()
+            .position(|arg| arg == "--")
+            .expect("Cargo argument separator");
+        argv.insert(at, "--all-features".into());
+    }
+    let limit = if scope.all {
+        "staged local-locked Rust workspace, explicit host/all-targets with all workspace features"
+    } else {
+        "staged local-locked Rust workspace, explicit host/all-targets with default workspace features"
+    };
     let mut output = tempfile::tempfile().map_err(|error| error.to_string())?;
     let mut command = execution.command("cargo")?;
     command
@@ -124,11 +143,12 @@ pub(crate) fn resolve(root: &Path, execution: &Execution, scope: Scope) -> Resul
         argv,
         guard: false,
         limits: [
-            "staged local-locked Rust workspace, all targets of the current host and default features only",
+            limit,
             "compiler artifacts include dependencies; --no-deps limits linting to selected workspace units",
             "only five std::fs::File locking methods; no non-Rust, third-party locking API or unselected cfg coverage",
             "references and complete expansion spans are evidence, not role, lifetime, disposition or admission judgments",
             "Cargo diagnostics can repeat across lib/test units; artifact metadata is not an individual diagnostic cfg proof",
+            "--all-features selects one workspace feature combination, not every combination or transitive optional branch",
         ],
         messages,
     })

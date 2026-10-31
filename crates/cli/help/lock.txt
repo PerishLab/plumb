@@ -8,7 +8,9 @@ resolve compiles the staged Rust workspace through the existing Guard source
 seat, Cargo lease, locked package preparation and execution environment. It runs
 Clippy offline for the workspace, explicitly selecting rustc's host triple
 and all target kinds, with
-default features and no dependency linting. Stage the intended inputs first;
+default workspace features and no dependency linting. --all-features selects
+all workspace features instead. Each selection is one compiled combination,
+not every combination or transitive optional branch. Stage the intended inputs first;
 unstaged edits are not compiled. Normal compiler prerequisites still apply.
 It prepares the Rust action and its declared prerequisite probes, then compiles
 the workspace. Normal compilation may execute build scripts and proc macros;
@@ -32,6 +34,6 @@ Exit zero means collection succeeded in that exact scope, even when references
 were found. Compilation failure, malformed/incomplete machine output and
 unavailable prerequisites refuse with exit 2. A report is not an admission
 judgment: roles, cleanup, hold intervals and precise dispositions need review.
-Other locking APIs, languages, target triples, features and unselected cfg
-branches remain outside this compiler scope. This command creates no Guard
+Other locking APIs, languages, target triples, feature combinations and
+unselected cfg branches remain outside this compiler scope. This command creates no Guard
 proof and does not turn an incomplete global inventory into a pass.
