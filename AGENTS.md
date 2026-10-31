@@ -146,6 +146,30 @@ public receipt. Source support alone does not qualify an installed consumer.
 
 ## Distribution
 
+The `windtun` library feature exports
+`plumb::windtun::qualification::{Inspector, Read, Remote}`. `Inspector` owns the
+bounded protocol judgment; `Read` supplies authenticated observations and never
+grants a verdict. The production `Remote` reads fixed GitHub metadata through
+`gh`, anonymous HTTPS objects and GHCR manifest bytes. It executes no product,
+suite or container and has no storage writer. Custom transports retain their own
+source authentication obligations; memory observations are test evidence only.
+
+`windtun check` selects an official repository and non-stable marker. It binds
+the product's exact annotated Git tag, source and manifest, current protected Wharf verifier
+requirements, latest declared attempt, native roles and complete steps, current
+product/runner/scene/image and actual archive bytes. The original reusable binary
+origin has an empty commit; the publication commit belongs to its validated
+binding. These identities must not be conflated. Mutable discovery and input
+worlds are rechecked after the immutable references and bytes are verified.
+
+The current scope is Linux x86_64, the recorded single-product combination and
+GHCR runtime images. Other registries and combinations remain unknown or refused.
+Reports keep qualification, unassessed content association and promotion separate;
+promotion is always false. This read-only surface does not activate promotion
+checks in stamp or Wharf. Help owns its selectors and exit codes. A source merge
+does not establish the release, installed consumer or delivery canary promised by
+PerishLab/plumb#509.
+
 - `release` only stamps its immutable marker on the head of a release line.
   `ship` hands that marker to wharf, which publishes every medium. `depot
   consign` places a marker's changelog, skill or scenes in wharf's yard, dispatches
