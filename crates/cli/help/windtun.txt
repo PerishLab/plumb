@@ -1,0 +1,22 @@
+Inspect product declarations or verify a published non-stable Windtun qualification.
+
+inspect reads only the selected repository's plumb.toml. check selects an official
+PerishLab repository and a non-stable marker. It authenticates the current verifier
+requirements through the fixed protected Wharf main, reads only the subject's
+latest declared attempt and independently verifies current public artifacts,
+official stable runner, Depot scenes, runtime image and native producer identity.
+It rechecks mutable inputs and discovery before reporting qualification.
+
+check requires GitHub CLI metadata read access. Release and scene objects and the
+GHCR runtime manifest are read anonymously. No suite or product is executed, no
+storage is written, and no publication credentials are used. Other runtime
+registries and product combinations remain unsupported and cannot qualify.
+
+The result covers linux-x86_64 and the recorded single-product combination.
+Qualification is separate from installation-content association and stable
+promotion permission: association is unassessed and promotion is always false.
+There is no source URL, branch or expected-hash override, version pin or TTL.
+
+With --json, failed and unknown checks still emit a structured report. Exit 0
+means qualified, 2 means refusal, and 3 means required evidence is unavailable.
+Declaration inspection keeps its existing exit behavior.

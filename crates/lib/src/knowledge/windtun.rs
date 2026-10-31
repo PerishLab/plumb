@@ -3,6 +3,10 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use std::path::Path;
 
+#[cfg(feature = "windtun")]
+#[path = "qualification/mod.rs"]
+pub mod qualification;
+
 pub const SCHEMA: &str = "plumb.windtun.declaration/v1";
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]

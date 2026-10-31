@@ -24,7 +24,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 pub(crate) enum Command {
-    #[command(about = "Read the product's independent Windtun contract from plumb.toml")]
+    #[command(about = "Inspect Windtun declarations and current public qualification", long_about = plumb::seat::resource!("help/windtun.txt"))]
     Windtun {
         #[command(subcommand)]
         deed: consumption::windtun::Deed,

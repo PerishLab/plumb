@@ -79,3 +79,62 @@ fn linked() {
     std::os::unix::fs::symlink(source, root.path().join("plumb.toml")).unwrap();
     assert_eq!(inspect(root.path()).status.code(), Some(2));
 }
+
+#[test]
+fn qualification() {
+    let root = tempfile::tempdir().unwrap();
+    struct Sample {
+        repository: &'static str,
+        marker: &'static str,
+        state: &'static str,
+        exit: i32,
+    }
+    for sample in [
+        Sample {
+            repository: "foreign/keel",
+            marker: "v1.0.0-rc.1",
+            state: "refused",
+            exit: 2,
+        },
+        Sample {
+            repository: "PerishLab/../keel",
+            marker: "v1.0.0-rc.1",
+            state: "refused",
+            exit: 2,
+        },
+        Sample {
+            repository: "PerishLab/keel",
+            marker: "v1.0.0",
+            state: "refused",
+            exit: 2,
+        },
+        Sample {
+            repository: "PerishLab/keel",
+            marker: "v1.0.0-rc.1",
+            state: "unknown",
+            exit: 3,
+        },
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args([
+                "windtun",
+                "check",
+                "--repository",
+                sample.repository,
+                "--marker",
+                sample.marker,
+                "--json",
+            ])
+            .env("PLUMB_HOME", root.path())
+            .env("PATH", root.path())
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(sample.exit), "{output:?}");
+        let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(report["schema"], "plumb.windtun.qualification/v1");
+        assert_eq!(report["state"], sample.state);
+        assert_eq!(report["qualified"], false);
+        assert_eq!(report["promotion"], false);
+        assert!(report["association"].is_null());
+    }
+}
