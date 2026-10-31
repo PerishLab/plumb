@@ -75,6 +75,14 @@ impl Messages {
         if !METHODS.contains(&operation) {
             return Err("compiler returned an unknown managed lock operation".into());
         }
+        let reference = format!("`{operation}`");
+        if !diagnostic
+            .get("message")
+            .and_then(Value::as_str)
+            .is_some_and(|message| message.contains(&reference))
+        {
+            return Err("managed lock marker differs from the compiler-resolved method".into());
+        }
         let package = message
             .get("package_id")
             .and_then(Value::as_str)
