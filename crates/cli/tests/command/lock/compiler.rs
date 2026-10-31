@@ -21,9 +21,13 @@ fn put(root: &Path, path: &str, text: &str) {
     std::fs::write(path, text).unwrap();
 }
 
-fn run(root: &Path, home: &Path) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_plumb"))
-        .args(["lock", "resolve", root.to_str().unwrap(), "--json"])
+fn run(root: &Path, home: &Path, all: bool) -> Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_plumb"));
+    command.args(["lock", "resolve", root.to_str().unwrap(), "--json"]);
+    if all {
+        command.arg("--all-features");
+    }
+    command
         .env("PLUMB_HOME", home)
         .env_remove("SCCACHE_DIR")
         .env_remove("RUSTC_WRAPPER")
@@ -88,7 +92,7 @@ fn compiler() {
     put(root, "app/src/lib.rs", SOURCE);
     git(root, &["init", "-q"]);
     git(root, &["add", "."]);
-    let output = run(root, home.path());
+    let output = run(root, home.path(), false);
     assert!(
         output.status.success(),
         "{}",
@@ -150,7 +154,7 @@ fn compiler() {
     );
     assert!(report["tools"]["cargo"]["digest"].as_str().is_some());
     assert!(report["execution"].is_string());
-    let cached = run(root, home.path());
+    let cached = run(root, home.path(), false);
     assert!(
         cached.status.success(),
         "{}",
@@ -161,8 +165,50 @@ fn compiler() {
         cached["messages"]["findings"],
         report["messages"]["findings"]
     );
+    let all = run(root, home.path(), true);
+    assert!(
+        all.status.success(),
+        "{}",
+        String::from_utf8_lossy(&all.stderr)
+    );
+    let all: serde_json::Value = serde_json::from_slice(&all.stdout).unwrap();
+    assert!(
+        all["argv"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|arg| arg == "--all-features")
+    );
+    assert!(
+        all["messages"]["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|finding| finding["spans"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|span| span["line_start"] == 18))
+    );
+    assert!(
+        all["limits"][0]
+            .as_str()
+            .unwrap()
+            .contains("all workspace features")
+    );
+    let restored = run(root, home.path(), false);
+    assert!(
+        restored.status.success(),
+        "{}",
+        String::from_utf8_lossy(&restored.stderr)
+    );
+    let restored: serde_json::Value = serde_json::from_slice(&restored.stdout).unwrap();
+    assert_eq!(
+        restored["messages"]["findings"],
+        report["messages"]["findings"]
+    );
     put(root, "app/src/lib.rs", "pub fn unstaged() {}\n");
-    let staged = run(root, home.path());
+    let staged = run(root, home.path(), false);
     assert!(
         staged.status.success(),
         "{}",
@@ -175,7 +221,7 @@ fn compiler() {
         report["messages"]["findings"]
     );
     git(root, &["add", "app/src/lib.rs"]);
-    let clean = run(root, home.path());
+    let clean = run(root, home.path(), false);
     assert!(
         clean.status.success(),
         "{}",
@@ -194,7 +240,7 @@ fn compiler() {
         "disallowed-methods=[{path=\"std::mem::drop\",reason=\"plumb.lock/std::fs::File::lock\"}]\n",
     );
     git(root, &["add", "."]);
-    let mismatch = run(root, home.path());
+    let mismatch = run(root, home.path(), false);
     assert_eq!(
         mismatch.status.code(),
         Some(2),
@@ -211,7 +257,7 @@ fn compiler() {
         "[identity]\nns=\"probe\"\n[workflow.hash.guard]\nrust=[\"suite://cargo\"]\ntest=[\"suite://cargo\"]\n[[workflow.tool.guard.test]]\nprogram=\"missing-lock-test-prerequisite\"\n",
     );
     git(root, &["add", "plumb.toml"]);
-    let selected = run(root, home.path());
+    let selected = run(root, home.path(), false);
     assert!(
         selected.status.success(),
         "unselected action prerequisite blocked Rust collection: {}",
@@ -219,7 +265,7 @@ fn compiler() {
     );
     put(root, "app/src/lib.rs", "pub fn broken(\n");
     git(root, &["add", "app/src/lib.rs"]);
-    let failed = run(root, home.path());
+    let failed = run(root, home.path(), false);
     assert_eq!(failed.status.code(), Some(2));
     assert!(failed.stdout.is_empty());
 }

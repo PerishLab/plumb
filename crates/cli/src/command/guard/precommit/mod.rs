@@ -102,11 +102,14 @@ impl Selection {
     }
 }
 
-pub(crate) struct Compiler<'a>(pub &'a Path);
+pub(crate) struct Compiler<'a> {
+    pub root: &'a Path,
+    pub all: bool,
+}
 
 impl Compiler<'_> {
     pub(crate) fn resolve(&self) -> Result<crate::execution::lock::Report, String> {
-        let root = self.0;
+        let root = self.root;
         crate::catalog::prepare()?;
         crate::catalog::set::prepare()?;
         let source = plumb::guard::tree(root)?;
@@ -123,6 +126,7 @@ impl Compiler<'_> {
             .as_ref()
             .ok_or("lock resolve requires managed Cargo execution")?;
         let scope = crate::execution::lock::Scope {
+            all: self.all,
             source,
             tree: tree::git(
                 &index.root,
