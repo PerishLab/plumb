@@ -5,10 +5,12 @@ use std::io::BufRead;
 
 #[derive(Serialize)]
 pub(crate) struct Finding {
-    operation: String,
-    package: String,
-    target: Value,
-    spans: Value,
+    pub(super) operation: String,
+    pub(super) package: String,
+    pub(super) target: Value,
+    pub(super) spans: Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) reference: Option<super::reference::Reference>,
 }
 
 #[derive(Default, Serialize)]
@@ -97,6 +99,7 @@ impl Messages {
             .filter(|spans| !spans.is_empty())
             .ok_or("Cargo lock diagnostic has no spans")?;
         self.findings.push(Finding {
+            reference: None,
             operation: operation.into(),
             package: package.into(),
             target: target.clone(),

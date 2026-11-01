@@ -100,3 +100,67 @@ fn mismatch() {
     let text = format!("{message}\n{{\"reason\":\"build-finished\",\"success\":true}}\n");
     assert!(messages::read(text.as_bytes()).is_err());
 }
+
+#[test]
+fn identity() {
+    let root = tempfile::tempdir().unwrap();
+    std::fs::create_dir(root.path().join("src")).unwrap();
+    for (name, source) in [
+        ("Cargo.toml", "[package]\nname=\"app\"\nversion=\"0.0.0\"\n"),
+        ("Cargo.lock", "version=4\n"),
+        ("src/lib.rs", "pub fn call() {}\n"),
+    ] {
+        std::fs::write(root.path().join(name), source).unwrap();
+    }
+    let git = |args: &[&str]| {
+        let output = plumb::config::detached("git")
+            .arg("-C")
+            .arg(root.path())
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{output:?}");
+    };
+    git(&["init", "-q"]);
+    git(&["add", "."]);
+    git(&[
+        "-c",
+        "user.name=Fixture",
+        "-c",
+        "user.email=fixture@example.invalid",
+        "commit",
+        "--no-gpg-sign",
+        "-qm",
+        "fixture",
+    ]);
+    let message = diagnostic();
+    let text = format!("{message}\n{{\"reason\":\"build-finished\",\"success\":true}}\n");
+    let mut held = messages::read(text.as_bytes()).unwrap();
+    let finding = &mut held.findings[0];
+    finding.target["src_path"] = json!(root.path().join("src/lib.rs"));
+    finding.spans = json!([{"file_name":"src/lib.rs","line_start":1}]);
+    let mut compiler = reference::Compiler {
+        host: "host",
+        all: false,
+        rustc: "one",
+        clippy: "one",
+    };
+    let first = serde_json::to_value(compiler.bind(root.path(), finding)).unwrap();
+    assert_eq!(first["state"], "bound");
+    assert!(first["files"]["Cargo.lock"].is_string());
+    compiler.rustc = "two";
+    let changed = serde_json::to_value(compiler.bind(root.path(), finding)).unwrap();
+    assert_ne!(changed["digest"], first["digest"]);
+    compiler.rustc = "one";
+    std::fs::write(root.path().join("src/generated.rs"), "generated source").unwrap();
+    finding.spans = json!([{"file_name":"src/generated.rs"}]);
+    let generated = serde_json::to_value(compiler.bind(root.path(), finding)).unwrap();
+    assert_eq!(generated["state"], "unknown");
+    assert!(generated.get("digest").is_none());
+    let outside = tempfile::tempdir().unwrap();
+    std::fs::write(outside.path().join("source.rs"), "opaque source").unwrap();
+    finding.spans = json!([{"file_name":outside.path().join("source.rs")}]);
+    let outside = serde_json::to_value(compiler.bind(root.path(), finding)).unwrap();
+    assert_eq!(outside["state"], "unknown");
+    assert!(outside.get("digest").is_none());
+}

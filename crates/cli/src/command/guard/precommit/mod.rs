@@ -109,6 +109,21 @@ pub(crate) struct Compiler<'a> {
 
 impl Compiler<'_> {
     pub(crate) fn resolve(&self) -> Result<crate::execution::lock::Report, String> {
+        self.execute(crate::execution::lock::resolve)
+    }
+
+    pub(crate) fn check(&self) -> Result<crate::execution::lock::Judgment, String> {
+        self.execute(crate::execution::lock::check)
+    }
+
+    fn execute<T>(
+        &self,
+        run: impl FnOnce(
+            &Path,
+            &plumb::config::Execution,
+            crate::execution::lock::Scope,
+        ) -> Result<T, String>,
+    ) -> Result<T, String> {
         let root = self.root;
         crate::catalog::prepare()?;
         crate::catalog::set::prepare()?;
@@ -135,7 +150,7 @@ impl Compiler<'_> {
             )?,
             resolution: prepared.resolution,
         };
-        let report = crate::execution::lock::resolve(&index.root, execution, scope)?;
+        let report = run(&index.root, execution, scope)?;
         tree::unchanged(&index)?;
         lease.settle();
         Ok(report)

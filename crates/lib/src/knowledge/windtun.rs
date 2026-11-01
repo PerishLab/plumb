@@ -40,8 +40,16 @@ pub fn parse(text: &str) -> Result<Option<Declaration>, String> {
         None => None,
         Some(value) => {
             let guard = value.as_table().ok_or("guard must be a table")?;
-            if guard.keys().any(|key| key != "seatrial") {
-                return Err("guard declares only the legacy Seatrial suite".into());
+            if guard
+                .keys()
+                .any(|key| !matches!(key.as_str(), "seatrial" | "lock"))
+            {
+                return Err(
+                    "guard declares only lock protection and the legacy Seatrial suite".into(),
+                );
+            }
+            if guard.get("lock").is_some_and(|value| !value.is_table()) {
+                return Err("guard.lock must be a table".into());
             }
             guard.get("seatrial")
         }
@@ -176,6 +184,18 @@ authority = "https://depot.seatrial.perish.uk"
 product = "seatrial"
 channel = "beta"
 "#;
+
+    #[test]
+    fn protection() {
+        assert_eq!(parse("[guard.lock]\ntarget=\"host\"\n").unwrap(), None);
+        assert!(parse("[guard]\nlock=true\n").is_err());
+        assert!(parse("[guard]\nunknown=true\n").is_err());
+        assert!(
+            parse(&(DECLARED.to_owned() + "[guard.lock]\ntarget=\"host\"\n"))
+                .unwrap()
+                .is_some()
+        );
+    }
 
     #[test]
     fn products() {
