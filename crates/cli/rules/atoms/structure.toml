@@ -69,3 +69,7 @@ configurations = [
   "svelte.config.mts",
   "svelte.config.ts",
 ]
+
+[lock]
+rule = "structure.lock-protection"
+scope = []

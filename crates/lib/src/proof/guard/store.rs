@@ -3,13 +3,13 @@ use sha2::{Digest as _, Sha256};
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
-pub(super) struct Seat {
+pub struct Seat {
     root: PathBuf,
     pub repository: String,
 }
 
 impl Seat {
-    pub(super) fn new(root: &Path) -> Result<Self, String> {
+    pub fn new(root: &Path) -> Result<Self, String> {
         let remote = git(root, &["remote", "get-url", "origin"], "read origin")?;
         let held = remote.trim_end_matches('/').trim_end_matches(".git");
         let path = held

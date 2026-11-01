@@ -19,7 +19,9 @@ impl Protection {
         if !guard {
             return Ok(None);
         }
-        let Some(declaration) = Declaration::enforced(root)? else {
+        let declaration = Declaration::enforced(root)?;
+        super::admission::check(root, declaration.as_ref())?;
+        let Some(declaration) = declaration else {
             return Ok(None);
         };
         let actions = actions.collect::<Vec<_>>();
