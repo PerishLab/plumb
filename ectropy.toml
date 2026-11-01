@@ -122,3 +122,7 @@ syntax = "embed"
 allow = ["word"]
 note = "The isolated serde::de::Visitor adapter implements the upstream trait's required method names for duplicate-key JSON decoding."
 paths = ["crates/lib/src/knowledge/qualification/unique.rs"]
+
+[[ban]]
+syntax = "lock"
+paths = ["crates/**/*.rs"]

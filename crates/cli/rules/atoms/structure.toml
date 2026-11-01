@@ -72,4 +72,7 @@ configurations = [
 
 [lock]
 rule = "structure.lock-protection"
-scope = []
+
+[[lock.scope]]
+repository = "PerishLab/plumb"
+features = ["default", "all-features"]
