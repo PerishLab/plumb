@@ -1,5 +1,5 @@
 use std::path::Path;
-use std::process::{Command, Output};
+use std::process::Output;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Standing {
@@ -75,7 +75,7 @@ pub fn standing(root: &Path, stable: &str, main: &str) -> Result<Standing, Strin
 }
 
 fn git(root: &Path, args: &[&str]) -> Result<Output, String> {
-    Command::new("git")
+    crate::config::detached("git")
         .arg("-C")
         .arg(root)
         .args(args)

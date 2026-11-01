@@ -2,7 +2,7 @@ use super::squash::{Landed, landed};
 use crate::landing::Refusal;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Output;
 
 #[cfg(test)]
 mod tests;
@@ -133,7 +133,7 @@ impl Seat<'_> {
     }
 
     fn git(&self, args: &[&str]) -> Result<Output, String> {
-        Command::new("git")
+        crate::config::detached("git")
             .arg("-C")
             .arg(self.root)
             .args(args)

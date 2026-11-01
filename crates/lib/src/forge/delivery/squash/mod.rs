@@ -1,6 +1,5 @@
 use crate::landing::{Refusal, refuse};
 use std::path::Path;
-use std::process::Command;
 
 mod settle;
 #[cfg(test)]
@@ -118,7 +117,7 @@ pub(super) fn geometry(root: &Path, candidate: &str, head: &str) -> Result<Lande
 }
 
 pub(super) fn git(root: &Path, args: &[&str]) -> Result<String, Refusal> {
-    let output = Command::new("git")
+    let output = crate::config::detached("git")
         .arg("-C")
         .arg(root)
         .args(args)

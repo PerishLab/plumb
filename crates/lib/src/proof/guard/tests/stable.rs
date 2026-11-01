@@ -1,7 +1,6 @@
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::Path;
-use std::process::Command;
 
 use super::{Action, Authority, Descriptor, Expected, SCHEMA};
 
@@ -66,7 +65,7 @@ fn online() -> String {
 }
 
 fn git(root: &Path, args: &[&str]) {
-    let status = Command::new("git")
+    let status = crate::config::detached("git")
         .args([
             "-c",
             "user.name=probe",

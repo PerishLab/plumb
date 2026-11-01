@@ -4,7 +4,6 @@ use clap::CommandFactory as _;
 use plumb::land::rejoin::{Stable, latest, tags};
 use plumb::seat::release::Distribution;
 use std::path::Path;
-use std::process::Command;
 
 const LISTING: &str = "m\trefs/heads/main\nt1\trefs/tags/v1.0.0\nc1\trefs/tags/v1.0.0^{}\nc2\trefs/tags/v1.1.0\nt3\trefs/tags/v2.0.0-rc.1\nc3\trefs/tags/v2.0.0-rc.1^{}\n";
 
@@ -68,7 +67,7 @@ fn ceiling() {
 }
 
 fn git(root: &Path, args: &[&str]) -> String {
-    let output = Command::new("git")
+    let output = plumb::config::detached("git")
         .args([
             "-c",
             "user.name=Plumb",

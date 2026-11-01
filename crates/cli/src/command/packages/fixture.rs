@@ -13,7 +13,7 @@ impl Fixture {
         ] {
             work::git(&source, &args).unwrap();
         }
-        std::process::Command::new("git")
+        plumb::config::detached("git")
             .args(["init", "-q", "--bare"])
             .arg(&origin)
             .status()
@@ -194,7 +194,7 @@ impl Fixture {
             .unwrap()
             .keep();
         let source = home.join("source");
-        let cloned = std::process::Command::new("git")
+        let cloned = plumb::config::detached("git")
             .args(["clone", "--no-local", "--single-branch", "--branch", "main"])
             .arg(self.root.path().join("origin.git"))
             .arg(&source)

@@ -1,5 +1,4 @@
 use super::Seat;
-use std::process::Command;
 
 #[test]
 fn settled() {
@@ -112,7 +111,7 @@ fn initialize(root: &std::path::Path) {
 }
 
 fn commit(root: &std::path::Path, message: &str, parent: Option<&str>, merges: &[&str]) -> String {
-    let written = Command::new("git")
+    let written = plumb::config::detached("git")
         .arg("-C")
         .arg(root)
         .arg("write-tree")
@@ -120,7 +119,7 @@ fn commit(root: &std::path::Path, message: &str, parent: Option<&str>, merges: &
         .expect("git should run");
     assert!(written.status.success(), "git write-tree should succeed");
     let tree = String::from_utf8_lossy(&written.stdout).trim().to_string();
-    let mut command = Command::new("git");
+    let mut command = plumb::config::detached("git");
     command.arg("-C").arg(root).args(["commit-tree", &tree]);
     if let Some(parent) = parent {
         command.args(["-p", parent]);
@@ -135,7 +134,7 @@ fn commit(root: &std::path::Path, message: &str, parent: Option<&str>, merges: &
 }
 
 fn run<const N: usize>(root: &std::path::Path, args: [&str; N]) {
-    let output = Command::new("git")
+    let output = plumb::config::detached("git")
         .arg("-C")
         .arg(root)
         .args(args)

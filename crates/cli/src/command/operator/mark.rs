@@ -3,7 +3,7 @@ use super::value;
 use super::worktree::fetch;
 use plumb::seat::release::{Authority, Marker};
 use std::path::Path;
-use std::process::{Command, Output};
+use std::process::Output;
 
 pub(in crate::command) fn retract(raw: &str, dry: bool) -> Result<String, String> {
     let held = named(raw);
@@ -92,7 +92,7 @@ impl Point<'_> {
     }
 
     fn git<const N: usize>(&self, args: [&str; N]) -> Result<Output, String> {
-        Command::new("git")
+        plumb::config::detached("git")
             .args(args)
             .current_dir(self.root)
             .output()

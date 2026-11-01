@@ -1,6 +1,6 @@
 use super::{Refusal, refuse};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Output;
 
 pub struct Repository {
     pub root: PathBuf,
@@ -24,7 +24,7 @@ impl Repository {
     }
 
     pub fn git(&self, args: &[&str]) -> Result<Output, Refusal> {
-        Command::new("git")
+        crate::config::detached("git")
             .args(args)
             .current_dir(&self.root)
             .output()

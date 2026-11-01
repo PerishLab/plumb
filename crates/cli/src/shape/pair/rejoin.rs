@@ -37,7 +37,7 @@ pub fn unsettled(root: &Path) -> Option<String> {
 }
 
 fn git(root: &Path, args: &[&str]) -> Command {
-    let mut command = Command::new("git");
+    let mut command = plumb::config::detached("git");
     command.arg("-C").arg(root).args(args);
     command
 }

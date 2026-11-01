@@ -17,7 +17,7 @@ impl Work<'_> {
         let created = !self.state.worktree.exists();
         if created {
             let start = self.state.pushed.as_deref().unwrap_or("origin/main");
-            let exists = std::process::Command::new("git")
+            let exists = plumb::config::detached("git")
                 .arg("-C")
                 .arg(self.source)
                 .args([
@@ -122,7 +122,7 @@ impl Work<'_> {
             "Follow the latest first-party packages\n\nRefs #{}.\n",
             self.state.issue
         );
-        let output = std::process::Command::new("git")
+        let output = plumb::config::detached("git")
             .args([
                 "-C",
                 root.to_str().ok_or("worktree path is not UTF-8")?,
@@ -185,7 +185,7 @@ impl Work<'_> {
         self.open()?;
         let head = git(&self.state.worktree, &["rev-parse", "HEAD"])?;
         let settled = git(&self.state.worktree, &["rev-parse", "HEAD^{tree}"])? == tree
-            || std::process::Command::new("git")
+            || plumb::config::detached("git")
                 .arg("-C")
                 .arg(self.source)
                 .args(["merge-base", "--is-ancestor", &head, "origin/main"])

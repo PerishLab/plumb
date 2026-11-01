@@ -3,7 +3,6 @@ use crate::landing::Refusal;
 use base64::Engine as _;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use std::process::Command;
 
 pub const TRAILER: &str = "Native-Gate-Proof:";
 
@@ -53,7 +52,7 @@ impl Evidence {
 }
 
 pub fn admit(root: &Path, commit: &str) -> Result<(), Refusal> {
-    let output = Command::new("git")
+    let output = crate::config::detached("git")
         .args([
             "-C",
             root.to_str()

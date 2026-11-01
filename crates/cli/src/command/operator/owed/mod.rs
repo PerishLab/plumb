@@ -6,7 +6,6 @@ use plumb::depot::v3::{Generation, Kind, Query};
 use plumb::land::rejoin::{Stable, tags};
 use plumb::seat::release::{Authority, Distribution, Marker};
 use std::path::Path;
-use std::process::Command;
 
 pub struct Seat<'a> {
     pub root: &'a Path,
@@ -153,7 +152,7 @@ impl Seat<'_> {
                 )
             })?;
         let reference = format!("refs/tags/{}", stable.marker);
-        let output = Command::new("git")
+        let output = plumb::config::detached("git")
             .args([
                 "fetch",
                 "--no-tags",

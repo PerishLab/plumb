@@ -18,7 +18,7 @@ pub struct Pull {
 }
 
 pub fn remote(root: &Path) -> Result<Remote, String> {
-    let output = Command::new("git")
+    let output = crate::config::detached("git")
         .args(["remote", "get-url", "origin"])
         .current_dir(root)
         .output()

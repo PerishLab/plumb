@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::Path;
-use std::process::{Command, Output};
+use std::process::Output;
 
 const TONGUES: [&str; 2] = ["en", "zh"];
 const LEAVES: [&str; 2] = ["INDEX.md", "MIGRATION.md"];
@@ -120,7 +120,7 @@ impl Repo<'_> {
     }
 
     fn empty(&self) -> Result<String, String> {
-        let mut child = Command::new("git")
+        let mut child = crate::config::detached("git")
             .arg("-C")
             .arg(self.0)
             .args(["hash-object", "-t", "tree", "--stdin"])
@@ -144,7 +144,7 @@ impl Repo<'_> {
     }
 
     fn git<const N: usize>(&self, args: [&str; N]) -> Result<Output, String> {
-        Command::new("git")
+        crate::config::detached("git")
             .arg("-C")
             .arg(self.0)
             .args(args)

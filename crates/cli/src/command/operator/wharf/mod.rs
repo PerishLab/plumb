@@ -267,7 +267,7 @@ fn next(listing: &str, base: &str, channel: &str) -> u64 {
 }
 
 pub(super) fn git(root: &Path, args: &[&str]) -> Result<Output, String> {
-    run(Command::new("git").args(args).current_dir(root))
+    run(plumb::config::detached("git").args(args).current_dir(root))
 }
 
 fn run(command: &mut Command) -> Result<Output, String> {

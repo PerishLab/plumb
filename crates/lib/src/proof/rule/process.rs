@@ -19,7 +19,7 @@ impl Probe {
         Ok(command)
     }
 
-    pub fn observe(&self, command: &mut Command, limit: Duration) -> Result<Observation, String> {
+    pub fn observe(&self, command: Command, limit: Duration) -> Result<Observation, String> {
         self.validate()?;
         let actual = std::iter::once(command.get_program()).chain(command.get_args());
         if !actual.eq(self.argv.iter().map(std::ffi::OsStr::new)) {
@@ -38,7 +38,10 @@ impl Probe {
         self.validate()?;
         let output = execution
             .command(&self.argv[0])
-            .and_then(|mut command| capture(command.args(&self.argv[1..]), limit))
+            .and_then(|mut command| {
+                command.args(&self.argv[1..]);
+                capture(command, limit)
+            })
             .map_err(|error| format!("probe {}: {error}", self.argv[0]))?;
         self.observation(output)
     }
