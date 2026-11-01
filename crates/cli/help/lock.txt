@@ -1,4 +1,4 @@
-Inspect lock syntax and collect compiler-confirmed Rust file-lock references.
+Inspect lock syntax, resolve compiler references and check exact dispositions.
 
 inspect reads repository source without compiling it. It retains candidates,
 inferred roles, hold intervals, unknowns and unscanned inputs. Unit Mutex/RwLock
@@ -37,3 +37,55 @@ judgment: roles, cleanup, hold intervals and precise dispositions need review.
 Other locking APIs, languages, target triples, feature combinations and
 unselected cfg branches remain outside this compiler scope. This command creates no Guard
 proof and does not turn an incomplete global inventory into a pass.
+
+Each resolved finding includes a reference. A bound reference has a digest and
+workspace-relative tracked regular file digests. Its identity includes the actual host, feature
+selection, rustc/Clippy versions, package, target, complete normalized spans and
+expansion chain, Cargo.lock and the relevant Cargo manifests and source files.
+The original compiler fields are retained. Relocating an identical workspace
+does not change the identity. Lib/test observations may share one source
+reference; this does not identify each diagnostic's cfg. External, generated or
+unreadable sources that cannot be bound within the staged workspace remain
+unknown and cannot receive a successful disposition check.
+
+check compiles every declared combination once through the same source seat,
+Cargo lease and prepared environment. Declare [guard.lock] in plumb.toml with
+one explicit target triple matching rustc's host and a nonempty, unique features
+list containing "default", "all-features", or both. No other combinations or
+targets are implicitly covered. The declaration is for this explicit command;
+its presence does not activate Guard.
+
+For every distinct reference in those reports, add one [[guard.lock.review]]
+with its reference digest, role, protocol, hold, release, verification and
+nonempty evidence table. Roles are carrier, interoperability or compatibility:
+they record human dispositions, not authenticated carrier authority or a proof
+of business correctness. Data/stdio locks and unit Mutex payloads are not
+classified as these five native File methods by spelling.
+
+evidence maps exact workspace-relative tracked regular file paths to lowercase SHA-256
+digests. Include the files supporting the protocol and hold/release review.
+The reference already binds its own source and Cargo inputs. No globs, directory
+grants, absolute or redirected paths substitute for exact evidence. All review
+fields are required and unknown fields refuse. For example:
+
+[guard.lock]
+target = "x86_64-unknown-linux-gnu"
+features = ["default", "all-features"]
+
+[[guard.lock.review]]
+reference = "<digest from the matching resolved combination>"
+role = "interoperability"
+protocol = "native interoperability fixture and its owning protocol"
+hold = "reviewed acquisition and complete handle interval"
+release = "reviewed cleanup and fault behavior"
+verification = "specific regression assertions supporting this review"
+[guard.lock.review.evidence]
+"tests/protocol.rs" = "<SHA-256 of the staged evidence file>"
+
+Run plumb lock check . --json after staging both declaration and intended source.
+Missing, duplicate, stale or surplus reviews, changed evidence, unbound sources
+and target/feature disagreement refuse with exit 2 and no complete stdout report.
+Success reports consistent=true, the human declarations and complete collected
+reports, with guard=false. It proves source-bound review consistency only:
+Ectropy grant/ban policy, carrier authority, actual safety, Guard activation and
+unexecuted scopes remain separate obligations.

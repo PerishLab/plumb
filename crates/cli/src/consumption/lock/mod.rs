@@ -16,6 +16,13 @@ mod walk;
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(about = "Check exact source-bound native lock dispositions in declared compiler scopes", long_about = plumb::seat::resource!("help/lock.txt"))]
+    Check {
+        #[command(flatten)]
+        target: Root,
+        #[arg(long)]
+        json: bool,
+    },
     #[command(
         about = "Collect compiler-confirmed native file-lock references from the staged Rust workspace",
         long_about = plumb::seat::resource!("help/lock.txt")
@@ -41,6 +48,12 @@ pub enum Deed {
 
 pub fn run(deed: Deed) -> i32 {
     let result = match deed {
+        Deed::Check { target, json } => crate::command::precommit::Compiler {
+            root: Path::new(&target.root),
+            all: false,
+        }
+        .check()
+        .and_then(|held| held.render(json)),
         Deed::Inspect { target, json } => {
             inspect(Path::new(&target.root)).and_then(|held| render(&held, json))
         }

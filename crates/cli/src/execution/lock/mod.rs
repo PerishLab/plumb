@@ -1,5 +1,9 @@
+mod judgment;
 mod messages;
 mod policy;
+mod reference;
+mod review;
+pub(crate) use judgment::{Judgment, check};
 
 use messages::Messages;
 use plumb::config::Execution;
@@ -28,7 +32,7 @@ pub(crate) struct Report {
     messages: Messages,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub(crate) struct Scope {
     #[serde(skip)]
     pub all: bool,
@@ -63,16 +67,7 @@ pub(crate) fn resolve(root: &Path, execution: &Execution, scope: Scope) -> Resul
         .map_err(|error| error.to_string())?;
     let compiler = version(execution, &["rustc", "-vV"])?;
     let clippy = version(execution, &["cargo", "clippy", "--version"])?;
-    let hosts = compiler
-        .lines()
-        .filter_map(|line| line.strip_prefix("host: "))
-        .collect::<Vec<_>>();
-    let [host] = hosts.as_slice() else {
-        return Err("rustc did not identify one compilation host".into());
-    };
-    if host.is_empty() {
-        return Err("rustc compilation host is empty".into());
-    }
+    let host = host(&compiler)?;
     let mut argv = [
         "cargo",
         "clippy",
@@ -125,7 +120,16 @@ pub(crate) fn resolve(root: &Path, execution: &Execution, scope: Scope) -> Resul
     output
         .seek(SeekFrom::Start(0))
         .map_err(|error| error.to_string())?;
-    let messages = messages::read(BufReader::new(output))?;
+    let mut messages = messages::read(BufReader::new(output))?;
+    let identity = reference::Compiler {
+        host,
+        all: scope.all,
+        rustc: &compiler,
+        clippy: &clippy,
+    };
+    for finding in &mut messages.findings {
+        finding.reference = Some(identity.bind(root, finding));
+    }
     if !status.success() {
         return Err(format!("Cargo lock resolution failed with {status}"));
     }
@@ -152,6 +156,20 @@ pub(crate) fn resolve(root: &Path, execution: &Execution, scope: Scope) -> Resul
         ],
         messages,
     })
+}
+
+fn host(compiler: &str) -> Result<&str, String> {
+    let hosts = compiler
+        .lines()
+        .filter_map(|line| line.strip_prefix("host: "))
+        .collect::<Vec<_>>();
+    let [host] = hosts.as_slice() else {
+        return Err("rustc did not identify one compilation host".into());
+    };
+    if host.is_empty() {
+        return Err("rustc compilation host is empty".into());
+    }
+    Ok(host)
 }
 
 fn version(execution: &Execution, argv: &[&str]) -> Result<String, String> {
