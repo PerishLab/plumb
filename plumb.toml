@@ -106,3 +106,8 @@ image = "ghcr.io/perishlab/images:stable"
 authority = "https://depot.seatrial.perish.uk"
 product = "seatrial"
 channel = "stable"
+
+[guard.lock]
+enforce = true
+target = "x86_64-unknown-linux-gnu"
+features = ["default", "all-features"]

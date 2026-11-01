@@ -255,6 +255,8 @@ mod tests {
         plumb::depot::carry(crate::catalog::carried::FILES);
         let root = tempfile::tempdir().unwrap();
         git(root.path(), &["init", "-q"]);
+        let origin = "https://github.com/Example/probe.git";
+        git(root.path(), &["remote", "add", "origin", origin]);
         std::fs::create_dir(root.path().join("src")).unwrap();
         std::fs::write(
             root.path().join("Cargo.toml"),
