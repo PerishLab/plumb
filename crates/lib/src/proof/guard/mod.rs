@@ -15,6 +15,7 @@ mod transit;
 
 pub use authority::{Authority, Expected, Verified};
 pub use index::tree;
+pub use store::Seat as Repository;
 pub use transit::{attach, stage, staged};
 
 pub const SCHEMA: &str = "plumb.guard-proof/v1";

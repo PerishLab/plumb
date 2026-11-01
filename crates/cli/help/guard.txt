@@ -103,3 +103,13 @@ not authenticated authority or a proof of business/cleanup correctness. Other
 APIs, languages, unexecuted combinations and targets remain outside that scope.
 Inspect the actual proof, declared policy and tool identities when recording an
 activation; a configured flag alone is not a passing enforcement result.
+
+Released policy may independently require protection for named Guard repository
+identities and exact feature selections. Within such a scope, removing the
+lock declaration, setting enforce=false or changing its required feature set
+refuses before proof reuse. The declared target must still match the actual
+compiler host. Required Rust/Ectropy participation and source-bound reviews
+remain mandatory; a scope declaration creates no missing coverage or safety
+proof. Outside a required scope, the explicit opt-in contract above remains.
+An empty carried scope list activates no repository. Changing repository-local
+configuration cannot remove a requirement selected by the released policy.

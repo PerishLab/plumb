@@ -829,3 +829,12 @@ evidence = "The tracked regular plumb.toml declaration parsed by the shared Seat
 standing = "mechanized"
 owner = "plumb"
 tags = ["configuration", "repository", "release"]
+
+[[rule]]
+id = "structure.lock-protection"
+summary = "Activated lock scopes retain their required protection"
+law = "Guard requires every carried repository lock scope to retain explicit enforcement and its exact host feature coverage. Removing a declaration, disabling enforcement, shrinking coverage or omitting required Rust/Ectropy participation refuses before proof reuse. Scope selection belongs to the released policy, not to a repository's optional declaration. No scope is activated by this rule's existence alone."
+evidence = "The carried scope policy, repository identity shared with Guard proofs, staged lock declaration and actual host/features, required actions and syntax policy, with source-bound dispositions and tool worlds."
+standing = "mechanized"
+owner = "plumb"
+tags = ["configuration", "ectropy", "repository"]

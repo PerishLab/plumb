@@ -1,6 +1,7 @@
 use super::rules;
 
 rules! {
+    LOCK_PROTECTION => "structure.lock-protection",
     ECTROPY_POLICY_PRESENT => "structure.ectropy-policy-present",
     PACKAGE_UNDER_PACKAGES => "structure.package-under-packages",
     PACKAGE_DIRECTORY_NAME => "structure.package-directory-name",
