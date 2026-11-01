@@ -1,6 +1,5 @@
 use super::{Standing, contained, report, standing};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 struct Line {
     #[allow(dead_code)]
@@ -53,7 +52,7 @@ impl Line {
 }
 
 fn git(root: &Path, args: &[&str]) -> String {
-    let output = Command::new("git")
+    let output = crate::config::detached("git")
         .arg("-C")
         .arg(root)
         .args(args)

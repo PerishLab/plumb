@@ -1,6 +1,7 @@
 mod changelog;
 mod closure;
 mod doctor;
+mod git;
 #[cfg(unix)]
 mod protection;
 mod toolchain;

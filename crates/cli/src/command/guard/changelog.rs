@@ -1,6 +1,5 @@
 use semver::Version;
 use std::path::Path;
-use std::process::Command;
 
 pub(crate) use plumb::changelog::Proof;
 
@@ -26,7 +25,7 @@ pub fn prove(root: &Path, home: &Path, version: &str) -> Result<Proof, String> {
 }
 
 fn point(root: &Path, tag: &str) -> Result<String, String> {
-    let output = Command::new("git")
+    let output = plumb::config::detached("git")
         .current_dir(root)
         .args(["rev-list", "-n", "1", tag])
         .output()
@@ -42,7 +41,7 @@ fn point(root: &Path, tag: &str) -> Result<String, String> {
 fn prior(root: &Path, version: &str, candidate: &str) -> Result<Option<String>, String> {
     let held =
         Version::parse(version).map_err(|error| format!("invalid version {version}: {error}"))?;
-    let output = Command::new("git")
+    let output = plumb::config::detached("git")
         .current_dir(root)
         .args(["tag", "--list", "v*"])
         .output()
@@ -56,7 +55,7 @@ fn prior(root: &Path, version: &str, candidate: &str) -> Result<Option<String>, 
     found.sort();
     while let Some(base) = found.pop() {
         let commit = point(root, &format!("v{base}"))?;
-        let status = Command::new("git")
+        let status = plumb::config::detached("git")
             .current_dir(root)
             .args(["merge-base", "--is-ancestor", &commit, candidate])
             .status()

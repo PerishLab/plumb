@@ -1,7 +1,6 @@
 use super::{Squash, landed};
 use crate::guard::{Action, Descriptor, TRAILER};
 use std::path::Path;
-use std::process::Command;
 
 struct Repo {
     fixture: tempfile::TempDir,
@@ -77,7 +76,7 @@ fn proof(root: &Path, tree: &str) -> Descriptor {
 }
 
 fn git(root: &Path, args: &[&str]) -> String {
-    let output = Command::new("git")
+    let output = crate::config::detached("git")
         .arg("-C")
         .arg(root)
         .args(args)

@@ -109,7 +109,7 @@ impl Seat<'_> {
     }
 
     fn git<const N: usize>(&self, args: [&str; N]) -> Command {
-        let mut command = Command::new("git");
+        let mut command = plumb::config::detached("git");
         command.arg("-C").arg(self.0).args(args);
         command
     }

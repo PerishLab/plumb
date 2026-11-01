@@ -67,3 +67,26 @@ fn renamed() {
     assert_eq!(report.outside, ["source/item.rs"]);
     assert!(!report.ok);
 }
+
+#[cfg(target_os = "linux")]
+#[test]
+fn native() {
+    use std::os::unix::ffi::OsStringExt;
+    let repo = Repo::new();
+    let source = repo
+        .root()
+        .join(std::ffi::OsString::from_vec(b"raw-\xff".to_vec()));
+    std::fs::write(&source, "same\n").unwrap();
+    let base = repo.commit("native source");
+    std::fs::copy(&source, repo.root().join("destination")).unwrap();
+    let head = repo.commit("copy");
+    let write = vec!["destination".to_string()];
+    let refused = plumb::boundary::check(plumb::boundary::Request {
+        root: repo.root(),
+        base: &base,
+        head: &head,
+        write: &write,
+    })
+    .unwrap_err();
+    assert_eq!(refused.kind, "git-path");
+}

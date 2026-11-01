@@ -5,7 +5,6 @@ use clap::Args;
 use plumb::depot::v3::{Generation, Kind, Query};
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 mod goods;
 mod yard;
@@ -234,7 +233,7 @@ fn stands(root: &Path, marker: &str) -> Result<(), String> {
 }
 
 fn text(root: &Path, args: &[&str]) -> Result<String, String> {
-    let output = Command::new("git")
+    let output = plumb::config::detached("git")
         .args(args)
         .current_dir(root)
         .output()

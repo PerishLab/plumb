@@ -1,5 +1,4 @@
 mod search;
-mod system;
 
 pub use search::Search;
 
@@ -7,7 +6,6 @@ use super::environment::Environment;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
@@ -58,7 +56,7 @@ impl Execution {
     }
 
     pub fn evidence(&self) -> Result<Vec<u8>, String> {
-        serde_json::to_vec(&(self.environment.evidence(), &self.tools))
+        serde_json::to_vec(&(self.environment.evidence(), &self.tools, mechanism()))
             .map_err(|error| format!("cannot encode execution evidence: {error}"))
     }
 
@@ -68,7 +66,7 @@ impl Execution {
             .ok_or_else(|| "execution requires a program".to_string())?;
         let mut command = self.command(program)?;
         command.args(args);
-        super::process::capture(&mut command, super::process::LIMIT)
+        super::process::capture(command, super::process::LIMIT)
     }
 
     pub fn command(&self, program: &str) -> Result<Command, String> {
@@ -77,8 +75,9 @@ impl Execution {
             .tools
             .get(program)
             .ok_or_else(|| format!("execution has no resolved tool {program}"))?;
-        let mut command = crate::config::detached(&tool.path);
+        let mut command = Command::new(&tool.path);
         self.environment.apply(&mut command);
+        radicula_git::detach(&mut command);
         for (key, program) in &self.environment.tools {
             command.env(key, &self.tools[program].path);
         }
@@ -110,18 +109,21 @@ impl Execution {
 }
 
 pub(crate) fn fingerprint(path: &Path) -> Result<String, String> {
-    let mut file = std::fs::File::open(path)
-        .map_err(|error| format!("cannot read resolved tool {}: {error}", path.display()))?;
-    let mut digest = Sha256::new();
-    let mut bytes = [0; 8192];
-    loop {
-        let count = file
-            .read(&mut bytes)
-            .map_err(|error| format!("cannot read resolved tool {}: {error}", path.display()))?;
-        if count == 0 {
-            break;
-        }
-        digest.update(&bytes[..count]);
-    }
-    Ok(format!("{:x}", digest.finalize()))
+    radicula_process::Tool::at(path.to_path_buf())
+        .map(|tool| tool.digest)
+        .map_err(|error| format!("cannot read resolved tool {}: {error}", path.display()))
+}
+
+fn mechanism() -> serde_json::Value {
+    serde_json::json!({
+        "schema": "plumb.execution/v2",
+        "git": {"policy": radicula_git::POLICY, "variables": radicula_git::LOCAL},
+        "probe": {
+            "engine": "radicula-process",
+            "stdin": "null",
+            "stderr": "null",
+            "output": super::process::OUTPUT,
+            "millis": super::process::LIMIT.as_millis(),
+        },
+    })
 }

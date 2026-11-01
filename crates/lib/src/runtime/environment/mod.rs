@@ -202,7 +202,12 @@ impl Environment {
             .get_envs()
             .map(|(key, value)| (key.to_os_string(), value.map(OsString::from)))
             .collect::<Vec<_>>();
-        command.env_clear().envs(&self.values);
+        radicula_process::Environment::new(
+            self.values
+                .iter()
+                .map(|(key, value)| (OsString::from(key), OsString::from(value))),
+        )
+        .apply(command);
         for (key, value) in overrides {
             match value {
                 Some(value) => {

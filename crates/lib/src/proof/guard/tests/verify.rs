@@ -1,5 +1,3 @@
-use std::process::Command;
-
 use super::{Action, Authority, Descriptor, Expected, SCHEMA};
 
 const COMMIT: &str = "1111111111111111111111111111111111111111";
@@ -32,13 +30,13 @@ fn proof() -> Descriptor {
 
 pub(super) fn seat() -> tempfile::TempDir {
     let fixture = tempfile::tempdir().expect("fixture");
-    let status = Command::new("git")
+    let status = crate::config::detached("git")
         .args(["init", "-q"])
         .current_dir(fixture.path())
         .status()
         .expect("git");
     assert!(status.success());
-    let status = Command::new("git")
+    let status = crate::config::detached("git")
         .args([
             "remote",
             "add",

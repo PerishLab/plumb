@@ -1,6 +1,5 @@
 use super::{Datum, carried, decode, leaf};
 use std::path::Path;
-use std::process::Command;
 
 pub struct Git<'a>(pub &'a Path);
 
@@ -59,7 +58,7 @@ impl Git<'_> {
     }
 
     fn command(&self, args: &[&str]) -> Result<std::process::Output, String> {
-        Command::new("git")
+        crate::config::detached("git")
             .arg("-C")
             .arg(self.0)
             .args(args)

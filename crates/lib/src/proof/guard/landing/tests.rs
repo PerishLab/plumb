@@ -1,7 +1,7 @@
 use super::{Request, SCHEMA};
 use crate::guard::{Action, Authority, Descriptor, Expected, Verified};
 use std::path::Path;
-use std::process::{Command, Output};
+use std::process::Output;
 
 const COMMIT: &str = "1111111111111111111111111111111111111111";
 const DEPOT: &str = "2222222222222222222222222222222222222222222222222222222222222222";
@@ -16,7 +16,7 @@ struct Git<'a>(&'a Path);
 
 impl Git<'_> {
     fn run(&self, args: &[&str]) -> Output {
-        let output = Command::new("git")
+        let output = crate::config::detached("git")
             .arg("-C")
             .arg(self.0)
             .args(args)

@@ -74,7 +74,7 @@ fn misnamed(root: &Path, ns: &str) -> Option<String> {
     if !root.join(".git").exists() {
         return None;
     }
-    let output = std::process::Command::new("git")
+    let output = plumb::config::detached("git")
         .arg("-C")
         .arg(root)
         .args(["remote", "get-url", "origin"])

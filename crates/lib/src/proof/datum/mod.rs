@@ -143,7 +143,7 @@ impl Tree<'_> {
     }
 
     fn branch(&self) -> Option<String> {
-        let output = std::process::Command::new("git")
+        let output = crate::config::detached("git")
             .arg("-C")
             .arg(self.0)
             .args(["branch", "--show-current"])

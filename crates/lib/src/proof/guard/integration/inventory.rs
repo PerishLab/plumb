@@ -1,9 +1,8 @@
 use super::{Refusal, Worktree, staging};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 pub fn list(root: &Path) -> Result<Vec<Worktree>, Refusal> {
-    let output = Command::new("git")
+    let output = crate::config::detached("git")
         .args([
             "-c",
             "core.quotePath=false",

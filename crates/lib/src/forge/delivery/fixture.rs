@@ -2,7 +2,6 @@ use super::super::{Context, Evidence, Gate, Identity};
 use crate::landing::Refusal;
 use std::cell::Cell;
 use std::path::Path;
-use std::process::Command;
 
 pub struct Repo(tempfile::TempDir);
 
@@ -124,7 +123,7 @@ impl Check {
 }
 
 pub fn git(root: &Path, args: &[&str]) -> String {
-    let output = Command::new("git")
+    let output = crate::config::detached("git")
         .arg("-C")
         .arg(root)
         .args(args)

@@ -1,9 +1,9 @@
 use super::Refusal;
 use std::path::Path;
-use std::process::{Command, Output};
+use std::process::Output;
 
 pub fn run(root: &Path, args: &[&str]) -> Result<Output, Refusal> {
-    Command::new("git")
+    crate::config::detached("git")
         .args(args)
         .current_dir(root)
         .output()

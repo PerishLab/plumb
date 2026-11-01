@@ -1,7 +1,7 @@
 use super::{Refusal, refuse};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
+use std::process::{Output, Stdio};
 
 pub struct Repository {
     pub root: PathBuf,
@@ -25,7 +25,7 @@ impl Repository {
     }
 
     pub fn git(&self, args: &[&str]) -> Result<Output, Refusal> {
-        Command::new("git")
+        crate::config::detached("git")
             .args(args)
             .current_dir(&self.root)
             .output()
@@ -39,7 +39,7 @@ impl Repository {
             args.extend(["-p", parent]);
         }
         args.extend(["-F", "-"]);
-        let mut child = Command::new("git")
+        let mut child = crate::config::detached("git")
             .args(&args)
             .current_dir(&self.root)
             .envs(seed.identity)

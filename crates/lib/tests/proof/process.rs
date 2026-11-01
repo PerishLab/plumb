@@ -90,14 +90,14 @@ fn direct() {
         platform: None,
     };
     let seen = probe
-        .observe(&mut probe.command().expect("command"), Probe::LIMIT)
+        .observe(probe.command().expect("command"), Probe::LIMIT)
         .expect("observe");
     assert!(seen.matches);
     let mut wrong = probe.command().expect("command");
     wrong.arg("extra");
     assert!(
         probe
-            .observe(&mut wrong, Probe::LIMIT)
+            .observe(wrong, Probe::LIMIT)
             .err()
             .expect("different argv")
             .contains("differs")
@@ -106,21 +106,7 @@ fn direct() {
 
 #[test]
 fn bounded() {
-    let executable = std::env::current_exe()
-        .expect("test binary")
-        .to_string_lossy()
-        .into_owned();
-    let probe = Probe {
-        argv: vec![
-            executable,
-            "--exact".into(),
-            "process::child".into(),
-            "--ignored".into(),
-            "--nocapture".into(),
-        ],
-        stdout: String::new(),
-        platform: None,
-    };
+    let probe = worker();
     assert_eq!(Probe::LIMIT, Duration::from_secs(10));
     let brief = Duration::from_millis(200);
     for (mode, limit, expected) in [
@@ -130,7 +116,7 @@ fn bounded() {
         let mut command = probe.command().expect("command");
         command.env("PLUMB_PROBE_TEST", mode);
         let error = probe
-            .observe(&mut command, limit)
+            .observe(command, limit)
             .err()
             .expect("bounded refusal");
         assert!(error.contains(expected), "{error}");
@@ -152,7 +138,61 @@ fn child() {
         "volume" => std::io::stdout()
             .write_all(&vec![b'x'; 65537])
             .expect("output"),
+        "diagnostic" => {
+            std::io::stderr().write_all(&vec![b'e'; 2_097_152]).unwrap();
+            println!("done");
+        }
+        "owned" => {
+            assert!(std::env::var_os("PATH").is_none());
+            println!("{}", std::env::var("PLUMB_OWNED_TEST").unwrap());
+        }
         "timeout" => std::thread::sleep(std::time::Duration::from_secs(30)),
         _ => panic!("unknown mode"),
     }
+}
+
+fn worker() -> Probe {
+    let executable = std::env::current_exe()
+        .expect("test binary")
+        .to_string_lossy()
+        .into_owned();
+    Probe {
+        argv: vec![
+            executable,
+            "--exact".into(),
+            "process::child".into(),
+            "--ignored".into(),
+            "--nocapture".into(),
+        ],
+        stdout: String::new(),
+        platform: None,
+    }
+}
+
+#[test]
+fn ownership() {
+    let probe = worker();
+    let mut command = probe.command().unwrap();
+    command
+        .env_clear()
+        .env("PLUMB_PROBE_TEST", "owned")
+        .env("PLUMB_OWNED_TEST", "owned 中文");
+    let observed = probe.observe(command, Probe::LIMIT).unwrap();
+    assert!(observed.stdout.contains("owned 中文"));
+}
+
+#[test]
+fn runtime() {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let _entered = runtime.enter();
+    let probe = worker();
+    let root = tempfile::tempdir().unwrap();
+    let held = execution(root.path(), &probe.argv[0], Some("diagnostic"));
+    let output = held.output(&probe.argv).unwrap();
+    assert!(output.status.success());
+    assert!(output.stdout.windows(4).any(|bytes| bytes == b"done"));
+    assert!(output.stderr.is_empty());
 }

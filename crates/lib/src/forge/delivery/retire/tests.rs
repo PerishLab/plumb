@@ -1,7 +1,6 @@
 use super::{Delivered, Kept, Pushed, retired};
 use crate::guard::{Action, Descriptor, TRAILER};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 const PROJECTION: &str = "land/topic";
 const TOPIC: &str = "topic";
@@ -97,7 +96,7 @@ impl Repo {
     }
 
     fn local(&self, branch: &str) -> bool {
-        Command::new("git")
+        crate::config::detached("git")
             .arg("-C")
             .arg(self.root())
             .args([
@@ -232,7 +231,7 @@ fn proof(root: &Path, tree: &str) -> Descriptor {
 }
 
 fn git(root: &Path, args: &[&str]) -> String {
-    let output = Command::new("git")
+    let output = crate::config::detached("git")
         .arg("-C")
         .arg(root)
         .args(args)

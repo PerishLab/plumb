@@ -1,5 +1,4 @@
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 pub fn root() -> Result<PathBuf, String> {
     git(
@@ -15,7 +14,7 @@ pub fn fetch(root: &Path) -> Result<(), String> {
 }
 
 fn git(cwd: &Path, args: &[&str], deed: &str) -> Result<String, String> {
-    let output = Command::new("git")
+    let output = plumb::config::detached("git")
         .args(args)
         .current_dir(cwd)
         .output()

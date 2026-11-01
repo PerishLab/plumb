@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Output;
 
 mod path;
 
@@ -159,12 +159,20 @@ impl Repository {
             head,
             "--",
         ])?;
-        let bytes = success(output, "git", "cannot read committed tree delta")?;
-        Delta::parse(&bytes)
+        if !output.status.success() {
+            return Err(refuse(
+                "git",
+                stderr(output, "cannot read committed tree delta"),
+            ));
+        }
+        let changes = radicula_git::Reply::new(output)
+            .changes()
+            .map_err(|error| refuse("git", error.to_string()))?;
+        Delta::paths(changes)
     }
 
     fn git(&self, args: &[&str]) -> Result<Output, Refusal> {
-        Command::new("git")
+        crate::config::detached("git")
             .arg("-C")
             .arg(&self.root)
             .args(args)
@@ -202,28 +210,27 @@ impl Claim {
 }
 
 impl Delta {
-    fn parse(bytes: &[u8]) -> Result<Vec<String>, Refusal> {
-        let mut fields = bytes
-            .split(|byte| *byte == 0)
-            .filter(|field| !field.is_empty());
+    fn paths(changes: Vec<radicula_git::Change>) -> Result<Vec<String>, Refusal> {
         let mut paths = Vec::new();
-        while let Some(status) = fields.next() {
-            let status = std::str::from_utf8(status)
-                .map_err(|_| refuse("git-path", "Git emitted a non-UTF-8 status"))?;
-            let count = usize::from(status.starts_with('R') || status.starts_with('C')) + 1;
-            for index in 0..count {
-                let field = fields.next().ok_or_else(|| {
-                    refuse("git", format!("Git emitted an incomplete {status} record"))
-                })?;
-                let path = std::str::from_utf8(field)
-                    .map_err(|_| refuse("git-path", "Git delta contains a non-UTF-8 path"))?;
-                let path = path::parse(path, false)?;
-                paths.extend((!status.starts_with('C') || index == 1).then_some(path));
+        for change in changes {
+            if let Some(previous) = change.previous {
+                let previous = Self::path(previous)?;
+                if change.status == radicula_git::Status::Renamed {
+                    paths.push(previous);
+                }
             }
+            paths.push(Self::path(change.path)?);
         }
         paths.sort();
         paths.dedup();
         Ok(paths)
+    }
+
+    fn path(path: PathBuf) -> Result<String, Refusal> {
+        let path = path
+            .to_str()
+            .ok_or_else(|| refuse("git-path", "Git delta contains a non-UTF-8 path"))?;
+        path::parse(path, false)
     }
 }
 
