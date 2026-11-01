@@ -1,6 +1,8 @@
 mod judgment;
 mod messages;
 mod policy;
+mod protection;
+pub(crate) use protection::Protection;
 mod reference;
 mod review;
 pub(crate) use judgment::{Judgment, check};

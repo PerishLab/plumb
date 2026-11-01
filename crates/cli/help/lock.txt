@@ -53,7 +53,7 @@ Cargo lease and prepared environment. Declare [guard.lock] in plumb.toml with
 one explicit target triple matching rustc's host and a nonempty, unique features
 list containing "default", "all-features", or both. No other combinations or
 targets are implicitly covered. The declaration is for this explicit command;
-its presence does not activate Guard.
+its presence alone does not activate Guard.
 
 For every distinct reference in those reports, add one [[guard.lock.review]]
 with its reference digest, role, protocol, hold, release, verification and
@@ -87,5 +87,8 @@ Missing, duplicate, stale or surplus reviews, changed evidence, unbound sources
 and target/feature disagreement refuse with exit 2 and no complete stdout report.
 Success reports consistent=true, the human declarations and complete collected
 reports, with guard=false. It proves source-bound review consistency only:
-Ectropy grant/ban policy, carrier authority, actual safety, Guard activation and
-unexecuted scopes remain separate obligations.
+Ectropy grant/ban policy, carrier authority, actual safety and unexecuted scopes
+remain separate obligations. Setting enforce=true explicitly opts the declaration
+into ordinary Guard, which requires actual Ectropy participation and records a
+separate guard/lock action. See plumb guard --help. The explicit check command
+still creates no Guard proof and never substitutes for that activation.

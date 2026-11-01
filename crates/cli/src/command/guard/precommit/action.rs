@@ -125,11 +125,15 @@ impl Proof<'_> {
                 let mut span = crate::diagnostic::Span::new(operation(&check.proof.name));
                 eprintln!("guard {}", check.proof.name);
                 let execution = tree::Execution {
-                    execution: check.execution.as_ref(),
+                    execution: check.execution.as_deref(),
                     observation: crate::observation::bind("check", &check.proof.name),
                 };
                 for command in &check.commands {
                     tree::execute(&index.root, command, &execution)?;
+                    tree::unchanged(&index)?;
+                }
+                if let Some(protection) = &check.protection {
+                    protection.run(&index.root, check.execution.as_deref())?;
                     tree::unchanged(&index)?;
                 }
                 if let Some(lease) = &lease {
@@ -173,6 +177,7 @@ fn record(prepared: &Prepared) {
 fn operation(name: &str) -> &'static str {
     match name {
         "guard/rust" => "guard.rust",
+        "guard/lock" => "guard.lock",
         "guard/test" => "guard.test",
         "guard/web" => "guard.web",
         "guard/plumb" => "guard.plumb",

@@ -9,7 +9,9 @@ pub(super) struct Check {
     pub proof: plumb::guard::Action,
     pub commands: Vec<Vec<String>>,
     pub exclusions: Vec<String>,
-    pub execution: Option<plumb::config::Execution>,
+    pub execution: Option<std::sync::Arc<plumb::config::Execution>>,
+    pub material: String,
+    pub protection: Option<crate::execution::lock::Protection>,
 }
 
 pub(super) struct Prepared {
@@ -42,6 +44,12 @@ impl Prepared {
         let topology = crate::shape::topology::world(&index.root, manifest.as_deref())?;
         index.settle()?;
         let prepared = selection.checks(&captured, &product)?;
+        let protection = crate::execution::lock::Protection::read(
+            &index.root,
+            !matches!(selection, Selection::Compiler),
+            prepared.iter().map(|check| check.name.as_str()),
+            resolution.clone(),
+        )?;
         let observation = if prepared.iter().any(|check| check.name == "guard/plumb") {
             Some(match observed {
                 Some(observed) => observed,
@@ -51,7 +59,6 @@ impl Prepared {
             None
         };
         let context = Context::read(&index.root)?;
-        let mut materials = Vec::new();
         let inputs = std::env::vars_os().collect::<Vec<_>>();
         let mut checks = Vec::new();
         for super::action::Preparation {
@@ -66,21 +73,7 @@ impl Prepared {
         {
             let input = crate::shape::topology::bind(&name, input, topology.as_deref());
             let (exclusions, policy) = if name == "guard/web" {
-                let policy = plumb::packages::Policy::read(&index.root)?;
-                let mut flags = policy.flags.clone();
-                let home = plumb::config::value("PLUMB_HOME")
-                    .map(std::path::PathBuf::from)
-                    .or_else(|| plumb::config::data("plumb"))
-                    .ok_or("cannot own the Guard pnpm cache: no PLUMB_HOME")?;
-                flags.push(plumb::packages::cache(&home)?);
-                flags.push("--config.verify-deps-before-run=error".into());
-                for command in commands
-                    .iter_mut()
-                    .filter(|command| command.first().is_some_and(|program| program == "pnpm"))
-                {
-                    command.splice(1..1, flags.iter().cloned());
-                }
-                (flags, policy)
+                super::web::prepare(&index.root, &mut commands)?
             } else {
                 Default::default()
             };
@@ -122,6 +115,10 @@ impl Prepared {
             };
             let mut execution =
                 super::world::execution(&name, environment, &index.root, &programs)?;
+            let input = protection
+                .as_ref()
+                .map(|held| held.bind(&name, &input))
+                .unwrap_or(input);
             let material = if name == "guard/plumb" {
                 let binding = super::action::Binding {
                     execution: Some(&execution),
@@ -134,14 +131,15 @@ impl Prepared {
             } else {
                 None
             };
-            let execution = Some(execution);
+            let execution = Some(std::sync::Arc::new(execution));
             let binding = super::action::Binding {
-                execution: execution.as_ref(),
+                execution: execution.as_deref(),
                 probes: &probes,
             };
             let world = super::world::digest(&name, &input, &commands, &binding)?;
-            materials.push(material.unwrap_or(world.material));
-            checks.push(Check {
+            let check = Check {
+                material: material.unwrap_or(world.material),
+                protection: None,
                 proof: plumb::guard::Action {
                     name,
                     input,
@@ -150,10 +148,14 @@ impl Prepared {
                 commands,
                 exclusions,
                 execution,
-            });
+            };
+            super::cargo::register(&mut checks, protection.as_ref(), check)?;
         }
         let material = super::super::world::material(
-            &materials,
+            &checks
+                .iter()
+                .map(|check| check.material.clone())
+                .collect::<Vec<_>>(),
             &resolution
                 .as_ref()
                 .expect("resolution was captured")

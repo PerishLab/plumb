@@ -1,6 +1,8 @@
 mod changelog;
 mod closure;
 mod doctor;
+#[cfg(unix)]
+mod protection;
 mod toolchain;
 mod workflow;
 

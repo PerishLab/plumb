@@ -20,6 +20,8 @@ impl Mode {
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct Declaration {
+    #[serde(default)]
+    pub enforce: bool,
     pub target: String,
     pub features: Vec<Mode>,
     #[serde(default)]
@@ -48,21 +50,46 @@ pub(super) enum Role {
 
 impl Declaration {
     pub fn read(root: &Path) -> Result<Self, String> {
-        let text =
-            std::fs::read_to_string(root.join("plumb.toml")).map_err(|error| error.to_string())?;
+        Self::optional(root)?
+            .ok_or_else(|| "lock check requires an explicit [guard.lock] declaration".into())
+    }
+
+    pub fn optional(root: &Path) -> Result<Option<Self>, String> {
+        let Some(held) = Self::parse(root)? else {
+            return Ok(None);
+        };
+        held.validate(root)?;
+        Ok(Some(held))
+    }
+
+    pub fn enforced(root: &Path) -> Result<Option<Self>, String> {
+        let Some(held) = Self::parse(root)? else {
+            return Ok(None);
+        };
+        if !held.enforce {
+            return Ok(None);
+        }
+        held.validate(root)?;
+        Ok(Some(held))
+    }
+
+    fn parse(root: &Path) -> Result<Option<Self>, String> {
+        let text = match std::fs::read_to_string(root.join("plumb.toml")) {
+            Ok(text) => text,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(error.to_string()),
+        };
         let document: toml::Table = text
             .parse()
             .map_err(|error| format!("invalid lock policy: {error}"))?;
-        let value = document
-            .get("guard")
-            .and_then(|value| value.get("lock"))
-            .ok_or("lock check requires an explicit [guard.lock] declaration")?;
+        let Some(value) = document.get("guard").and_then(|value| value.get("lock")) else {
+            return Ok(None);
+        };
         let held: Self = value
             .clone()
             .try_into()
             .map_err(|error| format!("invalid guard.lock: {error}"))?;
-        held.validate(root)?;
-        Ok(held)
+        Ok(Some(held))
     }
 
     fn validate(&self, root: &Path) -> Result<(), String> {
