@@ -70,3 +70,43 @@ pub(crate) fn identity(root: &Path) -> Result<String, String> {
         .map(str::to_string)
         .ok_or_else(|| "guarded repository path is not UTF-8".to_string())
 }
+
+pub(super) fn register(
+    checks: &mut Vec<super::world::Check>,
+    protection: Option<&crate::execution::lock::Protection>,
+    check: super::world::Check,
+) -> Result<(), String> {
+    let native = protection
+        .filter(|_| check.proof.name == "guard/rust")
+        .map(|protection| {
+            let execution = check
+                .execution
+                .as_deref()
+                .ok_or("lock protection needs managed Cargo execution")?;
+            let clippy = protection.clippy(execution)?;
+            let material = plumb::depot::sha(
+                &serde_json::to_vec(&("plumb.lock-world/v1", &check.material, clippy))
+                    .map_err(|error| error.to_string())?,
+            );
+            let input = protection.bind("guard/lock", &check.proof.input);
+            let world = plumb::depot::sha(
+                &serde_json::to_vec(&(&material, &input)).map_err(|error| error.to_string())?,
+            );
+            Ok::<_, String>(super::world::Check {
+                proof: plumb::guard::Action {
+                    name: "guard/lock".into(),
+                    input,
+                    world,
+                },
+                material,
+                commands: Vec::new(),
+                exclusions: Vec::new(),
+                execution: check.execution.clone(),
+                protection: Some(protection.clone()),
+            })
+        })
+        .transpose()?;
+    checks.push(check);
+    checks.extend(native);
+    Ok(())
+}

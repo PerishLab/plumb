@@ -73,3 +73,33 @@ never starts Seatrial, Docker or a product process. Read the canonical contract
 with plumb windtun inspect ROOT --json; the result binds the complete manifest
 SHA-256 and normalized declaration. Declaration validity grants no pass
 credential and adds no PR wait. Promotion enforcement is delivered separately.
+
+Explicit native-lock review enforcement is enabled only by [guard.lock]
+enforce=true in plumb.toml. Absent or false keeps standalone lock review
+configuration separate from Guard activation. The target/features and exact
+human reviews follow plumb lock check --help.
+
+Enforcement requires both guard/rust and guard/ectropy actions and an explicit
+Ectropy lock grant/ban policy. Lock grants name exact tracked regular files,
+never whole directories or glob exemptions. The installed Ectropy must accept
+that syntax policy; missing, unsupported or refusing participation stops Guard.
+No version pin, silent fallback or replacement kernel rule is introduced.
+
+Guard reuses its prepared source seat, Cargo lease and execution snapshot.
+A separate guard/lock action records successful source-bound review consistency;
+the whole proof is recorded only after every required action, including Ectropy,
+succeeds. The native action inherits the Rust tool/prerequisite world and binds
+actual Clippy identity. Rust compilation material remains shared.
+
+Current enforced declarations and evidence are validated before exact or action
+proof reuse. The native and Ectropy actions bind the complete protected tree and
+policy, independently of narrower workflow hash selections. New or changed
+protected inputs cannot reuse an old success; a failed action is never recorded
+as successful. Other actions retain their existing reuse behavior.
+
+The resulting proof covers the declared host/feature selections and supported
+native File references. Human role, protocol and hold/release declarations are
+not authenticated authority or a proof of business/cleanup correctness. Other
+APIs, languages, unexecuted combinations and targets remain outside that scope.
+Inspect the actual proof, declared policy and tool identities when recording an
+activation; a configured flag alone is not a passing enforcement result.

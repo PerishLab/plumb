@@ -46,3 +46,24 @@ fn manifest(path: &str) -> bool {
         .and_then(|path| path.strip_suffix("/package.json"))
         .is_some_and(|name| !name.is_empty() && !name.contains('/'))
 }
+
+pub(super) fn prepare(
+    root: &std::path::Path,
+    commands: &mut [Vec<String>],
+) -> Result<(Vec<String>, plumb::packages::Policy), String> {
+    let policy = plumb::packages::Policy::read(root)?;
+    let mut flags = policy.flags.clone();
+    let home = plumb::config::value("PLUMB_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| plumb::config::data("plumb"))
+        .ok_or("cannot own the Guard pnpm cache: no PLUMB_HOME")?;
+    flags.push(plumb::packages::cache(&home)?);
+    flags.push("--config.verify-deps-before-run=error".into());
+    for command in commands
+        .iter_mut()
+        .filter(|command| command.first().is_some_and(|program| program == "pnpm"))
+    {
+        command.splice(1..1, flags.iter().cloned());
+    }
+    Ok((flags, policy))
+}
