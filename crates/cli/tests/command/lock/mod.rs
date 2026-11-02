@@ -1,5 +1,6 @@
 mod carrier;
 mod compiler;
+mod path;
 mod review;
 
 use std::path::Path;

@@ -5,6 +5,7 @@ pub struct Target {
     pub key: String,
     pub entry: PathBuf,
     pub base: PathBuf,
+    pub root: PathBuf,
     pub label: String,
     pub context: &'static str,
     pub externs: BTreeMap<String, String>,
@@ -13,6 +14,7 @@ pub struct Target {
 
 pub struct Package<'a> {
     pub disk: &'a Path,
+    pub root: &'a Path,
     pub shown: &'a str,
     pub local: bool,
 }
@@ -48,6 +50,7 @@ pub fn targets(package: &Package) -> Vec<Target> {
             found.push(Target {
                 key,
                 base: package.disk.to_path_buf(),
+                root: package.root.to_path_buf(),
                 label: package.shown.to_string(),
                 entry,
                 context,
@@ -81,6 +84,13 @@ pub fn targets(package: &Package) -> Vec<Target> {
 
 impl Target {
     pub fn shown(&self, disk: &Path) -> String {
+        if self.local {
+            return disk
+                .strip_prefix(&self.root)
+                .unwrap_or(disk)
+                .to_string_lossy()
+                .replace('\\', "/");
+        }
         let relative = disk
             .strip_prefix(&self.base)
             .map(|path| path.to_string_lossy().replace('\\', "/"))

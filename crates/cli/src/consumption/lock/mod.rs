@@ -80,6 +80,8 @@ pub fn inspect(root: &Path) -> Result<Inspection, String> {
     if !root.is_dir() {
         return Err(format!("{} is not a directory", root.display()));
     }
+    let directory = root.canonicalize().map_err(|error| error.to_string())?;
+    let root = directory.as_path();
     let checkout = source::Checkout { root };
     let source = checkout.read();
     let packages = checkout.packages(&source.files);
@@ -101,6 +103,7 @@ pub fn inspect(root: &Path) -> Result<Inspection, String> {
         let label = format!("{}-{}", record.name, record.version);
         let held = crates::Package {
             disk: directory,
+            root: directory,
             shown: &label,
             local: false,
         };
@@ -120,6 +123,7 @@ pub fn inspect(root: &Path) -> Result<Inspection, String> {
         let disk = root.join(shown);
         let held = crates::Package {
             disk: &disk,
+            root,
             shown,
             local: true,
         };
@@ -190,6 +194,7 @@ fn detached(root: &Path, path: &str) -> crates::Target {
         key: format!("{path}[detached]"),
         entry: root.join(path),
         base: root.to_path_buf(),
+        root: root.to_path_buf(),
         label: String::new(),
         context: "detached",
         externs: BTreeMap::new(),
