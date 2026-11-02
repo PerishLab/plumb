@@ -80,3 +80,7 @@ features = ["default", "all-features"]
 [[lock.scope]]
 repository = "PerishLab/runseal"
 features = ["default", "all-features"]
+
+[[lock.scope]]
+repository = "PerishLab/locus"
+features = ["default", "all-features"]
