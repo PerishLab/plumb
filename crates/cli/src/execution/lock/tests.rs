@@ -147,7 +147,8 @@ fn identity() {
     };
     let first = serde_json::to_value(compiler.bind(root.path(), finding)).unwrap();
     assert_eq!(first["state"], "bound");
-    assert!(first["files"]["Cargo.lock"].is_string());
+    assert_eq!(first["schema"], "plumb.lock-reference/v2");
+    assert!(first["files"]["Cargo.lock"].is_null());
     compiler.rustc = "two";
     let changed = serde_json::to_value(compiler.bind(root.path(), finding)).unwrap();
     assert_ne!(changed["digest"], first["digest"]);

@@ -4,6 +4,8 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::{Command, Output};
 
+mod world;
+
 const APP: &str = "use std::fs::File as Handle;\ntype Alias = Handle;\npub fn alias(file: &Alias) { let _ = file.try_lock(); }\npub fn call(file: &std::fs::File) { let _ = carrier::protect!(file); let _ = carrier::protect!(file); }\n#[cfg(feature=\"extra\")]\npub fn extra(file: &std::fs::File) { let _ = file.lock_shared(); }\n";
 const CARRIER: &str =
     "#[macro_export]\nmacro_rules! protect { ($file:expr) => { $file.try_lock() }; }\n";

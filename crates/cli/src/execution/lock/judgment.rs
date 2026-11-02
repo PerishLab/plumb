@@ -60,7 +60,7 @@ pub(crate) fn check(root: &Path, execution: &Execution, scope: Scope) -> Result<
         ));
     }
     Ok(Judgment {
-        schema: "plumb.lock-review/v1",
+        schema: "plumb.lock-review/v2",
         consistent: true,
         guard: false,
         declaration,

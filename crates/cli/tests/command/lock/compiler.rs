@@ -99,7 +99,7 @@ fn compiler() {
         String::from_utf8_lossy(&output.stderr)
     );
     let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(report["schema"], "plumb.lock-resolution/v1");
+    assert_eq!(report["schema"], "plumb.lock-resolution/v2");
     assert_eq!(report["guard"], false);
     let findings = report["messages"]["findings"].as_array().unwrap();
     for operation in [
