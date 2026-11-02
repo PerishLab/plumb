@@ -317,3 +317,10 @@ Plumb's own; a product may adopt the exports but is not judged against them:
 - Package subprocesses resolve and verify their tools through captured
   `config::Execution` bindings. Executable lookup and platform invocation stay
   inside that mechanism.
+
+Anonymous public bucket GETs use one fixed ten-second global deadline, covering
+connection, response and body consumption. The shared reader preserves 404 as
+missing and all other unreadable/status failures as refusal. It adds no retry,
+alternate authority or evidence substitution. A successful byte read alone grants
+no authenticity, distribution completion or release permission; consumers retain
+their existing record, digest, identity and current-authority checks.

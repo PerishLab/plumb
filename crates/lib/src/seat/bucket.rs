@@ -5,7 +5,7 @@ use std::time::Duration;
 
 pub fn fetch(url: &str) -> Result<Option<Vec<u8>>, String> {
     let agent: ureq::Agent = ureq::Agent::config_builder()
-        .timeout_global(Some(Duration::from_secs(2)))
+        .timeout_global(Some(Duration::from_secs(10)))
         .build()
         .into();
     match agent.get(url).call() {
@@ -18,3 +18,6 @@ pub fn fetch(url: &str) -> Result<Option<Vec<u8>>, String> {
         Err(error) => Err(format!("cannot fetch public bucket object: {error}")),
     }
 }
+
+#[cfg(test)]
+mod tests;
