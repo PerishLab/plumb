@@ -27,6 +27,7 @@ pub(crate) struct Report {
     execution: String,
     tools: std::collections::BTreeMap<String, plumb::config::Tool>,
     configuration: String,
+    lockfile: String,
     compiler: String,
     clippy: String,
     argv: Vec<String>,
@@ -137,7 +138,7 @@ pub(crate) fn resolve(root: &Path, execution: &Execution, scope: Scope) -> Resul
         return Err(format!("Cargo lock resolution failed with {status}"));
     }
     Ok(Report {
-        schema: "plumb.lock-resolution/v1",
+        schema: "plumb.lock-resolution/v2",
         tool: plumb::config::Tool::at(std::env::current_exe().map_err(|error| error.to_string())?)?,
         version: plumb::version!("PLUMB").to_string(),
         commit: plumb::commit!("PLUMB").map(str::to_string),
@@ -145,6 +146,7 @@ pub(crate) fn resolve(root: &Path, execution: &Execution, scope: Scope) -> Resul
         execution: format!("{:x}", Sha256::digest(execution.evidence()?)),
         tools: execution.tools()?,
         configuration: format!("{:x}", Sha256::digest(config.as_bytes())),
+        lockfile: reference::file(root, "Cargo.lock")?.1,
         compiler,
         clippy,
         argv,

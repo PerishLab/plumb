@@ -41,7 +41,13 @@ proof and does not turn an incomplete global inventory into a pass.
 Each resolved finding includes a reference. A bound reference has a digest and
 workspace-relative tracked regular file digests. Its identity includes the actual host, feature
 selection, rustc/Clippy versions, package, target, complete normalized spans and
-expansion chain, Cargo.lock and the relevant Cargo manifests and source files.
+expansion chain and the relevant Cargo manifests and source files.
+The v2 source reference does not include Cargo.lock. Every compilation report
+separately records its lockfile SHA-256, complete original/effective trees,
+resolution and execution world. A dependency-only lock change requires fresh
+compilation; it never reuses an old Guard result across worlds. If the same
+source references and exact review evidence still match, their human dispositions
+remain consistent. This does not prove dependency behavior or protocol safety.
 The original compiler fields are retained. Relocating an identical workspace
 does not change the identity. Lib/test observations may share one source
 reference; this does not identify each diagnostic's cfg. External, generated or
@@ -64,7 +70,9 @@ classified as these five native File methods by spelling.
 
 evidence maps exact workspace-relative tracked regular file paths to lowercase SHA-256
 digests. Include the files supporting the protocol and hold/release review.
-The reference already binds its own source and Cargo inputs. No globs, directory
+The reference already binds its own source and Cargo manifests. Include Cargo.lock
+as explicit evidence when the protocol review must depend on that exact dependency
+snapshot; changing it then requires a new review. No globs, directory
 grants, absolute or redirected paths substitute for exact evidence. All review
 fields are required and unknown fields refuse. For example:
 
@@ -92,3 +100,8 @@ remain separate obligations. Setting enforce=true explicitly opts the declaratio
 into ordinary Guard, which requires actual Ectropy participation and records a
 separate guard/lock action. See plumb guard --help. The explicit check command
 still creates no Guard proof and never substitutes for that activation.
+
+Resolution, review and bound-reference reports use v2 schemas. V1 digests are
+not accepted as v2 dispositions or automatically rewritten. Re-run resolve for
+every declared combination, review the current source/protocol and evidence,
+then explicitly replace the old reviews. Empty review sets need no conversion.

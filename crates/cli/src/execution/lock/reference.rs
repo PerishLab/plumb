@@ -9,6 +9,7 @@ use std::path::{Component, Path};
 #[serde(tag = "state", rename_all = "kebab-case")]
 pub(super) enum Reference {
     Bound {
+        schema: &'static str,
         digest: String,
         files: BTreeMap<String, String>,
     },
@@ -109,10 +110,11 @@ impl Identity<'_> {
         let mut spans = finding.spans.clone();
         self.normalize(&mut spans)?;
         self.capture("Cargo.toml")?;
-        self.capture("Cargo.lock")?;
-        let basis = json!({"schema":"plumb.lock-reference/v1", "host":compiler.host, "all":compiler.all, "rustc":compiler.rustc, "clippy":compiler.clippy, "package":package, "target":target, "operation":finding.operation, "spans":spans, "files":self.files});
+        let schema = "plumb.lock-reference/v2";
+        let basis = json!({"schema":schema, "host":compiler.host, "all":compiler.all, "rustc":compiler.rustc, "clippy":compiler.clippy, "package":package, "target":target, "operation":finding.operation, "spans":spans, "files":self.files});
         let raw = serde_json::to_vec(&basis).map_err(|error| error.to_string())?;
         Ok(Reference::Bound {
+            schema,
             digest: format!("{:x}", Sha256::digest(raw)),
             files: self.files,
         })
