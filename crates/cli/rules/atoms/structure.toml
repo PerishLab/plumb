@@ -76,3 +76,7 @@ rule = "structure.lock-protection"
 [[lock.scope]]
 repository = "PerishLab/plumb"
 features = ["default", "all-features"]
+
+[[lock.scope]]
+repository = "PerishLab/runseal"
+features = ["default", "all-features"]
