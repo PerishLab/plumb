@@ -234,22 +234,52 @@ fn terminated() {
     cache::success(&cache::run(gated.root(), home.path()));
     retained(home.path(), gated.root());
     let atoms = atoms(home.path());
-    let edges = |edge: &str| {
-        atoms
-            .iter()
-            .filter(|atom| atom["source"]["edge"] == edge)
-            .count()
-    };
-    assert!(
-        atoms
-            .iter()
-            .any(|atom| atom["source"]["function"] == "execute"
-                && atom["source"]["edge"] == "return"),
-        "the interrupted check span closes: {atoms:?}"
-    );
+    let traces = atoms
+        .iter()
+        .filter(|atom| atom["payload"]["event"] == "cli.start")
+        .map(|atom| atom["context"]["locus.trace"].as_str().unwrap())
+        .collect::<std::collections::BTreeSet<_>>();
     assert_eq!(
-        edges("enter"),
-        edges("return"),
-        "every span closes: {atoms:?}"
+        traces.len(),
+        2,
+        "interrupted and subsequent Guard are distinct"
     );
+    let mut codes = Vec::new();
+    for trace in traces {
+        let events = atoms
+            .iter()
+            .filter(|atom| atom["context"]["locus.trace"] == trace)
+            .collect::<Vec<_>>();
+        let edges = |edge: &str| {
+            events
+                .iter()
+                .filter(|atom| atom["source"]["edge"] == edge)
+                .count()
+        };
+        assert_eq!(
+            edges("enter"),
+            edges("return"),
+            "every span closes in {trace}: {events:?}"
+        );
+        for (module, function) in [
+            ("plumb::command", "execute"),
+            ("plumb::command::guard::precommit", "run"),
+            ("plumb::command::guard::precommit::action", "prepare"),
+        ] {
+            assert!(
+                events.iter().any(|atom| atom["source"]["edge"] == "return"
+                    && atom["source"]["module"] == module
+                    && atom["source"]["function"] == function),
+                "outer span {module}::{function} did not close in {trace}"
+            );
+        }
+        let finishes = events
+            .iter()
+            .filter(|atom| atom["payload"]["event"] == "cli.finish")
+            .collect::<Vec<_>>();
+        assert_eq!(finishes.len(), 1, "one completed CLI outcome in {trace}");
+        codes.push(finishes[0]["payload"]["code"].as_i64().unwrap());
+    }
+    codes.sort();
+    assert_eq!(codes, [0, 143]);
 }
