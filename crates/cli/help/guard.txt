@@ -26,8 +26,28 @@ Linux start/finish resources describe the process and reaped children in kernel
 clock ticks, plus process peak RSS in KiB. Children peak RSS, IO wait, exclusive
 cgroup limits and other platforms remain unavailable; these are not whole-tree
 measurements. Suite results stay in inherited CI output, not in this report;
-no unstable libtest flag, output redirection or test concurrency change is
-introduced. Unit/codegen/link critical paths remain specialist diagnostics.
+observations do not change the selected test set or its result.
+Unit/codegen/link critical paths remain specialist diagnostics.
+
+On Linux with noninteractive input, guard/test first compiles the original
+locked Cargo test selection. It verifies the combined target selectors retain
+that compilation and test set, then asks Cargo to capture every actual program's
+launch context through a private runner. Capture does not execute tests and
+its success grants no test result or Guard proof. A retained copy of this
+Guard supplies the callback even when a self-hosted build replaces its binary.
+
+Guard schedules the actual test programs with a shared host core budget and
+passes each its libtest thread allocation. Each program retains its Cargo
+environment, working directory and arguments, with output and timing reported
+per program. Failure or cancellation stops new dispatch; already-started
+programs are reaped before the Cargo lease is released. Full Cargo doctests
+run only after every admitted test program succeeds. Scheduling does not
+change the action's input or world shape and adds no test timeout.
+
+An existing runner, custom harness, changed compilation context, unsupported
+target or launch context uses the complete original Cargo command and reports
+the fallback. Interactive input and platforms outside Linux use that command
+as well. A fallback is never evidence of parallel execution.
 
 On Linux, the owned Cargo execution contract omits dev/test debug information
 and strips linked debug sections, including standard-library debug information.
