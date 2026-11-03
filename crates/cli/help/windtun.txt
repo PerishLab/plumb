@@ -20,3 +20,8 @@ There is no source URL, branch or expected-hash override, version pin or TTL.
 With --json, failed and unknown checks still emit a structured report. Exit 0
 means qualified, 2 means refusal, and 3 means required evidence is unavailable.
 Declaration inspection keeps its existing exit behavior.
+
+Anonymous release and Scene object reads retain a bounded request purpose and
+SHA-256 identity, plus the observed request or body-read stage. Raw URLs, response bodies and
+provider error prose are not diagnostic output. Unknown remains nonpositive;
+these diagnostics add no retry, fallback or qualification exemption.

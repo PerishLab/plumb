@@ -1,4 +1,4 @@
-use super::{Fault, Read, Result, registry::Registry, wire::ARCHIVE};
+use super::super::{Fault, Result};
 use sha2::{Digest, Sha256};
 use std::{
     io::{Read as _, Seek},
@@ -6,70 +6,13 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub struct Remote {
-    agent: ureq::Agent,
-}
-
-impl Default for Remote {
-    fn default() -> Self {
-        Self {
-            agent: ureq::Agent::config_builder()
-                .https_only(true)
-                .max_redirects(0)
-                .timeout_global(Some(Duration::from_secs(30)))
-                .build()
-                .into(),
-        }
-    }
-}
-
-impl Read for Remote {
-    fn bytes(&self, url: &str, limit: usize) -> Result<Vec<u8>> {
-        if limit > ARCHIVE {
-            return Err(Fault::refused("public read budget exceeds protocol bounds"));
-        }
-        if let Some(path) = url.strip_prefix("https://api.github.com/") {
-            return self.github(path, limit);
-        }
-        let response = self
-            .agent
-            .get(url)
-            .header("User-Agent", "plumb")
-            .call()
-            .map_err(|_| Fault::unknown(format!("public material is unavailable: {url}")))?;
-        let mut bytes = Vec::new();
-        response
-            .into_body()
-            .as_reader()
-            .take(limit as u64 + 1)
-            .read_to_end(&mut bytes)
-            .map_err(|_| Fault::unknown("public material read failed"))?;
-        if bytes.len() > limit {
-            return Err(Fault::refused("public material exceeds bounds"));
-        }
-        Ok(bytes)
-    }
-
-    fn image(&self, reference: &str) -> Result<String> {
-        Registry(&self.agent).inspect(reference)
-    }
-}
-
-impl Remote {
-    fn github(&self, path: &str, limit: usize) -> Result<Vec<u8>> {
-        let mut command = Command::new("gh");
-        command.args(["api", "--hostname", "github.com", path]);
-        Metadata::new(path).read(&mut command, limit, Duration::from_secs(30))
-    }
-}
-
-struct Metadata {
+pub(super) struct Metadata {
     purpose: &'static str,
     request: String,
 }
 
 impl Metadata {
-    fn new(path: &str) -> Self {
+    pub(super) fn new(path: &str) -> Self {
         let route: Vec<_> = path
             .split('?')
             .next()
@@ -105,7 +48,12 @@ impl Metadata {
         Fault::unknown(self.reason(reason))
     }
 
-    fn read(&self, command: &mut Command, limit: usize, timeout: Duration) -> Result<Vec<u8>> {
+    pub(super) fn read(
+        &self,
+        command: &mut Command,
+        limit: usize,
+        timeout: Duration,
+    ) -> Result<Vec<u8>> {
         let mut output = tempfile::tempfile().map_err(|_| self.unknown("cannot hold output"))?;
         let handle = output
             .try_clone()
