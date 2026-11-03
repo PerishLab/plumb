@@ -24,6 +24,12 @@ struct Cli {
 
 #[derive(Subcommand)]
 pub(crate) enum Command {
+    #[command(hide = true, about = "Capture one admitted Cargo test launch", long_about = plumb::seat::resource!("help/runner.txt"))]
+    Runner {
+        session: PathBuf,
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true)]
+        arguments: Vec<std::ffi::OsString>,
+    },
     #[command(about = "Inspect Windtun declarations and current public qualification", long_about = plumb::seat::resource!("help/windtun.txt"))]
     Windtun {
         #[command(subcommand)]
@@ -218,9 +224,12 @@ pub(crate) enum Command {
         deed: command::cache::Deed,
     },
 }
+
 fn main() {
     plumb::depot::carry(catalog::carried::FILES);
-    if let Err(error) = plumb::identity!("PLUMB") {
+    if std::env::args_os().nth(1).as_deref() != Some(std::ffi::OsStr::new("runner"))
+        && let Err(error) = plumb::identity!("PLUMB")
+    {
         eprintln!("plumb: {error}");
         std::process::exit(1);
     }
@@ -232,28 +241,10 @@ fn main() {
             std::process::exit(code);
         }
     };
-    let observation = observation::start(command.name());
-    let diagnostic = diagnostic::Run::start(command.diagnostic(), command.name());
-    let prepared = plumb::identity::ready().and_then(|()| {
-        consumption::prepare(&command).map_err(|error| {
-            format!("cannot read installed rules: {error}\nrun plumb configuration install")
-        })
-    });
-    let code = match prepared {
-        Ok(()) => command::execute(command),
-        Err(error) => {
-            eprintln!("plumb: {error}");
-            1
-        }
-    };
-    let code = execution::signal::received().unwrap_or(code);
-    if let Some(observation) = observation {
-        observation.finish(code);
+    if let Command::Runner { session, arguments } = &command {
+        std::process::exit(execution::capture::run(session, arguments));
     }
-    if let Some(diagnostic) = diagnostic {
-        diagnostic.finish(code);
-    }
-    std::process::exit(code);
+    consumption::run(command);
 }
 
 impl Command {
@@ -269,6 +260,7 @@ impl Command {
 
     fn name(&self) -> &'static str {
         match self {
+            Self::Runner { .. } => "runner",
             Self::Windtun { .. } => "windtun",
             Self::Lock { .. } => "lock",
             Self::Lane { .. } => "lane",

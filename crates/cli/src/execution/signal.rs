@@ -9,6 +9,31 @@ const POLL: Duration = Duration::from_millis(20);
 
 static RECEIVED: OnceLock<Arc<AtomicUsize>> = OnceLock::new();
 static WATCH: Once = Once::new();
+static HELD: AtomicUsize = AtomicUsize::new(0);
+
+pub(crate) struct Hold;
+
+impl Hold {
+    pub fn new() -> Result<Self, String> {
+        HELD.fetch_add(1, Ordering::SeqCst);
+        let held = Self;
+        check()?;
+        Ok(held)
+    }
+}
+
+impl Drop for Hold {
+    fn drop(&mut self) {
+        HELD.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+pub(crate) fn check() -> Result<(), String> {
+    match received() {
+        Some(code) => Err(format!("execution interrupted by signal {}", code - 128)),
+        None => Ok(()),
+    }
+}
 
 pub(crate) fn watch() {
     WATCH.call_once(|| {
@@ -57,6 +82,9 @@ fn patrol(received: &AtomicUsize) {
         std::thread::sleep(POLL);
     }
     let code = code(received.load(Ordering::SeqCst));
+    while HELD.load(Ordering::SeqCst) != 0 {
+        std::thread::sleep(POLL);
+    }
     if plumb::integration::staging::held() {
         std::thread::sleep(GRACE);
         plumb::integration::staging::abandon();

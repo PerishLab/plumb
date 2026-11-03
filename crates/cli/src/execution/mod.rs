@@ -1,8 +1,11 @@
+pub(crate) mod capture;
 pub(crate) mod cargo;
 pub(crate) mod diagnostic;
 pub(crate) mod lock;
 pub(crate) mod observation;
+pub(crate) mod process;
 pub(crate) mod signal;
+pub(crate) mod suite;
 
 use plumb::config::{Contract, Environment, Execution};
 use plumb::rule::{Observation, Probe};

@@ -1,0 +1,8 @@
+Capture one Cargo-supplied test launch in an existing private Guard session.
+
+This internal transport accepts only a session-admitted executable and its
+package directory. It records the actual arguments and environment without
+running the test. A successful capture never proves a test pass. Guard checks
+complete coverage, executes the admitted tests, and runs required doctests
+before recording its proof. Existing Cargo runners retain the original serial
+command until their composition is qualified.

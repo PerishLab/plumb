@@ -30,6 +30,7 @@ pub(super) fn resolved(root: &Path) -> Result<Descriptor, String> {
 
 #[locus::trace(with = crate::observation::view())]
 fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
+    let _held = crate::execution::signal::Hold::new()?;
     crate::diagnostic::measure("guard.prove", || Proof { root, latest }.run())
 }
 
@@ -139,6 +140,7 @@ impl Proof<'_> {
                 if let Some(lease) = &lease {
                     lease.settle();
                 }
+                crate::execution::signal::check()?;
                 super::cache::record(&check.proof)?;
                 span.complete(true);
             }
@@ -158,6 +160,7 @@ impl Proof<'_> {
             None => proof,
         };
         crate::diagnostic::event("guard.proof", || serde_json::json!({"proof":proof}));
+        crate::execution::signal::check()?;
         plumb::guard::stage(root, &proof)?;
         Ok(proof)
     }
