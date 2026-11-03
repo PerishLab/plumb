@@ -14,6 +14,10 @@ path = "src/command/library/mod.rs"
 name = "plumb"
 path = "src/main.rs"
 
+[[example]]
+name = "github"
+path = "tests/support/github/main.rs"
+
 [[test]]
 name = "command"
 path = "tests/command/mod.rs"
