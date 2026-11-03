@@ -272,10 +272,11 @@ Absorbed; every product inherits them:
 - A repository names its product once, as `[identity] ns` in `plumb.toml`,
   equal to the repository name. Release, doctor and every later identity read
   it from there; `[release]` carries no name of its own.
-- Human policy enters through the cascade. The substrate exports config
-  mechanism; each binary declares its own sections and values, and owns the
-  variables it supplies to a template whose grammar the substrate owns. A
-  manifest spells every injected environment key exactly as the target product
+- Human policy enters through the cascade. Radicula owns the generic config
+  runtime and derive; Plumb supplies defining-package prefix and environment
+  lookup. Each binary declares its sections, values and explicit layering, and
+  owns the variables it supplies to a template whose grammar the substrate owns.
+  A manifest spells every injected environment key exactly as the target product
   derives it.
 
 Being absorbed; plumb owns the end form, and no product invents its own

@@ -68,7 +68,7 @@ fn reserve(home: &Path) -> Result<u64, String> {
     let path = home.join("plumb.toml");
     let file: File = match radicula_config::load(&path) {
         Ok(file) => file,
-        Err(plumb::config::Error::Read { source, .. })
+        Err(radicula_config::Error::Read { source, .. })
             if source.kind() == std::io::ErrorKind::NotFound =>
         {
             return Ok(RESERVE);

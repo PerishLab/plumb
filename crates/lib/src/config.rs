@@ -6,9 +6,7 @@ pub use crate::runtime::cache::Cache;
 pub use crate::runtime::environment::contract::contract;
 pub use crate::runtime::environment::{Binding, Contract, Environment};
 pub use crate::runtime::execution::{Execution, Search, Tool};
-pub use plumb_macro::{Cascade, prefix};
-pub use radicula_config::layer::{Cascade, Env, Opaque, Sniff};
-pub use radicula_config::{Error, load};
+pub use plumb_macro::prefix;
 
 pub fn environment(contract: &Contract) -> Result<Environment, String> {
     contract.capture(std::env::vars_os())

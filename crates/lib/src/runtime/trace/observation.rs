@@ -102,12 +102,12 @@ fn active() -> Option<&'static Seat> {
 fn load(declaration: Declaration<'_>, command: &str) -> Result<Option<Run>, String> {
     let file: File = match radicula_config::load(declaration.file) {
         Ok(file) => file,
-        Err(crate::config::Error::Read { source, .. })
+        Err(radicula_config::Error::Read { source, .. })
             if source.kind() == std::io::ErrorKind::NotFound =>
         {
             return Ok(None);
         }
-        Err(crate::config::Error::Parse { path, .. }) => {
+        Err(radicula_config::Error::Parse { path, .. }) => {
             return Err(format!(
                 "invalid observation configuration in {}; check [locus] settings",
                 path.display()

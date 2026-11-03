@@ -153,7 +153,7 @@ fn split() {
     .expect("manifest should be written");
     std::fs::write(
         dir.join("crates/api/src/main.rs"),
-        "#[derive(plumb::config::Cascade)]\nstruct Config;\nfn main() {}\n",
+        "#[derive(radicula_config::Cascade)]\nstruct Config;\nfn main() {}\n",
     )
     .expect("source should be written");
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
@@ -185,7 +185,7 @@ fn headless() {
     .expect("manifest should be written");
     std::fs::write(
         dir.join("crates/api/src/lib.rs"),
-        "#[derive(plumb::config::Cascade)]\nstruct Config;\n",
+        "#[derive(radicula_config::Cascade)]\nstruct Config;\n",
     )
     .expect("source should be written");
     let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
