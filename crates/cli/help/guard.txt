@@ -40,6 +40,18 @@ With no runtime selectors, guard keeps its local contract: it proves the staged
 tree for commit attachment, or checks an explicit --base/--head/--write task
 boundary.
 
+For preflight before a commit, run `git hook run pre-commit` from the managed
+topic checkout with the current Plumb hooks installed. Use the same external
+identity profile and tool environment for that preflight and the later commit.
+Both enter through Git's hook machinery. Git can change tool lookup for hooks,
+so direct `plumb guard` and a commit hook can resolve different executable paths
+even when their contents match. Paths and contents belong to the captured world.
+Reuse still requires unchanged staged inputs and execution worlds; ordinary
+commit hooks revalidate them and run any action whose proof no longer matches.
+The preflight does not create a commit or attach proof to one; commit-msg carries
+the proof when the commit is created. Use direct Guard for its explicit options,
+including --diagnostic; the installed hook does not forward extra arguments.
+
 After a caller-directed rebase or other base movement, --refresh requires a
 clean topic branch, proves its exact HEAD tree, and replaces that HEAD commit
 with the same tree, parents, narrative and identity carrying the fresh standard
