@@ -25,7 +25,7 @@ fn loader() {
     let out = run(&root);
     let manifest = Path::new("crates").join("cli").join("Cargo.toml");
     let line = format!(
-        "{} depends on .env loader dotenvy; declare settings through plumb Cascade",
+        "{} depends on .env loader dotenvy; declare settings through Radicula Cascade and explicit application inputs",
         manifest.display()
     );
     assert!(out.contains(&line), "{out}");

@@ -1,4 +1,5 @@
-use plumb::{config::Cascade, rig::Mint};
+use plumb::rig::Mint;
+use radicula_config::Cascade;
 
 #[test]
 fn layered() {

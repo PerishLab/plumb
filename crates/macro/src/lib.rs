@@ -4,6 +4,7 @@ mod catalogue;
 use syn::{DeriveInput, ItemFn, LitStr, parse_macro_input};
 
 mod parse;
+mod prefix;
 mod resource;
 mod trace;
 
@@ -97,4 +98,12 @@ pub fn span(args: TokenStream, input: TokenStream) -> TokenStream {
     let name = parse_macro_input!(args as LitStr);
     let item = parse_macro_input!(input as ItemFn);
     trace::expand(name, item).into()
+}
+
+#[doc = "Adds prefix() using the configuration type's defining package name. Combine with Radicula Cascade and pass prefix() and plumb::config::value explicitly to resolve or layered. This preserves existing application variable names; it declares no CLI identity."]
+#[proc_macro_attribute]
+pub fn prefix(args: TokenStream, input: TokenStream) -> TokenStream {
+    prefix::expand(args.into(), input.into())
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
 }

@@ -50,7 +50,7 @@ tags = ["dependency"]
 [[rule]]
 id = "deps.environment-loader-absent"
 summary = "Configuration does not load .env files"
-law = "A Rust manifest does not depend on a .env loader. Settings enter through plumb Cascade, whose file, environment and argument layers are the only way in; a loader writes whatever .env sits in the working directory into the process environment, feeds that layer unseen and is inherited by every child."
+law = "A Rust manifest does not depend on a .env loader. Settings enter through Radicula Cascade with explicit application file, environment and argument inputs; a loader writes whatever .env sits in the working directory into the process environment, feeds that layer unseen and is inherited by every child."
 evidence = "Direct Cargo dependency names, including renamed, workspace and target-specific ones, in the root, app and crates manifests."
 standing = "mechanized"
 owner = "plumb"

@@ -59,7 +59,7 @@ fn seated() {
 
     std::fs::write(
         dir.join("crates/anchor/src/lib.rs"),
-        "#[derive(plumb::config::Cascade)]\nstruct Config;\n",
+        "#[derive(radicula_config::Cascade)]\nstruct Config;\n",
     )
     .expect("source should be written");
     let seated = run(&["doctor", dir.to_str().expect("path should be utf8")]);
@@ -111,7 +111,7 @@ fn strayed() {
     .expect("manifest should be written");
     std::fs::write(
         dir.join("crates/other/src/lib.rs"),
-        "#[derive(plumb::config::Cascade)]\nstruct Config;\n",
+        "#[derive(radicula_config::Cascade)]\nstruct Config;\n",
     )
     .expect("source should be written");
     let outside = run(&["doctor", dir.to_str().expect("path should be utf8")]);

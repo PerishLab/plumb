@@ -1,46 +1,5 @@
 use plumb::config;
-use serde::Deserialize;
 use std::path::{Path, PathBuf};
-
-#[derive(Deserialize, PartialEq, Debug)]
-struct Sample {
-    name: String,
-    count: u32,
-}
-
-#[test]
-fn loads() {
-    let scratch = tempfile::tempdir().expect("fixture parent should be made");
-    let dir = scratch.path().join("plumb-load");
-    std::fs::create_dir_all(&dir).expect("fixture");
-    let path = dir.join("sample.toml");
-    std::fs::write(&path, "name = \"x\"\ncount = 3\n").expect("write");
-    let got: Sample = config::load(&path).expect("load");
-    assert_eq!(
-        got,
-        Sample {
-            name: "x".to_string(),
-            count: 3
-        }
-    );
-}
-
-#[test]
-fn missing() {
-    let err = config::load::<Sample>(&PathBuf::from("/no/such-xyz.toml")).unwrap_err();
-    assert!(err.to_string().contains("cannot read"), "{err}");
-}
-
-#[test]
-fn malformed() {
-    let scratch = tempfile::tempdir().expect("fixture parent should be made");
-    let dir = scratch.path().join("plumb-bad");
-    std::fs::create_dir_all(&dir).expect("fixture");
-    let path = dir.join("bad.toml");
-    std::fs::write(&path, "name = \n").expect("write");
-    let err = config::load::<Sample>(&path).unwrap_err();
-    assert!(err.to_string().contains("cannot parse"), "{err}");
-}
 
 #[test]
 fn finds() {

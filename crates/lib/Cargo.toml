@@ -8,7 +8,7 @@ publish = ["perish"]
 
 [package.metadata.perish.guard]
 schema = 1
-depot = "7a14fa8729dc70b64070ed03528ea0c29803319e1e1bd7261a77e41a24c3ebd8"
+depot = "bdf363e0fb167bb5d4a338d52160c24c6a36cab1c913edfebb6d76de762fa33c"
 
 [features]
 depot = [
@@ -32,6 +32,7 @@ testing = []
 windtun = ["depot", "dep:flate2", "dep:tar", "dep:sha1"]
 
 [dependencies]
+radicula-config = { version = "0", registry = "perish" }
 base64 = "0.22"
 clap = { version = "4", features = ["derive"] }
 flate2 = { version = "1", optional = true }

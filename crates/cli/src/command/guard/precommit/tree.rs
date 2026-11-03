@@ -133,10 +133,11 @@ fn record(source: &Path, tree: &str) -> Result<String, String> {
         .env("GIT_COMMITTER_EMAIL", "guard@plumb.invalid");
     let mut message = "plumb staged guard".to_string();
     if parent.status.success() {
-        let declared = plumb::rig::Rig::resolve(None)
-            .map_err(|error| error.to_string())?
-            .release
-            .version;
+        let declared =
+            plumb::rig::Rig::resolve(None, &plumb::rig::Rig::prefix(), &plumb::config::value)
+                .map_err(|error| error.to_string())?
+                .release
+                .version;
         if let Some(datum) = plumb::datum::Tree(source).capture(&declared)? {
             message.push_str(&format!("\n\n{}", datum.trailer()?));
         }
