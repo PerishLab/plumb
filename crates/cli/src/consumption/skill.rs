@@ -4,7 +4,7 @@ use plumb::skill::{Kit, command};
 use std::path::PathBuf;
 
 pub fn run(deed: Deed) -> i32 {
-    let rig = match Rig::resolve(None) {
+    let rig = match Rig::resolve(None, &Rig::prefix(), &plumb::config::value) {
         Ok(rig) => rig,
         Err(error) => return sour(&error.to_string()),
     };

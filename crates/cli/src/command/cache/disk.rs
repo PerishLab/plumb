@@ -66,7 +66,7 @@ fn reserve(home: &Path) -> Result<u64, String> {
             .ok_or_else(|| format!("{KEY} must be a percentage from 0 to 100, not {value}"));
     }
     let path = home.join("plumb.toml");
-    let file: File = match plumb::config::load(&path) {
+    let file: File = match radicula_config::load(&path) {
         Ok(file) => file,
         Err(plumb::config::Error::Read { source, .. })
             if source.kind() == std::io::ErrorKind::NotFound =>

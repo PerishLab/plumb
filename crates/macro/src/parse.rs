@@ -181,7 +181,9 @@ fn app(item: &DeriveInput, partial: &Ident) -> TokenStream {
                         ::plumb::config::load::<#partial>(path)?,
                     );
                 }
-                let seen = <Self as ::plumb::config::Cascade>::env(&Self::prefix())?;
+                let seen = <Self as ::plumb::config::Cascade>::lookup(
+                    &Self::prefix(), &::plumb::config::value,
+                )?;
                 held = ::plumb::config::Cascade::merge(held, seen);
                 ::core::result::Result::Ok(::plumb::config::Cascade::merge(held, over))
             }

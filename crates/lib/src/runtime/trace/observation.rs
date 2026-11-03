@@ -100,7 +100,7 @@ fn active() -> Option<&'static Seat> {
 }
 
 fn load(declaration: Declaration<'_>, command: &str) -> Result<Option<Run>, String> {
-    let file: File = match crate::config::load(declaration.file) {
+    let file: File = match radicula_config::load(declaration.file) {
         Ok(file) => file,
         Err(crate::config::Error::Read { source, .. })
             if source.kind() == std::io::ErrorKind::NotFound =>

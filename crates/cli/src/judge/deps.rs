@@ -82,7 +82,7 @@ fn loaders(held: &shape::Dependencies, found: &mut Found) {
             found.push(wrong(
                 &rule::LOADER_ABSENT,
                 format!(
-                    "{seat} depends on .env loader {name}; declare settings through plumb Cascade"
+                    "{seat} depends on .env loader {name}; declare settings through Radicula Cascade and explicit application inputs"
                 ),
             ));
         }

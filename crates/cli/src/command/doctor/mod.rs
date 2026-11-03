@@ -142,7 +142,8 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
 
 fn briefs() -> Vec<String> {
     let running = plumb::version!("PLUMB");
-    let Ok(rig) = plumb::rig::Rig::resolve(None) else {
+    let Ok(rig) = plumb::rig::Rig::resolve(None, &plumb::rig::Rig::prefix(), &plumb::config::value)
+    else {
         return Vec::new();
     };
     let kit = plumb::skill::Kit {
@@ -171,9 +172,10 @@ fn briefs() -> Vec<String> {
 }
 
 fn line(root: &Path) -> Option<String> {
-    let declared = plumb::rig::Rig::resolve(None)
-        .map(|rig| rig.release.version)
-        .unwrap_or_default();
+    let declared =
+        plumb::rig::Rig::resolve(None, &plumb::rig::Rig::prefix(), &plumb::config::value)
+            .map(|rig| rig.release.version)
+            .unwrap_or_default();
     plumb::datum::Tree(root).line(&declared)
 }
 

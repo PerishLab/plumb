@@ -1,10 +1,11 @@
-use crate::config::Cascade;
+use radicula_config::Cascade;
 use std::path::PathBuf;
 
 const RELEASES: &str = "https://releases.plumb.perish.uk";
 const DEPOT: &str = "https://depot.plumb.perish.uk";
 
 #[derive(Debug, PartialEq, Cascade)]
+#[crate::config::prefix]
 pub struct Rig {
     pub home: String,
     pub releases: String,
@@ -29,6 +30,7 @@ pub struct Rig {
 }
 
 #[derive(Debug, PartialEq, Cascade)]
+#[crate::config::prefix]
 pub struct Harness {
     #[cascade(section)]
     pub run: Run,
@@ -74,7 +76,7 @@ impl Millis {
     }
 }
 
-impl crate::config::Env for Millis {
+impl radicula_config::Env for Millis {
     fn read(value: &str) -> Result<Self, String> {
         value
             .parse()

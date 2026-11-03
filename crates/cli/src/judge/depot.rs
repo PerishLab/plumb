@@ -31,9 +31,10 @@ pub fn runtime() -> Vec<Finding> {
             format!("managed Plumb identity is not stable {running}; reinstall stable latest"),
         ))];
     }
-    let releases = plumb::rig::Rig::resolve(None)
-        .map(|rig| rig.releases)
-        .unwrap_or_else(|_| "https://releases.plumb.perish.uk".to_string());
+    let releases =
+        plumb::rig::Rig::resolve(None, &plumb::rig::Rig::prefix(), &plumb::config::value)
+            .map(|rig| rig.releases)
+            .unwrap_or_else(|_| "https://releases.plumb.perish.uk".to_string());
     let url = plumb::seat::release::Authority::at(&releases).pointer("stable");
     let output = Command::new("curl")
         .args([

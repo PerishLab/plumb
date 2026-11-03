@@ -290,3 +290,10 @@ fn malformed() {
     assert!(out.contains("blind:"), "{out}");
     assert!(out.contains("[dispatch]"), "{out}");
 }
+
+#[test]
+fn prefix() {
+    assert_eq!(env!("CARGO_PKG_NAME"), "plumb-cli");
+    assert_eq!(plumb::rig::Rig::prefix(), "PLUMB");
+    assert_eq!(plumb::rig::Harness::prefix(), "PLUMB");
+}
