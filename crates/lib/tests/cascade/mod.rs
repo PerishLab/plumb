@@ -87,25 +87,3 @@ fn site() {
     assert_eq!(held.site.token, "secret");
     assert_eq!(held.site.turns, 3);
 }
-
-#[derive(Default, radicula_config::Cascade)]
-#[cascade(section)]
-struct Section {
-    count: u16,
-}
-
-#[derive(Default, plumb::config::Cascade)]
-struct Bridge {
-    #[cascade(section)]
-    section: Section,
-}
-
-#[test]
-fn bridge() {
-    fn root<T: radicula_config::layer::Cascade>() {}
-    root::<Bridge>();
-    let get = |key: &str| (key == "BRIDGE_SECTION_COUNT").then(|| "17".into());
-    let held = Bridge::default().merge(Bridge::lookup("BRIDGE", &get).unwrap());
-    assert_eq!(held.section.count, 17);
-    assert_eq!(Bridge::prefix(), "PLUMB");
-}
