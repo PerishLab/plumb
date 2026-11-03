@@ -2,6 +2,31 @@ use super::{Fixture, issue, work};
 use serde_json::json;
 
 impl Fixture {
+    fn git(&self, root: &std::path::Path, args: &[&str]) -> Result<String, String> {
+        let output = plumb::config::detached("git")
+            .arg("-C")
+            .arg(root)
+            .args(args)
+            .env("GIT_TERMINAL_PROMPT", "0")
+            .env("GIT_AUTHOR_NAME", "Plumb Auto")
+            .env("GIT_AUTHOR_EMAIL", "auto@plumb.invalid")
+            .env("GIT_COMMITTER_NAME", "Plumb Auto")
+            .env("GIT_COMMITTER_EMAIL", "auto@plumb.invalid")
+            .stdin(std::process::Stdio::null())
+            .output()
+            .map_err(|error| error.to_string())?;
+        if !output.status.success() {
+            return Err(format!(
+                "fixture git refused ({}): {}",
+                output.status,
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
+        String::from_utf8(output.stdout)
+            .map(|text| text.trim().into())
+            .map_err(|error| format!("fixture git output is not UTF-8: {error}"))
+    }
+
     pub(in super::super) fn repository(&self, code: &str) -> std::path::PathBuf {
         let source = self.root.path().join("source");
         let origin = self.root.path().join("origin.git");
@@ -11,14 +36,14 @@ impl Fixture {
             vec!["config", "user.name", "Fixture"],
             vec!["config", "user.email", "fixture@example.invalid"],
         ] {
-            work::git(&source, &args).unwrap();
+            self.git(&source, &args).unwrap();
         }
         plumb::config::detached("git")
             .args(["init", "-q", "--bare"])
             .arg(&origin)
             .status()
             .unwrap();
-        work::git(
+        self.git(
             &source,
             &["remote", "add", "origin", origin.to_str().unwrap()],
         )
@@ -44,124 +69,13 @@ impl Fixture {
             "{}",
             String::from_utf8_lossy(&locked.stderr)
         );
-        work::git(&source, &["add", "."]).unwrap();
-        work::git(&source, &["commit", "-q", "-m", "base"]).unwrap();
-        work::git(&source, &["push", "-q", "origin", "main"]).unwrap();
-        work::git(&source, &["fetch", "origin"]).unwrap();
+        self.git(&source, &["add", "."]).unwrap();
+        self.git(&source, &["commit", "-q", "-m", "base"]).unwrap();
+        self.git(&source, &["push", "-q", "origin", "main"])
+            .unwrap();
+        self.git(&source, &["fetch", "origin"]).unwrap();
         std::fs::write(self.root.path().join("issue.json"), json!({"number":17,"type":{"name":"Auto"},"body":issue::body("Example/probe"),"state":"open","labels":[],"node_id":"fixture-issue","html_url":"https://github.com/Example/probe/issues/17","title":"Follow","updated_at":"2026-10-08T00:00:00Z","user":{"id":1,"login":"fixture-writer[bot]","type":"Bot"}}).to_string()).unwrap();
-        super::super::writer::executable(
-            &self.command,
-            r#"#!/usr/bin/env python3
-import json, os, pathlib, subprocess, sys
-root = pathlib.Path(__file__).parent
-args = sys.argv[1:]
-endpoint = args[1]
-if args[:2] == ['pr', 'merge'] and (root / 'mergefault').exists():
-    sys.exit('fixture reached verified merge boundary')
-payload = json.loads(pathlib.Path(args[args.index('--input') + 1]).read_text()) if '--input' in args else None
-with (root / 'calls').open('a') as trace:
-    trace.write(json.dumps({'endpoint':endpoint,'payload':payload,'args':args}) + '\n')
-number = json.loads((root / 'issue.json').read_text())['number']; auto = f'refs/heads/auto/{number}'
-def head(): return subprocess.check_output(['git','--git-dir',str(root/'origin.git'),'rev-parse',auto], text=True).strip()
-def git(*command):
-    actor = {'GIT_AUTHOR_NAME':'GitHub','GIT_AUTHOR_EMAIL':'noreply@github.com','GIT_COMMITTER_NAME':'GitHub','GIT_COMMITTER_EMAIL':'noreply@github.com'}
-    return subprocess.check_output(['git','--git-dir',str(root/'origin.git'),*command], text=True, env={**os.environ, **actor}).strip()
-if args[:2] == ['pr', 'view']:
-    path = root / 'ready.json'
-    states = json.loads(path.read_text()) if path.exists() else ['CLEAN']
-    if len(states) > 1:
-        path.write_text(json.dumps(states[1:]))
-    result = {'headRefOid':head(),'mergeStateStatus':states[0]}
-elif args[:2] == ['pr', 'merge']:
-    if (root / 'policyfault').exists():
-        (root / 'policyfault').unlink()
-        sys.exit('X Pull request Example/probe#18 is not mergeable: the base branch policy prohibits the merge.')
-    candidate = args[args.index('--match-head-commit') + 1]
-    assert candidate == head(), (candidate, head())
-    subject, body = (args[args.index(flag) + 1] for flag in ('--subject', '--body'))
-    merge = git('commit-tree', candidate + '^{tree}', '-p', candidate + '^', '-m', subject + '\n\n' + body)
-    git('update-ref', 'refs/heads/main', merge, candidate + '^')
-    git('update-ref', f'refs/pull/{number + 1}/head', candidate)
-    pull = json.loads((root / 'pull.json').read_text())
-    pull.update({'state':'closed','merged':True,'merged_at':'2026-10-09T00:00:00Z','merge_commit_sha':merge})
-    (root / 'pull.json').write_text(json.dumps(pull))
-    result = {}
-elif endpoint == 'graphql':
-    viewer = root / 'viewer'
-    result = {'data':{'viewer':json.loads(viewer.read_text()) if viewer.exists() else {'databaseId':1,'login':'fixture-writer'}}}
-elif '/issues?' in endpoint:
-    issue = json.loads((root / 'issue.json').read_text())
-    result = [[issue]] if (root / 'discover').exists() and issue['state'] == 'open' else [[]]
-elif '/git/matching-refs/' in endpoint:
-    probe = subprocess.run(['git','--git-dir',str(root/'origin.git'),'show-ref','--verify','--hash',auto], capture_output=True, text=True)
-    result = [[{'ref':auto,'object':{'sha':probe.stdout.strip()}}]] if probe.returncode == 0 else [[]]
-elif '/git/ref/' in endpoint:
-    if (root / 'pushfault').exists():
-        (root / 'pushfault').unlink()
-        sys.exit('fixture interrupted after branch push')
-    result = {'object':{'sha':head()}}
-elif '/pulls' in endpoint:
-    path = root / 'pull.json'
-    if payload and not endpoint.endswith('/pulls'):
-        pull = json.loads(path.read_text())
-        pull.update(payload)
-        path.write_text(json.dumps(pull))
-        result = pull
-    elif endpoint.endswith(f'/pulls/{number + 1}'):
-        result = json.loads(path.read_text())
-    elif payload:
-        pull = {'number':number + 1,'state':'open','head':{'ref':auto[11:],'sha':head(),'repo':{'full_name':'Example/probe'}},'base':{'ref':'main'},'body':payload['body']}
-        path.write_text(json.dumps(pull))
-        if (root / 'fault').exists():
-            (root / 'fault').unlink()
-            print('fixture interrupted after provider write', file=sys.stderr)
-            sys.exit(17)
-        result = pull
-    else:
-        result = [[json.loads(path.read_text())]] if path.exists() else [[]]
-elif '/check-runs' in endpoint and ((root / 'mergefault').exists() or (root / 'passing').exists()):
-    result = [{'check_runs':[{'name':'Guard','app':{'slug':'github-actions'},'head_sha':head(),'status':'completed','conclusion':'success','details_url':'https://github.com/Example/probe/actions/runs/17'}]}]
-elif '/check-runs' in endpoint:
-    result = [{'check_runs':[json.loads((root/'guard.json').read_text())]}] if (root/'guard.json').exists() else [{'check_runs':[]}]
-elif '/actions/runs/' in endpoint and not (root / 'run.json').exists():
-    result = {'head_sha':head(),'path':'.github/workflows/guard.yml','event':'pull_request','status':'completed','conclusion':'success'}
-elif '/actions/runs/' in endpoint:
-    result = json.loads((root/'run.json').read_text())
-elif '/comments' in endpoint:
-    comments = json.loads((root / 'comments.json').read_text())
-    if payload:
-        if 'plumb.auto-noop/v1' in payload['body'] and (root / 'commentfault').exists():
-            (root / 'commentfault').unlink()
-            sys.exit('fixture interrupted before no-op receipt')
-        comments.append(dict(payload, user={"id":1,"login":"fixture-writer[bot]","type":"Bot"}))
-        (root / 'comments.json').write_text(json.dumps(comments))
-        if 'plumb.auto-absorbed/v1' in payload['body'] and (root / 'receiptfault').exists():
-            (root / 'receiptfault').unlink()
-            sys.exit('fixture interrupted after absorption receipt')
-        issue = json.loads((root / 'issue.json').read_text())
-        issue['updated_at'] = f'2026-10-09T00:00:{len(comments):02d}Z'
-        (root / 'issue.json').write_text(json.dumps(issue))
-        if 'plumb.auto-noop/v1' in payload['body'] and (root / 'move').exists():
-            target = (root / 'move').read_text().strip()
-            subprocess.run(['git','--git-dir',str(root/'origin.git'),'update-ref','refs/heads/main',target], check=True)
-            (root / 'move').unlink()
-        result = payload
-    else:
-        result = [comments]
-elif '/sub_issues' in endpoint or '/dependencies/' in endpoint:
-    result = [[]]
-else:
-    result = json.loads((root / 'issue.json').read_text())
-    if payload:
-        result.update(payload)
-        (root / 'issue.json').write_text(json.dumps(result))
-        if (root / 'closefault').exists():
-            (root / 'closefault').unlink()
-            print('fixture interrupted after closure write', file=sys.stderr)
-            sys.exit(17)
-print(json.dumps(result))
-"#,
-        );
+        super::super::github::executable(&self.command, "recovery");
         source
     }
 }

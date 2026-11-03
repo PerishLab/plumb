@@ -1,5 +1,7 @@
 use super::{Provider, issue};
 use serde_json::{Value, json};
+#[path = "../../../tests/support/github.rs"]
+mod github;
 #[path = "../../../tests/support/script.rs"]
 mod writer;
 
@@ -17,30 +19,7 @@ impl Fixture {
         std::fs::write(root.path().join("routes.json"), routes.to_string()).unwrap();
         std::fs::write(root.path().join("comments.json"), "[]").unwrap();
         let command = root.path().join("gh");
-        writer::executable(
-            &command,
-            r#"#!/usr/bin/env python3
-import json, pathlib, sys
-root = pathlib.Path(__file__).parent
-args = sys.argv[1:]
-assert args[0] == 'api', args
-endpoint = args[1]
-payload = json.loads(pathlib.Path(args[args.index('--input') + 1]).read_text()) if '--input' in args else None
-with (root / 'calls').open('a') as trace:
-    trace.write(json.dumps({'endpoint': endpoint, 'payload': payload, 'args': args}) + '\n')
-if '/comments' in endpoint:
-    comments = json.loads((root / 'comments.json').read_text())
-    if payload:
-        comments.append(dict(payload, user={'id': 1}))
-        (root / 'comments.json').write_text(json.dumps(comments))
-        result = payload
-    else:
-        result = [comments]
-else:
-    result = json.loads((root / 'routes.json').read_text())[endpoint]
-print(json.dumps(result))
-"#,
-        );
+        github::executable(&command, "basic");
         Self { root, command }
     }
 
