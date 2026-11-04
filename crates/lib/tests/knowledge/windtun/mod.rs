@@ -2,6 +2,7 @@ mod binary;
 mod coherent;
 mod current;
 mod material;
+mod plan;
 mod receipt;
 mod refused;
 mod world;
