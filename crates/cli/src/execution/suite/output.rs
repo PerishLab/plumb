@@ -1,3 +1,5 @@
+use super::model::Program;
+use super::queue::Completed;
 use std::fs::File;
 use std::io::{Seek, SeekFrom};
 use std::process::{Command, ExitStatus};
@@ -87,3 +89,32 @@ fn isolate(command: &mut Command) {
 
 #[cfg(not(unix))]
 fn isolate(_: &mut Command) {}
+
+pub(super) fn describe(program: &Program) -> serde_json::Value {
+    serde_json::json!({"package":program.name,"target":program.target.name,"executable":program.executable,
+        "directory":program.directory,"features":program.features,"custom":program.custom})
+}
+
+pub(super) fn report(result: &Completed, program: &Program, output: &Output) -> Result<(), String> {
+    eprintln!(
+        "guard/test: {}:{}: queued {:.3}s, ran {:.3}s, {}",
+        program.name,
+        program.target.name,
+        result.queued.as_secs_f64(),
+        result.elapsed.as_secs_f64(),
+        if result.result.is_ok() {
+            "completed"
+        } else {
+            "failed"
+        }
+    );
+    output.render(true)?;
+    if let Err(error) = &result.result {
+        eprintln!("guard/test: {error}");
+    }
+    crate::diagnostic::event("test.completed", || {
+        serde_json::json!({"program":describe(program),
+        "threads":result.threads,"queued_ms":result.queued.as_millis(),"elapsed_ms":result.elapsed.as_millis(),"result":result.result})
+    });
+    Ok(())
+}

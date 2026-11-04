@@ -44,6 +44,7 @@ fn child(root: &Path) {
     radicula_lock::lock(&lease, Mode::Exclusive).unwrap();
     let carrier = Fixture::carrier();
     let runner = super::Runner {
+        home: &root.join("home"),
         carrier: &carrier,
         command: &|| Fixture::command(root),
         cores: 2,
@@ -62,6 +63,7 @@ fn child(root: &Path) {
 fn scenario(signal: Option<&str>) {
     let fixture = Fixture::new();
     fixture.controlled();
+    fixture.seed(2);
     let child = Command::new(std::env::current_exe().unwrap())
         .args([
             "--exact",

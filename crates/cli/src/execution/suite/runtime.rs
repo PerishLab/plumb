@@ -39,9 +39,11 @@ impl Fixture {
     }
 
     pub fn run(&self) -> Result<(), String> {
+        self.seed(2);
         let _held = super::super::signal::Hold::new()?;
         let carrier = Self::carrier();
         super::Runner {
+            home: &self.root().join("home"),
             carrier: &carrier,
             command: &|| Self::command(self.root()),
             cores: 2,
@@ -49,13 +51,55 @@ impl Fixture {
         .execute(self.root())
     }
 
+    pub fn seed(&self, cores: usize) {
+        let stream = Self::command(self.root())
+            .unwrap()
+            .args([
+                "test",
+                "--locked",
+                "--no-run",
+                "--message-format=json-render-diagnostics",
+            ])
+            .output()
+            .unwrap();
+        assert!(stream.status.success());
+        let metadata = Self::command(self.root())
+            .unwrap()
+            .args(["metadata", "--locked", "--no-deps", "--format-version=1"])
+            .output()
+            .unwrap();
+        assert!(metadata.status.success());
+        let plan = super::Plan::read(
+            self.root(),
+            std::str::from_utf8(&metadata.stdout).unwrap(),
+            std::str::from_utf8(&stream.stdout).unwrap(),
+        )
+        .unwrap();
+        let history = super::History::new(
+            self.root(),
+            &self.root().join("home"),
+            cores,
+            &plan.programs,
+        )
+        .unwrap();
+        let completed = (0..plan.programs.len())
+            .map(|index| {
+                Some(super::Completed {
+                    index,
+                    threads: cores,
+                    queued: std::time::Duration::ZERO,
+                    elapsed: std::time::Duration::from_millis(1),
+                    result: Ok(()),
+                })
+            })
+            .collect::<Vec<_>>();
+        history.record(&completed).unwrap();
+    }
+
     pub fn carrier() -> Vec<String> {
+        let image = std::env::current_exe().unwrap();
         vec![
-            std::env::current_exe()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string(),
+            image.to_str().unwrap().to_string(),
             "--exact".into(),
             "execution::capture::tests::record".into(),
             "--nocapture".into(),
@@ -187,12 +231,15 @@ fn program() {
     }
     std::fs::write("ran", "done").unwrap();
 }
+
 "#);
     }
     fixture.lock();
+    fixture.seed(12);
     let carrier = Fixture::carrier();
     let _held = super::super::signal::Hold::new().unwrap();
     super::Runner {
+        home: &fixture.root().join("home"),
         command: &|| Fixture::command(fixture.root()),
         cores: 12,
         carrier: &carrier,
