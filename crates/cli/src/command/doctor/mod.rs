@@ -72,6 +72,7 @@ struct Summary {
     unknown: usize,
     blind: usize,
     noted: usize,
+    lagging: usize,
 }
 
 #[locus::trace(with = crate::observation::view())]
@@ -103,7 +104,7 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
     }
     findings.extend(judge::vocabulary::judge(&vocabulary));
     findings.extend(judge::depot::runtime());
-    let summary = Summary::new(&findings);
+    let summary = Summary::new(&findings, &held.dependencies);
     let ok = summary.wrong == 0 && summary.blind == 0;
     if let Some(finding) = findings
         .iter()
@@ -239,8 +240,9 @@ impl Shape {
 }
 
 impl Summary {
-    fn new(findings: &[finding::Finding]) -> Self {
+    fn new(findings: &[finding::Finding], dependencies: &shape::Dependencies) -> Self {
         Self {
+            lagging: dependency::lagging(dependencies),
             wrong: findings
                 .iter()
                 .filter(|finding| finding.grade == "out of true")

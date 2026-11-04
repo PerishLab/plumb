@@ -19,7 +19,7 @@ pub fn render(seen: Held<'_>) {
         findings,
         briefs,
     } = seen;
-    let summary = Summary::new(findings);
+    let summary = Summary::new(findings, &held.dependencies);
     println!("plumb doctor {}", root.display());
     println!();
     println!("  wrappers  {}", show(&held.wrappers));
@@ -78,19 +78,25 @@ pub fn render(seen: Held<'_>) {
         println!("  brief     {brief}");
     }
     println!();
-    if findings.is_empty() {
+    if findings.is_empty() && summary.lagging == 0 {
         println!("  true to the skeleton");
         return;
     }
-    for finding in findings {
-        println!(
-            "  {}: {} [{}]",
-            finding.grade, finding.evidence, finding.scope
-        );
+    if !findings.is_empty() {
+        for finding in findings {
+            println!(
+                "  {}: {} [{}]",
+                finding.grade, finding.evidence, finding.scope
+            );
+        }
+        println!();
     }
-    println!();
-    println!(
+    let mut line = format!(
         "  {} out of true, {} unknown to the skeleton, {} blind, {} noted",
         summary.wrong, summary.unknown, summary.blind, summary.noted
     );
+    if summary.lagging > 0 {
+        line.push_str(&format!(", {} lagging first-party", summary.lagging));
+    }
+    println!("{line}");
 }

@@ -188,3 +188,60 @@ fn datum() {
     assert!(said.contains("latest 0.3.14"), "{said}");
     assert!(!said.contains("latest 0.3.15"), "{said}");
 }
+
+#[test]
+fn summary() {
+    let root = fixture();
+    let report = |observation: &serde_json::Value| {
+        let output = run(root.path(), |command| {
+            command
+                .arg("--json")
+                .env("PLUMB_PACKAGES_OBSERVATION", observation.to_string());
+        });
+        let said: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        (output, said)
+    };
+
+    let current = observed(root.path(), "ci-latest", "0.3.14");
+    let output = run(root.path(), observing(&current));
+    let said = String::from_utf8_lossy(&output.stdout);
+    assert!(output.status.success(), "{said}");
+    assert!(!said.contains("lagging first-party"), "{said}");
+    let (output, held) = report(&current);
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(held["summary"]["lagging"], 0);
+
+    let lagging = observed(root.path(), "local-locked", "0.3.15");
+    let output = run(root.path(), observing(&lagging));
+    let said = String::from_utf8_lossy(&output.stdout);
+    assert!(output.status.success(), "lag remains advisory: {said}");
+    assert!(said.contains("1 lagging first-party"), "{said}");
+    let (output, held) = report(&lagging);
+    assert!(
+        output.status.success(),
+        "lag remains advisory in json: {output:?}"
+    );
+    assert_eq!(held["summary"]["lagging"], 1);
+
+    let ahead = observed(root.path(), "local-locked", "0.3.13");
+    let output = run(root.path(), observing(&ahead));
+    let said = String::from_utf8_lossy(&output.stdout);
+    assert!(output.status.success(), "{said}");
+    assert!(!said.contains("lagging first-party"), "{said}");
+    let (_, held) = report(&ahead);
+    assert_eq!(held["summary"]["lagging"], 0);
+
+    let mut unavailable = observed(root.path(), "local-locked", "0.3.15");
+    unavailable["schema"] = 99.into();
+    let output = run(root.path(), observing(&unavailable));
+    let said = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !output.status.success(),
+        "a blind observation still fails the exit: {said}"
+    );
+    assert!(!said.contains("lagging first-party"), "{said}");
+    let (output, held) = report(&unavailable);
+    assert!(!output.status.success(), "{output:?}");
+    assert_eq!(held["summary"]["lagging"], 0);
+    assert_eq!(held["summary"]["blind"], 1);
+}
