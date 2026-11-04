@@ -138,8 +138,12 @@ fn program() {{
         let path = std::fs::read_dir(root.join("home/state/guard/test")).unwrap().next().unwrap().unwrap().path();
         std::fs::write(path, "foreign").unwrap();
     }}
-    let mut log = std::fs::OpenOptions::new().create(true).append(true).open(root.join("actual")).unwrap();
+    let mut log = std::fs::OpenOptions::new().create(true).append(true).open(root.join("actual-{name}")).unwrap();
     writeln!(log, "{name}:{{threads}}").unwrap();
+    if threads == "2" {{
+        let mut cold = std::fs::OpenOptions::new().create(true).append(true).open(root.join("cold")).unwrap();
+        cold.write_all(b"{name}\n").unwrap();
+    }}
 }}
 "#));
     }
@@ -152,13 +156,18 @@ fn program() {{
         cores: 2,
         carrier: &carrier,
     };
+    let read = |name: &str| {
+        std::fs::read_to_string(fixture.root().join(format!("actual-{name}"))).unwrap()
+    };
     runner.execute(fixture.root()).unwrap();
+    assert_eq!(read("a"), "a:2\n");
+    assert_eq!(read("b"), "b:2\n");
     assert_eq!(
-        std::fs::read_to_string(fixture.root().join("actual")).unwrap(),
-        "a:2\nb:2\n"
+        std::fs::read_to_string(fixture.root().join("cold")).unwrap(),
+        "a\nb\n"
     );
     runner.execute(fixture.root()).unwrap();
-    let log = std::fs::read_to_string(fixture.root().join("actual")).unwrap();
+    let log = format!("{}{}", read("a"), read("b"));
     let mut lines = log.lines().collect::<Vec<_>>();
     lines.sort();
     assert_eq!(lines, ["a:1", "a:2", "b:1", "b:2"]);
@@ -172,14 +181,20 @@ fn program() {{
     std::fs::write(&path, "foreign").unwrap();
     runner.execute(fixture.root()).unwrap();
     assert_eq!(std::fs::read_to_string(&path).unwrap(), "foreign");
-    let log = std::fs::read_to_string(fixture.root().join("actual")).unwrap();
-    assert!(log.ends_with("a:2\nb:2\n"));
+    assert_eq!(read("a"), "a:2\na:1\na:2\n");
+    assert_eq!(read("b"), "b:2\nb:1\nb:2\n");
     std::fs::write(&path, known).unwrap();
     fixture.write("change-record", "change during actual execution");
     runner.execute(fixture.root()).unwrap();
     assert_eq!(std::fs::read_to_string(&path).unwrap(), "foreign");
-    let log = std::fs::read_to_string(fixture.root().join("actual")).unwrap();
+    let log = format!("{}{}", read("a"), read("b"));
     assert_eq!(log.lines().count(), 8);
+    assert_eq!(read("a"), "a:2\na:1\na:2\na:1\n");
+    assert_eq!(read("b"), "b:2\nb:1\nb:2\nb:1\n");
+    assert_eq!(
+        std::fs::read_to_string(fixture.root().join("cold")).unwrap(),
+        "a\nb\na\nb\n"
+    );
 }
 
 #[test]
