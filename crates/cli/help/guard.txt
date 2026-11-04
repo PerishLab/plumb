@@ -44,6 +44,23 @@ programs are reaped before the Cargo lease is released. Full Cargo doctests
 run only after every admitted test program succeeds. Scheduling does not
 change the action's input or world shape and adds no test timeout.
 
+The first run without matching local timings executes one program at a time
+with the full thread budget and records successful timings. Later runs start
+longer programs first. A program dominating the observed work receives a
+larger thread grant while other programs share the remaining budget. Active
+grants together never exceed the host budget. The allocation is fixed when a
+program starts; it cannot grow while that program is running.
+
+Timing history lives in PLUMB_HOME state, separately from proof and transported
+compilation. It matches the workspace, core count, logical target set and
+features; executable rebuilds retain the hints. Source edits can make timings
+stale, so this policy does not promise a speedup on every run. Every admitted
+program still executes once. Unreadable, unknown or foreign records are
+preserved and their advice is refused; tests use the cold allocation without
+replacing those records. Recording failure is reported and leaves the actual
+test result intact. Cold serial learning is reported separately from actual program
+parallelism; neither a timing hint nor a successful capture is execution proof.
+
 An existing runner, custom harness, changed compilation context, unsupported
 target or launch context uses the complete original Cargo command and reports
 the fallback. Interactive input and platforms outside Linux use that command

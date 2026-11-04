@@ -203,3 +203,88 @@ fn selector(target: &Target) -> Result<Vec<String>, String> {
     }
     Ok(vec![format!("--{role}"), target.name.clone()])
 }
+
+#[derive(Debug)]
+pub(super) struct Schedule {
+    pub cores: usize,
+    pub slots: usize,
+    pub order: Vec<usize>,
+    pub grants: Vec<usize>,
+}
+
+impl Schedule {
+    pub fn cold(cores: usize, count: usize) -> Self {
+        Self {
+            cores: cores.max(1),
+            slots: count.min(1),
+            order: (0..count).collect(),
+            grants: vec![cores.max(1); count],
+        }
+    }
+
+    pub fn weighted(cores: usize, work: &[u64]) -> Self {
+        let cores = cores.max(1);
+        let count = work.len();
+        let slots = count.min(cores).min(cores.isqrt().max(2));
+        let mut schedule = Self {
+            cores,
+            slots,
+            order: (0..count).collect(),
+            grants: vec![cores / slots.max(1); count],
+        };
+        schedule
+            .order
+            .sort_by_key(|index| (std::cmp::Reverse(work[*index]), *index));
+        let total = work
+            .iter()
+            .map(|value| u128::from(*value).max(1))
+            .sum::<u128>();
+        if let Some(&index) = schedule.order.first() {
+            let largest = u128::from(work[index]).max(1);
+            if count > 1 && cores > 1 && largest > total / 2 {
+                let grant = (largest * cores as u128).div_ceil(total) as usize;
+                let grant = grant.clamp(1, cores - 1);
+                schedule.grants.fill(cores - grant);
+                schedule.grants[index] = grant;
+            }
+        }
+        schedule
+    }
+
+    pub fn validate(&self) -> Result<(), String> {
+        let expected = (0..self.grants.len()).collect::<BTreeSet<_>>();
+        let actual = self.order.iter().copied().collect::<BTreeSet<_>>();
+        if self.order.len() != self.grants.len() || expected != actual {
+            return Err("test schedule has an invalid program selection".into());
+        }
+        if self.cores == 0 || (!self.order.is_empty() && self.slots == 0) {
+            return Err("test schedule has an empty execution budget".into());
+        }
+        if self
+            .grants
+            .iter()
+            .any(|grant| *grant == 0 || *grant > self.cores)
+        {
+            return Err("test schedule has an invalid thread allocation".into());
+        }
+        Ok(())
+    }
+}
+
+impl Program {
+    pub fn key(&self, root: &Path) -> Result<String, String> {
+        let source = contained(&self.target.source, root)?;
+        let source = source
+            .strip_prefix(root)
+            .map_err(|_| "test timing target leaves the workspace")?;
+        let directory = contained(&self.directory, root)?;
+        let directory = directory
+            .strip_prefix(root)
+            .map_err(|_| "test timing package leaves the workspace")?;
+        let value = serde_json::json!({"directory":directory,"source":source,"name":self.target.name,
+            "kind":self.target.kind,"features":self.features});
+        Ok(plumb::depot::sha(
+            &serde_json::to_vec(&value).map_err(|error| error.to_string())?,
+        ))
+    }
+}

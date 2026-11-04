@@ -1,39 +1,25 @@
+use super::model::Schedule;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(super) struct Budget {
-    pub slots: usize,
-    pub threads: usize,
-}
-
-impl Budget {
-    pub fn new(cores: usize, count: usize) -> Self {
-        let cores = cores.max(1);
-        let slots = count.min(cores).min(cores.isqrt().max(2));
-        Self {
-            slots,
-            threads: cores / slots.max(1),
-        }
-    }
-}
 
 #[derive(Clone, Debug)]
 pub(super) struct Completed {
     pub index: usize,
     pub queued: Duration,
     pub elapsed: Duration,
+    pub threads: usize,
     pub result: Result<(), String>,
 }
 
 pub(super) struct Queue {
-    pub count: usize,
-    pub budget: Budget,
+    pub schedule: Schedule,
 }
 
 impl Queue {
-    fn capacity(&self, next: usize, active: usize) -> bool {
-        next < self.count && active < self.budget.slots
+    fn capacity(&self, next: usize, active: usize, available: usize) -> bool {
+        self.schedule.order.get(next).is_some_and(|index| {
+            active < self.schedule.slots && self.schedule.grants[*index] <= available
+        })
     }
 
     pub fn run(
@@ -41,33 +27,32 @@ impl Queue {
         execute: &(impl Fn(usize, usize) -> Result<(), String> + Sync),
         observe: &impl Fn(&Completed),
     ) -> Result<Vec<Option<Completed>>, String> {
-        if self.count != 0 && (self.budget.slots == 0 || self.budget.threads == 0) {
-            return Err("test queue requires a nonzero program and thread budget".into());
-        }
+        self.schedule.validate()?;
         let origin = Instant::now();
-        let (sender, receiver) = mpsc::channel();
-        let mut completed = vec![None; self.count];
+        let (sender, receiver) = mpsc::channel::<Completed>();
+        let mut completed = vec![None; self.schedule.order.len()];
         let mut next = 0;
         let mut active = 0;
+        let mut available = self.schedule.cores;
         let mut failed = false;
         std::thread::scope(|scope| {
             loop {
                 while let Ok(result) = receiver.try_recv() {
+                    available += result.threads;
                     settle(result, &mut completed, observe, &mut failed);
                     active -= 1;
                 }
-                while !failed
-                    && self.capacity(next, active)
+                if !failed
+                    && self.capacity(next, active, available)
                     && super::super::signal::received().is_none()
                 {
-                    start(
-                        scope,
-                        execute,
-                        (next, self.budget.threads, origin),
-                        sender.clone(),
-                    );
+                    let index = self.schedule.order[next];
+                    let threads = self.schedule.grants[index];
+                    available -= threads;
+                    start(scope, execute, (index, threads, origin), sender.clone());
                     next += 1;
                     active += 1;
+                    continue;
                 }
                 if active == 0 {
                     break;
@@ -75,6 +60,7 @@ impl Queue {
                 let result = receiver
                     .recv()
                     .map_err(|_| "test workers ended without a completion record".to_string())?;
+                available += result.threads;
                 settle(result, &mut completed, observe, &mut failed);
                 active -= 1;
             }
@@ -107,6 +93,7 @@ fn invoke(
         .unwrap_or_else(|_| Err("test worker panicked; execution cleanup must be verified".into()));
     Completed {
         index,
+        threads,
         queued: start.duration_since(origin),
         elapsed: start.elapsed(),
         result,
@@ -135,11 +122,10 @@ mod tests {
     fn budget() {
         for cores in 0..65 {
             for count in 0..65 {
-                let budget = Budget::new(cores, count);
-                assert!(budget.slots <= count);
-                assert!(budget.slots * budget.threads <= cores.max(1));
-                assert!(budget.threads > 0);
-                assert_eq!(budget.slots == 0, count == 0);
+                let schedule = Schedule::weighted(cores, &vec![1; count]);
+                schedule.validate().unwrap();
+                assert!(schedule.slots <= count);
+                assert_eq!(schedule.slots == 0, count == 0);
             }
         }
     }
@@ -151,11 +137,7 @@ mod tests {
         let peak = AtomicUsize::new(0);
         let seen = Mutex::new(Vec::new());
         let queue = Queue {
-            count: 4,
-            budget: Budget {
-                slots: 2,
-                threads: 3,
-            },
+            schedule: Schedule::weighted(6, &[1; 4]),
         };
         let completed = queue
             .run(
@@ -190,8 +172,7 @@ mod tests {
         let observed = AtomicBool::new(false);
         let drained = AtomicBool::new(false);
         let queue = Queue {
-            count: 3,
-            budget: Budget::new(2, 3),
+            schedule: Schedule::weighted(2, &[1; 3]),
         };
         let completed = queue
             .run(
@@ -223,10 +204,48 @@ mod tests {
     }
 
     #[test]
+    fn unequal() {
+        let schedule = Schedule::weighted(12, &[1, 900, 99]);
+        assert_eq!(schedule.order, [1, 2, 0]);
+        assert_eq!(schedule.grants, [1, 11, 1]);
+        let queue = Queue { schedule };
+        let barrier = Barrier::new(2);
+        let active = AtomicUsize::new(0);
+        let peak = AtomicUsize::new(0);
+        let completed = queue
+            .run(
+                &|index, threads| {
+                    let current = active.fetch_add(threads, Ordering::SeqCst) + threads;
+                    assert!(current <= 12);
+                    peak.fetch_max(current, Ordering::SeqCst);
+                    if index != 0 {
+                        barrier.wait();
+                    }
+                    active.fetch_sub(threads, Ordering::SeqCst);
+                    Ok(())
+                },
+                &|_| {},
+            )
+            .unwrap();
+        assert_eq!(peak.load(Ordering::SeqCst), 12);
+        assert_eq!(active.load(Ordering::SeqCst), 0);
+        assert!(
+            completed
+                .iter()
+                .all(|result| result.as_ref().unwrap().result.is_ok())
+        );
+        let cold = Schedule::cold(12, 3);
+        assert_eq!(cold.slots, 1);
+        assert_eq!(cold.grants, [12; 3]);
+        let mut duplicate = Schedule::weighted(12, &[1; 3]);
+        duplicate.order = vec![1; 3];
+        assert!(duplicate.validate().is_err());
+    }
+
+    #[test]
     fn panic() {
         let queue = Queue {
-            count: 2,
-            budget: Budget::new(1, 2),
+            schedule: Schedule::weighted(1, &[1; 2]),
         };
         let completed = queue
             .run(&|_, _| panic!("deliberate worker panic"), &|_| {})

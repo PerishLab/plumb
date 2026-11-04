@@ -1,5 +1,5 @@
+mod history;
 mod manifest;
-mod messages;
 mod model;
 mod output;
 mod queue;
@@ -13,9 +13,10 @@ mod runtime;
 mod tests;
 
 use super::capture::{Context, Image, Session};
-use model::{Group, Plan, Program};
-use output::Output;
-use queue::{Budget, Completed, Queue};
+use history::History;
+use model::{Group, Plan, Program, Schedule};
+use output::{Output, describe, report};
+use queue::{Completed, Queue};
 use std::path::Path;
 use std::process::Command;
 
@@ -24,7 +25,9 @@ pub(crate) fn run(
     command: &(impl Fn() -> Result<Command, String> + Sync),
 ) -> Result<(), String> {
     let _held = super::signal::Hold::new()?;
+    let home = crate::command::cache::home()?;
     let runner = Runner {
+        home: &home,
         command,
         carrier: &[],
         cores: std::thread::available_parallelism().map_or(1, usize::from),
@@ -47,6 +50,7 @@ pub(crate) fn run(
 }
 
 struct Runner<'a, F> {
+    home: &'a Path,
     command: &'a F,
     cores: usize,
     carrier: &'a [String],
@@ -94,11 +98,18 @@ impl<F: Fn() -> Result<Command, String> + Sync> Runner<'_, F> {
                 return self.fallback(&format!("launch-context capture refused: {reason}"));
             }
         };
-        self.parallel(&plan.programs, &contexts)?;
+        let (history, schedule) = History::prepare(root, self.home, self.cores, &plan.programs);
+        let results = self.parallel(&plan.programs, &contexts, schedule)?;
         if plan.docs {
             self.invoke(&["test", "--locked", "--doc"], true)?;
         }
-        super::signal::check()
+        super::signal::check()?;
+        if let Some(history) = history
+            && let Err(error) = history.record(&results)
+        {
+            history::refused("result retained without new timings", &error);
+        }
+        Ok(())
     }
 
     fn invoke(&self, arguments: &[&str], visible: bool) -> Result<String, String> {
@@ -130,7 +141,7 @@ impl<F: Fn() -> Result<Command, String> + Sync> Runner<'_, F> {
     }
 
     fn qualify(&self, groups: &[Group<'_>], stream: &str) -> Result<Option<String>, String> {
-        let original = messages::read(stream)?;
+        let original = selection::read(stream)?;
         for group in groups {
             let mut arguments = vec![
                 "test",
@@ -141,7 +152,7 @@ impl<F: Fn() -> Result<Command, String> + Sync> Runner<'_, F> {
                 "--message-format=json-render-diagnostics",
             ];
             arguments.extend(group.arguments.iter().map(String::as_str));
-            let built = messages::read(&self.invoke(&arguments, false)?)?;
+            let built = selection::read(&self.invoke(&arguments, false)?)?;
             if built.iter().any(|artifact| {
                 !artifact.fresh || !original.iter().any(|original| artifact.same(original))
             }) {
@@ -196,18 +207,20 @@ impl<F: Fn() -> Result<Command, String> + Sync> Runner<'_, F> {
         Ok(contexts)
     }
 
-    fn parallel(&self, programs: &[Program], contexts: &[Context]) -> Result<(), String> {
-        let queue = Queue {
-            count: programs.len(),
-            budget: Budget::new(self.cores, programs.len()),
-        };
+    fn parallel(
+        &self,
+        programs: &[Program],
+        contexts: &[Context],
+        schedule: Schedule,
+    ) -> Result<Vec<Option<Completed>>, String> {
+        let queue = Queue { schedule };
         let outputs = programs
             .iter()
             .map(|_| Output::new())
             .collect::<Result<Vec<_>, _>>()?;
         crate::diagnostic::event("test.plan", || {
             serde_json::json!({
-                "slots":queue.budget.slots,"threads":queue.budget.threads,
+                "slots":queue.schedule.slots,"cores":queue.schedule.cores,"grants":queue.schedule.grants,"order":queue.schedule.order,
                 "programs":programs.iter().map(describe).collect::<Vec<_>>()
             })
         });
@@ -240,41 +253,16 @@ impl<F: Fn() -> Result<Command, String> + Sync> Runner<'_, F> {
         if !rendering.borrow().is_empty() {
             return Err(rendering.borrow().join("; "));
         }
-        if results
+        let failed = results
             .iter()
-            .any(|result| result.as_ref().is_none_or(|result| result.result.is_err()))
-        {
-            return Err("test programs failed; remaining programs were not started".into());
+            .flatten()
+            .any(|result| result.result.is_err());
+        let skipped = results.iter().any(Option::is_none);
+        match (failed, skipped) {
+            (true, true) => Err("test programs failed; remaining programs were not started".into()),
+            (true, false) => Err("test programs failed".into()),
+            (false, true) => Err("remaining test programs were not started".into()),
+            (false, false) => Ok(results),
         }
-        Ok(())
     }
-}
-
-fn describe(program: &Program) -> serde_json::Value {
-    serde_json::json!({"package":program.name,"target":program.target.name,"executable":program.executable,
-        "directory":program.directory,"features":program.features,"custom":program.custom})
-}
-
-fn report(result: &Completed, program: &Program, output: &Output) -> Result<(), String> {
-    eprintln!(
-        "guard/test: {}:{}: queued {:.3}s, ran {:.3}s, {}",
-        program.name,
-        program.target.name,
-        result.queued.as_secs_f64(),
-        result.elapsed.as_secs_f64(),
-        if result.result.is_ok() {
-            "completed"
-        } else {
-            "failed"
-        }
-    );
-    output.render(true)?;
-    if let Err(error) = &result.result {
-        eprintln!("guard/test: {error}");
-    }
-    crate::diagnostic::event("test.completed", || {
-        serde_json::json!({"program":describe(program),
-        "queued_ms":result.queued.as_millis(),"elapsed_ms":result.elapsed.as_millis(),"result":result.result})
-    });
-    Ok(())
 }
