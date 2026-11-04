@@ -164,6 +164,12 @@ worlds are rechecked after the immutable references and bytes are verified.
 
 The current scope is Linux x86_64, the recorded single-product combination and
 GHCR runtime images. Other registries and combinations remain unknown or refused.
+Distribution reads accept exactly the legacy record or that record with a
+`wharf.plan.reference/v1` reference. The reference binds the same source and
+original completed publisher; its planner attempt may precede completion. A
+later observing run does not retarget it. Its digest is validated as metadata,
+without a private plan read or a claim of content association.
+
 Reports keep qualification, unassessed content association and promotion separate;
 promotion is always false. This read-only surface does not activate promotion
 checks in stamp or Wharf. Help owns its selectors and exit codes. A source merge

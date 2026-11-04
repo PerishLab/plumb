@@ -1,3 +1,5 @@
+mod plan;
+
 use super::{
     Read, Result,
     archive::Archive,
@@ -91,22 +93,7 @@ impl<'a, R: Read> World<'a, R> {
             Wire::text(&s.source["marker"])?
         );
         let record = Wire::document(self.reader, &format!("{root}/distribution.json"), false)?;
-        Wire::fields(
-            &record,
-            &[
-                "schema",
-                "repository",
-                "marker",
-                "commit",
-                "tree",
-                "media",
-                "state",
-                "attempt",
-                "completed",
-                "resolution",
-                "trial",
-            ],
-        )?;
+        plan::admit(&record)?;
         Wire::matches(
             &record,
             &json!({"schema":1, "state":"complete", "trial":s.declaration, "completed":passed["publisher"]}),
