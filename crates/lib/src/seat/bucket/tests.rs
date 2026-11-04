@@ -1,9 +1,9 @@
 use super::fetch;
 use std::{
-    io::{Read, Write},
+    io::{self, Read, Write},
     net::{TcpListener, TcpStream},
     thread::{self, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 fn request(stream: &mut TcpStream) {
@@ -22,7 +22,7 @@ fn request(stream: &mut TcpStream) {
     }
 }
 
-fn server(status: &'static str, delay: Duration) -> (String, JoinHandle<()>) {
+fn server(status: &'static str, delay: Duration) -> (String, JoinHandle<io::Result<()>>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!("http://{}/record", listener.local_addr().unwrap());
     let worker = thread::spawn(move || {
@@ -35,26 +35,69 @@ fn server(status: &'static str, delay: Duration) -> (String, JoinHandle<()>) {
             "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
             body.len()
         )
-        .unwrap();
     });
     (url, worker)
 }
 
 #[test]
+fn complete() {
+    let (url, worker) = server("200 OK", Duration::ZERO);
+    let result = fetch(&url);
+    let server = worker.join();
+    assert_eq!(result, Ok(Some(b"public-record".to_vec())), "{server:?}");
+    server.unwrap().unwrap();
+}
+
+#[test]
 fn latency() {
     let (url, worker) = server("200 OK", Duration::from_millis(2500));
+    let started = Instant::now();
     let result = fetch(&url);
-    worker.join().unwrap();
-    assert_eq!(result.unwrap(), Some(b"public-record".to_vec()));
+    let elapsed = started.elapsed();
+    let server = worker.join();
+    if let Ok(body) = result {
+        assert_eq!(body, Some(b"public-record".to_vec()));
+        server.unwrap().unwrap();
+    } else {
+        timeout(result, server, elapsed);
+    }
+}
+
+fn timeout(
+    result: Result<Option<Vec<u8>>, String>,
+    server: thread::Result<io::Result<()>>,
+    elapsed: Duration,
+) {
+    assert_eq!(
+        result,
+        Err("cannot fetch public bucket object: timeout: global".into()),
+        "fixture server: {server:?}"
+    );
+    assert!(elapsed >= Duration::from_secs(10));
+    if let Err(error) = server.expect("client timed out; fixture server must not panic") {
+        assert!(matches!(
+            error.kind(),
+            io::ErrorKind::BrokenPipe | io::ErrorKind::ConnectionReset
+        ));
+    }
+}
+
+#[test]
+fn deadline() {
+    let (url, worker) = server("200 OK", Duration::from_secs(11));
+    let started = Instant::now();
+    let result = fetch(&url);
+    let elapsed = started.elapsed();
+    timeout(result, worker.join(), elapsed);
 }
 
 #[test]
 fn statuses() {
     let (url, worker) = server("404 Not Found", Duration::ZERO);
     assert_eq!(fetch(&url).unwrap(), None);
-    worker.join().unwrap();
+    worker.join().unwrap().unwrap();
     let (url, worker) = server("503 Service Unavailable", Duration::ZERO);
     let failure = fetch(&url).unwrap_err();
-    worker.join().unwrap();
+    worker.join().unwrap().unwrap();
     assert!(failure.contains("503"));
 }
