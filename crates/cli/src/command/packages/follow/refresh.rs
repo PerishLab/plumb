@@ -146,7 +146,7 @@ pub(super) mod scope {
         }
     }
 
-    fn migrated(root: &Path, base: &str, head: &str) -> Result<bool, String> {
+    pub(in super::super) fn migrated(root: &Path, base: &str, head: &str) -> Result<bool, String> {
         let before = work::git(root, &["show", &format!("{base}:plumb.toml")])?;
         let after = work::git(root, &["show", &format!("{head}:plumb.toml")])?;
         let expected = crate::shape::release::migration::rewrite(&format!("{before}\n"))?;
