@@ -180,3 +180,29 @@ fn identity() {
         "{broken}"
     );
 }
+
+#[test]
+fn openwrt() {
+    let fixture = tempfile::tempdir().expect("fixture");
+    let dir = fixture.path();
+    crate::govern(dir);
+    let seat = dir.join("packaging/apk");
+    std::fs::create_dir_all(&seat).expect("package seat");
+    std::fs::write(
+        seat.join("package.toml"),
+        "description='Gateway'\nlicense='MIT'\n",
+    )
+    .expect("metadata");
+    let manifest = "[identity]\nns='foo'\n[release]\nauthority='https://example.invalid'\nbinaries=['foo']\ntargets=['x86_64-unknown-linux-gnu','aarch64-unknown-linux-musl']\n[release.apk]\nbinary='foo'\nroot='packaging/apk'\nprofile='openwrt-aarch64-cortex-a53'\n";
+    std::fs::write(dir.join("plumb.toml"), manifest).expect("manifest");
+    let held = crate::run(&["doctor", dir.to_str().expect("path")]);
+    assert!(held.contains("publishes apk binary"), "{held}");
+    assert!(held.contains("places    apk foo"), "{held}");
+    assert!(!held.contains("the current Plumb refuses"), "{held}");
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink("package.toml", seat.join("link")).expect("link");
+        let held = crate::run(&["doctor", dir.to_str().expect("path")]);
+        assert!(held.contains("scripts and links refuse"), "{held}");
+    }
+}

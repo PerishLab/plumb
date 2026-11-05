@@ -155,6 +155,7 @@ fn targets() {
         super::target::TARGETS,
         [
             "x86_64-unknown-linux-gnu",
+            "aarch64-unknown-linux-musl",
             "aarch64-apple-darwin",
             "x86_64-pc-windows-msvc",
         ],
@@ -217,4 +218,63 @@ fn migration() {
     decode(Path::new("."), &rewritten).expect("migrated manifest decodes");
     assert!(rewrite(&both.replace("ns = \"foo\"", "ns = \"bar\"")).is_err());
     decode(Path::new("."), &migrated).expect("migrated manifest decodes");
+}
+
+#[test]
+fn apk() {
+    let scratch = tempfile::tempdir().expect("fixture");
+    let root = scratch.path();
+    let seat = root.join("packaging/apk");
+    std::fs::create_dir_all(&seat).expect("package seat");
+    let metadata = "description = 'Gateway'\nlicense = 'MIT'\ndepends = ['libc']\n";
+    std::fs::write(seat.join("package.toml"), metadata).expect("metadata");
+    let declaration = format!(
+        "{HEAD}targets=['aarch64-unknown-linux-musl']\n[release.apk]\nbinary='santi'\nroot='packaging/apk'\nprofile='openwrt-aarch64-cortex-a53'\n"
+    );
+    let held = decode(root, &declaration).expect("APK");
+    assert!(held.surface().contains(&"apk"));
+    assert_eq!(held.placements(), vec!["apk santi"]);
+    for (from, to, reason) in [
+        ("binary='santi'", "binary='missing'", "must declare target"),
+        (
+            "aarch64-unknown-linux-musl",
+            "x86_64-unknown-linux-gnu",
+            "must declare target",
+        ),
+        ("packaging/apk", "../apk", "repository-relative"),
+        ("packaging/apk", "", "repository-relative"),
+        (
+            "openwrt-aarch64-cortex-a53",
+            "alpine-aarch64",
+            "unknown variant",
+        ),
+        ("profile=", "architecture=", "unknown field"),
+    ] {
+        refused(root, &declaration.replace(from, to), reason);
+    }
+    for tail in [
+        "version='1.0.0'",
+        "architecture='aarch64'",
+        "depends=['libc','libc']",
+    ] {
+        let value = if tail.starts_with("depends") {
+            format!("description='Gateway'\nlicense='MIT'\n{tail}\n")
+        } else {
+            format!("{metadata}{tail}\n")
+        };
+        std::fs::write(seat.join("package.toml"), value).expect("invalid metadata");
+        assert!(decode(root, &declaration).is_err(), "{tail}");
+    }
+    std::fs::write(seat.join("package.toml"), metadata).expect("metadata restored");
+    for name in [
+        "post-install",
+        "root/usr/bin/santi",
+        "root/etc/rc.d/S99santi",
+    ] {
+        let path = seat.join(name);
+        std::fs::create_dir_all(path.parent().expect("parent")).expect("payload seat");
+        std::fs::write(&path, "unowned").expect("payload");
+        assert!(decode(root, &declaration).is_err(), "{name}");
+        std::fs::remove_file(path).expect("fixture removed");
+    }
 }

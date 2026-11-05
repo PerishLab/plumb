@@ -1,16 +1,16 @@
 mod attachment;
-mod deb;
 mod depot;
 mod executable;
 pub(crate) mod identity;
 pub(crate) mod migration;
+mod package;
 mod shape;
 mod target;
 
 pub use attachment::{Cargo, Cfworker, Chart, Npm, Oci};
-pub use deb::Deb;
 pub use depot::Depot;
 pub use executable::{Binary, Executable};
+pub use package::{Apk, Deb};
 pub use target::{Target, Windows};
 
 use serde::Deserialize;
@@ -32,6 +32,7 @@ pub struct Spec {
     pub npm: Option<Npm>,
     pub cfworker: Option<Cfworker>,
     pub deb: Option<Deb>,
+    pub apk: Option<Apk>,
     pub depot: Option<Depot>,
     pub windows: Option<Windows>,
 }
@@ -64,6 +65,7 @@ struct Raw {
     npm: Option<Npm>,
     cfworker: Option<Cfworker>,
     deb: Option<Deb>,
+    apk: Option<Apk>,
     depot: Option<Depot>,
     windows: Option<Windows>,
 }
@@ -113,6 +115,7 @@ impl Spec {
             npm,
             cfworker,
             deb,
+            apk,
             depot,
             windows,
             ..
@@ -138,6 +141,7 @@ impl Spec {
             npm,
             cfworker,
             deb,
+            apk,
             depot,
             windows,
         };
@@ -145,7 +149,7 @@ impl Spec {
         Ok(spec)
     }
 
-    fn attachments(&self) -> [Result<(), String>; 6] {
+    fn attachments(&self) -> [Result<(), String>; 7] {
         [
             self.cargo.as_ref().map_or(Ok(()), Cargo::validate),
             self.oci.as_ref().map_or(Ok(()), |held| held.validate(self)),
@@ -159,6 +163,7 @@ impl Spec {
                 .as_ref()
                 .map_or(Ok(()), |held| held.validate(&self.root)),
             self.deb.as_ref().map_or(Ok(()), |held| held.validate(self)),
+            self.apk.as_ref().map_or(Ok(()), |held| held.validate(self)),
         ]
     }
 

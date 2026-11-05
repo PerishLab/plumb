@@ -7,8 +7,9 @@ pub struct Target {
     pub triple: String,
 }
 
-pub(super) const TARGETS: [&str; 3] = [
+pub(super) const TARGETS: [&str; 4] = [
     "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-musl",
     "aarch64-apple-darwin",
     "x86_64-pc-windows-msvc",
 ];
