@@ -1,11 +1,10 @@
 use proc_macro::TokenStream;
 
 mod catalogue;
-use syn::{ItemFn, LitStr, parse_macro_input};
+use syn::{LitStr, parse_macro_input};
 
 mod prefix;
 mod resource;
-mod trace;
 
 #[proc_macro]
 pub fn catalogue(input: TokenStream) -> TokenStream {
@@ -81,16 +80,6 @@ pub fn bytes(input: TokenStream) -> TokenStream {
     let path = parse_macro_input!(input as LitStr);
     resource::expand(path, quote::quote!(include_bytes))
         .unwrap_or_else(|err| err.to_compile_error())
-        .into()
-}
-
-#[proc_macro_attribute]
-#[doc = "Wraps ordinary synchronous functions in trace::run and async bodies in trace::carry. Generated paths use the canonical plumb dependency name and require no direct Root import. Const, unsafe, extern, variadic and track_caller signatures are refused. Async context is captured when the function body starts; carry the outer future explicitly to propagate its caller's context."]
-pub fn span(args: TokenStream, input: TokenStream) -> TokenStream {
-    let name = parse_macro_input!(args as LitStr);
-    let item = parse_macro_input!(input as ItemFn);
-    trace::expand(name, item)
-        .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
 
