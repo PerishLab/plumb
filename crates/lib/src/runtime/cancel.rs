@@ -1,4 +1,4 @@
-use crate::context::Context;
+use radicula_context::Context;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};

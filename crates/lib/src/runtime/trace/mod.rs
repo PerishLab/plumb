@@ -1,14 +1,17 @@
-use crate::context::Context;
-use std::sync::atomic::{AtomicU64, Ordering};
+use radicula_context::Context;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
+mod frame;
+mod future;
+
+use frame::{Finish, Frame};
+pub use future::{Carry, carry};
 pub use plumb_macro::span;
 
 #[cfg(feature = "observation")]
 pub mod observation;
-
-static NEXT: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Clone, Debug)]
 pub struct Record {
@@ -28,6 +31,7 @@ impl Record {
     }
 }
 
+#[doc = "A synchronous delivery callback that must return promptly. Records do not acknowledge persistence. Trace contains ordinary callback panics, but cannot isolate blocking, abort or process exit."]
 pub trait Engine: Send + Sync {
     fn accept(&self, record: Record);
 }
@@ -38,8 +42,17 @@ pub struct Sink {
 }
 
 impl Sink {
+    #[doc = "Attempts delivery outside panic unwinding. Ordinary callback panics produce an independent stderr diagnostic; unwinding skips callbacks. No delivery acknowledgement is returned."]
     pub fn accept(&self, record: Record) {
-        self.engine.accept(record);
+        if std::thread::panicking() {
+            return;
+        }
+        if catch_unwind(AssertUnwindSafe(|| self.engine.accept(record))).is_err() {
+            let _ = std::io::Write::write_all(
+                &mut std::io::stderr(),
+                b"plumb trace: engine callback panicked\n",
+            );
+        }
     }
 }
 
@@ -56,65 +69,40 @@ pub struct Ledger {
 
 impl Ledger {
     pub fn query(&self, keep: impl Fn(&Record) -> bool) -> Vec<Record> {
-        self.records
+        let records = self
+            .records
             .lock()
-            .unwrap()
-            .iter()
-            .filter(|record| keep(record))
-            .cloned()
-            .collect()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone();
+        records.into_iter().filter(keep).collect()
     }
 }
 
 impl Engine for Ledger {
     fn accept(&self, record: Record) {
-        self.records.lock().unwrap().push(record);
+        self.records
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push(record);
     }
 }
 
-pub struct Span {
-    id: u64,
-    parent: Option<u64>,
-    name: String,
-    tags: Mutex<Vec<(String, String)>>,
-    opened: SystemTime,
-    sink: Option<Sink>,
+#[doc = "Runs a local span and returns the body's output unchanged. Return, business error and unwinding end the frame independently of retained Context views. Unwinding clears the frame without calling Engine."]
+pub fn run<R>(name: &str, work: impl FnOnce() -> R) -> R {
+    let context = Context::current();
+    let frame = Frame::open(name, &context);
+    let active = frame
+        .as_ref()
+        .map_or_else(|| context.clone(), |frame| context.with(frame.clone()));
+    active.run(|| {
+        let _finish = Finish::new(frame.as_ref(), true);
+        work()
+    })
 }
 
-impl Span {
-    pub fn open(name: &str) -> Span {
-        let current = Context::current();
-        Span {
-            id: NEXT.fetch_add(1, Ordering::Relaxed),
-            parent: current.get::<Span>().map(|span| span.id),
-            name: name.to_string(),
-            tags: Mutex::new(Vec::new()),
-            opened: SystemTime::now(),
-            sink: current.get::<Sink>().map(|held| (*held).clone()),
-        }
-    }
-
-    pub fn note(key: &str, value: &str) {
-        if let Some(span) = Context::current().get::<Span>() {
-            span.tags
-                .lock()
-                .unwrap()
-                .push((key.to_string(), value.to_string()));
-        }
-    }
-}
-
-impl Drop for Span {
-    fn drop(&mut self) {
-        if let Some(sink) = self.sink.take() {
-            sink.accept(Record {
-                id: self.id,
-                parent: self.parent,
-                name: std::mem::take(&mut self.name),
-                tags: std::mem::take(&mut *self.tags.lock().unwrap()),
-                opened: self.opened,
-                closed: SystemTime::now(),
-            });
-        }
+#[doc = "Adds a tag to the current open frame. Missing sinks and already-ended frames are no-ops."]
+pub fn note(key: &str, value: &str) {
+    if let Some(frame) = Context::current().get::<Frame>() {
+        frame.note(key, value);
     }
 }
