@@ -1,5 +1,8 @@
 use plumb::delivery::{Narrative, Plan, Reference, SCHEMA, Snapshot};
 
+mod fixture;
+mod settlement;
+
 #[test]
 fn surface() {
     let prepare = plumb::delivery::prepare;

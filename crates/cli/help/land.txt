@@ -21,6 +21,10 @@ tree no Guard proved, which land reports and cannot undo. The caller supplies
 the repository-local title and body explicitly; Issue lifecycle orchestration
 belongs to Concord.
 
+Multiple matching Guard runs are accepted only when every check and each linked
+organization workflow on the exact candidate has completed successfully. A
+pending, failed, foreign or unreadable matching run still prevents merging.
+
 Once main is read back, land deletes the two branches it pushed, the
 projection and the topic: on origin by lease on the head it pushed, and locally
 while the branch still holds that head, detaching this checkout from the topic

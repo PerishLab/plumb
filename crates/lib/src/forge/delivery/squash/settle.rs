@@ -59,12 +59,14 @@ impl Settle<'_> {
                 "organization Guard is pending; no run on the exact {noun} head"
             ));
         }
-        if matches.len() != 1 {
-            return Err(format!(
-                "exact {noun} head has multiple organization Guard runs; human judgment required"
-            ));
+        let url = self.workflow(head, &matches[0])?;
+        for run in &matches[1..] {
+            self.workflow(head, run)?;
         }
-        let run = &matches[0];
+        Ok(url)
+    }
+
+    fn workflow(&self, head: &str, run: &Value) -> Result<String, String> {
         if run["status"] != "completed" {
             return Err("organization Guard is pending; rerun after its check completes".into());
         }
