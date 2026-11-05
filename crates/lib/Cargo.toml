@@ -8,7 +8,7 @@ publish = ["perish"]
 
 [package.metadata.perish.guard]
 schema = 1
-depot = "bdf363e0fb167bb5d4a338d52160c24c6a36cab1c913edfebb6d76de762fa33c"
+depot = "732d7a207a531010d8194afd7d4a7397eac54812812eadfe00eb5dd9884417ac"
 
 [features]
 depot = [

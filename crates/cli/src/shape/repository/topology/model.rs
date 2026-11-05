@@ -206,7 +206,7 @@ mod groups {
     #[test]
     fn internal() {
         let fixture = fixture();
-        assert!(!fixture.report(true).refusals.is_empty());
+        assert!(fixture.report(true).refusals.is_empty());
         let report = report(&fixture, GROUP);
         assert!(report.refusals.is_empty());
         assert!(report.unknown.is_empty());
@@ -222,12 +222,8 @@ mod groups {
         let text = format!("{GROUP}token=['token']\n");
         let report = report(&fixture, &text);
         assert!(report.unknown.is_empty());
-        assert!(
-            report
-                .refusals
-                .iter()
-                .any(|refusal| refusal.path.len() == 2)
-        );
+        assert!(report.refusals.is_empty());
+        assert_eq!(report.edges.len(), 2);
     }
 
     #[test]
@@ -238,12 +234,10 @@ mod groups {
         fixture.edge("bridge", "derive", Some("build"));
         let report = report(&fixture, GROUP);
         assert!(report.unknown.is_empty());
-        assert!(
-            report
-                .refusals
-                .iter()
-                .any(|refusal| refusal.path.len() == 2)
-        );
+        assert!(report.refusals.is_empty());
+        assert_eq!(report.edges.len(), 3);
+        fixture.edge("derive", "runtime", None);
+        assert!(!self::report(&fixture, GROUP).cycles.is_empty());
     }
 
     #[test]
@@ -256,16 +250,20 @@ mod groups {
 
     #[test]
     fn cycle() {
-        let mut fixture = fixture();
-        fixture.edge("derive", "runtime", Some("dev"));
-        let report = report(&fixture, GROUP);
-        assert_eq!(report.cycles.len(), 1);
-        assert!(
-            report
-                .refusals
-                .iter()
-                .any(|refusal| refusal.reason.contains("cycle"))
-        );
+        for text in ["[dependency]\nroot=true\n", GROUP] {
+            for kind in [None, Some("dev"), Some("build")] {
+                let mut fixture = fixture();
+                fixture.edge("derive", "runtime", kind);
+                let report = report(&fixture, text);
+                assert_eq!(report.cycles.len(), 1);
+                assert!(
+                    report
+                        .refusals
+                        .iter()
+                        .any(|refusal| refusal.reason.contains("cycle"))
+                );
+            }
+        }
     }
 
     #[test]
@@ -282,10 +280,7 @@ mod groups {
             let text = format!("[dependency]\nroot=true\n[dependency.groups]\n{members}\n");
             let report = report(&fixture, &text);
             assert!(!report.unknown.is_empty(), "{members}");
-            assert!(
-                !report.refusals.is_empty(),
-                "invalid groups grant no internal exemptions"
-            );
+            assert_eq!(report.root, Some(true));
         }
     }
 }

@@ -93,7 +93,7 @@ fn technical() {
 }
 
 #[test]
-fn orthogonal() {
+fn layered() {
     let mut fixture = Fixture::new();
     fixture.package("lock", "radicula-lock", None);
     fixture.package("token", "radicula-token", None);
@@ -102,8 +102,10 @@ fn orthogonal() {
     assert!(report.unknown.is_empty());
     fixture.edge("lock", "token", None);
     let report = fixture.report(true);
-    assert_eq!(report.refusals.len(), 1);
-    assert_eq!(report.refusals[0].path[0].to, "token");
+    assert!(report.refusals.is_empty());
+    assert!(report.unknown.is_empty());
+    assert_eq!(report.edges.len(), 1);
+    assert_eq!(report.edges[0].to, "token");
 }
 
 #[test]
@@ -249,7 +251,8 @@ fn targets() {
     fixture.packages[0]["targets"][0]["kind"] = json!(["proc-macro"]);
     fixture.edge("macro", "peer", Some("build"));
     let report = fixture.report(true);
-    assert_eq!(report.refusals.len(), 1);
+    assert!(report.refusals.is_empty());
+    assert_eq!(report.edges.len(), 1);
     assert!(report.unknown.is_empty());
     fixture.packages[0]["targets"][0]["kind"] = json!(["bin"]);
     assert!(

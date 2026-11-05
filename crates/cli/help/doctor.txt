@@ -33,15 +33,17 @@ retaining each exact package and source in the witness. Ordinary repositories
 observe cycles without enforcing a general domain order. Exact-package dev
 self-tests appear separately in tests; they do not excuse a root violation.
 
-A repository opts into strict library roots with this plumb.toml declaration:
+A repository declares a closed Rust library workspace with this plumb.toml declaration:
 
   [dependency]
   root = true
 
 deps.root-library-closed then refuses binary workspace targets and every path
-from a workspace library to another domain package, including another library
-in the same repository. Third-party intermediates do not hide the path.
-Independent-root repositories do not require a crate named after the repository.
+from a workspace library to a domain package outside its qualified workspace.
+Libraries inside that workspace may depend on each other as a DAG. A published
+package is not an owned member merely because its name matches one. Third-party
+intermediates do not hide an external domain path or an internal cycle.
+Closed-root repositories do not require a crate named after the repository.
 Normal, build, optional, platform and the root's own dev dependencies participate.
 A dependency package's own dev dependencies do not propagate to its consumer;
 those edges remain visible with propagated=false. Unknown relevant branches
@@ -55,11 +57,11 @@ their exact package names explicitly, for example:
 
 When groups are present, every workspace library belongs to exactly one nonempty
 named group. Missing, duplicate, overlapping, unknown or ambiguous membership
-prevents a clean verdict. Only direct edges between members of the same group
-are admitted. All actual edges remain visible; a third-party intermediary,
-another capability or a published domain package is not an internal exemption.
-Group cycles refuse judgment. With no groups, each library retains the original
-independent-root contract. Group declarations create no package or release.
+prevents a clean verdict. Groups describe public capabilities and their technical
+crates; they do not grant dependency exemptions or restrict valid internal DAG
+edges. All actual edges remain visible. Workspace cycles refuse with or without
+groups, including dev and cross-group cycles. Group declarations create no
+package or release; Cargo manifests own the dependency graph.
 
 There is no root=false exemption. CLI execution outside the library graph does
 not create a library dependency. Node root closures are not yet supported and

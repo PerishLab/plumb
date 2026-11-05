@@ -56,7 +56,7 @@ pub(crate) fn world(root: &Path, manifest: Option<&str>) -> Result<Option<String
     let report = Report::read(root);
     if !report.unknown.is_empty() || !report.refusals.is_empty() {
         return Err(format!(
-            "strict root topology refuses reuse: {} unknown, {} violations; run plumb doctor --json",
+            "root workspace topology refuses reuse: {} unknown, {} violations; run plumb doctor --json",
             report.unknown.len(),
             report.refusals.len()
         ));
@@ -230,7 +230,7 @@ fn declared(bytes: &[u8]) -> Result<Declaration, String> {
 }
 
 impl read::Graph {
-    fn group(&mut self, report: &Report) -> Result<(), String> {
+    fn group(&self, report: &Report) -> Result<(), String> {
         if report.groups.is_empty() {
             return Ok(());
         }
@@ -251,7 +251,6 @@ impl read::Graph {
         if assigned.len() != self.roots.len() {
             return Err("root capability groups must assign every workspace library".into());
         }
-        self.groups = assigned;
         Ok(())
     }
 
@@ -267,12 +266,6 @@ impl read::Graph {
                 "root capability member {name} is not one exact workspace library"
             )),
         }
-    }
-
-    fn internal(&self, edge: &Edge) -> bool {
-        self.groups
-            .get(&edge.from)
-            .is_some_and(|group| self.groups.get(&edge.to) == Some(group))
     }
 }
 

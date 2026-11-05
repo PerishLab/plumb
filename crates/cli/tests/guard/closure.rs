@@ -93,7 +93,7 @@ fn command() {
 
     let mut held = Vec::new();
     capture(Vec::new(), &mut held);
-    let expected = "33ecf05b6cb389b94a21da895654d1691a5035d4762ca84b246e8c2e1e4739b5";
+    let expected = "2e6db2c24a494cbc1d12e0b91f8729eefa4f7175bf507ddecd58742e19ff6744";
     assert_eq!(digest(&held), expected);
 }
 
