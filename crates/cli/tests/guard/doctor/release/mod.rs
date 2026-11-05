@@ -1,3 +1,4 @@
+mod cargo;
 mod library;
 
 use std::process::Command;
