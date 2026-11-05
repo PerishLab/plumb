@@ -67,3 +67,15 @@ The optional [release.windows] table sets scope = "user" or "machine" for the
 Windows manager. It requires at least one installed x86_64-pc-windows-msvc
 executable. Without the table, the manager uses user scope. Wharf resolves the
 platform directories; the declaration carries no arbitrary installation paths.
+
+OpenWrt APK placement declares [release.apk] with binary, root and
+profile = "openwrt-aarch64-cortex-a53". The binary must carry
+aarch64-unknown-linux-musl. This profile names OpenWrt APK v3 for the
+aarch64_cortex-a53 package architecture; it grants no Alpine compatibility.
+The repository-relative root holds package.toml and an optional root/ payload.
+Metadata requires description and license; depends is an optional list of
+distinct package names. Wharf owns package name, version, architecture and
+the bound /usr/bin/<binary>. Scripts, links, payload at that executable and
+etc/rc.d entries refuse. Installation does not enable or start a service.
+Declaration validity proves neither native package compatibility nor runtime
+network recovery; those require their own published-artifact evidence.

@@ -110,8 +110,9 @@ impl Spec {
 
     pub fn placements(&self) -> Vec<String> {
         let deb = self.deb.as_ref().map(|held| format!("deb {}", held.binary));
+        let apk = self.apk.as_ref().map(|held| format!("apk {}", held.binary));
         let oci = self.image().map(|held| format!("oci {held}"));
-        deb.into_iter().chain(oci).collect()
+        deb.into_iter().chain(apk).chain(oci).collect()
     }
 
     pub(super) fn server(&self, subject: &str, name: &str) -> Result<(), String> {

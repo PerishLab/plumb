@@ -13,6 +13,7 @@ impl Spec {
             self.npm.is_some(),
             self.cfworker.is_some(),
             self.deb.is_some(),
+            self.apk.is_some(),
         ]
         .into_iter()
         .any(|held| held)
@@ -22,6 +23,7 @@ impl Spec {
         [
             (!self.binaries.is_empty(), "binary"),
             (self.deb.is_some(), "deb"),
+            (self.apk.is_some(), "apk"),
             (self.cargo.is_some(), "cargo"),
             (self.chart.is_some(), "chart"),
             (self.npm.is_some(), "npm"),
