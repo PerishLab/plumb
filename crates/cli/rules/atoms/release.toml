@@ -9,3 +9,4 @@ rule = "release.attachment-permitted"
 ceiling = 10
 
 [permitted]
+cargo = 11
