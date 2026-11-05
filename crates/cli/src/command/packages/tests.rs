@@ -60,6 +60,10 @@ fn guard() {
         success.provider().guard("exact").unwrap(),
         "https://github.com/Example/probe/actions/runs/17"
     );
+    Fixture::new(routes(vec![check("success"); 2]))
+        .provider()
+        .guard("exact")
+        .unwrap();
     let mut unreadable = check("failure");
     unreadable["conclusion"] = Value::Null;
     let workflow = |conclusion: &str, patch: Value| {
@@ -78,7 +82,6 @@ fn guard() {
     for (routes, expected) in [
         (routes(vec![check("failure")]), failed),
         (routes(vec![]), pending),
-        (routes(vec![check("success"); 2]), "exact Auto head"),
         (routes(vec![unreadable]), "completed organization Guard"),
         (workflow("success", running), pending),
         (workflow("success", queued), pending),

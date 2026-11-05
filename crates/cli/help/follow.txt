@@ -8,6 +8,11 @@ required organization Guard, and revalidates before the ordinary squash merge.
 Closure reads back the merge commit and successful Guard run before accepting
 and closing the Issue.
 
+An already-published exact candidate is not pushed again. Multiple matching
+Guard runs are accepted only when every check and linked organization workflow
+on that head has completed successfully; pending, failed, foreign or unreadable
+evidence still prevents merging.
+
 If main already holds the Auto's own exact published pull and latest-stable
 resolution leaves no registered delta, follow records a writer-qualified
 absorption receipt, closes the pull unmerged, retires its branch by lease and

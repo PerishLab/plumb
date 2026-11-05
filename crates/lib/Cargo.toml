@@ -90,7 +90,7 @@ required-features = ["vendor"]
 
 [[test]]
 name = "delivery"
-path = "tests/proof/delivery.rs"
+path = "tests/proof/delivery/mod.rs"
 required-features = ["delivery"]
 
 [[test]]

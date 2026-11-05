@@ -25,6 +25,9 @@ mod retire;
 #[path = "candidate/delta.rs"]
 mod delta;
 
+#[path = "candidate/publication.rs"]
+mod publication;
+
 #[test]
 fn interrupted() {
     if !isolated("interrupted") {
