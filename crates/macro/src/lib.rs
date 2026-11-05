@@ -85,10 +85,13 @@ pub fn bytes(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+#[doc = "Wraps ordinary synchronous functions in trace::run and async bodies in trace::carry. Generated paths use the canonical plumb dependency name and require no direct Root import. Const, unsafe, extern, variadic and track_caller signatures are refused. Async context is captured when the function body starts; carry the outer future explicitly to propagate its caller's context."]
 pub fn span(args: TokenStream, input: TokenStream) -> TokenStream {
     let name = parse_macro_input!(args as LitStr);
     let item = parse_macro_input!(input as ItemFn);
-    trace::expand(name, item).into()
+    trace::expand(name, item)
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
 }
 
 #[doc = "Adds prefix() using the configuration type's defining package name. Combine with Radicula Cascade and pass prefix() and plumb::config::value explicitly to resolve or layered. This preserves existing application variable names; it declares no CLI identity."]

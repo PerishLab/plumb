@@ -1,21 +1,22 @@
 use super::support;
+use plumb::trace::{self, Ledger, Sink};
+use radicula_context::Context;
+use std::sync::Arc;
+
+mod fault;
+mod future;
+mod lifecycle;
+#[path = "support.rs"]
+mod probe;
 
 #[cfg(feature = "observation")]
 mod observation;
-
-use plumb::context::Context;
-use plumb::trace::{Ledger, Sink, Span};
-use std::sync::Arc;
 
 #[test]
 fn emits() {
     let ledger = Arc::new(Ledger::default());
     let context = Context::root().with(Sink::from(ledger.clone()));
-    {
-        let _scope = context.enter();
-        let scoped = Context::current().with(Span::open("turn"));
-        let _inner = scoped.enter();
-    }
+    assert_eq!(context.run(|| trace::run("turn", || 42)), 42);
     let seen = ledger.query(|record| record.name == "turn");
     assert_eq!(seen.len(), 1);
     assert!(seen[0].parent.is_none());
@@ -24,24 +25,23 @@ fn emits() {
 
 #[test]
 fn silent() {
-    let scoped = Context::root().with(Span::open("orphan"));
-    let _scope = scoped.enter();
-    Span::note("seen", "true");
+    let result = Context::root().run(|| {
+        trace::run("orphan", || {
+            trace::note("seen", "true");
+            Err::<(), _>("business")
+        })
+    });
+    assert_eq!(result, Err("business"));
+    let future = Context::root().run(|| trace::carry("silent", async { 9 }));
+    assert_eq!(support::block(future), 9);
 }
 
 #[test]
 fn lineage() {
     let ledger = Arc::new(Ledger::default());
-    let context = Context::root().with(Sink::from(ledger.clone()));
-    {
-        let _scope = context.enter();
-        let outer = Context::current().with(Span::open("turn"));
-        {
-            let _outer = outer.enter();
-            let inner = Context::current().with(Span::open("effect.dispatch"));
-            let _inner = inner.enter();
-        }
-    }
+    Context::root().with(Sink::from(ledger.clone())).run(|| {
+        trace::run("turn", || trace::run("effect.dispatch", || {}));
+    });
     let turns = ledger.query(|record| record.name == "turn");
     let effects = ledger.query(|record| record.name == "effect.dispatch");
     assert_eq!(effects[0].parent, Some(turns[0].id));
@@ -50,31 +50,11 @@ fn lineage() {
 #[test]
 fn notes() {
     let ledger = Arc::new(Ledger::default());
-    let context = Context::root().with(Sink::from(ledger.clone()));
-    {
-        let _scope = context.enter();
-        let scoped = Context::current().with(Span::open("effect.dispatch"));
-        let _inner = scoped.enter();
-        Span::note("effect.reason", "operator_resolved");
-    }
-    let seen = ledger.query(|record| {
-        record.name == "effect.dispatch" && record.says("effect.reason", "operator_resolved")
-    });
-    assert_eq!(seen.len(), 1);
-}
-
-#[test]
-fn queries() {
-    let ledger = Arc::new(Ledger::default());
-    let context = Context::root().with(Sink::from(ledger.clone()));
-    {
-        let _scope = context.enter();
+    Context::root().with(Sink::from(ledger.clone())).run(|| {
         for reason in ["advanced", "operator_resolved", "advanced"] {
-            let scoped = Context::current().with(Span::open("effect.dispatch"));
-            let _inner = scoped.enter();
-            Span::note("effect.reason", reason);
+            trace::run("effect.dispatch", || trace::note("effect.reason", reason));
         }
-    }
+    });
     let advanced = ledger.query(|record| record.says("effect.reason", "advanced"));
     let resolved = ledger.query(|record| record.says("effect.reason", "operator_resolved"));
     assert_eq!(advanced.len(), 2);
@@ -85,15 +65,14 @@ fn queries() {
 fn carries() {
     let ledger = Arc::new(Ledger::default());
     let context = Context::root().with(Sink::from(ledger.clone()));
-    support::block(context.carry(async {
-        let scoped = Context::current().with(Span::open("turn"));
-        scoped
-            .carry(async {
-                Span::note("phase", "worked");
-                support::rest().await;
-            })
-            .await;
-    }));
+    let task = context.run(|| {
+        trace::carry("turn", async {
+            trace::note("phase", "worked");
+            support::rest().await;
+            Err::<(), _>("business")
+        })
+    });
+    assert_eq!(support::block(task), Err("business"));
     let seen = ledger.query(|record| record.name == "turn" && record.says("phase", "worked"));
     assert_eq!(seen.len(), 1);
 }

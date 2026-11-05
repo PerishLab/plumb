@@ -284,6 +284,10 @@ Absorbed; every product inherits them:
   owns the variables it supplies to a template whose grammar the substrate owns.
   A manifest spells every injected environment key exactly as the target product
   derives it.
+- Radicula owns the generic execution Context and its scoped carriers. Plumb
+  Trace consumes it and owns its local frame completion; retained Context views
+  never own that completion. Locus owns its semantic Context and observation
+  records. The global observation Run selection remains a separate policy.
 
 Being absorbed; plumb owns the end form, and no product invents its own
 meanwhile:

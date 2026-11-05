@@ -1,7 +1,7 @@
 use super::support;
 
 use plumb::cancel::Cancel;
-use plumb::context::Context;
+use radicula_context::Context;
 use std::time::Duration;
 
 #[test]
@@ -32,10 +32,11 @@ fn contains() {
 #[test]
 fn ambient() {
     let (outer, context) = Cancel::child();
-    let _scope = context.enter();
-    let (inner, _derived) = Cancel::child();
-    outer.cancel();
-    assert!(inner.cancelled());
+    context.run(|| {
+        let (inner, _derived) = Cancel::child();
+        outer.cancel();
+        assert!(inner.cancelled());
+    });
 }
 
 #[test]
