@@ -8,4 +8,3 @@ pub mod observation;
 pub(crate) mod process;
 #[cfg(any(feature = "vendor", feature = "skill"))]
 pub mod rig;
-pub mod trace;

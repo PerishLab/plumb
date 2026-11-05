@@ -44,7 +44,7 @@ pub use proof::{boundary, changelog, datum, guard, rule, snapshot, vocabulary};
 pub use runtime::observation;
 #[cfg(any(feature = "vendor", feature = "skill"))]
 pub use runtime::rig;
-pub use runtime::{cancel, identity, trace};
+pub use runtime::{cancel, identity};
 
 pub use serde;
 

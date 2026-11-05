@@ -522,7 +522,6 @@ dependencies = [
  "flate2",
  "locus",
  "object",
- "pin-project-lite",
  "plumb",
  "plumb-macro",
  "radicula-config",
