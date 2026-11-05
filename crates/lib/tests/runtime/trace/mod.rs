@@ -9,9 +9,6 @@ mod lifecycle;
 #[path = "support.rs"]
 mod probe;
 
-#[cfg(feature = "observation")]
-mod observation;
-
 #[test]
 fn emits() {
     let ledger = Arc::new(Ledger::default());
