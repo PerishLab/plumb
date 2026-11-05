@@ -10,9 +10,6 @@ use frame::{Finish, Frame};
 pub use future::{Carry, carry};
 pub use plumb_macro::span;
 
-#[cfg(feature = "observation")]
-pub mod observation;
-
 #[derive(Clone, Debug)]
 pub struct Record {
     pub id: u64,

@@ -40,10 +40,10 @@ pub mod vendor;
 pub use proof::radius;
 
 pub use proof::{boundary, changelog, datum, guard, rule, snapshot, vocabulary};
+#[cfg(feature = "observation")]
+pub use runtime::observation;
 #[cfg(any(feature = "vendor", feature = "skill"))]
 pub use runtime::rig;
-#[cfg(feature = "observation")]
-pub use runtime::trace::observation;
 pub use runtime::{cancel, identity, trace};
 
 pub use serde;

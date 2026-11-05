@@ -3,6 +3,8 @@ pub mod cancel;
 pub(crate) mod environment;
 pub(crate) mod execution;
 pub mod identity;
+#[cfg(feature = "observation")]
+pub mod observation;
 pub(crate) mod process;
 #[cfg(any(feature = "vendor", feature = "skill"))]
 pub mod rig;
