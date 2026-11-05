@@ -40,8 +40,8 @@ tags = ["dependency"]
 
 [[rule]]
 id = "deps.root-library-closed"
-summary = "Declared root capabilities have no external domain dependencies"
-law = "A repository declaring dependency.root = true carries independent public capabilities. Their complete normal, build, development, macro, optional and platform dependency closure reaches no other domain package. Explicit dependency.groups may assign every workspace library to exactly one named capability and admit direct technical edges within it, while rejecting group cycles. Without groups every library is independent. Cross-group edges, published domain packages and third-party bridges receive no exemption. Missing closure evidence refuses judgment. Ordinary package topology remains observational."
+summary = "Declared root workspaces have no external domain dependencies"
+law = "A repository declaring dependency.root = true is a closed workspace of public libraries. Its complete normal, build, development, macro, optional and platform dependency closure may form a directed acyclic graph among its actual workspace libraries, but reaches no domain package outside that workspace, including published packages with the same name. Explicit dependency.groups describe capabilities and assign every workspace library exactly once; they grant no edge exemptions. Internal cycles, including paths through third-party packages, refuse judgment. Missing closure evidence remains unknown. Ordinary package topology remains observational."
 evidence = "The source root declaration, qualified workspace identity, frozen all-feature Cargo metadata, complete dependency declarations and exact source identities, with retained unresolved branches and path witnesses."
 standing = "mechanized"
 owner = "plumb"
@@ -419,8 +419,8 @@ tags = ["skill", "adoption"]
 [[rule]]
 id = "structure.anchor-present"
 summary = "Rust products carry an anchor crate"
-law = "A Rust repository has one crate named after the repository unless it explicitly declares independent library roots, whose closed topology replaces the product anchor."
-evidence = "Cargo package names across the workspace and the explicit independent-root declaration."
+law = "A Rust repository has one crate named after the repository unless it explicitly declares a closed root library workspace, whose dependency topology replaces the product anchor."
+evidence = "Cargo package names across the workspace and the explicit root-workspace declaration."
 standing = "mechanized"
 owner = "plumb"
 tags = ["cargo", "repository"]

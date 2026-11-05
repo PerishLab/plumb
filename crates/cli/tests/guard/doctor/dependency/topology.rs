@@ -178,11 +178,11 @@ fn platform() {
     let topology = &report["shape"]["topology"];
     assert_ne!(topology["input"], before);
     assert_eq!(topology["unknown"], serde_json::json!([]), "{report}");
-    let refusals = topology["refusals"].as_array().unwrap();
-    assert_eq!(refusals.len(), 1, "{report}");
-    assert_eq!(refusals[0]["path"][0]["kind"], "dev");
-    assert_eq!(refusals[0]["path"][0]["target"], "cfg(windows)");
-    assert!(report.to_string().contains("deps.root-library-closed"));
+    assert_eq!(topology["refusals"], serde_json::json!([]), "{report}");
+    let edges = topology["edges"].as_array().unwrap();
+    assert_eq!(edges.len(), 1, "{report}");
+    assert_eq!(edges[0]["kind"], "dev");
+    assert_eq!(edges[0]["target"], "cfg(windows)");
 }
 
 #[test]
@@ -251,12 +251,12 @@ fn grouping() {
             .as_array()
             .unwrap()
             .len(),
-        1
+        0
     );
     for (groups, refusals, unknown) in [
         ("lock=['lock','peer']", 0, false),
-        ("lock=['lock']\nother=['peer']", 1, false),
-        ("lock=['lock']", 1, true),
+        ("lock=['lock']\nother=['peer']", 0, false),
+        ("lock=['lock']", 0, true),
     ] {
         std::fs::write(
             &declaration,

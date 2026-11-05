@@ -9,7 +9,6 @@ pub(super) struct Graph {
     pub unknown: Vec<String>,
     pub pending: BTreeMap<(String, Binding), String>,
     pub binaries: Vec<String>,
-    pub groups: BTreeMap<String, String>,
 }
 
 #[derive(serde::Serialize)]
@@ -41,7 +40,6 @@ impl Graph {
             unknown: Vec::new(),
             pending: BTreeMap::new(),
             binaries: Vec::new(),
-            groups: BTreeMap::new(),
         };
         let owned = source.is_some_and(|value| value.starts_with("PerishLab/"));
         for package in &metadata.packages {
@@ -246,11 +244,9 @@ impl Graph {
         if report.root == Some(true) {
             report.refusals = self.refusals(&mut report.unknown);
             for cycle in &report.cycles {
-                if !self.groups.is_empty()
-                    && cycle.iter().any(|edge| self.roots.contains(&edge.from))
-                {
+                if cycle.iter().any(|edge| self.roots.contains(&edge.from)) {
                     report.refusals.push(super::model::Refusal {
-                        reason: "root capability has a dependency cycle".into(),
+                        reason: "root workspace has a dependency cycle".into(),
                         path: cycle.clone(),
                     });
                 }
