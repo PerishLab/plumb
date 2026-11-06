@@ -1,5 +1,7 @@
 use plumb::config::Contract;
 
+mod binary;
+
 #[test]
 fn executable() {
     let root = tempfile::tempdir().unwrap();
