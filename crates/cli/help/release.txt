@@ -83,3 +83,5 @@ the bound /usr/bin/<binary>. Scripts, links, payload at that executable and
 etc/rc.d entries refuse. Installation does not enable or start a service.
 Declaration validity proves neither native package compatibility nor runtime
 network recovery; those require their own published-artifact evidence.
+
+release collect reads exact public source and formal Scene inputs for review; it grants no baseline adoption or publication authority. See release collect --help.

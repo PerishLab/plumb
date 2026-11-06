@@ -97,3 +97,33 @@ fn invalid() {
     assert!(body.is_empty());
     assert!(error.contains("invalid release semantics"), "{error}");
 }
+
+#[test]
+fn collection() {
+    for (repository, commit) in [
+        ("foreign/plumb", "a".repeat(40)),
+        ("PerishLab/plumb", "main".into()),
+    ] {
+        let scratch = tempfile::tempdir().unwrap();
+        let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args([
+                "release",
+                "collect",
+                "--repository",
+                repository,
+                "--commit",
+                &commit,
+            ])
+            .env("PLUMB_HOME", scratch.path())
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(1));
+        let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(report["schema"], "plumb.release.collection/v1");
+        assert_eq!(report["state"], "refused");
+        assert_eq!(report["adoption"], false);
+        assert_eq!(report["publication"], false);
+        assert!(report["snapshot"].is_null());
+        assert_eq!(std::fs::read_dir(scratch.path()).unwrap().count(), 0);
+    }
+}
