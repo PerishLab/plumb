@@ -2,6 +2,11 @@ use clap::Subcommand;
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(about = "Assess supplied release boundary observations without publishing", long_about = plumb::seat::resource!("help/release/assess.txt"))]
+    Assess {
+        #[arg(long)]
+        input: std::path::PathBuf,
+    },
     #[command(about = "Withdraw an unpublished release point")]
     Retract {
         #[arg(long)]

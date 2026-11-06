@@ -1,3 +1,4 @@
+mod assess;
 pub(in crate::command) mod channel;
 mod identity;
 
@@ -7,6 +8,9 @@ use std::path::Path;
 use crate::shape::release::Spec;
 
 pub fn run(deed: Deed) -> i32 {
+    if let Deed::Assess { input } = &deed {
+        return assess::Assess(input).run();
+    }
     let result = execute(deed);
     match result {
         Ok(message) => {
@@ -22,6 +26,7 @@ pub fn run(deed: Deed) -> i32 {
 
 fn execute(deed: Deed) -> Result<String, String> {
     match deed {
+        Deed::Assess { .. } => Err("assessment uses its read-only entry point".into()),
         Deed::Stamp {
             version,
             remote,

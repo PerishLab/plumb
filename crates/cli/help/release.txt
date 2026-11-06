@@ -1,5 +1,9 @@
 Define one immutable distribution marker.
 
+Assess reads supplied version-boundary observations through the shared
+plumb::semantics protocol. It is advisory and read-only; release assess --help
+defines its input, trust limits and exit codes. It does not enable a release gate.
+
 Release owns identity, not distribution. A marker is one annotated Git tag on the
 head of its release line, naming the version and, for a stable marker, the
 prerelease it promotes. Stamp creates it: a beta or rc marker takes the next

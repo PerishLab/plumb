@@ -17,6 +17,8 @@ pub mod lane;
 pub mod packages;
 #[path = "forge/preview/mod.rs"]
 pub mod preview;
+#[path = "knowledge/semantics/mod.rs"]
+pub mod semantics;
 #[path = "knowledge/windtun.rs"]
 pub mod windtun;
 #[cfg(feature = "vendor")]

@@ -1,0 +1,75 @@
+Assess supplied release boundary observations without publishing.
+
+Reads one regular JSON file of at most 4 MiB. The shared plumb::semantics
+protocol accepts schema plumb.release.semantics/v1 and emits
+plumb.release.assessment/v1. It performs no network request, product execution,
+repository mutation or publication. authentication and publication are always
+false: input validation and a bound review do not authenticate their issuer,
+material origin, completeness, actual product behavior or a user's X decision.
+The caller must independently verify those facts before any admission.
+
+Input fields are exactly schema, baseline, candidate, review, reservations and
+major. Optional review and major may be null. Unknown fields and versions,
+duplicate fields, duplicate material or coverage identities and malformed
+markers are refused. Duplicate JSON keys are not normalized away.
+
+A Snapshot has product, source, materials and coverage. Source has repository,
+commit and tree; repository must be PerishLab/<product>, with lowercase 40-digit
+commit/tree identities. Materials have kind, name, sha256, size and executable.
+Kinds are schema, case, setup, helper and runtime. Names are canonical relative
+paths; case names are stable lowercase identifiers. Material::verify checks
+caller-fetched bytes and executable mode against a material reference. Parsing
+a reference alone never fetches or verifies its bytes.
+
+Coverage has case, platform and backend. Each is a nonempty bounded lowercase
+identifier. Explicitly spell a backend such as none when it does not apply.
+There must be schema and case materials, nonempty coverage and exact coverage
+of every case material. At most 4096 materials, coverage entries and reserved
+markers are accepted. Material/coverage order is not semantic: digest sorts
+them before compact typed JSON encoding and SHA-256. Source identity, size,
+mode, kind, name and all coverage values participate in that input identity.
+This digest identifies observations, not program semantics.
+
+Baseline has stable, anchor and review. A Release has marker and snapshot.
+Both markers must be stable and belong to one ordered X.Y product family.
+The anchor retains that family's initial exact Snapshot. If the stable Snapshot
+differs, baseline.review must attest same and bind the anchor directly to that
+stable Snapshot; a chain of unbound local exemptions is insufficient. One
+marker cannot identify different Snapshots.
+Declared coverage cannot drift from the X.Y anchor, even with a same review.
+
+A Review has before, after, anchor, decision and reference. The three identities
+are exact Snapshot::digest outputs. Candidate review binds the previous stable
+Snapshot, candidate Snapshot and original anchor Snapshot. Baseline review binds
+anchor, stable and anchor respectively. Decision is same or changed. Reference
+is an exact PerishLab GitHub Issue comment URL, not an authenticated approval.
+The review must be refreshed when any bound input changes.
+
+Identical input identities yield same. Changed declared coverage yields changed
+and cannot be overridden by a same review. Other changed inputs without a bound
+review yield unknown. Schema/case/helper byte changes alone are never declared
+semantically equal or different automatically. Correcting an assertion or
+adding old-promise coverage still requires changed when the expressed boundary
+changes; calling it a bug fix grants no exception.
+
+Same keeps X.Y and advances Z. Changed advances Y and resets Z. Reservations
+use canonical vX.Y.Z[-alpha.N|-beta.N|-rc.N] markers. Within the required
+dimension, choose the smallest core version above the previous stable that can
+still exceed existing markers; a reserved prerelease of that core can continue
+on its next ordinal. A newer supplied stable invalidates the baseline.
+An unchanged boundary after a higher-Y RC produces conflict, never an invented
+Y change, automatic X or retraction of public material. Version exhaustion is
+an explicit refusal.
+
+Major may carry a PerishLab Issue comment URL for an independently verifiable
+human decision. Its presence yields human with no suggested marker. This
+surface cannot authenticate a user's decision and never authorizes X from a
+self-reported boolean or a URL alone.
+
+Output includes exact before/after and anchor input identities, the family
+anchor's marker and the baseline marker,
+material/coverage/source differences, review/major references, state, marker and
+reason. State is same, changed, unknown, conflict or human. Exit 0 is an advisory
+same/changed result, 1 is conflict or invalid input, and 3 is unknown or human.
+No result grants qualification, promotion or publication. Existing open, stamp,
+ship, marker ordering, Guard and Windtun behavior remains independent.
