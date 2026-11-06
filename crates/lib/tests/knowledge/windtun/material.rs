@@ -7,7 +7,9 @@ pub struct Codec;
 
 impl Codec {
     pub fn bytes(value: &Value) -> Vec<u8> {
-        serde_json::to_vec(value).unwrap()
+        let mut held = value.clone();
+        held.sort_all_objects();
+        serde_json::to_vec(&held).unwrap()
     }
     pub fn sha(bytes: &[u8]) -> String {
         format!("{:x}", Sha256::digest(bytes))

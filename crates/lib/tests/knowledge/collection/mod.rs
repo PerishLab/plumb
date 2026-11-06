@@ -19,6 +19,15 @@ fn projection() {
             .any(|case| case.case == "diagnostic")
     );
     assert_eq!(snapshot.product, "plumb");
+    let source = snapshot
+        .materials
+        .iter()
+        .find(|item| item.name == "source.json")
+        .unwrap();
+    assert_eq!(
+        source.sha256,
+        "03ae0a478fbfcb0ca26d01981a100b142b81a942f084629e198196e25e017d12"
+    );
     assert!(snapshot.digest().is_ok());
 }
 

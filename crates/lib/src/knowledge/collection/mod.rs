@@ -103,7 +103,9 @@ impl<R: Read> Collector<R> {
             ));
         }
         let mut materials = scene.materials.clone();
-        let raw = serde_json::to_vec(&subject.files)
+        let mut files = subject.files.clone();
+        files.sort_all_objects();
+        let raw = serde_json::to_vec(&files)
             .map_err(|_| Fault::refused("cannot encode source projection"))?;
         materials.push(
             super::Material::new(super::Kind::Schema, "source.json".into(), &raw, false)
