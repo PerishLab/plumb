@@ -2,6 +2,13 @@ use clap::Subcommand;
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(about = "Collect exact public source and formal Scene review inputs", long_about = plumb::seat::resource!("help/release/collect.txt"))]
+    Collect {
+        #[arg(long)]
+        repository: String,
+        #[arg(long)]
+        commit: String,
+    },
     #[command(about = "Assess supplied release boundary observations without publishing", long_about = plumb::seat::resource!("help/release/assess.txt"))]
     Assess {
         #[arg(long)]

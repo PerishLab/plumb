@@ -1,7 +1,11 @@
 mod assess;
+#[cfg(feature = "windtun")]
+#[path = "../collection/mod.rs"]
+pub mod collection;
 mod identity;
 mod material;
 mod review;
+pub mod subjects;
 mod version;
 mod wire;
 

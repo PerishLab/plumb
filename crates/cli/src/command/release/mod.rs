@@ -1,5 +1,6 @@
 mod assess;
 pub(in crate::command) mod channel;
+mod collect;
 mod identity;
 
 pub use identity::deed::Deed;
@@ -8,6 +9,9 @@ use std::path::Path;
 use crate::shape::release::Spec;
 
 pub fn run(deed: Deed) -> i32 {
+    if let Deed::Collect { repository, commit } = &deed {
+        return collect::Collect { repository, commit }.run();
+    }
     if let Deed::Assess { input } = &deed {
         return assess::Assess(input).run();
     }
@@ -26,6 +30,7 @@ pub fn run(deed: Deed) -> i32 {
 
 fn execute(deed: Deed) -> Result<String, String> {
     match deed {
+        Deed::Collect { .. } => Err("collection uses its read-only entry point".into()),
         Deed::Assess { .. } => Err("assessment uses its read-only entry point".into()),
         Deed::Stamp {
             version,

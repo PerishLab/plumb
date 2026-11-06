@@ -16,7 +16,7 @@ impl Default for Remote {
             agent: ureq::Agent::config_builder()
                 .https_only(true)
                 .max_redirects(0)
-                .timeout_global(Some(Duration::from_secs(30)))
+                .timeout_global(Some(Duration::from_secs(10)))
                 .build()
                 .into(),
         }
