@@ -237,8 +237,13 @@ fn name(key: &str) -> String {
 }
 
 fn token(value: &str) -> bool {
+    let punctuation: &[u8] = if value.starts_with("CARGO_BIN_EXE_") {
+        b"_-"
+    } else {
+        b"_"
+    };
     !value.is_empty()
         && value
             .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+            .all(|byte| byte.is_ascii_alphanumeric() || punctuation.contains(&byte))
 }

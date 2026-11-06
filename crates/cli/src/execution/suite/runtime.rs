@@ -154,14 +154,22 @@ fn context() {
     fixture.write("shared/Cargo.toml", "[package]\nname='shared'\nversion='0.0.0'\nedition='2024'\n[features]\nleft=[]\nright=[]\n");
     fixture.write("shared/src/lib.rs", "pub fn mask()->u8 { u8::from(cfg!(feature=\"left\")) + 2*u8::from(cfg!(feature=\"right\")) }");
     for (name, feature, peer) in [("alpha", "left", "beta"), ("beta", "right", "alpha")] {
-        fixture.write(&format!("{name}/Cargo.toml"), &format!("[package]\nname='{name}'\nversion='0.0.0'\nedition='2024'\n[dependencies]\nshared={{path='../shared',features=['{feature}']}}\n[lib]\ntest=true\n[[bin]]\nname='helper_{name}'\npath='src/main.rs'\ntest=false\n"));
+        let binary = if name == "alpha" {
+            "helper-alpha"
+        } else {
+            "helper_beta"
+        };
+        fixture.write(&format!("{name}/Cargo.toml"), &format!("[package]\nname='{name}'\nversion='0.0.0'\nedition='2024'\n[dependencies]\nshared={{path='../shared',features=['{feature}']}}\n[lib]\ntest=true\n[[bin]]\nname='{binary}'\npath='src/main.rs'\ntest=false\n"));
         fixture.write(
             &format!("{name}/build.rs"),
             "fn main(){println!(\"cargo:rustc-env=BUILD_STAMP=script-value\");}",
         );
         fixture.write(&format!("{name}/src/main.rs"), "fn main(){}");
         fixture.write(&format!("{name}/src/lib.rs"), "/// ```\n/// assert_eq!(shared::mask(), 3);\n/// ```\n/// ```compile_fail\n/// no_such_function();\n/// ```\npub fn docs() {}\n");
-        fixture.write(&format!("{name}/tests/{name}.rs"), &format!(r#"
+        fixture.write(
+            &format!("{name}/tests/{name}.rs"),
+            &format!(
+                r#"
 #[test]
 #[cfg(target_os = "linux")]
 fn context() {{
@@ -170,7 +178,8 @@ fn context() {{
     let root = std::path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     assert_eq!(std::env::current_dir().unwrap(), root);
     assert!(std::path::Path::new(&std::env::var("CARGO").unwrap()).is_file());
-    assert!(std::process::Command::new(std::env::var("CARGO_BIN_EXE_helper_{name}").unwrap()).status().unwrap().success());
+    assert_eq!(std::env::var("CARGO_BIN_EXE_{binary}").unwrap(), env!("CARGO_BIN_EXE_{binary}"));
+    assert!(std::process::Command::new(env!("CARGO_BIN_EXE_{binary}")).status().unwrap().success());
     std::fs::write(root.join("../{name}.start"), "started").unwrap();
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
     while !root.join("../{peer}.start").exists() {{
@@ -178,7 +187,9 @@ fn context() {{
         std::thread::sleep(std::time::Duration::from_millis(10));
     }}
 }}
-"#));
+"#
+            ),
+        );
     }
     fixture.lock();
     fixture.run().unwrap();
