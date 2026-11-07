@@ -162,6 +162,9 @@ mod stale;
 #[path = "candidate/ambient.rs"]
 mod ambient;
 
+#[path = "candidate/leftover.rs"]
+mod leftover;
+
 fn isolated(name: &str) -> bool {
     alone(&format!("recovery::{name}"))
 }

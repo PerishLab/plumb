@@ -169,6 +169,66 @@ pub(super) fn git(root: &Path, args: &[&str]) -> Result<String, String> {
         .map_err(|error| format!("Auto git output is not UTF-8: {error}"))
 }
 
+pub(super) struct Origin<'a>(pub &'a Path);
+
+impl Origin<'_> {
+    pub fn cherry(&self, upstream: &str, head: &str) -> Result<Vec<(char, String)>, String> {
+        git(self.0, &["cherry", upstream, head])?
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .map(|line| match line.split_once(' ') {
+                Some(("-", commit)) if !commit.trim().is_empty() => Ok(('-', commit.trim().into())),
+                Some(("+", commit)) if !commit.trim().is_empty() => Ok(('+', commit.trim().into())),
+                _ => Err(format!("git cherry line is unreadable: {line}")),
+            })
+            .collect()
+    }
+
+    pub fn equivalent(&self, upstream: &str, head: &str) -> Result<bool, String> {
+        let marks = self.cherry(upstream, head)?;
+        if marks.is_empty() {
+            return Err(format!(
+                "git cherry {upstream} {head} is empty; patch equivalence is undeterminable"
+            ));
+        }
+        Ok(marks.iter().all(|(mark, _)| *mark == '-'))
+    }
+
+    pub fn merges(&self, range: &str) -> Result<Vec<String>, String> {
+        Ok(git(self.0, &["rev-list", "--merges", range])?
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .map(String::from)
+            .collect())
+    }
+
+    pub fn heads(&self) -> Result<Vec<(u64, String)>, String> {
+        git(
+            self.0,
+            &["ls-remote", "--heads", "origin", "refs/heads/auto/*"],
+        )?
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| {
+            let (tip, name) = line
+                .split_once('\t')
+                .ok_or_else(|| format!("remote Auto head is unreadable: {line}"))?;
+            let number = name
+                .strip_prefix("refs/heads/auto/")
+                .and_then(|number| number.parse::<u64>().ok())
+                .filter(|number| *number > 0)
+                .ok_or_else(|| format!("remote Auto head has no Issue number: {name}"))?;
+            if !matches!(tip.len(), 40 | 64) || !tip.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+                return Err(format!("remote Auto head has an invalid commit: {line}"));
+            }
+            Ok((number, tip.into()))
+        })
+        .collect()
+    }
+}
+
 pub(super) fn current(root: &Path, main: &str) -> Result<(), String> {
     git(root, &["fetch", "origin"])?;
     if git(root, &["rev-parse", "origin/main"])? != main {

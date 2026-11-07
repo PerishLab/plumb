@@ -169,3 +169,89 @@ fn owned(root: &Path, seat: &Seat, state: &State) -> Result<Option<String>, Stri
         .map(|path| Some(path.to_string()))
         .ok_or_else(|| "Auto worktree path is not UTF-8".into())
 }
+
+pub(super) struct Leftover<'a> {
+    pub root: &'a Path,
+    pub provider: &'a Provider<'a>,
+    pub state: &'a State,
+}
+
+impl Leftover<'_> {
+    pub fn check(&self) -> Result<(), String> {
+        for (number, tip) in work::Origin(self.root).heads()? {
+            self.waived(number, &tip).map_err(|reason| {
+                format!("leftover remote auto/{number} at {tip} blocks follow: {reason}")
+            })?;
+        }
+        Ok(())
+    }
+
+    fn waived(&self, number: u64, tip: &str) -> Result<(), String> {
+        let issue = self.provider.issue(number)?;
+        if issue.get("pull_request").is_some() || issue["state"] != "closed" {
+            return Err(format!("Auto issue #{number} is not a closed issue"));
+        }
+        self.pulled(number)?;
+        self.idle(number)?;
+        let origin = work::Origin(self.root);
+        work::git(
+            self.root,
+            &["fetch", "origin", &format!("refs/heads/auto/{number}")],
+        )?;
+        if work::git(self.root, &["rev-parse", "FETCH_HEAD"])? != tip {
+            return Err("the listed tip moved or is unreadable".into());
+        }
+        if !origin.merges(&format!("origin/main..{tip}"))?.is_empty() {
+            return Err("origin/main.. range holds a merge commit".into());
+        }
+        if !origin.equivalent("origin/main", tip)? {
+            return Err("git cherry against origin/main has a commit not marked -".into());
+        }
+        Ok(())
+    }
+
+    fn pulled(&self, number: u64) -> Result<(), String> {
+        let branch = format!("auto/{number}");
+        let repository = self.provider.repository;
+        let owner = repository
+            .split('/')
+            .next()
+            .ok_or("repository has no owner")?;
+        let pulls = self.provider.pages(&format!(
+            "repos/{repository}/pulls?state=all&head={owner}:{branch}&per_page=100"
+        ))?;
+        if pulls
+            .iter()
+            .any(|pull| pull["head"]["ref"].as_str() != Some(branch.as_str()))
+        {
+            return Err("a pull request for this head names another branch".into());
+        }
+        if pulls.iter().any(|pull| pull["state"] != "closed") {
+            return Err("an open pull request still has this head".into());
+        }
+        let merged = pulls
+            .iter()
+            .filter(|pull| pull["merged_at"].is_string())
+            .count();
+        if merged != 1 {
+            return Err(format!(
+                "exactly one merged pull request must have this head; found {merged}"
+            ));
+        }
+        Ok(())
+    }
+
+    fn idle(&self, number: u64) -> Result<(), String> {
+        if self.state.issue == number {
+            return Err("the running follow still records this Auto".into());
+        }
+        let held = format!("branch refs/heads/auto/{number}");
+        if work::git(self.root, &["worktree", "list", "--porcelain"])?
+            .lines()
+            .any(|line| line == held)
+        {
+            return Err("a local worktree still holds this Auto branch".into());
+        }
+        Ok(())
+    }
+}

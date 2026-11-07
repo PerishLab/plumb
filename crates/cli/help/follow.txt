@@ -37,6 +37,14 @@ the lease. It then removes the owned auto/<number> branch by exact lease and its
 worktree, clears the seat and prints what it retired, so the next plain run
 opens a fresh Auto from current main.
 
+Before opening a new Auto, follow scans origin for leftover auto/<number>
+branches. One is waived only when its Issue is closed, exactly one merged pull
+and no open pull has that head, no running follow or local worktree holds it,
+origin/main..auto/<number> has no merge commit and every git cherry line against
+origin/main is marked -. Any other leftover, or one it cannot judge, stops
+before an Issue is created; follow never deletes it. The waiver covers only the
+leftover-branch signal.
+
 Only the Auto Issue's author, its operation writer, runs or settles it. Any
 other identity refuses before its first write, naming the writer and itself.
 Another identity's marker comment refuses every run until it is resolved,
