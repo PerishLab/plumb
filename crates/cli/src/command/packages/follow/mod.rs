@@ -105,6 +105,12 @@ fn resume(
         }
     }
     if state.issue == 0 {
+        retire::Leftover {
+            root: &input.root,
+            provider,
+            state,
+        }
+        .check()?;
         let tree = work::git(&input.root, &["rev-parse", "origin/main^{tree}"])?;
         let probe = crate::command::guard::precommit::tree::Index::new(&input.root, &tree)?;
         if let Err(error) = super::resolve(&probe.root, "follow") {
