@@ -1,4 +1,4 @@
-use super::{Definition, Judgment, Reference, wire::Wire};
+use super::{Comparison, Definition, Judgment, Reference, wire::Wire};
 use crate::windtun::qualification::{Fault, Read};
 use serde::Serialize;
 use serde_json::Value;
@@ -79,6 +79,10 @@ impl<R: Read> Reader<'_, R> {
 
     pub fn adoption(&self, location: &str, product: &str) -> Result<Review<Definition>, Fault> {
         self.document((location, product), Definition::parse)
+    }
+
+    pub fn comparison(&self, location: &str, product: &str) -> Result<Review<Comparison>, Fault> {
+        self.document((location, product), Comparison::parse)
     }
 
     fn document<T: Serialize>(

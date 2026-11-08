@@ -1,5 +1,7 @@
 #[path = "../adoption/mod.rs"]
 mod baseline;
+#[path = "../semantics/comparison.rs"]
+mod comparison;
 #[path = "../semantics/declaration.rs"]
 mod declaration;
 mod native;
@@ -13,6 +15,7 @@ mod world;
 
 use crate::windtun::qualification::{Fault, Read};
 pub use baseline::{Baseline, Materials};
+pub use comparison::{Binding, Comparison, Projection};
 pub use declaration::{Definition, Judgment};
 pub use native::Native;
 pub use policy::{Authority, Requirements, Scope};
@@ -43,5 +46,9 @@ impl<R: Read> Inspector<R> {
 
     pub fn adoption(&self, location: &str, product: &str) -> Result<Review<Definition>, Fault> {
         review::Reader(&self.0).adoption(location, product)
+    }
+
+    pub fn comparison(&self, location: &str, product: &str) -> Result<Review<Comparison>, Fault> {
+        review::Reader(&self.0).comparison(location, product)
     }
 }

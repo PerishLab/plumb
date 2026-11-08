@@ -27,6 +27,9 @@ impl Facts {
             Purpose::Adoption => inspector
                 .adoption(reference, product)
                 .and_then(|held| Self::value(&held)),
+            Purpose::Comparison => inspector
+                .comparison(reference, product)
+                .and_then(|held| Self::value(&held)),
         };
         Self::print(result)
     }

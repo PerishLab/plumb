@@ -171,6 +171,17 @@ The same material verification is available before issuance without authenticati
 the supplied record. Issuers consume that shared check; baseline readers add
 exact native object authentication. Neither phase grants publication permission.
 
+World-bound review v2 names the exact before, candidate and original family anchor
+as separate snapshot/world digest pairs. Its shared projection validates each
+source/world binding and augments a copy of every snapshot with the same reserved
+runtime world material before the existing assessment algorithm runs. It never
+rewrites an adopted snapshot or rolls its anchor. World changes require the exact
+review even when source/Scene are identical; a byte difference alone does not
+force Y. The native reader authenticates the current declaration and author, not
+the supplied worlds or their semantic truth. This projection is advisory until
+trusted history, candidate-world provenance and complete admission are verified;
+v1 snapshot-only reviews cannot substitute for world-bound review.
+
 The `windtun` library feature exports
 `plumb::windtun::qualification::{Inspector, Read, Remote}`. `Inspector` owns the
 bounded protocol judgment; `Read` supplies authenticated observations and never

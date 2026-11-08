@@ -1,4 +1,5 @@
 mod baseline;
+mod comparison;
 mod fixture;
 mod inputs;
 mod producer;
