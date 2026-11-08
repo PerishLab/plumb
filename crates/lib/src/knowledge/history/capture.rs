@@ -34,8 +34,14 @@ impl<R: Read> Inspector<R> {
         )?;
         request.native.validate()?;
         request.root.validate(product)?;
+        if let Some(reference) = &request.previous {
+            reference.validate(product)?;
+        }
         let authority = self.current()?;
         let discovered = Discovery::read(&self.0, product)?;
+        if discovered.is_none() && request.previous.is_some() {
+            return Err(Fault::unknown("current retained history is undiscovered"));
+        }
         Wire::require(
             discovered.as_ref().map(|head| &head.reference) == request.previous.as_ref(),
             "history request does not bind current discovery",

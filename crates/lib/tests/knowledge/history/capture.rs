@@ -175,6 +175,22 @@ fn current() {
 }
 
 #[test]
+fn undiscovered() {
+    let Inputs {
+        source,
+        reference,
+        mut request,
+        ..
+    } = inputs(false);
+    request.previous = Some(reference);
+    let fault = Inspector::new(source)
+        .retain(&request, "plumb")
+        .unwrap_err();
+    assert_eq!(fault.state, plumb::windtun::qualification::State::Unknown);
+    assert!(fault.reason.contains("undiscovered"));
+}
+
+#[test]
 fn capacity() {
     let Inputs {
         mut source,
