@@ -6,7 +6,7 @@ use base64::{Engine, engine::general_purpose::STANDARD};
 use serde_json::{Value, json};
 use sha1::{Digest, Sha1};
 
-pub(super) struct Source<'a, R>(pub &'a R);
+pub(crate) struct Source<'a, R>(pub &'a R);
 
 pub(super) struct Subject {
     pub source: Value,
@@ -56,7 +56,7 @@ impl<R: Read> Source<'_, R> {
         Ok(Wire::hex(&value["commit"]["sha"], 40)?.into())
     }
 
-    pub fn content(&self, repository: &str, commit: &str, path: &str) -> Result<Vec<u8>> {
+    pub(super) fn content(&self, repository: &str, commit: &str, path: &str) -> Result<Vec<u8>> {
         let url = format!("https://api.github.com/repos/{repository}/contents/{path}?ref={commit}");
         let value = Wire::document(self.0, &url, false)?;
         Wire::require(
@@ -85,7 +85,7 @@ impl<R: Read> Source<'_, R> {
         Ok(raw)
     }
 
-    pub fn policy(&self) -> Result<Value> {
+    pub(super) fn policy(&self) -> Result<Value> {
         let repository = self.repository("PerishLab/wharf")?;
         Wire::require(
             repository["id"] == 1374358737_u64
@@ -118,7 +118,7 @@ impl<R: Read> Source<'_, R> {
         )
     }
 
-    fn commit(&self, repository: &str, marker: &str) -> Result<Value> {
+    pub(crate) fn commit(&self, repository: &str, marker: &str) -> Result<Value> {
         let root = format!("https://api.github.com/repos/{repository}");
         let reference = Wire::document(self.0, &format!("{root}/git/ref/tags/{marker}"), false)?;
         Wire::require(
@@ -145,7 +145,7 @@ impl<R: Read> Source<'_, R> {
         )
     }
 
-    pub fn subject(&self, repository: &str, marker: &str) -> Result<Subject> {
+    pub(super) fn subject(&self, repository: &str, marker: &str) -> Result<Subject> {
         let product = repository
             .strip_prefix("PerishLab/")
             .ok_or_else(|| Fault::refused("subject requires PerishLab repository"))?;
@@ -243,7 +243,7 @@ impl<R: Read> Source<'_, R> {
         Ok(names)
     }
 
-    pub fn unchanged(&self, subject: &Subject) -> Result<()> {
+    pub(super) fn unchanged(&self, subject: &Subject) -> Result<()> {
         let source = &subject.source;
         let same = self.commit(
             Wire::text(&source["repository"])?,

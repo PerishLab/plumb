@@ -13,10 +13,14 @@ pub enum Deed {
         #[arg(long, value_enum)]
         purpose: Purpose,
     },
-    #[command(about = "Validate supplied release record data without authenticating it", long_about = plumb::seat::resource!("help/release/inspect.txt"))]
+    #[command(about = "Inspect release data or authenticate exact semantic records", long_about = plumb::seat::resource!("help/release/inspect.txt"))]
     Inspect {
         #[arg(long)]
         input: std::path::PathBuf,
+        #[arg(long, value_enum, default_value = "data")]
+        purpose: Inspection,
+        #[arg(long, required_if_eq_any([("purpose", "materials"), ("purpose", "issuer"), ("purpose", "baseline")]))]
+        product: Option<String>,
     },
     #[command(about = "Collect exact public source and formal Scene review inputs", long_about = plumb::seat::resource!("help/release/collect.txt"))]
     Collect {
@@ -86,4 +90,12 @@ pub enum Deed {
 pub enum Purpose {
     Boundary,
     Adoption,
+}
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+pub enum Inspection {
+    Data,
+    Materials,
+    Issuer,
+    Baseline,
 }

@@ -1,4 +1,4 @@
-mod fixture;
+pub(super) mod fixture;
 
 use fixture::{BASE, Fixture, POINTER};
 use plumb::seat::depot::v3::Pointer;

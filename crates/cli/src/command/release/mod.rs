@@ -17,7 +17,13 @@ pub fn run(deed: Deed) -> i32 {
             reference,
             purpose,
         } => return facts::Facts::review(product, reference, *purpose),
-        Deed::Inspect { input } => return facts::Facts::inspect(input),
+        Deed::Inspect {
+            input,
+            purpose,
+            product,
+        } => {
+            return facts::Facts::inspect(input, *purpose, product.as_deref());
+        }
         _ => {}
     }
     if let Deed::Collect { repository, commit } = &deed {

@@ -3,10 +3,10 @@ mod current;
 mod receipt;
 mod registry;
 mod remote;
-mod source;
+pub(crate) mod source;
 pub(crate) mod unique;
 mod wire;
-mod world;
+pub(crate) mod world;
 
 pub use remote::Remote;
 use serde::Serialize;

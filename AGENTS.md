@@ -154,6 +154,23 @@ rebuilding old source with today's controls cannot recover that historical world
 The foundation does not enable a semantics gate in open, stamp or ship. Those
 admission and activation commitments remain open in Plumb #617 and Wharf #354.
 
+The shared record reader authenticates an immutable semantic object's exact bytes
+through its completed native issuer job and digest-bearing confirmation step,
+with protected-main history and fresh authority checks. Capture roles do not
+issue records. This producer authentication alone establishes no baseline
+adoption, boundary equality, execution, canary or publication permission; the
+matching trusted Wharf issuer must still be deployed and consumed.
+The initial baseline reader additionally verifies the actual annotated stable,
+complete original distribution and recorded combinations, original world,
+full source and immutable Scene collection, and exact native adoption review.
+Missing historical plans or resolved worlds remain unknown. This retrospective
+adoption does not claim original historical execution or release compliance.
+An effective tree differing from the archived source remains unknown until its
+complete effective-source materials are available; a hash alone is insufficient.
+The same material verification is available before issuance without authenticating
+the supplied record. Issuers consume that shared check; baseline readers add
+exact native object authentication. Neither phase grants publication permission.
+
 The `windtun` library feature exports
 `plumb::windtun::qualification::{Inspector, Read, Remote}`. `Inspector` owns the
 bounded protocol judgment; `Read` supplies authenticated observations and never

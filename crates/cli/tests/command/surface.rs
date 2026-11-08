@@ -76,3 +76,80 @@ fn inspection() {
         assert_eq!(held["publication"], false);
     }
 }
+
+#[test]
+fn purposes() {
+    let directory = tempfile::tempdir().unwrap();
+    let input = directory.path().join("reference.json");
+    let reference = serde_json::json!({"url":"https://foreign.example/object.json","sha256":"a".repeat(64),"size":12});
+    std::fs::write(&input, serde_json::to_vec(&reference).unwrap()).unwrap();
+    for purpose in ["issuer", "baseline"] {
+        let result = Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["release", "inspect", "--purpose", purpose, "--input"])
+            .arg(&input)
+            .output()
+            .unwrap();
+        assert_eq!(result.status.code(), Some(2));
+        assert!(String::from_utf8_lossy(&result.stderr).contains("--product"));
+        let result = Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args([
+                "release",
+                "inspect",
+                "--purpose",
+                purpose,
+                "--product",
+                "plumb",
+                "--input",
+            ])
+            .arg(&input)
+            .output()
+            .unwrap();
+        assert_eq!(result.status.code(), Some(1));
+        let held: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+        assert_eq!(held["state"], "refused");
+        assert_eq!(held["publication"], false);
+        assert!(
+            held["reason"]
+                .as_str()
+                .unwrap()
+                .contains("foreign authority")
+        );
+    }
+    let result = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["release", "inspect", "--purpose", "materials", "--input"])
+        .arg(&input)
+        .output()
+        .unwrap();
+    assert_eq!(result.status.code(), Some(2));
+    let result = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args([
+            "release",
+            "inspect",
+            "--purpose",
+            "materials",
+            "--product",
+            "plumb",
+            "--input",
+        ])
+        .arg(&input)
+        .output()
+        .unwrap();
+    assert_eq!(result.status.code(), Some(1));
+    let held: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+    assert_eq!(held["state"], "refused");
+    assert_eq!(held["publication"], false);
+    let result = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["release", "inspect", "--product", "plumb", "--input"])
+        .arg(&input)
+        .output()
+        .unwrap();
+    assert_eq!(result.status.code(), Some(1));
+    let held: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+    assert_eq!(held["state"], "refused");
+    assert!(
+        held["reason"]
+            .as_str()
+            .unwrap()
+            .contains("does not select a product")
+    );
+}

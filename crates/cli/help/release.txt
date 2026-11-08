@@ -88,6 +88,9 @@ release collect reads exact public source and formal Scene inputs for review; it
 
 release policy reads current protected activation requirements; review reads an
 exact native author declaration with current product write permission; inspect
-validates supplied record or frozen world data. Their successful observations
+validates supplied record or frozen world data by default. Its explicit issuer
+and baseline purposes authenticate exact native records and initial adoption;
+materials verifies the same adoption inputs before issuance
+through the same shared library, without granting release admission. Their observations
 grant no publication permission. They do not activate semantics enforcement in
 open, stamp or ship. Each command's help states its trust boundary and exit codes.
