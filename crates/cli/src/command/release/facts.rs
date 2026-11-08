@@ -1,5 +1,5 @@
 use super::identity::deed::{Inspection, Purpose};
-use plumb::semantics::admission::{Inspector, Record, Reference, World};
+use plumb::semantics::admission::{Inspector, Preparation, Record, Reference, World};
 use plumb::windtun::qualification::{Fault, Remote, State};
 use serde_json::{Value, json};
 use std::io::Read;
@@ -59,6 +59,12 @@ impl Facts {
     }
 
     fn native(raw: &[u8], purpose: Inspection, product: &str) -> Result<Value, Fault> {
+        if let Inspection::Preparation = purpose {
+            let preparation = Preparation::parse(raw)?;
+            let data = Inspector::new(Remote::default()).prepared(&preparation, product)?;
+            return Ok(json!({"schema":"plumb.release.prepared/v1","data":data,
+                "authentication":true,"publication":false}));
+        }
         if let Inspection::Materials = purpose {
             let Record::Adoption(adoption) = Record::parse(raw)? else {
                 return Err(Fault::refused(
@@ -84,7 +90,7 @@ impl Facts {
                 "plumb.release.baseline/v1",
                 Self::value(&inspector.baseline(&reference, product)?)?,
             ),
-            Inspection::Data | Inspection::Materials => {
+            Inspection::Data | Inspection::Materials | Inspection::Preparation => {
                 return Err(Fault::refused("inspection uses its separate data reader"));
             }
         };

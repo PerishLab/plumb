@@ -19,7 +19,7 @@ pub enum Deed {
         input: std::path::PathBuf,
         #[arg(long, value_enum, default_value = "data")]
         purpose: Inspection,
-        #[arg(long, required_if_eq_any([("purpose", "materials"), ("purpose", "issuer"), ("purpose", "baseline")]))]
+        #[arg(long, required_if_eq_any([("purpose", "materials"), ("purpose", "issuer"), ("purpose", "baseline"), ("purpose", "preparation")]))]
         product: Option<String>,
     },
     #[command(about = "Collect exact public source and formal Scene review inputs", long_about = plumb::seat::resource!("help/release/collect.txt"))]
@@ -99,4 +99,5 @@ pub enum Inspection {
     Materials,
     Issuer,
     Baseline,
+    Preparation,
 }

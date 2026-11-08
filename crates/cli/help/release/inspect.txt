@@ -41,3 +41,16 @@ current activation or permission to publish. Issuer and baseline observations
 require the matching trusted Wharf issuer; prepared material facts cannot
 substitute for its confirmed record bytes.
 Data mode refuses --product. Exit 1 is refusal; exit 3 is unknown required evidence.
+With --purpose preparation --product <name>, input is a strict
+wharf.release.semantics.world/v1 descriptor naming the exact native run, attempt,
+control commit and job, plus public content-addressed world and material
+references. The shared reader verifies protected-main producer history, the
+completed successful semantic-world role and its unique confirmation step naming
+both exact SHA256 values, then complete effective-source bytes and reconstructed
+Git tree. Object, native-job and current-authority facts are rechecked.
+The plumb.release.prepared/v1 report authenticates original preparation only;
+it grants no current candidate freshness, semantic equality, baseline adoption,
+qualification, activation or publication. Missing observations remain unknown.
+Material facts summarize verified file count and identities; the library also
+retains complete verified file data without expanding it into the CLI report.
+

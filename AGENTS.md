@@ -199,6 +199,16 @@ This data reader neither authenticates the supplied world or producer nor grants
 publication. Existing baseline and comparison readers still refuse unavailable
 effective-source authority; successful payload decoding cannot bypass them.
 
+The native prepared-world reader authenticates a supplied descriptor's two exact
+public objects through the original completed semantic-world job and its unique
+dual-digest confirmation step, reusing the issuer's native identity verifier.
+It verifies complete effective source and rechecks immutable objects and current
+Wharf authority. Its authentication concerns original preparation, not current
+candidate freshness, semantic closure/equality, adoption or publication. CLI
+facts summarize source identities/counts; the library retains verified file data.
+Retained source objects and real installed consumption remain separate rollout
+obligations. This API does not loosen baseline or advisory comparison checks.
+
 The `windtun` library feature exports
 `plumb::windtun::qualification::{Inspector, Read, Remote}`. `Inspector` owns the
 bounded protocol judgment; `Read` supplies authenticated observations and never
