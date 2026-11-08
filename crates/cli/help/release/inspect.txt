@@ -5,4 +5,6 @@ No network request occurs. Native run IDs, matching digests and valid data do no
 authenticate an issuer, execution, baseline, canary or publication permission.
 The JSON result explicitly retains authentication=false and publication=false.
 Exit 0 means data is structurally valid, never that a release is admissible.
-Exit 1 means refused; unreadable input is refused. No release gate is activated.
+Exit 1 means refused; unreadable input is refused. Exit 3 means unknown required
+world inputs, including a valid runtime claim without its actual resolution.
+No release gate is activated.

@@ -46,7 +46,9 @@ impl Wire {
             !raw.is_empty() && raw.len() <= Self::LIMIT,
             "semantic document exceeds bounds",
         )?;
-        serde_json::from_slice(raw).map_err(|_| Fault::refused("invalid semantic document"))
+        let held: crate::windtun::qualification::unique::Unique = serde_json::from_slice(raw)
+            .map_err(|_| Fault::refused("invalid or duplicate semantic document"))?;
+        serde_json::from_value(held.0).map_err(|_| Fault::refused("invalid semantic document"))
     }
 
     pub fn canonical(value: &impl Serialize) -> Result<Vec<u8>, Fault> {

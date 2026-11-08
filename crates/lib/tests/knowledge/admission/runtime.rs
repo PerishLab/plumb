@@ -121,9 +121,30 @@ fn worlds() {
         guard,
     };
     World::parse(&serde_json::to_vec(&held).unwrap()).unwrap();
+    let raw = serde_json::to_string(&held).unwrap();
+    let ambiguous = raw.replace(
+        "\"node.version\":\"24.18.0\"",
+        "\"node.version\":\"invalid\",\"node.version\":\"24.18.0\"",
+    );
+    assert_ne!(raw, ambiguous);
+    assert_eq!(
+        World::parse(ambiguous.as_bytes()).unwrap_err().state,
+        plumb::windtun::qualification::State::Refused
+    );
     let mut reused = held.clone();
     reused.head = "a".repeat(40);
     reused.validate().unwrap();
+    let mut missing = held.clone();
+    missing.guard.guard.resolution = None;
+    missing.guard.guard.digest =
+        "d27fbee012bb9959f4daa46e3dd06e67ff31c6116432b40d4afcb6016f44ac5f".into();
+    missing.guard.digest = Runtime::seal(&missing.guard.commit, &missing.guard.guard).unwrap();
+    missing.guard.validate().unwrap();
+    let raw = serde_json::to_vec(&missing).unwrap();
+    assert_eq!(
+        World::parse(&raw).unwrap_err().state,
+        plumb::windtun::qualification::State::Unknown
+    );
     for changed in 0..7 {
         let mut value = held.clone();
         match changed {
