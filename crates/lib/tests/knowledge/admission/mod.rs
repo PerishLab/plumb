@@ -5,6 +5,7 @@ mod inputs;
 mod markers;
 mod producer;
 mod runtime;
+mod source;
 
 use fixture::{COMMENT, Fixture, LOCATION, PERMISSION, WHARF};
 use plumb::semantics::admission::{Inspector, Judgment, Requirements};
