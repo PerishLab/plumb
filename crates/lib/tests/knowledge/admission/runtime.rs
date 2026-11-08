@@ -1,10 +1,10 @@
 use plumb::guard::{Action, Descriptor, Runtime};
 use plumb::packages::Resolution;
 
-struct Fixture;
+pub(super) struct Fixture;
 
 impl Fixture {
-    fn runtime() -> Runtime {
+    pub(super) fn runtime() -> Runtime {
         let guard = Descriptor {
             schema: plumb::guard::SCHEMA.into(),
             repository: "PerishLab/plumb".into(),

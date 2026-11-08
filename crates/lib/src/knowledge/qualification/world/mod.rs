@@ -1,4 +1,4 @@
-mod plan;
+pub(crate) mod plan;
 
 use super::{
     Read, Result,

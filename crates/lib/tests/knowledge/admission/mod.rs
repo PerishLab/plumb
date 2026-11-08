@@ -1,4 +1,7 @@
+mod baseline;
 mod fixture;
+mod inputs;
+mod producer;
 mod runtime;
 
 use fixture::{COMMENT, Fixture, LOCATION, PERMISSION, WHARF};

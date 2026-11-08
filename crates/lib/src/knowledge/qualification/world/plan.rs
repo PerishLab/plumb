@@ -45,7 +45,7 @@ const NESTED: &[&str] = &[
     "sha256",
 ];
 
-pub(super) fn admit(record: &Value) -> Result<()> {
+pub(crate) fn admit(record: &Value) -> Result<()> {
     shape(record)?;
     match record.get("plan") {
         None => Ok(()),

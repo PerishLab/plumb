@@ -1,5 +1,5 @@
-use super::identity::deed::Purpose;
-use plumb::semantics::admission::{Inspector, Record, World};
+use super::identity::deed::{Inspection, Purpose};
+use plumb::semantics::admission::{Inspector, Record, Reference, World};
 use plumb::windtun::qualification::{Fault, Remote, State};
 use serde_json::{Value, json};
 use std::io::Read;
@@ -31,18 +31,61 @@ impl Facts {
         Self::print(result)
     }
 
-    pub fn inspect(path: &Path) -> i32 {
-        Self::print(Self::read(path).and_then(|raw| {
-            let value: Value = serde_json::from_slice(&raw)
-                .map_err(|_| Fault::refused("invalid supplied JSON"))?;
-            let held = if value["schema"] == World::SCHEMA {
-                Self::value(&World::parse(&raw)?)?
-            } else {
-                Self::value(&Record::parse(&raw)?)?
+    pub fn inspect(path: &Path, purpose: Inspection, product: Option<&str>) -> i32 {
+        let result = Self::read(path).and_then(|raw| match (purpose, product) {
+            (Inspection::Data, None) => Self::data(&raw),
+            (Inspection::Data, Some(_)) => {
+                Err(Fault::refused("data inspection does not select a product"))
+            }
+            (_, None) => Err(Fault::refused("remote inspection requires --product")),
+            (_, Some(product)) => Self::native(&raw, purpose, product),
+        });
+        Self::print(result)
+    }
+
+    fn data(raw: &[u8]) -> Result<Value, Fault> {
+        let value: Value =
+            serde_json::from_slice(raw).map_err(|_| Fault::refused("invalid supplied JSON"))?;
+        let held = if value["schema"] == World::SCHEMA {
+            Self::value(&World::parse(raw)?)?
+        } else {
+            Self::value(&Record::parse(raw)?)?
+        };
+        Ok(json!({"schema":"plumb.release.inspection/v1","data":held,
+            "authentication":false,"publication":false}))
+    }
+
+    fn native(raw: &[u8], purpose: Inspection, product: &str) -> Result<Value, Fault> {
+        if let Inspection::Materials = purpose {
+            let Record::Adoption(adoption) = Record::parse(raw)? else {
+                return Err(Fault::refused(
+                    "material verification requires supplied adoption data",
+                ));
             };
-            Ok(json!({"schema":"plumb.release.inspection/v1","data":held,
-                "authentication":false,"publication":false}))
-        }))
+            if adoption.product != product {
+                return Err(Fault::refused("adoption materials name another product"));
+            }
+            let data = Inspector::new(Remote::default()).materials(&adoption)?;
+            return Ok(json!({"schema":"plumb.release.materials/v1","data":data,
+                "authentication":false,"publication":false}));
+        }
+        let reference: Reference = serde_json::from_slice(raw)
+            .map_err(|_| Fault::refused("invalid semantic object reference"))?;
+        let inspector = Inspector::new(Remote::default());
+        let (schema, data) = match purpose {
+            Inspection::Issuer => (
+                "plumb.release.origin/v1",
+                Self::value(&inspector.record(&reference, product)?)?,
+            ),
+            Inspection::Baseline => (
+                "plumb.release.baseline/v1",
+                Self::value(&inspector.baseline(&reference, product)?)?,
+            ),
+            Inspection::Data | Inspection::Materials => {
+                return Err(Fault::refused("inspection uses its separate data reader"));
+            }
+        };
+        Ok(json!({"schema":schema,"data":data,"authentication":true,"publication":false}))
     }
 
     fn read(path: &Path) -> Result<Vec<u8>, Fault> {

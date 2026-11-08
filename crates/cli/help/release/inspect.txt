@@ -1,10 +1,43 @@
-Validate a supplied regular JSON file within 4 MiB. Accept a strict effective
+Inspect a regular JSON file within 4 MiB. The default --purpose data accepts a strict effective
 wharf.release.snapshot/v1 world or a canonical wharf.release.semantics record.
 Check supported fields, bounded identities, references and internal consistency.
-No network request occurs. Native run IDs, matching digests and valid data do not
+Data inspection makes no network request. Native run IDs, matching digests and valid data do not
 authenticate an issuer, execution, baseline, canary or publication permission.
 The JSON result explicitly retains authentication=false and publication=false.
 Exit 0 means data is structurally valid, never that a release is admissible.
 Exit 1 means refused; unreadable input is refused. Exit 3 means unknown required
 world inputs, including a valid runtime claim without its actual resolution.
 No release gate is activated.
+
+With --purpose materials --product <name>, input is canonical adoption record
+data. Independently verify the annotated stable, original resolved world and
+complete distribution, exact full-source/Scene collection and bound native
+adoption review. This shares the baseline reader's material verification and
+lets a trusted producer check inputs before its issuer job completes. The
+plumb.release.materials/v1 facts retain authentication=false and publication=false;
+they do not authenticate the supplied record or replace its future native issuer.
+
+With --purpose issuer --product <name>, input is a strict semantic object reference
+containing url, sha256 and size. Fetch exact canonical bytes from that product's
+fixed authority. Verify current protected Wharf requirements, main-history
+ancestry and the exact native ship attempt, successful issuer job and successful
+digest-bearing confirmation step. The surrounding run may still be in progress;
+the issuer job must already be complete. A capture role cannot issue a record.
+The plumb.release.origin/v1 facts authenticate record origin only.
+
+With --purpose baseline --product <name>, input names an adoption record. Also
+verify the actual annotated stable, complete original distribution and recorded
+combinations, original resolved world, full source and immutable Scene collection,
+and the exact current native adoption review. Missing historical plans or actual
+resolved worlds remain unknown. The plumb.release.baseline/v1 facts describe a
+retrospective initial adoption, never original historical release compliance.
+An effective source tree differing from the archived source remains unknown
+until its complete effective-source materials are supported; a tree hash alone
+does not recover that material closure.
+
+Materials, issuer and baseline modes make bounded remote reads and retain publication=false.
+They establish no arbitrary program equivalence, execution, qualification, canary,
+current activation or permission to publish. Issuer and baseline observations
+require the matching trusted Wharf issuer; prepared material facts cannot
+substitute for its confirmed record bytes.
+Data mode refuses --product. Exit 1 is refusal; exit 3 is unknown required evidence.
