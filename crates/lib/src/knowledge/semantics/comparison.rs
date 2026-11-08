@@ -12,17 +12,22 @@ pub struct Binding {
 
 impl Binding {
     pub fn new(snapshot: &Snapshot, world: &World) -> Result<Self, Fault> {
+        let binding = Self::observed(snapshot, world)?;
+        if world.tree != world.source.tree {
+            return Err(Fault::unknown(
+                "complete effective-source materials are unavailable for boundary review",
+            ));
+        }
+        Ok(binding)
+    }
+
+    pub(super) fn observed(snapshot: &Snapshot, world: &World) -> Result<Self, Fault> {
         snapshot.validate().map_err(Fault::refused)?;
         world.validate()?;
         Wire::require(
             snapshot.source == world.source.source(),
             "review world names another snapshot source",
         )?;
-        if world.tree != world.source.tree {
-            return Err(Fault::unknown(
-                "complete effective-source materials are unavailable for boundary review",
-            ));
-        }
         Ok(Self {
             snapshot: snapshot.digest().map_err(Fault::refused)?,
             world: Wire::sha(&Wire::canonical(world)?),
@@ -31,6 +36,14 @@ impl Binding {
 
     fn project(snapshot: &Snapshot, world: &World) -> Result<(Self, Snapshot), Fault> {
         let binding = Self::new(snapshot, world)?;
+        Self::augmented(snapshot, world, binding)
+    }
+
+    pub(super) fn augmented(
+        snapshot: &Snapshot,
+        world: &World,
+        binding: Self,
+    ) -> Result<(Self, Snapshot), Fault> {
         let name = "plumb/release/world.json";
         Wire::require(
             !snapshot
@@ -107,18 +120,31 @@ impl Comparison {
         reference: &str,
         inputs: [(&Snapshot, &World); 3],
     ) -> Result<Projection, Fault> {
+        let [(before, old), (after, current), (anchor, original)] = inputs;
+        self.projected(
+            reference,
+            [
+                Binding::project(before, old)?,
+                Binding::project(after, current)?,
+                Binding::project(anchor, original)?,
+            ],
+        )
+    }
+
+    pub(super) fn projected(
+        &self,
+        reference: &str,
+        inputs: [(Binding, Snapshot); 3],
+    ) -> Result<Projection, Fault> {
         self.validate()?;
         super::super::wire::Wire::reference(reference).map_err(Fault::refused)?;
-        let [(before, old), (after, current), (anchor, original)] = inputs;
-        for snapshot in [before, after, anchor] {
+        let [(old, before), (current, after), (original, anchor)] = inputs;
+        for snapshot in [&before, &after, &anchor] {
             Wire::require(
                 snapshot.product == self.product,
                 "world-bound review names another product",
             )?;
         }
-        let (old, before) = Binding::project(before, old)?;
-        let (current, after) = Binding::project(after, current)?;
-        let (original, anchor) = Binding::project(anchor, original)?;
         Wire::require(
             old == self.before && current == self.after && original == self.anchor,
             "review does not bind all three exact snapshot and world pairs",
