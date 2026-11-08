@@ -6,6 +6,8 @@ mod comparison;
 mod declaration;
 mod native;
 mod policy;
+#[path = "../preparation/mod.rs"]
+mod preparation;
 mod producer;
 mod record;
 mod reference;
@@ -19,6 +21,7 @@ pub use comparison::{Binding, Comparison, Projection};
 pub use declaration::{Definition, Judgment};
 pub use native::Native;
 pub use policy::{Authority, Requirements, Scope};
+pub use preparation::{File, Payload};
 pub use producer::Origin;
 pub use record::{Adoption, Canary, Intent, Kind, Publication, Record, Trial};
 pub use reference::Reference;

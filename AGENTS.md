@@ -191,6 +191,14 @@ establish a complete retained version history. Full admission must combine these
 current observations with its immutable history and original family evidence;
 this inventory alone grants neither equality nor publication permission.
 
+The effective-source payload reader verifies bounded decompression, every raw
+blob's size, SHA256 and Git identity, regular-file modes, complete directory
+structure and the reconstructed effective Git tree against the supplied world.
+Its current portable-path support is ASCII; unsupported Unicode remains unknown.
+This data reader neither authenticates the supplied world or producer nor grants
+publication. Existing baseline and comparison readers still refuse unavailable
+effective-source authority; successful payload decoding cannot bypass them.
+
 The `windtun` library feature exports
 `plumb::windtun::qualification::{Inspector, Read, Remote}`. `Inspector` owns the
 bounded protocol judgment; `Read` supplies authenticated observations and never
