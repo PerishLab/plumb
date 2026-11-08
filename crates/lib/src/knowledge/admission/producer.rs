@@ -48,7 +48,7 @@ impl<R: Read> Reader<'_, R> {
         })
     }
 
-    fn lineage(&self, commit: &str, head: &str) -> Result<(), Fault> {
+    pub(super) fn lineage(&self, commit: &str, head: &str) -> Result<(), Fault> {
         let compared: Value = Wire::document(
             self.0,
             &format!("{}/compare/{commit}...{head}", Wire::WHARF),
@@ -61,7 +61,7 @@ impl<R: Read> Reader<'_, R> {
         )
     }
 
-    fn run(&self, native: &Native) -> Result<Value, Fault> {
+    pub(super) fn run(&self, native: &Native) -> Result<Value, Fault> {
         let value: Value = Wire::document(self.0, &Self::path(native))?;
         Wire::require(
             value["id"].as_u64() == Some(native.run)
@@ -91,6 +91,19 @@ impl<R: Read> Reader<'_, R> {
     }
 
     fn job(&self, native: &Native, digest: &str) -> Result<Value, Fault> {
+        self.role(
+            native,
+            "[issue] version semantics",
+            &format!("[issue] semantics {digest}"),
+        )
+    }
+
+    pub(super) fn role(
+        &self,
+        native: &Native,
+        role: &str,
+        confirmation: &str,
+    ) -> Result<Value, Fault> {
         let held: Value =
             Wire::document(self.0, &format!("{}/jobs?per_page=100", Self::path(native)))?;
         let jobs = held["jobs"]
@@ -122,7 +135,7 @@ impl<R: Read> Reader<'_, R> {
         }
         let selected = jobs
             .iter()
-            .filter(|job| job["name"] == "[issue] version semantics")
+            .filter(|job| job["name"] == role)
             .collect::<Vec<_>>();
         Wire::require(
             selected.len() == 1,
@@ -138,10 +151,9 @@ impl<R: Read> Reader<'_, R> {
         let steps = job["steps"]
             .as_array()
             .ok_or_else(|| Fault::refused("semantic issuer steps are unavailable"))?;
-        let name = format!("[issue] semantics {digest}");
         let confirmed = steps
             .iter()
-            .filter(|step| step["name"] == name)
+            .filter(|step| step["name"] == confirmation)
             .collect::<Vec<_>>();
         Wire::require(
             confirmed.len() == 1

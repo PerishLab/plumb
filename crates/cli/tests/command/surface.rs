@@ -153,3 +153,29 @@ fn purposes() {
             .contains("does not select a product")
     );
 }
+
+#[test]
+fn preparation() {
+    let directory = tempfile::tempdir().unwrap();
+    let input = directory.path().join("preparation.json");
+    std::fs::write(&input, b"{}").unwrap();
+    let command = || {
+        let mut held = Command::new(env!("CARGO_BIN_EXE_plumb"));
+        held.args(["release", "inspect", "--purpose", "preparation", "--input"]);
+        held.arg(&input);
+        held
+    };
+    assert_eq!(command().output().unwrap().status.code(), Some(2));
+    let reference = serde_json::json!({"url":format!("https://releases.plumb.perish.uk/v1/semantics/objects/{}.json", "a".repeat(64)),"sha256":"a".repeat(64),"size":12});
+    for value in [
+        serde_json::json!({}),
+        serde_json::json!({"schema":"wharf.release.semantics.world/v1", "native":{"run":1,"attempt":1,"job":1,"commit":"a".repeat(40)},"world":reference,"material":reference,"authentication":true}),
+    ] {
+        std::fs::write(&input, serde_json::to_vec(&value).unwrap()).unwrap();
+        let result = command().args(["--product", "plumb"]).output().unwrap();
+        assert_eq!(result.status.code(), Some(1));
+        let held: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+        assert_eq!(held["state"], "refused");
+        assert_eq!(held["publication"], false);
+    }
+}

@@ -7,8 +7,8 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{io::Write, path::Path, process::Command};
 
-struct Inputs {
-    world: World,
+pub(super) struct Inputs {
+    pub(super) world: World,
     files: Vec<Value>,
 }
 
@@ -39,7 +39,7 @@ impl Inputs {
         String::from_utf8(result.stdout).unwrap().trim().into()
     }
 
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         let temporary = tempfile::tempdir().unwrap();
         let root = temporary.path();
         Self::git(root, &["init", "--initial-branch=main"]);
@@ -94,7 +94,7 @@ impl Inputs {
         json!({"encoding":"gzip+base64","size":raw.len(),"sha256":Self::sha(raw),"data":STANDARD.encode(gzip.finish().unwrap())})
     }
 
-    fn value(&self) -> Value {
+    pub(super) fn value(&self) -> Value {
         json!({"schema":"wharf.release.source/v1","source":self.world.source,"head":self.world.head,"tree":self.world.tree,
             "files":self.files.len(),"payload":Self::packed(&serde_json::to_vec(&self.files).unwrap())})
     }
