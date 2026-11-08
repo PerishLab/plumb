@@ -2,6 +2,7 @@ mod baseline;
 mod comparison;
 mod fixture;
 mod inputs;
+mod markers;
 mod producer;
 mod runtime;
 

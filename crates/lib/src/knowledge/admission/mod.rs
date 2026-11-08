@@ -14,7 +14,7 @@ mod wire;
 mod world;
 
 use crate::windtun::qualification::{Fault, Read};
-pub use baseline::{Baseline, Materials};
+pub use baseline::{Baseline, Inventory, Materials, Tag};
 pub use comparison::{Binding, Comparison, Projection};
 pub use declaration::{Definition, Judgment};
 pub use native::Native;

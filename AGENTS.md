@@ -182,6 +182,15 @@ the supplied worlds or their semantic truth. This projection is advisory until
 trusted history, candidate-world provenance and complete admission are verified;
 v1 snapshot-only reviews cannot substitute for world-bound review.
 
+The native marker inventory reads every bounded GitHub tag page twice and
+rechecks repository identity. It retains each canonical release name and the
+native listed commit; repeated pages, unreadable or oversized inventories and
+moved observations cannot become an empty reservation set. It does not recover
+deleted tags, authenticate annotated tag objects, prove historical ordering or
+establish a complete retained version history. Full admission must combine these
+current observations with its immutable history and original family evidence;
+this inventory alone grants neither equality nor publication permission.
+
 The `windtun` library feature exports
 `plumb::windtun::qualification::{Inspector, Read, Remote}`. `Inspector` owns the
 bounded protocol judgment; `Read` supplies authenticated observations and never

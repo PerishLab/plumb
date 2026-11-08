@@ -1,4 +1,7 @@
+mod markers;
 mod publication;
+
+pub use markers::{Inventory, Tag};
 
 use super::{
     Adoption, Definition, Inspector, Origin, Record, Reference, Review, World, policy, producer,
