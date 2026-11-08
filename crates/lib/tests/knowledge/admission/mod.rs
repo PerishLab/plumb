@@ -1,6 +1,8 @@
 mod baseline;
 mod comparison;
 mod fixture;
+#[path = "../history/mod.rs"]
+mod history;
 mod inputs;
 mod markers;
 mod prepared;

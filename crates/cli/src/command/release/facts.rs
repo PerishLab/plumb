@@ -1,5 +1,7 @@
 use super::identity::deed::{Inspection, Purpose};
-use plumb::semantics::admission::{Inspector, Preparation, Record, Reference, World};
+use plumb::semantics::admission::{
+    Checkpoint, Inspector, Preparation, Record, Reference, Retention, World,
+};
 use plumb::windtun::qualification::{Fault, Remote, State};
 use serde_json::{Value, json};
 use std::io::Read;
@@ -51,6 +53,8 @@ impl Facts {
             serde_json::from_slice(raw).map_err(|_| Fault::refused("invalid supplied JSON"))?;
         let held = if value["schema"] == World::SCHEMA {
             Self::value(&World::parse(raw)?)?
+        } else if value["schema"] == Checkpoint::SCHEMA {
+            Self::value(&Checkpoint::parse(raw)?)?
         } else {
             Self::value(&Record::parse(raw)?)?
         };
@@ -59,6 +63,14 @@ impl Facts {
     }
 
     fn native(raw: &[u8], purpose: Inspection, product: &str) -> Result<Value, Fault> {
+        if let Inspection::Retention = purpose {
+            let request = Retention::parse(raw)?;
+            let data = Inspector::new(Remote::default()).retain(&request, product)?;
+            return Ok(
+                json!({"schema":"plumb.release.history.materials/v1","data":data,
+                "authentication":false,"publication":false}),
+            );
+        }
         if let Inspection::Preparation = purpose {
             let preparation = Preparation::parse(raw)?;
             let data = Inspector::new(Remote::default()).prepared(&preparation, product)?;
@@ -80,6 +92,7 @@ impl Facts {
         }
         let reference: Reference = serde_json::from_slice(raw)
             .map_err(|_| Fault::refused("invalid semantic object reference"))?;
+        reference.validate(product)?;
         let inspector = Inspector::new(Remote::default());
         let (schema, data) = match purpose {
             Inspection::Issuer => (
@@ -90,7 +103,19 @@ impl Facts {
                 "plumb.release.baseline/v1",
                 Self::value(&inspector.baseline(&reference, product)?)?,
             ),
-            Inspection::Data | Inspection::Materials | Inspection::Preparation => {
+            Inspection::History => {
+                let history = inspector.discover(product)?;
+                if history.reference() != &reference {
+                    return Err(Fault::refused(
+                        "supplied checkpoint is not current discovery",
+                    ));
+                }
+                ("plumb.release.history/v1", Self::value(&history)?)
+            }
+            Inspection::Data
+            | Inspection::Materials
+            | Inspection::Preparation
+            | Inspection::Retention => {
                 return Err(Fault::refused("inspection uses its separate data reader"));
             }
         };
