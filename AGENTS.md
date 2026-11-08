@@ -146,6 +146,14 @@ public receipt. Source support alone does not qualify an installed consumer.
 
 ## Distribution
 
+Release semantics foundation reads current protected Wharf requirements and exact
+native review declarations. Its supplied record and frozen world codecs validate
+data and internal consistency; they authenticate no publisher, execution, baseline
+adoption or canary. A captured world must come from its original publication;
+rebuilding old source with today's controls cannot recover that historical world.
+The foundation does not enable a semantics gate in open, stamp or ship. Those
+admission and activation commitments remain open in Plumb #617 and Wharf #354.
+
 The `windtun` library feature exports
 `plumb::windtun::qualification::{Inspector, Read, Remote}`. `Inspector` owns the
 bounded protocol judgment; `Read` supplies authenticated observations and never

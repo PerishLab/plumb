@@ -1,6 +1,8 @@
 mod fixture;
 
 use fixture::{BASE, Fixture, POINTER};
+use plumb::seat::depot::v3::Pointer;
+use plumb::semantics::collection::Collector;
 use serde_json::json;
 
 #[test]
@@ -130,4 +132,56 @@ fn standing() {
     let report = fixture.inspect();
     assert_eq!(report.state, "refused");
     assert!(report.reason.unwrap().contains("standing differ"));
+}
+
+#[test]
+fn retained() {
+    let mut fixture = Fixture::new();
+    let pointer = Pointer::parse(&fixture.values[POINTER]).unwrap();
+    fixture.values.remove(POINTER);
+    fixture.values.remove(
+        "https://depot.seatrial.perish.uk/channels/stable/scenes/versions/v0.2.0/latest.json",
+    );
+    let report = Collector::new(fixture).historical("PerishLab/plumb", &"a".repeat(40), &pointer);
+    assert_eq!(report.state, "observed", "{:?}", report.reason);
+    assert!(report.reason.unwrap().contains("no current-channel"));
+    assert!(!report.adoption && !report.publication);
+    assert_eq!(report.snapshot.unwrap().coverage.len(), 2);
+}
+
+#[test]
+fn corruption() {
+    let mut fixture = Fixture::new();
+    let pointer = Pointer::parse(&fixture.values[POINTER]).unwrap();
+    let path = fixture
+        .values
+        .keys()
+        .find(|path| path.ends_with("objects/group/main.py"))
+        .unwrap()
+        .clone();
+    fixture
+        .values
+        .insert(path, b"different assertions".to_vec());
+    let report = Collector::new(fixture).historical("PerishLab/plumb", &"a".repeat(40), &pointer);
+    assert_eq!(report.state, "refused");
+    assert!(report.snapshot.is_none());
+}
+
+#[test]
+fn foreign() {
+    let fixture = Fixture::new();
+    let mut pointer = Pointer::parse(&fixture.values[POINTER]).unwrap();
+    pointer.manifest.url = pointer
+        .manifest
+        .url
+        .replace("depot.seatrial.perish.uk", "foreign.example");
+    let report = Collector::new(fixture).historical("PerishLab/plumb", &"a".repeat(40), &pointer);
+    assert_eq!(report.state, "refused");
+    assert!(report.snapshot.is_none());
+    let mut fixture = Fixture::new();
+    let pointer = Pointer::parse(&fixture.values[POINTER]).unwrap();
+    fixture.values.remove(&pointer.manifest.url);
+    let report = Collector::new(fixture).historical("PerishLab/plumb", &"a".repeat(40), &pointer);
+    assert_eq!(report.state, "unknown");
+    assert!(report.snapshot.is_none());
 }

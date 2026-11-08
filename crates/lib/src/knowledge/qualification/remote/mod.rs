@@ -37,6 +37,18 @@ impl Read for Remote {
     fn image(&self, reference: &str) -> Result<String> {
         Registry(&self.agent).inspect(reference)
     }
+
+    fn optional(&self, url: &str, limit: usize) -> Result<Option<Vec<u8>>> {
+        if limit > ARCHIVE {
+            return Err(Fault::refused(
+                "public optional read exceeds protocol bounds",
+            ));
+        }
+        if url.starts_with("https://api.github.com/") {
+            return Err(Fault::refused("optional native metadata is unsupported"));
+        }
+        Material::new(url).optional(&self.agent, limit)
+    }
 }
 
 impl Remote {

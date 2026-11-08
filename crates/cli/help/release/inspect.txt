@@ -1,0 +1,8 @@
+Validate a supplied regular JSON file within 4 MiB. Accept a strict effective
+wharf.release.snapshot/v1 world or a canonical wharf.release.semantics record.
+Check supported fields, bounded identities, references and internal consistency.
+No network request occurs. Native run IDs, matching digests and valid data do not
+authenticate an issuer, execution, baseline, canary or publication permission.
+The JSON result explicitly retains authentication=false and publication=false.
+Exit 0 means data is structurally valid, never that a release is admissible.
+Exit 1 means refused; unreadable input is refused. No release gate is activated.

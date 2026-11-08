@@ -1,3 +1,6 @@
+#[cfg(feature = "windtun")]
+#[path = "../admission/mod.rs"]
+pub mod admission;
 mod assess;
 #[cfg(feature = "windtun")]
 #[path = "../collection/mod.rs"]

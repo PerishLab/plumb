@@ -4,6 +4,7 @@ mod source;
 mod wire;
 
 use super::{Snapshot, Source};
+use crate::seat::depot::v3::Pointer;
 use crate::windtun::qualification::{Fault, Read, State};
 pub use scene::Scene;
 use serde::Serialize;
@@ -29,6 +30,31 @@ pub struct Report {
     pub reason: Option<String>,
 }
 
+impl Report {
+    fn pending() -> Self {
+        Self {
+            schema: "plumb.release.collection/v1",
+            state: "unknown",
+            observation: None,
+            snapshot: None,
+            adoption: false,
+            publication: false,
+            reason: None,
+        }
+    }
+
+    fn settle(&mut self, result: Result<(), Fault>) {
+        if let Err(fault) = result {
+            self.state = if fault.state == State::Refused {
+                "refused"
+            } else {
+                "unknown"
+            };
+            self.reason = Some(fault.reason);
+        }
+    }
+}
+
 pub struct Collector<R>(R);
 
 impl<R: Read> Collector<R> {
@@ -37,24 +63,51 @@ impl<R: Read> Collector<R> {
     }
 
     pub fn inspect(&self, repository: &str, commit: &str) -> Report {
-        let mut held = Report {
-            schema: "plumb.release.collection/v1",
-            state: "unknown",
-            observation: None,
-            snapshot: None,
-            adoption: false,
-            publication: false,
-            reason: None,
-        };
-        if let Err(fault) = self.collect(repository, commit, &mut held) {
-            held.state = if fault.state == State::Refused {
-                "refused"
-            } else {
-                "unknown"
-            };
-            held.reason = Some(fault.reason);
-        }
+        let mut held = Report::pending();
+        let result = self.collect(repository, commit, &mut held);
+        held.settle(result);
         held
+    }
+
+    pub fn historical(&self, repository: &str, commit: &str, pointer: &Pointer) -> Report {
+        let mut held = Report::pending();
+        let result = self.past((repository, commit), pointer, &mut held);
+        held.settle(result);
+        held
+    }
+
+    fn past(
+        &self,
+        selected: (&str, &str),
+        pointer: &Pointer,
+        report: &mut Report,
+    ) -> Result<(), Fault> {
+        let source = source::Reader(&self.0);
+        let subject = source.inspect(selected.0, selected.1)?;
+        report.observation = Some(Observation {
+            source: subject.source.clone(),
+            repository: subject.repository.clone(),
+            files: subject.files.clone(),
+            scenes: None,
+        });
+        let declaration = subject
+            .declaration
+            .as_ref()
+            .ok_or_else(|| Fault::unknown("historical source has no Scene declaration"))?;
+        let scene = scene::Reader(&self.0).historical(&declaration.scenes, pointer)?;
+        report.observation.as_mut().unwrap().scenes = Some(scene);
+        source.unchanged(&subject)?;
+        let scene = report
+            .observation
+            .as_ref()
+            .unwrap()
+            .scenes
+            .as_ref()
+            .unwrap();
+        report.snapshot = Some(Self::snapshot(&subject, scene)?);
+        report.state = "observed";
+        report.reason = Some("Historical immutable materials verified; no current-channel, adoption or publication claim".into());
+        Ok(())
     }
 
     fn collect(&self, repository: &str, commit: &str, report: &mut Report) -> Result<(), Fault> {

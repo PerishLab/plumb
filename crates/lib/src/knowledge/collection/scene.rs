@@ -27,6 +27,11 @@ impl<R: Read> Reader<'_, R> {
             "Scene pointer exceeds bounds",
         )?;
         let held = Pointer::parse(&raw).map_err(Fault::refused)?;
+        Self::bound(scenes, &held)?;
+        Ok(held)
+    }
+
+    fn bound(scenes: &Scenes, held: &Pointer) -> Result<(), Fault> {
         Wire::require(
             held.product == scenes.product && held.channel == scenes.channel,
             "Scene pointer identity differs",
@@ -45,7 +50,7 @@ impl<R: Read> Reader<'_, R> {
             held.manifest.url == expected,
             "Scene manifest has a foreign source",
         )?;
-        Ok(held)
+        Ok(())
     }
 
     fn discovery(scenes: &Scenes) -> Result<String, Fault> {
@@ -80,6 +85,17 @@ impl<R: Read> Reader<'_, R> {
             self.pointer(scenes, &Self::standing(scenes, &pointer)?)? == pointer,
             "Scene channel and version standing differ",
         )?;
+        self.materials(pointer)
+    }
+
+    pub fn historical(&self, scenes: &Scenes, pointer: &Pointer) -> Result<Scene, Fault> {
+        Self::discovery(scenes)?;
+        pointer.encode().map_err(Fault::refused)?;
+        Self::bound(scenes, pointer)?;
+        self.materials(pointer.clone())
+    }
+
+    fn materials(&self, pointer: Pointer) -> Result<Scene, Fault> {
         Wire::require(
             pointer.manifest.size <= Wire::LIMIT as u64,
             "Scene manifest exceeds bounds",
@@ -112,7 +128,7 @@ impl<R: Read> Reader<'_, R> {
             .transpose()?;
         if let Some(mapping) = &subjects {
             Wire::require(
-                mapping.product == scenes.product,
+                mapping.product == pointer.product,
                 "subject metadata names another Scene producer",
             )?;
             mapping.bind(&cases, &paths).map_err(Fault::refused)?;

@@ -90,12 +90,17 @@ impl<'a> Material<'a> {
     }
 
     pub(super) fn read(&self, agent: &ureq::Agent, limit: usize) -> Result<Vec<u8>> {
-        let response = agent
-            .get(self.url)
-            .header("User-Agent", "plumb")
-            .call()
-            .map_err(|error| self.failure(error))?;
-        self.body(response.into_body().as_reader(), limit)
+        self.optional(agent, limit)?
+            .ok_or_else(|| self.failure(ureq::Error::StatusCode(404)))
+    }
+
+    pub(super) fn optional(&self, agent: &ureq::Agent, limit: usize) -> Result<Option<Vec<u8>>> {
+        let response = match agent.get(self.url).header("User-Agent", "plumb").call() {
+            Ok(response) => response,
+            Err(ureq::Error::StatusCode(404)) => return Ok(None),
+            Err(error) => return Err(self.failure(error)),
+        };
+        self.body(response.into_body().as_reader(), limit).map(Some)
     }
 
     fn failure(&self, error: ureq::Error) -> Fault {
