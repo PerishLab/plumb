@@ -1,11 +1,12 @@
 use super::super::{Inspector, wire::Wire};
 use crate::semantics::version::Markers;
 use crate::windtun::qualification::{Fault, Read};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeSet;
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Tag {
     pub marker: String,
     pub commit: String,

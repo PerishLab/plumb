@@ -179,3 +179,37 @@ fn preparation() {
         assert_eq!(held["publication"], false);
     }
 }
+
+#[test]
+fn history() {
+    let directory = tempfile::tempdir().unwrap();
+    let input = directory.path().join("history.json");
+    std::fs::write(&input, b"{\"authentication\":true}").unwrap();
+    for purpose in ["history", "retention"] {
+        let command = || {
+            let mut held = Command::new(env!("CARGO_BIN_EXE_plumb"));
+            held.args(["release", "inspect", "--purpose", purpose, "--input"]);
+            held.arg(&input);
+            held
+        };
+        assert_eq!(command().output().unwrap().status.code(), Some(2));
+        let result = command().args(["--product", "plumb"]).output().unwrap();
+        assert_eq!(result.status.code(), Some(1));
+        let held: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+        assert_eq!(held["state"], "refused");
+        assert_eq!(held["publication"], false);
+    }
+    let reference = serde_json::json!({"url":format!("https://releases.plumb.perish.uk/v1/semantics/objects/{}.json", "a".repeat(64)),"sha256":"a".repeat(64),"size":12});
+    let mut checkpoint = serde_json::json!({"schema":"wharf.release.semantics.history/v1","product":"plumb","repository":{"id":1,"node_id":"R_fixture","full_name":"PerishLab/plumb"},"root":reference,"previous":null,"sequence":1,"markers":[{"marker":"v0.1.0","commit":"a".repeat(40)}],"native":{"run":1,"attempt":1,"commit":"a".repeat(40),"job":1}});
+    checkpoint.sort_all_objects();
+    std::fs::write(&input, serde_json::to_vec(&checkpoint).unwrap()).unwrap();
+    let result = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["release", "inspect", "--input"])
+        .arg(&input)
+        .output()
+        .unwrap();
+    assert_eq!(result.status.code(), Some(0));
+    let held: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+    assert_eq!(held["facts"]["authentication"], false);
+    assert_eq!(held["facts"]["publication"], false);
+}

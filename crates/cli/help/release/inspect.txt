@@ -1,5 +1,6 @@
 Inspect a regular JSON file within 4 MiB. The default --purpose data accepts a strict effective
-wharf.release.snapshot/v1 world or a canonical wharf.release.semantics record.
+wharf.release.snapshot/v1 world, canonical wharf.release.semantics record or
+wharf.release.semantics.history/v1 checkpoint.
 Check supported fields, bounded identities, references and internal consistency.
 Data inspection makes no network request. Native run IDs, matching digests and valid data do not
 authenticate an issuer, execution, baseline, canary or publication permission.
@@ -53,4 +54,27 @@ it grants no current candidate freshness, semantic equality, baseline adoption,
 qualification, activation or publication. Missing observations remain unknown.
 Material facts summarize verified file count and identities; the library also
 retains complete verified file data without expanding it into the CLI report.
+
+With --purpose history --product <name>, input is a strict checkpoint reference.
+It must equal the product's current fixed history discovery. Authenticate the
+complete predecessor chain and each original native [retain] semantic history
+job and unique [retain] history SHA256 step, exact repository, original adopted
+stable and full baseline materials. No checkpoint may erase/retarget a reservation
+or replace the original adoption. Discovery, objects, jobs and authority are
+rechecked. Observation is bounded to 128 checkpoints and 16 MiB of checkpoint
+bytes; exhaustion remains unknown. Retained history before inception stays
+unknown, and a historical prefix cannot substitute for current discovery.
+
+With --purpose retention --product <name>, input is canonical
+wharf.release.semantics.history.request/v1 data with root, previous and native.
+Verify the original adoption and exact current predecessor, collect the full
+current marker inventory, retain earlier reservations even when tags disappeared,
+and refuse changed marker targets. Return the next checkpoint as data with
+authentication=false and publication=false. Missing discovery permits only an
+initial data preparation; it proves neither physical absence nor historical
+completeness. A writer still needs conditional create/update and unknown-write
+recovery. Supplied native fields acquire no issuer authority from preparation.
+History facts authenticate retained observations, never complete prior history,
+family transitions, semantic equality, publication or activation. The matching
+trusted producer and real formal consumption remain separate rollout obligations.
 

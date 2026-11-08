@@ -191,6 +191,18 @@ establish a complete retained version history. Full admission must combine these
 current observations with its immutable history and original family evidence;
 this inventory alone grants neither equality nor publication permission.
 
+Retained-history checkpoints bind the original adopted stable, exact repository,
+predecessor and cumulative marker/source reservations. Shared preparation reads
+the current discovery and complete current inventory, preserves disappeared tags,
+and refuses retargeting or a replaced root. The native reader authenticates each
+checkpoint through its dedicated history role and exact digest step, verifies
+the complete chain and full adoption, and rechecks mutable discovery and authority.
+Its 128-checkpoint/16-MiB observation bounds fail unknown. Pre-inception history
+remains unknown. Preparation data authenticates no supplied native fields and
+does not prove absence, conditional writes or recovery. Current discovery does
+not establish complete historical coverage, new-family transitions or publication.
+The matching writer, formal consumption and complete admission remain open.
+
 The effective-source payload reader verifies bounded decompression, every raw
 blob's size, SHA256 and Git identity, regular-file modes, complete directory
 structure and the reconstructed effective Git tree against the supplied world.
