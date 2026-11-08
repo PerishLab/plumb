@@ -4,7 +4,7 @@ mod receipt;
 mod registry;
 mod remote;
 mod source;
-mod unique;
+pub(crate) mod unique;
 mod wire;
 mod world;
 

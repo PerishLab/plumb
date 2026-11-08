@@ -3,7 +3,7 @@ use serde::{Deserialize, Deserializer};
 use serde_json::{Map, Number, Value};
 use std::fmt;
 
-pub(super) struct Unique(pub Value);
+pub(crate) struct Unique(pub Value);
 
 impl<'de> Deserialize<'de> for Unique {
     fn deserialize<D: Deserializer<'de>>(reader: D) -> std::result::Result<Self, D::Error> {
