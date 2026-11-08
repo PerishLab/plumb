@@ -85,3 +85,9 @@ Declaration validity proves neither native package compatibility nor runtime
 network recovery; those require their own published-artifact evidence.
 
 release collect reads exact public source and formal Scene inputs for review; it grants no baseline adoption or publication authority. See release collect --help.
+
+release policy reads current protected activation requirements; review reads an
+exact native author declaration with current product write permission; inspect
+validates supplied record or frozen world data. Their successful observations
+grant no publication permission. They do not activate semantics enforcement in
+open, stamp or ship. Each command's help states its trust boundary and exit codes.

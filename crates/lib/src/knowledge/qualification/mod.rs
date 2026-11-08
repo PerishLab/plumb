@@ -54,6 +54,9 @@ impl std::error::Error for Fault {}
 
 pub trait Read {
     fn bytes(&self, url: &str, limit: usize) -> Result<Vec<u8>>;
+    fn optional(&self, url: &str, limit: usize) -> Result<Option<Vec<u8>>> {
+        self.bytes(url, limit).map(Some)
+    }
     fn image(&self, reference: &str) -> Result<String>;
 }
 

@@ -126,6 +126,41 @@ fn observed() {
 }
 
 #[test]
+fn optional() {
+    use std::io::{Read as _, Write as _};
+    use std::net::TcpListener;
+    use std::time::Duration;
+    for status in [200, 404, 503] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/object", listener.local_addr().unwrap());
+        let server = std::thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            socket
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut request = [0; 4096];
+            assert!(socket.read(&mut request).unwrap() > 0);
+            write!(
+                socket,
+                "HTTP/1.1 {status} Response\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok"
+            )
+            .unwrap();
+        });
+        let agent: ureq::Agent = ureq::Agent::config_builder()
+            .timeout_global(Some(Duration::from_secs(2)))
+            .build()
+            .into();
+        let result = Material::new(&url).optional(&agent, 2);
+        server.join().unwrap();
+        match status {
+            200 => assert_eq!(result.unwrap().unwrap(), b"ok"),
+            404 => assert!(result.unwrap().is_none()),
+            _ => assert_eq!(result.unwrap_err().state, State::Unknown),
+        }
+    }
+}
+
+#[test]
 fn contexts() {
     let cases = [
         ("v1/channels/rc.json", "channel pointer"),

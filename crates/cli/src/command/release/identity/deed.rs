@@ -2,6 +2,22 @@ use clap::Subcommand;
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(about = "Read current protected release semantics requirements", long_about = plumb::seat::resource!("help/release/policy.txt"))]
+    Policy,
+    #[command(about = "Read an independently authenticated semantic review", long_about = plumb::seat::resource!("help/release/review.txt"))]
+    Review {
+        #[arg(long)]
+        product: String,
+        #[arg(long)]
+        reference: String,
+        #[arg(long, value_enum)]
+        purpose: Purpose,
+    },
+    #[command(about = "Validate supplied release record data without authenticating it", long_about = plumb::seat::resource!("help/release/inspect.txt"))]
+    Inspect {
+        #[arg(long)]
+        input: std::path::PathBuf,
+    },
     #[command(about = "Collect exact public source and formal Scene review inputs", long_about = plumb::seat::resource!("help/release/collect.txt"))]
     Collect {
         #[arg(long)]
@@ -64,4 +80,10 @@ pub enum Deed {
     },
     #[command(about = "Report whether main holds the standing stable marker's changes")]
     Rejoin,
+}
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+pub enum Purpose {
+    Boundary,
+    Adoption,
 }

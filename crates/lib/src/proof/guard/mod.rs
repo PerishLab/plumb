@@ -7,6 +7,8 @@ mod authority;
 mod index;
 pub mod landing;
 pub(crate) mod running;
+#[path = "integration/runtime.rs"]
+mod runtime;
 pub mod seatrial;
 mod store;
 #[cfg(test)]
@@ -15,6 +17,7 @@ mod transit;
 
 pub use authority::{Authority, Expected, Verified};
 pub use index::tree;
+pub use runtime::Runtime;
 pub use store::Seat as Repository;
 pub use transit::{attach, stage, staged};
 

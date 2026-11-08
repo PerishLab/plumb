@@ -1,9 +1,8 @@
-use plumb::guard::{Action, Descriptor};
+use plumb::guard::Descriptor;
 use serde::Serialize;
-use sha2::{Digest as _, Sha256};
 use std::path::{Path, PathBuf};
 
-const SCHEMA: &str = "plumb.guard-runtime/v1";
+const SCHEMA: &str = plumb::guard::Runtime::SCHEMA;
 const STRENGTH: &str = "PLUMB_GUARD_STRENGTH";
 const BOUNDARY: &str = "PLUMB_GUARD_BOUNDARY";
 
@@ -34,22 +33,6 @@ impl Evidence {
             }
         }
     }
-}
-
-#[derive(Serialize)]
-struct Claim<'a> {
-    schema: &'static str,
-    strength: &'static str,
-    boundary: &'static str,
-    repository: &'a str,
-    commit: &'a str,
-    tree: &'a str,
-    plumb: &'a str,
-    depot: &'a str,
-    platform: &'a str,
-    actions: &'a [Action],
-    proof: &'a str,
-    resolution: &'a Option<plumb::packages::Resolution>,
 }
 
 #[derive(Serialize)]
@@ -162,22 +145,7 @@ fn prove(root: &Path) -> Result<Evidence, String> {
             guard.tree, after.tree
         ));
     }
-    let claim = Claim {
-        schema: SCHEMA,
-        strength: "full",
-        boundary: "head",
-        repository: &guard.repository,
-        commit: &after.commit,
-        tree: &guard.tree,
-        plumb: &guard.plumb,
-        depot: &guard.depot,
-        platform: &guard.platform,
-        actions: &guard.actions,
-        proof: &guard.digest,
-        resolution: &guard.resolution,
-    };
-    let bytes = serde_json::to_vec(&claim)
-        .map_err(|error| format!("cannot seal runtime Guard evidence: {error}"))?;
+    let digest = plumb::guard::Runtime::seal(&after.commit, &guard)?;
     Ok(Evidence {
         schema: SCHEMA,
         root: root.to_path_buf(),
@@ -186,7 +154,7 @@ fn prove(root: &Path) -> Result<Evidence, String> {
         boundary: "head",
         commit: after.commit,
         guard,
-        digest: format!("{:x}", Sha256::digest(bytes)),
+        digest,
     })
 }
 

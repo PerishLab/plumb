@@ -1,0 +1,5 @@
+Read release semantics requirements from the fixed PerishLab/wharf repository's
+protected main. Verify repository identity, exact commit, native blob and canonical
+closed document, then recheck mutable authority. Empty scopes mean no activation.
+This read-only command grants no baseline adoption or publication permission.
+JSON on stdout. Exit 0: observed; 1: refused; 3: unknown.

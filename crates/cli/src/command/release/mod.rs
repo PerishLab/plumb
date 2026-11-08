@@ -1,6 +1,7 @@
 mod assess;
 pub(in crate::command) mod channel;
 mod collect;
+mod facts;
 mod identity;
 
 pub use identity::deed::Deed;
@@ -9,6 +10,16 @@ use std::path::Path;
 use crate::shape::release::Spec;
 
 pub fn run(deed: Deed) -> i32 {
+    match &deed {
+        Deed::Policy => return facts::Facts::policy(),
+        Deed::Review {
+            product,
+            reference,
+            purpose,
+        } => return facts::Facts::review(product, reference, *purpose),
+        Deed::Inspect { input } => return facts::Facts::inspect(input),
+        _ => {}
+    }
     if let Deed::Collect { repository, commit } = &deed {
         return collect::Collect { repository, commit }.run();
     }
@@ -30,6 +41,9 @@ pub fn run(deed: Deed) -> i32 {
 
 fn execute(deed: Deed) -> Result<String, String> {
     match deed {
+        Deed::Policy | Deed::Review { .. } | Deed::Inspect { .. } => {
+            Err("facts use their read-only entry point".into())
+        }
         Deed::Collect { .. } => Err("collection uses its read-only entry point".into()),
         Deed::Assess { .. } => Err("assessment uses its read-only entry point".into()),
         Deed::Stamp {
