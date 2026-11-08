@@ -1,5 +1,14 @@
-use super::{fixture::Fixture, producer, source::Inputs};
-use plumb::semantics::admission::{Inspector, Native, Preparation, Reference};
+use super::{
+    baseline,
+    fixture::{Fixture, LOCATION},
+    producer,
+    source::Inputs,
+};
+use plumb::seat::depot::v3::Pointer;
+use plumb::semantics::admission::{
+    Binding, Comparison, Inspector, Native, Preparation, Record, Reference,
+};
+use plumb::semantics::{Baseline, Decision, Release, Request};
 use plumb::windtun::qualification::State;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -7,9 +16,27 @@ use sha2::{Digest, Sha256};
 const JOBS: &str =
     "https://api.github.com/repos/PerishLab/wharf/actions/runs/32/attempts/1/jobs?per_page=100";
 
-struct Source;
+pub(super) struct Source;
 
 impl Source {
+    fn frame() -> (Fixture, Reference, Pointer) {
+        let (mut fixture, root) = baseline::setup();
+        let Record::Adoption(adoption) = Record::parse(&fixture.values[&root.url]).unwrap() else {
+            panic!("adoption fixture");
+        };
+        let (prepared, descriptor) = Self::setup();
+        fixture.values.extend(prepared.values);
+        let raw = serde_json::to_vec(&descriptor).unwrap();
+        let sha256 = format!("{:x}", Sha256::digest(&raw));
+        let reference = Reference {
+            url: format!("https://releases.plumb.perish.uk/v1/semantics/objects/{sha256}.json"),
+            sha256,
+            size: raw.len() as u64,
+        };
+        fixture.values.insert(reference.url.clone(), raw);
+        (fixture, reference, adoption.scenes)
+    }
+
     fn retain(fixture: &mut Fixture, value: Value) -> Reference {
         let raw = serde_json::to_vec(&value).unwrap();
         let sha256 = format!("{:x}", Sha256::digest(&raw));
@@ -22,7 +49,7 @@ impl Source {
         reference
     }
 
-    fn setup() -> (Fixture, Preparation) {
+    pub(super) fn setup() -> (Fixture, Preparation) {
         let (mut fixture, _) = producer::setup();
         let inputs = Inputs::new();
         let world = Self::retain(&mut fixture, serde_json::to_value(&inputs.world).unwrap());
@@ -193,4 +220,71 @@ fn authority() {
         .prepared(&preparation, "plumb")
         .unwrap_err();
     assert_eq!(fault.state, State::Unknown);
+}
+
+#[test]
+fn frame() {
+    let (fixture, reference, scenes) = Source::frame();
+    let frame = Inspector::new(fixture)
+        .frame(&reference, &scenes, "plumb")
+        .unwrap();
+    assert_ne!(frame.world().tree, frame.world().source.tree);
+    assert!(Binding::new(frame.snapshot(), frame.world()).is_err());
+    assert!(frame.snapshot().materials.iter().any(|item| item.name
+        == "plumb/release/preparation.json"
+        && item.sha256 == reference.sha256));
+    let comparison = Comparison {
+        schema: Comparison::SCHEMA.into(),
+        product: "plumb".into(),
+        before: frame.binding().unwrap(),
+        after: frame.binding().unwrap(),
+        anchor: frame.binding().unwrap(),
+        decision: Decision::Same,
+        basis: "Synthetic authenticated complete-source frame, no publication grant".into(),
+    };
+    let projection = comparison
+        .frames(LOCATION, [&frame, &frame, &frame])
+        .unwrap();
+    let request = Request {
+        schema: Request::SCHEMA.into(),
+        baseline: Baseline {
+            stable: Release {
+                marker: "v0.138.0".into(),
+                snapshot: projection.before,
+            },
+            anchor: Release {
+                marker: "v0.138.0".into(),
+                snapshot: projection.anchor,
+            },
+            review: None,
+        },
+        candidate: projection.after,
+        review: Some(projection.review),
+        reservations: vec!["v0.138.0".into()],
+        major: None,
+    };
+    let verdict = request.assess().unwrap();
+    assert_eq!(verdict.marker.as_deref(), Some("v0.138.1"));
+    assert!(!verdict.authentication && !verdict.publication);
+}
+
+#[test]
+fn collection() {
+    let (mut fixture, reference, scenes) = Source::frame();
+    let raw = fixture.values[&reference.url].clone();
+    let descriptor: Value = serde_json::from_slice(&raw).unwrap();
+    fixture
+        .values
+        .remove(descriptor["material"]["url"].as_str().unwrap());
+    assert!(
+        Inspector::new(fixture)
+            .frame(&reference, &scenes, "plumb")
+            .is_err()
+    );
+    let (fixture, reference, scenes) = Source::frame();
+    assert!(
+        Inspector::new(fixture)
+            .frame(&reference, &scenes, "concord")
+            .is_err()
+    );
 }

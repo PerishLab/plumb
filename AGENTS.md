@@ -209,6 +209,16 @@ facts summarize source identities/counts; the library retains verified file data
 Retained source objects and real installed consumption remain separate rollout
 obligations. This API does not loosen baseline or advisory comparison checks.
 
+Verified frames join an authenticated original baseline or a native prepared-world
+descriptor with its exact immutable source/Scene collection. Prepared frames retain
+the descriptor's bytes as reserved runtime material, so reviews bind complete
+source provenance as well as world inputs. Frame fields cannot be constructed or
+deserialized by callers. Shared frame projection reuses the same comparison and
+assessment path; it can handle differing effective trees only after complete
+source verification. Raw advisory projection still returns unknown there.
+Frames do not establish current candidate freshness, trusted history, semantic
+truth or publication permission; complete admission must reobserve those facts.
+
 The `windtun` library feature exports
 `plumb::windtun::qualification::{Inspector, Read, Remote}`. `Inspector` owns the
 bounded protocol judgment; `Read` supplies authenticated observations and never

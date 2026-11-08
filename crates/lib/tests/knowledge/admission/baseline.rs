@@ -275,3 +275,14 @@ fn effective() {
     assert_eq!(fault.state, State::Unknown);
     assert!(fault.reason.contains("complete effective-source materials"));
 }
+
+#[test]
+fn root() {
+    let (fixture, reference) = setup();
+    let frame = Inspector::new(fixture).root(&reference, "plumb").unwrap();
+    assert_eq!(frame.world().source.marker, "v0.138.0");
+    assert_eq!(
+        frame.binding().unwrap(),
+        plumb::semantics::admission::Binding::new(frame.snapshot(), frame.world()).unwrap()
+    );
+}

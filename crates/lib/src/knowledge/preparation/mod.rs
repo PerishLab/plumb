@@ -4,3 +4,5 @@ mod tree;
 
 pub use native::{Preparation, Prepared};
 pub use source::{File, Payload};
+mod frame;
+pub use frame::Frame;

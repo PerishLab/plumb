@@ -21,7 +21,7 @@ pub use comparison::{Binding, Comparison, Projection};
 pub use declaration::{Definition, Judgment};
 pub use native::Native;
 pub use policy::{Authority, Requirements, Scope};
-pub use preparation::{File, Payload, Preparation, Prepared};
+pub use preparation::{File, Frame, Payload, Preparation, Prepared};
 pub use producer::Origin;
 pub use record::{Adoption, Canary, Intent, Kind, Publication, Record, Trial};
 pub use reference::Reference;
