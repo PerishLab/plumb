@@ -90,6 +90,7 @@ pub enum Deed {
 pub enum Purpose {
     Boundary,
     Adoption,
+    Comparison,
 }
 
 #[derive(Clone, Copy, clap::ValueEnum)]

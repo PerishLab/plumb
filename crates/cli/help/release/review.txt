@@ -1,7 +1,11 @@
 Read one canonical PerishLab GitHub Issue comment and its current author's native
 write permission on --product. --purpose boundary selects plumb.release.review/v1;
---purpose adoption selects plumb.release.adoption/v1. Both require one marked JSON
-document and recheck comment, repository and permission after observation.
+--purpose adoption selects plumb.release.adoption/v1. --purpose comparison selects
+plumb.release.review/v2, which binds before, after and original anchor snapshot/world
+pairs. Each requires one marked JSON document and rechecks comment, repository and
+permission after observation. The v2 library projection validates the three supplied
+pairs and includes each canonical world as a reserved runtime material before using
+the existing assessment algorithm. It does not authenticate supplied world origins.
 The result binds the exact body digest and native author identity. It authenticates
 the supplied declaration, not its semantic truth, baseline adoption, manual X
 decision or publication permission. No mutation occurs.
