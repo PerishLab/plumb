@@ -125,7 +125,7 @@ publication=false. Historical preparation cannot substitute for current release
 admission. It does not reconstruct evidence absent from the retained history.
 
 With --purpose choice --product <name>, input is an immutable selection record
-reference. Authenticate its exact canonical wharf.release.semantics.selection/v1
+reference. Authenticate its exact canonical wharf.release.semantics.family.selection/v1
 bytes through the dedicated completed native [select] stable family role and
 unique digest confirmation. This establishes issuer origin only, not that its
 family is current or that its material or predecessor claims are valid.
