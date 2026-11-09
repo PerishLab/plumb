@@ -249,3 +249,6 @@ pub(crate) fn verify(prepared: Option<&Prepared>, root: &Path) -> Result<(), Str
 mod fixture;
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod shared;
