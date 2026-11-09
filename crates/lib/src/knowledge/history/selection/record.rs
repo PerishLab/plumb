@@ -17,7 +17,7 @@ pub struct Selection {
 }
 
 impl Selection {
-    pub const SCHEMA: &str = "wharf.release.semantics.selection/v1";
+    pub const SCHEMA: &str = "wharf.release.semantics.family.selection/v1";
 
     pub fn parse(raw: &[u8]) -> Result<Self, Fault> {
         let held: Self = Wire::parse(raw)?;
