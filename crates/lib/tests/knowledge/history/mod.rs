@@ -1,5 +1,7 @@
 mod capture;
 mod changes;
+mod family;
+mod validation;
 
 use super::{baseline, fixture::Fixture};
 use plumb::semantics::admission::{Checkpoint, Inspector, Native, Record, Reference, Tag};

@@ -1,5 +1,5 @@
 mod markers;
-mod publication;
+pub(super) mod publication;
 
 pub use markers::{Inventory, Tag};
 

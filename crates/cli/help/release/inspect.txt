@@ -78,3 +78,48 @@ History facts authenticate retained observations, never complete prior history,
 family transitions, semantic equality, publication or activation. The matching
 trusted producer and real formal consumption remain separate rollout obligations.
 
+
+With --purpose family --product <name>, input names an adoption or canonical
+wharf.release.semantics.transition/v1 record. Authenticate the complete historical
+stable chain back to its original adoption, then independently reconstruct each
+formal snapshot and original published world, retained marker reservations,
+world-bound review and the shared semantic judgment. Caller-supplied Request
+fields must exactly equal that derivation. Each Z preserves the original X.Y
+anchor; a verified Y establishes its own new anchor without replacing the root.
+Anchor continuity is derived only from preceding verified judgments, not claimed
+as a new independently authenticated human review.
+The reader requires complete formal distributions and refuses rolling anchors,
+history rollback, retargeted markers or a mismatched minimum Y/Z result.
+X transitions remain unknown until independent user-decision verification exists.
+It repeats material, history, review, issuer and authority observations. Bounds
+are 64 records and 8 MiB of record bytes; exhaustion remains unknown. Effective
+source differing from archived source requires the bound complete source object;
+its full bytes and reconstructed Git tree must match the original formal world.
+The plumb.release.family/v1 facts authenticate this historical chain only, with
+publication=false. They do not select the current latest stable, prove a
+prospective candidate admissible, recover missing transitions or enable a gate.
+A deployed matching transition issuer and actual formal consumption are still
+required; valid supplied data is never substituted for native authentication.
+
+With --purpose transition --product <name>, input is canonical transition record
+data. Verify the prior authenticated family, the current fixed retained history,
+current latest stable, complete published frame, exact world-bound review and
+independently derived shared judgment. Retained history must cover every current
+tag with its exact source; incomplete coverage remains unknown. Repeat the family, materials, review,
+inventory, discovery and authority checks. Return plumb.release.transition.materials/v1
+facts with authentication=false and publication=false. The preceding family is
+authenticated; the derived family explicitly is not. Supplied native identity
+acquires no authority, even when all material checks succeed. A trusted issuer
+must independently bind its actual request/context and confirm exact public bytes.
+This preparation admits no prospective release and activates no publication gate.
+
+With --purpose historical --product <name>, input is the same canonical
+transition data. Independently verify the historical predecessor family, bound
+retained checkpoint, original complete formal publication and exact review.
+It can reconstruct a missing historical transition after newer stables exist,
+using the actual retained checkpoint rather than today's reservation inventory.
+It neither replaces a current head nor claims current latest-stable freshness.
+The same materials report explicitly names freshness=historical; transition mode
+names freshness=current. Both derived families retain authentication=false and
+publication=false. Historical preparation cannot substitute for current release
+admission. It does not reconstruct evidence absent from the retained history.

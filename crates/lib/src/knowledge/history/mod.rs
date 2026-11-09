@@ -1,11 +1,18 @@
+mod advance;
 mod capture;
 mod discovery;
+mod family;
 mod reader;
 mod record;
+mod transition;
+mod validation;
 
 pub use capture::Retention;
 pub use discovery::Discovery;
+pub use family::Family;
 pub use record::Checkpoint;
+pub use transition::Transition;
+pub use validation::Validation;
 
 use super::{Authority, Baseline, Reference};
 use serde::Serialize;

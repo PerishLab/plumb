@@ -63,6 +63,20 @@ impl Facts {
     }
 
     fn native(raw: &[u8], purpose: Inspection, product: &str) -> Result<Value, Fault> {
+        if matches!(purpose, Inspection::Transition | Inspection::Historical) {
+            let Record::Transition(transition) = Record::parse(raw)? else {
+                return Err(Fault::refused(
+                    "transition preparation requires supplied transition data",
+                ));
+            };
+            let inspector = Inspector::new(Remote::default());
+            let validation = if matches!(purpose, Inspection::Historical) {
+                inspector.historical(&transition, product)?
+            } else {
+                inspector.transition(&transition, product)?
+            };
+            return Self::value(&validation);
+        }
         if let Inspection::Retention = purpose {
             let request = Retention::parse(raw)?;
             let data = Inspector::new(Remote::default()).retain(&request, product)?;
@@ -103,6 +117,10 @@ impl Facts {
                 "plumb.release.baseline/v1",
                 Self::value(&inspector.baseline(&reference, product)?)?,
             ),
+            Inspection::Family => (
+                "plumb.release.family/v1",
+                Self::value(&inspector.family(&reference, product)?)?,
+            ),
             Inspection::History => {
                 let history = inspector.discover(product)?;
                 if history.reference() != &reference {
@@ -115,7 +133,9 @@ impl Facts {
             Inspection::Data
             | Inspection::Materials
             | Inspection::Preparation
-            | Inspection::Retention => {
+            | Inspection::Retention
+            | Inspection::Transition
+            | Inspection::Historical => {
                 return Err(Fault::refused("inspection uses its separate data reader"));
             }
         };

@@ -185,7 +185,7 @@ fn history() {
     let directory = tempfile::tempdir().unwrap();
     let input = directory.path().join("history.json");
     std::fs::write(&input, b"{\"authentication\":true}").unwrap();
-    for purpose in ["history", "retention"] {
+    for purpose in ["history", "retention", "family", "transition", "historical"] {
         let command = || {
             let mut held = Command::new(env!("CARGO_BIN_EXE_plumb"));
             held.args(["release", "inspect", "--purpose", purpose, "--input"]);

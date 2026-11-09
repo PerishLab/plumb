@@ -21,7 +21,7 @@ use crate::windtun::qualification::{Fault, Read};
 pub use baseline::{Baseline, Inventory, Materials, Tag};
 pub use comparison::{Binding, Comparison, Projection};
 pub use declaration::{Definition, Judgment};
-pub use history::{Checkpoint, Discovery, History, Retention};
+pub use history::{Checkpoint, Discovery, Family, History, Retention, Transition, Validation};
 pub use native::Native;
 pub use policy::{Authority, Requirements, Scope};
 pub use preparation::{File, Frame, Payload, Preparation, Prepared};
