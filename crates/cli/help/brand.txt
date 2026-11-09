@@ -3,8 +3,8 @@ Verify one explicitly declared brand consumption boundary after its normal build
 An empty [brand] table in plumb.toml activates the bounded contract. All root and
 apps/* Svelte/Vite applications are discovered; a new app is not skipped because
 it is not named web. Each requires one static configuration, a real imported
-Design plugin call, a literal brand product/HTTPS origin, and imported official
-Hero/Navigator marks. Dynamic configuration or unsupported source stays
+Design plugin call and imported official Hero/Navigator marks. The default HTML
+carrier requires a literal head product/HTTPS origin. Dynamic configuration or unsupported source stays
 unqualified. Additional config imports, resolution overrides and transforms are
 outside the qualified scope. No repository configuration is executed by this command.
 
@@ -18,15 +18,38 @@ Literal generics in a TypeScript script are verified as type parameters, without
 creating runtime component bindings. Dynamic/malformed generics, extra script
 attributes and generics on JavaScript scripts stay unqualified.
 
+The compiler plugin must be imported, called once without arguments, with no
+automatic Svelte config, app package browser mapping or producer self-reference.
+Package, lock, app config, HTML and source inputs must be tracked regular files.
+
 The fixed official registry supplies exact stable npm metadata and archives.
 Acquisition runs no repository/package code. Archive SHA512 must match the
 actual pnpm lock. Complete Crest/Design distributions, installed package files,
 the official manifest, every receipt selection and actual output bytes are
-verified. Generated HTML must include a matching registered data-crest image;
-CSR-only output and unreachable source-only declarations stay unqualified.
+verified. The default HTML carrier requires matching generated data-crest images;
+CSR-only output and unreachable source-only declarations stay unqualified there.
 The receipt authenticates no publisher by itself. Captured archive
 references validate content; supplied/deserialized references alone authenticate
 no origin. Guard captures its own originals and binds them to source/world.
+
+An explicit bounded CSR carrier is available:
+
+[brand]
+mode = "views"
+
+It requires the standard Design Views import/root/mount program, root Vite base,
+login:false, one src/views/index.svelte root route and one unconditional imported
+brand under plain formal Shell/Frame layouts. Other aliases, bootstraps, conditional
+brand placement and route graphs remain unqualified. Headless consumption allows
+no brand plugin head option, requires explicit receipt head:null, and permits only
+an empty data favicon instead of graphical head media. Missing head is not null.
+
+The plumb.brand/v2 report distinguishes formal origins, source/image outputs and
+the rendering obligation. Views mode records the local output module and digest;
+that digest proves neither source/bundle equivalence nor actual rendering. Its
+rendering field requires an independent browser; browser is always unverified.
+HTML image observation is also separate from browser appearance. Exit 0 qualifies
+only the stated carrier's source/origin/official-image relationship.
 
 Additional unchanged copies can be declared without duplicating geometry:
 

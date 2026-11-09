@@ -4,6 +4,14 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use tree_sitter::{Node, Parser};
 
+pub(super) fn client(
+    root: &Path,
+    selection: Option<&Selection>,
+    outputs: &BTreeMap<String, Vec<Asset>>,
+) -> Result<(), String> {
+    client::verify(root, selection, outputs)
+}
+
 pub(super) fn verify(
     root: &Path,
     selection: &Selection,
@@ -62,6 +70,10 @@ pub(super) fn read(
             return Err(format!("HTML head omits formal {required}"));
         }
     }
+    media::dimensions(
+        &found.head,
+        reader.product(found.head.get("og:image").ok_or("missing sharing image")?)?,
+    )?;
     Ok(found.rendered)
 }
 
@@ -116,21 +128,28 @@ impl Head<'_> {
         let attributes = self.attributes(node)?;
         let value = |key: &str| attributes.get(key).map(String::as_str).unwrap_or_default();
         if name == "link" {
+            media::link(&attributes)?;
             return self.icon(&attributes, found);
         }
+        media::meta(&attributes)?;
         let key = attributes
             .get("property")
             .or_else(|| attributes.get("name"))
-            .map(String::as_str)
+            .map(|value| value.to_ascii_lowercase())
             .unwrap_or_default();
-        if ["og:image", "twitter:image"].contains(&key) {
+        if ["og:image:width", "og:image:height"].contains(&key.as_str())
+            && found.insert(key.clone(), value("content").into()).is_some()
+        {
+            return Err("duplicate sharing image dimension".into());
+        }
+        if ["og:image", "twitter:image"].contains(&key.as_str()) {
             let asset = self.product(value("content"))?;
             if asset.medium != "png" || asset.width != asset.height {
                 return Err(
                     "sharing image is outside the current formal square PNG contract".into(),
                 );
             }
-            if found.insert(key.into(), value("content").into()).is_some() {
+            if found.insert(key.clone(), value("content").into()).is_some() {
                 return Err("duplicate brand head metadata".into());
             }
         }
@@ -149,15 +168,19 @@ impl Head<'_> {
     ) -> Result<(), String> {
         let rel = attributes
             .get("rel")
-            .map(String::as_str)
+            .map(|value| value.to_ascii_lowercase())
             .unwrap_or_default();
-        if ["mask-icon", "apple-touch-icon-precomposed"].contains(&rel) {
+        if ["mask-icon", "apple-touch-icon-precomposed"].contains(&rel.as_str()) {
             return Err("head icon format is unqualified".into());
         }
-        if !["icon", "shortcut icon", "apple-touch-icon"].contains(&rel) {
+        if !["icon", "shortcut icon", "apple-touch-icon"].contains(&rel.as_str()) {
             return Ok(());
         }
-        let key = if rel == "shortcut icon" { "icon" } else { rel };
+        let key = if rel == "shortcut icon" {
+            "icon"
+        } else {
+            rel.as_str()
+        };
         let reference = attributes
             .get("href")
             .map(String::as_str)
@@ -269,3 +292,5 @@ fn documents(root: &Path) -> Result<Vec<PathBuf>, String> {
     found.sort();
     Ok(found)
 }
+mod client;
+mod media;

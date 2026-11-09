@@ -57,7 +57,12 @@ struct Receipt {
     model: Model,
     manifest: Input,
     assets: Vec<Output>,
+    #[serde(deserialize_with = "present")]
     head: Option<Selection>,
+}
+
+fn present<'de, D: serde::Deserializer<'de>>(input: D) -> Result<Option<Selection>, D::Error> {
+    Option::deserialize(input)
 }
 
 #[derive(Deserialize)]
@@ -169,9 +174,17 @@ impl Catalog {
         {
             return Err("brand receipt differs from the formal model/manifest".into());
         }
-        let expected: Selection = serde_json::from_value(app.setup.options["brand"].clone())
+        let expected: Option<Selection> = app
+            .setup
+            .options
+            .get("brand")
+            .map(|value| serde_json::from_value(value.clone()))
+            .transpose()
             .map_err(|error| format!("head declaration is unqualified: {error}"))?;
-        if receipt.head.as_ref() != Some(&expected) {
+        if app.mode == super::Mode::Html && expected.is_none() {
+            return Err("HTML carrier requires a declared formal head".into());
+        }
+        if receipt.head != expected {
             return Err("head receipt differs from the static plugin declaration".into());
         }
         let outputs = unique(
@@ -205,14 +218,23 @@ impl Catalog {
                 ));
             }
         }
-        self.product(&expected.product)?;
+        if let Some(selection) = &expected {
+            self.product(&selection.product)?;
+        }
         let mut head = BTreeMap::<String, Vec<Asset>>::new();
         for output in outputs.values() {
             head.entry(output.output.clone())
                 .or_default()
                 .push(output.asset());
         }
-        super::head::verify(&directory, &expected, &head)?;
+        match app.mode {
+            super::Mode::Html => super::head::verify(
+                &directory,
+                expected.as_ref().ok_or("missing HTML head")?,
+                &head,
+            )?,
+            super::Mode::Views => super::head::client(&directory, expected.as_ref(), &head)?,
+        }
         Ok(outputs.len())
     }
 

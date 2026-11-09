@@ -11,8 +11,9 @@ fn active(options: serde_json::Value) -> Activation {
 fn config(plugin: &str) -> String {
     format!(
         r#"import {{ design as crest }} from "@perishlab/design/vite";
+import {{ svelte as compile }} from "@sveltejs/vite-plugin-svelte";
 import {{ defineConfig as configure }} from "vite";
-export default configure({{ plugins: [{plugin}] }});"#
+export default configure({{ plugins: [{plugin}, compile()] }});"#
     )
 }
 
@@ -28,10 +29,24 @@ fn imported() {
     );
     assert_eq!(
         Activation::read(
-            "import {design} from '@perishlab/design/vite'; export default {plugins:[design()]};"
+            "import {design} from '@perishlab/design/vite';import {svelte} from '@sveltejs/vite-plugin-svelte'; export default {plugins:[design(),svelte()]};"
         ),
         active(serde_json::json!({}))
     );
+}
+
+#[test]
+fn compiler() {
+    for source in [
+        "import {design} from '@perishlab/design/vite';export default {plugins:[design()]};",
+        "import {design} from '@perishlab/design/vite';import {svelte} from '@sveltejs/vite-plugin-svelte';export default {plugins:[design(),svelte({preprocess:unknown})]};",
+        "import {design} from '@perishlab/design/vite';import {svelte} from '@sveltejs/vite-plugin-svelte';export default {plugins:[design(),svelte(),svelte()]};",
+    ] {
+        let Activation::Active(setup) = Activation::read(source) else {
+            panic!("genuine Design activation remains observable")
+        };
+        assert!(setup.problem.is_some(), "{source}");
+    }
 }
 
 #[test]

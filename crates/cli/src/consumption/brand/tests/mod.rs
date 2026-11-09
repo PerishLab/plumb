@@ -1,3 +1,8 @@
+mod client;
+mod inputs;
+mod resolution;
+mod views;
+
 use super::svelte;
 #[test]
 fn imported() {
@@ -191,6 +196,7 @@ fn copies() {
     }
     let mut prepared = super::Prepared {
         declaration: super::Declaration {
+            mode: super::Mode::Html,
             copy: vec![super::Copy {
                 asset: "fixture/svg".into(),
                 output: "public/favicon.svg".into(),
@@ -219,9 +225,11 @@ fn discovery() {
             r#"{"dependencies":{"svelte":"5"},"devDependencies":{"vite":"8"}}"#,
         )
         .unwrap();
-        std::fs::write(directory.join("vite.config.ts"),r#"import {design} from '@perishlab/design/vite';export default {plugins:[design({brand:{product:'fixture',origin:'https://example.test'}})]};"#).unwrap();
+        std::fs::write(directory.join("vite.config.ts"),r#"import {design} from '@perishlab/design/vite';import {svelte} from '@sveltejs/vite-plugin-svelte';export default {plugins:[design({brand:{product:'fixture',origin:'https://example.test'}}),svelte()]};"#).unwrap();
     }
-    let apps = super::source::Source(root.path()).apps().unwrap();
+    let apps = super::source::Source(root.path())
+        .apps(super::Mode::Html)
+        .unwrap();
     assert_eq!(apps.len(), 2);
     assert!(apps.iter().any(|app| app.path.ends_with("new-product")));
     std::fs::write(
@@ -229,56 +237,21 @@ fn discovery() {
         "// design(\nexport default {plugins:[]};",
     )
     .unwrap();
-    assert!(super::source::Source(root.path()).apps().is_err());
-}
-
-#[test]
-fn inputs() {
-    let root = tempfile::tempdir().unwrap();
-    let base = root.path();
-    for dir in ["src", "crates", "public"] {
-        std::fs::create_dir(base.join(dir)).unwrap();
-    }
-    std::fs::write(base.join("src/entry.svelte"), "<Hero />").unwrap();
-    std::fs::write(base.join("crates/lib.rs"), "fn original(){}").unwrap();
-    std::fs::write(base.join("public/image.svg"), "original image").unwrap();
-    for args in [vec!["init", "-q"], vec!["add", "."]] {
-        assert!(
-            plumb::config::detached("git")
-                .args(args)
-                .current_dir(base)
-                .status()
-                .unwrap()
-                .success()
-        );
-    }
-    let apps = vec![super::source::App {
-        path: "".into(),
-        setup: crate::shape::web::Setup {
-            options: serde_json::json!({}),
-            base: "/".into(),
-            output: "dist".into(),
-            problem: None,
-        },
-    }];
-    let source = super::source::Source(base);
-    let before = source.inputs(&apps).unwrap();
-    std::fs::write(base.join("src/entry.svelte"), "<Hero mark=\"fixture\" />").unwrap();
-    let changed = source.inputs(&apps).unwrap();
-    assert_ne!(before, changed);
-    std::fs::write(base.join("crates/lib.rs"), "fn unrelated_rust_change(){}").unwrap();
-    assert_eq!(changed, source.inputs(&apps).unwrap());
-    std::fs::write(base.join("public/image.svg"), "changed image").unwrap();
-    assert_ne!(changed, source.inputs(&apps).unwrap());
-    std::fs::write(base.join("public/untracked.svg"), "unknown").unwrap();
-    assert!(source.inputs(&apps).is_err());
+    assert!(
+        super::source::Source(root.path())
+            .apps(super::Mode::Html)
+            .is_err()
+    );
 }
 
 #[test]
 fn bound() {
     let fixture = super::fixture::Fixture::new();
     let prepared = super::Prepared {
-        declaration: super::Declaration { copy: Vec::new() },
+        declaration: super::Declaration {
+            copy: Vec::new(),
+            ..Default::default()
+        },
         apps: Vec::new(),
         materials: fixture.materials,
         inputs: "fixture source".into(),
