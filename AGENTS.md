@@ -144,8 +144,15 @@ contract. The reader discovers root/apps/* Svelte/Vite applications instead of
 assuming every app is named web. Qualified configuration is a direct object or
 imported defineConfig, literal plugin options, Design plus the imported Svelte
 plugin, optional local absolute base and build.outDir. Other resolution,
-transforms, config imports, plugin implementations, dynamic selections and
-template lexical bindings remain unqualified. CSR-only output is unqualified;
+transforms, config imports, plugin implementations and dynamic selections remain
+unqualified. Unrelated each/snippet/await business templates do not invalidate
+brand references outside their scope. Brand references inside those lexical
+scopes, const or slot bindings in a brand-bearing scope, and snippet names that
+shadow an imported brand component remain unqualified. This bounded AST projection
+does not resolve arbitrary local component aliases. Module/context scripts remain
+unqualified. Literal TypeScript generics are parsed as type parameters and create
+no runtime brand binding; dynamic, malformed or JavaScript generics refuse.
+CSR-only output is unqualified;
 registered data-crest images must appear in actual generated HTML. Current copies require a pnpm input world; unsupported
 hosts and package worlds are not silently activated or given a UI framework.
 

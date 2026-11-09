@@ -1,3 +1,6 @@
+mod generic;
+mod scope;
+
 use crate::shape::web::Syntax;
 use std::collections::BTreeMap;
 use tree_sitter::{Node, Parser};
@@ -80,16 +83,7 @@ impl Svelte<'_> {
         bindings: &BTreeMap<String, String>,
         found: &mut Vec<Mark>,
     ) -> Result<(), String> {
-        if [
-            "each_statement",
-            "snippet_statement",
-            "await_statement",
-            "const_tag",
-        ]
-        .contains(&node.kind())
-        {
-            return Err("template lexical bindings are outside qualified brand scope".into());
-        }
+        scope::Scope(Syntax(self.0.0), bindings).verify(node)?;
         if ["start_tag", "self_closing_tag"].contains(&node.kind()) {
             self.tag(node, bindings, found)?;
         }
@@ -103,6 +97,8 @@ impl Svelte<'_> {
     }
 
     fn scope(&self, start: Node<'_>) -> Result<(), String> {
+        let mut dialect = None;
+        let mut generic = None;
         for node in self.0.children(start) {
             if node.kind() == "tag_name" {
                 continue;
@@ -112,16 +108,29 @@ impl Svelte<'_> {
                 .first()
                 .map(|node| self.0.text(*node))
                 .unwrap_or_default();
-            if name != "lang" {
-                return Err("module/context or dynamic Svelte script scope is unqualified".into());
-            }
             let value = parts
                 .get(1)
                 .map(|node| self.0.text(*node))
                 .unwrap_or_default();
-            if !["\"ts\"", "'ts'", "\"js\"", "'js'"].contains(&value) {
-                return Err("Svelte script dialect is unqualified".into());
+            match name {
+                "lang" if dialect.is_none() => dialect = Some(value),
+                "generics" if generic.is_none() => generic = Some(value),
+                _ => {
+                    return Err(
+                        "module/context, duplicate or dynamic Svelte script scope is unqualified"
+                            .into(),
+                    );
+                }
             }
+        }
+        if dialect.is_some_and(|value| !["\"ts\"", "'ts'", "\"js\"", "'js'"].contains(&value)) {
+            return Err("Svelte script dialect is unqualified".into());
+        }
+        if let Some(value) = generic {
+            if !dialect.is_some_and(|value| ["\"ts\"", "'ts'"].contains(&value)) {
+                return Err("Svelte generics require a TypeScript script".into());
+            }
+            generic::read(value)?;
         }
         Ok(())
     }
@@ -137,15 +146,10 @@ impl Svelte<'_> {
             .iter()
             .find(|node| node.kind() == "tag_name")
             .ok_or("Svelte tag has no name")?;
-        let Some(binding) = bindings.get(self.0.text(*tag)) else {
+        let scope = scope::Scope(Syntax(self.0.0), bindings);
+        let Some(component) = scope.component(self.0.text(*tag)) else {
             return Ok(());
         };
-        let Some(component) = binding.strip_prefix("@perishlab/design#") else {
-            return Ok(());
-        };
-        if !["Navigator", "Hero"].contains(&component) {
-            return Ok(());
-        }
         let mut mark = None;
         let mut surface = None;
         for attribute in children.iter().filter(|node| node.kind() != "tag_name") {
@@ -229,3 +233,6 @@ impl Mark {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -8,6 +8,16 @@ Hero/Navigator marks. Dynamic configuration or unsupported source stays
 unqualified. Additional config imports, resolution overrides and transforms are
 outside the qualified scope. No repository configuration is executed by this command.
 
+Unrelated each/snippet/await templates do not invalidate an imported brand mark
+outside their scope. The AST still inspects all template tags. Brand references
+inside those lexical scopes, const or slot bindings in a brand-bearing scope,
+snippet names shadowing an imported brand component and module/context scripts
+remain unqualified. Local aliases and arbitrary dynamic component semantics are
+not resolved; unrelated business components are not reclassified as brands.
+Literal generics in a TypeScript script are verified as type parameters, without
+creating runtime component bindings. Dynamic/malformed generics, extra script
+attributes and generics on JavaScript scripts stay unqualified.
+
 The fixed official registry supplies exact stable npm metadata and archives.
 Acquisition runs no repository/package code. Archive SHA512 must match the
 actual pnpm lock. Complete Crest/Design distributions, installed package files,
