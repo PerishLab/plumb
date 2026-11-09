@@ -120,3 +120,20 @@ fn generic() {
         assert!(read(&text).is_err(), "{attributes}");
     }
 }
+
+#[test]
+fn layouts() {
+    let text = r#"<script>import {Hero as Badge,Shell as Wrap,Frame as Pane} from '@perishlab/design';</script><Wrap><Pane><Badge mark="plumb"/>{#if loading}<p>Business</p>{/if}</Pane></Wrap>"#;
+    let marks = read(text).unwrap();
+    assert_eq!(marks.len(), 1);
+    assert!(marks[0].root);
+    for other in [
+        text.replace("<Pane>", "<Pane width=\"hidden\">"),
+        text.replace("<Badge mark", "{#if loading}<Badge mark")
+            .replace("mark=\"plumb\"/>", "mark=\"plumb\"/>{/if}"),
+    ] {
+        let marks = read(&other).unwrap();
+        assert_eq!(marks.len(), 1);
+        assert!(!marks[0].root);
+    }
+}
