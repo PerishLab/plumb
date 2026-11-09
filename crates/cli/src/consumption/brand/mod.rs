@@ -101,7 +101,7 @@ impl Prepared {
             origins: self.materials.origins.clone(),
             inputs: self.inputs.clone(),
             publications: self.materials.publications.clone(),
-            limits: "Qualified static Design Vite activation, imported Hero/Navigator marks, formal package bytes and declared image outputs only. Arbitrary image semantics, other renderers/hosts, runtime request coverage and browser presentation are not qualified.",
+            limits: "Qualified static Design Vite activation, imported Hero/Navigator marks outside unresolved lexical bindings, formal package bytes and declared image outputs only. Unrelated business templates do not establish brand adoption. Arbitrary image semantics, local component aliases, other renderers/hosts, runtime request coverage and browser presentation are not qualified.",
         })
     }
 
