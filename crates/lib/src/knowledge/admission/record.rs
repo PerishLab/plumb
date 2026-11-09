@@ -1,4 +1,4 @@
-use super::{Native, Point, Reference, wire::Wire};
+use super::{Native, Point, Reference, Transition, wire::Wire};
 use crate::seat::depot::v3::Pointer;
 use crate::semantics::{Release, Request};
 use crate::windtun::qualification::Fault;
@@ -88,6 +88,8 @@ pub enum Record {
     Adoption(Box<Adoption>),
     #[serde(rename = "wharf.release.semantics.intent/v1")]
     Intent(Box<Intent>),
+    #[serde(rename = "wharf.release.semantics.transition/v1")]
+    Transition(Box<Transition>),
     #[serde(rename = "wharf.release.semantics.canary/v1")]
     Canary(Canary),
     #[serde(rename = "wharf.release.semantics.publication/v1")]
@@ -142,6 +144,13 @@ impl Record {
                     Self::review(reference)?;
                 }
             }
+            Self::Transition(held) => {
+                Record::Intent(Box::new(held.intent.clone())).validate()?;
+                held.history.validate(product)?;
+                if let Some(reference) = &held.source {
+                    reference.validate(product)?;
+                }
+            }
             Self::Publication(held) => {
                 held.intent.validate(product)?;
                 held.world.validate(product)?;
@@ -190,6 +199,7 @@ impl Record {
         match self {
             Self::Adoption(held) => &held.product,
             Self::Intent(held) => &held.product,
+            Self::Transition(held) => &held.intent.product,
             Self::Canary(held) => &held.product,
             Self::Publication(held) => &held.product,
         }
@@ -199,6 +209,7 @@ impl Record {
         match self {
             Self::Adoption(held) => &held.release.marker,
             Self::Intent(held) => &held.marker,
+            Self::Transition(held) => &held.intent.marker,
             Self::Canary(held) => &held.marker,
             Self::Publication(held) => &held.marker,
         }
@@ -208,6 +219,7 @@ impl Record {
         match self {
             Self::Adoption(held) => &held.native,
             Self::Intent(held) => &held.native,
+            Self::Transition(held) => &held.intent.native,
             Self::Canary(held) => &held.native,
             Self::Publication(held) => &held.native,
         }
@@ -220,6 +232,10 @@ impl Record {
             Self::Intent(held) => Ok(Release {
                 marker: held.marker.clone(),
                 snapshot: held.request.candidate.clone(),
+            }),
+            Self::Transition(held) => Ok(Release {
+                marker: held.intent.marker.clone(),
+                snapshot: held.intent.request.candidate.clone(),
             }),
             Self::Canary(_) | Self::Publication(_) => Err(Fault::refused(
                 "evidence reference is not a formal product baseline",

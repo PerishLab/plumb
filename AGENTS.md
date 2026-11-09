@@ -352,6 +352,21 @@ non-stable release owes. Why the contract has this shape, and
 every decision that put it there, is in the Issues and pull requests that
 changed it.
 
+Historical family inspection authenticates complete adoption/transition chains,
+reconstructs every formal frame, retained reservation and world-bound review,
+and repeats those inputs before returning. Z preserves its initial X.Y anchor;
+verified Y establishes a new anchor without replacing the root. Supplied Request
+fields must equal the independent derivation. Missing transitions, exhausted
+bounds, missing effective-source materials and unverified X stay unknown.
+It selects no current stable, admits no prospective candidate and enables no gate.
+Transition preparation additionally binds current latest stable and fixed history,
+repeats the independent derivation and returns no authentication for supplied
+native fields or its derived family. It admits no prospective release. Historical preparation instead verifies the
+original bound checkpoint and complete formal publication, so later tool releases
+do not prevent retrospective reconstruction. Its explicit historical freshness
+never substitutes for current release admission.
+Its matching transition producer and formal consumer qualification remain open.
+
 ## Commitments
 
 These bind how Plumb is written rather than what a repository carries, so no

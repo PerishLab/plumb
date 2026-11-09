@@ -70,6 +70,84 @@ impl<R: Read> Inspector<R> {
         })
     }
 
+    pub fn formal(
+        &self,
+        inputs: (&Reference, Option<&Reference>),
+        scenes: &Pointer,
+        product: &str,
+    ) -> Result<Frame, Fault> {
+        let (reference, source) = inputs;
+        let authority = self.current()?;
+        let raw = reference.bytes(&self.0, product)?;
+        let world = World::parse(&raw)?;
+        Wire::require(
+            world.source.repository == format!("PerishLab/{product}"),
+            "formal frame names another product",
+        )?;
+        crate::semantics::version::Markers::stable(&world.source.marker).map_err(Fault::refused)?;
+        let material = source
+            .map(|reference| {
+                let raw = reference.bytes(&self.0, product)?;
+                super::Payload::parse(&raw, &world)?;
+                Ok::<_, Fault>((reference, raw))
+            })
+            .transpose()?;
+        if world.tree != world.source.tree && material.is_none() {
+            return Err(Fault::unknown(
+                "formal frame needs complete effective-source materials",
+            ));
+        }
+        let publication = super::super::baseline::publication::Reader(&self.0).observe(&world)?;
+        let report = Collector::new(Access(&self.0)).historical(
+            &world.source.repository,
+            &world.source.commit,
+            scenes,
+        );
+        if report.state != "observed" || report.snapshot.is_none() {
+            return Err(Fault {
+                state: if report.state == "refused" {
+                    State::Refused
+                } else {
+                    State::Unknown
+                },
+                reason: report
+                    .reason
+                    .unwrap_or_else(|| "formal frame collection is incomplete".into()),
+            });
+        }
+        let mut snapshot = report.snapshot.unwrap();
+        if let Some((reference, raw)) = material {
+            let name = "plumb/release/source.json";
+            Wire::require(
+                !snapshot
+                    .materials
+                    .iter()
+                    .any(|item| item.kind == Kind::Runtime && item.name == name),
+                "collection already contains reserved effective-source material",
+            )?;
+            snapshot.materials.push(
+                Material::new(Kind::Runtime, name.into(), &raw, false).map_err(Fault::refused)?,
+            );
+            Wire::require(
+                reference.bytes(&self.0, product)? == raw,
+                "formal effective source moved during observation",
+            )?;
+        }
+        snapshot.validate().map_err(Fault::refused)?;
+        Wire::require(
+            snapshot.product == product && snapshot.source == world.source.source(),
+            "formal frame differs from collected source",
+        )?;
+        Wire::require(
+            reference.bytes(&self.0, product)? == raw
+                && super::super::baseline::publication::Reader(&self.0).observe(&world)?
+                    == publication
+                && self.current()? == authority,
+            "formal frame publication, bytes or authority moved",
+        )?;
+        Ok(Frame { snapshot, world })
+    }
+
     pub fn frame(
         &self,
         reference: &Reference,

@@ -2,7 +2,7 @@ use super::super::{World, wire::Wire};
 use crate::windtun::qualification::{Fault, Read, source::Source, world::plan};
 use serde_json::{Value, json};
 
-pub(super) struct Reader<'a, R>(pub &'a R);
+pub(in crate::semantics::admission) struct Reader<'a, R>(pub &'a R);
 
 impl<R: Read> Reader<'_, R> {
     pub fn observe(&self, world: &World) -> Result<Value, Fault> {
