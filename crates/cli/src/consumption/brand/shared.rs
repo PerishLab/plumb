@@ -49,3 +49,20 @@ fn registered() {
         );
     }
 }
+
+#[test]
+fn unregistered() {
+    let outputs = outputs();
+    let selection = receipt::Selection {
+        product: "missing".into(),
+        origin: "https://example.test".into(),
+    };
+    let failure = head::read(&document("fixture"), &selection, &outputs).unwrap_err();
+    assert!(failure.contains("different formal product"), "{failure}");
+    let selection = receipt::Selection {
+        product: "fixture".into(),
+        origin: "https://example.test".into(),
+    };
+    let failure = head::read(&document("missing"), &selection, &outputs).unwrap_err();
+    assert!(failure.contains("no matching formal output"), "{failure}");
+}
