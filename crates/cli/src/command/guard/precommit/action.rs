@@ -133,6 +133,7 @@ impl Proof<'_> {
                     tree::execute(&index.root, command, &execution)?;
                     tree::unchanged(&index)?;
                 }
+                crate::consumption::brand::verify(check.brand.as_ref(), &index.root)?;
                 if let Some(protection) = &check.protection {
                     protection.run(&index.root, check.execution.as_deref())?;
                     tree::unchanged(&index)?;

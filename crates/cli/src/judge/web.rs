@@ -1,4 +1,4 @@
-use super::finding::{Found, wrong};
+use super::finding::{Found, unknown, wrong};
 use crate::catalog::model::Mechanism;
 use crate::catalog::rules::web as rule;
 use crate::shape::web::{Evidence, Role};
@@ -15,12 +15,17 @@ pub fn judge(evidence: Option<&Evidence>) -> Found {
         &rule::DESIGN_DEPENDENCY,
         "web does not depend on @perishlab/design",
     );
-    check(
-        &mut found,
-        plane.plugin,
-        &rule::DESIGN_PLUGIN_ACTIVE,
-        "vite does not activate the design plugin",
-    );
+    match &plane.plugin {
+        crate::shape::web::Activation::Active(_) => {}
+        crate::shape::web::Activation::Missing => found.push(wrong(
+            &rule::DESIGN_PLUGIN_ACTIVE,
+            "vite does not activate the design plugin",
+        )),
+        crate::shape::web::Activation::Unknown(reason) => found.push(unknown(
+            &rule::DESIGN_PLUGIN_ACTIVE,
+            format!("Vite activation was not qualified: {reason}"),
+        )),
+    }
     check(
         &mut found,
         plane.dispatch,

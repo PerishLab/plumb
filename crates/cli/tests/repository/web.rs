@@ -29,7 +29,7 @@ fn fixture(name: &str) -> (tempfile::TempDir, std::path::PathBuf) {
     .expect("manifest should be written");
     std::fs::write(
         root.join("apps/web/vite.config.ts"),
-        "import { design } from '@perishlab/design/vite'; design();",
+        "import { design } from '@perishlab/design/vite'; export default { plugins: [design()] };",
     )
     .expect("vite config should be written");
     std::fs::write(
@@ -99,5 +99,28 @@ fn roles() {
         "web components only hold lowercase svelte files",
     ] {
         assert!(out.contains(&format!("{line} [web]")), "{out}");
+    }
+}
+
+#[test]
+fn bindings() {
+    for (source, finding) in [
+        (
+            "// design(\nexport default {plugins:[]};",
+            "out of true: vite does not activate the design plugin",
+        ),
+        (
+            "import {design} from 'other'; export default {plugins:[design()]};",
+            "out of true: vite does not activate the design plugin",
+        ),
+        (
+            "import {design} from '@perishlab/design/vite'; export default () => ({plugins:[design()]});",
+            "unknown shape: Vite activation was not qualified:",
+        ),
+    ] {
+        let (_scratch, root) = fixture("plumb-web-binding");
+        std::fs::write(root.join("apps/web/vite.config.ts"), source).unwrap();
+        let out = run(&root);
+        assert!(out.contains(finding), "{out}");
     }
 }

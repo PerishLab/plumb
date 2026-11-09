@@ -1,5 +1,6 @@
 use super::Command;
 
+pub(crate) mod brand;
 pub mod configuration;
 pub mod lane;
 pub mod lock;
@@ -10,7 +11,8 @@ pub mod windtun;
 pub fn prepare(command: &Command) -> Result<(), String> {
     if matches!(
         command,
-        Command::Configuration { .. }
+        Command::Brand { .. }
+            | Command::Configuration { .. }
             | Command::Windtun { .. }
             | Command::Lock { .. }
             | Command::Metadata { .. }

@@ -103,6 +103,7 @@ pub(super) fn register(
                 exclusions: Vec::new(),
                 execution: check.execution.clone(),
                 protection: Some(protection.clone()),
+                brand: None,
             })
         })
         .transpose()?;

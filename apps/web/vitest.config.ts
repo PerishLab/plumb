@@ -1,14 +1,16 @@
-import { svelte } from "@sveltejs/vite-plugin-svelte";
-import { defineConfig } from "vitest/config";
+import { defineConfig, mergeConfig } from "vitest/config";
+import app from "./vite.config";
 
-export default defineConfig({
-	plugins: [svelte()],
-	test: {
-		include: ["tests/**/*.test.ts"],
-		server: {
-			deps: {
-				inline: ["@perishlab/crest", "@perishlab/design", "@perishlab/sign"],
+export default mergeConfig(
+	app,
+	defineConfig({
+		test: {
+			include: ["tests/**/*.test.ts"],
+			server: {
+				deps: {
+					inline: ["@perishlab/crest", "@perishlab/design", "@perishlab/sign"],
+				},
 			},
 		},
-	},
-});
+	}),
+);

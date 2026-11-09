@@ -254,7 +254,6 @@ export default { server: { port, proxy: { "/api": api } } };
     let (success, out) = run(&root);
     assert!(!success, "{out}");
     for line in [
-        "vite does not activate the design plugin",
         "vite manually consumes sidecar dispatch environment",
         "web does not load the virtual views manifest",
         "web does not render the views manifest",
@@ -262,6 +261,8 @@ export default { server: { port, proxy: { "/api": api } } };
     ] {
         assert!(out.contains(&format!("{line} [web]")), "{out}");
     }
+    let unknown = "unknown shape: Vite activation was not qualified:";
+    assert!(out.contains(unknown), "{out}");
     for line in [
         "web/api pair has no sidecar.toml",
         "api does not consume SIDECAR_PORT",

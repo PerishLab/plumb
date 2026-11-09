@@ -1,0 +1,42 @@
+Verify one explicitly declared brand consumption boundary after its normal build.
+
+An empty [brand] table in plumb.toml activates the bounded contract. All root and
+apps/* Svelte/Vite applications are discovered; a new app is not skipped because
+it is not named web. Each requires one static configuration, a real imported
+Design plugin call, a literal brand product/HTTPS origin, and imported official
+Hero/Navigator marks. Dynamic configuration or unsupported source stays
+unqualified. Additional config imports, resolution overrides and transforms are
+outside the qualified scope. No repository configuration is executed by this command.
+
+The fixed official registry supplies exact stable npm metadata and archives.
+Acquisition runs no repository/package code. Archive SHA512 must match the
+actual pnpm lock. Complete Crest/Design distributions, installed package files,
+the official manifest, every receipt selection and actual output bytes are
+verified. Generated HTML must include a matching registered data-crest image;
+CSR-only output and unreachable source-only declarations stay unqualified.
+The receipt authenticates no publisher by itself. Captured archive
+references validate content; supplied/deserialized references alone authenticate
+no origin. Guard captures its own originals and binds them to source/world.
+
+Additional unchanged copies can be declared without duplicating geometry:
+
+[[brand.copy]]
+asset = "plumb/sign/full/light/png/48"
+output = "apps/web/public/favicon.png"
+
+The asset identifier is resolved from the official manifest. Output paths must
+stay inside tracked regular repository source. They are verified before action
+reuse and after execution. The current Guard contract requires a pnpm input
+world; other static package/host worlds remain unqualified. Unknown selections, changed bytes, missing outputs,
+unreadable sources and unsupported worlds refuse; no repair or fallback occurs.
+Ordinary SVG/business graphics are not universally classified as brands.
+
+This proves bounded source/origin/output relationships, not arbitrary image
+semantics, browser presentation, all runtime requests, other renderers/native
+hosts or estate-wide activation. Absence of [brand] proves no adoption. Guard
+verifies an activated contract after the web build; distribution, installation
+and real land canaries remain separate rollout evidence.
+
+JSON is written to stdout with --json. Exit 0: qualified within the stated
+boundary; exit 1: refused or unqualified. Credentials are used only to acquire
+official metadata/archive bytes, never to execute repository code.

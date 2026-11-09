@@ -16,6 +16,9 @@ use std::path::PathBuf;
 #[locus::trace(with = crate::observation::view())]
 pub(crate) fn execute(command: Command) -> i32 {
     match command {
+        Command::Brand { target, json } => {
+            crate::consumption::brand::run(PathBuf::from(target.root), json)
+        }
         Command::Runner { session, arguments } => {
             crate::execution::capture::run(&session, &arguments)
         }

@@ -6,6 +6,8 @@ pub use fetch::run as fetch;
 mod manifest;
 mod npm;
 mod observation;
+#[cfg(feature = "origin")]
+pub use npm::origin::{Archive, Origin};
 mod process;
 pub use observation::{Observation, latest};
 mod registry;
