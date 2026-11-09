@@ -19,7 +19,7 @@ pub enum Deed {
         input: std::path::PathBuf,
         #[arg(long, value_enum, default_value = "data")]
         purpose: Inspection,
-        #[arg(long, required_if_eq_any([("purpose", "materials"), ("purpose", "issuer"), ("purpose", "baseline"), ("purpose", "preparation"), ("purpose", "history"), ("purpose", "family"), ("purpose", "transition"), ("purpose", "historical"), ("purpose", "retention")]))]
+        #[arg(long, required_if_eq_any([("purpose", "materials"), ("purpose", "issuer"), ("purpose", "baseline"), ("purpose", "preparation"), ("purpose", "history"), ("purpose", "family"), ("purpose", "transition"), ("purpose", "historical"), ("purpose", "retention"), ("purpose", "choice"), ("purpose", "selected"), ("purpose", "nomination")]))]
         product: Option<String>,
     },
     #[command(about = "Collect exact public source and formal Scene review inputs", long_about = plumb::seat::resource!("help/release/collect.txt"))]
@@ -105,4 +105,7 @@ pub enum Inspection {
     Transition,
     Historical,
     Retention,
+    Choice,
+    Selected,
+    Nomination,
 }

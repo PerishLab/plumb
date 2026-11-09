@@ -435,3 +435,17 @@ missing and all other unreadable/status failures as refusal. It adds no retry,
 alternate authority or evidence substitution. A successful byte read alone grants
 no authenticity, distribution completion or release permission; consumers retain
 their existing record, digest, identity and current-authority checks.
+
+Stable family selection has a separate canonical record and fixed discovery.
+A separately retained inception binds the first selection; lost discovery never
+authorizes a different first branch. Its dedicated native role authenticates selection origin, while current selection
+also reconstructs the family, authenticated predecessor sequence and retained
+history against the caller's expected original root. Predecessors must stay on
+the selected branch and advance stable. The latest retained stable must still
+exist at its exact live source; deleting a tag cannot authorize older selection.
+Current reservations may extend the selection's bound checkpoint. Repeated source,
+material, history, inventory, discovery and authority checks refuse movement.
+Nomination authenticates its observed family, never its supplied native fields or
+conditional update. The producer owns protected predecessor observation, CAS and
+unknown-write recovery; source data and public absence prove no writer authority.
+These metadata facts do not admit prospective releases or activate a scope.

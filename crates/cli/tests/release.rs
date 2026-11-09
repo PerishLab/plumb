@@ -127,3 +127,75 @@ fn collection() {
         assert_eq!(std::fs::read_dir(scratch.path()).unwrap().count(), 0);
     }
 }
+
+#[test]
+fn selection() {
+    use plumb::semantics::admission::{Native, Reference, Selection};
+    let reference = Reference {
+        url: format!(
+            "https://releases.plumb.perish.uk/v1/semantics/objects/{}.json",
+            "a".repeat(64)
+        ),
+        sha256: "a".repeat(64),
+        size: 1,
+    };
+    let selection = Selection {
+        schema: Selection::SCHEMA.into(),
+        product: "plumb".into(),
+        marker: "v0.143.0".into(),
+        root: reference.clone(),
+        family: reference.clone(),
+        history: reference,
+        previous: None,
+        sequence: 1,
+        native: Native {
+            run: 1,
+            attempt: 1,
+            commit: "b".repeat(40),
+            job: 2,
+        },
+    };
+    let scratch = tempfile::tempdir().unwrap();
+    let path = scratch.path().join("selection.json");
+    let raw = selection.encode().unwrap();
+    std::fs::write(&path, &raw).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["release", "inspect", "--input"])
+        .arg(&path)
+        .env("PLUMB_HOME", scratch.path())
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(value["facts"]["authentication"], false);
+    assert_eq!(value["facts"]["publication"], false);
+    assert_eq!(std::fs::read(&path).unwrap(), raw);
+}
+
+#[test]
+fn selectors() {
+    let scratch = tempfile::tempdir().unwrap();
+    let path = scratch.path().join("reference.json");
+    std::fs::write(&path, b"{}").unwrap();
+    for purpose in ["choice", "selected", "nomination"] {
+        let missing = Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["release", "inspect", "--input"])
+            .arg(&path)
+            .args(["--purpose", purpose])
+            .env("PLUMB_HOME", scratch.path())
+            .output()
+            .unwrap();
+        assert_eq!(missing.status.code(), Some(2));
+        let invalid = Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["release", "inspect", "--input"])
+            .arg(&path)
+            .args(["--purpose", purpose, "--product", "plumb"])
+            .env("PLUMB_HOME", scratch.path())
+            .output()
+            .unwrap();
+        assert_eq!(invalid.status.code(), Some(1));
+        let value: serde_json::Value = serde_json::from_slice(&invalid.stdout).unwrap();
+        assert_eq!(value["state"], "refused");
+        assert_eq!(value["publication"], false);
+    }
+}
