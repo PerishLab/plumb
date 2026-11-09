@@ -1,4 +1,9 @@
-use crate::shape::web::{Activation, Setup};
+mod app;
+mod document;
+mod entry;
+mod views;
+
+use crate::shape::web::Setup;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -7,12 +12,23 @@ use std::path::{Path, PathBuf};
 pub(super) struct App {
     pub(super) path: PathBuf,
     pub(super) setup: Setup,
+    pub(super) mode: super::Mode,
+    pub(super) config: String,
+}
+
+#[derive(Serialize)]
+pub(super) struct Entry {
+    pub(super) source: String,
+    pub(super) view: String,
+    pub(super) target: String,
+    pub(super) output: String,
+    pub(super) digest: String,
 }
 
 pub(super) struct Source<'a>(pub(super) &'a Path);
 
 impl Source<'_> {
-    pub(super) fn apps(&self) -> Result<Vec<App>, String> {
+    pub(super) fn apps(&self, mode: super::Mode) -> Result<Vec<App>, String> {
         let root = self.0;
         let mut paths = vec![PathBuf::new()];
         let directory = root.join("apps");
@@ -38,80 +54,23 @@ impl Source<'_> {
         paths.sort();
         let mut found = Vec::new();
         for path in paths {
-            if let Some(app) = self.app(&path)? {
+            if let Some(app) = app::read(root, &path, mode)? {
                 found.push(app)
             }
         }
         Ok(found)
     }
 
-    fn app(&self, path: &Path) -> Result<Option<App>, String> {
-        let root = self.0;
-        let manifest = root.join(path).join("package.json");
-        if !manifest.is_file() {
-            return Ok(None);
-        }
-        let bytes = std::fs::read(manifest).map_err(|error| error.to_string())?;
-        let manifest: serde_json::Value =
-            serde_json::from_slice(&bytes).map_err(|error| error.to_string())?;
-        if !has(&manifest, "vite") || !has(&manifest, "svelte") {
-            return Ok(None);
-        }
-        let configs = [
-            "vite.config.ts",
-            "vite.config.mts",
-            "vite.config.js",
-            "vite.config.mjs",
-        ]
-        .into_iter()
-        .map(|name| root.join(path).join(name))
-        .filter(|path| path.exists())
-        .collect::<Vec<_>>();
-        if configs.len() != 1 {
-            return Err(format!(
-                "{} needs one readable static Vite configuration",
-                path.display()
-            ));
-        }
-        let text = std::fs::read_to_string(&configs[0]).map_err(|error| error.to_string())?;
-        let setup = match Activation::read(&text) {
-            Activation::Active(setup) => setup,
-            Activation::Missing => {
-                return Err(format!(
-                    "{} has no imported Design plugin activation",
-                    path.display()
-                ));
-            }
-            Activation::Unknown(reason) => {
-                return Err(format!(
-                    "{} Vite configuration is unqualified: {reason}",
-                    path.display()
-                ));
-            }
-        };
-        if let Some(problem) = &setup.problem {
-            return Err(format!(
-                "{} brand configuration is unqualified: {problem}",
-                path.display()
-            ));
-        }
-        if setup.options.get("brand").is_none() {
-            return Err(format!(
-                "{} has no explicit brand product/origin; adoption is unqualified",
-                path.display()
-            ));
-        }
-        relative(&setup.output)?;
-        if !setup.base.starts_with('/')
-            || setup.base.starts_with("//")
-            || !setup.base.ends_with('/')
-        {
-            return Err("brand output requires a local absolute Vite base ending in /".into());
-        }
-        Ok(Some(App {
-            path: path.into(),
-            setup,
-        }))
+    pub(super) fn views(
+        &self,
+        app: &App,
+        sources: &[(PathBuf, Vec<super::svelte::Mark>)],
+    ) -> Result<(), String> {
+        views::verify(self.0, app, sources)
+    }
+
+    pub(super) fn built(&self, app: &App) -> Result<Entry, String> {
+        views::built(self.0, app)
     }
 
     pub(super) fn files(&self) -> Result<Vec<PathBuf>, String> {
@@ -160,7 +119,24 @@ impl Source<'_> {
                 entries.push((entry.path(), super::material::digest(entry.bytes())));
             }
         }
+        for path in ["package.json", "pnpm-lock.yaml"] {
+            tracked(root, path, &entries)?;
+        }
+        match root.join("pnpm-workspace.yaml").symlink_metadata() {
+            Ok(_) => tracked(root, "pnpm-workspace.yaml", &entries)?,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+            Err(error) => return Err(error.to_string()),
+        }
         for app in apps {
+            for name in ["package.json", "index.html", &app.config] {
+                let path = app
+                    .path
+                    .join(name)
+                    .to_str()
+                    .ok_or("non-text app input path")?
+                    .replace('\\', "/");
+                tracked(root, &path, &entries)?;
+            }
             Source(&root.join(&app.path)).tracked(root, &entries)?;
         }
         let bytes = serde_json::to_vec(&entries).map_err(|error| error.to_string())?;
@@ -188,10 +164,14 @@ impl Source<'_> {
     }
 }
 
-fn has(manifest: &serde_json::Value, name: &str) -> bool {
-    ["dependencies", "devDependencies", "peerDependencies"]
-        .iter()
-        .any(|section| manifest[section][name].is_string())
+fn tracked(root: &Path, path: &str, entries: &[(&str, String)]) -> Result<(), String> {
+    if !entries.iter().any(|(name, _)| *name == path) {
+        return Err(format!(
+            "required brand input {path} is outside the tracked input world"
+        ));
+    }
+    super::material::regular(root, path)?;
+    Ok(())
 }
 
 pub(super) fn relative(path: &str) -> Result<(), String> {

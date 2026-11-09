@@ -82,6 +82,8 @@ impl Fixture {
                 publications: Vec::new(),
             },
             app: source::App {
+                mode: super::Mode::Html,
+                config: "vite.config.ts".into(),
                 path: "".into(),
                 setup: crate::shape::web::Setup {
                     options: serde_json::json!({"brand":head}),

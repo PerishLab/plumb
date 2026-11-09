@@ -9,11 +9,21 @@ use receipt::Catalog;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct Declaration {
     #[serde(default)]
+    mode: Mode,
+    #[serde(default)]
     copy: Vec<Copy>,
+}
+
+#[derive(Clone, Copy, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum Mode {
+    #[default]
+    Html,
+    Views,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -47,6 +57,10 @@ struct App {
     path: PathBuf,
     images: usize,
     marks: usize,
+    mode: Mode,
+    rendering: &'static str,
+    browser: &'static str,
+    entry: Option<source::Entry>,
 }
 
 impl Prepared {
@@ -57,7 +71,7 @@ impl Prepared {
         let Some(declaration) = declared(root)? else {
             return Ok(None);
         };
-        let apps = source::Source(root).apps()?;
+        let apps = source::Source(root).apps(declaration.mode)?;
         if apps.is_empty() && declaration.copy.is_empty() {
             return Err("brand declaration has no qualified app or materialized copy".into());
         }
@@ -91,17 +105,27 @@ impl Prepared {
                 path: app.path.clone(),
                 images,
                 marks: count,
+                mode: app.mode,
+                rendering: match app.mode {
+                    Mode::Html => "html-images-observed",
+                    Mode::Views => "independent-browser-required",
+                },
+                browser: "unverified",
+                entry: match app.mode {
+                    Mode::Html => None,
+                    Mode::Views => Some(source::Source(root).built(app)?),
+                },
             });
         }
         self.copies(root, &catalog)?;
         Ok(Report {
-            schema: "plumb.brand/v1",
+            schema: "plumb.brand/v2",
             apps,
             copies: self.declaration.copy.len(),
             origins: self.materials.origins.clone(),
             inputs: self.inputs.clone(),
             publications: self.materials.publications.clone(),
-            limits: "Qualified static Design Vite activation, imported Hero/Navigator marks outside unresolved lexical bindings, formal package bytes and declared image outputs only. Unrelated business templates do not establish brand adoption. Arbitrary image semantics, local component aliases, other renderers/hosts, runtime request coverage and browser presentation are not qualified.",
+            limits: "Bounded formal origin, source selection and unchanged official image output checks. HTML mode observes generated image tags; views mode proves only the closed root-entry relation and local module presence/digest, never compiled-source equivalence or runtime rendering. Browser display, runtime requests, arbitrary image semantics, other entry programs/hosts remain unverified.",
         })
     }
 
@@ -138,6 +162,7 @@ impl Prepared {
         let mut counts = Vec::new();
         for app in &self.apps {
             let mut count = 0;
+            let mut sources = Vec::new();
             for file in source::Source(&root.join(&app.path).join("src")).files()? {
                 let text = std::fs::read_to_string(&file).map_err(|error| error.to_string())?;
                 let marks =
@@ -146,6 +171,10 @@ impl Prepared {
                     mark.verify(catalog, &file)?;
                 }
                 count += marks.len();
+                sources.push((file, marks));
+            }
+            if app.mode == Mode::Views {
+                source::Source(root).views(app, &sources)?;
             }
             if count == 0 {
                 return Err(format!(
@@ -229,7 +258,7 @@ pub(crate) fn run(root: PathBuf, json: bool) -> i32 {
 fn refused(error: String, json: bool) -> i32 {
     if json {
         let message =
-            serde_json::json!({"schema":"plumb.brand/v1","status":"unqualified","reason":error});
+            serde_json::json!({"schema":"plumb.brand/v2","status":"unqualified","reason":error});
         println!("{message}");
     } else {
         eprintln!("plumb brand: {error}");

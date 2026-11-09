@@ -8,6 +8,39 @@ pub(super) struct Scope<'a>(
 );
 
 impl Scope<'_> {
+    pub(super) fn root(&self, node: Node<'_>) -> bool {
+        let mut parent = node.parent().and_then(|node| node.parent());
+        while let Some(node) = parent {
+            if node.kind() == "document" {
+                return true;
+            }
+            if node.kind() != "element" || !self.layout(node) {
+                return false;
+            }
+            parent = node.parent();
+        }
+        false
+    }
+
+    fn layout(&self, node: Node<'_>) -> bool {
+        let start = self
+            .0
+            .children(node)
+            .into_iter()
+            .find(|node| node.kind() == "start_tag");
+        let Some(start) = start else { return false };
+        let children = self.0.children(start);
+        let [name] = children.as_slice() else {
+            return false;
+        };
+        if name.kind() != "tag_name" {
+            return false;
+        }
+        self.1.get(self.0.text(*name)).is_some_and(|binding| {
+            ["@perishlab/design#Shell", "@perishlab/design#Frame"].contains(&binding.as_str())
+        })
+    }
+
     pub(super) fn component(&self, name: &str) -> Option<&str> {
         let component = self.1.get(name)?.strip_prefix("@perishlab/design#")?;
         ["Hero", "Navigator"]

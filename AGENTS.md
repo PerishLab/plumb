@@ -152,8 +152,23 @@ shadow an imported brand component remain unqualified. This bounded AST projecti
 does not resolve arbitrary local component aliases. Module/context scripts remain
 unqualified. Literal TypeScript generics are parsed as type parameters and create
 no runtime brand binding; dynamic, malformed or JavaScript generics refuse.
-CSR-only output is unqualified;
-registered data-crest images must appear in actual generated HTML. Current copies require a pnpm input world; unsupported
+The default HTML carrier requires registered data-crest images in actual generated
+HTML. Explicit mode="views" qualifies only the standard Design Views bootstrap,
+root Vite base, login:false, one root view, and one unconditional brand under
+plain imported Shell/Frame layouts. Other bootstraps, aliases and route graphs
+stay unqualified. That carrier binds source, origins and unchanged official
+images; its output module digest is descriptive, not proof of compiled-source
+equivalence or runtime rendering. Browser display still needs independent evidence.
+The v2 report separates the carrier and rendering obligation and always reports
+browser verification as unverified.
+
+The Svelte compiler call must be genuine, unique and argument-free. Automatic
+Svelte configs, package browser mappings and producer self-reference app names
+stay unqualified. Required package, lock, app config and HTML inputs must be tracked
+regular files. Headless Views consumption requires an explicit null head receipt
+and no graphical head, allowing an empty data favicon only. Declared head media
+still requires its formal product/origin and image bytes; unsupported alternate
+image/manifest metadata refuses. Current copies require a pnpm input world; unsupported
 hosts and package worlds are not silently activated or given a UI framework.
 
 The optional origin library feature exposes the shared packages Origin capability queries the fixed official npm authority

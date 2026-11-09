@@ -89,6 +89,7 @@ impl Vite<'_> {
         }
         let mut active = None;
         let mut foreign = uncertain;
+        let mut compiler = false;
         for plugin in self.0.children(plugins) {
             if plugin.kind() != "call_expression" {
                 return Err("dynamic plugin entries and spreads are unsupported".into());
@@ -104,8 +105,16 @@ impl Vite<'_> {
                 }
                 active = Some(self.options(plugin)?);
             } else if bindings.get(self.0.text(function)).map(String::as_str)
-                != Some("@sveltejs/vite-plugin-svelte#svelte")
+                == Some("@sveltejs/vite-plugin-svelte#svelte")
             {
+                let arguments = plugin
+                    .child_by_field_name("arguments")
+                    .ok_or("missing Svelte arguments")?;
+                if compiler || !self.0.children(arguments).is_empty() {
+                    foreign = true;
+                }
+                compiler = true;
+            } else {
                 foreign = true;
             }
         }
@@ -121,7 +130,7 @@ impl Vite<'_> {
             options,
             base,
             output,
-            problem: self.scope(config, foreign).err(),
+            problem: self.scope(config, foreign || !compiler).err(),
         }))
     }
 

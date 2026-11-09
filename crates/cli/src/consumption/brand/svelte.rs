@@ -10,6 +10,7 @@ pub(super) struct Mark {
     pub(super) product: String,
     pub(super) component: String,
     pub(super) surface: Option<String>,
+    pub(super) root: bool,
 }
 
 pub(super) fn read(text: &str) -> Result<Vec<Mark>, String> {
@@ -160,6 +161,7 @@ impl Svelte<'_> {
                 product,
                 component: component.into(),
                 surface,
+                root: scope.root(node),
             });
         }
         Ok(())
