@@ -123,3 +123,41 @@ The same materials report explicitly names freshness=historical; transition mode
 names freshness=current. Both derived families retain authentication=false and
 publication=false. Historical preparation cannot substitute for current release
 admission. It does not reconstruct evidence absent from the retained history.
+
+With --purpose choice --product <name>, input is an immutable selection record
+reference. Authenticate its exact canonical wharf.release.semantics.selection/v1
+bytes through the dedicated completed native [select] stable family role and
+unique digest confirmation. This establishes issuer origin only, not that its
+family is current or that its material or predecessor claims are valid.
+
+With --purpose nomination --product <name>, input is canonical selection data.
+Verify its complete authenticated family, exact original root, strict authenticated
+selection predecessors on that same branch, increasing stable and sequence,
+current retained history and complete tag inventory. A retained newer stable
+cannot be ignored when its current tag disappears. Repeat material and freshness
+checks. The plumb.release.selection.materials/v1 report retains authentication=false
+and publication=false for the proposed selection. It proves no supplied native
+identity, physical absence, conditional update, writer idleness or publication
+permission. A trusted producer must bind its actual native identity, protected
+predecessor bytes and conditional write, preserve unknown outcomes, and confirm
+public bytes without a storage credential. Retain the first selection separately
+at /v1/semantics/family/initial.json with create-only semantics. An established
+inception must never be replaced or inferred absent from missing discovery.
+
+With --purpose selected --product <name>, input is the expected original adoption
+reference. Read the fixed /v1/semantics/family/latest.json selector, authenticate
+its immutable selection record, complete predecessor chain and the separately
+retained /v1/semantics/family/initial.json inception. The chain must end at that
+exact first selection; a missing latest pointer cannot authorize reinitialization.
+Independently reconstruct its family and retained history. Verify the expected original root,
+current latest retained stable with its exact live source, complete current tag
+inventory and current history extending the selected history. New RC reservations
+may extend history without moving the stable selection. Repeat the selection,
+materials, predecessor, history, inventory, discovery and protected authority
+observations. Missing selectors or producers, exhausted 128-selection/16-MiB
+predecessor bounds, missing latest stable, forks, rollback and moved inputs stop.
+The plumb.release.family.current/v1 facts authenticate the selected current
+metadata and family under that expected root; they admit no prospective candidate
+and grant no publication or activation. The expected root must come from the
+caller's trusted scope; supplying a root creates no scope authority. Formal
+matching producer and consumer qualification remain required before activation.

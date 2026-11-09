@@ -1,6 +1,6 @@
 use super::identity::deed::{Inspection, Purpose};
 use plumb::semantics::admission::{
-    Checkpoint, Inspector, Preparation, Record, Reference, Retention, World,
+    Checkpoint, Inspector, Preparation, Record, Reference, Retention, Selection, World,
 };
 use plumb::windtun::qualification::{Fault, Remote, State};
 use serde_json::{Value, json};
@@ -53,6 +53,8 @@ impl Facts {
             serde_json::from_slice(raw).map_err(|_| Fault::refused("invalid supplied JSON"))?;
         let held = if value["schema"] == World::SCHEMA {
             Self::value(&World::parse(raw)?)?
+        } else if value["schema"] == Selection::SCHEMA {
+            Self::value(&Selection::parse(raw)?)?
         } else if value["schema"] == Checkpoint::SCHEMA {
             Self::value(&Checkpoint::parse(raw)?)?
         } else {
@@ -63,6 +65,11 @@ impl Facts {
     }
 
     fn native(raw: &[u8], purpose: Inspection, product: &str) -> Result<Value, Fault> {
+        if let Inspection::Nomination = purpose {
+            return Self::value(
+                &Inspector::new(Remote::default()).nominate(&Selection::parse(raw)?, product)?,
+            );
+        }
         if matches!(purpose, Inspection::Transition | Inspection::Historical) {
             let Record::Transition(transition) = Record::parse(raw)? else {
                 return Err(Fault::refused(
@@ -121,6 +128,14 @@ impl Facts {
                 "plumb.release.family/v1",
                 Self::value(&inspector.family(&reference, product)?)?,
             ),
+            Inspection::Choice => (
+                "plumb.release.selection.origin/v1",
+                Self::value(&inspector.choice(&reference, product)?)?,
+            ),
+            Inspection::Selected => (
+                "plumb.release.family.current/v1",
+                Self::value(&inspector.selected(&reference, product)?)?,
+            ),
             Inspection::History => {
                 let history = inspector.discover(product)?;
                 if history.reference() != &reference {
@@ -135,7 +150,8 @@ impl Facts {
             | Inspection::Preparation
             | Inspection::Retention
             | Inspection::Transition
-            | Inspection::Historical => {
+            | Inspection::Historical
+            | Inspection::Nomination => {
                 return Err(Fault::refused("inspection uses its separate data reader"));
             }
         };

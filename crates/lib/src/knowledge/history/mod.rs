@@ -4,6 +4,7 @@ mod discovery;
 mod family;
 mod reader;
 mod record;
+mod selection;
 mod transition;
 mod validation;
 
@@ -11,6 +12,7 @@ pub use capture::Retention;
 pub use discovery::Discovery;
 pub use family::Family;
 pub use record::Checkpoint;
+pub use selection::{Choice, Nomination, Selected, Selection, Selector};
 pub use transition::Transition;
 pub use validation::Validation;
 

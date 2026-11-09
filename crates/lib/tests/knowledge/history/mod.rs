@@ -1,6 +1,7 @@
 mod capture;
 mod changes;
 mod family;
+mod selection;
 mod validation;
 
 use super::{baseline, fixture::Fixture};
