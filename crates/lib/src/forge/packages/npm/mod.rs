@@ -1,3 +1,8 @@
+#[cfg(feature = "origin")]
+mod archive;
+#[cfg(feature = "origin")]
+pub(super) mod origin;
+
 use super::{Package, process};
 use std::collections::BTreeSet;
 use std::path::Path;

@@ -95,6 +95,10 @@ impl Selection {
         product: &str,
     ) -> Result<Vec<action::Preparation>, String> {
         let mut checks = action::Catalog { tree, product }.checks()?;
+        crate::consumption::brand::admit(
+            tree.text("plumb.toml")?.as_deref(),
+            checks.iter().any(|check| check.name == "guard/web"),
+        )?;
         if matches!(self, Self::Compiler) {
             checks.retain(|check| check.name == "guard/rust");
         }

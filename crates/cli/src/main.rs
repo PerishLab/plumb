@@ -24,6 +24,13 @@ struct Cli {
 
 #[derive(Subcommand)]
 pub(crate) enum Command {
+    #[command(about = "Verify declared brand consumption against formal package origins and built outputs", long_about = plumb::seat::resource!("help/brand.txt"))]
+    Brand {
+        #[command(flatten)]
+        target: Root,
+        #[arg(long)]
+        json: bool,
+    },
     #[command(hide = true, about = "Capture one admitted Cargo test launch", long_about = plumb::seat::resource!("help/runner.txt"))]
     Runner {
         session: PathBuf,
@@ -260,6 +267,7 @@ impl Command {
 
     fn name(&self) -> &'static str {
         match self {
+            Self::Brand { .. } => "brand",
             Self::Runner { .. } => "runner",
             Self::Windtun { .. } => "windtun",
             Self::Lock { .. } => "lock",

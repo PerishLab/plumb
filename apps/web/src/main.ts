@@ -1,9 +1,13 @@
 import source from "virtual:perish/views";
 import { Views } from "@perishlab/design";
 import { hydrate, mount } from "svelte";
+import Home from "./views/index.svelte";
 
 const target = document.getElementById("root");
 if (target !== null) {
-	const props = { source };
-	(target.hasChildNodes() ? hydrate : mount)(Views, { target, props });
+	if (globalThis.location.pathname === "/" && target.hasChildNodes()) {
+		hydrate(Home, { target });
+	} else {
+		mount(Views, { target, props: { source } });
+	}
 }

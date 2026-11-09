@@ -1,3 +1,9 @@
+mod syntax;
+mod vite;
+
+pub(crate) use syntax::Syntax;
+pub(crate) use vite::{Activation, Setup};
+
 use serde_json::Value as Json;
 use std::path::{Path, PathBuf};
 
@@ -8,7 +14,7 @@ pub struct Evidence {
 
 pub(crate) struct Plane {
     pub(crate) design: bool,
-    pub(crate) plugin: bool,
+    pub(crate) plugin: vite::Activation,
     pub(crate) dispatch: bool,
     pub(crate) loaded: bool,
     pub(crate) rendered: bool,
@@ -49,7 +55,7 @@ impl Web<'_> {
         let source = self.sources(&self.0.join("apps/web/src"));
         let plane = Plane {
             design: has(&package, "@perishlab/design"),
-            plugin: config.contains("design("),
+            plugin: vite::Activation::read(&config),
             dispatch: !config.contains("SIDECAR_PORT") && !config.contains("API_URL"),
             loaded: source.contains("virtual:perish/views"),
             rendered: source.contains("Views") && source.contains("@perishlab/design"),

@@ -3,5 +3,12 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-	plugins: [design({ login: false, serve: false }), svelte()],
+	plugins: [
+		design({
+			login: false,
+			serve: false,
+			brand: { product: "plumb", origin: "https://plumb.perish.uk" },
+		}),
+		svelte(),
+	],
 });

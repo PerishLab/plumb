@@ -706,7 +706,7 @@ tags = ["web"]
 
 [[rule]]
 id = "web.component-file-kind"
-summary = "Components are TSX files"
+summary = "Components are Svelte files"
 law = "The web component tree contains only lowercase directories and .svelte files."
 evidence = "Files below apps/web/src/lib/components."
 standing = "mechanized"
@@ -734,7 +734,7 @@ tags = ["dependency", "web"]
 [[rule]]
 id = "web.design-plugin-active"
 summary = "The design plugin is active"
-law = "The Vite configuration activates the workshop design plugin."
+law = "The static Vite configuration calls the design function imported from @perishlab/design/vite in its plugins array. Comments and unrelated names do not activate it; unsupported dynamic configuration stays unknown."
 evidence = "Recognized Vite configuration files."
 standing = "mechanized"
 owner = "web"
@@ -751,8 +751,8 @@ tags = ["web"]
 
 [[rule]]
 id = "web.svelte-under-components"
-summary = "Library TSX lives under components"
-law = "Reusable web library TSX lives below lib/components."
+summary = "Library Svelte lives under components"
+law = "Reusable web library Svelte lives below lib/components."
 evidence = "Direct files below apps/web/src/lib."
 standing = "mechanized"
 owner = "web"
@@ -760,7 +760,7 @@ tags = ["web"]
 
 [[rule]]
 id = "web.view-file-kind"
-summary = "Views contain route TSX files"
+summary = "Views contain route Svelte files"
 law = "The views tree contains only route .svelte files."
 evidence = "Files below apps/web/src/views."
 standing = "mechanized"

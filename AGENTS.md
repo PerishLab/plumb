@@ -129,6 +129,46 @@ answers for.
   the Issue that owns the work. A document nobody must read and no
   mechanism keeps true is the worst of the four.
 
+## Brand
+
+Crest owns brand geometry, palette and supported image variants. The Web specimen
+uses the formal Design adapter and registered plumb product, including its head
+media. The specimen uses Shell to declare its actual theme surface. Its root
+Home is prerendered and hydrated as the same component; Views mounts unrendered
+entries instead of hydrating a different component over that root. Retired unused
+brand copies are removed; ordinary business graphics are
+not automatically classified as branding.
+
+An explicit [brand] table activates the current source/Guard consumption
+contract. The reader discovers root/apps/* Svelte/Vite applications instead of
+assuming every app is named web. Qualified configuration is a direct object or
+imported defineConfig, literal plugin options, Design plus the imported Svelte
+plugin, optional local absolute base and build.outDir. Other resolution,
+transforms, config imports, plugin implementations, dynamic selections and
+template lexical bindings remain unqualified. CSR-only output is unqualified;
+registered data-crest images must appear in actual generated HTML. Current copies require a pnpm input world; unsupported
+hosts and package worlds are not silently activated or given a UI framework.
+
+The optional origin library feature exposes the shared packages Origin capability queries the fixed official npm authority
+and fetches an exact stable archive without executing repository/package code.
+SHA512, package identity and bounded regular archive entries are verified. Its
+serialized reference/read operation validates content only; a supplied reference
+never authenticates a publisher. Guard captures its own references and complete
+formal publication identities before product execution and binds them into the
+web action input. Build execution remains credential-free.
+
+After the build, the checker compares installed Crest/Design files with their
+formal archives, reads the official asset catalog, and checks every receipt
+selection/output byte, actual HTML head references and declared rendered image
+identities. Tracked app inputs also bind the web action, including root app
+source outside the usual apps directory. Tracked unchanged copies
+name only an official asset ID and consumer output path. They are checked before
+Guard cache reuse as well as after execution. No geometry, palette, product list
+or image digest becomes a second compiled brand truth. This bounded evidence
+proves neither arbitrary image semantics nor browser appearance, runtime request
+coverage or domain-wide activation. Formal tool distribution, installation and
+real land canaries remain separate rollout evidence.
+
 ## Lane evidence
 
 Schema2 selection/operation evidence retains its canonical bytes. Schema3

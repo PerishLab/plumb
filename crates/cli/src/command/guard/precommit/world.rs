@@ -12,6 +12,7 @@ pub(super) struct Check {
     pub execution: Option<std::sync::Arc<plumb::config::Execution>>,
     pub material: String,
     pub protection: Option<crate::execution::lock::Protection>,
+    pub brand: Option<crate::consumption::brand::Prepared>,
 }
 
 pub(super) struct Prepared {
@@ -72,6 +73,11 @@ impl Prepared {
         } in prepared
         {
             let input = crate::shape::topology::bind(&name, input, topology.as_deref());
+            let (input, brand) = crate::consumption::brand::prepare(
+                (&name, input),
+                &index.root,
+                resolution.as_ref(),
+            )?;
             let (exclusions, policy) = if name == "guard/web" {
                 super::web::prepare(&index.root, &mut commands)?
             } else {
@@ -140,6 +146,7 @@ impl Prepared {
             let check = Check {
                 material: material.unwrap_or(world.material),
                 protection: None,
+                brand,
                 proof: plumb::guard::Action {
                     name,
                     input,
@@ -183,20 +190,6 @@ impl Prepared {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn git(root: &Path, args: &[&str]) {
-        let output = plumb::config::detached("git")
-            .arg("-C")
-            .arg(root)
-            .args(args)
-            .output()
-            .unwrap();
-        assert!(
-            output.status.success(),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
 
     struct Frame {
         material: String,
@@ -254,9 +247,11 @@ mod tests {
         }
         plumb::depot::carry(crate::catalog::carried::FILES);
         let root = tempfile::tempdir().unwrap();
-        git(root.path(), &["init", "-q"]);
+        let git =
+            |args: &[&str]| super::super::tree::git(root.path(), args, "world fixture").unwrap();
+        git(&["init", "-q"]);
         let origin = "https://github.com/Example/probe.git";
-        git(root.path(), &["remote", "add", "origin", origin]);
+        git(&["remote", "add", "origin", origin]);
         std::fs::create_dir(root.path().join("src")).unwrap();
         std::fs::write(
             root.path().join("Cargo.toml"),
@@ -275,14 +270,14 @@ mod tests {
             .output()
             .unwrap();
         assert!(output.status.success());
-        git(root.path(), &["add", "."]);
+        git(&["add", "."]);
         let first = prepare(root.path());
         std::fs::write(
             root.path().join("src/lib.rs"),
             "pub fn answer() -> u8 { 2 }\n",
         )
         .unwrap();
-        git(root.path(), &["add", "src/lib.rs"]);
+        git(&["add", "src/lib.rs"]);
         let next = prepare(root.path());
         assert_ne!(
             first.observation, next.observation,
