@@ -1,4 +1,5 @@
 pub(crate) mod plan;
+pub(crate) mod services;
 
 use super::{
     Read, Result,
@@ -64,17 +65,24 @@ impl<'a, R: Read> World<'a, R> {
             _ => repository,
         };
         let image = json!({"name":s.product, "reference":reference, "digest":format!("{repository}@{digest}")});
-        Ok(json!({
+        let mut pins = json!({
             "product":product,
             "runner":Wire::document(self.reader, &format!("{RUNNER}/v1/channels/stable.json"), false)?,
             "scene":Wire::document(self.reader, &format!("{}/channels/{}/scenes/latest.json", Wire::text(&scenes["authority"])?, Wire::text(&scenes["channel"])?), false)?,
             "image":image,
-        }))
+        });
+        if s.declaration["specification"].get("services").is_some() {
+            pins["services"] = self.services().pins()?;
+        }
+        Ok(pins)
     }
 
     pub fn verify(&self, passed: &Value) -> Result<Value> {
         let pins = self.pins()?;
         self.product(passed, &pins["product"])?;
+        if pins.get("services").is_some() {
+            self.services().verify(passed, &pins["services"])?;
+        }
         self.runner(passed, &pins["runner"])?;
         self.scene(&pins["scene"])?;
         Wire::require(
@@ -82,6 +90,14 @@ impl<'a, R: Read> World<'a, R> {
             "credential scene or image differs from current inputs",
         )?;
         Ok(pins)
+    }
+
+    fn services(&self) -> services::Services<'_, R> {
+        services::Services {
+            reader: self.reader,
+            declaration: &self.subject.declaration["specification"],
+            target: &self.subject.product,
+        }
     }
 
     fn product(&self, passed: &Value, pointer: &Value) -> Result<()> {
@@ -133,10 +149,14 @@ impl<'a, R: Read> World<'a, R> {
         )?;
         let (seal, raw) = Archive::seal(self.reader, pointer, &s.authority)?;
         let artifact = &seal["artifacts"]["linux-x64"];
-        let product = Receipt::single(
-            &passed["products"],
-            &["name", "channel", "version", "commit", "seal", "archive"],
-        )?;
+        let product = if s.declaration["specification"].get("services").is_some() {
+            services::Services::<R>::product(passed, &s.product)?
+        } else {
+            Receipt::single(
+                &passed["products"],
+                &["name", "channel", "version", "commit", "seal", "archive"],
+            )?
+        };
         Wire::require(
             *product
                 == json!({"name":s.product, "channel":s.channel, "version":s.source["marker"], "commit":s.source["commit"], "seal":Wire::sha(&raw), "archive":artifact["sha256"]}),

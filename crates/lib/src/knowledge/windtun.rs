@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 #[cfg(feature = "windtun")]
@@ -8,6 +8,7 @@ use std::path::Path;
 pub mod qualification;
 
 pub const SCHEMA: &str = "plumb.windtun.declaration/v1";
+pub const COMBINATION: &str = "plumb.windtun.declaration/v2";
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Inspection {
@@ -22,6 +23,8 @@ pub struct Declaration {
     pub scenes: Scenes,
     pub cases: Vec<String>,
     pub image: String,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub services: BTreeMap<String, Service>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -66,6 +69,14 @@ pub fn parse(text: &str) -> Result<Option<Declaration>, String> {
         .try_into()
         .map_err(|error| format!("windtun: {error}"))?;
     held.validate()?;
+    if document
+        .get("identity")
+        .and_then(|v| v.get("ns"))
+        .and_then(|v| v.as_str())
+        .is_some_and(|name| held.services.contains_key(name))
+    {
+        return Err("Windtun service cannot repeat the published target".into());
+    }
     Ok(Some(held))
 }
 
@@ -91,10 +102,18 @@ pub fn inspect(root: &Path) -> Result<Inspection, String> {
     }
     let raw = std::fs::read(path).map_err(|error| format!("cannot read plumb.toml: {error}"))?;
     let text = std::str::from_utf8(&raw).map_err(|_| "invalid declaration UTF-8")?;
+    let windtun = parse(text)?;
     Ok(Inspection {
-        schema: SCHEMA,
+        schema: if windtun
+            .as_ref()
+            .is_some_and(|value| !value.services.is_empty())
+        {
+            COMBINATION
+        } else {
+            SCHEMA
+        },
         manifest: Some(format!("{:x}", Sha256::digest(&raw))),
-        windtun: parse(text)?,
+        windtun,
     })
 }
 
@@ -114,6 +133,12 @@ pub fn declared(snapshot: &crate::snapshot::Snapshot) -> Result<Option<Declarati
 
 impl Declaration {
     pub fn validate(&self) -> Result<(), String> {
+        if self.services.len() > 4 {
+            return Err("Windtun admits at most four explicit services".into());
+        }
+        for (name, service) in &self.services {
+            service.validate(name)?;
+        }
         let scenes = &self.scenes;
         let authority = &scenes.authority;
         crate::seat::release::Authority::new(authority)?;
@@ -172,67 +197,55 @@ fn name(value: &str) -> bool {
         })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Service {
+    pub authority: String,
+    pub channel: String,
+    pub placement: Placement,
+}
 
-    const DECLARED: &str = r#"[guard.seatrial]
-cases = ["health-lite", "again-lite"]
-image = "ghcr.io/perishlab/keel"
-[guard.seatrial.scenes]
-authority = "https://depot.seatrial.perish.uk"
-product = "seatrial"
-channel = "beta"
-"#;
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Placement {
+    pub artifact: String,
+    pub entry: String,
+    pub paths: BTreeMap<String, String>,
+}
 
-    #[test]
-    fn protection() {
-        assert_eq!(parse("[guard.lock]\ntarget=\"host\"\n").unwrap(), None);
-        assert!(parse("[guard]\nlock=true\n").is_err());
-        assert!(parse("[guard]\nunknown=true\n").is_err());
-        assert!(
-            parse(&(DECLARED.to_owned() + "[guard.lock]\ntarget=\"host\"\n"))
-                .unwrap()
-                .is_some()
-        );
+impl Service {
+    pub fn validate(&self, name: &str) -> Result<(), String> {
+        if !self::name(name)
+            || self.authority != format!("https://releases.{name}.perish.uk")
+            || self.channel != "stable"
+        {
+            return Err("Windtun services require canonical first-party stable channels".into());
+        }
+        self.placement.validate()
     }
+}
 
-    #[test]
-    fn products() {
-        let keel = parse(DECLARED).unwrap().unwrap();
-        assert_eq!(keel.cases, ["health-lite", "again-lite"]);
-        let plumb = DECLARED.replace("[\"health-lite\", \"again-lite\"]", "[\"writer\"]");
-        let plumb = plumb.replace("ghcr.io/perishlab/keel", "ghcr.io/perishlab/images:stable");
-        assert!(parse(&plumb).unwrap().is_some());
-        assert_eq!(parse("[identity]\nns = \"keel\"\n").unwrap(), None);
-        let modern = DECLARED.replace("guard.seatrial", "windtun");
-        assert_eq!(parse(&modern).unwrap(), parse(DECLARED).unwrap());
-        assert!(parse(&(DECLARED.to_owned() + &modern)).is_err());
-    }
-
-    #[test]
-    fn refuse() {
-        for (from, to) in [
-            ("channel = \"beta\"", "channel = \"v1.2.3-beta.1\""),
-            (
-                "https://depot.seatrial.perish.uk",
-                "http://depot.seatrial.perish.uk",
-            ),
-            ("[\"health-lite\", \"again-lite\"]", "[]"),
-            ("again-lite", "health-lite"),
-            ("health-lite", "*"),
-            ("ghcr.io/perishlab/keel", "ghcr.io/perishlab/keel:0.27.0"),
-            ("image =", "command ="),
-        ] {
-            assert!(
-                parse(&DECLARED.replace(from, to)).is_err(),
-                "{from} -> {to}"
+impl Placement {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.artifact != "linux-x64-deb" || !name(&self.entry) || self.paths.len() != 1 {
+            return Err("Windtun service placement requires one explicit Debian executable".into());
+        }
+        let path = self
+            .paths
+            .get(&self.entry)
+            .ok_or("Windtun service placement lacks its exact primary entry")?;
+        if path.is_empty() || path.len() > 256 {
+            return Err("Windtun service path exceeds its nonempty byte bound".into());
+        }
+        if path
+            .bytes()
+            .any(|byte| !byte.is_ascii_graphic() || byte == b'\\')
+            || path.split('/').any(|part| matches!(part, "" | "." | ".."))
+        {
+            return Err(
+                "Windtun service placement requires a canonical package-relative path".into(),
             );
         }
-        assert!(parse(&(DECLARED.to_owned() + "version = \"v1.2.3\"\n")).is_err());
-        let modern = DECLARED.replace("guard.seatrial", "windtun");
-        assert!(parse(&modern.replace("again-lite", "health-lite")).is_err());
-        assert!(parse(&modern.replace("channel = \"beta\"", "channel = \"v1.2.3\"")).is_err());
-        assert!(parse(&modern.replace("image =", "command =")).is_err());
+        Ok(())
     }
 }

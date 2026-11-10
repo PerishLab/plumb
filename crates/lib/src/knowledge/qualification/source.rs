@@ -20,7 +20,7 @@ pub(super) struct Subject {
 }
 
 impl<R: Read> Source<'_, R> {
-    fn repository(&self, name: &str) -> Result<Value> {
+    pub(super) fn repository(&self, name: &str) -> Result<Value> {
         let value = Wire::document(
             self.0,
             &format!("https://api.github.com/repos/{name}"),
@@ -194,7 +194,12 @@ impl<R: Read> Source<'_, R> {
         let specification = super::super::parse(text)
             .map_err(Fault::refused)?
             .ok_or_else(|| Fault::refused("product has no Windtun declaration"))?;
-        let declaration = json!({"schema":"wharf.trial.declaration/v1", "source":source, "manifest":Wire::sha(&raw), "authority":authority, "specification":specification});
+        let schema = if specification.services.is_empty() {
+            "wharf.trial.declaration/v1"
+        } else {
+            "wharf.trial.declaration/v2"
+        };
+        let declaration = json!({"schema":schema, "source":source, "manifest":Wire::sha(&raw), "authority":authority, "specification":specification});
         Ok(Subject {
             source,
             tag: resolved["tag"].clone(),

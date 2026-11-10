@@ -206,6 +206,21 @@ prepared authority, prove current authority/quiescence and order evidence before
 state writes. Authority-specific execution details remain in that consumer's
 public receipt. Source support alone does not qualify an installed consumer.
 
+## Windtun service combinations
+
+The public declaration retains its v1 shape without services. Up to four explicit
+`[windtun.services.<product>]` entries use declaration/v2 and pass/v2. Each follows
+its canonical PerishLab stable authority and selects one `linux-x64-deb` primary
+executable through an exact canonical package-relative placement map. Services
+share the declared execution image. The published target remains unique and keeps
+its existing executable binding and content checks. The independent reader checks
+the full declared product set, native service tags and repositories, complete
+service distributions, seal/archive bytes and placements, then rechecks current
+inputs. Service package decoding and execution remain the formal runner's work;
+the reader does not run service code. V2 support alone does not deploy the trusted
+Wharf producer or qualify an actual service combination. Those require their own
+source deployment and full published-artifact canary.
+
 ## Distribution
 
 Release semantics foundation reads current protected Wharf requirements and exact
