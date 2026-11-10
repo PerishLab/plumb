@@ -1,9 +1,9 @@
-use locus::{Candidate, Config, Context, Engine, Key, Policy, Role};
+use locus::{Adaptor, Candidate, Config, Context, Engine, Hook, Key, Policy, Role};
 use serde::Deserialize;
 use serde_json::json;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::{OnceLock, RwLock};
+use std::sync::{Arc, OnceLock, RwLock};
 
 const ENDPOINT: &str = "http://127.0.0.1:43308";
 const PARENT: &str = "parent";
@@ -42,13 +42,20 @@ pub struct Run {
 impl Run {
     pub fn start(declaration: Declaration<'_>, command: &str) -> Option<Self> {
         let producer = declaration.producer;
-        match load(declaration, command) {
+        match Self::open(declaration, command, Arc::new(Adaptor)) {
             Ok(run) => run,
             Err(error) => {
                 eprintln!("{producer} locus: {error}");
                 None
             }
         }
+    }
+    pub fn open(
+        declaration: Declaration<'_>,
+        command: &str,
+        hook: Arc<dyn Hook>,
+    ) -> Result<Option<Self>, String> {
+        load(declaration, command, hook)
     }
     pub fn view(&self) -> (&'static Engine, &'static Context) {
         (&self.seat.engine, &self.seat.context)
@@ -99,7 +106,11 @@ fn active() -> Option<&'static Seat> {
     *ACTIVE.read().unwrap_or_else(|error| error.into_inner())
 }
 
-fn load(declaration: Declaration<'_>, command: &str) -> Result<Option<Run>, String> {
+fn load(
+    declaration: Declaration<'_>,
+    command: &str,
+    hook: Arc<dyn Hook>,
+) -> Result<Option<Run>, String> {
     let file: File = match radicula_config::load(declaration.file) {
         Ok(file) => file,
         Err(radicula_config::Error::Read { source, .. })
@@ -124,7 +135,7 @@ fn load(declaration: Declaration<'_>, command: &str) -> Result<Option<Run>, Stri
         .or_else(|| crate::config::value("LOCUS_API"))
         .unwrap_or_else(|| ENDPOINT.into());
     let (seat, cycle) =
-        build(&declaration, command, endpoint).map_err(|error| error.to_string())?;
+        build(&declaration, command, endpoint, hook).map_err(|error| error.to_string())?;
     let seat: &'static Seat = Box::leak(Box::new(seat));
     *ACTIVE.write().unwrap_or_else(|error| error.into_inner()) = Some(seat);
     Ok(Some(Run {
@@ -138,17 +149,21 @@ fn build(
     declaration: &Declaration<'_>,
     command: &str,
     endpoint: String,
+    hook: Arc<dyn Hook>,
 ) -> Result<(Seat, Context), locus::Error> {
     let producer = declaration.producer;
-    let engine = Engine::bootstrap(Config::new(
-        Policy::default()
-            .producer(producer)
-            .collector(PARENT, locus::collector::Spec::parent())
-            .reporter(locus::reporter::Spec::api(
-                endpoint,
-                declaration.buffer.clone(),
-            )),
-    ))?;
+    let engine = Engine::bootstrap(
+        Config::new(
+            Policy::default()
+                .producer(producer)
+                .collector(PARENT, locus::collector::Spec::parent())
+                .reporter(locus::reporter::Spec::api(
+                    endpoint,
+                    declaration.buffer.clone(),
+                )),
+        )
+        .hook(hook),
+    )?;
     let candidate = Candidate::context()
         .ensure(Role::trace())
         .explicit(
