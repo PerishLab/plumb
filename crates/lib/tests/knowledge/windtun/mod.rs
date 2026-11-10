@@ -5,6 +5,7 @@ mod material;
 mod plan;
 mod receipt;
 mod refused;
+mod service;
 mod world;
 
 use plumb::windtun::qualification::{Inspector, State};

@@ -128,32 +128,41 @@ impl Receipt {
 
     fn validate(&self, subject: &Subject, policy: &Value) -> Result<()> {
         let p = &self.passed;
-        Wire::fields(
-            p,
-            &[
-                "schema",
-                "policy",
-                "implementation",
-                "observer",
-                "source",
-                "publisher",
-                "distribution",
-                "declaration",
-                "requirements",
-                "prepared",
-                "runner",
-                "scene",
-                "groups",
-                "products",
-                "images",
-                "controls",
-                "cleanup",
-                "evidence",
-                "intent",
-            ],
-        )?;
+        let combination = subject.declaration["specification"]
+            .get("services")
+            .is_some();
+        let mut fields = vec![
+            "schema",
+            "policy",
+            "implementation",
+            "observer",
+            "source",
+            "publisher",
+            "distribution",
+            "declaration",
+            "requirements",
+            "prepared",
+            "runner",
+            "scene",
+            "groups",
+            "products",
+            "images",
+            "controls",
+            "cleanup",
+            "evidence",
+            "intent",
+        ];
+        if combination {
+            fields.push("services");
+        }
+        Wire::fields(p, &fields)?;
         Wire::require(
-            p["schema"] == "wharf.windtun.pass/v1"
+            p["schema"]
+                == if combination {
+                    "wharf.windtun.pass/v2"
+                } else {
+                    "wharf.windtun.pass/v1"
+                }
                 && p["policy"] == policy["policy"]
                 && p["implementation"] == policy["implementation"],
             "credential policy or implementation is invalidated",
@@ -189,10 +198,18 @@ impl Receipt {
             .map(|(_, digest)| Value::String(digest.into()))
             .unwrap_or(Value::Null);
         Wire::hex(&digest, 64)?;
-        Self::single(
-            &p["products"],
-            &["name", "channel", "version", "commit", "seal", "archive"],
-        )?;
+        if combination {
+            super::world::services::Services::<()>::records(
+                p,
+                &subject.declaration["specification"],
+                &subject.product,
+            )?;
+        } else {
+            Self::single(
+                &p["products"],
+                &["name", "channel", "version", "commit", "seal", "archive"],
+            )?;
+        }
         Self::single(&p["images"], &["name", "reference", "digest"])?;
         Ok(())
     }
