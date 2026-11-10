@@ -498,6 +498,13 @@ meanwhile:
   provide. Install, status and upgrade keep the global skill ledger anchored to
   stable, and a non-stable skill takes an exact version and an explicit path,
   receives a staged marker, and never enters managed state.
+  `Settings` provides a strict, default-disabled parsed observation snapshot.
+  `Run::configured` consumes that snapshot and the supplied Hook without reading
+  the declaration file or ambient endpoint configuration. Callers own parsing
+  failure handoff and explicit environment fallback; disabled snapshots touch no
+  spool or reporter. The original file-based `start` and `open` retain their
+  existing permissive section parsing and endpoint fallback.
+
 
 Plumb's own; a product may adopt the exports but is not judged against them:
 
