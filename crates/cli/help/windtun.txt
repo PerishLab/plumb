@@ -5,14 +5,22 @@ PerishLab repository and a non-stable marker. It authenticates the current verif
 requirements through the fixed protected Wharf main, reads only the subject's
 latest declared attempt and independently verifies current public artifacts,
 official stable runner, Depot scenes, runtime image and native producer identity.
-It rechecks mutable inputs and discovery before reporting qualification.
+It rechecks mutable inputs and discovery before reporting qualification, including
+every declared service's current publication and native source identity.
+
+Declarations may name up to four canonical PerishLab stable service peers, each
+with explicit linux-x64-deb placement selecting one executable. Nonempty services
+use v2 declaration and pass records, binding the exact service snapshots and
+placement; declarations without services retain the strict v1 contract. Services
+share the target's execution image and never become additional promoted targets.
 
 check requires GitHub CLI metadata read access. Release and scene objects and the
 GHCR runtime manifest are read anonymously. No suite or product is executed, no
 storage is written, and no publication credentials are used. Other runtime
-registries and product combinations remain unsupported and cannot qualify.
+registries and undeclared product combinations remain unsupported and cannot qualify.
 
-The result covers linux-x86_64 and the recorded single-product combination.
+The result covers linux-x86_64, one execution image and the recorded target/service
+combination. A reader check neither deploys services nor executes the combined suite.
 Qualification is separate from installation-content association and stable
 promotion permission: association is unassessed and promotion is always false.
 There is no source URL, branch or expected-hash override, version pin or TTL.
