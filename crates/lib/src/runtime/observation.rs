@@ -1,5 +1,5 @@
 use locus::{Adaptor, Candidate, Config, Context, Engine, Hook, Key, Policy, Role};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -11,14 +11,21 @@ const PARENT: &str = "parent";
 #[derive(Default, Deserialize)]
 struct File {
     #[serde(default)]
-    locus: Settings,
+    locus: Legacy,
 }
 
 #[derive(Default, Deserialize)]
-struct Settings {
+struct Legacy {
     #[serde(default)]
     enabled: bool,
     endpoint: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Settings {
+    pub enabled: bool,
+    pub endpoint: Option<String>,
 }
 
 struct Seat {
@@ -56,6 +63,26 @@ impl Run {
         hook: Arc<dyn Hook>,
     ) -> Result<Option<Self>, String> {
         load(declaration, command, hook)
+    }
+    pub fn configured(
+        declaration: Declaration<'_>,
+        command: &str,
+        settings: Settings,
+        hook: Arc<dyn Hook>,
+    ) -> Result<Option<Self>, String> {
+        if !settings.enabled {
+            return Ok(None);
+        }
+        let endpoint = settings.endpoint.unwrap_or_else(|| ENDPOINT.into());
+        let (seat, cycle) =
+            build(&declaration, command, endpoint, hook).map_err(|error| error.to_string())?;
+        let seat: &'static Seat = Box::leak(Box::new(seat));
+        *ACTIVE.write().unwrap_or_else(|error| error.into_inner()) = Some(seat);
+        Ok(Some(Run {
+            producer: declaration.producer,
+            seat,
+            cycle,
+        }))
     }
     pub fn view(&self) -> (&'static Engine, &'static Context) {
         (&self.seat.engine, &self.seat.context)
@@ -134,15 +161,15 @@ fn load(
         .endpoint
         .or_else(|| crate::config::value("LOCUS_API"))
         .unwrap_or_else(|| ENDPOINT.into());
-    let (seat, cycle) =
-        build(&declaration, command, endpoint, hook).map_err(|error| error.to_string())?;
-    let seat: &'static Seat = Box::leak(Box::new(seat));
-    *ACTIVE.write().unwrap_or_else(|error| error.into_inner()) = Some(seat);
-    Ok(Some(Run {
-        producer: declaration.producer,
-        seat,
-        cycle,
-    }))
+    Run::configured(
+        declaration,
+        command,
+        Settings {
+            enabled: true,
+            endpoint: Some(endpoint),
+        },
+        hook,
+    )
 }
 
 fn build(
