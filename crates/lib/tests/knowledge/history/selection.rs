@@ -18,6 +18,8 @@ fn current() {
     assert_eq!(value["authentication"], true);
     assert_eq!(value["publication"], false);
     assert_eq!(value["family"]["prior"], "unknown");
+    assert_eq!(value["family"]["judgment"], "historical_reconciliation");
+    assert_eq!(value["family"]["admission"], "unknown");
 }
 
 #[test]
@@ -35,6 +37,7 @@ fn materials() {
     assert_eq!(value["authentication"], false);
     assert_eq!(value["publication"], false);
     assert_eq!(value["family"]["authentication"], true);
+    assert_eq!(value["family"]["admission"], "unknown");
     assert!(
         inspector
             .choice(&selection.reference().unwrap(), "plumb")

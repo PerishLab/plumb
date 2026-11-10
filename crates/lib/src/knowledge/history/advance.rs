@@ -1,6 +1,8 @@
 use super::super::{Inspector, Reference, Transition, wire::Wire};
 use super::Family;
-use crate::semantics::{Baseline, Decision, Release, Request, Review, State};
+use crate::semantics::{
+    Assessment, Baseline, Decision, Release, Request, Review, State, version::Markers,
+};
 use crate::windtun::qualification::{Fault, Read};
 
 impl<R: Read> Inspector<R> {
@@ -115,7 +117,7 @@ impl<R: Read> Inspector<R> {
             request == intent.request,
             "supplied transition judgment differs from independently derived inputs",
         )?;
-        let assessed = request.assess().map_err(Fault::refused)?;
+        let assessed = family.judge(&request, &intent.marker)?;
         Wire::require(
             matches!(assessed.state, State::Same | State::Changed)
                 && assessed.marker.as_deref() == Some(&intent.marker),
@@ -134,5 +136,33 @@ impl<R: Read> Inspector<R> {
         family.stable = candidate;
         family.records.push(reference.clone());
         Ok(())
+    }
+}
+
+impl Family {
+    fn judge(&self, request: &Request, marker: &str) -> Result<Assessment, Fault> {
+        request.validate().map_err(Fault::refused)?;
+        let target = Markers::stable(marker).map_err(Fault::refused)?;
+        let baseline =
+            Markers::stable(&self.stable.world().source.marker).map_err(Fault::refused)?;
+        if request.major.is_some() || target.major != baseline.major {
+            return Err(Fault::unknown(
+                "X transition requires independent verification of the user's decision",
+            ));
+        }
+        if target <= baseline {
+            return Err(Fault::refused(
+                "historical stable does not advance its predecessor",
+            ));
+        }
+        let mut projected = request.clone();
+        projected.reservations.clear();
+        for marker in &request.reservations {
+            let version = Markers::parse(marker).map_err(Fault::refused)?;
+            if version <= target {
+                projected.reservations.push(marker.clone());
+            }
+        }
+        projected.assess().map_err(Fault::refused)
     }
 }

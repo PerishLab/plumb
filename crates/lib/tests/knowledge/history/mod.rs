@@ -2,6 +2,7 @@ mod capture;
 mod changes;
 mod family;
 mod observation;
+mod reconciliation;
 mod selection;
 mod validation;
 

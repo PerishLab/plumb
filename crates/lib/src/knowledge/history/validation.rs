@@ -1,5 +1,6 @@
 use super::super::{Inspector, Record, Reference, Transition, wire::Wire};
 use super::Family;
+use crate::semantics::State;
 use crate::semantics::version::Markers;
 use crate::windtun::qualification::{Fault, Read};
 use serde::Serialize;
@@ -50,6 +51,12 @@ impl<R: Read> Inspector<R> {
             ));
         }
         let mut validation = self.historical(transition, product)?;
+        let assessed = transition.intent.request.assess().map_err(Fault::refused)?;
+        Wire::require(
+            matches!(assessed.state, State::Same | State::Changed)
+                && assessed.marker.as_deref() == Some(&transition.intent.marker),
+            "current transition marker disagrees with the complete reservation judgment",
+        )?;
         Wire::require(
             self.markers(product)? == inventory
                 && Wire::canonical(&self.discover(product)?)? == Wire::canonical(&history)?
