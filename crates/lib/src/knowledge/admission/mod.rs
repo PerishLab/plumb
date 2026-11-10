@@ -7,6 +7,7 @@ mod declaration;
 #[path = "../history/mod.rs"]
 mod history;
 mod native;
+mod observation;
 mod policy;
 #[path = "../preparation/mod.rs"]
 mod preparation;
@@ -39,6 +40,16 @@ pub struct Inspector<R>(R);
 impl<R: Read> Inspector<R> {
     pub fn new(reader: R) -> Self {
         Self(reader)
+    }
+
+    fn observed<T>(
+        &self,
+        inspect: impl FnOnce(&Inspector<observation::Observation<'_>>) -> Result<T, Fault>,
+    ) -> Result<T, Fault> {
+        let held = Inspector::new(observation::Observation::new(&self.0));
+        let result = inspect(&held)?;
+        held.0.confirm()?;
+        Ok(result)
     }
 
     pub fn current(&self) -> Result<Authority, Fault> {

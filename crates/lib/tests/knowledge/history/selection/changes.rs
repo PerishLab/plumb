@@ -2,7 +2,44 @@ use super::fixture;
 use plumb::semantics::admission::{Checkpoint, Discovery, Inspector, Selector, Tag};
 use plumb::windtun::qualification::{Fault, Read, State};
 use serde_json::json;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
+use std::collections::BTreeMap;
+
+struct Count<'a>(&'a fixture::Inputs, &'a RefCell<BTreeMap<String, usize>>);
+
+impl Read for Count<'_> {
+    fn bytes(&self, url: &str, limit: usize) -> Result<Vec<u8>, Fault> {
+        *self.1.borrow_mut().entry(url.into()).or_default() += 1;
+        self.0.fixture.bytes(url, limit)
+    }
+
+    fn image(&self, reference: &str) -> Result<String, Fault> {
+        self.0.fixture.image(reference)
+    }
+}
+
+#[test]
+fn bounded() {
+    let (held, first) = fixture::setup();
+    for nomination in [false, true] {
+        let reads = RefCell::default();
+        let reader = Count(&held, &reads);
+        let inspector = Inspector::new(reader);
+        let value = if nomination {
+            serde_json::to_value(inspector.nominate(&first, "plumb").unwrap()).unwrap()
+        } else {
+            serde_json::to_value(inspector.selected(&first.root, "plumb").unwrap()).unwrap()
+        };
+        assert_eq!(value["publication"], false);
+        assert_eq!(value["authentication"], !nomination);
+        let reads = reads.borrow();
+        assert!(reads.values().all(|count| *count <= 4));
+        assert_eq!(
+            reads["https://api.github.com/repos/PerishLab/wharf/branches/main"],
+            2
+        );
+    }
+}
 
 #[test]
 fn extension() {

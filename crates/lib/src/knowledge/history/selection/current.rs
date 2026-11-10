@@ -28,6 +28,10 @@ impl Selected {
 
 impl<R: Read> Inspector<R> {
     pub fn selected(&self, root: &Reference, product: &str) -> Result<Selected, Fault> {
+        self.observed(|held| held.resolve(root, product))
+    }
+
+    fn resolve(&self, root: &Reference, product: &str) -> Result<Selected, Fault> {
         root.validate(product)?;
         let authority = self.current()?;
         let selector = Selector::read(&self.0, product)?

@@ -516,3 +516,12 @@ Nomination authenticates its observed family, never its supplied native fields o
 conditional update. The producer owns protected predecessor observation, CAS and
 unknown-write recovery; source data and public absence prove no writer authority.
 These metadata facts do not admit prospective releases or activate a scope.
+
+Family, transition and current-selection inspection share reads only within one
+operation. Every distinct method/address/limit is freshly reobserved before a
+result escapes, in last-use order so final discovery and authority checks remain
+at the end. Any changed bytes, presence or image identity refuse; unreadable
+evidence and exhausted bounds stay unknown. Each observation admits 1024 entries,
+128 MiB including addresses and 600 seconds checked around each transport call.
+Nested checks share their enclosing reads but never escape its final confirmation.
+No observation survives the operation, retries a failure or grants publication.
