@@ -100,6 +100,14 @@ publication=false. They do not select the current latest stable, prove a
 prospective candidate admissible, recover missing transitions or enable a gate.
 A deployed matching transition issuer and actual formal consumption are still
 required; valid supplied data is never substituted for native authentication.
+Family facts explicitly report judgment=historical_reconciliation and
+admission=unknown. The complete supplied Request and all cumulative
+reservations remain bound and verified. For an already published historical
+stable, the minimum Y/Z judgment uses the numeric prefix through that stable;
+known intervening stables still prevent a skipped transition. This prefix is a
+semantic comparison, never a reconstruction of the original reservation inventory.
+Higher markers may already have existed then: original admission stays unknown.
+These same Family facts remain explicit inside nomination and current selection.
 
 With --purpose transition --product <name>, input is canonical transition record
 data. Verify the prior authenticated family, the current fixed retained history,
@@ -112,6 +120,8 @@ authenticated; the derived family explicitly is not. Supplied native identity
 acquires no authority, even when all material checks succeed. A trusted issuer
 must independently bind its actual request/context and confirm exact public bytes.
 This preparation admits no prospective release and activates no publication gate.
+Current transition mode additionally assesses the complete reservation set;
+historical reconciliation never bypasses current ordering or reservation conflicts.
 
 With --purpose historical --product <name>, input is the same canonical
 transition data. Independently verify the historical predecessor family, bound

@@ -234,11 +234,18 @@ fn conflict() {
     });
     held.history = super::retained(&mut held.fixture, &checkpoint);
     held.append("v0.138.1", Decision::Same);
-    assert!(
-        held.inspector()
-            .family(&held.reference, "plumb")
-            .unwrap_err()
-            .reason
-            .contains("shared semantic judgment")
+    let plumb::semantics::admission::Record::Transition(record) =
+        plumb::semantics::admission::Record::parse(&held.fixture.values[&held.reference.url])
+            .unwrap()
+    else {
+        panic!("transition")
+    };
+    assert_eq!(
+        record.intent.request.assess().unwrap().state,
+        plumb::semantics::State::Conflict
     );
+    let family = held.inspector().family(&held.reference, "plumb").unwrap();
+    assert_eq!(family.admission(), "unknown");
+    assert_eq!(family.anchor(), family.root());
+    assert_eq!(family.stable().world().source.marker, "v0.138.1");
 }

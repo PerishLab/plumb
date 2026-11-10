@@ -15,6 +15,8 @@ pub struct Family {
     pub(super) history: Option<Reference>,
     pub(super) observations: Vec<String>,
     prior: &'static str,
+    judgment: &'static str,
+    admission: &'static str,
     pub(super) authentication: bool,
     publication: bool,
 }
@@ -35,6 +37,8 @@ impl Family {
             history: None,
             observations: Vec::new(),
             prior: "unknown",
+            judgment: "historical_reconciliation",
+            admission: "unknown",
             authentication: true,
             publication: false,
         }
@@ -58,6 +62,10 @@ impl Family {
 
     pub fn original(&self) -> &Frame {
         &self.original
+    }
+
+    pub fn admission(&self) -> &str {
+        self.admission
     }
 }
 

@@ -444,6 +444,21 @@ do not prevent retrospective reconstruction. Its explicit historical freshness
 never substitutes for current release admission.
 Its matching transition producer and formal consumer qualification remain open.
 
+Historical family judgment is explicitly `historical_reconciliation`, with
+`admission` remaining `unknown`, including inside current selection.
+It compares an already formally published stable against its predecessor and
+fixed family anchor using the reservation prefix through that stable. This is a
+semantic minimum Y/Z judgment, not an inferred original inventory: a numerically
+higher reservation may have existed before that publication. All cumulative
+reservations remain in the exact independently derived Request and authenticated
+history. Known intervening stables cannot be skipped. Root, anchor, original
+publication, source, review, native issuer and repeated observation checks remain
+required; X stays unknown without independent user verification. Current
+transition preparation additionally runs the full reservation assessment, and
+ordinary prospective Request assessment retains its complete inventory. Historical
+reconciliation grants no original release-compliance, candidate-admission or
+publication permission. PerishLab/plumb#656 records the explicit user decision.
+
 ## Commitments
 
 These bind how Plumb is written rather than what a repository carries, so no
