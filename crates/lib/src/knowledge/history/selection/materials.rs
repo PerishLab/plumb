@@ -15,6 +15,10 @@ pub struct Nomination {
 
 impl<R: Read> Inspector<R> {
     pub fn nominate(&self, selection: &Selection, product: &str) -> Result<Nomination, Fault> {
+        self.observed(|held| held.nomination(selection, product))
+    }
+
+    fn nomination(&self, selection: &Selection, product: &str) -> Result<Nomination, Fault> {
         let authority = self.current()?;
         let first = self.selection(selection, product)?;
         let inception = self.inception(selection, &first.2)?;

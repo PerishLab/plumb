@@ -63,6 +63,10 @@ impl Family {
 
 impl<R: Read> Inspector<R> {
     pub fn family(&self, reference: &Reference, product: &str) -> Result<Family, Fault> {
+        self.observed(|held| held.reconstruct(reference, product))
+    }
+
+    fn reconstruct(&self, reference: &Reference, product: &str) -> Result<Family, Fault> {
         let authority = self.current()?;
         let mut records: Vec<Origin> = Vec::new();
         let mut seen = BTreeSet::new();

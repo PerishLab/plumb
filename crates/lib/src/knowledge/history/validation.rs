@@ -16,6 +16,10 @@ pub struct Validation {
 
 impl<R: Read> Inspector<R> {
     pub fn transition(&self, transition: &Transition, product: &str) -> Result<Validation, Fault> {
+        self.observed(|held| held.validate(transition, product))
+    }
+
+    fn validate(&self, transition: &Transition, product: &str) -> Result<Validation, Fault> {
         let authority = self.current()?;
         let inventory = self.markers(product)?;
         let mut latest = None;
@@ -57,6 +61,10 @@ impl<R: Read> Inspector<R> {
     }
 
     pub fn historical(&self, transition: &Transition, product: &str) -> Result<Validation, Fault> {
+        self.observed(|held| held.derive(transition, product))
+    }
+
+    fn derive(&self, transition: &Transition, product: &str) -> Result<Validation, Fault> {
         let record = Record::Transition(Box::new(transition.clone()));
         let raw = record.encode()?;
         Wire::require(
