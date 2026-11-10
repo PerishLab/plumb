@@ -474,6 +474,11 @@ meanwhile:
   process may observe several runs in turn; free `view()`/`fault()` address the
   run started last and not yet finished, and `Run::view`/`Run::fault` address
   that run only. Each product moves its own copy onto it as its own change.
+  `Run::open` accepts the product's Locus Hook and returns configuration or
+  construction errors without printing them; disabled or missing configuration
+  returns `Ok(None)`. Engine diagnostics follow that Hook. Products retain
+  their own terminal-safe diagnostic handoff and business failure policy.
+  `Run::start` keeps the default stderr adaptor and its existing Option result.
 - A released skill never claims enforcement its matching binary does not
   provide. Install, status and upgrade keep the global skill ledger anchored to
   stable, and a non-stable skill takes an exact version and an explicit path,

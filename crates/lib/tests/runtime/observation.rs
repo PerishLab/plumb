@@ -1,4 +1,5 @@
 use plumb::observation::{self, Declaration, Run};
+mod handoff;
 use serde_json::Value;
 use std::path::Path;
 use std::process::Command;
