@@ -7,7 +7,7 @@ struct Source(Cell<usize>, Cell<bool>);
 impl Read for Source {
     fn bytes(&self, _: &str, _: usize) -> Result<Vec<u8>, Fault> {
         self.0.set(self.0.get() + 1);
-        Ok(vec![1; 4])
+        Ok(vec![if self.1.get() { 2 } else { 1 }; 4])
     }
 
     fn optional(&self, _: &str, _: usize) -> Result<Option<Vec<u8>>, Fault> {
@@ -17,7 +17,12 @@ impl Read for Source {
 
     fn image(&self, _: &str) -> Result<String, Fault> {
         self.0.set(self.0.get() + 1);
-        Ok("sha256:digest".into())
+        Ok(if self.1.get() {
+            "sha256:BODY_NEVER_SHOW"
+        } else {
+            "sha256:digest"
+        }
+        .into())
     }
 }
 
@@ -83,4 +88,46 @@ fn presence() {
     source.1.set(true);
     assert_eq!(held.confirm().unwrap_err().state, State::Refused);
     assert_eq!(source.0.get(), 2);
+}
+
+#[test]
+fn movement() {
+    let address = "https://example.invalid/private?token=ADDRESS_NEVER_SHOW";
+    for (method, limit) in [("bytes", 4), ("bytes", 8), ("optional", 4), ("image", 4096)] {
+        let source = Source(Cell::new(0), Cell::new(false));
+        let held = Observation::new(&source);
+        match method {
+            "bytes" => {
+                held.bytes(address, limit).unwrap();
+            }
+            "optional" => {
+                held.optional(address, limit).unwrap();
+            }
+            _ => {
+                held.image(address).unwrap();
+            }
+        }
+        source.1.set(true);
+        let fault = held.confirm().unwrap_err();
+        assert_eq!(fault.state, State::Refused);
+        assert!(
+            fault
+                .reason
+                .starts_with("semantic observation moved before final confirmation")
+        );
+        assert!(
+            fault
+                .reason
+                .contains(&format!("[{method}; limit:{limit}; address sha256:"))
+        );
+        assert!(
+            fault
+                .reason
+                .contains("c223d589f42af225b7ae88cbb37dd62a40baeec71a97747abab974067d398c3c")
+        );
+        assert!(!fault.reason.contains("NEVER_SHOW"));
+        assert!(!fault.reason.contains("example.invalid"));
+        assert!(fault.reason.len() < 240);
+        assert_eq!(source.0.get(), 2);
+    }
 }
