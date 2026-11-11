@@ -80,9 +80,7 @@ impl<'a> Observation<'a> {
             let repeated = key.read(self.reader)?;
             self.budget()?;
             if materials.values.get(key) != Some(&repeated) {
-                return Err(Fault::refused(
-                    "semantic observation moved before final confirmation",
-                ));
+                return Err(key.moved());
             }
         }
         Ok(())
