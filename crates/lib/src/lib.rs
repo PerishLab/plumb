@@ -63,6 +63,13 @@ macro_rules! version {
 }
 
 #[macro_export]
+macro_rules! agent {
+    ($prefix:literal, $product:literal) => {
+        $crate::identity::Agent::new($product, $crate::version!($prefix))
+    };
+}
+
+#[macro_export]
 macro_rules! commit {
     ($prefix:literal) => {
         $crate::identity::Reader($prefix)
