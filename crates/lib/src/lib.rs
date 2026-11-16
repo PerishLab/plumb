@@ -63,6 +63,7 @@ macro_rules! version {
 }
 
 #[macro_export]
+#[doc = "Create an identity::Agent from an explicit executable name and version!(prefix). The version follows the bound process identity, then the existing build/package fallback. Callers choose whether to send the resulting value as an HTTP header."]
 macro_rules! agent {
     ($prefix:literal, $product:literal) => {
         $crate::identity::Agent::new($product, $crate::version!($prefix))
