@@ -1,3 +1,4 @@
+mod agent;
 mod fixtures;
 mod public;
 use object::{Object, ObjectSection};
@@ -33,10 +34,11 @@ fn executable() -> Vec<u8> {
 fn probe() {
     plumb::identity::install(&REGION, true).unwrap();
     println!(
-        "identity={} channel={} ready={}",
+        "identity={} channel={} ready={} agent={}",
         plumb::identity::Reader("TEST").version().unwrap(),
         plumb::identity::Reader("TEST").channel().unwrap(),
-        plumb::identity::ready().is_ok()
+        plumb::identity::ready().is_ok(),
+        plumb::agent!("TEST", "test-cli").unwrap()
     );
 }
 
@@ -106,6 +108,10 @@ fn runs() {
                 "identity={marker} channel={} ready=true",
                 identity.channel().unwrap()
             )),
+            "{stdout}"
+        );
+        assert!(
+            stdout.contains(&format!("agent=test-cli/{marker}")),
             "{stdout}"
         );
     }

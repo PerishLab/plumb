@@ -1,8 +1,10 @@
+mod agent;
 mod codec;
 mod image;
 mod region;
 mod running;
 
+pub use agent::Agent;
 pub use codec::{Binding, Codec, Origin};
 pub use image::{bind, inspect};
 pub use region::{Region, SIZE};
