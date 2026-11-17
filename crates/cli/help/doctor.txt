@@ -25,7 +25,11 @@ The context names declaration-candidates and the topology input binds that
 material. Canonical responses are stored as integrity-checked, content-addressed
 snapshots below Plumb's managed data home. Each capture has bounded time, bytes,
 versions, ranges and edges. Missing, partial, corrupt, unsupported or exhausted
-material remains unknown. Source replacement, patches and registry overrides
+material remains unknown. If a stored index omits an exact locked candidate,
+a capture refreshes that cached package at most once and qualifies the new
+index under the same bounds. Earlier content-addressed snapshots are retained.
+A fresh missing version, failed refresh or checksum disagreement stays unknown.
+Source replacement, patches and registry overrides
 are not qualified by this mechanism. Ordinary repositories do not use it.
 
 Cycles project PerishLab registry packages across versions by package identity,
