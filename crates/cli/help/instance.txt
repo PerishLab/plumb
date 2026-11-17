@@ -1,0 +1,20 @@
+Identify the current OS instance through its existing SSH Ed25519 host PUBLIC key.
+
+The shared plumb::instance implementation validates one ssh-ed25519 public record
+and its exact SSH wire encoding, then fingerprints the wire blob with SHA256.
+The identifier is ssh-ed25519:SHA256:<unpadded standard Base64 digest>, compatible
+with the SHA256 fingerprint ssh-keygen reports. Public comments and whitespace do
+not change it. The JSON contract is plumb.instance/v1 with id and source.kind/path.
+
+Linux and macOS read /etc/ssh/ssh_host_ed25519_key.pub. Windows reads
+ssh/ssh_host_ed25519_key.pub below the OS ProgramData location, which must be
+available and absolute. Missing, unreadable or malformed public material refuses.
+No private key is read, no key is generated, and no other algorithm, hostname,
+machine-id or identity environment variable is selected as a fallback. There is
+no CLI path override. Other commands and help do not require a host key.
+
+This is stable source context comparable to a client User-Agent, not proof of
+possession, authentication or authority. Users, profiles and sessions within one
+OS share it. Rotating the selected host key changes it; cloning an OS with its
+host key copies it. Registration, clone detection and managed migration may be
+added later without making consumers invent their own identification protocol.

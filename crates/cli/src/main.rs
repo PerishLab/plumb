@@ -24,6 +24,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 pub(crate) enum Command {
+    #[command(about = "Identify the current OS instance from its existing public host key", long_about = plumb::seat::resource!("help/instance.txt"))]
+    Instance {
+        #[arg(long)]
+        json: bool,
+    },
     #[command(about = "Verify declared brand consumption against formal package origins and built outputs", long_about = plumb::seat::resource!("help/brand.txt"))]
     Brand {
         #[command(flatten)]
@@ -255,18 +260,9 @@ fn main() {
 }
 
 impl Command {
-    fn diagnostic(&self) -> Option<&std::path::Path> {
-        match self {
-            Self::Guard { diagnostic, .. } => diagnostic.as_deref(),
-            Self::Cache {
-                deed: command::cache::Deed::Transport(input),
-            } => input.diagnostic.as_deref(),
-            _ => None,
-        }
-    }
-
     fn name(&self) -> &'static str {
         match self {
+            Self::Instance { .. } => "instance",
             Self::Brand { .. } => "brand",
             Self::Runner { .. } => "runner",
             Self::Windtun { .. } => "windtun",

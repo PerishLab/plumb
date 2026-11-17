@@ -1,4 +1,5 @@
 mod cache;
+mod instance;
 
 use std::process::Command;
 
