@@ -1,5 +1,6 @@
+#[path = "../dependency/closure.rs"]
 mod closure;
-mod evidence;
+use closure::evidence;
 #[path = "graph.rs"]
 mod graph;
 #[path = "model.rs"]

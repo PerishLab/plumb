@@ -1,20 +1,27 @@
 #[cfg(test)]
 #[path = "declaration.rs"]
-mod tests;
-
+mod declaration;
+#[cfg(test)]
+#[path = "fixture.rs"]
+mod fixture;
 use super::{
     evidence::{Evidence, Source, digest},
     model::{Metadata, Package},
     read::Graph,
     registry::{self, Entry},
 };
-use semver::{Version, VersionReq};
+#[path = "evidence.rs"]
+pub(super) mod evidence;
+#[path = "expansion.rs"]
+mod expansion;
+
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 pub(super) struct Closure<'a> {
     graph: &'a mut Graph,
     indices: BTreeMap<String, Vec<Entry>>,
     failed: BTreeSet<String>,
+    refreshed: BTreeSet<String>,
     versions: BTreeSet<(String, String)>,
     ranges: BTreeSet<(String, String)>,
     queue: VecDeque<(String, String)>,
@@ -35,6 +42,7 @@ impl Graph {
             graph: self,
             indices: BTreeMap::new(),
             failed: BTreeSet::new(),
+            refreshed: BTreeSet::new(),
             versions: BTreeSet::new(),
             ranges: BTreeSet::new(),
             queue: VecDeque::new(),
@@ -193,60 +201,6 @@ impl Closure<'_> {
                 }
             }
         }
-    }
-
-    fn expand(
-        &mut self,
-        reader: &mut impl Source,
-        name: &str,
-        requirement: &str,
-    ) -> Result<(), String> {
-        if self.failed.contains(name) {
-            return Err(format!("declaration index remains unavailable: {name}"));
-        }
-        if !self.indices.contains_key(name) {
-            let entries = reader
-                .read(name)
-                .and_then(|bytes| Entry::read(name, &bytes));
-            match entries {
-                Ok(entries) => {
-                    self.indices.insert(name.into(), entries);
-                }
-                Err(error) => {
-                    self.failed.insert(name.into());
-                    return Err(error);
-                }
-            }
-        }
-        let requirement = VersionReq::parse(requirement).map_err(|error| error.to_string())?;
-        let entries = self.indices[name]
-            .iter()
-            .filter(|entry| {
-                Version::parse(&entry.vers).is_ok_and(|version| requirement.matches(&version))
-            })
-            .cloned()
-            .collect::<Vec<_>>();
-        if entries.is_empty()
-            && self.locked.keys().any(|(package, version)| {
-                package == name
-                    && Version::parse(version).is_ok_and(|version| requirement.matches(&version))
-            })
-        {
-            return Err(format!(
-                "canonical index omits locked candidates for {name} {requirement}"
-            ));
-        }
-        for entry in entries {
-            entry.qualify(&self.locked)?;
-            if !self.versions.insert((name.into(), entry.vers.clone())) {
-                continue;
-            }
-            if self.versions.len() >= 50000 || self.edges >= 500000 {
-                return Err("declaration candidate budget exhausted".into());
-            }
-            self.attach(&entry);
-        }
-        Ok(())
     }
 
     fn attach(&mut self, entry: &Entry) {
