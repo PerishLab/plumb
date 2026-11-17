@@ -99,7 +99,7 @@ program = "git"
 scope = "user"
 
 [windtun]
-cases = ["writer","cache-lifecycle"]
+cases = ["writer","cache-lifecycle","cache-run"]
 image = "ghcr.io/perishlab/images:stable"
 
 [windtun.scenes]

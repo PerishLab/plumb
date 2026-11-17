@@ -1,9 +1,9 @@
 mod bucket;
-mod disk;
 mod graph;
 mod parcel;
 mod plan;
 mod pressure;
+mod run;
 mod sweep;
 mod transfer;
 pub(crate) mod transport;
@@ -12,7 +12,7 @@ pub(crate) use bucket::{adopt, home, lease, seat};
 pub(crate) use sweep::{now, settle};
 
 use clap::Subcommand;
-use disk::Disk;
+use pressure::Disk;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
@@ -20,6 +20,8 @@ const DAY: u64 = 24 * 60 * 60;
 
 #[derive(Subcommand)]
 pub enum Deed {
+    #[command(about = "Run one source experiment with disposable compilation state", long_about = plumb::seat::resource!("help/cache/run.txt"))]
+    Run(run::Input),
     #[command(about = "Declare owned Guard compilation transport", long_about = plumb::seat::resource!("help/cache.txt"))]
     Transport(transport::Input),
     #[command(
@@ -54,6 +56,7 @@ struct Report {
 
 pub fn run(deed: Deed) -> i32 {
     let (apply, json) = match deed {
+        Deed::Run(input) => return run::run(input),
         Deed::Transport(input) => return transport::run(input),
         Deed::Status { json } => (false, json),
         Deed::Reclaim { apply, json } => (apply, json),
