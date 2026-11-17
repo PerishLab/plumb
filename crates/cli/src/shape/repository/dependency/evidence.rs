@@ -30,22 +30,24 @@ struct Stored {
     sha256: String,
 }
 
-pub(super) trait Source {
+pub(crate) trait Source {
     fn prepare(&mut self, names: &BTreeSet<String>);
     fn read(&mut self, name: &str) -> Result<Vec<u8>, String>;
+    fn refresh(&mut self, name: &str) -> Result<Option<Vec<u8>>, String>;
     fn confirm(&self) -> Result<(), String>;
     fn indices(&self) -> &BTreeMap<String, String>;
 }
 
 type Materials = BTreeMap<String, Result<Vec<u8>, String>>;
 
-pub(super) struct Reader {
+pub(crate) struct Reader {
     home: PathBuf,
     pub indices: BTreeMap<String, String>,
     started: Instant,
     budget: AtomicUsize,
     agent: ureq::Agent,
     prepared: Materials,
+    cached: BTreeSet<String>,
 }
 
 impl Reader {
@@ -60,6 +62,7 @@ impl Reader {
             started: Instant::now(),
             budget: AtomicUsize::new(0),
             prepared: BTreeMap::new(),
+            cached: BTreeSet::new(),
             agent: ureq::Agent::config_builder()
                 .https_only(true)
                 .max_redirects(0)
@@ -122,6 +125,7 @@ impl Reader {
             bytes
         };
         if cached {
+            self.cached.insert(name.into());
             self.budget.fetch_add(bytes.len(), Ordering::Relaxed);
         }
         if self.budget.load(Ordering::Relaxed) > 256 * 1024 * 1024 {
@@ -129,6 +133,36 @@ impl Reader {
         }
         self.indices.insert(name.into(), digest(&bytes));
         Ok(bytes)
+    }
+
+    pub fn refresh(&mut self, name: &str) -> Result<Option<Vec<u8>>, String> {
+        if !self.cached.remove(name) {
+            return Ok(None);
+        }
+        let bytes = self.download(name)?;
+        super::registry::Entry::read(name, &bytes)?;
+        let hash = digest(&bytes);
+        let object = self.home.join(format!("{hash}.index"));
+        if object.exists() {
+            if bounded(&object, 16 * 1024 * 1024)? != bytes {
+                return Err("declaration cache object differs".into());
+            }
+        } else {
+            fs::write(object, &bytes).map_err(|error| error.to_string())?;
+        }
+        let stored = Stored {
+            format: 1,
+            name: name.into(),
+            url: url(name),
+            sha256: hash.clone(),
+        };
+        plumb::seat::replace::write(
+            &self.home.join(format!("{name}.json")),
+            &serde_json::to_vec(&stored).map_err(|error| error.to_string())?,
+        )
+        .map_err(|error| error.to_string())?;
+        self.indices.insert(name.into(), hash);
+        Ok(Some(bytes))
     }
 
     pub fn confirm(&self) -> Result<(), String> {
@@ -146,7 +180,7 @@ pub(super) fn digest(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 
-pub(super) fn checksum(value: &str) -> bool {
+pub(crate) fn checksum(value: &str) -> bool {
     value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
@@ -170,6 +204,9 @@ impl Source for Reader {
     }
     fn read(&mut self, name: &str) -> Result<Vec<u8>, String> {
         Reader::read(self, name)
+    }
+    fn refresh(&mut self, name: &str) -> Result<Option<Vec<u8>>, String> {
+        Reader::refresh(self, name)
     }
     fn confirm(&self) -> Result<(), String> {
         Reader::confirm(self)
