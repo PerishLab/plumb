@@ -1,5 +1,5 @@
 use super::inputs::digest;
-use super::request::Client;
+use super::request::{Client, Scan};
 use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -61,16 +61,21 @@ pub(crate) fn fetch(root: &Path, target: &Path, prefix: &str) -> Result<bool, St
     let repository = repository(root)?;
     let metadata: Repository = client.json(&format!("repos/{repository}"))?;
     let trees = trees(root, &metadata.branch)?;
+    let mut scan = Scan::default();
     for page in 1..=5 {
         let listing: Listing = client.json(&format!(
             "repos/{repository}/actions/artifacts?per_page=20&page={page}"
         ))?;
         let count = listing.artifacts.len();
+        scan.pages = page;
         for artifact in listing.artifacts {
-            let Some(attempt) = artifact.attempt(prefix) else {
+            let attempt = artifact.attempt(prefix);
+            scan.note(&artifact.name, artifact.expired, attempt, prefix);
+            let Some(attempt) = attempt else {
                 continue;
             };
             let Some(reference) = &artifact.run else {
+                scan.refused += 1;
                 continue;
             };
             let run: Run = client.json(&format!(
@@ -78,11 +83,13 @@ pub(crate) fn fetch(root: &Path, target: &Path, prefix: &str) -> Result<bool, St
                 reference.id
             ))?;
             if !run.admitted(attempt) {
+                scan.refused += 1;
                 continue;
             }
             let commit: Commit =
                 client.json(&format!("repos/{repository}/git/commits/{}", run.head))?;
             if !trees.contains(&commit.tree.sha) {
+                scan.outside += 1;
                 continue;
             }
             artifact.download(&client, &repository, target)?;
@@ -90,12 +97,14 @@ pub(crate) fn fetch(root: &Path, target: &Path, prefix: &str) -> Result<bool, St
                 "guard material: fetched accepted default-branch tree {} from Guard run {} attempt {attempt}",
                 commit.tree.sha, reference.id
             );
+            scan.finish(true);
             return Ok(true);
         }
         if count < 20 {
             break;
         }
     }
+    scan.finish(false);
     Ok(false)
 }
 

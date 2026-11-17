@@ -172,6 +172,58 @@ fn location(url: &str) -> bool {
     !host.is_empty() && !host.contains('@') && !host.contains('\\')
 }
 
+#[derive(Default)]
+pub(super) struct Scan {
+    pub pages: u64,
+    pub scanned: u64,
+    pub own: u64,
+    pub foreign: u64,
+    pub refused: u64,
+    pub outside: u64,
+}
+
+impl Scan {
+    pub fn note(&mut self, name: &str, expired: bool, attempt: Option<u64>, prefix: &str) {
+        self.scanned += 1;
+        if attempt.is_some() {
+            self.own += 1;
+        } else if name.starts_with(super::FAMILY) && !expired && !name.starts_with(prefix) {
+            self.foreign += 1;
+        }
+    }
+
+    pub fn report(&self) -> String {
+        if self.own == 0 && self.foreign == 0 {
+            return format!(
+                "no Guard material artifact among {} artifacts on {} pages",
+                self.scanned, self.pages
+            );
+        }
+        if self.own == 0 {
+            return format!(
+                "{} Guard material artifacts exist, all for another Guard identity (producer, Depot mark, image or repository changed); {} artifacts on {} pages",
+                self.foreign, self.scanned, self.pages
+            );
+        }
+        format!(
+            "{} artifacts of this Guard identity: {} from runs not accepted, {} outside the default-branch tree window; {} for other identities; {} artifacts on {} pages",
+            self.own, self.refused, self.outside, self.foreign, self.scanned, self.pages
+        )
+    }
+
+    pub fn finish(&self, found: bool) {
+        crate::diagnostic::event("material.lookup.scan", || {
+            serde_json::json!({
+                "found":found,"pages":self.pages,"scanned":self.scanned,"own":self.own,
+                "foreign":self.foreign,"refused":self.refused,"outside":self.outside
+            })
+        });
+        if !found {
+            eprintln!("guard material: no accepted artifact: {}", self.report());
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -187,5 +239,33 @@ mod tests {
         ] {
             assert!(!super::location(url), "{url}");
         }
+    }
+
+    #[test]
+    fn reasons() {
+        use super::Scan;
+        let own = format!("guard-material-v1-{}-", "a".repeat(64));
+        let other = format!("guard-material-v1-{}-1", "b".repeat(64));
+        let mut scan = Scan {
+            pages: 1,
+            ..Scan::default()
+        };
+        scan.note("guard-runtime", false, None, &own);
+        assert!(
+            scan.report()
+                .starts_with("no Guard material artifact among 1 artifacts")
+        );
+        scan.note(&other, false, None, &own);
+        assert!(scan.report().contains("all for another Guard identity"));
+        scan.note(&other, true, None, &own);
+        assert_eq!(scan.foreign, 1);
+        scan.note(&format!("{own}2"), false, Some(2), &own);
+        scan.refused += 1;
+        let report = scan.report();
+        assert!(
+            report.starts_with("1 artifacts of this Guard identity: 1 from runs not accepted"),
+            "{report}"
+        );
+        assert!(report.contains("1 for other identities"), "{report}");
     }
 }

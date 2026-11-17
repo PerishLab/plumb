@@ -18,6 +18,7 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 
 const SCHEMA: &str = "plumb.guard-material/v1";
+pub(super) const FAMILY: &str = "guard-material-v1-";
 pub(super) const MARKER: &str = "source.json";
 
 #[derive(Serialize)]
@@ -123,7 +124,7 @@ fn report(root: &Path, action: Action) -> Result<Report, String> {
     });
     let bytes = serde_json::to_vec(&identity).map_err(|error| error.to_string())?;
     let digest = plumb::depot::sha(&bytes);
-    let restore = format!("guard-material-v1-{digest}-");
+    let restore = format!("{FAMILY}{digest}-");
     let parcel = home
         .join("cache/transport")
         .join(&digest)
