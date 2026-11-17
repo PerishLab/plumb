@@ -6,7 +6,7 @@ const RESERVE: u64 = 30;
 const KEY: &str = "PLUMB_GUARD_CACHE_RESERVE";
 
 #[derive(Clone, Copy, Serialize)]
-pub(super) struct Disk {
+pub(crate) struct Disk {
     pub available: u64,
     pub total: u64,
     pub reserve: u64,

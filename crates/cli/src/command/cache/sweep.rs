@@ -1,7 +1,7 @@
 use super::bucket::{self, Record};
-use super::disk::Disk;
 use super::graph;
 use super::plan::{self, Plan, Seat};
+use super::pressure::Disk;
 use radicula_lock::{Mode, TryLockError};
 use serde::Serialize;
 use std::collections::BTreeMap;

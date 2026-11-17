@@ -1,0 +1,43 @@
+Run a noninteractive source or library-consumer experiment in a disposable
+compilation scope. Linux is the initially supported host; other hosts refuse.
+No user systemd manager is required.
+
+--output names a new external evidence directory whose parent already exists.
+Admitted executions retain invocation.json, result.json, stdout.log and stderr.log.
+Setup refusals report their error without claiming execution. --cwd names
+the existing source directory. --timeout is a positive budget in seconds,
+default 900 and at most 86400. The combined stdout/stderr budget is 64 MiB;
+overflow is an explicit failure with the captured prefix retained.
+
+Plumb binds CARGO_TARGET_DIR, PLUMB_HOME and TMPDIR to its newly owned scope.
+Existing target bindings and output directories refuse. Captured tool lookup
+preserves literal arguments; no shell or environment expansion is introduced.
+Inherited inputs are PATH, HOME, USER, LOGNAME, LANG, LC_ALL, TZ, CARGO_HOME,
+RUSTUP_HOME, RUSTUP_TOOLCHAIN and CARGO_BUILD_JOBS.
+When an identity is needed, put Runseal in the actual command, for example:
+
+  plumb cache run --output evidence/run-1 --cwd consumer -- runseal :identity.liberte cargo test --locked --offline
+
+The owned process group is stopped before its compilation directory is removed.
+Registry and in-directory ownership records must still agree. Unknown process
+cleanup or changed ownership preserves material and returns a failure.
+Ordinary child status is retained; timeout exits 124, cancellation or a worker
+signal exits 128 plus that signal, and unconfirmed cleanup exits 125.
+
+The versioned invocation record names the cwd, literal arguments, owned directory,
+registry path, bound tools and timeout. The result records the original child
+code/signal, cause and CLI exit. Its process field confirms owned-group settlement
+(or that execution never started); directory confirms owned material and registry
+removal, and cleanup requires both. Error text is diagnostic, not a stable code.
+
+The in-directory plumb.json and invocation's registry path use
+plumb.cache-run-owned/v1: keeper, canonical directory, device and inode must agree.
+Treat retained records as evidence; do not rewrite them to obtain cleanup.
+
+Only the created Linux group is supervised. Deliberately escaped groups/sessions
+and external services are outside that boundary.
+
+This is not a filesystem sandbox, Guard proof, or Windtun qualification. An
+experiment that overrides its target or writes elsewhere owns those outputs.
+Forced loss of the supervising Plumb process or host cannot produce a completed
+cleanup receipt; retained ownership records remain evidence for explicit recovery.

@@ -1,3 +1,5 @@
+mod cache;
+
 use std::process::Command;
 
 #[test]

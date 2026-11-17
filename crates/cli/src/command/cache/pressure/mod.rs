@@ -1,5 +1,7 @@
-use super::disk::Disk;
+mod disk;
+
 use super::sweep::{self, Entry, Status};
+pub(super) use disk::Disk;
 use std::path::{Path, PathBuf};
 
 pub(super) struct Candidate {

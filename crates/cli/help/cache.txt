@@ -1,3 +1,6 @@
+Use `plumb cache run` for a disposable source experiment with retained evidence.
+Use `plumb cache transport` for verified Guard compilation material.
+
 Declare the compilation material a caller may transport between Guard jobs.
 
 The JSON document owns one atomic Zstandard parcel path, primary key, restore
