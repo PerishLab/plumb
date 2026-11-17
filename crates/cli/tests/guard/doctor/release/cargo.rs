@@ -21,7 +21,7 @@ fn capacity() {
         "[workspace]\nmembers=['crates/*']\nresolver='3'\n",
     )
     .unwrap();
-    let names = (1..=12)
+    let names = (1..=13)
         .map(|index| format!("foo-p{index}"))
         .collect::<Vec<_>>();
     for name in &names {
@@ -45,7 +45,7 @@ fn capacity() {
         ],
     );
     command(&root, "cargo", &["generate-lockfile", "--offline"]);
-    for count in [11, 12] {
+    for count in [12, 13] {
         let packages = serde_json::to_string(&names[..count]).unwrap();
         std::fs::write(
             root.join("plumb.toml"),
@@ -58,14 +58,14 @@ fn capacity() {
         let report = crate::run(&["doctor", root.to_str().unwrap()]);
         assert_eq!(
             report.contains("and Plumb permits"),
-            count == 12,
+            count == 13,
             "{report}"
         );
-        if count == 11 {
+        if count == 12 {
             assert!(report.contains("the skeleton has released 2"), "{report}");
         } else {
             assert!(
-                report.contains("the cargo attachment declares 12 packages and Plumb permits 11"),
+                report.contains("the cargo attachment declares 13 packages and Plumb permits 12"),
                 "{report}"
             );
         }
