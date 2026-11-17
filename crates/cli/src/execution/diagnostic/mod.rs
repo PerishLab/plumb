@@ -74,3 +74,15 @@ fn number(key: &str) -> Option<u64> {
 fn warn(message: &str) {
     let _ = writeln!(std::io::stderr(), "plumb diagnostic: {message}");
 }
+
+impl crate::Command {
+    pub(crate) fn diagnostic(&self) -> Option<&std::path::Path> {
+        match self {
+            Self::Guard { diagnostic, .. } => diagnostic.as_deref(),
+            Self::Cache {
+                deed: crate::command::cache::Deed::Transport(input),
+            } => input.diagnostic.as_deref(),
+            _ => None,
+        }
+    }
+}

@@ -562,3 +562,13 @@ evidence and exhausted bounds stay unknown. Each observation admits 1024 entries
 128 MiB including addresses and 600 seconds checked around each transport call.
 Nested checks share their enclosing reads but never escape its final confirmation.
 No observation survives the operation, retries a failure or grants publication.
+
+## OS Instance Source
+
+`plumb::instance` and `plumb instance --json` share one OS-source identity
+contract. They read only the existing SSH Ed25519 public host key and refuse
+unavailable or malformed material without creating keys or choosing another
+identity source. This labels an OS like client context, not possession or
+authority; users, profiles and sessions share it. Rotation changes the label,
+and cloning a retained host key retains it. Discovery belongs here, not in
+workshop or other consumers. The command help owns schema and platform paths.

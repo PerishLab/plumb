@@ -9,6 +9,8 @@ pub mod cookbook;
 pub mod delivery;
 #[cfg(feature = "vendor")]
 mod forge;
+#[path = "runtime/instance/mod.rs"]
+pub mod instance;
 #[path = "proof/guard/integration/mod.rs"]
 pub mod integration;
 #[path = "forge/lane/mod.rs"]

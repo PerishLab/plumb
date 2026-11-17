@@ -119,3 +119,7 @@ required-features = ["depot"]
 
 [target.'cfg(windows)'.dependencies]
 winapi-util = "0.1"
+
+[[test]]
+name = "instance"
+path = "tests/runtime/identity/instance/main.rs"

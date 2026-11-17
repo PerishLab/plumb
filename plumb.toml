@@ -113,3 +113,7 @@ target = "x86_64-unknown-linux-gnu"
 features = ["default", "all-features"]
 
 [brand]
+
+[[workflow.tool.guard.test]]
+program = "ssh-keygen"
+platform = ["linux-x86_64", "linux-aarch64", "darwin-aarch64", "darwin-x86_64"]
