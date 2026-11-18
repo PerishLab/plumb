@@ -13,16 +13,19 @@ fn command(root: &Path, program: &str, args: &[&str]) {
     );
 }
 
-#[test]
-fn capacity() {
-    let (_scratch, root) = super::seat("cargo-capacity");
+fn fixture(
+    name: &str,
+    ns: &str,
+    total: usize,
+) -> (tempfile::TempDir, std::path::PathBuf, Vec<String>) {
+    let (scratch, root) = super::seat(name);
     std::fs::write(
         root.join("Cargo.toml"),
         "[workspace]\nmembers=['crates/*']\nresolver='3'\n",
     )
     .unwrap();
-    let names = (1..=14)
-        .map(|index| format!("foo-p{index}"))
+    let names = (1..=total)
+        .map(|index| format!("{ns}-p{index}"))
         .collect::<Vec<_>>();
     for name in &names {
         let path = root.join("crates").join(name);
@@ -41,21 +44,31 @@ fn capacity() {
             "remote",
             "add",
             "origin",
-            "https://github.com/PerishLab/foo.git",
+            &format!("https://github.com/PerishLab/{ns}.git"),
         ],
     );
     command(&root, "cargo", &["generate-lockfile", "--offline"]);
+    (scratch, root, names)
+}
+
+fn report(root: &Path, ns: &str, names: &[String], count: usize) -> String {
+    let packages = serde_json::to_string(&names[..count]).unwrap();
+    std::fs::write(
+        root.join("plumb.toml"),
+        format!(
+            "[identity]\nns='{ns}'\n[dependency]\nroot=true\n[release]\nauthority='https://example.invalid'\n[release.cargo]\nregistry='perish'\npackages={packages}\n"
+        ),
+    )
+    .unwrap();
+    command(root, "git", &["add", "."]);
+    crate::run(&["doctor", root.to_str().unwrap()])
+}
+
+#[test]
+fn capacity() {
+    let (_scratch, root, names) = fixture("cargo-capacity", "foo", 14);
     for count in [12, 13, 14] {
-        let packages = serde_json::to_string(&names[..count]).unwrap();
-        std::fs::write(
-            root.join("plumb.toml"),
-            format!(
-                "[identity]\nns='foo'\n[dependency]\nroot=true\n[release]\nauthority='https://example.invalid'\n[release.cargo]\nregistry='perish'\npackages={packages}\n"
-            ),
-        )
-        .unwrap();
-        command(&root, "git", &["add", "."]);
-        let report = crate::run(&["doctor", root.to_str().unwrap()]);
+        let report = report(&root, "foo", &names, count);
         assert_eq!(
             report.contains("and Plumb permits"),
             count == 14,
@@ -68,6 +81,27 @@ fn capacity() {
                 report.contains("the cargo attachment declares 14 packages and Plumb permits 13"),
                 "{report}"
             );
+        }
+    }
+}
+
+#[test]
+fn product() {
+    let (_scratch, root, names) = fixture("cargo-product", "radicula", 31);
+    for count in [13, 14, 30, 31] {
+        let report = report(&root, "radicula", &names, count);
+        assert_eq!(
+            report.contains("and Plumb permits"),
+            count == 31,
+            "{report}"
+        );
+        if count == 31 {
+            assert!(
+                report.contains("the cargo attachment declares 31 packages and Plumb permits 30"),
+                "{report}"
+            );
+        } else {
+            assert!(report.contains("the skeleton has released 2"), "{report}");
         }
     }
 }

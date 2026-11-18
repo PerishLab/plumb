@@ -5,6 +5,7 @@ use std::path::Path;
 
 #[derive(Default)]
 pub struct Release {
+    pub product: String,
     pub attachments: BTreeSet<String>,
     pub executables: Vec<String>,
     pub placements: Vec<String>,
@@ -48,6 +49,7 @@ impl Root<'_> {
     fn held(&self, spec: &Spec) -> Release {
         let attachments = attachments(spec);
         Release {
+            product: spec.product.clone(),
             attachments,
             executables: spec.lines(),
             placements: spec.placements(),
