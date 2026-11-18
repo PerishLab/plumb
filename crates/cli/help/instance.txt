@@ -1,20 +1,49 @@
-Identify the current OS instance through its existing SSH Ed25519 host PUBLIC key.
+Identify the current instance: an explicitly declared identifier, otherwise the
+existing SSH Ed25519 host PUBLIC key of the OS.
 
-The shared plumb::instance implementation validates one ssh-ed25519 public record
-and its exact SSH wire encoding, then fingerprints the wire blob with SHA256.
-The identifier is ssh-ed25519:SHA256:<unpadded standard Base64 digest>, compatible
-with the SHA256 fingerprint ssh-keygen reports. Public comments and whitespace do
-not change it. The JSON contract is plumb.instance/v1 with id and source.kind/path.
+The identifier comes from the first layer that declares one:
+  1. --instance-id <ID>
+  2. the PLUMB_INSTANCE_ID environment variable
+  3. instance_id in PLUMB_HOME/plumb.toml (default data home: .plumb under your
+     home; LOCALAPPDATA/plumb on Windows)
+  4. the SSH host key, as below.
+In plumb.toml, instance_id is a root key: write it before the first [table], such
+as [locus]. A key placed inside a table is not read. A missing plumb.toml is an
+absent layer; an unreadable or malformed one refuses, even when a higher layer
+declares the identifier. Other sections and keys in that file are ignored here.
 
-Linux and macOS read /etc/ssh/ssh_host_ed25519_key.pub. Windows reads
-ssh/ssh_host_ed25519_key.pub below the OS ProgramData location, which must be
-available and absolute. Missing, unreadable or malformed public material refuses.
-No private key is read, no key is generated, and no other algorithm, hostname,
-machine-id or identity environment variable is selected as a fallback. There is
-no CLI path override. Other commands and help do not require a host key.
+A declared identifier is an opaque string and has no required format. It is
+refused, never trimmed or repaired and never replaced by a lower layer, when it is
+empty, has leading or trailing whitespace, contains a control character such as a
+newline or tab, or exceeds 512 bytes. An environment variable that is blank is
+unset and the next layer is consulted. A declared identifier is not compared with
+the host key and is returned exactly as given; the host key is not read at all.
+Keep it free of interior whitespace if a consumer, such as workshop, rejects that.
+
+The JSON contract is plumb.instance/v1 with id and source.kind, plus source.path
+when a file supplied the value. source.kind names the layer that won: argument,
+environment, configuration or ssh-host-key. Argument and environment carry no
+path; configuration carries the plumb.toml path; ssh-host-key carries the .pub path.
+
+Without a declaration, the shared plumb::instance implementation validates one
+ssh-ed25519 public record and its exact SSH wire encoding, then fingerprints the
+wire blob with SHA256. The identifier is ssh-ed25519:SHA256:<unpadded standard
+Base64 digest>, compatible with the SHA256 fingerprint ssh-keygen reports. Public
+comments and whitespace do not change it. Linux and macOS read
+/etc/ssh/ssh_host_ed25519_key.pub. Windows reads ssh/ssh_host_ed25519_key.pub
+below the OS ProgramData location, which must be available and absolute. Missing,
+unreadable or malformed public material refuses. No private key is read, no key is
+generated, and no other algorithm, hostname or machine-id is selected as a
+fallback. There is no CLI path override. Other commands and help do not require a
+host key.
 
 This is stable source context comparable to a client User-Agent, not proof of
-possession, authentication or authority. Users, profiles and sessions within one
-OS share it. Rotating the selected host key changes it; cloning an OS with its
-host key copies it. Registration, clone detection and managed migration may be
-added later without making consumers invent their own identification protocol.
+possession, authentication or authority. A host-key identifier is shared by every
+user, profile and session within one OS; a declared one is not. The argument and
+the environment belong to one process and its children, and plumb.toml belongs to
+one data home, so users of the same OS can hold different identifiers, and copying
+a plumb.toml or exporting the variable elsewhere copies the identifier. Rotating
+the selected host key changes the host-key identifier; cloning an OS with its host
+key copies it. Declaring the identifier pins it across such changes. Registration,
+clone detection and managed migration may be added later without making consumers
+invent their own identification protocol.
