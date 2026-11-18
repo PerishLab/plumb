@@ -64,13 +64,21 @@ impl Transfer<'_> {
     }
 
     fn save(&self) -> Result<Receipt, String> {
+        self.pack(native::skip()?)
+    }
+
+    fn pack(&self, skip: Option<native::Skip>) -> Result<Receipt, String> {
         let lease = Lease::new(self.root)?;
         let cargo = match self.context {
+            Some(_) if skip.is_some() => None,
             Some(context) if Hint::ready(&lease.root, context)? => {
                 (Target(&lease.root).seal()?.links == 0).then(|| lease.root.clone())
             }
             _ => None,
         };
+        if let Some(skip) = skip.filter(|_| self.context.is_some()) {
+            skip.report();
+        }
         let compiler = self.home.join("cache/compiler");
         let compiler =
             (compiler.is_dir() && std::env::var_os("SCCACHE_DIR").is_none()).then_some(compiler);
@@ -216,5 +224,6 @@ impl Copy {
     }
 }
 
+mod native;
 #[cfg(test)]
 mod tests;

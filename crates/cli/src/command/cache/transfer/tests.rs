@@ -1,3 +1,4 @@
+use super::native;
 use super::{Action, Copy, Transfer};
 use crate::command::cache::parcel::{Parcel, Plan};
 
@@ -153,4 +154,108 @@ fn producers() {
         assert_eq!(receipt.compiler, reused, "{name}");
         assert_eq!(home.join("cache/compiler/entry").exists(), reused, "{name}");
     }
+}
+
+fn skipped(vars: &[(&str, &str)]) -> Option<&'static str> {
+    native::decide(|name| {
+        vars.iter()
+            .find(|(key, _)| *key == name)
+            .map(|(_, value)| value.to_string())
+    })
+    .unwrap()
+    .map(|skip| skip.reason())
+}
+
+#[test]
+fn follow() {
+    assert_eq!(
+        skipped(&[("GITHUB_HEAD_REF", "auto/259")]),
+        Some("follow-branch")
+    );
+    assert_eq!(
+        skipped(&[("GITHUB_HEAD_REF", ""), ("GITHUB_REF", "refs/heads/auto/7")]),
+        Some("follow-branch")
+    );
+    assert_eq!(
+        skipped(&[
+            ("GITHUB_HEAD_REF", "auto/1"),
+            ("PLUMB_GUARD_NATIVE", "auto")
+        ]),
+        Some("follow-branch")
+    );
+}
+
+#[test]
+fn ordinary() {
+    assert_eq!(skipped(&[]), None);
+    assert_eq!(skipped(&[("GITHUB_HEAD_REF", "feature/690")]), None);
+    assert_eq!(skipped(&[("GITHUB_HEAD_REF", "task/auto/3")]), None);
+    assert_eq!(
+        skipped(&[
+            ("GITHUB_HEAD_REF", "feature/9"),
+            ("GITHUB_REF", "refs/pull/9/merge")
+        ]),
+        None
+    );
+    assert_eq!(skipped(&[("GITHUB_REF", "refs/heads/main")]), None);
+    assert_eq!(skipped(&[("GITHUB_REF", "refs/tags/auto/1")]), None);
+}
+
+#[test]
+fn explicit() {
+    assert_eq!(
+        skipped(&[
+            ("GITHUB_HEAD_REF", "auto/259"),
+            ("PLUMB_GUARD_NATIVE", "keep")
+        ]),
+        None
+    );
+    assert_eq!(
+        skipped(&[
+            ("GITHUB_HEAD_REF", "feature/1"),
+            ("PLUMB_GUARD_NATIVE", "skip")
+        ]),
+        Some("requested")
+    );
+    let error = native::decide(|name| (name == "PLUMB_GUARD_NATIVE").then(|| "maybe".to_string()))
+        .err()
+        .unwrap();
+    assert!(error.contains("must be auto, keep or skip"));
+}
+
+#[test]
+fn compiler() {
+    let root = tempfile::tempdir().unwrap();
+    assert!(
+        std::process::Command::new("git")
+            .args(["init", "-q"])
+            .current_dir(root.path())
+            .status()
+            .unwrap()
+            .success()
+    );
+    let home = root.path().join("home");
+    std::fs::create_dir_all(home.join("cache/compiler")).unwrap();
+    std::fs::write(home.join("cache/compiler/entry"), "compiled").unwrap();
+    let context = crate::command::cache::transport::Context {
+        image: format!("sha256:{}", "a".repeat(64)),
+    };
+    let parcel = root.path().join("slot/material.tar.zst");
+    std::fs::create_dir(parcel.parent().unwrap()).unwrap();
+    let skip =
+        native::decide(|name| (name == "GITHUB_HEAD_REF").then(|| "auto/5".to_string())).unwrap();
+    assert!(skip.is_some());
+    let receipt = Transfer {
+        root: root.path(),
+        home: &home,
+        context: Some(&context),
+        parcel: &parcel,
+        family: "world;",
+        identity: "world;producer",
+    }
+    .pack(skip)
+    .unwrap();
+    assert!(!receipt.cargo);
+    assert!(receipt.compiler);
+    assert!(parcel.exists());
 }
