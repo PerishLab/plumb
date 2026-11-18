@@ -565,10 +565,25 @@ No observation survives the operation, retries a failure or grants publication.
 
 ## OS Instance Source
 
-`plumb::instance` and `plumb instance --json` share one OS-source identity
-contract. They read only the existing SSH Ed25519 public host key and refuse
-unavailable or malformed material without creating keys or choosing another
-identity source. This labels an OS like client context, not possession or
-authority; users, profiles and sessions share it. Rotation changes the label,
-and cloning a retained host key retains it. Discovery belongs here, not in
-workshop or other consumers. The command help owns schema and platform paths.
+`plumb::instance` and `plumb instance --json` share one instance-identity
+contract. The identifier is an explicit declaration when one exists, otherwise the
+OS-source identity read from the existing SSH Ed25519 public host key. The layers
+are `--instance-id`, then `PLUMB_INSTANCE_ID`, then the root key `instance_id` in
+`PLUMB_HOME/plumb.toml`, then the host key; the cascade declares them and Plumb
+alone owns their precedence. `source.kind` in the unchanged `plumb.instance/v1`
+schema names the winning layer: `argument`, `environment`, `configuration` or
+`ssh-host-key`, with `source.path` only where a file supplied the value.
+
+A declaration is an opaque string without a required format. An empty value,
+leading or trailing whitespace, a control character or more than 512 bytes refuses
+loudly; an invalid winning layer never falls back to a lower one or to the host
+key, and a blank variable is unset. A declaration does not read or compare the
+host key. Without one, the host key path refuses unavailable or malformed material
+without creating keys or choosing another identity source. Either way the value
+labels an instance like client context, not possession or authority. A host-key
+identifier is shared by every user, profile and session of one OS; a declared one
+is not, because arguments, variables and `plumb.toml` belong to a process or a
+data home, so one OS can present several and a copied file copies its identifier.
+Rotation changes the host-key label and cloning a retained host key retains it;
+declaring the identifier pins it. Discovery belongs here, not in workshop or other
+consumers. The command help owns schema and platform paths.

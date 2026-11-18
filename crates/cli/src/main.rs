@@ -24,8 +24,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 pub(crate) enum Command {
-    #[command(about = "Identify the current OS instance from its existing public host key", long_about = plumb::seat::resource!("help/instance.txt"))]
+    #[command(about = "Identify the current instance from an explicit declaration or its public host key", long_about = plumb::seat::resource!("help/instance.txt"))]
     Instance {
+        #[command(flatten)]
+        declared: plumb::instance::Arguments,
         #[arg(long)]
         json: bool,
     },

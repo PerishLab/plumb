@@ -1,3 +1,4 @@
+mod declaration;
 mod encoding;
 mod reading;
 

@@ -1,5 +1,5 @@
-pub(crate) fn run(json: bool) -> i32 {
-    match plumb::instance::current() {
+pub(crate) fn run(declared: plumb::instance::Arguments, json: bool) -> i32 {
+    match plumb::instance::select(declared.instance.as_deref()) {
         Ok(instance) => show(&instance, json),
         Err(error) => {
             eprintln!("plumb: {error}");
@@ -10,11 +10,15 @@ pub(crate) fn run(json: bool) -> i32 {
 
 fn show(instance: &plumb::instance::Instance, json: bool) -> i32 {
     if !json {
-        println!(
-            "{}\nsource: {}",
-            instance.id,
-            instance.source.path.display()
-        );
+        match &instance.source.path {
+            Some(path) => println!(
+                "{}\nsource: {} {}",
+                instance.id,
+                instance.source.kind,
+                path.display()
+            ),
+            None => println!("{}\nsource: {}", instance.id, instance.source.kind),
+        }
         return 0;
     }
     match serde_json::to_string(instance) {
