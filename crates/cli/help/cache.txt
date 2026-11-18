@@ -25,6 +25,15 @@ snapshots cannot restore old freshness. Failed attempts remain unsealed. Cargo
 and source ownership leases remain local, and every actual Guard check and
 source/package/tool judgment remains required. A cache is never a verdict.
 
+With --save, Plumb itself decides whether to pack native Cargo content. A run
+on a follow branch packs only compiler material, because a follow changes the
+first-party package world and no later job can restore the native layer. A
+follow branch is a pull request whose GITHUB_HEAD_REF begins with auto/, or a
+run whose GITHUB_REF is refs/heads/auto/. The skip is reported on stderr and as
+a material.skip diagnostic event, and the receipt still reports cargo false.
+PLUMB_GUARD_NATIVE=keep or skip overrides the rule; auto, the default, applies it.
+The caller only passes the branch variables it already provides.
+
 With --restore --fetch, an unavailable native snapshot may be seeded from a
 successful organization Guard artifact whose exact head tree is in the locally
 fetched default branch history. Lookup is bounded and requires GH_TOKEN or
