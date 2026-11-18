@@ -1,3 +1,4 @@
+use super::artifact::Slot;
 use plumb::config::Execution;
 use std::io::Write as _;
 use std::path::Path;
@@ -177,44 +178,55 @@ pub(super) struct Scan {
     pub pages: u64,
     pub scanned: u64,
     pub own: u64,
+    pub other: u64,
     pub foreign: u64,
     pub refused: u64,
     pub outside: u64,
 }
 
 impl Scan {
-    pub fn note(&mut self, name: &str, expired: bool, attempt: Option<u64>, prefix: &str) {
+    pub fn note(&mut self, name: &str, expired: bool, slot: Option<&Slot>, family: &str) {
         self.scanned += 1;
-        if attempt.is_some() {
-            self.own += 1;
-        } else if name.starts_with(super::FAMILY) && !expired && !name.starts_with(prefix) {
-            self.foreign += 1;
+        match slot {
+            Some(slot) if slot.exact => self.own += 1,
+            Some(_) => self.other += 1,
+            None if name.starts_with(super::FAMILY) && !expired && !name.starts_with(family) => {
+                self.foreign += 1;
+            }
+            None => {}
         }
     }
 
     pub fn report(&self) -> String {
-        if self.own == 0 && self.foreign == 0 {
+        if self.own + self.other + self.foreign == 0 {
             return format!(
                 "no Guard material artifact among {} artifacts on {} pages",
                 self.scanned, self.pages
             );
         }
-        if self.own == 0 {
+        if self.own + self.other == 0 {
             return format!(
-                "{} Guard material artifacts exist, all for another Guard identity (producer, Depot mark, image or repository changed); {} artifacts on {} pages",
+                "{} Guard material artifacts exist, all for another Guard environment (repository, image or platform changed); {} artifacts on {} pages",
                 self.foreign, self.scanned, self.pages
             );
         }
         format!(
-            "{} artifacts of this Guard identity: {} from runs not accepted, {} outside the default-branch tree window; {} for other identities; {} artifacts on {} pages",
-            self.own, self.refused, self.outside, self.foreign, self.scanned, self.pages
+            "{} artifacts of this Guard environment ({} from this producer, {} from another): {} from runs not accepted, {} outside the default-branch tree window; {} for other environments; {} artifacts on {} pages",
+            self.own + self.other,
+            self.own,
+            self.other,
+            self.refused,
+            self.outside,
+            self.foreign,
+            self.scanned,
+            self.pages
         )
     }
 
     pub fn finish(&self, found: bool) {
         crate::diagnostic::event("material.lookup.scan", || {
             serde_json::json!({
-                "found":found,"pages":self.pages,"scanned":self.scanned,"own":self.own,
+                "found":found,"pages":self.pages,"scanned":self.scanned,"own":self.own,"other":self.other,
                 "foreign":self.foreign,"refused":self.refused,"outside":self.outside
             })
         });
@@ -243,29 +255,38 @@ mod tests {
 
     #[test]
     fn reasons() {
-        use super::Scan;
-        let own = format!("guard-material-v1-{}-", "a".repeat(64));
-        let other = format!("guard-material-v1-{}-1", "b".repeat(64));
+        use super::{Scan, Slot};
+        let family = format!("guard-material-v1-{}-", "a".repeat(64));
+        let other = format!("guard-material-v1-{}-{}-1", "b".repeat(64), "c".repeat(64));
         let mut scan = Scan {
             pages: 1,
             ..Scan::default()
         };
-        scan.note("guard-runtime", false, None, &own);
+        scan.note("guard-runtime", false, None, &family);
         assert!(
             scan.report()
                 .starts_with("no Guard material artifact among 1 artifacts")
         );
-        scan.note(&other, false, None, &own);
-        assert!(scan.report().contains("all for another Guard identity"));
-        scan.note(&other, true, None, &own);
+        scan.note(&other, false, None, &family);
+        assert!(scan.report().contains("all for another Guard environment"));
+        scan.note(&other, true, None, &family);
         assert_eq!(scan.foreign, 1);
-        scan.note(&format!("{own}2"), false, Some(2), &own);
+        let slot = Slot {
+            attempt: 2,
+            exact: false,
+        };
+        scan.note(
+            &format!("{family}{}-2", "d".repeat(64)),
+            false,
+            Some(&slot),
+            &family,
+        );
         scan.refused += 1;
         let report = scan.report();
         assert!(
-            report.starts_with("1 artifacts of this Guard identity: 1 from runs not accepted"),
+            report.starts_with("1 artifacts of this Guard environment (0 from this producer, 1 from another): 1 from runs not accepted"),
             "{report}"
         );
-        assert!(report.contains("1 for other identities"), "{report}");
+        assert!(report.contains("1 for other environments"), "{report}");
     }
 }

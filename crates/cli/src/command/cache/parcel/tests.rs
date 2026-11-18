@@ -28,13 +28,13 @@ fn timestamps() {
     let path = root.path().join("material.tar");
     let receipt = Parcel(&path)
         .write(Plan {
-            identity: "same world".into(),
+            identity: "same world;producer-a".into(),
             cargo: Some(cargo),
             compiler: None,
         })
         .unwrap();
     assert!(receipt.cargo);
-    let snapshot = Parcel(&path).read("same world").unwrap().unwrap();
+    let snapshot = Parcel(&path).read("same world;").unwrap().unwrap();
     let restored = snapshot.root.path().join("cargo/debug/deps/material");
     assert_eq!(std::fs::read(&restored).unwrap(), b"compiled inputs");
     assert_eq!(
@@ -44,7 +44,9 @@ fn timestamps() {
     assert!(!snapshot.root.path().join("cargo/lease").exists());
     assert!(!snapshot.root.path().join("cargo/plumb.json").exists());
     assert!(!snapshot.root.path().join("cargo/tmp").exists());
-    assert!(Parcel(&path).read("different world").is_err());
+    assert_eq!(snapshot.manifest.identity, "same world;producer-a");
+    assert!(Parcel(&path).read("different world;").is_err());
+    assert!(Parcel(&path).read("same world;producer-b").is_err());
 }
 
 #[test]

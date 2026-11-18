@@ -1,10 +1,10 @@
+mod artifact;
 pub(super) mod context;
 pub(super) mod inputs;
 pub(super) mod provider;
 pub(super) mod record;
 mod request;
 mod session;
-pub(super) mod stamp;
 pub(super) mod target;
 #[cfg(test)]
 mod tests;
@@ -22,12 +22,16 @@ pub(super) const FAMILY: &str = "guard-material-v1-";
 pub(super) const MARKER: &str = "source.json";
 
 #[derive(Serialize)]
-struct Identity<'a> {
+struct World<'a> {
     schema: &'static str,
     repository: &'a str,
     home: &'a Path,
     image: Option<&'a str>,
     platform: &'a str,
+}
+
+#[derive(Serialize)]
+struct Producer<'a> {
     plumb: &'a str,
     depot: &'a str,
 }
@@ -107,27 +111,31 @@ fn report(root: &Path, action: Action) -> Result<Report, String> {
     let repository = crate::command::guard::precommit::cargo::identity(root)?;
     let platform = plumb::config::platform();
     let depot = plumb::depot::rules()?;
-    let identity = Identity {
+    let world = World {
         schema: SCHEMA,
         repository: &repository,
         home: &home,
         image: context.as_ref().map(|context| context.image.as_str()),
         platform: &platform,
+    };
+    let producer = Producer {
         plumb: plumb::version!("PLUMB"),
         depot: depot.mark(),
     };
     crate::diagnostic::event("material.identity", || {
         serde_json::json!({
-            "repository_key":plumb::depot::sha(repository.as_bytes()),"image":identity.image,"platform":platform,
-            "tree":tree,"producer":identity.plumb,"depot":identity.depot
+            "repository_key":plumb::depot::sha(repository.as_bytes()),"image":world.image,"platform":platform,
+            "tree":tree,"producer":producer.plumb,"depot":producer.depot
         })
     });
-    let bytes = serde_json::to_vec(&identity).map_err(|error| error.to_string())?;
-    let digest = plumb::depot::sha(&bytes);
-    let restore = format!("{FAMILY}{digest}-");
+    let world = digest(&world)?;
+    let producer = digest(&producer)?;
+    let family = format!("{FAMILY}{world}-");
+    let restore = format!("{family}{producer}-");
+    let slot = plumb::depot::sha(restore.as_bytes());
     let parcel = home
         .join("cache/transport")
-        .join(&digest)
+        .join(&slot)
         .join("material.tar.zst");
     let mut paths = Vec::new();
     let mut receipt = Receipt::default();
@@ -138,6 +146,7 @@ fn report(root: &Path, action: Action) -> Result<Report, String> {
             home: &home,
             context: context.as_ref(),
             parcel: &parcel,
+            family: &family,
             identity: &restore,
         }
         .run(action)?;
@@ -159,6 +168,11 @@ fn report(root: &Path, action: Action) -> Result<Report, String> {
         populated: receipt.any(),
         receipt,
     })
+}
+
+fn digest<T: Serialize>(value: &T) -> Result<String, String> {
+    let bytes = serde_json::to_vec(value).map_err(|error| error.to_string())?;
+    Ok(plumb::depot::sha(&bytes))
 }
 
 fn attempt() -> Result<u64, String> {

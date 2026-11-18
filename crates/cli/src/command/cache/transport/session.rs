@@ -1,8 +1,8 @@
 use super::SCHEMA;
 use super::context::Context;
 use super::inputs::Inputs;
+use super::inputs::Stamp;
 use super::record::Hint;
-use super::stamp::Stamp;
 use super::target::Target;
 use crate::command::guard::precommit::cargo::Lease;
 use std::collections::BTreeMap;

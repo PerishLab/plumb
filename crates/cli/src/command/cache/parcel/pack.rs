@@ -1,5 +1,5 @@
 use super::{Manifest, Plan, Receipt, SCHEMA};
-use crate::command::cache::transport::{MARKER, stamp::Stamp, target::NAMES};
+use crate::command::cache::transport::{MARKER, inputs::Stamp, target::NAMES};
 use std::collections::BTreeMap;
 use std::fs::{File, Metadata};
 use std::path::{Path, PathBuf};

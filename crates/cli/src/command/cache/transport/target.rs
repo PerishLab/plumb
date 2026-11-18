@@ -1,5 +1,5 @@
+use super::inputs::Stamp;
 use super::inputs::{digest, mode};
-use super::stamp::Stamp;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use std::path::{Path, PathBuf};

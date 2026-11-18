@@ -3,7 +3,7 @@ mod pack;
 mod tests;
 mod unpack;
 
-use super::transport::stamp::Stamp;
+use super::transport::inputs::Stamp;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -50,7 +50,7 @@ impl Parcel<'_> {
         pack::write(self.0, plan)
     }
 
-    pub fn read(&self, identity: &str) -> Result<Option<Snapshot>, String> {
-        unpack::read(self.0, identity)
+    pub fn read(&self, family: &str) -> Result<Option<Snapshot>, String> {
+        unpack::read(self.0, family)
     }
 }

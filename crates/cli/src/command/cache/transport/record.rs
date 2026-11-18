@@ -1,6 +1,6 @@
 use super::context::Context;
+use super::inputs::Stamp;
 use super::inputs::{Input, relative};
-use super::stamp::Stamp;
 use super::target::{Seal, Target};
 use super::{MARKER, SCHEMA};
 use serde::{Deserialize, Serialize};
