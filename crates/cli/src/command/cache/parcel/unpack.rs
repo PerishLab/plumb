@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use std::io::Read as _;
 use std::path::{Component, Path};
 
-pub(super) fn read(path: &Path, identity: &str) -> Result<Option<Snapshot>, String> {
+pub(super) fn read(path: &Path, family: &str) -> Result<Option<Snapshot>, String> {
     let metadata = match std::fs::symlink_metadata(path) {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -65,7 +65,7 @@ pub(super) fn read(path: &Path, identity: &str) -> Result<Option<Snapshot>, Stri
         }
     }
     let manifest = manifest.ok_or("compilation parcel has no manifest")?;
-    if manifest.schema != SCHEMA || manifest.identity != identity {
+    if manifest.schema != SCHEMA || !manifest.identity.starts_with(family) {
         return Err("compilation parcel identity does not match this Guard context".into());
     }
     let timed = manifest

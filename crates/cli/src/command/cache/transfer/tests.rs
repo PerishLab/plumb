@@ -1,4 +1,5 @@
 use super::{Action, Copy, Transfer};
+use crate::command::cache::parcel::{Parcel, Plan};
 
 #[test]
 fn existing() {
@@ -40,6 +41,7 @@ fn foreign() {
         home: root.path(),
         context: None,
         parcel: &parcel,
+        family: "unused",
         identity: "unused",
     };
     assert!(
@@ -104,4 +106,51 @@ fn symlink() {
             .file_type()
             .is_symlink()
     );
+}
+
+#[test]
+fn producers() {
+    let root = tempfile::tempdir().unwrap();
+    assert!(
+        std::process::Command::new("git")
+            .args(["init", "-q"])
+            .current_dir(root.path())
+            .status()
+            .unwrap()
+            .success()
+    );
+    let compiler = root.path().join("source");
+    std::fs::create_dir(&compiler).unwrap();
+    std::fs::write(compiler.join("entry"), "compiled").unwrap();
+    let parcel = root.path().join("slot/material.tar.zst");
+    std::fs::create_dir(parcel.parent().unwrap()).unwrap();
+    Parcel(&parcel)
+        .write(Plan {
+            identity: "world;producer-a".into(),
+            cargo: None,
+            compiler: Some(compiler),
+        })
+        .unwrap();
+    for (name, family, identity) in [
+        ("exact", "world;", "world;producer-a"),
+        ("other", "world;", "world;producer-b"),
+        ("foreign", "elsewhere;", "elsewhere;producer-a"),
+    ] {
+        let reused = name != "foreign";
+        let home = root.path().join(name);
+        std::fs::create_dir(&home).unwrap();
+        let receipt = Transfer {
+            root: root.path(),
+            home: &home,
+            context: None,
+            parcel: &parcel,
+            family,
+            identity,
+        }
+        .run(Action::Restore { fetch: false })
+        .unwrap();
+        assert!(!receipt.cargo, "{name}");
+        assert_eq!(receipt.compiler, reused, "{name}");
+        assert_eq!(home.join("cache/compiler/entry").exists(), reused, "{name}");
+    }
 }

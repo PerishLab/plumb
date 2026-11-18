@@ -18,6 +18,7 @@ pub(super) struct Transfer<'a> {
     pub home: &'a Path,
     pub context: Option<&'a Context>,
     pub parcel: &'a Path,
+    pub family: &'a str,
     pub identity: &'a str,
 }
 
@@ -51,7 +52,7 @@ impl Transfer<'_> {
             return Ok(receipt);
         }
         match crate::diagnostic::measure("material.lookup", || {
-            super::transport::provider::fetch(self.root, self.parcel, self.identity)
+            super::transport::provider::fetch(self.root, self.parcel, self.family, self.identity)
         }) {
             Ok(true) => self.restore(),
             Ok(false) => Ok(receipt),
@@ -82,7 +83,7 @@ impl Transfer<'_> {
 
     fn restore(&self) -> Result<Receipt, String> {
         let snapshot = match crate::diagnostic::measure("material.verify", || {
-            Parcel(self.parcel).read(self.identity)
+            Parcel(self.parcel).read(self.family)
         }) {
             Ok(Some(snapshot)) => snapshot,
             Ok(None) => {
@@ -102,8 +103,18 @@ impl Transfer<'_> {
             }
         };
         let lease = Lease::new(self.root)?;
-        let cargo =
-            crate::diagnostic::measure("material.native", || self.native(&snapshot, &lease))?;
+        let cargo = if snapshot.manifest.identity == self.identity {
+            crate::diagnostic::measure("material.native", || self.native(&snapshot, &lease))?
+        } else {
+            crate::diagnostic::event(
+                "material.foreign",
+                || serde_json::json!({"producer":"other","cargo":snapshot.manifest.cargo}),
+            );
+            eprintln!(
+                "guard material: parcel from another producer; reusing compiler material only"
+            );
+            false
+        };
         let compiler = if snapshot.manifest.compiler {
             Copy {
                 source: snapshot.root.path().join("compiler"),
