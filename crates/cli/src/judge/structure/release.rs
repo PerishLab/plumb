@@ -65,8 +65,9 @@ fn measured(release: &Release, found: &mut Found) {
     let rules = &crate::catalog::set::current().release;
     for (attachment, held) in &release.widths {
         let permitted = rules
-            .permitted
-            .get(attachment)
+            .products
+            .get(&(release.product.clone(), attachment.clone()))
+            .or_else(|| rules.permitted.get(attachment))
             .copied()
             .unwrap_or(rules.ceiling);
         if *held > permitted {

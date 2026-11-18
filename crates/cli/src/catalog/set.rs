@@ -23,6 +23,7 @@ pub const CARGO: Cargo = Cargo {
 pub struct Release {
     pub ceiling: usize,
     pub permitted: BTreeMap<String, usize>,
+    pub products: BTreeMap<(String, String), usize>,
 }
 
 const SETS: [&str; 6] = ["deps", "limit", "release", "scan", "seat", "structure"];
@@ -146,6 +147,7 @@ fn build() -> Result<Rules, String> {
         release: Release {
             ceiling: ceiling(&release)?,
             permitted: counted(&release, "permitted"),
+            products: products(release.get("product")),
         },
     })
 }
@@ -195,16 +197,34 @@ fn ceiling(doc: &toml::Table) -> Result<usize, String> {
 fn counted(doc: &toml::Table, key: &str) -> BTreeMap<String, usize> {
     doc.get(key)
         .and_then(toml::Value::as_table)
-        .map(|table| {
-            table
-                .iter()
-                .filter_map(|(name, value)| {
-                    let held = value.as_integer()?;
-                    usize::try_from(held).ok().map(|held| (name.clone(), held))
-                })
-                .collect()
-        })
+        .map(tallied)
         .unwrap_or_default()
+}
+
+fn products(value: Option<&toml::Value>) -> BTreeMap<(String, String), usize> {
+    let mut found = BTreeMap::new();
+    let Some(table) = value.and_then(toml::Value::as_table) else {
+        return found;
+    };
+    for (product, widths) in table {
+        let Some(widths) = widths.as_table() else {
+            continue;
+        };
+        for (attachment, held) in tallied(widths) {
+            found.insert((product.clone(), attachment), held);
+        }
+    }
+    found
+}
+
+fn tallied(table: &toml::Table) -> BTreeMap<String, usize> {
+    table
+        .iter()
+        .filter_map(|(name, value)| {
+            let held = value.as_integer()?;
+            usize::try_from(held).ok().map(|held| (name.clone(), held))
+        })
+        .collect()
 }
 
 fn required(value: &toml::Value, key: &str, place: &str) -> Result<String, String> {

@@ -329,8 +329,8 @@ tags = ["release", "repository"]
 [[rule]]
 id = "release.attachment-permitted"
 summary = "Attachments declare no more than Plumb permits"
-law = "An attachment declares at most the number of packages Plumb permits it, because every package past the first adds ordering, cross-pinning, and partial failure to the mechanism, and a product cannot grant itself a wider shape by declaring one."
-evidence = "The attachment tables in plumb.toml against the permitted widths in Plumb's release rules."
+law = "An attachment declares at most the number of packages Plumb permits it, or its product where Plumb names a wider width for that product, because every package past the first adds ordering, cross-pinning, and partial failure to the mechanism, and a product cannot grant itself a wider shape by declaring one."
+evidence = "The attachment tables in plumb.toml against the permitted and per-product widths in Plumb's release rules."
 standing = "mechanized"
 owner = "release"
 tags = ["ownership", "release"]
