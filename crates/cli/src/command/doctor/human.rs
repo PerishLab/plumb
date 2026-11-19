@@ -56,6 +56,9 @@ pub fn render(seen: Held<'_>) {
             held.topology.root,
         );
     }
+    if held.topology.ecosystem.is_some() {
+        println!("  root      cargo closure");
+    }
     match (held.block, held.path) {
         (Some(block), Some(path)) => println!(
             "  law       block={block} path={path} grants={}",

@@ -24,6 +24,8 @@ use std::path::Path;
 pub(crate) struct Report {
     pub schema: &'static str,
     pub root: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ecosystem: Option<Scope>,
     pub groups: BTreeMap<String, Vec<String>>,
     pub context: &'static str,
     pub input: String,
@@ -43,15 +45,27 @@ pub(crate) struct Report {
 #[serde(deny_unknown_fields)]
 struct Declaration {
     root: bool,
+    ecosystem: Option<Scope>,
     #[serde(default)]
     groups: BTreeMap<String, Vec<String>>,
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum Scope {
+    Cargo,
+}
+
+fn uncovered(root: &Path, scope: Option<Scope>) -> bool {
+    scope.is_none() && root.join("package.json").exists()
+}
+
 pub(crate) fn world(root: &Path, manifest: Option<&str>) -> Result<Option<String>, String> {
-    if !declared(manifest.unwrap_or_default().as_bytes())?.root {
+    let declaration = declared(manifest.unwrap_or_default().as_bytes())?;
+    if !declaration.root {
         return Ok(None);
     }
-    if root.join("Cargo.toml").exists() && !root.join("package.json").exists() {
+    if root.join("Cargo.toml").exists() && !uncovered(root, declaration.ecosystem) {
         crate::diagnostic::measure("topology.prepare", || plumb::packages::cargo::fetch(root))?;
     }
     let report = Report::read(root);
@@ -89,6 +103,7 @@ impl Report {
         report.root = match declared(&declaration) {
             Ok(value) => {
                 report.groups = value.groups;
+                report.ecosystem = value.ecosystem;
                 Some(value.root)
             }
             Err(error) => {
@@ -97,7 +112,7 @@ impl Report {
             }
         };
         let lock = std::fs::read(root.join("Cargo.lock")).unwrap_or_default();
-        if root.join("package.json").exists() && report.root != Some(false) {
+        if report.root != Some(false) && uncovered(root, report.ecosystem) {
             report
                 .unknown
                 .push("Node root closure is not yet supported".into());
@@ -194,6 +209,7 @@ impl Report {
         Self {
             schema: "plumb.topology/v3",
             root: Some(false),
+            ecosystem: None,
             groups: BTreeMap::new(),
             context: "frozen-all-features",
             input: String::new(),
