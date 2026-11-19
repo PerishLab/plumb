@@ -280,3 +280,21 @@ fn grouping() {
         assert_ne!(topology["input"], baseline["shape"]["topology"]["input"]);
     }
 }
+
+#[test]
+fn mixed() {
+    let root = fixture();
+    let path = root.path();
+    super::write(path, "package.json", r#"{"private":true}"#);
+    let old = &observe(path)["shape"]["topology"];
+    assert!(old["unknown"].to_string().contains("Node root closure"));
+    let file = path.join("plumb.toml");
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::write(file, text + "ecosystem='cargo'\n").unwrap();
+    let report = observe(path);
+    let topology = &report["shape"]["topology"];
+    assert_eq!(topology["ecosystem"], "cargo");
+    assert_eq!(topology["unknown"], serde_json::json!([]));
+    assert_eq!(topology["nodes"], old["nodes"]);
+    assert_ne!(topology["input"], old["input"]);
+}

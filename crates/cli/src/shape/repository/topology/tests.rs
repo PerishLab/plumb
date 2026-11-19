@@ -210,6 +210,8 @@ fn declaration() {
     for text in [
         "[dependency]\nroot=false\n",
         "[dependency]\nroot='true'\n",
+        "[dependency]\nroot=true\necosystem='node'\n",
+        "[dependency]\nroot=false\necosystem='cargo'\n",
         "[dependency]\nroot=true\nallow=['plumb']\n",
         "[dependency]\n",
     ] {
