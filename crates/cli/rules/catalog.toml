@@ -374,7 +374,7 @@ tags = ["ownership", "release", "state"]
 [[rule]]
 id = "release.marker-distributed"
 summary = "A marker counts as distributed only by its distribution record"
-law = "Wharf's distribution.json beside a marker's seal is the one authority on how far the marker is distributed: a prerelease promotes only once it records the prerelease complete at the commit being promoted, and a later marker waits until it records the stable below complete at that stable's commit. Seals, channel pointers and registries are evidence; drift is settled by dispatching the marker again."
+law = "Wharf's distribution.json beside a marker's seal is the one authority on how far the marker is distributed: a prerelease promotes only once it records the prerelease complete at the commit being promoted, and ordinary later markers wait until it records the stable below complete at that stable's commit. An exact organization-approved successor can proceed while this obligation remains explicitly owed. Seals, channel pointers and registries are evidence; drift is settled by dispatching the marker again."
 evidence = "The release authority's v1/releases/<channel>/<marker>/distribution.json: release stamp reads it for the prerelease a stable marker promotes, and release owed, open, stamp and ship dispatch read it for the highest stable below the marker at hand."
 standing = "mechanized"
 owner = "release"

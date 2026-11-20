@@ -1,5 +1,5 @@
 use super::course::Course;
-use super::owed::{Seat, observed};
+use super::owed::{Seat, observed, successor::Stage};
 use super::value;
 use super::wharf::{git, reference, repository, text};
 use crate::shape::release::Spec;
@@ -76,16 +76,21 @@ impl Line {
         ))
     }
 
-    fn fetch(&self, reference: &str) -> Result<(), String> {
+    fn fetch(&self, remote: &str, reference: &str) -> Result<(), String> {
         text(
             "fetch the line's origin",
-            git(&self.root, &["fetch", "--no-tags", &self.remote, reference])?,
+            git(&self.root, &["fetch", "--no-tags", remote, reference])?,
         )
         .map(|_| ())
     }
 }
 
-pub(in crate::command) fn open(raw: &str, remote: &str, dry: bool) -> Result<String, String> {
+pub(in crate::command) fn open(
+    raw: &str,
+    remote: &str,
+    dry: bool,
+    successor: Option<&str>,
+) -> Result<String, String> {
     let version = value::version(&named(raw), "stable")?;
     let branch = value::branch(&version);
     let line = Line::read(remote)?;
@@ -98,13 +103,18 @@ pub(in crate::command) fn open(raw: &str, remote: &str, dry: bool) -> Result<Str
         ));
     }
     value::ascends(&line.listing, remote, &version)?;
-    line.seat().require(&version)?;
+    line.seat().ordinary(&version, successor)?;
     let source = "refs/heads/main";
     let head = reference(&line.listing, source)
         .ok_or_else(|| format!("{remote} has no main to open a line from"))?;
+    let route = match successor {
+        Some(blob) => line.seat().successor(blob, &version, Stage::Open(&head))?,
+        None => remote.to_string(),
+    };
+    let remote = route.as_str();
     let mut course = Course::new(dry);
     course.step(format!("git fetch {remote} {source}"), || {
-        line.fetch(source)
+        line.fetch(remote, source)
     })?;
     course.step(
         format!("git push {remote} {head}:refs/heads/{branch}"),
@@ -135,8 +145,8 @@ pub(in crate::command) fn close(
     let line = Line::read(remote)?;
     let head = reference(&line.listing, &format!("refs/heads/{branch}"))
         .ok_or_else(|| format!("{remote} has no {branch}; nothing to close"))?;
-    line.fetch(&format!("refs/heads/{branch}"))?;
-    line.fetch("refs/heads/main")?;
+    line.fetch(remote, &format!("refs/heads/{branch}"))?;
+    line.fetch(remote, "refs/heads/main")?;
     match (line.released(&version)?, abandon) {
         (Some(commit), false) => released(&line, &version, &commit, &head)?,
         (Some(_), true) => {

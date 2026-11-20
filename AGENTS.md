@@ -387,7 +387,14 @@ PerishLab/plumb#509.
   (`depot consign`), and its line closed. `command/operator/owed` is their
   table; each row names its rule, the command that settles it and the detector
   that reads it, `release owed` reports it, and `release open`, `release
-  stamp` and `ship dispatch` refuse any later version while one is owed. A settlement never ships without its detector, nor
+  stamp` and `ship dispatch` normally refuse a later version while one is owed.
+  An explicit `--successor GIT_BLOB` on open, stamp and dispatch authenticates
+  a decision from the protected main of PerishLab/.github. It admits one exact
+  patch and first RC while the original distribution remains owed. All other
+  applicable obligations must be settled. Source, native refs, old receipt and
+  stable channel must agree with the decision. Stable promotion verifies the
+  completed exact RC and a completed successor exhausts the decision.
+  A settlement never ships without its detector, nor
   a detector without its settlement.
 - Wherever a marker has a distribution record, it alone says how far the marker
   is distributed: `ship status` reads it, `ship dispatch --watch` judges its run
