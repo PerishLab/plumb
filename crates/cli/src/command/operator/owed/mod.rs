@@ -1,3 +1,8 @@
+mod decision;
+mod native;
+mod origin;
+pub(super) mod successor;
+
 use crate::catalog::model::Mechanism;
 use crate::catalog::rules::release as law;
 use crate::shape::pair::rejoin;
@@ -92,6 +97,14 @@ impl Seat<'_> {
             held.push((obligation, (obligation.detect)(self, stable)?));
         }
         Ok(held)
+    }
+
+    pub fn ordinary(&self, marker: &str, successor: Option<&str>) -> Result<(), String> {
+        if successor.is_some() {
+            Ok(())
+        } else {
+            self.require(marker)
+        }
     }
 
     pub fn require(&self, marker: &str) -> Result<(), String> {
@@ -258,3 +271,8 @@ pub fn source(spec: &Spec) -> String {
 
 #[cfg(test)]
 mod proof;
+
+#[cfg(test)]
+mod admission;
+#[cfg(test)]
+mod pilot;

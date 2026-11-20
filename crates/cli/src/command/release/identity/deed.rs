@@ -49,6 +49,12 @@ pub enum Deed {
         remote: String,
         #[arg(long = "dry-run")]
         dry: bool,
+        #[arg(
+            long,
+            value_name = "GIT_BLOB",
+            help = "Use the exact organization-approved successor record"
+        )]
+        successor: Option<String>,
     },
     #[command(about = "Open the release line one version is stamped on")]
     Open {
@@ -58,6 +64,12 @@ pub enum Deed {
         remote: String,
         #[arg(long = "dry-run")]
         dry: bool,
+        #[arg(
+            long,
+            value_name = "GIT_BLOB",
+            help = "Use the exact organization-approved successor record"
+        )]
+        successor: Option<String>,
     },
     #[command(about = "Close a release line once its stable marker is home")]
     Close {

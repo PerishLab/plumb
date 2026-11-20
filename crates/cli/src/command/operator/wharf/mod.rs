@@ -1,5 +1,6 @@
 use super::Dispatch;
 use super::course::Course;
+use super::owed::successor::Stage;
 use super::value;
 use plumb::seat::release::{Authority, Distribution, Marker};
 use std::path::Path;
@@ -7,6 +8,7 @@ use std::process::{Command, Output};
 
 pub(super) mod launch;
 mod record;
+use record::next;
 pub(super) mod status;
 
 const HUB: &str = "PerishLab/wharf";
@@ -14,7 +16,12 @@ const WORKFLOW: &str = "ship.yml";
 const PRERELEASES: [&str; 2] = ["rc", "beta"];
 const STABLE: &str = "stable";
 
-pub(in crate::command) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<String, String> {
+pub(in crate::command) fn stamp(
+    raw: &str,
+    remote: &str,
+    dry: bool,
+    successor: Option<&str>,
+) -> Result<String, String> {
     let held = if raw.starts_with('v') {
         raw.to_string()
     } else {
@@ -41,13 +48,13 @@ pub(in crate::command) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<St
     )?;
     value::ascends(&listing, remote, &version)?;
     let spec = crate::shape::release::Spec::controller(&root)?;
-    super::owed::Seat {
+    let seat = super::owed::Seat {
         root: &root,
         remote,
         listing: &listing,
         spec: &spec,
-    }
-    .require(&version)?;
+    };
+    seat.ordinary(&version, successor)?;
     let head = reference(&listing, &format!("refs/heads/{branch}")).ok_or_else(|| {
         format!("{remote} has no {branch}; a marker stands only on its release line")
     })?;
@@ -81,6 +88,11 @@ pub(in crate::command) fn stamp(raw: &str, remote: &str, dry: bool) -> Result<St
         }
         version.clone()
     };
+    let route = match successor {
+        Some(blob) => seat.successor(blob, &version, Stage::Stamp(&head, &message))?,
+        None => remote.to_string(),
+    };
+    let remote = route.as_str();
     let mut course = Course::new(dry);
     course.step(format!("fetch {branch} from {remote}"), || {
         text(
@@ -193,13 +205,17 @@ pub(super) fn dispatch(options: Dispatch) -> Result<String, String> {
         })?;
         record::unmoved(held.as_ref(), &options.marker, &commit)?;
     }
-    super::owed::Seat {
+    let seat = super::owed::Seat {
         root: &root,
         remote: "origin",
         listing: &listing,
         spec: &spec,
+    };
+    if let Some(blob) = options.successor.as_deref() {
+        seat.successor(blob, &options.marker, Stage::Dispatch(&commit))?;
+    } else {
+        seat.require(&options.marker)?;
     }
-    .require(&options.marker)?;
     let mut course = Course::new(options.dry);
     let fields = [
         format!("repository={repo}"),
@@ -222,6 +238,13 @@ pub(super) fn dispatch(options: Dispatch) -> Result<String, String> {
                 channel,
                 marker: options.marker.clone(),
             })?;
+            if options.successor.is_some()
+                && record.as_ref().is_none_or(|item| item.commit != commit)
+            {
+                return Err(format!(
+                    "{url}: successor distribution source differs from {commit}"
+                ));
+            }
             let said = status::verdict(record, &options.marker, launch::identity(&url))
                 .map_err(|error| format!("{url}: {error}"))?;
             Ok(format!("{url}\n{said}"))
@@ -248,22 +271,6 @@ pub(super) fn reference(listing: &str, name: &str) -> Option<String> {
         let (object, held) = line.split_once('\t')?;
         (held == name).then(|| object.to_string())
     })
-}
-
-fn next(listing: &str, base: &str, channel: &str) -> u64 {
-    let prefix = format!("refs/tags/{base}-{channel}.");
-    listing
-        .lines()
-        .filter_map(|line| {
-            line.split_once('\t')?
-                .1
-                .strip_prefix(&prefix)?
-                .parse::<u64>()
-                .ok()
-        })
-        .max()
-        .unwrap_or(0)
-        + 1
 }
 
 pub(super) fn git(root: &Path, args: &[&str]) -> Result<Output, String> {

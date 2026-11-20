@@ -22,6 +22,12 @@ pub(super) use wharf::status::status;
 pub struct Dispatch {
     #[arg(long)]
     marker: String,
+    #[arg(
+        long,
+        value_name = "GIT_BLOB",
+        help = "Use the exact organization-approved successor record"
+    )]
+    successor: Option<String>,
     #[arg(long, default_value = "")]
     repo: String,
     #[arg(long)]

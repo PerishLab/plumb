@@ -56,14 +56,16 @@ fn execute(deed: Deed) -> Result<String, String> {
             version,
             remote,
             dry,
-        } => super::operator::stamp(&version, &remote, dry),
+            successor,
+        } => super::operator::stamp(&version, &remote, dry, successor.as_deref()),
         Deed::Retract { version, dry } => super::operator::retract(&version, dry),
         Deed::Rejoin => super::operator::rejoin(),
         Deed::Open {
             version,
             remote,
             dry,
-        } => super::operator::open(&version, &remote, dry),
+            successor,
+        } => super::operator::open(&version, &remote, dry, successor.as_deref()),
         Deed::Close {
             version,
             abandon,
