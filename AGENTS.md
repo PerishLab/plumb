@@ -525,7 +525,23 @@ meanwhile:
   the declaration file or ambient endpoint configuration. Callers own parsing
   failure handoff and explicit environment fallback; disabled snapshots touch no
   spool or reporter. The original file-based `start` and `open` retain their
-  existing permissive section parsing and endpoint fallback.
+  existing permissive section parsing and endpoint fallback. For HTTPS, an
+  enabled file declares both `endpoint` and absolute writer `key_file`. It can
+  add the canonical absolute `sender` path to a trusted Locus executable on
+  Unix. Other platforms use the SDK’s in-process sender and finite recovery.
+  With no local endpoint, key file or sender, the observer reads `LOCUS_API`,
+  `LOCUS_API_KEY_FILE` and optional `LOCUS_SENDER` together. A local setting
+  selects its own configuration and never borrows an ambient credential.
+  `Run::reporting` accepts `Configuration::new(settings, writer)` with an
+  optional writer-file reference and an optional `.sender(path)`. It reads no
+  ambient endpoint configuration. Locus owns
+  transport, key rotation and recovery. Each producer's HTTPS outbox is
+  `<declared-buffer>.https/<producer>`; recover it with
+  `locus deliver --buffer <outbox>`. Existing HTTP uses the declared buffer.
+  Run completion appends its final Atom and invokes the SDK’s bounded settle
+  once. An explicit sender allows command exit while delivery continues. A
+  later finite drain recovers any unconfirmed records.
+  Authenticated reads use a separately scoped reader and its token file.
 
 
 Plumb's own; a product may adopt the exports but is not judged against them:
