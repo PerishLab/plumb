@@ -1,3 +1,8 @@
+mod configuration;
+#[cfg(test)]
+mod testing;
+
+pub use configuration::Configuration;
 use locus::{Adaptor, Candidate, Config, Context, Engine, Hook, Key, Policy, Role};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -11,14 +16,7 @@ const PARENT: &str = "parent";
 #[derive(Default, Deserialize)]
 struct File {
     #[serde(default)]
-    locus: Legacy,
-}
-
-#[derive(Default, Deserialize)]
-struct Legacy {
-    #[serde(default)]
-    enabled: bool,
-    endpoint: Option<String>,
+    locus: Configuration,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
@@ -70,12 +68,24 @@ impl Run {
         settings: Settings,
         hook: Arc<dyn Hook>,
     ) -> Result<Option<Self>, String> {
-        if !settings.enabled {
+        Self::reporting(
+            declaration,
+            command,
+            Configuration::new(settings, None),
+            hook,
+        )
+    }
+    pub fn reporting(
+        declaration: Declaration<'_>,
+        command: &str,
+        configuration: Configuration,
+        hook: Arc<dyn Hook>,
+    ) -> Result<Option<Self>, String> {
+        let Some(reporter) = configuration.reporter(&declaration)? else {
             return Ok(None);
-        }
-        let endpoint = settings.endpoint.unwrap_or_else(|| ENDPOINT.into());
+        };
         let (seat, cycle) =
-            build(&declaration, command, endpoint, hook).map_err(|error| error.to_string())?;
+            build(&declaration, command, reporter, hook).map_err(|error| error.to_string())?;
         let seat: &'static Seat = Box::leak(Box::new(seat));
         *ACTIVE.write().unwrap_or_else(|error| error.into_inner()) = Some(seat);
         Ok(Some(Run {
@@ -109,6 +119,7 @@ impl Run {
             candidate = candidate.explicit(role, key);
         }
         let _ = seat.engine.append(&self.cycle, candidate);
+        seat.engine.settle();
     }
 }
 pub fn view() -> Option<(&'static Engine, &'static Context)> {
@@ -153,29 +164,20 @@ fn load(
         }
         Err(error) => return Err(error.to_string()),
     };
-    if !file.locus.enabled {
-        return Ok(None);
-    }
-    let endpoint = file
-        .locus
-        .endpoint
-        .or_else(|| crate::config::value("LOCUS_API"))
-        .unwrap_or_else(|| ENDPOINT.into());
-    Run::configured(
-        declaration,
-        command,
-        Settings {
-            enabled: true,
-            endpoint: Some(endpoint),
-        },
-        hook,
-    )
+    let configuration = file.locus.fallback(|| {
+        (
+            crate::config::value("LOCUS_API"),
+            std::env::var_os("LOCUS_API_KEY_FILE").map(PathBuf::from),
+            std::env::var_os("LOCUS_SENDER").map(PathBuf::from),
+        )
+    });
+    Run::reporting(declaration, command, configuration, hook)
 }
 
 fn build(
     declaration: &Declaration<'_>,
     command: &str,
-    endpoint: String,
+    reporter: locus::reporter::Spec,
     hook: Arc<dyn Hook>,
 ) -> Result<(Seat, Context), locus::Error> {
     let producer = declaration.producer;
@@ -184,10 +186,7 @@ fn build(
             Policy::default()
                 .producer(producer)
                 .collector(PARENT, locus::collector::Spec::parent())
-                .reporter(locus::reporter::Spec::api(
-                    endpoint,
-                    declaration.buffer.clone(),
-                )),
+                .reporter(reporter),
         )
         .hook(hook),
     )?;

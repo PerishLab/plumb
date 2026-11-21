@@ -15,7 +15,7 @@ use std::path::PathBuf;
 #[command(
     name = "plumb",
     version = plumb::version!("PLUMB"),
-    long_about = "Judge, prove, and deliver repositories.\n\nOptional Locus observation is disabled by default. Configure [locus] enabled = true in PLUMB_HOME/plumb.toml (default data home: .plumb under your home; LOCALAPPDATA/plumb on Windows). Set endpoint in that section to select a locus-api, otherwise LOCUS_API or http://127.0.0.1:43308 is used. Observation failures produce diagnostics and leave command results intact."
+    long_about = "Judge, prove, and deliver repositories.\n\nOptional Locus observation is disabled by default. Configure [locus] enabled = true in PLUMB_HOME/plumb.toml (default data home: .plumb under your home; LOCALAPPDATA/plumb on Windows). Set endpoint and key_file together for authenticated HTTPS. On Unix an optional absolute sender path to the locus executable lets the command exit while delivery continues. With no local endpoint, key_file or sender, LOCUS_API, LOCUS_API_KEY_FILE and optional LOCUS_SENDER supply the configuration. A local HTTP endpoint uses the original spool. The default is http://127.0.0.1:43308. Drain the HTTPS queue with locus deliver --buffer <PLUMB_HOME>/state/locus.https/plumb. Observation failures produce diagnostics and leave command results intact."
 )]
 struct Cli {
     #[command(subcommand)]
