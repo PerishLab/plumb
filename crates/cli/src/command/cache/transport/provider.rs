@@ -20,6 +20,13 @@ struct Run {
     head: String,
     #[serde(rename = "run_attempt")]
     attempt: u64,
+    #[serde(default, rename = "pull_requests")]
+    requests: Vec<Request>,
+}
+
+#[derive(Deserialize)]
+struct Request {
+    number: u64,
 }
 
 #[derive(Deserialize)]
@@ -59,6 +66,7 @@ pub(crate) fn fetch(root: &Path, target: &Path, family: &str, exact: &str) -> Re
         }
     }
     found.sort_by_key(|(_, slot)| !slot.exact);
+    let pull = pull();
     for (artifact, slot) in found {
         let attempt = slot.attempt;
         let Some(reference) = &artifact.run else {
@@ -75,16 +83,30 @@ pub(crate) fn fetch(root: &Path, target: &Path, family: &str, exact: &str) -> Re
         }
         let commit: Commit =
             client.json(&format!("repos/{repository}/git/commits/{}", run.head))?;
-        if !trees.contains(&commit.tree.sha) {
+        let mut requests = run.requests();
+        if !belongs(&trees, &commit.tree.sha, pull, &requests)
+            && pull.is_some()
+            && requests.is_empty()
+        {
+            requests = linked(&client, &repository, &run.head)?;
+        }
+        if !belongs(&trees, &commit.tree.sha, pull, &requests) {
             scan.outside += 1;
             continue;
         }
         artifact.download(&client, &repository, target)?;
         let producer = if slot.exact { "this" } else { "another" };
-        eprintln!(
-            "guard material: fetched {producer} producer's material for accepted default-branch tree {} from Guard run {} attempt {attempt}",
-            commit.tree.sha, reference.id
-        );
+        if trees.contains(&commit.tree.sha) {
+            eprintln!(
+                "guard material: fetched {producer} producer's material for accepted default-branch tree {} from Guard run {} attempt {attempt}",
+                commit.tree.sha, reference.id
+            );
+        } else {
+            eprintln!(
+                "guard material: fetched {producer} producer's material for this pull request from Guard run {} attempt {attempt}",
+                reference.id
+            );
+        }
         scan.finish(true);
         return Ok(true);
     }
@@ -102,6 +124,44 @@ impl Run {
         }
         matches!(self.event.as_str(), "pull_request" | "merge_group") && object(&self.head)
     }
+
+    fn requests(&self) -> Vec<u64> {
+        self.requests
+            .iter()
+            .map(|request| request.number)
+            .filter(|number| *number != 0)
+            .collect()
+    }
+}
+
+fn pull() -> Option<u64> {
+    std::env::var("GITHUB_REF")
+        .ok()
+        .as_deref()
+        .and_then(numbered)
+}
+
+fn numbered(value: &str) -> Option<u64> {
+    let rest = value.strip_prefix("refs/pull/")?;
+    let (number, suffix) = rest.split_once('/')?;
+    if suffix != "merge" && suffix != "head" {
+        return None;
+    }
+    number.parse().ok().filter(|number| *number != 0)
+}
+
+fn belongs(trees: &BTreeSet<String>, tree: &str, pull: Option<u64>, requests: &[u64]) -> bool {
+    trees.contains(tree) || pull.is_some_and(|pull| requests.contains(&pull))
+}
+
+fn linked(client: &Client, repository: &str, head: &str) -> Result<Vec<u64>, String> {
+    let requests: Vec<Request> =
+        client.json(&format!("repos/{repository}/commits/{head}/pulls"))?;
+    Ok(requests
+        .iter()
+        .map(|request| request.number)
+        .filter(|number| *number != 0)
+        .collect())
 }
 
 fn repository(root: &Path) -> Result<String, String> {
@@ -171,6 +231,7 @@ mod tests {
             conclusion: Some("success".into()),
             head: "a".repeat(40),
             attempt: 2,
+            requests: Vec::new(),
         };
         assert!(run.admitted(2));
         assert!(!run.admitted(1));
@@ -182,5 +243,28 @@ mod tests {
         run.path = ".github/workflows/guard.yml".into();
         run.event = "workflow_dispatch".into();
         assert!(!run.admitted(2));
+    }
+
+    #[test]
+    fn request() {
+        assert_eq!(super::numbered("refs/pull/294/merge"), Some(294));
+        assert_eq!(super::numbered("refs/pull/294/head"), Some(294));
+        assert_eq!(super::numbered("refs/pull/0/merge"), None);
+        assert_eq!(super::numbered("refs/heads/auto/294"), None);
+        assert_eq!(super::numbered("refs/pull/294/other"), None);
+        assert_eq!(super::numbered("refs/pull/merge"), None);
+    }
+
+    #[test]
+    fn window() {
+        let tree = "b".repeat(40);
+        let mut trees = std::collections::BTreeSet::new();
+        trees.insert(tree.clone());
+        assert!(super::belongs(&trees, &tree, None, &[]));
+        assert!(!super::belongs(&trees, &"c".repeat(40), None, &[294]));
+        assert!(super::belongs(&trees, &"c".repeat(40), Some(294), &[294]));
+        assert!(!super::belongs(&trees, &"c".repeat(40), Some(294), &[295]));
+        assert!(!super::belongs(&trees, &"c".repeat(40), Some(294), &[]));
+        assert!(!super::belongs(&trees, &"c".repeat(40), None, &[294]));
     }
 }

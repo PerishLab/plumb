@@ -36,7 +36,8 @@ The caller only passes the branch variables it already provides.
 
 With --restore --fetch, an unavailable native snapshot may be seeded from a
 successful organization Guard artifact whose exact head tree is in the locally
-fetched default branch history. Lookup is bounded and requires GH_TOKEN or
+fetched default branch history, or whose originating run belongs to the same
+pull request as the current job. Lookup is bounded and requires GH_TOKEN or
 GITHUB_TOKEN with repository Actions read access. The credential is isolated
 from repository execution and is never forwarded to artifact storage. The
 artifact digest, parcel identity and native content are independently checked.
