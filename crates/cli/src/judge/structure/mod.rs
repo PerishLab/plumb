@@ -6,6 +6,7 @@ use crate::shape;
 use std::collections::BTreeSet;
 
 mod collaboration;
+mod family;
 pub(crate) mod layout;
 mod policy;
 mod release;

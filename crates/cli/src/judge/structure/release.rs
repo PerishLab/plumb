@@ -5,15 +5,8 @@ use crate::judge::finding::{Found, Seed};
 use crate::shape;
 use crate::shape::pair::Release;
 
-const EXERCISED: [(&str, usize); 2] = [("cargo", 2), ("npm", 1)];
-
-fn exercised(attachment: &str) -> usize {
-    EXERCISED
-        .iter()
-        .find(|(name, _)| *name == attachment)
-        .map(|(_, width)| *width)
-        .unwrap_or(0)
-}
+use super::family::{Widths, observed};
+use std::collections::BTreeMap;
 
 pub fn judge(held: &shape::Shape) -> Found {
     Judge(held).run()
@@ -38,7 +31,7 @@ impl Judge<'_> {
             found.push(Seed::blind(&release::IDENTITY_BOUND, error.clone()));
         }
         spec(&held.release, &mut found);
-        measured(&held.release, &mut found);
+        measured(&held.release, &mut found, &observed());
         found
     }
 }
@@ -61,7 +54,7 @@ fn spec(release: &Release, found: &mut Found) {
     }
 }
 
-fn measured(release: &Release, found: &mut Found) {
+fn measured(release: &Release, found: &mut Found, widths: &Widths) {
     let rules = &crate::catalog::set::current().release;
     for (attachment, held) in &release.widths {
         let permitted = rules
@@ -79,14 +72,32 @@ fn measured(release: &Release, found: &mut Found) {
             ));
             continue;
         }
-        let exercised = exercised(attachment);
-        if *held > exercised {
-            found.push(Seed::noted(
-                &release::ATTACHMENT_EXERCISED,
-                format!(
-                    "the {attachment} attachment declares {held} packages and the skeleton has released {exercised}; this width has never run"
-                ),
-            ));
+        if let Some(seed) = gap(attachment, *held, widths) {
+            found.push(seed);
         }
     }
+}
+
+fn gap(attachment: &str, held: usize, widths: &Widths) -> Option<Seed> {
+    match widths {
+        Widths::Blind(error) => Some(Seed::unknown(
+            &release::ATTACHMENT_EXERCISED,
+            format!(
+                "the {attachment} attachment declares {held} packages and the family's released width could not be read: {error}"
+            ),
+        )),
+        Widths::Known(widths) => wider(attachment, held, widths),
+    }
+}
+
+fn wider(attachment: &str, held: usize, widths: &BTreeMap<String, usize>) -> Option<Seed> {
+    let exercised = widths.get(attachment).copied().unwrap_or(0);
+    (held > exercised).then(|| {
+        Seed::noted(
+            &release::ATTACHMENT_EXERCISED,
+            format!(
+                "the {attachment} attachment declares {held} packages and the family has released {exercised}; this width has never run"
+            ),
+        )
+    })
 }
