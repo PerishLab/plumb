@@ -9,14 +9,19 @@ This repository is the workshop's living skeleton. `ectropy .` must print
 `clean` before anything lands, and CI runs the complete repository guard in
 explicit fail-fast order. Ectropy has one severity: every finding is an error.
 
-Four surfaces answer, and knowing which one to ask is most of knowing this
-repository. **The source** says what a thing does and why it exists; it is the
-only one that cannot be wrong. **`--help`** says how to use it, and covers every
-command. **`plumb cookbook`** says what to do when something fired, and covers
-only the findings whose remedy the finding itself does not give. **This file**
-says what none of the other three can, which is why it is short and why anything
-belonging to them is removed from it on sight. Ask the surface that owns the
-question rather than trusting the nearest prose.
+Six surfaces answer, and knowing which one to ask is most of knowing this
+repository. The organization-wide division of authority in GOVERNANCE.md is the
+canonical list; this is its local view, naming only the surfaces this repository
+has. **The source** says what a thing does and why it exists; it is the only one
+that cannot be wrong. **`--help`** says how to use it, and covers every command.
+**`plumb cookbook`** says what to do when something fired, and covers only the
+findings whose remedy the finding itself does not give. **The product Skill** is
+the durable entry point and the promise plumb makes to its users;
+`release.skill = true` lodges it on Depot and installs it as a managed seat.
+**Errors, status and audit output** own current operational evidence. **This
+file** says what none of the others can, which is why it is short and why
+anything belonging to them is removed from it on sight. Ask the surface that
+owns the question rather than trusting the nearest prose.
 
 ## The relation
 
