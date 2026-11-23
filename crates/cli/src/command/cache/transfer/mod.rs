@@ -52,6 +52,7 @@ impl Transfer<'_> {
             return Ok(receipt);
         }
         let budget = budget::budget()?;
+        let pages = scan::pages()?;
         match crate::diagnostic::measure("material.lookup", || {
             super::transport::provider::fetch(&super::transport::provider::Lookup {
                 root: self.root,
@@ -59,6 +60,7 @@ impl Transfer<'_> {
                 family: self.family,
                 exact: self.identity,
                 budget,
+                pages,
             })
         }) {
             Ok(true) => self.restore(),
@@ -241,5 +243,6 @@ impl Copy {
 
 mod budget;
 mod native;
+mod scan;
 #[cfg(test)]
 mod tests;

@@ -1,4 +1,4 @@
-use super::artifact::Listing;
+use super::artifact::{Artifact, Listing, Slot};
 use super::request::{Client, Scan};
 use serde::Deserialize;
 use std::collections::BTreeSet;
@@ -12,22 +12,22 @@ struct Repository {
 }
 
 #[derive(Deserialize)]
-struct Run {
-    path: String,
-    event: String,
-    status: String,
-    conclusion: Option<String>,
+pub(super) struct Run {
+    pub path: String,
+    pub event: String,
+    pub status: String,
+    pub conclusion: Option<String>,
     #[serde(rename = "head_sha")]
-    head: String,
+    pub head: String,
     #[serde(rename = "run_attempt")]
-    attempt: u64,
+    pub attempt: u64,
     #[serde(default, rename = "pull_requests")]
-    requests: Vec<Request>,
+    pub requests: Vec<Request>,
 }
 
 #[derive(Deserialize)]
-struct Request {
-    number: u64,
+pub(super) struct Request {
+    pub number: u64,
 }
 
 #[derive(Deserialize)]
@@ -46,6 +46,7 @@ pub(crate) struct Lookup<'a> {
     pub family: &'a str,
     pub exact: &'a str,
     pub budget: Duration,
+    pub pages: u64,
 }
 
 pub(crate) fn fetch(lookup: &Lookup<'_>) -> Result<bool, String> {
@@ -57,79 +58,131 @@ pub(crate) fn fetch(lookup: &Lookup<'_>) -> Result<bool, String> {
     let trees = trees(lookup.root, &metadata.branch)?;
     let mut scan = Scan::default();
     let mut found = Vec::new();
-    for page in 1..=5 {
-        let listing: Listing = client.json(&format!(
-            "repos/{repository}/actions/artifacts?per_page=20&page={page}"
-        ))?;
+    let mut start = 0;
+    let mut hunt = Hunt {
+        client: &client,
+        repository: &repository,
+        lookup,
+        trees: &trees,
+        pull: pull(),
+        scan: &mut scan,
+    };
+    for page in 1..=lookup.pages {
+        let listing = match artifacts(hunt.client, hunt.repository, page) {
+            Ok(listing) => listing,
+            Err(error) if exhausted(&error) && !found.is_empty() => break,
+            Err(error) => return Err(error),
+        };
         let count = listing.artifacts.len();
-        scan.pages = page;
+        hunt.scan.pages = page;
         for artifact in listing.artifacts {
-            let slot = artifact.slot(lookup.family, lookup.exact);
-            scan.note(
+            let slot = artifact.slot(hunt.lookup.family, hunt.lookup.exact);
+            hunt.scan.note(
                 &artifact.name,
                 artifact.expired,
                 slot.as_ref(),
-                lookup.family,
+                hunt.lookup.family,
             );
             if let Some(slot) = slot {
                 found.push((artifact, slot));
             }
         }
+        if offer(&mut hunt, &found, start, true)? {
+            return Ok(true);
+        }
+        start = found.len();
         if count < 20 {
             break;
         }
     }
-    found.sort_by_key(|(_, slot)| !slot.exact);
-    let pull = pull();
-    for (artifact, slot) in found {
-        let attempt = slot.attempt;
-        let Some(reference) = &artifact.run else {
-            scan.refused += 1;
-            continue;
-        };
-        let run: Run = client.json(&format!(
-            "repos/{repository}/actions/runs/{}/attempts/{attempt}",
-            reference.id
-        ))?;
-        if !run.admitted(attempt) {
-            scan.refused += 1;
-            continue;
-        }
-        let commit: Commit =
-            client.json(&format!("repos/{repository}/git/commits/{}", run.head))?;
-        let mut requests = run.requests();
-        if !belongs(&trees, &commit.tree.sha, pull, &requests)
-            && pull.is_some()
-            && requests.is_empty()
-        {
-            requests = linked(&client, &repository, &run.head)?;
-        }
-        if !belongs(&trees, &commit.tree.sha, pull, &requests) {
-            scan.outside += 1;
-            continue;
-        }
-        artifact.download(&client, &repository, lookup.target)?;
-        let producer = if slot.exact { "this" } else { "another" };
-        if trees.contains(&commit.tree.sha) {
-            eprintln!(
-                "guard material: fetched {producer} producer's material for accepted default-branch tree {} from Guard run {} attempt {attempt}",
-                commit.tree.sha, reference.id
-            );
-        } else {
-            eprintln!(
-                "guard material: fetched {producer} producer's material for this pull request from Guard run {} attempt {attempt}",
-                reference.id
-            );
-        }
-        scan.finish(true);
+    if offer(&mut hunt, &found, 0, false)? {
         return Ok(true);
     }
-    scan.finish(false);
+    hunt.scan.finish(false);
     Ok(false)
 }
 
+struct Hunt<'a> {
+    client: &'a Client,
+    repository: &'a str,
+    lookup: &'a Lookup<'a>,
+    trees: &'a BTreeSet<String>,
+    pull: Option<u64>,
+    scan: &'a mut Scan,
+}
+
+fn artifacts(client: &Client, repository: &str, page: u64) -> Result<Listing, String> {
+    client.json(&format!(
+        "repos/{repository}/actions/artifacts?per_page=20&page={page}"
+    ))
+}
+
+fn exhausted(error: &str) -> bool {
+    error.contains("exceeded its") && error.contains("budget")
+}
+
+fn offer(
+    hunt: &mut Hunt<'_>,
+    found: &[(Artifact, Slot)],
+    start: usize,
+    exact: bool,
+) -> Result<bool, String> {
+    for (artifact, slot) in found.iter().skip(start) {
+        if slot.exact == exact && take(hunt, artifact, slot)? {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn take(hunt: &mut Hunt<'_>, artifact: &Artifact, slot: &Slot) -> Result<bool, String> {
+    let attempt = slot.attempt;
+    let Some(reference) = &artifact.run else {
+        hunt.scan.refused += 1;
+        return Ok(false);
+    };
+    let run: Run = hunt.client.json(&format!(
+        "repos/{}/actions/runs/{}/attempts/{attempt}",
+        hunt.repository, reference.id
+    ))?;
+    if !run.admitted(attempt) {
+        hunt.scan.refused += 1;
+        return Ok(false);
+    }
+    let commit: Commit = hunt.client.json(&format!(
+        "repos/{}/git/commits/{}",
+        hunt.repository, run.head
+    ))?;
+    let mut requests = run.requests();
+    if !belongs(hunt.trees, &commit.tree.sha, hunt.pull, &requests)
+        && hunt.pull.is_some()
+        && requests.is_empty()
+    {
+        requests = linked(hunt.client, hunt.repository, &run.head)?;
+    }
+    if !belongs(hunt.trees, &commit.tree.sha, hunt.pull, &requests) {
+        hunt.scan.outside += 1;
+        return Ok(false);
+    }
+    artifact.download(hunt.client, hunt.repository, hunt.lookup.target)?;
+    let producer = if slot.exact { "this" } else { "another" };
+    if hunt.trees.contains(&commit.tree.sha) {
+        eprintln!(
+            "guard material: fetched {producer} producer's material for accepted default-branch tree {} from Guard run {} attempt {attempt}",
+            commit.tree.sha, reference.id
+        );
+    } else {
+        eprintln!(
+            "guard material: fetched {producer} producer's material for this pull request from Guard run {} attempt {attempt}",
+            reference.id
+        );
+    }
+    hunt.scan.finish(true);
+    Ok(true)
+}
+
 impl Run {
-    fn admitted(&self, attempt: u64) -> bool {
+    pub(super) fn admitted(&self, attempt: u64) -> bool {
         if self.status != "completed" || self.conclusion.as_deref() != Some("success") {
             return false;
         }
@@ -155,7 +208,7 @@ fn pull() -> Option<u64> {
         .and_then(numbered)
 }
 
-fn numbered(value: &str) -> Option<u64> {
+pub(super) fn numbered(value: &str) -> Option<u64> {
     let rest = value.strip_prefix("refs/pull/")?;
     let (number, suffix) = rest.split_once('/')?;
     if suffix != "merge" && suffix != "head" {
@@ -164,7 +217,12 @@ fn numbered(value: &str) -> Option<u64> {
     number.parse().ok().filter(|number| *number != 0)
 }
 
-fn belongs(trees: &BTreeSet<String>, tree: &str, pull: Option<u64>, requests: &[u64]) -> bool {
+pub(super) fn belongs(
+    trees: &BTreeSet<String>,
+    tree: &str,
+    pull: Option<u64>,
+    requests: &[u64],
+) -> bool {
     trees.contains(tree) || pull.is_some_and(|pull| requests.contains(&pull))
 }
 
@@ -230,55 +288,4 @@ fn trees(root: &Path, branch: &str) -> Result<BTreeSet<String>, String> {
 
 fn object(value: &str) -> bool {
     matches!(value.len(), 40 | 64) && value.bytes().all(|byte| byte.is_ascii_hexdigit())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::Run;
-
-    #[test]
-    fn admission() {
-        let mut run = Run {
-            path: ".github/workflows/guard.yml".into(),
-            event: "pull_request".into(),
-            status: "completed".into(),
-            conclusion: Some("success".into()),
-            head: "a".repeat(40),
-            attempt: 2,
-            requests: Vec::new(),
-        };
-        assert!(run.admitted(2));
-        assert!(!run.admitted(1));
-        run.conclusion = Some("failure".into());
-        assert!(!run.admitted(2));
-        run.conclusion = Some("success".into());
-        run.path = ".github/workflows/foreign.yml".into();
-        assert!(!run.admitted(2));
-        run.path = ".github/workflows/guard.yml".into();
-        run.event = "workflow_dispatch".into();
-        assert!(!run.admitted(2));
-    }
-
-    #[test]
-    fn request() {
-        assert_eq!(super::numbered("refs/pull/294/merge"), Some(294));
-        assert_eq!(super::numbered("refs/pull/294/head"), Some(294));
-        assert_eq!(super::numbered("refs/pull/0/merge"), None);
-        assert_eq!(super::numbered("refs/heads/auto/294"), None);
-        assert_eq!(super::numbered("refs/pull/294/other"), None);
-        assert_eq!(super::numbered("refs/pull/merge"), None);
-    }
-
-    #[test]
-    fn window() {
-        let tree = "b".repeat(40);
-        let mut trees = std::collections::BTreeSet::new();
-        trees.insert(tree.clone());
-        assert!(super::belongs(&trees, &tree, None, &[]));
-        assert!(!super::belongs(&trees, &"c".repeat(40), None, &[294]));
-        assert!(super::belongs(&trees, &"c".repeat(40), Some(294), &[294]));
-        assert!(!super::belongs(&trees, &"c".repeat(40), Some(294), &[295]));
-        assert!(!super::belongs(&trees, &"c".repeat(40), Some(294), &[]));
-        assert!(!super::belongs(&trees, &"c".repeat(40), None, &[294]));
-    }
 }
