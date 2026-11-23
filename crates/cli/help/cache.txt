@@ -38,15 +38,19 @@ With --restore --fetch, an unavailable native snapshot may be seeded from a
 successful organization Guard artifact whose exact head tree is in the locally
 fetched default branch history, or whose originating run belongs to the same
 pull request as the current job. Lookup is bounded: metadata and artifact
-download share one wall-clock budget, 60 seconds by default.
-PLUMB_GUARD_RESTORE_BUDGET overrides that default with a positive number of
-seconds. The rule lives in Plumb; a caller may only override the budget. Lookup
-requires GH_TOKEN or GITHUB_TOKEN with repository Actions read access. The
-credential is isolated from repository execution and is never forwarded to
-artifact storage. The artifact digest, parcel identity and native content are
-independently checked. Metadata, download, budget expiry or cache rejection
-falls back to ordinary compilation and does not keep partial material.
-This fetch supplies compilation material; current Guard checks still execute.
+download share one wall-clock budget, 60 seconds by default. Artifact listing
+scans at most 25 pages of 20 artifacts by default, newest first, and only
+guard-material-v1- names are candidates. Scanning stops at a short page, that
+page cap, or the remaining budget. PLUMB_GUARD_RESTORE_BUDGET overrides the
+budget with a positive number of seconds; PLUMB_GUARD_RESTORE_PAGES overrides
+the page cap with a positive page count. The rules live in Plumb; a caller may
+only override those bounds. Lookup requires GH_TOKEN or GITHUB_TOKEN with
+repository Actions read access. The credential is isolated from repository
+execution and is never forwarded to artifact storage. The artifact digest,
+parcel identity and native content are independently checked. Metadata,
+download, budget expiry or cache rejection falls back to ordinary compilation
+and does not keep partial material. This fetch supplies compilation material;
+current Guard checks still execute.
 
 For diagnostic export, --diagnostic NEW_FILE on transport writes bounded
 plumb.guard-diagnostic/v1 JSON-lines independently of the material receipt.

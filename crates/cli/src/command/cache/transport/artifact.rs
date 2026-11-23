@@ -201,4 +201,89 @@ mod tests {
             [listed[1].clone(), listed[0].clone(), listed[2].clone()]
         );
     }
+
+    use super::super::provider::Run;
+
+    #[test]
+    fn admission() {
+        let mut run = Run {
+            path: ".github/workflows/guard.yml".into(),
+            event: "pull_request".into(),
+            status: "completed".into(),
+            conclusion: Some("success".into()),
+            head: "a".repeat(40),
+            attempt: 2,
+            requests: Vec::new(),
+        };
+        assert!(run.admitted(2));
+        assert!(!run.admitted(1));
+        run.conclusion = Some("failure".into());
+        assert!(!run.admitted(2));
+        run.conclusion = Some("success".into());
+        run.path = ".github/workflows/foreign.yml".into();
+        assert!(!run.admitted(2));
+        run.path = ".github/workflows/guard.yml".into();
+        run.event = "workflow_dispatch".into();
+        assert!(!run.admitted(2));
+    }
+
+    #[test]
+    fn request() {
+        assert_eq!(
+            super::super::provider::numbered("refs/pull/294/merge"),
+            Some(294)
+        );
+        assert_eq!(
+            super::super::provider::numbered("refs/pull/294/head"),
+            Some(294)
+        );
+        assert_eq!(super::super::provider::numbered("refs/pull/0/merge"), None);
+        assert_eq!(
+            super::super::provider::numbered("refs/heads/auto/294"),
+            None
+        );
+        assert_eq!(
+            super::super::provider::numbered("refs/pull/294/other"),
+            None
+        );
+        assert_eq!(super::super::provider::numbered("refs/pull/merge"), None);
+    }
+
+    #[test]
+    fn window() {
+        let tree = "b".repeat(40);
+        let mut trees = std::collections::BTreeSet::new();
+        trees.insert(tree.clone());
+        assert!(super::super::provider::belongs(&trees, &tree, None, &[]));
+        assert!(!super::super::provider::belongs(
+            &trees,
+            &"c".repeat(40),
+            None,
+            &[294]
+        ));
+        assert!(super::super::provider::belongs(
+            &trees,
+            &"c".repeat(40),
+            Some(294),
+            &[294]
+        ));
+        assert!(!super::super::provider::belongs(
+            &trees,
+            &"c".repeat(40),
+            Some(294),
+            &[295]
+        ));
+        assert!(!super::super::provider::belongs(
+            &trees,
+            &"c".repeat(40),
+            Some(294),
+            &[]
+        ));
+        assert!(!super::super::provider::belongs(
+            &trees,
+            &"c".repeat(40),
+            None,
+            &[294]
+        ));
+    }
 }
