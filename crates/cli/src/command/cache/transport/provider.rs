@@ -3,6 +3,7 @@ use super::request::{Client, Scan};
 use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::path::Path;
+use std::time::Duration;
 
 #[derive(Deserialize)]
 struct Repository {
@@ -39,13 +40,21 @@ struct Object {
     sha: String,
 }
 
-pub(crate) fn fetch(root: &Path, target: &Path, family: &str, exact: &str) -> Result<bool, String> {
-    let Some(client) = Client::new(root)? else {
+pub(crate) struct Lookup<'a> {
+    pub root: &'a Path,
+    pub target: &'a Path,
+    pub family: &'a str,
+    pub exact: &'a str,
+    pub budget: Duration,
+}
+
+pub(crate) fn fetch(lookup: &Lookup<'_>) -> Result<bool, String> {
+    let Some(client) = Client::new(lookup.root, lookup.budget)? else {
         return Ok(false);
     };
-    let repository = repository(root)?;
+    let repository = repository(lookup.root)?;
     let metadata: Repository = client.json(&format!("repos/{repository}"))?;
-    let trees = trees(root, &metadata.branch)?;
+    let trees = trees(lookup.root, &metadata.branch)?;
     let mut scan = Scan::default();
     let mut found = Vec::new();
     for page in 1..=5 {
@@ -55,8 +64,13 @@ pub(crate) fn fetch(root: &Path, target: &Path, family: &str, exact: &str) -> Re
         let count = listing.artifacts.len();
         scan.pages = page;
         for artifact in listing.artifacts {
-            let slot = artifact.slot(family, exact);
-            scan.note(&artifact.name, artifact.expired, slot.as_ref(), family);
+            let slot = artifact.slot(lookup.family, lookup.exact);
+            scan.note(
+                &artifact.name,
+                artifact.expired,
+                slot.as_ref(),
+                lookup.family,
+            );
             if let Some(slot) = slot {
                 found.push((artifact, slot));
             }
@@ -94,7 +108,7 @@ pub(crate) fn fetch(root: &Path, target: &Path, family: &str, exact: &str) -> Re
             scan.outside += 1;
             continue;
         }
-        artifact.download(&client, &repository, target)?;
+        artifact.download(&client, &repository, lookup.target)?;
         let producer = if slot.exact { "this" } else { "another" };
         if trees.contains(&commit.tree.sha) {
             eprintln!(
