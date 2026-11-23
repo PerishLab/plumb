@@ -11,7 +11,12 @@ use std::path::Path;
 
 #[allow(dead_code)]
 pub fn home() -> tempfile::TempDir {
-    tempfile::tempdir().expect("home fixture")
+    let home = tempfile::tempdir().expect("home fixture");
+    let state = home.path().join("state");
+    std::fs::create_dir_all(&state).expect("state");
+    std::fs::write(state.join("family-widths.json"), r#"{"cargo":2,"npm":1}"#)
+        .expect("family widths");
+    home
 }
 
 #[allow(dead_code)]

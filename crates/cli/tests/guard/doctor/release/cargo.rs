@@ -1,16 +1,61 @@
 use std::path::Path;
 
-fn command(root: &Path, program: &str, args: &[&str]) {
-    let output = crate::support::outside(program)
-        .args(args)
-        .current_dir(root)
-        .output()
+struct Seat<'a> {
+    root: &'a Path,
+    ns: &'a str,
+}
+
+impl Seat<'_> {
+    fn command(&self, program: &str, args: &[&str]) {
+        let output = crate::support::outside(program)
+            .args(args)
+            .current_dir(self.root)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    fn declare(&self, names: &[String]) {
+        let packages = serde_json::to_string(names).unwrap();
+        std::fs::write(
+            self.root.join("plumb.toml"),
+            format!(
+                "[identity]\nns='{}'\n[dependency]\nroot=true\n[release]\nauthority='https://example.invalid'\n[release.cargo]\nregistry='perish'\npackages={packages}\n",
+                self.ns
+            ),
+        )
         .unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+        self.command("git", &["add", "."]);
+    }
+
+    fn doctor(&self, widths: Option<&str>) -> String {
+        let home = crate::support::home();
+        let path = match widths {
+            Some(widths) => {
+                let path = home.path().join("state").join("override.json");
+                std::fs::write(&path, widths).unwrap();
+                path
+            }
+            None => home.path().join("missing.json"),
+        };
+        let output = crate::support::outside(env!("CARGO_BIN_EXE_plumb"))
+            .args(["doctor", self.root.to_str().unwrap()])
+            .env("PLUMB_HOME", home.path())
+            .env("PLUMB_FAMILY_WIDTHS", path)
+            .env_remove("PLUMB_RELEASE_VERSION")
+            .output()
+            .unwrap();
+        String::from_utf8_lossy(&output.stdout).to_string()
+    }
+
+    fn report(&self, names: &[String]) -> String {
+        self.declare(names);
+        self.doctor(Some(EXERCISED))
+    }
 }
 
 fn fixture(
@@ -37,8 +82,8 @@ fn fixture(
         .unwrap();
         std::fs::write(path.join("src/lib.rs"), "").unwrap();
     }
-    command(
-        &root,
+    let seat = Seat { root: &root, ns };
+    seat.command(
         "git",
         &[
             "remote",
@@ -47,61 +92,82 @@ fn fixture(
             &format!("https://github.com/PerishLab/{ns}.git"),
         ],
     );
-    command(&root, "cargo", &["generate-lockfile", "--offline"]);
+    seat.command("cargo", &["generate-lockfile", "--offline"]);
     (scratch, root, names)
 }
 
-fn report(root: &Path, ns: &str, names: &[String], count: usize) -> String {
-    let packages = serde_json::to_string(&names[..count]).unwrap();
-    std::fs::write(
-        root.join("plumb.toml"),
-        format!(
-            "[identity]\nns='{ns}'\n[dependency]\nroot=true\n[release]\nauthority='https://example.invalid'\n[release.cargo]\nregistry='perish'\npackages={packages}\n"
-        ),
-    )
-    .unwrap();
-    command(root, "git", &["add", "."]);
-    crate::run(&["doctor", root.to_str().unwrap()])
-}
+const EXERCISED: &str = "{\"cargo\":14,\"npm\":4}";
 
 #[test]
 fn capacity() {
     let (_scratch, root, names) = fixture("cargo-capacity", "foo", 14);
-    for count in [12, 13, 14] {
-        let report = report(&root, "foo", &names, count);
-        assert_eq!(
-            report.contains("and Plumb permits"),
-            count == 14,
-            "{report}"
-        );
-        if count <= 13 {
-            assert!(report.contains("the skeleton has released 2"), "{report}");
-        } else {
-            assert!(
-                report.contains("the cargo attachment declares 14 packages and Plumb permits 13"),
-                "{report}"
-            );
-        }
-    }
+    let seat = Seat {
+        root: &root,
+        ns: "foo",
+    };
+    let allowed = seat.report(&names[..13]);
+    assert!(!allowed.contains("this width has never run"), "{allowed}");
+    assert!(!allowed.contains("and Plumb permits"), "{allowed}");
+    let refused = seat.report(&names);
+    assert!(
+        refused.contains("the cargo attachment declares 14 packages and Plumb permits 13"),
+        "{refused}"
+    );
 }
 
 #[test]
 fn product() {
     let (_scratch, root, names) = fixture("cargo-product", "radicula", 31);
-    for count in [13, 14, 30, 31] {
-        let report = report(&root, "radicula", &names, count);
-        assert_eq!(
-            report.contains("and Plumb permits"),
-            count == 31,
-            "{report}"
-        );
-        if count == 31 {
-            assert!(
-                report.contains("the cargo attachment declares 31 packages and Plumb permits 30"),
-                "{report}"
-            );
-        } else {
-            assert!(report.contains("the skeleton has released 2"), "{report}");
-        }
-    }
+    let seat = Seat {
+        root: &root,
+        ns: "radicula",
+    };
+    let allowed = seat.report(&names[..14]);
+    assert!(!allowed.contains("this width has never run"), "{allowed}");
+    assert!(!allowed.contains("and Plumb permits"), "{allowed}");
+}
+
+#[test]
+fn noted() {
+    let (_scratch, root, names) = fixture("cargo-noted", "radicula", 30);
+    let seat = Seat {
+        root: &root,
+        ns: "radicula",
+    };
+    let report = seat.report(&names);
+    assert!(
+        report.contains("the family has released 14; this width has never run"),
+        "{report}"
+    );
+}
+
+#[test]
+fn capped() {
+    let (_scratch, root, names) = fixture("cargo-capped", "radicula", 31);
+    let seat = Seat {
+        root: &root,
+        ns: "radicula",
+    };
+    let report = seat.report(&names);
+    assert!(
+        report.contains("the cargo attachment declares 31 packages and Plumb permits 30"),
+        "{report}"
+    );
+    assert!(!report.contains("this width has never run"), "{report}");
+}
+
+#[test]
+fn unread() {
+    let (_scratch, root, names) = fixture("cargo-unread", "radicula", 14);
+    let seat = Seat {
+        root: &root,
+        ns: "radicula",
+    };
+    seat.declare(&names);
+    let report = seat.doctor(None);
+    assert!(
+        report.contains("the family's released width could not be read"),
+        "{report}"
+    );
+    assert!(!report.contains("this width has never run"), "{report}");
 }

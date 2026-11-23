@@ -320,8 +320,8 @@ tags = ["configuration", "repository"]
 [[rule]]
 id = "release.attachment-exercised"
 summary = "Unexercised width stays visible"
-law = "The width a product declares is reported against the width this skeleton has actually released, so a path no release has ever run says so instead of passing as proven."
-evidence = "The attachment tables in plumb.toml against the exercised widths in Plumb's release rules."
+law = "The width a product declares is reported against the maximum width any product in the family has actually released, derived from complete stable distribution records and the released plumb.toml, so a path no release has ever run says so instead of passing as proven. When those records cannot be read, the gap is unknown, not a claim that the width has never run."
+evidence = "The attachment tables in plumb.toml against the family's released package widths, derived from release records."
 standing = "mechanized"
 owner = "release"
 tags = ["release", "repository"]
