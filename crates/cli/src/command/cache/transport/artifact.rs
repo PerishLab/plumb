@@ -104,6 +104,17 @@ impl Artifact {
     }
 }
 
+pub(super) fn location(url: &str) -> bool {
+    let Some(rest) = url.strip_prefix("https://") else {
+        return false;
+    };
+    let host = rest.split('/').next().unwrap_or_default();
+    if url.len() > 8192 {
+        return false;
+    }
+    !host.is_empty() && !host.contains('@') && !host.contains('\\')
+}
+
 #[cfg(test)]
 mod tests {
     use super::Artifact;
@@ -125,6 +136,21 @@ mod tests {
             world.to_string().repeat(64),
             producer.to_string().repeat(64)
         )
+    }
+
+    #[test]
+    fn redirect() {
+        assert!(super::location(
+            "https://storage.example/artifact?signature=value"
+        ));
+        for url in [
+            "http://storage.example/a",
+            "https:///missing",
+            "https://token@storage.example/a",
+            "https://storage.example\\@foreign/a",
+        ] {
+            assert!(!super::location(url), "{url}");
+        }
     }
 
     #[test]

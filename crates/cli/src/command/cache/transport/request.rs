@@ -8,6 +8,7 @@ pub(super) struct Client {
     execution: Execution,
     headers: tempfile::NamedTempFile,
     started: Instant,
+    budget: Duration,
 }
 
 struct Request<'a> {
@@ -19,7 +20,7 @@ struct Request<'a> {
 }
 
 impl Client {
-    pub fn new(root: &Path) -> Result<Option<Self>, String> {
+    pub fn new(root: &Path, budget: Duration) -> Result<Option<Self>, String> {
         let token = std::env::var("GH_TOKEN")
             .or_else(|_| std::env::var("GITHUB_TOKEN"))
             .ok();
@@ -38,14 +39,12 @@ impl Client {
             execution,
             headers,
             started: Instant::now(),
+            budget,
         }))
     }
 
     pub fn json<T: serde::de::DeserializeOwned>(&self, endpoint: &str) -> Result<T, String> {
-        let remaining = Duration::from_secs(30)
-            .checked_sub(self.started.elapsed())
-            .ok_or("cache heat metadata lookup exceeded 30 seconds")?;
-        let timeout = remaining.as_secs().clamp(1, 10);
+        let timeout = self.leftover()?.as_secs().clamp(1, 10);
         let file = tempfile::NamedTempFile::new().map_err(|_| "cannot stage cache metadata")?;
         let status = self.get(Request {
             url: &format!("https://api.github.com/{endpoint}"),
@@ -68,11 +67,12 @@ impl Client {
         let headers =
             tempfile::NamedTempFile::new().map_err(|_| "cannot stage artifact redirect")?;
         let body = tempfile::NamedTempFile::new().map_err(|_| "cannot stage artifact redirect")?;
+        let redirect = self.leftover()?.as_secs().clamp(1, 10);
         let status = self.get(Request {
             url: &format!("https://api.github.com/{endpoint}"),
             target: body.path(),
             authenticated: true,
-            limits: (65536, 10),
+            limits: (65536, redirect),
             headers: Some(headers.path()),
         })?;
         if status != "302" {
@@ -86,20 +86,33 @@ impl Client {
             .filter(|(name, _)| name.eq_ignore_ascii_case("location"))
             .map(|(_, value)| value.trim())
             .collect::<Vec<_>>();
-        if locations.len() != 1 || !location(locations[0]) {
+        if locations.len() != 1 || !super::artifact::location(locations[0]) {
             return Err("GitHub cache artifact redirect is invalid".into());
         }
+        let timeout = self.leftover()?.as_secs().max(1);
         let status = self.get(Request {
             url: locations[0],
             target,
             authenticated: false,
-            limits: (maximum, 120),
+            limits: (maximum, timeout),
             headers: None,
         })?;
         if status != "200" {
             return Err(format!("cache artifact storage returned HTTP {status}"));
         }
         Ok(())
+    }
+
+    fn leftover(&self) -> Result<Duration, String> {
+        self.budget
+            .checked_sub(self.started.elapsed())
+            .filter(|time| !time.is_zero())
+            .ok_or_else(|| {
+                format!(
+                    "cache restore exceeded its {}s budget",
+                    self.budget.as_secs()
+                )
+            })
     }
 
     fn get(&self, request: Request<'_>) -> Result<String, String> {
@@ -150,7 +163,10 @@ impl Client {
             .output()
             .map_err(|_| "cannot run isolated cache read transport")?;
         if !output.status.success() {
-            return Err("cache read transport failed or exceeded its bound".into());
+            return Err(self
+                .leftover()
+                .err()
+                .unwrap_or_else(|| "cache read transport failed or exceeded its bound".into()));
         }
         let status = std::str::from_utf8(&output.stdout)
             .map_err(|_| "cache HTTP status is invalid")?
@@ -160,17 +176,6 @@ impl Client {
         }
         Ok(status.into())
     }
-}
-
-fn location(url: &str) -> bool {
-    let Some(rest) = url.strip_prefix("https://") else {
-        return false;
-    };
-    let host = rest.split('/').next().unwrap_or_default();
-    if url.len() > 8192 {
-        return false;
-    }
-    !host.is_empty() && !host.contains('@') && !host.contains('\\')
 }
 
 #[derive(Default)]
@@ -238,21 +243,6 @@ impl Scan {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn redirect() {
-        assert!(super::location(
-            "https://storage.example/artifact?signature=value"
-        ));
-        for url in [
-            "http://storage.example/a",
-            "https:///missing",
-            "https://token@storage.example/a",
-            "https://storage.example\\@foreign/a",
-        ] {
-            assert!(!super::location(url), "{url}");
-        }
-    }
-
     #[test]
     fn reasons() {
         use super::{Scan, Slot};

@@ -51,16 +51,31 @@ impl Transfer<'_> {
         if receipt.cargo || !fetch {
             return Ok(receipt);
         }
+        let budget = budget::budget()?;
         match crate::diagnostic::measure("material.lookup", || {
-            super::transport::provider::fetch(self.root, self.parcel, self.family, self.identity)
+            super::transport::provider::fetch(&super::transport::provider::Lookup {
+                root: self.root,
+                target: self.parcel,
+                family: self.family,
+                exact: self.identity,
+                budget,
+            })
         }) {
             Ok(true) => self.restore(),
             Ok(false) => Ok(receipt),
-            Err(error) => {
-                eprintln!("guard material: heat source unavailable; compiling normally: {error}");
-                Ok(receipt)
-            }
+            Err(error) => Ok(Self::fallback(error, receipt)),
         }
+    }
+
+    fn fallback(error: String, receipt: Receipt) -> Receipt {
+        if error.contains("exceeded its") && error.contains("budget") {
+            crate::diagnostic::event(
+                "material.lookup.budget",
+                || serde_json::json!({"reason":"exceeded","error":error}),
+            );
+        }
+        eprintln!("guard material: heat source unavailable; compiling normally: {error}");
+        receipt
     }
 
     fn save(&self) -> Result<Receipt, String> {
@@ -224,6 +239,7 @@ impl Copy {
     }
 }
 
+mod budget;
 mod native;
 #[cfg(test)]
 mod tests;
