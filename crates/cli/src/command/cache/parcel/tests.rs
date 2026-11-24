@@ -31,6 +31,7 @@ fn timestamps() {
             identity: "same world;producer-a".into(),
             cargo: Some(cargo),
             compiler: None,
+            timing: None,
         })
         .unwrap();
     assert!(receipt.cargo);
@@ -60,6 +61,7 @@ fn empty() {
             identity: "empty".into(),
             cargo: None,
             compiler: Some(compiler),
+            timing: None,
         })
         .unwrap();
     assert!(!receipt.any());
@@ -85,4 +87,50 @@ fn traversal() {
     let error = Parcel(&path).read("world").err().unwrap();
     assert!(error.contains("relative"), "{error}");
     assert!(!root.path().join("escaped").exists());
+}
+
+#[test]
+fn timing() {
+    let root = tempfile::tempdir().unwrap();
+    let compiler = root.path().join("compiler");
+    put(&compiler, "entry", b"compiled");
+    let timing = root.path().join("timing");
+    put(&timing, "record.json", b"timings");
+    let path = root.path().join("material.tar");
+    let receipt = Parcel(&path)
+        .write(Plan {
+            identity: "world;producer".into(),
+            cargo: None,
+            compiler: Some(compiler),
+            timing: Some(timing.clone()),
+        })
+        .unwrap();
+    assert!(receipt.compiler);
+    let snapshot = Parcel(&path).read("world;").unwrap().unwrap();
+    assert!(snapshot.manifest.timing);
+    assert_eq!(
+        std::fs::read(snapshot.root.path().join("timing/record.json")).unwrap(),
+        b"timings"
+    );
+    let alone = root.path().join("alone.tar");
+    let receipt = Parcel(&alone)
+        .write(Plan {
+            identity: "world;producer".into(),
+            cargo: None,
+            compiler: None,
+            timing: Some(timing),
+        })
+        .unwrap();
+    assert!(!receipt.any());
+    assert!(!alone.exists(), "timings alone cannot claim a cache key");
+}
+
+#[test]
+fn legacy() {
+    let manifest: super::Manifest = serde_json::from_str(
+        r#"{"schema":"plumb.guard-parcel/v1","identity":"world;","cargo":false,"compiler":true,"times":{}}"#,
+    )
+    .unwrap();
+    assert!(manifest.compiler);
+    assert!(!manifest.timing);
 }

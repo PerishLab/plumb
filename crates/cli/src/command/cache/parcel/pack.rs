@@ -25,6 +25,7 @@ pub(super) fn write(path: &Path, plan: Plan) -> Result<Receipt, String> {
             identity: plan.identity,
             cargo: plan.cargo.is_some(),
             compiler: false,
+            timing: false,
             times: BTreeMap::new(),
         },
     };
@@ -45,6 +46,13 @@ pub(super) fn write(path: &Path, plan: Plan) -> Result<Receipt, String> {
     }
     if !writer.manifest.cargo && !writer.manifest.compiler {
         return Ok(Receipt::default());
+    }
+    if let Some(root) = plan.timing {
+        let before = writer.manifest.times.len();
+        if root.is_dir() {
+            writer.append(&root, Path::new("timing"))?;
+        }
+        writer.manifest.timing = writer.manifest.times.len() != before;
     }
     let receipt = Receipt {
         cargo: writer.manifest.cargo,

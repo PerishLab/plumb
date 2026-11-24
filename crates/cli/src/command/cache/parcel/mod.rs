@@ -26,6 +26,7 @@ pub(super) struct Plan {
     pub identity: String,
     pub cargo: Option<PathBuf>,
     pub compiler: Option<PathBuf>,
+    pub timing: Option<PathBuf>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -35,6 +36,8 @@ pub(super) struct Manifest {
     pub identity: String,
     pub cargo: bool,
     pub compiler: bool,
+    #[serde(default)]
+    pub timing: bool,
     times: BTreeMap<String, Stamp>,
 }
 

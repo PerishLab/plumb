@@ -99,10 +99,12 @@ impl Transfer<'_> {
         let compiler = self.home.join("cache/compiler");
         let compiler =
             (compiler.is_dir() && std::env::var_os("SCCACHE_DIR").is_none()).then_some(compiler);
+        let timing = Some(self.timing()).filter(|path| path.is_dir());
         Parcel(self.parcel).write(Plan {
             identity: self.identity.into(),
             cargo,
             compiler,
+            timing,
         })
     }
 
@@ -150,7 +152,32 @@ impl Transfer<'_> {
         } else {
             false
         };
+        if snapshot.manifest.timing {
+            self.learn(&snapshot.root.path().join("timing"));
+        }
         Ok(Receipt { cargo, compiler })
+    }
+
+    fn timing(&self) -> PathBuf {
+        self.home.join("state/guard/test")
+    }
+
+    fn learn(&self, source: &Path) {
+        let copy = Copy {
+            source: source.to_path_buf(),
+            target: self.timing(),
+        };
+        let (files, error) = match copy.merge() {
+            Ok(files) => (files, None),
+            Err(error) => (0, Some(error)),
+        };
+        crate::diagnostic::event(
+            "material.timing",
+            || serde_json::json!({"files":files,"error":error}),
+        );
+        if let Some(error) = error {
+            eprintln!("guard material: test timing history not restored: {error}");
+        }
     }
 
     fn native(&self, snapshot: &Snapshot, lease: &Lease) -> Result<bool, String> {
@@ -242,6 +269,8 @@ impl Copy {
 }
 
 mod budget;
+#[cfg(test)]
+mod learned;
 mod native;
 mod scan;
 #[cfg(test)]

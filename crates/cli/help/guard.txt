@@ -51,8 +51,10 @@ larger thread grant while other programs share the remaining budget. Active
 grants together never exceed the host budget. The allocation is fixed when a
 program starts; it cannot grow while that program is running.
 
-Timing history lives in PLUMB_HOME state, separately from proof and transported
-compilation. It matches the workspace, core count, logical target set and
+Timing history lives in PLUMB_HOME state, separately from proof. Guard
+material carries it beside compilation material so a fresh CI home can reuse
+earlier timings; restore adds only missing records and never replaces local
+ones. It matches the workspace, core count, logical target set and
 features; executable rebuilds retain the hints. Source edits can make timings
 stale, so this policy does not promise a speedup on every run. Every admitted
 program still executes once. Unreadable, unknown or foreign records are
