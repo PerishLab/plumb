@@ -212,14 +212,7 @@ impl Leftover<'_> {
 
     fn pulled(&self, number: u64) -> Result<(), String> {
         let branch = format!("auto/{number}");
-        let repository = self.provider.repository;
-        let owner = repository
-            .split('/')
-            .next()
-            .ok_or("repository has no owner")?;
-        let pulls = self.provider.pages(&format!(
-            "repos/{repository}/pulls?state=all&head={owner}:{branch}&per_page=100"
-        ))?;
+        let pulls = self.provider.listing(&branch, None)?;
         if pulls
             .iter()
             .any(|pull| pull["head"]["ref"].as_str() != Some(branch.as_str()))

@@ -1,3 +1,4 @@
+use super::provider::Source;
 use super::{Provider, Seat, State, issue, pull, refresh, scope, work};
 use std::path::Path;
 
@@ -141,7 +142,8 @@ pub(super) fn advance(
     plan.issue = provider.published(&plan.issue)?;
     state.plan = Some(plan.clone());
     seat.write(state)?;
-    let guard = provider.settle(|settle| settle.wait(&plan.candidate))?;
+    let guard =
+        plumb::delivery::Guard::wait(provider.patience.pause, || provider.guard(&plan.candidate))?;
     let latest = plumb::packages::Plan::read(&state.worktree, "follow")?;
     latest.verify(&state.worktree)?;
     let snapshot = issue::snapshot(provider, state.issue)?;
@@ -157,11 +159,8 @@ pub(super) fn advance(
     plumb::delivery::revalidate(request, &plan, &authority).map_err(|error| error.to_string())?;
     let squash = plumb::delivery::Squash::read(&state.worktree, &plan.candidate)
         .map_err(|error| error.to_string())?;
-    provider.settle(|settle| settle.merge(state.pull, &squash))?;
-    let merged = provider.api(
-        &format!("repos/{}/pulls/{}", provider.repository, state.pull),
-        None,
-    )?;
+    provider.merge(state.pull, &squash)?;
+    let merged = provider.pull(state.pull)?;
     if merged["merged"] != true {
         return Err("provider did not confirm Auto merge".into());
     }
@@ -178,4 +177,18 @@ pub(super) fn advance(
 fn current(root: &Path, head: &str) -> Result<bool, String> {
     let base = work::git(root, &["rev-parse", "origin/main"])?;
     Ok(work::git(root, &["merge-base", head, &base])? == base)
+}
+
+impl Provider<'_> {
+    pub(super) fn guard(&self, head: &str) -> Result<String, String> {
+        match &self.source {
+            Source::Native(client) => {
+                let (owner, repo) = self.coordinate()?;
+                let guard = plumb::delivery::Guard { head, noun: "Auto" };
+                plumb::github::guard(client, owner, repo, &guard)
+            }
+            #[cfg(all(test, unix))]
+            Source::Fixture => self.settle(|settle| settle.guard(head)),
+        }
+    }
 }

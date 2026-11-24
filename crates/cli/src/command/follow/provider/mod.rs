@@ -1,35 +1,69 @@
-use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
-use std::io::{Read, Seek, Write};
+mod intent;
+mod remote;
+
+pub(super) use intent::Intent;
+
+use crate::command::diagnostic;
+use runseal::github::{Client, records::Author};
+use serde::Serialize;
+use serde_json::Value;
+#[cfg(all(test, unix))]
+use std::io::Write;
+use std::io::{Read, Seek};
+#[cfg(all(test, unix))]
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 pub(super) struct Provider<'a> {
+    pub source: Source,
+    #[cfg(all(test, unix))]
     pub command: &'a Path,
     pub repository: &'a str,
     pub patience: Patience,
     pub sources: plumb::packages::Sources,
 }
 
+pub(super) enum Source {
+    Native(Box<Client>),
+    #[cfg(all(test, unix))]
+    Fixture,
+}
+
 pub(super) use plumb::delivery::Patience;
 
+impl<'a> Provider<'a> {
+    pub(super) fn native(repository: &'a str) -> Result<Self, String> {
+        Ok(Self {
+            source: Source::Native(Box::new(crate::command::github()?)),
+            #[cfg(all(test, unix))]
+            command: Path::new(""),
+            repository,
+            patience: Patience::MERGE,
+            sources: Default::default(),
+        })
+    }
+}
+
 impl Provider<'_> {
+    #[cfg(all(test, unix))]
     pub fn api(&self, endpoint: &str, body: Option<&Value>) -> Result<Value, String> {
         self.request(endpoint, body, None)
     }
 
+    #[cfg(all(test, unix))]
     pub fn patch(&self, endpoint: &str, body: &Value) -> Result<Value, String> {
         self.request(endpoint, Some(body), Some("PATCH"))
     }
 
+    #[cfg(all(test, unix))]
     fn request(
         &self,
         endpoint: &str,
         body: Option<&Value>,
         method: Option<&str>,
     ) -> Result<Value, String> {
-        let mut command = Command::new(self.command);
+        let mut command = self.process();
         command.args(["api", endpoint]);
         if let Some(method) = method {
             command.args(["--method", method]);
@@ -45,12 +79,21 @@ impl Provider<'_> {
             .map_err(|error| format!("provider returned invalid JSON: {error}"))
     }
 
+    #[cfg(all(test, unix))]
     pub fn command(&self, args: &[String]) -> Result<Vec<u8>, String> {
-        let mut command = Command::new(self.command);
+        let mut command = self.process();
         command.args(args);
         capture(command, Duration::from_secs(30))
     }
 
+    #[cfg(all(test, unix))]
+    fn process(&self) -> Command {
+        let mut command = Command::new(self.command);
+        command.env("GH_HOST", "github.com");
+        command
+    }
+
+    #[cfg(all(test, unix))]
     pub fn pages(&self, path: &str) -> Result<Vec<Value>, String> {
         let bytes = self.command(&[
             "api".into(),
@@ -69,6 +112,7 @@ impl Provider<'_> {
             .collect())
     }
 
+    #[cfg(all(test, unix))]
     pub fn settle<T>(&self, then: impl FnOnce(&plumb::delivery::Settle<'_>) -> T) -> T {
         let gh = |args: &[String]| self.command(args);
         then(&plumb::delivery::Settle {
@@ -80,22 +124,82 @@ impl Provider<'_> {
     }
 
     pub fn issue(&self, number: u64) -> Result<Value, String> {
-        self.api(&format!("repos/{}/issues/{number}", self.repository), None)
+        match &self.source {
+            Source::Native(client) => encode(
+                client
+                    .ticket(&self.target(number)?)
+                    .map_err(diagnostic)?
+                    .value,
+            ),
+            #[cfg(all(test, unix))]
+            Source::Fixture => {
+                self.api(&format!("repos/{}/issues/{number}", self.repository), None)
+            }
+        }
+    }
+
+    pub(super) fn coordinate(&self) -> Result<(&str, &str), String> {
+        self.repository
+            .split_once('/')
+            .ok_or_else(|| "invalid GitHub repository coordinate".into())
+    }
+
+    pub(super) fn viewer(&self) -> Result<Author, String> {
+        match &self.source {
+            Source::Native(client) => {
+                let actor = client.viewer().map_err(diagnostic)?.value;
+                Ok(Author {
+                    id: actor.number,
+                    login: actor.login,
+                })
+            }
+            #[cfg(all(test, unix))]
+            Source::Fixture => {
+                let args = [
+                    "api",
+                    "graphql",
+                    "-f",
+                    "query=query{viewer{databaseId login}}",
+                ];
+                let reply = self.command(&args.map(str::to_owned))?;
+                let value: Value = serde_json::from_slice(&reply).map_err(|err| err.to_string())?;
+                let actor = &value["data"]["viewer"];
+                serde_json::from_value(
+                    serde_json::json!({"id":actor["databaseId"],"login":actor["login"]}),
+                )
+                .map_err(|_| "provider identity is unreadable".into())
+            }
+        }
     }
 
     pub fn comment(&self, number: u64, body: &str) -> Result<(), String> {
-        let endpoint = format!("repos/{}/issues/{number}/comments", self.repository);
-        let owner = self.owner(number)?;
+        let issue = self.issue(number)?;
+        let owner = super::issue::author(&issue)?;
         if self
-            .pages(&format!("{endpoint}?per_page=100"))?
+            .discussion(number)?
             .iter()
             .any(|comment| comment["body"] == body && comment["user"]["id"].as_u64() == Some(owner))
         {
             return Ok(());
         }
-        self.api(&endpoint, Some(&json!({"body": body})))?;
-        Ok(())
+        match &self.source {
+            Source::Native(client) => client
+                .comment(&super::issue::text(&issue, "node_id")?, body)
+                .map(|_| ())
+                .map_err(diagnostic),
+            #[cfg(all(test, unix))]
+            Source::Fixture => self
+                .api(
+                    &format!("repos/{}/issues/{number}/comments", self.repository),
+                    Some(&serde_json::json!({"body": body})),
+                )
+                .map(|_| ()),
+        }
     }
+}
+
+pub(super) fn encode(value: impl Serialize) -> Result<Value, String> {
+    serde_json::to_value(value).map_err(|error| error.to_string())
 }
 
 pub(super) fn capture(mut command: Command, limit: Duration) -> Result<Vec<u8>, String> {
@@ -141,72 +245,4 @@ pub(super) fn capture(mut command: Command, limit: Duration) -> Result<Vec<u8>, 
         ));
     }
     Ok(bytes)
-}
-
-#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub(super) struct Intent {
-    pub schema: String,
-    pub repository: String,
-    pub issue: u64,
-    pub branch: String,
-    pub previous: Option<String>,
-    pub head: String,
-    pub base: String,
-    pub tree: String,
-}
-
-impl Intent {
-    fn check(&self, provider: &Provider<'_>, issue: u64) -> Result<(), String> {
-        let exact = |head: &str| {
-            matches!(head.len(), 40 | 64) && head.bytes().all(|byte| byte.is_ascii_hexdigit())
-        };
-        let identity = (self.schema.as_str(), self.repository.as_str(), self.issue);
-        if identity != ("plumb.auto-push/v1", provider.repository, issue)
-            || self.branch != format!("auto/{issue}")
-        {
-            return Err("Auto publication intent identity disagrees".into());
-        }
-        if ![&self.head, &self.base, &self.tree]
-            .into_iter()
-            .all(|head| exact(head))
-            || self.previous.as_deref().is_some_and(|head| !exact(head))
-        {
-            return Err("Auto publication intent has an invalid Git identity".into());
-        }
-        Ok(())
-    }
-
-    fn body(&self) -> Result<String, String> {
-        Ok(format!(
-            "Auto follow publication intent; provider readback decides execution.\n\n<!-- plumb.auto-push/v1\n{}\n-->",
-            serde_json::to_string(self).map_err(|error| error.to_string())?
-        ))
-    }
-}
-
-impl Provider<'_> {
-    pub(super) fn intent(&self, issue: u64, held: &Intent) -> Result<(), String> {
-        held.check(self, issue)?;
-        self.comment(issue, &held.body()?)?;
-        if self.recorded(issue)?.as_ref() != Some(held) {
-            return Err("Auto publication intent readback disagrees".into());
-        }
-        Ok(())
-    }
-
-    pub(super) fn recorded(&self, issue: u64) -> Result<Option<Intent>, String> {
-        let mut standing = None;
-        for body in self.evidence(issue, "<!-- plumb.auto-push/", "Auto publication intent")? {
-            let value = body
-                .split_once("<!-- plumb.auto-push/v1\n")
-                .and_then(|(_, value)| value.strip_suffix("\n-->"))
-                .ok_or("Auto publication intent has an unknown shape")?;
-            let held: Intent = serde_json::from_str(value)
-                .map_err(|error| format!("Auto publication intent is unreadable: {error}"))?;
-            held.check(self, issue)?;
-            standing = Some(held);
-        }
-        Ok(standing)
-    }
 }

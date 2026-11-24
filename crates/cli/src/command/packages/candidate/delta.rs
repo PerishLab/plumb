@@ -134,6 +134,7 @@ fn delta() {
     let head = work::git(root, &["rev-parse", "HEAD"]).unwrap();
     let (served, generation) = serve();
     let provider = Provider {
+        source: crate::command::packages::follow::provider::Source::Fixture,
         command: &fixture.command,
         repository: "Example/probe",
         patience: Patience {

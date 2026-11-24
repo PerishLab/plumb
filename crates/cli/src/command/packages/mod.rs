@@ -1,3 +1,4 @@
+#[path = "../follow/mod.rs"]
 pub(crate) mod follow;
 use plumb::packages::{Plan, Resolution};
 use std::path::{Path, PathBuf};

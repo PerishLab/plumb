@@ -224,7 +224,6 @@ fn current() {
     };
     let input = super::super::Input {
         root: source.clone(),
-        github: fixture.command.clone(),
         json: true,
     };
     let result = super::super::resume(&input, &fixture.provider(), &seat, &mut state).unwrap();

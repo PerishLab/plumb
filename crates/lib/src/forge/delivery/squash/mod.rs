@@ -5,7 +5,7 @@ mod settle;
 #[cfg(test)]
 mod tests;
 
-pub use settle::{Patience, Settle};
+pub use settle::{Guard, Patience, Settle};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Squash {

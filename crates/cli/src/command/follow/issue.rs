@@ -1,30 +1,26 @@
 use super::State;
-use super::provider::Provider;
+use super::provider::{Provider, Source, encode};
+use crate::command::diagnostic;
+use runseal::github::{Client, Relation};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
+use std::collections::BTreeSet;
 
 const MARKER: &str = "<!-- plumb.auto/v1 operation=follow -->";
 const RECOVERY: &str = "see: plumb cookbook follow.foreign-writer";
 
 pub(super) fn find(provider: &Provider<'_>) -> Result<Option<u64>, String> {
-    let issues = provider.pages(&format!(
-        "repos/{}/issues?state=open&per_page=100",
-        provider.repository
-    ))?;
-    let matching = issues
-        .iter()
-        .filter(|issue| {
-            issue["body"]
-                .as_str()
-                .is_some_and(|body| body.contains(MARKER))
-                && issue.get("pull_request").is_none()
-        })
-        .collect::<Vec<_>>();
-    if matching.len() > 1 {
-        return Err("multiple open Auto follow issues require human judgment".into());
-    }
+    let mut matching = None;
+    provider.open(|issue| {
+        let marked = issue["body"]
+            .as_str()
+            .is_some_and(|body| body.contains(MARKER));
+        if marked && issue.get("pull_request").is_none() && matching.replace(issue).is_some() {
+            return Err("multiple open Auto follow issues require human judgment".into());
+        }
+        Ok(())
+    })?;
     matching
-        .first()
         .map(|issue| {
             if issue["type"]["name"] != "Auto" {
                 return Err("matching follow issue is not Auto; human judgment required".into());
@@ -37,10 +33,7 @@ pub(super) fn find(provider: &Provider<'_>) -> Result<Option<u64>, String> {
 }
 
 pub(super) fn create(provider: &Provider<'_>) -> Result<u64, String> {
-    let issue = provider.api(&format!("repos/{}/issues", provider.repository), Some(&json!({"title":"Follow the latest first-party packages", "type":"Auto", "body":body(provider.repository)})))?;
-    issue["number"]
-        .as_u64()
-        .ok_or_else(|| "created Auto issue has no number; reread before retry".into())
+    provider.raise(&body(provider.repository))
 }
 
 pub(super) fn body(repository: &str) -> String {
@@ -74,11 +67,7 @@ pub(super) fn snapshot(
     if !accepted {
         return Err("Auto follow body changed outside its operation contract".into());
     }
-    let children = provider.pages(&format!(
-        "repos/{}/issues/{number}/sub_issues?per_page=100",
-        provider.repository
-    ))?;
-    if children.iter().any(|issue| issue["state"] != "closed") {
+    if provider.unresolved(number, Relation::Child)? {
         return Err("Auto issue has an unresolved child".into());
     }
     for label in issue["labels"]
@@ -92,11 +81,7 @@ pub(super) fn snapshot(
             return Err("Auto issue needs human resolution of its labels".into());
         }
     }
-    let blockers = provider.pages(&format!(
-        "repos/{}/issues/{number}/dependencies/blocked_by?per_page=100",
-        provider.repository
-    ))?;
-    if blockers.iter().any(|issue| issue["state"] != "closed") {
+    if provider.unresolved(number, Relation::Blocker)? {
         return Err("Auto issue has an unresolved native blocker".into());
     }
     Ok(plumb::delivery::Snapshot {
@@ -121,6 +106,13 @@ pub(super) fn text(value: &Value, key: &str) -> Result<String, String> {
         .filter(|text| !text.is_empty())
         .map(str::to_string)
         .ok_or_else(|| format!("provider field {key} is missing"))
+}
+
+pub(super) fn author(issue: &Value) -> Result<u64, String> {
+    issue["user"]["id"]
+        .as_u64()
+        .filter(|id| *id > 0)
+        .ok_or_else(|| "Auto issue has no operation writer identity".into())
 }
 
 impl Provider<'_> {
@@ -163,14 +155,13 @@ impl Provider<'_> {
     }
 
     pub(super) fn owner(&self, issue: u64) -> Result<u64, String> {
-        self.issue(issue)?["user"]["id"]
-            .as_u64()
-            .filter(|id| *id > 0)
-            .ok_or_else(|| "Auto issue has no operation writer identity".into())
+        author(&self.issue(issue)?)
     }
 
     pub(super) fn writer(&self, issue: u64) -> Result<(), String> {
-        plumb_cli::writer::check(self.repository, issue, |args| self.command(args))
+        let record = self.issue(issue)?;
+        let owner = serde_json::from_value(record["user"].clone()).ok();
+        plumb_cli::writer::check(issue, owner, || self.viewer())
     }
 
     pub(super) fn evidence(
@@ -180,10 +171,7 @@ impl Provider<'_> {
         what: &str,
     ) -> Result<Vec<String>, String> {
         let owner = self.owner(issue)?;
-        let comments = self.pages(&format!(
-            "repos/{}/issues/{issue}/comments?per_page=100",
-            self.repository
-        ))?;
+        let comments = self.discussion(issue)?;
         let (mut held, mut foreign) = (Vec::new(), Vec::new());
         for comment in comments {
             let body = comment["body"]
@@ -229,5 +217,53 @@ impl Provider<'_> {
             return format!("{error}; failure comment could not be recorded: {recording}");
         }
         error
+    }
+}
+
+impl Provider<'_> {
+    pub(super) fn open(
+        &self,
+        mut inspect: impl FnMut(Value) -> Result<(), String>,
+    ) -> Result<(), String> {
+        match &self.source {
+            Source::Native(client) => self.inventory(client, &mut inspect),
+            #[cfg(all(test, unix))]
+            Source::Fixture => {
+                for row in self.pages(&format!(
+                    "repos/{}/issues?state=open&per_page=100",
+                    self.repository
+                ))? {
+                    inspect(row)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn inventory(
+        &self,
+        client: &Client,
+        inspect: &mut impl FnMut(Value) -> Result<(), String>,
+    ) -> Result<(), String> {
+        let (owner, name) = self.coordinate()?;
+        let (mut numbers, mut nodes) = (BTreeSet::new(), BTreeSet::new());
+        let mut page = 1;
+        for _ in 0..100 {
+            let held = client
+                .issues(owner, name, page, 30)
+                .map_err(diagnostic)?
+                .value;
+            for row in held.rows {
+                if !numbers.insert(row.number) || !nodes.insert(row.node.clone()) {
+                    return Err("Auto Issue inventory repeated an Issue across pages".into());
+                }
+                inspect(encode(row)?)?;
+            }
+            match held.next {
+                Some(next) => page = next,
+                None => return Ok(()),
+            }
+        }
+        Err("Auto Issue inventory exceeded its page limit".into())
     }
 }

@@ -1,4 +1,4 @@
-use super::{Planning, Reviewed, Selection, Status, hub, status};
+use super::{Planning, Reviewed, Selection, Status, hub::Gateway, status};
 use plumb::lane::{Digest, Source, declaration::Declaration, dispatch::Dispatch};
 use serde::{Deserialize, Serialize};
 use std::io::Read;
@@ -60,7 +60,10 @@ impl Plan {
     }
 }
 
-pub(super) fn prepare(options: Planning) -> Result<serde_json::Value, String> {
+pub(super) fn prepare(
+    options: Planning,
+    gateway: &impl Gateway,
+) -> Result<serde_json::Value, String> {
     let dispatch = Dispatch::read(&bounded(&options.input)?)?;
     let observed = status::read(Status {
         target: options.target,
@@ -77,7 +80,7 @@ pub(super) fn prepare(options: Planning) -> Result<serde_json::Value, String> {
             .map_err(|_| "invalid lane source")?,
     };
     plan.validate()?;
-    hub::observe(&plan)?;
+    gateway.observe(&plan)?;
     Ok(
         serde_json::json!({"plan": plan, "digest": plan.digest()?, "current":{"outcome":"unknown","reason":"unverified"}}),
     )

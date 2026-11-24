@@ -23,6 +23,7 @@ radius = [
 ]
 vendor = [
   "delivery",
+  "dep:runseal",
 ]
 skill = [
   "depot",
@@ -30,11 +31,12 @@ skill = [
   "dep:tar",
 ]
 testing = []
-windtun = ["depot", "dep:flate2", "dep:tar", "dep:sha1"]
+windtun = ["depot", "dep:flate2", "dep:tar", "dep:sha1", "dep:runseal"]
 
 [dependencies]
 radicula-config = { version = "0", registry = "perish" }
 radicula-context = { version = "0", registry = "perish" }
+runseal = { version = "0", registry = "perish", optional = true }
 base64 = "0.22"
 clap = { version = "4", features = ["derive"] }
 flate2 = { version = "1", optional = true }

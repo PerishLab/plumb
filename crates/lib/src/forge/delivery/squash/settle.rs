@@ -26,7 +26,6 @@ pub struct Settle<'a> {
 
 impl Settle<'_> {
     pub fn guard(&self, head: &str) -> Result<String, String> {
-        let noun = self.noun;
         let pages = self.json(&[
             "api",
             &format!(
@@ -37,92 +36,31 @@ impl Settle<'_> {
             "--slurp",
         ])?;
         let pages = pages.as_array().ok_or("check-run response is unreadable")?;
-        let mut matches = Vec::new();
+        let mut checks = Vec::new();
         for page in pages.iter().flat_map(|page| match page {
             Value::Array(items) => items.iter().collect(),
             item => vec![item],
         }) {
-            for run in page["check_runs"]
-                .as_array()
-                .ok_or("check-run response is unreadable")?
-            {
-                if run["name"] == "Guard"
-                    && run["app"]["slug"] == "github-actions"
-                    && run["head_sha"] == head
-                {
-                    matches.push(run.clone());
-                }
-            }
+            checks.extend_from_slice(
+                page["check_runs"]
+                    .as_array()
+                    .ok_or("check-run response is unreadable")?,
+            );
         }
-        if matches.is_empty() {
-            return Err(format!(
-                "organization Guard is pending; no run on the exact {noun} head"
-            ));
+        Guard {
+            head,
+            noun: self.noun,
         }
-        let url = self.workflow(head, &matches[0])?;
-        for run in &matches[1..] {
-            self.workflow(head, run)?;
-        }
-        Ok(url)
-    }
-
-    fn workflow(&self, head: &str, run: &Value) -> Result<String, String> {
-        if run["status"] != "completed" {
-            return Err("organization Guard is pending; rerun after its check completes".into());
-        }
-        let conclusion = run["conclusion"]
-            .as_str()
-            .filter(|text| !text.is_empty())
-            .ok_or("completed organization Guard has no readable conclusion")?;
-        let url = text(run, "details_url")?;
-        let id = url
-            .split("/actions/runs/")
-            .nth(1)
-            .and_then(|tail| tail.split('/').next())
-            .filter(|id| id.parse::<u64>().is_ok())
-            .ok_or("Guard check has no workflow run identity")?;
-        let workflow = self.json(&[
-            "api",
-            &format!("repos/{}/actions/runs/{id}", self.repository),
-        ])?;
-        if workflow["head_sha"] != head
-            || workflow["path"] != ".github/workflows/guard.yml"
-            || !matches!(
-                workflow["event"].as_str(),
-                Some("pull_request" | "merge_group")
-            )
-        {
-            return Err("Guard check is not the organization workflow on this exact head".into());
-        }
-        if conclusion != "success" {
-            return Err(format!("organization Guard failed: {}", run["conclusion"]));
-        }
-        if workflow["status"] != "completed" {
-            return Err(format!(
-                "organization Guard is pending; workflow run {id} is {} after its Guard check completed",
-                workflow["status"]
-            ));
-        }
-        if workflow["conclusion"] != "success" {
-            return Err(format!(
-                "organization Guard failed: workflow run {id} concluded {}",
-                workflow["conclusion"]
-            ));
-        }
-        Ok(url)
+        .observe(&checks, |id| {
+            self.json(&[
+                "api",
+                &format!("repos/{}/actions/runs/{id}", self.repository),
+            ])
+        })
     }
 
     pub fn wait(&self, head: &str) -> Result<String, String> {
-        for _ in 0..90 {
-            match self.guard(head) {
-                Ok(run) => return Ok(run),
-                Err(error) if error.starts_with("organization Guard is pending;") => {
-                    std::thread::sleep(self.patience.pause)
-                }
-                Err(error) => return Err(error),
-            }
-        }
-        Err("organization Guard did not settle within the bounded wait".into())
+        Guard::wait(self.patience.pause, || self.guard(head))
     }
 
     pub fn merge(&self, pull: u64, squash: &Squash) -> Result<(), String> {
@@ -189,6 +127,102 @@ impl Settle<'_> {
         let bytes = (self.gh)(&args)?;
         serde_json::from_slice(&bytes)
             .map_err(|error| format!("provider returned invalid JSON: {error}"))
+    }
+}
+
+pub struct Guard<'a> {
+    pub head: &'a str,
+    pub noun: &'a str,
+}
+
+impl Guard<'_> {
+    pub fn observe(
+        &self,
+        checks: &[Value],
+        workflow: impl Fn(&str) -> Result<Value, String>,
+    ) -> Result<String, String> {
+        let matches = checks
+            .iter()
+            .filter(|run| {
+                run["name"] == "Guard"
+                    && run["app"]["slug"] == "github-actions"
+                    && run["head_sha"] == self.head
+            })
+            .collect::<Vec<_>>();
+        if matches.is_empty() {
+            return Err(format!(
+                "organization Guard is pending; no run on the exact {} head",
+                self.noun
+            ));
+        }
+        let url = self.workflow(matches[0], &workflow)?;
+        for run in &matches[1..] {
+            self.workflow(run, &workflow)?;
+        }
+        Ok(url)
+    }
+
+    fn workflow(
+        &self,
+        run: &Value,
+        workflow: &impl Fn(&str) -> Result<Value, String>,
+    ) -> Result<String, String> {
+        if run["status"] != "completed" {
+            return Err("organization Guard is pending; rerun after its check completes".into());
+        }
+        let conclusion = run["conclusion"]
+            .as_str()
+            .filter(|text| !text.is_empty())
+            .ok_or("completed organization Guard has no readable conclusion")?;
+        let url = text(run, "details_url")?;
+        let id = url
+            .split("/actions/runs/")
+            .nth(1)
+            .and_then(|tail| tail.split('/').next())
+            .filter(|id| id.parse::<u64>().is_ok())
+            .ok_or("Guard check has no workflow run identity")?;
+        let workflow = workflow(id)?;
+        if workflow["head_sha"] != self.head
+            || workflow["path"] != ".github/workflows/guard.yml"
+            || !matches!(
+                workflow["event"].as_str(),
+                Some("pull_request" | "merge_group")
+            )
+        {
+            return Err("Guard check is not the organization workflow on this exact head".into());
+        }
+        if conclusion != "success" {
+            return Err(format!("organization Guard failed: {}", run["conclusion"]));
+        }
+        if workflow["status"] != "completed" {
+            return Err(format!(
+                "organization Guard is pending; workflow run {id} is {} after its Guard check completed",
+                workflow["status"]
+            ));
+        }
+        if workflow["conclusion"] != "success" {
+            return Err(format!(
+                "organization Guard failed: workflow run {id} concluded {}",
+                workflow["conclusion"]
+            ));
+        }
+        Ok(url)
+    }
+
+    pub fn wait(
+        pause: Duration,
+        probe: impl Fn() -> Result<String, String>,
+    ) -> Result<String, String> {
+        for _ in 0..90 {
+            match probe() {
+                Ok(run) => return Ok(run),
+                Err(error) if error.starts_with("organization Guard is pending;") => {
+                    std::thread::sleep(pause)
+                }
+                Err(error) => return Err(error),
+            }
+        }
+        Err("organization Guard did not settle within the bounded wait".into())
     }
 }
 

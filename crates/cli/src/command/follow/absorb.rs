@@ -1,6 +1,7 @@
 use super::{Provider, Seat, State, issue, scope, work};
+use runseal::github::lifecycle::Update;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
 use std::path::Path;
 
 const MARKER: &str = "<!-- plumb.auto-absorbed/v1\n";
@@ -153,10 +154,7 @@ impl Absorption<'_, '_> {
 
     fn close(&self, state: &State, head: &str) -> Result<(), String> {
         if self.own(state, head)?["state"] == "open" {
-            self.provider.patch(
-                &format!("repos/{}/pulls/{}", self.provider.repository, state.pull),
-                &json!({"state":"closed"}),
-            )?;
+            self.provider.revise(state.pull, &Update::Close)?;
         }
         if self.own(state, head)?["state"] != "closed" {
             return Err("absorbed Auto pull closure was not read back".into());
@@ -191,10 +189,7 @@ impl Absorption<'_, '_> {
         let current = self.provider.issue(number)?;
         if current["state"] != "closed" {
             let accepted = issue::text(&current, "body")?.replace("- [ ]", "- [x]");
-            self.provider.patch(
-                &format!("repos/{}/issues/{number}", self.provider.repository),
-                &json!({"body": accepted, "state": "closed"}),
-            )?;
+            self.provider.complete(number, &accepted)?;
         }
         if self.provider.issue(number)?["state"] != "closed" {
             return Err("absorbed Auto issue closure was not read back".into());

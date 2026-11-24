@@ -88,10 +88,7 @@ pub(super) fn close(
     }
     let current = provider.issue(state.issue)?;
     let accepted = issue::text(&current, "body")?.replace("- [ ]", "- [x]");
-    provider.patch(
-        &format!("repos/{}/issues/{}", provider.repository, state.issue),
-        &serde_json::json!({"body": accepted, "state": "closed"}),
-    )?;
+    provider.complete(state.issue, &accepted)?;
     if provider.issue(state.issue)?["state"] != "closed" {
         return Err("Auto issue closure was not read back".into());
     }
@@ -198,8 +195,8 @@ pub(super) fn idle(
             "Auto no-op provider progress moved before closure; reread before retry".into(),
         );
     }
-    provider.patch(&format!("repos/{}/issues/{}", provider.repository, state.issue),
-        &serde_json::json!({"body": issue::body(provider.repository).replace("- [ ]", "- [x]"), "state":"closed"}))?;
+    let accepted = issue::body(provider.repository).replace("- [ ]", "- [x]");
+    provider.complete(state.issue, &accepted)?;
     if !resume(root, provider, seat, state)? {
         return Err("qualified Auto no-op closure was not read back".into());
     }

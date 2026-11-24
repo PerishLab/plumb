@@ -51,5 +51,6 @@ Another identity's marker comment refuses every run until it is resolved,
 unless the writer posted the identical comment itself; see plumb cookbook
 follow.foreign-writer.
 
---github-command selects the caller's gh-compatible provider executable. Auto
-has no Concord Member and does not repair business source or perform releases.
+GitHub access uses the active credential's Runseal client. Set GITHUB_TOKEN_FILE
+for explicit token custody or use the GitHub token carried by your Runseal profile.
+Auto has no Concord Member and does not repair business source or perform releases.

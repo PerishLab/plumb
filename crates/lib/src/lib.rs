@@ -24,7 +24,7 @@ pub mod semantics;
 #[path = "knowledge/windtun.rs"]
 pub mod windtun;
 #[cfg(feature = "vendor")]
-pub use forge::land;
+pub use forge::{github, land};
 pub use proof::guard::landing;
 mod proof;
 mod runtime;

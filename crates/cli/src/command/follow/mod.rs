@@ -2,12 +2,12 @@ mod absorb;
 mod closure;
 mod engine;
 mod issue;
-mod provider;
+pub(super) mod provider;
 mod pull;
 mod refresh;
 mod retire;
 #[cfg(all(test, unix))]
-#[path = "../tests.rs"]
+#[path = "../packages/tests.rs"]
 mod tests;
 mod work;
 
@@ -21,7 +21,6 @@ use std::path::{Path, PathBuf};
 
 pub(crate) struct Input {
     pub root: PathBuf,
-    pub github: PathBuf,
     pub json: bool,
 }
 
@@ -37,12 +36,7 @@ pub(crate) fn run(input: Input) -> i32 {
 
 pub(crate) fn retire(input: Input) -> i32 {
     let retired = repository(&input.root).and_then(|repository| {
-        let provider = Provider {
-            command: &input.github,
-            repository: &repository,
-            patience: provider::Patience::MERGE,
-            sources: Default::default(),
-        };
+        let provider = Provider::native(&repository)?;
         retire::run(&input.root, &provider)
     });
     match retired {
@@ -68,12 +62,7 @@ fn report(input: &Input, message: &str) -> i32 {
 
 fn execute(input: &Input) -> Result<String, String> {
     let repository = repository(&input.root)?;
-    let provider = Provider {
-        command: &input.github,
-        repository: &repository,
-        patience: provider::Patience::MERGE,
-        sources: Default::default(),
-    };
+    let provider = Provider::native(&repository)?;
     let seat = Seat::open(&repository)?;
     let mut state = seat.read(&repository)?;
     resume(input, &provider, &seat, &mut state).map_err(|error| provider.stopped(&state, error))

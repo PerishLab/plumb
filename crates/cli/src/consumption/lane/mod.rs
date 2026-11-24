@@ -4,7 +4,8 @@ mod inspect;
 mod plan;
 mod result;
 mod status;
-mod transport;
+#[cfg(test)]
+mod tests;
 
 use clap::{Args, Subcommand};
 use plumb::cli::Root;
@@ -131,14 +132,22 @@ pub struct Reading {
 
 pub fn run(deed: Deed) -> i32 {
     let (json, result) = match deed {
-        Deed::Plan(options) => (options.json, plan::prepare(options)),
+        Deed::Plan(options) => (options.json, plan::prepare(options, &hub::Native)),
         Deed::Apply(options) => (
             options.json,
-            dispatch::execute(options, plumb::lane::dispatch::Operation::Apply),
+            dispatch::execute(
+                options,
+                plumb::lane::dispatch::Operation::Apply,
+                &hub::Native,
+            ),
         ),
         Deed::Discard(options) => (
             options.json,
-            dispatch::execute(options, plumb::lane::dispatch::Operation::Dispose),
+            dispatch::execute(
+                options,
+                plumb::lane::dispatch::Operation::Dispose,
+                &hub::Native,
+            ),
         ),
         Deed::Result(options) => (options.json, result::read(options)),
         Deed::Status(options) => (options.json, status::read(options)),

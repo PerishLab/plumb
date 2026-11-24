@@ -25,6 +25,7 @@ impl Fixture {
 
     fn provider(&self) -> Provider<'_> {
         Provider {
+            source: crate::command::packages::follow::provider::Source::Fixture,
             command: &self.command,
             repository: "Example/probe",
             patience: super::provider::Patience {
