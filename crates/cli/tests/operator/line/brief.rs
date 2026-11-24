@@ -123,3 +123,22 @@ fn ungated() {
         "marker=v1.1.0-rc.1",
     );
 }
+
+#[test]
+fn agy() {
+    let home = tempfile::tempdir().expect("home");
+    std::fs::create_dir_all(home.path().join(".gemini/config")).expect("config");
+    let bare = closed(home.path());
+    assert_eq!(bare.lines().count(), 1, "{bare}");
+    assert!(!bare.contains("observed"), "{bare}");
+    std::fs::create_dir_all(home.path().join(".gemini/antigravity-cli")).expect("agy");
+    let said = closed(home.path());
+    let path = home.path().join(".gemini/config/skills/probe");
+    assert!(
+        said.contains(&format!(
+            "agy seat {} holds no brief: {STEP}",
+            path.display()
+        )),
+        "{said}"
+    );
+}

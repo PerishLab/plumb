@@ -84,8 +84,7 @@ fn route(head: &str) -> Option<(&str, &str)> {
     Some((parts.next()?, parts.next()?))
 }
 
-fn rig(root: &Path, url: &str) -> Kit {
-    fs::create_dir_all(root.join("home/.claude/skills")).expect("claude");
+fn bare(root: &Path, url: &str) -> Kit {
     Kit {
         name: "plumb".to_string(),
         home: root.join("home"),
@@ -94,10 +93,22 @@ fn rig(root: &Path, url: &str) -> Kit {
     }
 }
 
+fn rig(root: &Path, url: &str) -> Kit {
+    fs::create_dir_all(root.join("home/.claude/skills")).expect("claude");
+    bare(root, url)
+}
+
 fn ask() -> Ask {
     Ask {
         channel: "stable".to_string(),
         ..Ask::default()
+    }
+}
+
+fn pin(version: &str) -> Ask {
+    Ask {
+        version: Some(version.to_string()),
+        ..ask()
     }
 }
 
@@ -115,14 +126,12 @@ fn current() {
     let seat = root("current");
     let kit = rig(&seat, &url);
     kit.install(&ask()).expect("install");
-
     hits.record.store(0, Ordering::SeqCst);
     hits.archive.store(0, Ordering::SeqCst);
     let report = kit.status(&ask()).expect("status");
     assert_eq!(report.seats[0].state, Standing::Current);
     assert_eq!(report.seats[0].action, Action::None);
     assert_eq!(hits.archive.load(Ordering::SeqCst), 0);
-
     let done = kit.upgrade(&ask()).expect("no-op");
     assert_eq!(done.same.len(), 1);
     assert_eq!(hits.record.load(Ordering::SeqCst), 4);
@@ -136,32 +145,19 @@ fn direction() {
     let (url, hits) = serve(archive.clone(), plumb::skill::stamp(&archive));
     let seat = root("direction");
     let kit = rig(&seat, &url);
-    kit.install(&Ask {
-        version: Some("v1.0.0".to_string()),
-        ..ask()
-    })
-    .expect("old");
+    kit.install(&pin("v1.0.0")).expect("old");
     assert_eq!(
         kit.status(&ask()).expect("update").seats[0].action,
         Action::Upgrade
     );
     kit.upgrade(&ask()).expect("upgrade");
-
-    let exact = Ask {
-        version: Some("v1.0.0".to_string()),
-        ..ask()
-    };
+    let exact = pin("v1.0.0");
     assert_eq!(
         kit.status(&exact).expect("rollback").seats[0].action,
         Action::Rollback
     );
     kit.upgrade(&exact).expect("rollback");
-    kit.upgrade(&Ask {
-        version: Some("v2.0.0".to_string()),
-        ..ask()
-    })
-    .expect("ahead");
-
+    kit.upgrade(&pin("v2.0.0")).expect("ahead");
     hits.archive.store(0, Ordering::SeqCst);
     assert_eq!(
         kit.status(&ask()).expect("regression").seats[0].action,
@@ -227,7 +223,10 @@ fn worn(home: &Path, version: &str, keeper: &str) -> PathBuf {
 fn briefs() {
     let home = root("briefs");
     assert!(plumb::skill::briefs(&home, "plumb").is_empty());
+    fs::create_dir_all(home.join(".gemini/config")).expect("config");
+    assert!(plumb::skill::briefs(&home, "plumb").is_empty());
     fs::create_dir_all(home.join(".codex")).expect("codex");
+    fs::create_dir_all(home.join(".gemini/antigravity-cli")).expect("agy");
     let path = worn(&home, "v1.0.0", "plumb");
     let found = plumb::skill::briefs(&home, "plumb");
     let held = |agent: &str| {
@@ -236,11 +235,17 @@ fn briefs() {
             .find(|brief| brief.seat.agent == agent)
             .unwrap_or_else(|| panic!("{agent} seat"))
     };
-    assert_eq!(found.len(), 2);
+    assert_eq!(found.len(), 3);
     assert_eq!(held("grok").seat.path, path);
     assert_eq!(held("grok").version.as_deref(), Some("v1.0.0"));
     assert_eq!(held("codex").version, None);
+    assert_eq!(
+        held("agy").seat.path,
+        home.join(".gemini/config/skills/plumb")
+    );
+    assert_eq!(held("agy").version, None);
     assert!(held("codex").below("v1.0.0"));
+    assert!(held("agy").below("v1.0.0"));
     assert!(held("grok").below("v1.0.1-rc.1"));
     assert!(held("grok").below("v1.1.0"));
     assert!(!held("grok").below("v1.0.0"));
@@ -249,4 +254,38 @@ fn briefs() {
     let staged = plumb::skill::briefs(&home, "plumb");
     assert!(staged.iter().all(|brief| brief.version.is_none()));
     assert!(!home.join("state").exists());
+}
+
+#[test]
+fn agy() {
+    let archive = pack();
+    let (url, _) = serve(archive.clone(), plumb::skill::stamp(&archive));
+    let seat = root("agy");
+    fs::create_dir_all(seat.join("home/.gemini/antigravity-cli")).expect("agy");
+    let kit = bare(&seat, &url);
+    kit.install(&pin("v1.0.0")).expect("install");
+    let target = seat.join("home/.gemini/config/skills/plumb");
+    let before = kit.status(&ask()).expect("before");
+    assert_eq!(before.seats.len(), 1);
+    assert_eq!(before.seats[0].agent, "agy");
+    assert_eq!(before.seats[0].path, target);
+    assert_eq!(before.seats[0].state, Standing::Available);
+    assert_eq!(before.seats[0].action, Action::Upgrade);
+    let done = kit.upgrade(&ask()).expect("upgrade");
+    assert_eq!(done.kept.len(), 1);
+    assert_eq!(done.kept[0].agent, "agy");
+    assert_eq!(done.kept[0].path, target);
+    assert!(done.left.is_empty());
+    let after = kit.status(&ask()).expect("after");
+    assert_eq!(after.seats[0].state, Standing::Current);
+    assert_eq!(after.seats[0].action, Action::None);
+    assert!(
+        fs::read_to_string(target.join("metadata.json"))
+            .expect("marker")
+            .contains("v1.2.3")
+    );
+    let same = kit.upgrade(&ask()).expect("same");
+    assert_eq!(same.same.len(), 1);
+    assert_eq!(same.same[0].agent, "agy");
+    let _ = fs::remove_dir_all(seat);
 }
