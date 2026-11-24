@@ -1628,9 +1628,9 @@ dependencies = [
 
 [[package]]
 name = "runseal"
-version = "0.58.0"
+version = "0.59.0"
 source = "sparse+https://cargo.perish.uk/"
-checksum = "9147df9a1987a18518d3546163e22dfdac3f48ef6388ce8f19c76c04d9dd0c41"
+checksum = "1dd3cbb5eb7d10693dfe278bc12539db3cd872bb24e2df4434bc142fab8a17fa"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
