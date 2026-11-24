@@ -1,6 +1,6 @@
 use super::{Provider, Source, encode};
 use crate::command::diagnostic;
-use runseal::github::{Draft, Number, Page, Relation, State, Window, lifecycle};
+use runseal::github::{Number, Page, Relation, State, Window, lifecycle, records::Draft};
 use serde::Serialize;
 use serde_json::Value;
 #[cfg(all(test, unix))]
@@ -27,12 +27,13 @@ impl Provider<'_> {
         match &self.source {
             Source::Native(client) => {
                 let (owner, name) = self.coordinate()?;
-                let repo = client.repository(owner, name).map_err(diagnostic)?.value;
-                let node = repo.node.ok_or("repository has no GitHub node identity")?;
-                let kinds = cursors(|window| client.kinds(owner, window).map(|r| r.value))?;
-                let kind = kind(&kinds)?;
-                let draft = Draft::new(&node, title, body, Some(&kind.id)).map_err(diagnostic)?;
-                let issue = client.create(&draft).map_err(diagnostic)?.value;
+                let draft = Draft::new(title, body, "Auto").map_err(diagnostic)?;
+                let issue = client
+                    .file(owner, name, &draft)
+                    .map_err(|error| {
+                        format!("create repository Auto Issue: {}", diagnostic(error))
+                    })?
+                    .value;
                 Ok(issue.number.into())
             }
             #[cfg(all(test, unix))]
@@ -164,17 +165,6 @@ impl Provider<'_> {
             }
         }
     }
-}
-
-fn kind(kinds: &[runseal::github::Kind]) -> Result<&runseal::github::Kind, String> {
-    let mut auto = kinds.iter().filter(|row| row.name == "Auto" && row.enabled);
-    let kind = auto
-        .next()
-        .ok_or("provider has no enabled Auto issue type")?;
-    if auto.next().is_some() {
-        return Err("provider returned more than one enabled Auto issue type".into());
-    }
-    Ok(kind)
 }
 
 fn numbered<T: Serialize>(
