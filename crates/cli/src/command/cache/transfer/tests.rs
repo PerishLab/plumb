@@ -130,6 +130,7 @@ fn producers() {
             identity: "world;producer-a".into(),
             cargo: None,
             compiler: Some(compiler),
+            timing: None,
         })
         .unwrap();
     for (name, family, identity) in [

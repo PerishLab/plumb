@@ -25,6 +25,12 @@ snapshots cannot restore old freshness. Failed attempts remain unsealed. Cargo
 and source ownership leases remain local, and every actual Guard check and
 source/package/tool judgment remains required. A cache is never a verdict.
 
+A parcel that carries compilation material also carries the guard/test timing
+history from PLUMB_HOME state when present. Restore adds only missing timing
+records and never replaces existing ones; a failed timing restore is reported
+and leaves compilation material in place. Timings only advise test scheduling.
+Parcels without timing history still restore.
+
 With --save, Plumb itself decides whether to pack native Cargo content. A run
 on a follow branch packs only compiler material, because a follow changes the
 first-party package world and no later job can restore the native layer. A

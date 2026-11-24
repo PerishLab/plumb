@@ -99,7 +99,10 @@ fn validate(name: &Path) -> Result<(), String> {
     if name == Path::new("manifest.json") {
         return Ok(());
     }
-    if !name.starts_with("cargo") && !name.starts_with("compiler") {
+    if !["cargo", "compiler", "timing"]
+        .iter()
+        .any(|member| name.starts_with(member))
+    {
         return Err("compilation parcel contains undeclared content".into());
     }
     Ok(())
