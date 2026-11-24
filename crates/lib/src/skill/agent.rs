@@ -40,6 +40,7 @@ fn spots(home: &Path) -> Vec<Spot> {
     let grok = home.join(".grok");
     let shared = home.join(".agents").join("skills");
     let opencode = home.join(".config").join("opencode");
+    let gemini = home.join(".gemini");
     vec![
         Spot {
             agent: "claude",
@@ -65,6 +66,11 @@ fn spots(home: &Path) -> Vec<Spot> {
             agent: "opencode",
             skills: opencode.join("skills"),
             presence: opencode,
+        },
+        Spot {
+            agent: "agy",
+            presence: gemini.join("antigravity-cli"),
+            skills: gemini.join("config").join("skills"),
         },
     ]
 }
