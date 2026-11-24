@@ -181,7 +181,6 @@ fn cold() {
     assert!(fixture.provider().remote(17).unwrap().is_none());
     let input = super::super::super::Input {
         root: source.clone(),
-        github: fixture.command.clone(),
         json: true,
     };
     let mut state = seat.read("Example/probe").unwrap();
@@ -216,7 +215,6 @@ fn issueonly() {
     let (source, seat) = fixture.cold(&source);
     let input = super::super::super::Input {
         root: source.clone(),
-        github: fixture.command.clone(),
         json: true,
     };
     let mut state = seat.read("Example/probe").unwrap();
@@ -254,7 +252,6 @@ fn stopped() {
         let before = fixture.calls().len();
         let input = super::super::super::Input {
             root: source.clone(),
-            github: fixture.command.clone(),
             json: true,
         };
         let mut state = seat.read("Example/probe").unwrap();

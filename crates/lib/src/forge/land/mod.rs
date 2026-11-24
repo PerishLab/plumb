@@ -129,7 +129,7 @@ fn execute(request: Request<'_>, expected: Option<&Preparation>) -> Result<Repor
     let landing = Landing::open(request.root, request.base)?;
     landing.landable(true)?;
     let remote = github::remote(&landing.repo.root).map_err(|error| refuse("remote", error))?;
-    let client = Client::new(&remote);
+    let client = Client::new(&remote).map_err(|error| refuse("forge", error))?;
     let projection = landing.projection();
     let standing = client
         .opened(&landing.base, &projection)

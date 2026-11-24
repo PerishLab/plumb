@@ -74,3 +74,27 @@ pub fn current(program: impl AsRef<OsStr>) -> Command {
 pub fn detached(program: impl AsRef<OsStr>) -> Command {
     radicula_git::detached(program)
 }
+
+#[cfg(any(feature = "vendor", feature = "windtun"))]
+pub mod github {
+    use runseal::github::{Client, Error};
+    use std::path::Path;
+
+    pub fn client() -> Result<Client, String> {
+        let value = crate::config::value;
+        if let Some(path) = value("GITHUB_TOKEN_FILE") {
+            return Client::open(Path::new(&path)).map_err(diagnostic);
+        }
+        let token = value("GH_TOKEN")
+            .or_else(|| value("GITHUB_TOKEN"))
+            .ok_or("select a profile carrying a GitHub token")?;
+        Client::token(&token).map_err(diagnostic)
+    }
+
+    pub fn diagnostic(error: Error) -> String {
+        format!(
+            "{error}; HTTP status {:?}; request {:?}; retry-after {:?}",
+            error.evidence.status, error.evidence.request, error.evidence.wait
+        )
+    }
+}

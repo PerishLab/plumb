@@ -153,3 +153,92 @@ pub(super) mod scope {
         Ok(expected.is_some_and(|expected| expected.trim() == after))
     }
 }
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::super::pull::{body, change};
+    use super::super::work::git as workgit;
+
+    fn repository(manifest: &str) -> (tempfile::TempDir, String) {
+        let root = tempfile::tempdir().unwrap();
+        workgit(root.path(), &["init", "-q", "-b", "main"]).unwrap();
+        workgit(root.path(), &["config", "user.name", "Fixture"]).unwrap();
+        workgit(
+            root.path(),
+            &["config", "user.email", "fixture@example.invalid"],
+        )
+        .unwrap();
+        std::fs::write(root.path().join("plumb.toml"), manifest).unwrap();
+        std::fs::write(root.path().join("Cargo.lock"), "version = 4\n").unwrap();
+        workgit(root.path(), &["add", "."]).unwrap();
+        workgit(root.path(), &["commit", "-q", "-m", "base"]).unwrap();
+        let base = workgit(root.path(), &["rev-parse", "HEAD"]).unwrap();
+        (root, base)
+    }
+
+    fn head(root: &std::path::Path, message: &str) -> String {
+        workgit(root, &["add", "-A"]).unwrap();
+        workgit(root, &["commit", "-q", "-m", message]).unwrap();
+        workgit(root, &["rev-parse", "HEAD"]).unwrap()
+    }
+
+    fn describe(root: &std::path::Path, base: &str, head: &str) -> String {
+        body(
+            520,
+            change(root, base, head).unwrap(),
+            "## Delta\nNo first-party package moved.\n",
+        )
+    }
+
+    mod candidate {
+        use super::*;
+
+        #[test]
+        fn lockfile() {
+            let (root, base) = repository("[identity]\nns = \"probe\"\n");
+            std::fs::write(
+                root.path().join("Cargo.lock"),
+                "version = 4\n\n[[package]]\nname = \"probe\"\nversion = \"0.2.0\"\n",
+            )
+            .unwrap();
+            let head = head(root.path(), "follow");
+            let body = describe(root.path(), &base, &head);
+            assert!(body.contains(
+                "## Change\nRegistered follow operation; manifests and lockfiles only.\n"
+            ));
+            assert!(!body.contains("[identity] ns"));
+            assert!(body.contains("Refs #520."));
+            assert!(body.contains("## Delta\nNo first-party package moved.\n"));
+        }
+
+        #[test]
+        fn migration() {
+            let (root, base) = repository("[release]\nproduct = \"probe\"\n");
+            let before = std::fs::read_to_string(root.path().join("plumb.toml")).unwrap();
+            let migrated = crate::shape::release::migration::rewrite(&before)
+                .unwrap()
+                .unwrap();
+            std::fs::write(root.path().join("plumb.toml"), migrated).unwrap();
+            let head = head(root.path(), "follow");
+            let body = describe(root.path(), &base, &head);
+            assert!(body.contains(
+                "## Change\nRegistered follow operation; manifests and lockfiles only, plus the mechanical move of plumb.toml [release] product to [identity] ns.\n"
+            ));
+        }
+
+        #[test]
+        fn edit() {
+            let (root, base) = repository("[identity]\nns = \"probe\"\n");
+            std::fs::write(
+                root.path().join("plumb.toml"),
+                "[identity]\nns = \"probe\"\n\n[workflow]\n",
+            )
+            .unwrap();
+            let head = head(root.path(), "follow");
+            assert_eq!(
+                change(root.path(), &base, &head).unwrap(),
+                "Registered follow operation; manifests and lockfiles only."
+            );
+        }
+    }
+}

@@ -46,7 +46,6 @@ fn moved() {
     .unwrap();
     let input = super::super::super::Input {
         root: source.clone(),
-        github: fixture.command.clone(),
         json: true,
     };
     let mut current = seat.read("Example/probe").unwrap();
@@ -69,10 +68,9 @@ fn moved() {
     assert!(fixture.calls().iter().all(|call| call["payload"].is_null()));
 }
 
-fn input(fixture: &Fixture, source: &std::path::Path) -> super::super::super::Input {
+fn input(source: &std::path::Path) -> super::super::super::Input {
     super::super::super::Input {
         root: source.into(),
-        github: fixture.command.clone(),
         json: true,
     }
 }
@@ -112,13 +110,9 @@ fn cold() {
     assert!(work::git(&source, &["cat-file", "-e", &head]).is_err());
     let mut state = seat.read("Example/probe").unwrap();
     assert_eq!(state.issue, 0);
-    let error = super::super::super::resume(
-        &input(&fixture, &source),
-        &fixture.provider(),
-        &seat,
-        &mut state,
-    )
-    .unwrap_err();
+    let error =
+        super::super::super::resume(&input(&source), &fixture.provider(), &seat, &mut state)
+            .unwrap_err();
     assert!(error.contains("failed with"), "{error}");
     assert_eq!(state.issue, 17);
     assert_eq!(state.pull, 18);
@@ -140,13 +134,9 @@ fn cold() {
     let (source, seat) = fixture.cold(&source);
     let mut state = seat.read("Example/probe").unwrap();
     assert_eq!(state.issue, 0);
-    let error = super::super::super::resume(
-        &input(&fixture, &source),
-        &fixture.provider(),
-        &seat,
-        &mut state,
-    )
-    .unwrap_err();
+    let error =
+        super::super::super::resume(&input(&source), &fixture.provider(), &seat, &mut state)
+            .unwrap_err();
     assert!(error.contains("failed with"), "{error}");
     assert_eq!(
         fixture
@@ -172,13 +162,9 @@ fn writer() {
     let (source, seat) = fixture.cold(&source);
     let before = fixture.calls().len();
     let mut state = seat.read("Example/probe").unwrap();
-    let error = super::super::super::resume(
-        &input(&fixture, &source),
-        &fixture.provider(),
-        &seat,
-        &mut state,
-    )
-    .unwrap_err();
+    let error =
+        super::super::super::resume(&input(&source), &fixture.provider(), &seat, &mut state)
+            .unwrap_err();
     assert!(error.contains("another operation writer"), "{error}");
     assert_eq!(fixture.provider().remote(17).unwrap(), Some(head));
     assert!(
@@ -198,13 +184,9 @@ fn coldstop() {
         let (source, seat) = fixture.cold(&source);
         let before = fixture.calls().len();
         let mut state = seat.read("Example/probe").unwrap();
-        let error = super::super::super::resume(
-            &input(&fixture, &source),
-            &fixture.provider(),
-            &seat,
-            &mut state,
-        )
-        .unwrap_err();
+        let error =
+            super::super::super::resume(&input(&source), &fixture.provider(), &seat, &mut state)
+                .unwrap_err();
         let expected = match reason {
             "label" => "labels",
             "orphan" => "unrecorded",

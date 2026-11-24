@@ -3,16 +3,18 @@ mod metadata;
 
 use super::{Fault, Read, Result, registry::Registry, wire::ARCHIVE};
 use material::Material;
-use metadata::Metadata;
-use std::{process::Command, time::Duration};
+use std::sync::OnceLock;
+use std::time::Duration;
 
 pub struct Remote {
     agent: ureq::Agent,
+    github: OnceLock<std::result::Result<runseal::github::Client, String>>,
 }
 
 impl Default for Remote {
     fn default() -> Self {
         Self {
+            github: OnceLock::new(),
             agent: ureq::Agent::config_builder()
                 .https_only(true)
                 .max_redirects(0)
@@ -29,7 +31,12 @@ impl Read for Remote {
             return Err(Fault::refused("public read budget exceeds protocol bounds"));
         }
         if let Some(path) = url.strip_prefix("https://api.github.com/") {
-            return self.github(path, limit);
+            let client = self
+                .github
+                .get_or_init(crate::config::github::client)
+                .as_ref()
+                .map_err(|error| Fault::unknown(error.clone()))?;
+            return metadata::read(client, path, limit);
         }
         Material::new(url).read(&self.agent, limit)
     }
@@ -48,13 +55,5 @@ impl Read for Remote {
             return Err(Fault::refused("optional native metadata is unsupported"));
         }
         Material::new(url).optional(&self.agent, limit)
-    }
-}
-
-impl Remote {
-    fn github(&self, path: &str, limit: usize) -> Result<Vec<u8>> {
-        let mut command = Command::new("gh");
-        command.args(["api", "--hostname", "github.com", path]);
-        Metadata::new(path).read(&mut command, limit, Duration::from_secs(30))
     }
 }

@@ -26,7 +26,7 @@ latest generation does not discover the repository's latest released version.
 The yard seat comes from PLUMB_YARD_ENDPOINT, PLUMB_YARD_BUCKET,
 PLUMB_YARD_ACCESS_KEY_ID and PLUMB_YARD_SECRET_ACCESS_KEY or its _FILE
 variant, which the developer profile carries: runseal :liberte plumb depot
-consign. Dispatch drives the gh CLI under the same profile.
+consign. Dispatch uses the GitHub token selected by the same profile.
 
 By default consign watches the lodge and then reads Depot back: it succeeds
 only when the standing generation for the marker holds exactly what was

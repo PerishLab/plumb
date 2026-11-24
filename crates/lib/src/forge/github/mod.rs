@@ -1,7 +1,13 @@
-use crate::delivery::{Patience, Settle, Squash};
-use serde_json::Value;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+mod delivery;
+
+use self::delivery as github;
+pub use crate::config::github::{client, diagnostic};
+use crate::delivery::{Guard, Patience, Squash};
+pub use delivery::{guard, merge};
+use runseal::github::{
+    Compare, Number, Proposal, Signal, State, Target, Verdict, lifecycle::Selection,
+};
+use std::path::Path;
 
 pub struct Remote {
     pub owner: String,
@@ -50,126 +56,89 @@ fn parse(raw: &str) -> Result<Remote, String> {
     }
 }
 
-pub struct Client {
-    seat: String,
-    command: PathBuf,
-    patience: Patience,
+pub struct Client<'a> {
+    scope: &'a Remote,
+    github: runseal::github::Client,
 }
 
-impl Client {
-    pub fn new(remote: &Remote) -> Self {
-        Self {
-            seat: format!("{}/{}", remote.owner, remote.repo),
-            command: PathBuf::from("gh"),
-            patience: Patience::MERGE,
-        }
+impl<'a> Client<'a> {
+    pub fn new(scope: &'a Remote) -> Result<Self, String> {
+        Ok(Self {
+            scope,
+            github: client()?,
+        })
     }
 
     pub fn opened(&self, base: &str, head: &str) -> Result<Option<Pull>, String> {
-        let listed = self.gh(&[
-            "pr", "list", "-R", &self.seat, "--state", "open", "--base", base, "--head", head,
-            "--json", FIELDS,
-        ])?;
-        let value: Value = serde_json::from_str(&listed)
-            .map_err(|error| format!("gh pr list did not answer JSON: {error}"))?;
-        Ok(value
-            .as_array()
-            .and_then(|held| held.first())
-            .and_then(pull))
+        let selection = Selection::new(
+            head,
+            Some(base),
+            State::Open,
+            Number::new(1, 2).map_err(diagnostic)?,
+        )
+        .map_err(diagnostic)?;
+        let page = self
+            .github
+            .listing(&self.scope.owner, &self.scope.repo, &selection)
+            .map_err(diagnostic)?
+            .value;
+        if page.next.is_some() || page.rows.len() > 1 {
+            return Err("multiple open pulls match the landing branch".into());
+        }
+        Ok(page.rows.into_iter().next().map(Pull::from))
     }
 
     pub fn raise(&self, base: &str, head: &str, title: &str, body: &str) -> Result<Pull, String> {
-        let url = self.gh(&[
-            "pr", "create", "-R", &self.seat, "--base", base, "--head", head, "--title", title,
-            "--body", body,
-        ])?;
-        let url = url
-            .lines()
-            .rev()
-            .find(|line| line.contains("/pull/"))
-            .ok_or_else(|| format!("gh pr create named no pull: {url}"))?
-            .trim()
-            .to_string();
-        let viewed = self.gh(&["pr", "view", &url, "-R", &self.seat, "--json", FIELDS])?;
-        let value: Value = serde_json::from_str(&viewed)
-            .map_err(|error| format!("gh pr view did not answer JSON: {error}"))?;
-        pull(&value).ok_or_else(|| format!("{url} has no number"))
+        let compare = Compare::new(head, base).map_err(diagnostic)?;
+        let proposal = Proposal::new(compare, title, Some(body)).map_err(diagnostic)?;
+        let pull = self
+            .github
+            .propose(&self.scope.owner, &self.scope.repo, &proposal)
+            .map_err(diagnostic)?
+            .value;
+        Ok(Pull::from(pull))
     }
 
     pub fn mark(&self, commit: &str, context: &str, description: &str) -> Result<(), String> {
-        self.gh(&[
-            "api",
-            "-X",
-            "POST",
-            &format!("repos/{}/statuses/{commit}", self.seat),
-            "-f",
-            "state=success",
-            "-f",
-            &format!("context={context}"),
-            "-f",
-            &format!("description={description}"),
-        ])
-        .map(|_| ())
+        let input =
+            Signal::new(Verdict::Success, context, Some(description), None).map_err(diagnostic)?;
+        self.github
+            .mark(&self.scope.owner, &self.scope.repo, commit, &input)
+            .map_err(diagnostic)?;
+        Ok(())
     }
 
     pub fn settle(&self, number: u64, squash: &Squash) -> Result<(), String> {
-        let gh = |args: &[String]| self.run(args);
-        let settle = Settle {
-            repository: &self.seat,
+        let (owner, repo) = (&self.scope.owner, &self.scope.repo);
+        let number = u32::try_from(number).map_err(|_| "invalid GitHub pull number")?;
+        let target = Target::new(owner, repo, number).map_err(diagnostic)?;
+        let guard = Guard {
+            head: &squash.candidate,
             noun: "land",
-            patience: self.patience,
-            gh: &gh,
         };
-        settle.wait(&squash.candidate)?;
-        settle.merge(number, squash)
+        let patience = Patience::MERGE;
+        Guard::wait(patience.pause, || {
+            github::guard(&self.github, owner, repo, &guard)
+        })?;
+        github::merge(&target, &self.github, squash, "land")
     }
+}
 
-    fn gh(&self, args: &[&str]) -> Result<String, String> {
-        let args = args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>();
-        self.run(&args)
-            .map(|bytes| String::from_utf8_lossy(&bytes).trim().to_string())
-    }
-
-    fn run(&self, args: &[String]) -> Result<Vec<u8>, String> {
-        let output = Command::new(&self.command)
-            .args(args)
-            .output()
-            .map_err(|error| format!("cannot run gh: {error}"))?;
-        if output.status.success() {
-            return Ok(output.stdout);
+impl From<runseal::github::Pull> for Pull {
+    fn from(pull: runseal::github::Pull) -> Self {
+        Self {
+            node: pull.node,
+            number: pull.number.into(),
+            url: pull.url,
+            head: pull.head.sha,
+            title: pull.title,
+            body: pull.body.unwrap_or_default(),
         }
-        let named = args
-            .iter()
-            .take_while(|arg| !arg.starts_with('-'))
-            .map(String::as_str)
-            .collect::<Vec<_>>()
-            .join(" ");
-        Err(format!(
-            "gh {named} on {} failed: {}",
-            self.seat,
-            String::from_utf8_lossy(&output.stderr).trim()
-        ))
     }
 }
 
-const FIELDS: &str = "id,number,url,headRefOid,title,body";
-fn pull(value: &Value) -> Option<Pull> {
-    let text = |key: &str| {
-        value
-            .get(key)
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_string()
-    };
-    Some(Pull {
-        node: text("id"),
-        number: value.get("number")?.as_u64()?,
-        url: text("url"),
-        head: text("headRefOid"),
-        title: text("title"),
-        body: text("body"),
-    })
-}
+#[cfg(all(test, unix))]
+mod fixture;
 
 #[cfg(test)]
 mod tests;

@@ -11,7 +11,6 @@ mod record;
 use record::next;
 pub(super) mod status;
 
-const HUB: &str = "PerishLab/wharf";
 const WORKFLOW: &str = "ship.yml";
 const PRERELEASES: [&str; 2] = ["rc", "beta"];
 const STABLE: &str = "stable";

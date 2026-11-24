@@ -1,243 +1,174 @@
 use super::super::{Fault, Result};
+use base64::{Engine, engine::general_purpose::STANDARD};
+use runseal::github::{Blob, Client, Error, Invocation, Listing, Receipt, Reference};
+use serde::Serialize;
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use std::{
-    io::{Read as _, Seek},
-    process::{Child, Command, Stdio},
-    time::{Duration, Instant},
-};
 
-pub(super) struct Metadata {
-    purpose: &'static str,
-    request: String,
+pub(super) fn read(client: &Client, path: &str, limit: usize) -> Result<Vec<u8>> {
+    let (route, query) = path.split_once('?').unwrap_or((path, ""));
+    let segments: Vec<_> = route.split('/').collect();
+    let ["repos", owner, name, rest @ ..] = segments.as_slice() else {
+        return Err(Fault::refused("unsupported GitHub metadata coordinate"));
+    };
+    let source = Repository {
+        client,
+        owner,
+        name,
+    };
+    let value = source.observe(rest, query).map_err(|fault| {
+        let digest = Sha256::digest(path.as_bytes());
+        Fault {
+            reason: format!("GitHub metadata [request sha256:{digest:x}]: {fault}"),
+            ..fault
+        }
+    })?;
+    encode(&value, limit)
 }
 
-impl Metadata {
-    pub(super) fn new(path: &str) -> Self {
-        let route: Vec<_> = path
-            .split('?')
-            .next()
-            .unwrap_or_default()
-            .split('/')
-            .take(10)
-            .collect();
-        let purpose = match route.as_slice() {
-            ["repos", _, _] => "repository",
-            ["repos", _, _, "branches", _] => "branch",
-            ["repos", _, _, "git", "commits", _] => "commit",
-            ["repos", _, _, "git", "ref", "tags", ..] => "tag reference",
-            ["repos", _, _, "git", "tags", _] => "tag object",
-            ["repos", _, _, "contents", ..] => "source content",
-            ["repos", _, _, "actions", "runs", _, "attempts", _, "jobs"] => "attempt jobs",
-            ["repos", _, _, "actions", "runs", _, "attempts", _] => "run attempt",
-            _ => "request",
-        };
-        Self {
-            purpose,
-            request: format!("{:x}", Sha256::digest(path.as_bytes())),
+struct Repository<'a> {
+    client: &'a Client,
+    owner: &'a str,
+    name: &'a str,
+}
+
+impl Repository<'_> {
+    fn observe(&self, route: &[&str], query: &str) -> Result<Value> {
+        match (route, query) {
+            (["git", rest @ ..], query) => self.git(rest, query),
+            (["actions", "runs", run, "attempts", attempt, rest @ ..], query) => {
+                self.attempt(run, attempt, rest, query)
+            }
+            (["contents", path @ ..], query) => self.content(path, query),
+            (["tags"], query) => self.tags(query),
+            ([], "") => value(self.client.repository(self.owner, self.name)),
+            (["branches", branch], "") => value(self.client.branch(self.owner, self.name, branch)),
+            (["compare", pair], "") => self.lineage(pair),
+            (["issues", "comments", id], "") => self.comment(id),
+            (["collaborators", login, "permission"], "") => {
+                value(self.client.permission(self.owner, self.name, login))
+            }
+            _ => Err(Fault::refused("unsupported GitHub metadata route")),
         }
     }
 
-    fn reason(&self, reason: &str) -> String {
-        format!(
-            "GitHub metadata {} [request sha256:{}]: {reason}",
-            self.purpose, self.request
-        )
-    }
-
-    fn unknown(&self, reason: &str) -> Fault {
-        Fault::unknown(self.reason(reason))
-    }
-
-    pub(super) fn read(
-        &self,
-        command: &mut Command,
-        limit: usize,
-        timeout: Duration,
-    ) -> Result<Vec<u8>> {
-        let mut output = tempfile::tempfile().map_err(|_| self.unknown("cannot hold output"))?;
-        let handle = output
-            .try_clone()
-            .map_err(|_| self.unknown("cannot hand off output"))?;
-        let mut child = command
-            .stdin(Stdio::null())
-            .stdout(handle)
-            .stderr(Stdio::null())
-            .spawn()
-            .map_err(|error| self.unknown(&format!("spawn failed ({:?})", error.kind())))?;
-        let started = Instant::now();
-        let status = loop {
-            let size = match output.metadata() {
-                Ok(value) => value.len(),
-                Err(_) => return Err(self.stop(&mut child, "output metadata is unreadable")),
-            };
-            if started.elapsed() > timeout {
-                return Err(self.stop(&mut child, "time budget exceeded"));
+    fn git(&self, route: &[&str], query: &str) -> Result<Value> {
+        let (client, owner, name) = (self.client, self.owner, self.name);
+        match (route, query) {
+            (["commits", sha], "") => value(client.commit(owner, name, sha)),
+            (["ref", "tags", tag], "") => {
+                value(client.reference(owner, name, &Reference::Tag((*tag).into())))
             }
-            if size > limit as u64 {
-                return Err(self.stop(&mut child, "output budget exceeded"));
-            }
-            match child.try_wait() {
-                Ok(Some(status)) => break status,
-                Ok(None) => std::thread::sleep(Duration::from_millis(20)),
-                Err(_) => return Err(self.stop(&mut child, "child did not settle")),
-            }
-        };
-        if !status.success() {
-            let exit = status
-                .code()
-                .map(|code| code.to_string())
-                .unwrap_or_else(|| "unavailable".into());
-            return Err(self.unknown(&format!("child failed (exit {exit}; cause unknown)")));
+            (["tags", sha], "") => value(client.annotation(owner, name, sha)),
+            (["trees", sha], "recursive=1") => value(client.tree(owner, name, sha, true)),
+            (["blobs", sha], "") => client
+                .blob(owner, name, sha)
+                .map_err(provider)
+                .map(|r| blob(r.value)),
+            _ => Err(Fault::refused("unsupported GitHub Git metadata route")),
         }
-        self.body(&mut output, limit)
     }
 
-    fn body(&self, mut output: impl std::io::Read + Seek, limit: usize) -> Result<Vec<u8>> {
-        output
-            .rewind()
-            .map_err(|_| self.unknown("cannot rewind output"))?;
-        let mut bytes = Vec::new();
-        output
-            .take(limit as u64 + 1)
-            .read_to_end(&mut bytes)
-            .map_err(|_| self.unknown("cannot read output"))?;
-        if bytes.len() > limit {
-            return Err(Fault::refused(self.reason("output exceeds bounds")));
+    fn attempt(&self, run: &str, attempt: &str, route: &[&str], query: &str) -> Result<Value> {
+        let run = number(run)?;
+        let attempt = number(attempt)?;
+        match (route, query) {
+            ([], "") => value(self.client.workflow(
+                self.owner,
+                self.name,
+                Invocation::new(run, Some(attempt)).map_err(provider)?,
+            )),
+            (["jobs"], "per_page=100") => {
+                let input = Listing::new(run, attempt, 1, 100).map_err(provider)?;
+                value(self.client.jobs(self.owner, self.name, input))
+            }
+            _ => Err(Fault::refused("unsupported GitHub Actions metadata route")),
         }
-        Ok(bytes)
     }
 
-    fn stop(&self, child: &mut Child, reason: &str) -> Fault {
-        let _ = child.kill();
-        let _ = child.wait();
-        self.unknown(reason)
+    fn content(&self, path: &[&str], query: &str) -> Result<Value> {
+        let commit = query
+            .strip_prefix("ref=")
+            .ok_or_else(|| Fault::refused("source content requires an exact commit"))?;
+        let path = path.join("/");
+        let held = self
+            .client
+            .contents(self.owner, self.name, commit, &path)
+            .map_err(provider)?
+            .value;
+        let mut body = blob(held.blob);
+        body["type"] = json!("file");
+        body["path"] = json!(held.path);
+        Ok(body)
+    }
+
+    fn tags(&self, query: &str) -> Result<Value> {
+        let page = query
+            .strip_prefix("per_page=100&page=")
+            .ok_or_else(|| Fault::refused("unsupported native tag page"))?;
+        let receipt = self
+            .client
+            .tags(self.owner, self.name, number(page)?, 100)
+            .map_err(provider)?;
+        serde_json::to_value(receipt.value.rows)
+            .map_err(|_| Fault::refused("cannot encode native tag page"))
+    }
+
+    fn lineage(&self, pair: &str) -> Result<Value> {
+        let (base, head) = pair
+            .split_once("...")
+            .ok_or_else(|| Fault::refused("invalid GitHub comparison"))?;
+        value(self.client.ancestry((self.owner, self.name), base, head))
+    }
+
+    fn comment(&self, id: &str) -> Result<Value> {
+        let found = self
+            .client
+            .lookup(self.owner, self.name, number(id)?)
+            .map_err(provider)?
+            .value;
+        let mut body = serde_json::to_value(found.entry)
+            .map_err(|_| Fault::refused("cannot encode comment evidence"))?;
+        body["user"] = json!(found.author);
+        body["updated_at"] = json!(found.updated);
+        Ok(body)
     }
 }
 
-#[cfg(all(test, unix))]
+fn value<T: Serialize>(receipt: std::result::Result<Receipt<T>, Error>) -> Result<Value> {
+    serde_json::to_value(receipt.map_err(provider)?.value)
+        .map_err(|_| Fault::refused("cannot encode GitHub metadata"))
+}
+
+fn provider(error: Error) -> Fault {
+    Fault::unknown(crate::config::github::diagnostic(error))
+}
+
+fn number<T: std::str::FromStr>(raw: &str) -> Result<T> {
+    raw.parse()
+        .map_err(|_| Fault::refused("invalid GitHub metadata number"))
+}
+
+fn blob(blob: Blob) -> Value {
+    json!({"sha":blob.sha,"size":blob.size,"encoding":"base64","content":STANDARD.encode(blob.bytes)})
+}
+
+fn encode(value: &Value, limit: usize) -> Result<Vec<u8>> {
+    let bytes =
+        serde_json::to_vec(value).map_err(|_| Fault::refused("cannot encode GitHub metadata"))?;
+    if bytes.len() > limit {
+        return Err(Fault::refused("GitHub metadata output exceeds bounds"));
+    }
+    Ok(bytes)
+}
+
+#[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::windtun::qualification::State;
-    use std::io::{Cursor, SeekFrom};
-
-    fn command(body: &str) -> (tempfile::TempDir, Command) {
-        let root = tempfile::tempdir().unwrap();
-        let path = root.path().join("gh");
-        crate::testing::executable(&path, body);
-        let mut command = Command::new(path);
-        command.current_dir(root.path());
-        (root, command)
-    }
-
     #[test]
-    fn nonzero() {
-        let (_root, mut child) = command("#!/bin/sh\nprintf NEVER_SHOW >&2\nexit 7\n");
-        let path = "repos/PerishLab/secret/contents/token?ref=NEVER_SHOW";
-        let request = Metadata::new(path);
-        let fault = request
-            .read(&mut child, 64, Duration::from_secs(2))
-            .unwrap_err();
-        assert_eq!(fault.state, State::Unknown);
-        assert!(fault.reason.contains("source content"));
-        assert!(
-            fault
-                .reason
-                .contains(&format!("{:x}", Sha256::digest(path.as_bytes())))
-        );
-        assert!(fault.reason.contains("exit 7; cause unknown"));
-        assert!(!fault.reason.contains("NEVER_SHOW"));
-        assert!(!fault.reason.contains("secret"));
-        assert!(!fault.reason.contains("authenticate"));
-        assert!(fault.reason.len() < 240);
-    }
-
-    #[test]
-    fn spawn() {
-        let root = tempfile::tempdir().unwrap();
-        let fault = Metadata::new("repos/PerishLab/wharf")
-            .read(
-                &mut Command::new(root.path().join("NEVER_SHOW")),
-                64,
-                Duration::from_secs(2),
-            )
-            .unwrap_err();
-        assert_eq!(fault.state, State::Unknown);
-        assert!(fault.reason.contains("repository"));
-        assert!(fault.reason.contains("spawn failed (NotFound)"));
-        assert!(!fault.reason.contains("NEVER_SHOW"));
-    }
-
-    #[test]
-    fn time() {
-        let (_root, mut child) = command("#!/bin/sh\nexec sleep 30\n");
-        let request = Metadata::new("repos/PerishLab/wharf/branches/main");
-        let fault = request.read(&mut child, 64, Duration::ZERO).unwrap_err();
-        assert_eq!(fault.state, State::Unknown);
-        assert!(fault.reason.contains("time budget exceeded"));
-        let mut held = child.stdout(Stdio::null()).spawn().unwrap();
-        request.stop(&mut held, "stopped");
-        assert!(held.try_wait().unwrap().is_some());
-    }
-
-    #[test]
-    fn output() {
-        let (_root, mut child) = command("#!/bin/sh\nprintf TOO_MUCH\nexec sleep 30\n");
-        let fault = Metadata::new("repos/PerishLab/wharf")
-            .read(&mut child, 1, Duration::from_secs(2))
-            .unwrap_err();
-        assert_eq!(fault.state, State::Unknown);
-        assert!(fault.reason.contains("output budget exceeded"));
-        assert!(!fault.reason.contains("TOO_MUCH"));
-    }
-
-    struct Broken(bool);
-
-    impl Seek for Broken {
-        fn seek(&mut self, _: SeekFrom) -> std::io::Result<u64> {
-            if self.0 {
-                Err(std::io::Error::other("NEVER_SHOW"))
-            } else {
-                Ok(0)
-            }
-        }
-    }
-
-    impl std::io::Read for Broken {
-        fn read(&mut self, _: &mut [u8]) -> std::io::Result<usize> {
-            Err(std::io::Error::other("NEVER_SHOW"))
-        }
-    }
-
-    #[test]
-    fn readback() {
-        let request = Metadata::new("repos/PerishLab/wharf");
-        for (broken, reason) in [
-            (true, "cannot rewind output"),
-            (false, "cannot read output"),
-        ] {
-            let fault = request.body(Broken(broken), 1).unwrap_err();
-            assert_eq!(fault.state, State::Unknown);
-            assert!(fault.reason.contains(reason));
-            assert!(!fault.reason.contains("NEVER_SHOW"));
-        }
-        let fault = request.body(Cursor::new(b"TOO_MUCH"), 1).unwrap_err();
-        assert_eq!(fault.state, State::Refused);
-        assert!(!fault.reason.contains("TOO_MUCH"));
-    }
-
-    #[test]
-    fn positive() {
-        let (_root, mut child) = command("#!/bin/sh\nprintf '{\"ok\":true}'\n");
-        let request = Metadata::new("repos/PerishLab/wharf");
-        assert_eq!(
-            request
-                .read(&mut child, 64, Duration::from_secs(2))
-                .unwrap(),
-            b"{\"ok\":true}"
-        );
-        assert_ne!(
-            request.request,
-            Metadata::new("repos/PerishLab/keel").request
-        );
+    fn bounds() {
+        let value = serde_json::json!({"kind":"bounded"});
+        let size = serde_json::to_vec(&value).unwrap().len();
+        assert!(super::encode(&value, size).is_ok());
+        assert!(super::encode(&value, size - 1).is_err());
     }
 }

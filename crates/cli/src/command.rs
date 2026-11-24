@@ -26,13 +26,11 @@ pub(crate) fn execute(command: Command) -> i32 {
         Command::Lane { deed } => crate::consumption::lane::run(deed),
         Command::Follow {
             target,
-            github,
             json,
             retire,
         } => {
             let input = packages::follow::Input {
                 root: PathBuf::from(target.root),
-                github,
                 json,
             };
             if retire {
@@ -116,4 +114,12 @@ pub(crate) fn execute(command: Command) -> i32 {
         Command::Depot { deed } => depot::run(deed),
         Command::Cache { deed } => cache::run(deed),
     }
+}
+
+pub(crate) fn github() -> Result<runseal::github::Client, String> {
+    plumb::github::client()
+}
+
+pub(crate) fn diagnostic(error: runseal::github::Error) -> String {
+    plumb::github::diagnostic(error)
 }

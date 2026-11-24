@@ -49,13 +49,9 @@ fn operator() {
             let remote = provider.remote(17).unwrap();
             let before = fixture.calls().len();
             let mut state = seat.read("Example/probe").unwrap();
-            let error = super::super::super::super::resume(
-                &input(&fixture, &source),
-                &provider,
-                &seat,
-                &mut state,
-            )
-            .unwrap_err();
+            let error =
+                super::super::super::super::resume(&input(&source), &provider, &seat, &mut state)
+                    .unwrap_err();
             let error = provider.stopped(&state, error);
             assert!(
                 error.contains(

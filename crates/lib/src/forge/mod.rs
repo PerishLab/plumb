@@ -1,2 +1,2 @@
-mod github;
+pub mod github;
 pub mod land;

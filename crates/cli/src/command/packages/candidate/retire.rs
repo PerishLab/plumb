@@ -22,6 +22,7 @@ print(json.dumps(fresh))
 
 fn provider(command: &Path) -> Provider<'_> {
     Provider {
+        source: crate::command::packages::follow::provider::Source::Fixture,
         command,
         repository: "Example/probe",
         patience: Patience {
@@ -98,7 +99,6 @@ fn fresh() {
     shut(&fixture);
     let input = Input {
         root: source.clone(),
-        github: fixture.command.clone(),
         json: true,
     };
     let error = resume(&input, &fixture.provider(), &seat, &mut state).unwrap_err();
@@ -245,7 +245,6 @@ fn unpulled() {
     shut(&fixture);
     let input = Input {
         root: source.clone(),
-        github: fixture.command.clone(),
         json: true,
     };
     let error = resume(&input, &fixture.provider(), &seat, &mut state).unwrap_err();

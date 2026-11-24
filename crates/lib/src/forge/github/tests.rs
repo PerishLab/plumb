@@ -1,6 +1,8 @@
 #[cfg(unix)]
-use super::Client;
-use super::{parse, pull};
+use super::fixture::Fixture;
+#[cfg(unix)]
+use super::fixture::pull;
+use super::parse;
 #[cfg(unix)]
 use crate::delivery::{Patience, Squash};
 #[cfg(unix)]
@@ -94,11 +96,11 @@ done(code=2, error="unexpected gh call: " + " ".join(args))
 "#;
 
 #[cfg(unix)]
-fn client(root: &Path, config: Value) -> Client {
+fn client(root: &Path, config: Value) -> Fixture {
     std::fs::write(root.join("config.json"), config.to_string()).unwrap();
     let command = root.join("gh");
     crate::testing::executable(&command, GH);
-    Client {
+    Fixture {
         seat: "PerishLab/plumb".into(),
         command,
         patience: Patience {
