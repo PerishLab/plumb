@@ -86,13 +86,19 @@ impl Transfer<'_> {
 
     fn pack(&self, skip: Option<native::Skip>) -> Result<Receipt, String> {
         let lease = Lease::new(self.root)?;
-        let cargo = match self.context {
-            Some(_) if skip.is_some() => None,
-            Some(context) if Hint::ready(&lease.root, context)? => {
-                (Target(&lease.root).seal()?.links == 0).then(|| lease.root.clone())
-            }
-            _ => None,
+        let reason = match self.context {
+            None => Some("context-missing"),
+            Some(_) if skip.is_some() => Some("skipped"),
+            Some(context) => match Hint::refusal(&lease.root, context)? {
+                None if Target(&lease.root).seal()?.links != 0 => Some("links"),
+                refusal => refusal,
+            },
         };
+        crate::diagnostic::event(
+            "material.native",
+            || serde_json::json!({"packed":reason.is_none(),"reason":reason}),
+        );
+        let cargo = reason.is_none().then(|| lease.root.clone());
         if let Some(skip) = skip.filter(|_| self.context.is_some()) {
             skip.report();
         }
@@ -269,6 +275,8 @@ impl Copy {
 }
 
 mod budget;
+#[cfg(test)]
+mod layout;
 #[cfg(test)]
 mod learned;
 mod native;

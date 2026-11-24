@@ -38,6 +38,7 @@ impl Target<'_> {
                 && !["debug", "release", "tmp"]
                     .iter()
                     .any(|known| name == *known)
+                && !name.to_str().is_some_and(triple)
             {
                 return Ok(false);
             }
@@ -97,6 +98,17 @@ impl Target<'_> {
         }
         Ok(())
     }
+}
+
+pub(crate) fn triple(name: &str) -> bool {
+    let parts = name.split('-').collect::<Vec<_>>();
+    (3..=4).contains(&parts.len())
+        && parts.iter().all(|part| {
+            !part.is_empty()
+                && part.chars().all(|letter| {
+                    letter.is_ascii_lowercase() || letter.is_ascii_digit() || letter == '_'
+                })
+        })
 }
 
 impl Hash<'_> {
