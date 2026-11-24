@@ -71,18 +71,33 @@ impl Hint {
     }
 
     pub fn ready(bucket: &Path, context: &Context) -> Result<bool, String> {
+        Ok(Self::refusal(bucket, context)?.is_none())
+    }
+
+    pub fn refusal(bucket: &Path, context: &Context) -> Result<Option<&'static str>, String> {
         let Some(hint) = Self::read(bucket)? else {
-            return Ok(false);
+            return Ok(Some("snapshot-missing"));
         };
-        if hint.image != context.image || !Target(bucket).supported()? {
-            return Ok(false);
+        if hint.image != context.image {
+            return Ok(Some("image-mismatch"));
+        }
+        if !Target(bucket).supported()? {
+            return Ok(Some("layout-unsupported"));
         }
         let actual = Target(bucket).seal()?;
         if !hint.valid(&actual, Stamp::now()?) {
-            return Ok(false);
+            return Ok(Some(if hint.ready {
+                "seal-mismatch"
+            } else {
+                "snapshot-pending"
+            }));
         }
-        Ok(super::super::graph::profiles(bucket)?
+        if !super::super::graph::profiles(bucket)?
             .iter()
-            .any(|profile| !profile.units.is_empty()))
+            .any(|profile| !profile.units.is_empty())
+        {
+            return Ok(Some("units-empty"));
+        }
+        Ok(None)
     }
 }

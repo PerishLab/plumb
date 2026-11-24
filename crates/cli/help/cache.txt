@@ -24,6 +24,10 @@ changed inputs receive fresh timestamps. Pending, partial, mismatched or future
 snapshots cannot restore old freshness. Failed attempts remain unsealed. Cargo
 and source ownership leases remain local, and every actual Guard check and
 source/package/tool judgment remains required. A cache is never a verdict.
+Per-target output directories, such as the explicit host triple used by
+guard/lock, stay local: they neither block nor join the native snapshot. When
+--save does not pack native Cargo content, a material.native diagnostic event
+names the reason.
 
 A parcel that carries compilation material also carries the guard/test timing
 history from PLUMB_HOME state when present. Restore adds only missing timing
