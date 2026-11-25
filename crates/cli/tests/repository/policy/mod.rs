@@ -148,6 +148,7 @@ pub(super) fn policy(root: &Path, write: bool) -> std::process::Output {
 }
 
 pub(super) fn stock(home: &Path, limit: &str, scan: &str, shape: &str) {
+    crate::support::widths(home);
     for (path, body) in [
         ("rules/atoms/limit.toml", limit),
         ("rules/atoms/scan.toml", scan),
