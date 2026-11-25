@@ -17,8 +17,8 @@ fn issue() -> Snapshot {
         kind: "Feature".to_string(),
         updated: "2026-09-30T00:00:00Z".to_string(),
         parent: None,
-        sub_issues: Vec::new(),
-        blocked_by: Vec::new(),
+        children: Vec::new(),
+        blockers: Vec::new(),
         blocking: Vec::new(),
     }
 }
