@@ -60,27 +60,29 @@ fn unbound() {
 
 #[test]
 fn pinned() {
-    let depot = Authority::pinned().expect("plumb-lib pins its Depot mark");
-    assert_eq!(depot.len(), 64);
-    let manifest = |schema: u64| {
+    let manifest = |schema: u64, extra: &str| {
         format!(
             "[package]\nname = \"plumb\"\nversion = \"0.0.0\"\n\
-             [package.metadata.perish.guard]\nschema = {schema}\ndepot = \"{DEPOT}\"\n"
+             [package.metadata.perish.guard]\nschema = {schema}\n{extra}"
         )
     };
     let pin = |text: &str| {
         super::authority::perish(text).and_then(|held| super::authority::pin(held.guard))
     };
-    assert_eq!(pin(&manifest(1)).as_deref(), Ok(DEPOT));
+    assert_eq!(pin(&manifest(1, "")), Ok(None));
     assert_eq!(
-        pin(&manifest(2)).err().as_deref(),
+        pin(&manifest(1, &format!("depot = \"{DEPOT}\"\n"))),
+        Ok(Some(DEPOT.into()))
+    );
+    assert_eq!(
+        pin(&manifest(2, "")).err().as_deref(),
         Some("plumb-lib Guard authority schema 2 is not 1")
     );
 }
 
 #[test]
 fn package() {
-    let manifest = format!(
+    let legacy = format!(
         r#"[package]
 name = "plumb"
 version = "0.0.0"
@@ -95,10 +97,32 @@ commit = "{COMMIT}"
 tree = "{TREE}"
 "#
     );
-    assert_eq!(
-        Authority::package(&manifest).expect("authority").producer(),
-        format!("v0.0.0@{COMMIT}")
-    );
+    let authority = Authority::package(&legacy, "https://depot.plumb.perish.uk").expect("legacy");
+    assert_eq!(authority.producer(), format!("v0.0.0@{COMMIT}"));
+    assert_eq!(authority.depot(), DEPOT);
+
+    #[cfg(feature = "depot")]
+    {
+        let decoupled = format!(
+            r#"[package]
+name = "plumb"
+version = "0.0.0"
+[package.metadata.perish.guard]
+schema = 1
+[package.metadata.perish.release]
+schema = 1
+repository = "PerishLab/plumb"
+marker = "v0.0.0"
+commit = "{COMMIT}"
+tree = "{TREE}"
+"#
+        );
+        let (source, generation) = super::depot::serve(false);
+        let authority = Authority::package(&decoupled, &source).expect("decoupled");
+        assert_eq!(authority.producer(), format!("v0.0.0@{COMMIT}"));
+        assert_eq!(authority.depot(), generation);
+        assert!(Authority::package(&decoupled, &super::depot::dead()).is_err());
+    }
 }
 
 #[test]

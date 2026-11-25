@@ -27,6 +27,13 @@ pub fn run(deed: Deed) -> i32 {
 }
 
 fn install(root: &Path) -> Result<String, String> {
+    if let Some(raw) = super::pin()? {
+        let source = super::origin()?;
+        let source = source.as_deref().unwrap_or(super::DEPOT);
+        let pinned = plumb::depot::v3::Pinned::parse(&raw, source)?;
+        let home = super::home()?;
+        pinned.cached(&home, source)?;
+    }
     Ok(
         crate::command::precommit::project(root)?.unwrap_or_else(|| {
             format!(

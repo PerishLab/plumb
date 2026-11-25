@@ -85,15 +85,16 @@ pub(super) fn authority(root: &Path) -> Result<String, String> {
     Spec::controller(root).map(|spec| spec.authority)
 }
 
+#[derive(serde::Serialize)]
+struct Guard {
+    producer: String,
+}
+
 fn guard(json: bool) -> Result<String, String> {
-    let authority = plumb::guard::Authority::running()?;
+    let producer = plumb::guard::producer();
     if json {
-        return serde_json::to_string(&authority)
+        return serde_json::to_string(&Guard { producer })
             .map_err(|error| format!("cannot encode Guard authority: {error}"));
     }
-    Ok(format!(
-        "producer {}\ndepot {}",
-        authority.producer(),
-        authority.depot()
-    ))
+    Ok(format!("producer {producer}"))
 }

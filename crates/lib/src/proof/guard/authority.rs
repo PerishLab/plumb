@@ -1,9 +1,10 @@
-use super::Descriptor;
+use super::{Descriptor, Verified, hash, live};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 #[cfg(feature = "skill")]
 const STABLE: &str = "https://releases.plumb.perish.uk";
+const DEPOT: &str = "https://depot.plumb.perish.uk";
 const MANIFEST: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml"));
 const REPOSITORY: &str = "PerishLab/plumb";
 const VERSION: u64 = 1;
@@ -20,9 +21,6 @@ pub struct Authority {
     producer: String,
     depot: String,
 }
-
-#[derive(Debug)]
-pub struct Verified(Descriptor);
 
 #[derive(Deserialize)]
 struct Manifest {
@@ -49,7 +47,8 @@ pub(super) struct Perish {
 #[serde(deny_unknown_fields)]
 pub(super) struct Guard {
     schema: u64,
-    depot: String,
+    #[serde(default)]
+    depot: Option<String>,
 }
 
 #[cfg(feature = "skill")]
@@ -66,7 +65,8 @@ struct Sealed {
 #[serde(deny_unknown_fields)]
 struct Stable {
     producer: String,
-    depot: String,
+    #[serde(default)]
+    depot: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -99,16 +99,12 @@ impl Expected {
 
 impl Authority {
     pub fn released() -> Result<Self, String> {
-        Self::package(MANIFEST)
-    }
-
-    pub fn pinned() -> Result<String, String> {
-        perish(MANIFEST).and_then(|perish| pin(perish.guard))
+        Self::package(MANIFEST, DEPOT)
     }
 
     #[cfg(feature = "skill")]
     pub fn stable() -> Result<Self, String> {
-        Self::published(STABLE)
+        Self::published(STABLE, DEPOT)
     }
 
     pub fn running() -> Result<Self, String> {
@@ -116,6 +112,14 @@ impl Authority {
             producer: super::identity(),
             depot: crate::depot::rules()?.mark().to_string(),
         })
+    }
+
+    #[cfg(feature = "testing")]
+    pub fn named(producer: impl Into<String>, depot: impl Into<String>) -> Self {
+        Self {
+            producer: producer.into(),
+            depot: depot.into(),
+        }
     }
 
     pub fn among(set: Vec<Self>, root: &Path, commit: &str) -> Result<Self, String> {
@@ -149,8 +153,7 @@ impl Authority {
         commit: &str,
         expected: &Expected,
     ) -> Result<Verified, String> {
-        let proof = super::commit(root, commit)?;
-        self.judge(root, proof, expected)
+        self.judge(root, super::commit(root, commit)?, expected)
     }
 
     #[cfg(test)]
@@ -191,13 +194,12 @@ impl Authority {
     }
 
     #[cfg(feature = "skill")]
-    pub(super) fn published(base: &str) -> Result<Self, String> {
-        let pointer = crate::seat::release::Authority::at(base).pointer("stable");
-        let body = crate::skill::sealed(base).map_err(|error| {
-            format!("cannot read Plumb stable Guard authority at {pointer}: {error}")
-        })?;
+    pub(super) fn published(releases: &str, depot: &str) -> Result<Self, String> {
+        let pointer = crate::seat::release::Authority::at(releases).pointer("stable");
+        let body = crate::skill::sealed(releases)
+            .map_err(|e| format!("cannot read Plumb stable Guard authority at {pointer}: {e}"))?;
         let seal: Sealed = serde_json::from_slice(&body)
-            .map_err(|error| format!("stable seal named by {pointer} is malformed: {error}"))?;
+            .map_err(|e| format!("stable seal named by {pointer} is malformed: {e}"))?;
         if seal.channel != "stable" {
             return Err(format!(
                 "stable seal named by {pointer} is for channel {}",
@@ -210,28 +212,32 @@ impl Authority {
                 seal.version
             )
         })?;
-        let (marker, commit) = guard
-            .producer
-            .split_once('@')
-            .unwrap_or((&guard.producer, ""));
+        let (marker, commit) = guard.producer.split_once('@').unwrap_or(("", ""));
         if marker != seal.version {
             return Err(format!(
                 "Plumb stable {} seal names guard producer {}",
                 seal.version, guard.producer
             ));
         }
-        hash(commit, "producer commit")
-            .and_then(|()| hash(&guard.depot, "Depot mark"))
-            .map_err(|error| format!("Plumb stable {} seal: {error}", seal.version))?;
+        let tag = format!("Plumb stable {} seal", seal.version);
+        hash(commit, "producer commit").map_err(|e| format!("{tag}: {e}"))?;
+        let depot = match guard.depot {
+            Some(held) => {
+                hash(&held, "Depot mark").map_err(|e| format!("{tag}: {e}"))?;
+                held
+            }
+            None => live(depot)
+                .map_err(|e| format!("cannot resolve {tag} Depot authority from {depot}: {e}"))?,
+        };
         Ok(Self {
             producer: guard.producer,
-            depot: guard.depot,
+            depot,
         })
     }
 
-    pub(super) fn package(text: &str) -> Result<Self, String> {
+    pub(super) fn package(text: &str, depot: &str) -> Result<Self, String> {
         let perish = perish(text)?;
-        let depot = pin(perish.guard)?;
+        let pinned = pin(perish.guard)?;
         let release = perish
             .release
             .ok_or("plumb-lib package carries no released authority")?;
@@ -252,7 +258,7 @@ impl Authority {
             .strip_prefix('v')
             .ok_or("plumb-lib release marker has no v prefix")?;
         let version = semver::Version::parse(marker)
-            .map_err(|error| format!("plumb-lib release marker is invalid: {error}"))?;
+            .map_err(|e| format!("plumb-lib release marker is invalid: {e}"))?;
         if version.to_string() != env!("CARGO_PKG_VERSION") {
             return Err(format!(
                 "plumb-lib release marker {} does not match package v{}",
@@ -262,20 +268,11 @@ impl Authority {
         }
         hash(&release.commit, "release commit")?;
         hash(&release.tree, "release tree")?;
+        let depot = pinned.map(Ok).unwrap_or_else(|| live(depot))?;
         Ok(Self {
             producer: format!("{}@{}", release.marker, release.commit),
             depot,
         })
-    }
-}
-
-impl Verified {
-    pub fn descriptor(&self) -> &Descriptor {
-        &self.0
-    }
-
-    pub fn take(self) -> Descriptor {
-        self.0
     }
 }
 
@@ -285,16 +282,15 @@ pub(super) fn perish(text: &str) -> Result<Perish, String> {
         .map_err(|error| format!("cannot read plumb-lib package authority: {error}"))
 }
 
-pub(super) fn pin(guard: Guard) -> Result<String, String> {
+pub(super) fn pin(guard: Guard) -> Result<Option<String>, String> {
     if guard.schema != VERSION {
         return Err(format!(
             "plumb-lib Guard authority schema {} is not {VERSION}",
             guard.schema
         ));
     }
-    hash(&guard.depot, "Depot mark").map(|()| guard.depot)
-}
-
-fn hash(value: &str, name: &str) -> Result<(), String> {
-    super::hash(value, name)
+    guard
+        .depot
+        .map(|depot| hash(&depot, "Depot mark").map(|()| depot))
+        .transpose()
 }

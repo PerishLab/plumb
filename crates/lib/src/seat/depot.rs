@@ -6,12 +6,20 @@ pub mod v3;
 pub struct Rules {
     files: Vec<(String, Vec<u8>)>,
     mark: String,
+    pinned: Option<v3::Pinned>,
 }
 
 static CARRIED: OnceLock<Rules> = OnceLock::new();
 
+#[cfg(any(test, debug_assertions, feature = "testing"))]
 pub fn carry(files: &'static [(&'static str, &'static str)]) {
     CARRIED.get_or_init(|| Rules::new(files));
+}
+
+pub fn install(rules: Rules) -> Result<(), String> {
+    CARRIED
+        .set(rules)
+        .map_err(|_| "Plumb rules were already initialized".to_string())
 }
 
 pub fn rules() -> Result<&'static Rules, String> {
@@ -21,6 +29,7 @@ pub fn rules() -> Result<&'static Rules, String> {
 }
 
 impl Rules {
+    #[cfg(any(test, debug_assertions, feature = "testing"))]
     fn new(carried: &'static [(&'static str, &'static str)]) -> Self {
         let mut files = carried
             .iter()
@@ -58,7 +67,11 @@ impl Rules {
         let mark = manifest
             .generation()
             .expect("carried Plumb rules form a valid Depot v3 generation");
-        Self { files, mark }
+        Self {
+            files,
+            mark,
+            pinned: None,
+        }
     }
 
     pub fn bundle(bundle: &v3::Bundle) -> Result<Self, String> {
@@ -82,7 +95,23 @@ impl Rules {
                 .verify(&object.path, bytes, object.executable)?;
             files.push((object.path.clone(), bytes.clone()));
         }
-        Ok(Self { files, mark })
+        Ok(Self {
+            files,
+            mark,
+            pinned: None,
+        })
+    }
+
+    pub fn resolved(bundle: &v3::Bundle, pinned: v3::Pinned) -> Result<Self, String> {
+        let mut rules = Self::bundle(bundle)?;
+        if rules.mark != pinned.generation {
+            return Err(format!(
+                "depot configuration {} disagrees with pinned {}",
+                rules.mark, pinned.generation
+            ));
+        }
+        rules.pinned = Some(pinned);
+        Ok(rules)
     }
 
     pub fn read(&self, path: &str) -> Result<String, String> {
@@ -98,6 +127,10 @@ impl Rules {
 
     pub fn mark(&self) -> &str {
         &self.mark
+    }
+
+    pub fn pinned(&self) -> Option<&v3::Pinned> {
+        self.pinned.as_ref()
     }
 }
 
@@ -135,7 +168,7 @@ fn walk(root: &std::path::Path, dir: &std::path::Path, held: &mut Vec<(String, S
     }
 }
 
-#[cfg(not(debug_assertions))]
+#[cfg(all(not(debug_assertions), any(test, feature = "testing")))]
 fn overlay() -> Vec<(String, String)> {
     Vec::new()
 }

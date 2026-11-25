@@ -1,3 +1,4 @@
+#[cfg(any(test, debug_assertions))]
 pub static FILES: &[(&str, &str)] = plumb::seat::catalogue!();
 
 #[cfg(test)]
@@ -108,9 +109,11 @@ mod tests {
     #[test]
     fn mark() {
         plumb::depot::carry(super::FILES);
-        assert_eq!(
-            plumb::depot::rules().expect("carried rules").mark(),
-            plumb::guard::Authority::pinned().expect("pinned Depot mark")
+        let mark = plumb::depot::rules().expect("carried rules").mark();
+        assert_eq!(mark.len(), 64);
+        assert!(
+            mark.bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
         );
     }
 }

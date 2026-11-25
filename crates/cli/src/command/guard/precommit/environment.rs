@@ -3,6 +3,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 const COMPILER: &str = "PLUMB_GUARD_COMPILER_CACHE";
+const CONFIGURATION: &str = "PLUMB_CONFIGURATION";
 const MARK: &str = "PLUMB_DEPOT_MARK";
 
 pub(super) fn capture(
@@ -28,47 +29,36 @@ pub(super) fn capture(
         environment = environment
             .combine(crate::execution::contract(family)?.capture(inputs.iter().cloned())?)?;
     }
-    environment = environment.combine(
-        Contract {
-            inherit: Vec::new(),
-            managed: Vec::new(),
-            reject: Vec::new(),
-            bind: [(
-                "NPM_CONFIG_USERCONFIG".into(),
-                Binding::Value(if cfg!(windows) {
-                    "NUL".into()
-                } else {
-                    "/dev/null".into()
-                }),
-            )]
-            .into(),
-        }
-        .capture([])?,
-    )?;
+    let null = if cfg!(windows) { "NUL" } else { "/dev/null" };
+    environment = environment.combine(bound(
+        [("NPM_CONFIG_USERCONFIG".into(), Binding::Value(null.into()))].into(),
+    )?)?;
     if families.contains("cargo") {
         if compiler()? {
-            environment = environment.combine(
-                Contract {
-                    inherit: Vec::new(),
-                    managed: Vec::new(),
-                    reject: Vec::new(),
-                    bind: [
-                        (
-                            "RUSTC_WRAPPER".into(),
-                            Binding::Tool {
-                                tool: "sccache".into(),
-                            },
-                        ),
-                        ("CARGO_INCREMENTAL".into(), Binding::Value("0".into())),
-                    ]
-                    .into(),
-                }
-                .capture([])?,
-            )?;
+            let tool = Binding::Tool {
+                tool: "sccache".into(),
+            };
+            environment = environment.combine(bound(
+                [
+                    ("RUSTC_WRAPPER".into(), tool),
+                    ("CARGO_INCREMENTAL".into(), Binding::Value("0".into())),
+                ]
+                .into(),
+            )?)?;
         }
         inspect(root, &environment)?;
     }
     Ok(environment)
+}
+
+fn bound(bind: std::collections::BTreeMap<String, Binding>) -> Result<Environment, String> {
+    Contract {
+        inherit: Vec::new(),
+        managed: Vec::new(),
+        reject: Vec::new(),
+        bind,
+    }
+    .capture([])
 }
 
 fn compiler() -> Result<bool, String> {
@@ -90,30 +80,25 @@ pub(super) fn observed(
     if value.len() > 8192 {
         return Err("package observation exceeds execution input bound".into());
     }
-    environment.combine(
-        Contract {
-            inherit: Vec::new(),
-            managed: Vec::new(),
-            reject: Vec::new(),
-            bind: [("PLUMB_PACKAGES_OBSERVATION".into(), Binding::Value(value))].into(),
-        }
-        .capture([])?,
-    )
+    environment.combine(bound(
+        [("PLUMB_PACKAGES_OBSERVATION".into(), Binding::Value(value))].into(),
+    )?)
 }
 
-pub(super) fn depot(environment: Environment, mark: &str) -> Result<Environment, String> {
+pub(super) fn depot(
+    environment: Environment,
+    rules: &plumb::depot::Rules,
+) -> Result<Environment, String> {
+    let mark = rules.mark();
     if mark.trim().is_empty() {
         return Err("depot mark is empty".into());
     }
-    environment.combine(
-        Contract {
-            inherit: Vec::new(),
-            managed: Vec::new(),
-            reject: Vec::new(),
-            bind: [(MARK.into(), Binding::Value(mark.into()))].into(),
-        }
-        .capture([])?,
-    )
+    let mut entries =
+        std::collections::BTreeMap::from([(MARK.into(), Binding::Value(mark.into()))]);
+    if let Some(pinned) = rules.pinned() {
+        entries.insert(CONFIGURATION.into(), Binding::Value(pinned.encode()?));
+    }
+    environment.combine(bound(entries)?)
 }
 
 fn inspect(root: &Path, environment: &Environment) -> Result<(), String> {
@@ -131,30 +116,16 @@ fn inspect(root: &Path, environment: &Environment) -> Result<(), String> {
 pub(super) fn managed(environment: Environment, seat: &Path) -> Result<Environment, String> {
     let mut command = crate::cargo::command();
     command.env("CARGO_TARGET_DIR", seat);
-    let bind = command
+    let entries = command
         .get_envs()
         .filter_map(|(key, value)| value.map(|value| (key, value)))
         .map(|(key, value)| {
-            Ok((
-                key.to_str().ok_or("managed Cargo key is not text")?.into(),
-                Binding::Value(
-                    value
-                        .to_str()
-                        .ok_or("managed Cargo value is not text")?
-                        .into(),
-                ),
-            ))
+            let key = key.to_str().ok_or("managed Cargo key is not text")?.into();
+            let val = value.to_str().ok_or("managed Cargo value is not text")?;
+            Ok((key, Binding::Value(val.into())))
         })
         .collect::<Result<_, String>>()?;
-    environment.combine(
-        Contract {
-            inherit: Vec::new(),
-            managed: Vec::new(),
-            reject: Vec::new(),
-            bind,
-        }
-        .capture([])?,
-    )
+    environment.combine(bound(entries)?)
 }
 
 #[cfg(test)]
@@ -271,5 +242,58 @@ mod tests {
         std::fs::create_dir(home.path().join(".cargo")).unwrap();
         std::fs::write(home.path().join("config.toml"), "[build]\njobs=1\n").unwrap();
         assert!(capture(root.path(), &programs, &inputs).is_err());
+    }
+
+    #[test]
+    fn forward() {
+        use plumb::depot::{Rules, sha, v3};
+        let bytes = b"answer = 42\n".to_vec();
+        let manifest = v3::Manifest::new(
+            v3::Identity {
+                product: "plumb".into(),
+                channel: "stable".into(),
+                version: "v0.163.0".into(),
+                marker: v3::Marker {
+                    name: "v0.163.0".into(),
+                    sha256: "a".repeat(64),
+                },
+                kind: v3::Kind::Configuration,
+            },
+            vec![v3::Object {
+                path: "rules/catalog.toml".into(),
+                sha256: sha(&bytes),
+                size: bytes.len() as u64,
+                media: "application/toml".into(),
+                executable: false,
+            }],
+        )
+        .unwrap();
+        let pointer = v3::Pointer::new(
+            &manifest,
+            v3::Publication {
+                source: "https://depot.plumb.perish.uk",
+                prior: None,
+                created: "2026-10-28T00:00:00Z".into(),
+            },
+        )
+        .unwrap();
+        let pinned = v3::Pinned::pointer(&pointer).unwrap();
+        let encoded = pinned.encode().unwrap();
+        let bodies = [("rules/catalog.toml".into(), bytes)].into_iter().collect();
+        let bundle = v3::Bundle { manifest, bodies };
+        let plain = depot(
+            bound(Default::default()).unwrap(),
+            &Rules::bundle(&bundle).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(plain.get(MARK), Some(pinned.generation.as_str()));
+        assert!(plain.get(CONFIGURATION).is_none());
+        let bound = depot(
+            bound(Default::default()).unwrap(),
+            &Rules::resolved(&bundle, pinned.clone()).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(bound.get(MARK), Some(pinned.generation.as_str()));
+        assert_eq!(bound.get(CONFIGURATION), Some(encoded.as_str()));
     }
 }

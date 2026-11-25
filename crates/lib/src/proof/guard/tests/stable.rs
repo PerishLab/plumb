@@ -2,7 +2,7 @@ use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::Path;
 
-use super::{Action, Authority, Descriptor, Expected, SCHEMA};
+use super::{Action, Authority, Descriptor, Expected, SCHEMA, depot};
 
 const OLD: &str = "1111111111111111111111111111111111111111";
 const NEW: &str = "6666666666666666666666666666666666666666";
@@ -17,6 +17,10 @@ struct Release {
 
 fn guard() -> String {
     format!(r#"{{"producer":"v0.2.0@{NEW}","depot":"{DEPOT}"}}"#)
+}
+
+fn decoupled() -> String {
+    format!(r#"{{"producer":"v0.2.0@{NEW}"}}"#)
 }
 
 fn serve(release: Release) -> String {
@@ -114,50 +118,83 @@ fn committed(root: &Path) -> Expected {
 
 #[test]
 fn reads() {
-    let authority = Authority::published(&online()).expect("stable authority");
+    let dead = depot::dead();
+    let authority = Authority::published(&online(), &dead).expect("legacy stable authority");
     assert_eq!(authority.producer(), format!("v0.2.0@{NEW}"));
     assert_eq!(authority.depot(), DEPOT);
 }
 
 #[test]
+fn floating() {
+    let releases = serve(Release {
+        guard: Some(decoupled()),
+        pinned: None,
+    });
+    let (source, generation) = depot::serve(false);
+    let authority = Authority::published(&releases, &source).expect("decoupled stable authority");
+    assert_eq!(authority.producer(), format!("v0.2.0@{NEW}"));
+    assert_eq!(authority.depot(), generation);
+
+    let dead = depot::dead();
+    let error = Authority::published(&releases, &dead)
+        .expect_err("offline depot must refuse decoupled seal");
+    assert!(error.contains(&dead), "{error}");
+
+    let (corrupted, _) = depot::serve(true);
+    assert!(
+        Authority::published(&releases, &corrupted).is_err(),
+        "corrupted depot manifest must refuse decoupled seal"
+    );
+}
+
+#[test]
 fn mismatch() {
-    let error = Authority::published(&serve(Release {
-        guard: Some(guard()),
-        pinned: Some("8".repeat(64)),
-    }))
+    let dead = depot::dead();
+    let error = Authority::published(
+        &serve(Release {
+            guard: Some(guard()),
+            pinned: Some("8".repeat(64)),
+        }),
+        &dead,
+    )
     .expect_err("seal digest mismatch must refuse");
     assert!(error.contains("digest mismatch"), "{error}");
 }
 
 #[test]
 fn missing() {
-    let error = Authority::published(&serve(Release {
-        guard: None,
-        pinned: None,
-    }))
+    let dead = depot::dead();
+    let error = Authority::published(
+        &serve(Release {
+            guard: None,
+            pinned: None,
+        }),
+        &dead,
+    )
     .expect_err("seal without guard must refuse");
     assert!(error.contains("carries no guard authority"), "{error}");
 }
 
 #[test]
 fn foreign() {
-    let error = Authority::published(&serve(Release {
-        guard: Some(format!(
-            r#"{{"producer":"v0.1.0@{NEW}","depot":"{DEPOT}"}}"#
-        )),
-        pinned: None,
-    }))
+    let dead = depot::dead();
+    let error = Authority::published(
+        &serve(Release {
+            guard: Some(format!(
+                r#"{{"producer":"v0.1.0@{NEW}","depot":"{DEPOT}"}}"#
+            )),
+            pinned: None,
+        }),
+        &dead,
+    )
     .expect_err("producer of another release must refuse");
     assert!(error.contains("names guard producer v0.1.0"), "{error}");
 }
 
 #[test]
 fn offline() {
-    let listener = TcpListener::bind("127.0.0.1:0").expect("reserve");
-    let port = listener.local_addr().expect("addr").port();
-    drop(listener);
-    let base = format!("http://127.0.0.1:{port}");
-    let error = Authority::published(&base).expect_err("unreachable authority must refuse");
+    let base = depot::dead();
+    let error = Authority::published(&base, &base).expect_err("unreachable authority must refuse");
     assert!(
         error.contains(&format!("{base}/v1/channels/stable.json")),
         "{error}"
@@ -170,7 +207,8 @@ fn newer() {
     let root = repository.path();
     let expected = committed(root);
     let compiled = Authority::fixture(format!("v0.1.0@{OLD}"), &"2".repeat(64));
-    let stable = Authority::published(&online()).expect("stable authority");
+    let dead = depot::dead();
+    let stable = Authority::published(&online(), &dead).expect("stable authority");
     assert!(
         compiled
             .verify(root, "HEAD", &expected)

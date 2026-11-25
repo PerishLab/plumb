@@ -62,13 +62,8 @@ fn executable() {
         );
         let authority: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
         assert_eq!(
-            authority["producer"],
-            format!("{marker}@{}", "3".repeat(40))
-        );
-        assert!(
-            authority["depot"]
-                .as_str()
-                .is_some_and(|depot| depot.len() == 64)
+            authority,
+            serde_json::json!({ "producer": format!("{marker}@{}", "3".repeat(40)) })
         );
     }
     assert_eq!(fs::read(source).unwrap(), original);
