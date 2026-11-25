@@ -9,13 +9,19 @@ mod bucket;
 pub use bucket::Bucket;
 use std::path::Path;
 
+const WIDTHS: &str = r#"{"cargo":2,"npm":1}"#;
+
+#[allow(dead_code)]
+pub fn widths(home: &Path) {
+    let state = home.join("state");
+    std::fs::create_dir_all(&state).expect("state");
+    std::fs::write(state.join("family-widths.json"), WIDTHS).expect("family widths");
+}
+
 #[allow(dead_code)]
 pub fn home() -> tempfile::TempDir {
     let home = tempfile::tempdir().expect("home fixture");
-    let state = home.path().join("state");
-    std::fs::create_dir_all(&state).expect("state");
-    std::fs::write(state.join("family-widths.json"), r#"{"cargo":2,"npm":1}"#)
-        .expect("family widths");
+    widths(home.path());
     home
 }
 
@@ -121,5 +127,16 @@ fn msvc(command: &mut std::process::Command) {
                 "LIBPATH",
                 std::env::join_paths(lib).expect("MSVC reference path"),
             );
+    }
+}
+
+#[cfg(test)]
+mod proof {
+    #[test]
+    fn widths() {
+        let home = tempfile::tempdir().expect("home");
+        super::widths(home.path());
+        let body = std::fs::read(home.path().join("state/family-widths.json")).expect("widths");
+        assert_eq!(body, super::WIDTHS.as_bytes());
     }
 }
