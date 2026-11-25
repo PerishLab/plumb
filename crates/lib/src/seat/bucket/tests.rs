@@ -101,3 +101,49 @@ fn statuses() {
     worker.join().unwrap().unwrap();
     assert!(failure.contains("503"));
 }
+
+fn scripted(script: &'static [&'static str]) -> (String, JoinHandle<usize>) {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}/record", listener.local_addr().unwrap());
+    let worker = thread::spawn(move || {
+        for reply in script {
+            let (mut stream, _) = listener.accept().unwrap();
+            request(&mut stream);
+            let bytes: &[u8] = match *reply {
+                "cut" => b"",
+                "short" => b"HTTP/1.1 200 OK\r\nContent-Length: 20\r\nConnection: close\r\n\r\nshort",
+                "forbidden" => b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                _ => b"HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: close\r\n\r\npublic-record",
+            };
+            let _ = stream.write_all(bytes);
+        }
+        script.len()
+    });
+    (url, worker)
+}
+
+#[test]
+fn retried() {
+    let (url, worker) = scripted(&["cut", "short", "ok"]);
+    assert_eq!(fetch(&url), Ok(Some(b"public-record".to_vec())));
+    assert_eq!(worker.join().unwrap(), 3);
+}
+
+#[test]
+fn exhausted() {
+    let (url, worker) = scripted(&["cut", "cut", "cut"]);
+    let error = fetch(&url).unwrap_err();
+    assert!(
+        error.starts_with("cannot fetch public bucket object:"),
+        "{error}"
+    );
+    assert_eq!(worker.join().unwrap(), 3);
+}
+
+#[test]
+fn refused() {
+    let (url, worker) = scripted(&["forbidden"]);
+    let error = fetch(&url).unwrap_err();
+    assert!(error.contains("403"), "{error}");
+    assert_eq!(worker.join().unwrap(), 1);
+}
