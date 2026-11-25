@@ -24,8 +24,10 @@ pub struct Snapshot {
     pub kind: String,
     pub updated: String,
     pub parent: Option<Reference>,
-    pub sub_issues: Vec<Reference>,
-    pub blocked_by: Vec<Reference>,
+    #[serde(rename = "sub_issues")]
+    pub children: Vec<Reference>,
+    #[serde(rename = "blocked_by")]
+    pub blockers: Vec<Reference>,
     pub blocking: Vec<Reference>,
 }
 
@@ -182,8 +184,8 @@ impl Ready {
 
 fn declarations(request: &Request<'_>) -> Result<Snapshot, Refusal> {
     let mut issue = request.issue.clone();
-    issue.sub_issues.sort();
-    issue.blocked_by.sort();
+    issue.children.sort();
+    issue.blockers.sort();
     issue.blocking.sort();
     if request.observed == 0 {
         return Err(refuse("issue", "Issue snapshot has no observation time"));
@@ -217,8 +219,8 @@ fn validate(issue: &Snapshot) -> Result<(), Refusal> {
     if issue.number == 0 || issue.state != "OPEN" {
         return Err(refuse("issue", "Issue snapshot is not one open coordinate"));
     }
-    let mut relations = issue.sub_issues.clone();
-    relations.extend(issue.blocked_by.clone());
+    let mut relations = issue.children.clone();
+    relations.extend(issue.blockers.clone());
     relations.extend(issue.blocking.clone());
     if let Some(parent) = &issue.parent {
         relations.push(parent.clone());
