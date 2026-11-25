@@ -174,6 +174,9 @@ fn alone(test: &str) -> bool {
     if std::env::var("PLUMB_TEST_RECOVERY").as_deref() == Ok(test) {
         return true;
     }
+    if std::env::var_os("PLUMB_TEST_AMBIENT").is_some() {
+        return false;
+    }
     let home = tempfile::tempdir().unwrap();
     let mut command = std::process::Command::new(std::env::current_exe().unwrap());
     command
