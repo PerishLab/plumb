@@ -1,26 +1,29 @@
 use super::{Image, Plane, Production};
-use crate::shape::release::Spec;
+use crate::shape::release::{Input, Spec};
 use std::path::{Path, PathBuf};
 
 pub(super) fn read(root: &Path) -> Production {
     let production = Reader(root);
     let spec = Spec::resolve(root).ok();
     let placed = spec.as_ref().is_some_and(|spec| spec.cfworker.is_some());
-    let contained = spec.as_ref().is_some_and(|spec| spec.oci.is_some())
-        && root.join("Containerfile").is_file();
-    let image = root.join("deploy/web.Dockerfile");
+    let parts = spec
+        .as_ref()
+        .and_then(|spec| spec.oci.as_ref().map(|oci| oci.parts(spec)))
+        .unwrap_or_default();
+    let contained = parts.iter().any(|part| {
+        matches!(part.input, Input::Binary(_) | Input::Source) && root.join(&part.file).is_file()
+    });
+    let webs: Vec<PathBuf> = parts
+        .iter()
+        .filter(|part| matches!(part.input, Input::Web(_)))
+        .map(|part| root.join(&part.file))
+        .collect();
     let web = if placed {
         Image::Placed
-    } else if !image.is_file() {
-        Image::Absent
+    } else if webs.is_empty() {
+        plane(&[root.join("deploy/web.Dockerfile")])
     } else {
-        match std::fs::read_to_string(image) {
-            Ok(text) => Image::Held(Plane {
-                runtime: text.contains("dist/.perish/server.mjs"),
-                dispatch: !Manifest(&text).proxy(),
-            }),
-            Err(_) => Image::Unread,
-        }
+        plane(&webs)
     };
     let templates = production.templates();
     let api = templates
@@ -49,6 +52,22 @@ pub(super) fn read(root: &Path) -> Production {
         ingress,
         aligned,
     }
+}
+
+fn plane(paths: &[PathBuf]) -> Image {
+    let mut runtime = true;
+    let mut dispatch = true;
+    for path in paths {
+        if !path.is_file() {
+            return Image::Absent;
+        }
+        let Ok(text) = std::fs::read_to_string(path) else {
+            return Image::Unread;
+        };
+        runtime &= text.contains("dist/.perish/server.mjs");
+        dispatch &= !Manifest(&text).proxy();
+    }
+    Image::Held(Plane { runtime, dispatch })
 }
 
 struct Reader<'a>(&'a Path);

@@ -7,7 +7,7 @@ mod package;
 mod shape;
 mod target;
 
-pub use attachment::{Cargo, Cfworker, Chart, Npm, Oci};
+pub use attachment::{Cargo, Cfworker, Chart, Input, Npm, Oci};
 pub use depot::Depot;
 pub use executable::{Binary, Executable};
 pub use package::{Apk, Deb};

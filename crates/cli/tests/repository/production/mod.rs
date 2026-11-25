@@ -142,6 +142,75 @@ fn worker() {
     }
 }
 
+#[test]
+fn multi() {
+    let root = specimen();
+    std::fs::create_dir_all(root.path().join("deploy")).unwrap();
+    write(
+        root.path(),
+        "apps/web/package.json",
+        r#"{"name":"specimen-web","scripts":{"build":"vite build"},"dependencies":{"svelte":"5","vite":"7"}}"#,
+    );
+    write(root.path(), "Containerfile", "FROM scratch\n");
+    write(
+        root.path(),
+        "deploy/web.Dockerfile",
+        "FROM node:22\nCMD [\"node\", \"dist/.perish/server.mjs\"]\n",
+    );
+    let manifest = "[identity]\nns = \"specimen\"\n[release]\nauthority = \"https://releases.specimen.example\"\nbinaries = [\"specimen-api\"]\ntargets = [\"x86_64-unknown-linux-gnu\"]\n[release.oci]\nregistry = \"ghcr.io\"\naccount = \"PerishLab\"\n[release.oci.components.api]\nimage = \"perishlab/specimen-api\"\nbinary = \"specimen-api\"\n[release.oci.components.web]\nimage = \"perishlab/specimen-web\"\nweb = \"apps/web\"\nfile = \"deploy/web.Dockerfile\"\n";
+    write(root.path(), "plumb.toml", manifest);
+    let held = doctor(root.path());
+    for message in [
+        "production has no api image seat",
+        "production has no web image seat",
+        "web image does not run the emitted design runtime",
+        "web image still owns public proxy dispatch",
+    ] {
+        assert!(!held.contains(message), "{held}");
+    }
+
+    std::fs::remove_file(root.path().join("Containerfile")).unwrap();
+    std::fs::remove_file(root.path().join("deploy/web.Dockerfile")).unwrap();
+    write(root.path(), "deploy/api.Containerfile", "FROM scratch\n");
+    write(
+        root.path(),
+        "deploy/site.Containerfile",
+        "FROM node:22\nCMD [\"node\", \"dist/.perish/server.mjs\"]\n",
+    );
+    let custom = manifest
+        .replace(
+            "binary = \"specimen-api\"\n",
+            "binary = \"specimen-api\"\nfile = \"deploy/api.Containerfile\"\n",
+        )
+        .replace("deploy/web.Dockerfile", "deploy/site.Containerfile");
+    write(root.path(), "plumb.toml", &custom);
+    let moved = doctor(root.path());
+    for message in [
+        "production has no api image seat",
+        "production has no web image seat",
+        "web image does not run the emitted design runtime",
+        "web image still owns public proxy dispatch",
+    ] {
+        assert!(!moved.contains(message), "{moved}");
+    }
+
+    write(
+        root.path(),
+        "deploy/site.Containerfile",
+        "FROM nginx\nENV API_UPSTREAM=api:3400\n",
+    );
+    let broken = doctor(root.path());
+    for message in [
+        "web image does not run the emitted design runtime",
+        "web image still owns public proxy dispatch",
+    ] {
+        assert!(
+            broken.contains(&format!("{message} [dispatch]")),
+            "{broken}"
+        );
+    }
+}
+
 fn specimen() -> tempfile::TempDir {
     let root = tempfile::tempdir().unwrap();
     for path in ["apps/web", "crates/api/src", "charts/specimen/templates"] {
