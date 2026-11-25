@@ -79,13 +79,8 @@ impl Proof<'_> {
             crate::diagnostic::event("guard.reused", || serde_json::json!({"proof":proof}));
             return Ok(proof);
         }
-        let Prepared {
-            checks,
-            resolution,
-            material,
-            context,
-        } = prepared;
-        let pending = checks
+        let pending = prepared
+            .checks
             .iter()
             .filter(|check| {
                 let reused = super::cache::contains(&check.proof);
@@ -103,12 +98,12 @@ impl Proof<'_> {
         } else {
             lease
                 .as_ref()
-                .zip(context.as_ref())
+                .zip(prepared.context.as_ref())
                 .map(|(lease, context)| {
                     crate::command::cache::transport::Session::begin(
                         &index.root,
                         lease,
-                        &material,
+                        &prepared.material,
                         context,
                     )
                 })
@@ -154,9 +149,13 @@ impl Proof<'_> {
         let proof = Descriptor::new(
             root,
             tree,
-            checks.into_iter().map(|check| check.proof).collect(),
+            prepared
+                .checks
+                .into_iter()
+                .map(|check| check.proof)
+                .collect(),
         )?;
-        let proof = match resolution {
+        let proof = match prepared.resolution {
             Some(resolution) => proof.resolved(resolution)?,
             None => proof,
         };

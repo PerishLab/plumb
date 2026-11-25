@@ -27,8 +27,6 @@ pub(super) fn digest(
         sponge.update(commit.as_bytes());
     }
     sponge.update([0]);
-    sponge.update(plumb::depot::rules()?.mark().as_bytes());
-    sponge.update([0]);
     sponge.update(plumb::config::platform().as_bytes());
     if let Some(execution) = binding.execution {
         sponge.update([0]);
@@ -48,6 +46,8 @@ pub(super) fn digest(
         sponge.update(version(tool, binding.execution)?.as_bytes());
     }
     let material = format!("{:x}", sponge.clone().finalize());
+    sponge.update([0]);
+    sponge.update(plumb::depot::rules()?.mark().as_bytes());
     sponge.update([0]);
     sponge.update(input.as_bytes());
     Ok(Fingerprint {

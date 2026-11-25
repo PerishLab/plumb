@@ -2,6 +2,50 @@ use super::finding::{Finding, Seed};
 use crate::catalog::rules::config::PLUMB_CURRENT;
 use std::process::Command;
 
+const MARK: &str = "PLUMB_DEPOT_MARK";
+
+pub fn mark() -> Vec<Finding> {
+    let Some(raw) = std::env::var_os(MARK) else {
+        return Vec::new();
+    };
+    let Ok(expected) = raw.into_string() else {
+        return vec![Finding::new(Seed::blind(
+            &PLUMB_CURRENT,
+            format!("{MARK} is not valid UTF-8"),
+        ))];
+    };
+    if !valid(&expected) {
+        return vec![Finding::new(Seed::blind(
+            &PLUMB_CURRENT,
+            format!("{MARK} must be a 64-character lowercase hex depot mark"),
+        ))];
+    }
+    let active = match plumb::depot::rules() {
+        Ok(rules) => rules.mark(),
+        Err(error) => {
+            return vec![Finding::new(Seed::blind(
+                &PLUMB_CURRENT,
+                format!("cannot read active Plumb depot mark: {error}"),
+            ))];
+        }
+    };
+    if expected == active {
+        Vec::new()
+    } else {
+        vec![Finding::new(Seed::wrong(
+            &PLUMB_CURRENT,
+            format!("pinned depot mark {expected} disagrees with active Plumb depot {active}"),
+        ))]
+    }
+}
+
+fn valid(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
 pub fn runtime() -> Vec<Finding> {
     let Some(manager) = managed() else {
         return Vec::new();

@@ -74,6 +74,7 @@ pub(crate) fn identity(root: &Path) -> Result<String, String> {
 pub(super) fn register(
     checks: &mut Vec<super::world::Check>,
     protection: Option<&crate::execution::lock::Protection>,
+    depot: &str,
     check: super::world::Check,
 ) -> Result<(), String> {
     let native = protection
@@ -90,7 +91,8 @@ pub(super) fn register(
             );
             let input = protection.bind("guard/lock", &check.proof.input);
             let world = plumb::depot::sha(
-                &serde_json::to_vec(&(&material, &input)).map_err(|error| error.to_string())?,
+                &serde_json::to_vec(&(&material, depot, &input))
+                    .map_err(|error| error.to_string())?,
             );
             Ok::<_, String>(super::world::Check {
                 proof: plumb::guard::Action {
@@ -110,4 +112,117 @@ pub(super) fn register(
     checks.push(check);
     checks.extend(native);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::{Selection, tree::Index, world::Prepared};
+    use serde::{Deserialize, Serialize};
+    use std::{env, fs, path::Path, process::Command};
+
+    #[derive(Deserialize, Serialize)]
+    struct Snapshot {
+        depot: String,
+        material: String,
+        plumb: String,
+        lock: String,
+        held: String,
+    }
+
+    fn inspect(root: &Path) -> Snapshot {
+        plumb::depot::carry(crate::catalog::carried::FILES);
+        crate::catalog::prepare().unwrap();
+        crate::catalog::set::prepare().unwrap();
+        let tree = plumb::guard::tree(root).unwrap();
+        let index = Index::new(root, &tree).unwrap();
+        let seat = super::seat(root, &tree).unwrap();
+        let prepared = Prepared::new(root, &index, Selection::Local, seat.as_deref()).unwrap();
+        let find = |name| {
+            prepared
+                .checks
+                .iter()
+                .find(|check| check.proof.name == name)
+                .unwrap()
+        };
+        let (plumb, lock) = (find("guard/plumb"), find("guard/lock"));
+        let environment = &plumb.execution.as_ref().unwrap().environment;
+        assert!(environment.get("PLUMB_DEPOT_MARK").is_none());
+        Snapshot {
+            depot: prepared.depot,
+            material: prepared.material,
+            plumb: plumb.proof.world.clone(),
+            lock: lock.proof.world.clone(),
+            held: lock.material.clone(),
+        }
+    }
+
+    fn child(home: &Path, root: &Path, name: &str) -> Snapshot {
+        let test = "command::guard::precommit::cargo::tests::depot";
+        let result = Command::new(env::current_exe().unwrap())
+            .args(["--exact", test, "--nocapture"])
+            .env("PLUMB_CARGO_TEST_ROOT", root)
+            .env("PLUMB_CARGO_TEST_NAME", name)
+            .env("PLUMB_HOME", home)
+            .output()
+            .unwrap();
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        assert!(result.status.success(), "{stderr}");
+        serde_json::from_slice(&fs::read(home.join(format!("{name}.json"))).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn depot() {
+        if let (Some(root), Some(name)) = (
+            env::var_os("PLUMB_CARGO_TEST_ROOT"),
+            env::var_os("PLUMB_CARGO_TEST_NAME"),
+        ) {
+            let snapshot = inspect(Path::new(&root));
+            let home = env::var_os("PLUMB_HOME").unwrap();
+            let out = Path::new(&home).join(format!("{}.json", name.to_string_lossy()));
+            fs::write(out, serde_json::to_vec(&snapshot).unwrap()).unwrap();
+            return;
+        }
+        let (home, root) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+        let (home, root) = (home.path(), root.path());
+        let git = |args: &[&str]| super::super::tree::git(root, args, "cargo fixture").unwrap();
+        git(&["init", "-q"]);
+        git(&[
+            "remote",
+            "add",
+            "origin",
+            "https://github.com/Example/probe.git",
+        ]);
+        fs::create_dir(root.join("src")).unwrap();
+        fs::write(
+            root.join("Cargo.toml"),
+            "[package]\nname='probe'\nversion='0.1.0'\nedition='2024'\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("plumb.toml"),
+            "[identity]\nns='plumb'\n[guard.lock]\nenforce=true\ntarget='x86_64-unknown-linux-gnu'\nfeatures=['default']\n[workflow.hash.guard]\nrust=['Cargo.toml','Cargo.lock','src']\nplumb=['Cargo.toml','Cargo.lock','src']\nectropy=['ectropy.toml','src']\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("ectropy.toml"),
+            "[[ban]]\nsyntax='lock'\npaths=['src/**/*.rs']\n",
+        )
+        .unwrap();
+        fs::write(root.join("src/lib.rs"), "pub fn answer() -> u8 { 1 }\n").unwrap();
+        let mut cargo = Command::new("cargo");
+        cargo
+            .args(["generate-lockfile", "--offline"])
+            .current_dir(root);
+        assert!(cargo.status().unwrap().success());
+        git(&["add", "."]);
+        let first = child(home, root, "base");
+        fs::create_dir_all(home.join("overlay")).unwrap();
+        fs::write(home.join("overlay/probe.txt"), "overlay\n").unwrap();
+        let next = child(home, root, "overlay");
+        assert_ne!(first.depot, next.depot);
+        assert_ne!(first.plumb, next.plumb);
+        assert_ne!(first.lock, next.lock);
+        assert_eq!(first.held, next.held);
+        assert_eq!(first.material, next.material);
+    }
 }

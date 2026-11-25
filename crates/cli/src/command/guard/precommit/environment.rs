@@ -3,6 +3,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 const COMPILER: &str = "PLUMB_GUARD_COMPILER_CACHE";
+const MARK: &str = "PLUMB_DEPOT_MARK";
 
 pub(super) fn capture(
     root: &Path,
@@ -95,6 +96,21 @@ pub(super) fn observed(
             managed: Vec::new(),
             reject: Vec::new(),
             bind: [("PLUMB_PACKAGES_OBSERVATION".into(), Binding::Value(value))].into(),
+        }
+        .capture([])?,
+    )
+}
+
+pub(super) fn depot(environment: Environment, mark: &str) -> Result<Environment, String> {
+    if mark.trim().is_empty() {
+        return Err("depot mark is empty".into());
+    }
+    environment.combine(
+        Contract {
+            inherit: Vec::new(),
+            managed: Vec::new(),
+            reject: Vec::new(),
+            bind: [(MARK.into(), Binding::Value(mark.into()))].into(),
         }
         .capture([])?,
     )
