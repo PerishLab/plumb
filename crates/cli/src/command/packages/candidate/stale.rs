@@ -11,6 +11,9 @@ fn isolated(name: &str) -> bool {
     if std::env::var("PLUMB_TEST_STALE").as_deref() == Ok(name) {
         return true;
     }
+    if std::env::var_os("PLUMB_TEST_AMBIENT").is_some() {
+        return false;
+    }
     let home = tempfile::tempdir().unwrap();
     let tools = tempfile::tempdir().unwrap();
     std::fs::write(tools.path().join("latest"), "\"0.1.0\"").unwrap();

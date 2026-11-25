@@ -92,7 +92,9 @@ fn stalled() {
     let (source, seat, mut state) = staged(&fixture);
     let root = fixture.root.path();
     std::fs::write(root.join("ready.json"), json!(["BLOCKED"]).to_string()).unwrap();
-    let error = engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap_err();
+    let mut provider = fixture.provider();
+    provider.patience.deadline = std::time::Duration::from_secs(1);
+    let error = engine::advance(&source, &provider, &seat, &mut state).unwrap_err();
     assert!(error.contains("bounded wait"), "{error}");
     assert!(error.contains("BLOCKED"), "{error}");
     assert!(state.merged.is_none());
@@ -101,7 +103,7 @@ fn stalled() {
     assert_eq!(fixture.provider().issue(17).unwrap()["state"], "open");
     let before = verbs(&fixture, "view").len();
     std::fs::write(root.join("ready.json"), json!(["DIRTY"]).to_string()).unwrap();
-    let error = engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap_err();
+    let error = engine::advance(&source, &provider, &seat, &mut state).unwrap_err();
     assert!(error.contains("mergeStateStatus DIRTY"), "{error}");
     assert_eq!(verbs(&fixture, "view").len(), before + 1);
     assert!(verbs(&fixture, "merge").is_empty());

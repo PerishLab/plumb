@@ -202,6 +202,16 @@ pub(super) fn encode(value: impl Serialize) -> Result<Value, String> {
     serde_json::to_value(value).map_err(|error| error.to_string())
 }
 
+const FLOOR: Duration = Duration::from_micros(250);
+const CEILING: Duration = Duration::from_millis(20);
+
+fn pace(pause: Duration) -> Duration {
+    (pause * 2).min(CEILING)
+}
+
+#[cfg(test)]
+mod tests;
+
 pub(super) fn capture(mut command: Command, limit: Duration) -> Result<Vec<u8>, String> {
     let mut out = tempfile::tempfile().map_err(|error| error.to_string())?;
     let mut err = tempfile::tempfile().map_err(|error| error.to_string())?;
@@ -211,6 +221,7 @@ pub(super) fn capture(mut command: Command, limit: Duration) -> Result<Vec<u8>, 
         .stderr(err.try_clone().map_err(|error| error.to_string())?);
     let mut child = command.spawn().map_err(|error| error.to_string())?;
     let started = Instant::now();
+    let mut pause = FLOOR;
     let status = loop {
         if started.elapsed() > limit
             || out.metadata().map_err(|error| error.to_string())?.len() > 8 * 1024 * 1024
@@ -225,7 +236,8 @@ pub(super) fn capture(mut command: Command, limit: Duration) -> Result<Vec<u8>, 
         if let Some(status) = child.try_wait().map_err(|error| error.to_string())? {
             break status;
         }
-        std::thread::sleep(Duration::from_millis(20));
+        std::thread::sleep(pause);
+        pause = pace(pause);
     };
     out.rewind().map_err(|error| error.to_string())?;
     err.rewind().map_err(|error| error.to_string())?;
