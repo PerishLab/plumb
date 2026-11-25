@@ -163,10 +163,6 @@ impl Prepared {
                 .iter()
                 .map(|check| check.material.clone())
                 .collect::<Vec<_>>(),
-            &resolution
-                .as_ref()
-                .expect("resolution was captured")
-                .packages,
         )?;
         Ok(Self {
             checks,

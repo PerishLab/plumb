@@ -119,11 +119,8 @@ fn version(tool: &str, execution: Option<&plumb::config::Execution>) -> Result<S
     }
 }
 
-pub(super) fn material(
-    worlds: &[String],
-    packages: &[plumb::packages::Package],
-) -> Result<String, String> {
-    let bytes = serde_json::to_vec(&("plumb.compilation-world/v2", worlds, packages))
+pub(super) fn material(worlds: &[String]) -> Result<String, String> {
+    let bytes = serde_json::to_vec(&("plumb.compilation-world/v3", worlds))
         .map_err(|error| error.to_string())?;
     Ok(plumb::depot::sha(&bytes))
 }
@@ -136,29 +133,11 @@ mod tests {
     use std::path::Path;
     use std::process::{Command, Output};
 
-    fn package(version: &str) -> plumb::packages::Package {
-        plumb::packages::Package {
-            ecosystem: "cargo".into(),
-            name: "locus".into(),
-            version: version.into(),
-        }
-    }
-
     #[test]
     fn selections() {
-        let first = material(&["same-execution".into()], &[package("0.1.0")]).unwrap();
-        assert_ne!(
-            first,
-            material(&["same-execution".into()], &[package("0.2.0")]).unwrap()
-        );
-        assert_ne!(
-            first,
-            material(&["changed-execution".into()], &[package("0.1.0")]).unwrap()
-        );
-        assert_eq!(
-            first,
-            material(&["same-execution".into()], &[package("0.1.0")]).unwrap()
-        );
+        let first = material(&["same-execution".into()]).unwrap();
+        assert_ne!(first, material(&["changed-execution".into()]).unwrap());
+        assert_eq!(first, material(&["same-execution".into()]).unwrap());
     }
     fn git(root: &Path, args: &[&str]) {
         let output = plumb::config::detached("git")

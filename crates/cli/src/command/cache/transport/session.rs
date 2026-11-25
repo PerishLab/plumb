@@ -49,9 +49,10 @@ impl<'a> Session<'a> {
         match valid {
             Some(hint) => Inputs(root).restore(&inputs, &hint.files, hint.stamp.fresh()?)?,
             None => {
+                let cause = cause(hint.as_ref(), root, world, context);
                 crate::diagnostic::event(
                     "material.reset",
-                    || serde_json::json!({"reason":"snapshot-missing-pending-or-mismatched","files":actual.files}),
+                    || serde_json::json!({"reason":"snapshot-missing-pending-or-mismatched","cause":cause,"files":actual.files}),
                 );
                 if actual.files != 0 {
                     eprintln!(
@@ -100,5 +101,55 @@ impl<'a> Session<'a> {
             files,
         };
         hint.write(&self.lease.root)
+    }
+}
+
+pub(super) fn cause(
+    hint: Option<&Hint>,
+    root: &Path,
+    world: &str,
+    context: &Context,
+) -> &'static str {
+    match hint {
+        None => "missing",
+        Some(hint) if !hint.ready => "pending",
+        Some(hint) if hint.source != root => "source",
+        Some(hint) if hint.world != world => "world",
+        Some(hint) if hint.image != context.image => "image",
+        Some(_) => "seal",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn causes() {
+        let root = Path::new("/seat");
+        let context = Context {
+            image: "image".into(),
+        };
+        let held = |ready: bool, source: &str, world: &str, image: &str| Hint {
+            schema: SCHEMA.into(),
+            ready,
+            source: source.into(),
+            world: world.into(),
+            image: image.into(),
+            stamp: Stamp::now().unwrap(),
+            target: None,
+            files: BTreeMap::new(),
+        };
+        assert_eq!(cause(None, root, "world", &context), "missing");
+        let hint = held(false, "/seat", "world", "image");
+        assert_eq!(cause(Some(&hint), root, "world", &context), "pending");
+        let hint = held(true, "/other", "world", "image");
+        assert_eq!(cause(Some(&hint), root, "world", &context), "source");
+        let hint = held(true, "/seat", "old", "image");
+        assert_eq!(cause(Some(&hint), root, "world", &context), "world");
+        let hint = held(true, "/seat", "world", "old");
+        assert_eq!(cause(Some(&hint), root, "world", &context), "image");
+        let hint = held(true, "/seat", "world", "image");
+        assert_eq!(cause(Some(&hint), root, "world", &context), "seal");
     }
 }
