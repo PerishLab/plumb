@@ -1,0 +1,16 @@
+Read the SKILL.md a release version lodged on Depot.
+
+Resolves the repository's plumb.toml release declaration and refuses when the
+repository declares no skill (release.skill = false). Reads the latest Depot
+skill generation for --version (or the repository's declared version when
+omitted), accepting stable and prerelease markers with or without a leading v.
+
+Verifies the generation pointer, manifest binding, SKILL.md presence, object
+sha256 and byte length, and UTF-8 encoding before writing anything to stdout.
+Missing generations, corrupted digests, unreadable objects and non-UTF-8 content
+refuse with a non-zero exit status and never fall back silently.
+
+By default prints the normalized version and generation digest followed by a
+blank line and the SKILL.md body. Pass --raw to write only the exact verified
+SKILL.md bytes to stdout without any header or newline changes, suitable for
+saving a prior generation's brief as the base for the next release.
