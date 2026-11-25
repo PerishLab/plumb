@@ -1,6 +1,16 @@
+#[cfg(feature = "depot")]
+#[path = "support/cache.rs"]
+mod cache;
+#[cfg(feature = "depot")]
+#[path = "support/configuration.rs"]
+mod configuration;
+#[cfg(feature = "depot")]
+#[path = "support/fixture.rs"]
+mod fixture;
 #[path = "support/generation.rs"]
 mod generation;
 
+#[cfg(feature = "skill")]
 #[test]
 fn skill() {
     let root = tempfile::tempdir().expect("skill seat");

@@ -91,7 +91,7 @@ fn key(path: &Path) -> Result<String, String> {
         .map(|parts| parts.join("/"))
 }
 
-fn media(path: &str) -> &'static str {
+pub(crate) fn media(path: &str) -> &'static str {
     match Path::new(path).extension().and_then(|held| held.to_str()) {
         Some("json") => "application/json",
         Some("toml") => "application/toml",

@@ -1,4 +1,4 @@
-Move a release's changelog, skill and scenes onto Depot through wharf.
+Move a release's changelog, skill, scene and configuration onto Depot through wharf.
 
 Depot is written by wharf alone. Plumb consigns: it places one document in
 wharf's yard, a private bucket whose objects expire after seven days, and
@@ -22,6 +22,14 @@ judging scene semantics; Seatrial owns selection and execution. A scene is its
 own Depot kind, independent of the product it tests. Its generation remains
 bound to the consigning repository's --version marker. Reading that version's
 latest generation does not discover the repository's latest released version.
+
+Consign configuration with --kind configuration and the complete rules tree in
+--dir. The nonempty plain directory carries only regular files and directories,
+never links or special objects, with UTF-8 anchored POSIX paths. Every .toml
+file (case-insensitive) must be valid UTF-8 TOML parsing to a nonempty table;
+companion non-.toml regular files are allowed. When watching the lodge, Plumb
+reads back both the version standing pointer and the channel floating discovery
+pointer, failing closed if either is absent, unverified, or behind --version.
 
 The yard seat comes from PLUMB_YARD_ENDPOINT, PLUMB_YARD_BUCKET,
 PLUMB_YARD_ACCESS_KEY_ID and PLUMB_YARD_SECRET_ACCESS_KEY or its _FILE

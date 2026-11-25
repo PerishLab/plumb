@@ -6,6 +6,7 @@ use plumb::depot::v3::{Generation, Kind, Query};
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
+mod configuration;
 mod goods;
 mod yard;
 
@@ -18,7 +19,7 @@ const WORKFLOW: &str = "depot.yml";
 pub struct Consign {
     #[arg(long)]
     version: String,
-    #[arg(long, value_parser = ["changelog", "skill", "scene"])]
+    #[arg(long, value_parser = ["changelog", "skill", "scene", "configuration"])]
     kind: String,
     #[arg(long, value_name = "DIR")]
     dir: Option<PathBuf>,
@@ -106,6 +107,7 @@ fn gathered(
         "scene" => Kind::Scene,
         "skill" => Kind::Skill,
         "changelog" => Kind::Changelog,
+        "configuration" => Kind::Configuration,
         _ => return Err(format!("unknown depot kind {}", options.kind)),
     };
     if kind == Kind::Skill && !spec.skill {
@@ -121,6 +123,7 @@ fn gathered(
             crate::command::changelog::prove(root, dir, marker)?;
         }
         Kind::Scene => {}
+        Kind::Configuration => configuration::vet(dir)?,
         _ => return Err(format!("{} cannot be consigned", kind.label())),
     }
     Ok((goods::directory(dir)?, kind))
@@ -211,6 +214,16 @@ fn lodged(lodging: &Lodging<'_>, objects: &[Good]) -> Result<String, String> {
             found.pointer.generation
         ));
     }
+    if lodging.kind == Kind::Configuration {
+        configuration::Check {
+            source: &source,
+            product: &lodging.spec.product,
+            channel: lodging.channel,
+            marker: lodging.marker,
+            generation: &found.pointer.generation,
+        }
+        .verify()?;
+    }
     Ok(found.pointer.generation)
 }
 
@@ -257,3 +270,6 @@ fn text(root: &Path, args: &[&str]) -> Result<String, String> {
 
 #[cfg(all(test, unix))]
 mod proof;
+
+#[cfg(test)]
+mod readback;

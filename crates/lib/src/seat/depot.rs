@@ -4,7 +4,7 @@ use std::sync::OnceLock;
 pub mod v3;
 
 pub struct Rules {
-    files: Vec<(String, String)>,
+    files: Vec<(String, Vec<u8>)>,
     mark: String,
 }
 
@@ -24,34 +24,76 @@ impl Rules {
     fn new(carried: &'static [(&'static str, &'static str)]) -> Self {
         let mut files = carried
             .iter()
-            .map(|(path, body)| (path.to_string(), body.to_string()))
+            .map(|(path, body)| (path.to_string(), body.as_bytes().to_vec()))
             .collect::<Vec<_>>();
         for (path, body) in overlay() {
             match files.iter_mut().find(|(held, _)| *held == path) {
-                Some(held) => held.1 = body,
-                None => files.push((path, body)),
+                Some(held) => held.1 = body.into_bytes(),
+                None => files.push((path, body.into_bytes())),
             }
         }
-        files.sort();
-        let mut hasher = Sha256::new();
-        for (path, body) in &files {
-            hasher.update(path.as_bytes());
-            hasher.update([0]);
-            hasher.update(body.as_bytes());
-            hasher.update([0]);
+        files.sort_by(|left, right| left.0.cmp(&right.0));
+        let objects = files
+            .iter()
+            .map(|(path, body)| v3::Object {
+                path: path.clone(),
+                sha256: sha(body),
+                size: body.len() as u64,
+                media: v3::media(path).to_string(),
+                executable: false,
+            })
+            .collect::<Vec<_>>();
+        let identity = v3::Identity {
+            product: "plumb".into(),
+            channel: "stable".into(),
+            version: "v0.0.0".into(),
+            marker: v3::Marker {
+                name: "v0.0.0".into(),
+                sha256: "0".repeat(64),
+            },
+            kind: v3::Kind::Configuration,
+        };
+        let manifest = v3::Manifest::new(identity, objects)
+            .expect("carried Plumb rules form a valid Depot v3 manifest");
+        let mark = manifest
+            .generation()
+            .expect("carried Plumb rules form a valid Depot v3 generation");
+        Self { files, mark }
+    }
+
+    pub fn bundle(bundle: &v3::Bundle) -> Result<Self, String> {
+        if bundle.manifest.kind != v3::Kind::Configuration {
+            return Err(format!(
+                "depot rules require configuration kind, got {}",
+                bundle.manifest.kind.label()
+            ));
         }
-        Self {
-            files,
-            mark: format!("{:x}", hasher.finalize()),
+        let mark = bundle.manifest.generation()?;
+        if bundle.bodies.len() != bundle.manifest.objects.len() {
+            return Err("depot configuration bodies do not match its manifest".into());
         }
+        let mut files = Vec::with_capacity(bundle.manifest.objects.len());
+        for object in &bundle.manifest.objects {
+            let bytes = bundle.bodies.get(&object.path).ok_or_else(|| {
+                format!("depot configuration carries no body for {}", object.path)
+            })?;
+            bundle
+                .manifest
+                .verify(&object.path, bytes, object.executable)?;
+            files.push((object.path.clone(), bytes.clone()));
+        }
+        Ok(Self { files, mark })
     }
 
     pub fn read(&self, path: &str) -> Result<String, String> {
-        self.files
+        let bytes = self
+            .files
             .iter()
             .find(|(held, _)| held == path)
-            .map(|(_, body)| body.clone())
-            .ok_or_else(|| format!("the carried Plumb rules hold no {path}"))
+            .map(|(_, body)| body)
+            .ok_or_else(|| format!("the carried Plumb rules hold no {path}"))?;
+        String::from_utf8(bytes.clone())
+            .map_err(|error| format!("the carried Plumb rule {path} is not UTF-8: {error}"))
     }
 
     pub fn mark(&self) -> &str {
