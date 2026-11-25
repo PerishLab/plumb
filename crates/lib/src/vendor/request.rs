@@ -25,6 +25,37 @@ pub fn send(
     body: Option<Value>,
     auth: Option<&str>,
 ) -> Result<Response, String> {
+    let started = std::time::Instant::now();
+    let result = dispatch(url, method, body, auth);
+    match &result {
+        Ok(response) => {
+            let outcome = if response.status < 400 {
+                "ok"
+            } else if response.status == 404 {
+                "missing"
+            } else {
+                "error"
+            };
+            crate::runtime::exchange::https(
+                "vendor.http",
+                outcome,
+                Some(response.status),
+                started.elapsed(),
+            );
+        }
+        Err(_) => {
+            crate::runtime::exchange::https("vendor.http", "error", None, started.elapsed());
+        }
+    }
+    result
+}
+
+fn dispatch(
+    url: &str,
+    method: &str,
+    body: Option<Value>,
+    auth: Option<&str>,
+) -> Result<Response, String> {
     let mut command = Command::new("curl");
     command.args([
         "--silent",

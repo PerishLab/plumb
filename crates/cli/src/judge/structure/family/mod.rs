@@ -118,11 +118,19 @@ impl Product<'_> {
 
     fn tagged(&self) -> Result<Option<String>, String> {
         let url = format!("https://github.com/PerishLab/{}.git", self.0);
-        let output = std::process::Command::new("git")
-            .args(["ls-remote", "--tags", &url])
+        let args = ["ls-remote", "--tags", &url];
+        let started = std::time::Instant::now();
+        let result = std::process::Command::new("git")
+            .args(args)
             .env("GIT_TERMINAL_PROMPT", "0")
             .output()
-            .map_err(|error| format!("cannot list tags at {url}: {error}"))?;
+            .map_err(|error| format!("cannot list tags at {url}: {error}"));
+        plumb::observation::git(
+            &args,
+            started,
+            result.as_ref().is_ok_and(|out| out.status.success()),
+        );
+        let output = result?;
         if !output.status.success() {
             let error = String::from_utf8_lossy(&output.stderr);
             let error = error.trim();

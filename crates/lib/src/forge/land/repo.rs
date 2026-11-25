@@ -24,11 +24,18 @@ impl Repository {
     }
 
     pub fn git(&self, args: &[&str]) -> Result<Output, Refusal> {
-        crate::config::detached("git")
+        let started = std::time::Instant::now();
+        let result = crate::config::detached("git")
             .args(args)
             .current_dir(&self.root)
             .output()
-            .map_err(|error| refuse("git", format!("cannot run git: {error}")))
+            .map_err(|error| refuse("git", format!("cannot run git: {error}")));
+        crate::runtime::exchange::git(
+            args,
+            started,
+            result.as_ref().is_ok_and(|out| out.status.success()),
+        );
+        result
     }
 
     pub fn text(&self, args: &[&str], kind: &'static str, whose: &str) -> Result<String, Refusal> {

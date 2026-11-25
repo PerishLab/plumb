@@ -187,24 +187,50 @@ pub(super) fn url(package: &str) -> String {
 
 pub(super) fn fetch(agent: &ureq::Agent, url: &str) -> Result<Vec<u8>, String> {
     use std::io::Read;
-    let mut response = agent
-        .get(url)
-        .call()
-        .map_err(|error| format!("cannot read declaration index: {error}"))?;
-    if response.status().as_u16() != 200 || response.headers().contains_key("Content-Range") {
+    let started = std::time::Instant::now();
+    let mut response = match agent.get(url).call() {
+        Ok(response) => response,
+        Err(error) => {
+            let status = match &error {
+                ureq::Error::StatusCode(code) => Some(*code),
+                _ => None,
+            };
+            noted("error", status, started);
+            return Err(format!("cannot read declaration index: {error}"));
+        }
+    };
+    let status = response.status().as_u16();
+    if status != 200 || response.headers().contains_key("Content-Range") {
+        noted("error", Some(status), started);
         return Err("partial declaration index response".into());
     }
     let mut bytes = Vec::new();
-    response
+    if let Err(error) = response
         .body_mut()
         .as_reader()
         .take(16 * 1024 * 1024 + 1)
         .read_to_end(&mut bytes)
-        .map_err(|error| error.to_string())?;
+    {
+        noted("error", Some(status), started);
+        return Err(error.to_string());
+    }
+    noted("ok", Some(status), started);
     if bytes.len() > 16 * 1024 * 1024 {
         return Err("declaration index exceeds byte budget".into());
     }
     Ok(bytes)
+}
+
+fn noted(outcome: &'static str, status: Option<u16>, started: std::time::Instant) {
+    plumb::observation::record(&plumb::observation::Exchange {
+        provider: "https",
+        operation: "crates.index",
+        transport: "https",
+        outcome,
+        status,
+        attempts: 1,
+        elapsed: started.elapsed(),
+    });
 }
 
 pub(super) fn unmodified(root: &Path) -> Result<(), String> {

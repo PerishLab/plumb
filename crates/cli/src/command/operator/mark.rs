@@ -92,11 +92,18 @@ impl Point<'_> {
     }
 
     fn git<const N: usize>(&self, args: [&str; N]) -> Result<Output, String> {
-        plumb::config::detached("git")
+        let started = std::time::Instant::now();
+        let result = plumb::config::detached("git")
             .args(args)
             .current_dir(self.root)
             .output()
-            .map_err(|error| format!("cannot run git: {error}"))
+            .map_err(|error| format!("cannot run git: {error}"));
+        plumb::observation::git(
+            &args,
+            started,
+            result.as_ref().is_ok_and(|out| out.status.success()),
+        );
+        result
     }
 }
 

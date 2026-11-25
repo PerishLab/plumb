@@ -1,51 +1,74 @@
 use super::Error;
-use std::time::Duration;
+use crate::runtime::exchange;
+use std::time::{Duration, Instant};
 
 const ATTEMPTS: u32 = 3;
 
 enum Fault {
-    Transient(String),
-    Final(String),
+    Transient(Option<u16>, String),
+    Final(Option<u16>, String),
 }
 
 pub(super) fn draw(url: &str) -> Result<Vec<u8>, Error> {
+    let started = Instant::now();
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .timeout_connect(Some(Duration::from_secs(10)))
         .timeout_global(Some(Duration::from_secs(120)))
         .max_idle_connections(0)
         .build()
         .into();
-    let mut last = String::new();
+    let mut last = (None, String::new());
     for attempt in 1..=ATTEMPTS {
+        let count = attempt as u8;
         match once(&agent, url) {
-            Ok(bytes) => return Ok(bytes),
-            Err(Fault::Final(why)) => return Err(Error::Fetch(url.to_string(), why)),
-            Err(Fault::Transient(why)) => last = why,
+            Ok(bytes) => {
+                exchange::attempt("skill.fetch", "ok", Some(200), (count, started.elapsed()));
+                return Ok(bytes);
+            }
+            Err(Fault::Final(code, why)) => {
+                exchange::attempt("skill.fetch", label(code), code, (count, started.elapsed()));
+                return Err(Error::Fetch(url.to_string(), why));
+            }
+            Err(Fault::Transient(code, why)) => last = (code, why),
         }
         if attempt < ATTEMPTS {
             std::thread::sleep(Duration::from_millis(250 * u64::from(attempt)));
         }
     }
+    exchange::attempt(
+        "skill.fetch",
+        "error",
+        last.0,
+        (ATTEMPTS as u8, started.elapsed()),
+    );
     Err(Error::Fetch(
         url.to_string(),
-        format!("transport failed after {ATTEMPTS} attempts: {last}"),
+        format!("transport failed after {ATTEMPTS} attempts: {}", last.1),
     ))
+}
+
+fn label(code: Option<u16>) -> &'static str {
+    if code == Some(404) {
+        "missing"
+    } else {
+        "error"
+    }
 }
 
 fn once(agent: &ureq::Agent, url: &str) -> Result<Vec<u8>, Fault> {
     let response = agent.get(url).call().map_err(|error| match error {
-        ureq::Error::StatusCode(code) if code < 500 => Fault::Final(error.to_string()),
-        ureq::Error::StatusCode(_)
-        | ureq::Error::Io(_)
+        ureq::Error::StatusCode(code) if code < 500 => Fault::Final(Some(code), error.to_string()),
+        ureq::Error::StatusCode(code) => Fault::Transient(Some(code), error.to_string()),
+        ureq::Error::Io(_)
         | ureq::Error::Timeout(_)
         | ureq::Error::ConnectionFailed
         | ureq::Error::BodyStalled
-        | ureq::Error::Protocol(_) => Fault::Transient(error.to_string()),
-        other => Fault::Final(other.to_string()),
+        | ureq::Error::Protocol(_) => Fault::Transient(None, error.to_string()),
+        other => Fault::Final(None, other.to_string()),
     })?;
     let mut bytes = Vec::new();
     std::io::Read::read_to_end(&mut response.into_body().as_reader(), &mut bytes)
-        .map_err(|error| Fault::Transient(error.to_string()))?;
+        .map_err(|error| Fault::Transient(None, error.to_string()))?;
     Ok(bytes)
 }
 

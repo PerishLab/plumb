@@ -95,12 +95,42 @@ impl<'a> Material<'a> {
     }
 
     pub(super) fn optional(&self, agent: &ureq::Agent, limit: usize) -> Result<Option<Vec<u8>>> {
+        let started = std::time::Instant::now();
         let response = match agent.get(self.url).header("User-Agent", "plumb").call() {
             Ok(response) => response,
-            Err(ureq::Error::StatusCode(404)) => return Ok(None),
-            Err(error) => return Err(self.failure(error)),
+            Err(ureq::Error::StatusCode(404)) => {
+                crate::runtime::exchange::https(
+                    "qualification.fetch",
+                    "missing",
+                    Some(404),
+                    started.elapsed(),
+                );
+                return Ok(None);
+            }
+            Err(error) => {
+                let code = match &error {
+                    ureq::Error::StatusCode(code) => Some(*code),
+                    _ => None,
+                };
+                crate::runtime::exchange::https(
+                    "qualification.fetch",
+                    "error",
+                    code,
+                    started.elapsed(),
+                );
+                return Err(self.failure(error));
+            }
         };
-        self.body(response.into_body().as_reader(), limit).map(Some)
+        let status = response.status().as_u16();
+        let result = self.body(response.into_body().as_reader(), limit).map(Some);
+        let outcome = if result.is_ok() { "ok" } else { "error" };
+        crate::runtime::exchange::https(
+            "qualification.fetch",
+            outcome,
+            Some(status),
+            started.elapsed(),
+        );
+        result
     }
 
     fn failure(&self, error: ureq::Error) -> Fault {

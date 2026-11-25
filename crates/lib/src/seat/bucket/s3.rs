@@ -1,6 +1,6 @@
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 mod probe;
 
@@ -65,13 +65,20 @@ impl Control {
     }
 
     pub fn read(&self, key: &str) -> Result<Outcome<Object>, String> {
+        let started = std::time::Instant::now();
         for attempt in 0..ATTEMPTS {
             pause(attempt);
             let signed = self.sign("GET", key, &[], &[])?;
             match self.get(signed) {
-                Ok(outcome) => return Ok(outcome),
+                Ok(outcome) => {
+                    probe::note("s3.read", &outcome, attempt + 1, started);
+                    return Ok(outcome);
+                }
                 Err(error) if retryable(&error) && attempt + 1 < ATTEMPTS => continue,
-                Err(error) => return Err(format!("cannot read bucket object {key}: {error}")),
+                Err(error) => {
+                    probe::fail("s3.read", &error, attempt + 1, started);
+                    return Err(format!("cannot read bucket object {key}: {error}"));
+                }
             }
         }
         unreachable!()
@@ -115,6 +122,7 @@ impl Control {
             ("content-type", policy.media),
             (name, value),
         ];
+        let started = std::time::Instant::now();
         for attempt in 0..ATTEMPTS {
             pause(attempt);
             let signed = self.sign("PUT", key, body, &fields)?;
@@ -127,10 +135,21 @@ impl Control {
                 .header("cache-control", policy.cache)
                 .header(name, value);
             match request.send(body) {
-                Ok(_) => return Ok(Outcome::Held(())),
-                Err(ureq::Error::StatusCode(412)) => return Ok(Outcome::Stale),
+                Ok(_) => {
+                    let outcome = Outcome::Held(());
+                    probe::note("s3.write", &outcome, attempt + 1, started);
+                    return Ok(outcome);
+                }
+                Err(ureq::Error::StatusCode(412)) => {
+                    let outcome = Outcome::Stale;
+                    probe::note("s3.write", &outcome, attempt + 1, started);
+                    return Ok(outcome);
+                }
                 Err(error) if retryable(&error) && attempt + 1 < ATTEMPTS => continue,
-                Err(error) => return Err(format!("cannot write bucket object {key}: {error}")),
+                Err(error) => {
+                    probe::fail("s3.write", &error, attempt + 1, started);
+                    return Err(format!("cannot write bucket object {key}: {error}"));
+                }
             }
         }
         unreachable!()
@@ -188,21 +207,11 @@ impl Control {
 }
 
 fn retryable(error: &ureq::Error) -> bool {
-    match error {
-        ureq::Error::StatusCode(code) => matches!(code, 408 | 429 | 500..=599),
-        ureq::Error::Io(_)
-        | ureq::Error::Protocol(_)
-        | ureq::Error::Timeout(_)
-        | ureq::Error::HostNotFound
-        | ureq::Error::ConnectionFailed => true,
-        _ => false,
-    }
+    probe::retryable(error)
 }
 
 fn pause(attempt: usize) {
-    if attempt > 0 {
-        std::thread::sleep(Duration::from_millis(200 * attempt as u64));
-    }
+    probe::pause(attempt);
 }
 
 struct Signed {

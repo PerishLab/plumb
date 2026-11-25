@@ -153,6 +153,7 @@ impl Work<'_> {
 }
 
 pub(super) fn git(root: &Path, args: &[&str]) -> Result<String, String> {
+    let started = std::time::Instant::now();
     let mut command = plumb::config::detached("git");
     command
         .arg("-C")
@@ -163,7 +164,9 @@ pub(super) fn git(root: &Path, args: &[&str]) -> Result<String, String> {
         .env("GIT_AUTHOR_EMAIL", "auto@plumb.invalid")
         .env("GIT_COMMITTER_NAME", "Plumb Auto")
         .env("GIT_COMMITTER_EMAIL", "auto@plumb.invalid");
-    let bytes = super::provider::capture(command, std::time::Duration::from_secs(120))?;
+    let result = super::provider::capture(command, std::time::Duration::from_secs(120));
+    plumb::observation::git(args, started, result.is_ok());
+    let bytes = result?;
     String::from_utf8(bytes)
         .map(|text| text.trim().into())
         .map_err(|error| format!("Auto git output is not UTF-8: {error}"))

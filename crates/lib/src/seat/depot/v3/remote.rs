@@ -137,28 +137,59 @@ fn read(base: &str, manifest: &Manifest, path: &str) -> Result<Vec<u8>, String> 
 }
 
 fn pull(url: &str) -> Result<Option<Vec<u8>>, String> {
-    let mut last = String::new();
+    let started = std::time::Instant::now();
+    let mut last = (None, String::new());
     for attempt in 0..ATTEMPTS {
+        let count = attempt as u8 + 1;
         match draw(url) {
-            Ok(bytes) => return Ok(bytes),
+            Ok(Some(bytes)) => {
+                crate::runtime::exchange::attempt(
+                    "depot.fetch",
+                    "ok",
+                    Some(200),
+                    (count, started.elapsed()),
+                );
+                return Ok(Some(bytes));
+            }
+            Ok(None) => {
+                crate::runtime::exchange::attempt(
+                    "depot.fetch",
+                    "missing",
+                    Some(404),
+                    (count, started.elapsed()),
+                );
+                return Ok(None);
+            }
             Err(error) => last = error,
         }
         if attempt + 1 < ATTEMPTS {
             std::thread::sleep(std::time::Duration::from_millis(200 * (attempt as u64 + 1)));
         }
     }
-    Err(last)
+    crate::runtime::exchange::attempt(
+        "depot.fetch",
+        "error",
+        last.0,
+        (ATTEMPTS as u8, started.elapsed()),
+    );
+    Err(last.1)
 }
 
-fn draw(url: &str) -> Result<Option<Vec<u8>>, String> {
+fn draw(url: &str) -> Result<Option<Vec<u8>>, (Option<u16>, String)> {
     let response = match ureq::get(url).call() {
         Ok(response) => response,
         Err(ureq::Error::StatusCode(404)) => return Ok(None),
-        Err(error) => return Err(format!("cannot fetch {url}: {error}")),
+        Err(ureq::Error::StatusCode(code)) => {
+            return Err((
+                Some(code),
+                format!("cannot fetch {url}: http status: {code}"),
+            ));
+        }
+        Err(error) => return Err((None, format!("cannot fetch {url}: {error}"))),
     };
     let mut body = response.into_body();
     let mut bytes = Vec::new();
     std::io::Read::read_to_end(&mut body.as_reader(), &mut bytes)
-        .map_err(|error| format!("cannot read {url}: {error}"))?;
+        .map_err(|error| (None, format!("cannot read {url}: {error}")))?;
     Ok(Some(bytes))
 }
