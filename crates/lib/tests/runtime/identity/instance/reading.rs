@@ -1,4 +1,5 @@
 use super::{public, wire};
+#[cfg(unix)]
 use std::process::Command;
 
 #[test]

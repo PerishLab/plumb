@@ -1,4 +1,6 @@
-use super::{Lock, Package, SOURCE, graph, manifest};
+#[cfg(unix)]
+use super::{Lock, Package};
+use super::{SOURCE, graph, manifest};
 use std::collections::{BTreeMap, BTreeSet};
 
 const THIRD: &str = "registry+https://github.com/rust-lang/crates.io-index";
