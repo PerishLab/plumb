@@ -31,3 +31,8 @@ consign. Dispatch uses the GitHub token selected by the same profile.
 By default consign watches the lodge and then reads Depot back: it succeeds
 only when the standing generation for the marker holds exactly what was
 consigned. --no-watch returns once the lodge is dispatched.
+
+Read a lodged skill generation with plumb depot skill, passing --version or
+using the repository's declared version. Pass --raw to write only the exact
+verified SKILL.md bytes to stdout for editing the next release's brief on top
+of a prior generation.
