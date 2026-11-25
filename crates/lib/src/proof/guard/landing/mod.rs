@@ -88,6 +88,7 @@ impl Request<'_> {
 }
 
 impl Inspection {
+    #[cfg(feature = "delivery")]
     pub(crate) fn draft(self) -> Draft {
         self.0
     }
