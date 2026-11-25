@@ -43,12 +43,12 @@ fn changes() {
         |p| p.blob = "a".repeat(40),
         |p| {
             p.records
-                .get_mut(&native("repositories/1388431417/branches/main"))
+                .get_mut(&native("repos/PerishLab/.github/branches/main"))
                 .unwrap()["protected"] = json!(false);
         },
         |p| {
             p.records
-                .get_mut(&native("repositories/1388431417"))
+                .get_mut(&native("repos/PerishLab/.github"))
                 .unwrap()["id"] = json!(17);
         },
         |p| {
