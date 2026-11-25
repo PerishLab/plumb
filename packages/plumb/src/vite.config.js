@@ -5,7 +5,7 @@ export default defineConfig({
 		emptyOutDir: true,
 		lib: {
 			entry: "src/index.js",
-			fileName: () => "index.js",
+			fileName: "index",
 			formats: ["es"],
 		},
 		outDir: "dist",

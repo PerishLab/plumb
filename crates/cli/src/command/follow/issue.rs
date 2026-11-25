@@ -94,8 +94,8 @@ pub(super) fn snapshot(
         kind: "Auto".into(),
         updated: text(&issue, "updated_at")?,
         parent: None,
-        sub_issues: Vec::new(),
-        blocked_by: Vec::new(),
+        children: Vec::new(),
+        blockers: Vec::new(),
         blocking: Vec::new(),
     })
 }
