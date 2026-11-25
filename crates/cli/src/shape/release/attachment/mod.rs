@@ -1,3 +1,9 @@
+mod oci;
+#[cfg(test)]
+mod tests;
+
+pub use oci::{Input, Oci};
+
 use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -7,15 +13,6 @@ use std::path::Path;
 pub struct Cargo {
     pub registry: String,
     pub packages: Vec<String>,
-}
-
-#[derive(Clone, Debug, Default, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "kebab-case")]
-pub struct Oci {
-    pub registry: String,
-    pub image: String,
-    pub account: String,
-    pub binary: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -54,21 +51,6 @@ impl Cargo {
             }
         }
         Ok(())
-    }
-}
-
-impl Oci {
-    pub(super) fn validate(&self, spec: &super::Spec) -> Result<(), String> {
-        if let Some(binary) = &self.binary {
-            spec.server("image placement", binary)?;
-        }
-        host("image registry", &self.registry)?;
-        account("image account", &self.account)?;
-        pair(
-            &self.image,
-            "image attachment must name one owner and one image",
-        )
-        .map(|_| ())
     }
 }
 

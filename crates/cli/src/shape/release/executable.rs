@@ -1,4 +1,4 @@
-use super::{Spec, Target};
+use super::{Input, Spec, Target};
 use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -85,6 +85,9 @@ impl Spec {
 
     pub fn image(&self) -> Option<&str> {
         let oci = self.oci.as_ref()?;
+        if !oci.components.is_empty() || oci.web.is_some() {
+            return None;
+        }
         oci.binary.as_deref().or_else(|| self.primary())
     }
 
@@ -111,8 +114,29 @@ impl Spec {
     pub fn placements(&self) -> Vec<String> {
         let deb = self.deb.as_ref().map(|held| format!("deb {}", held.binary));
         let apk = self.apk.as_ref().map(|held| format!("apk {}", held.binary));
-        let oci = self.image().map(|held| format!("oci {held}"));
-        deb.into_iter().chain(apk).chain(oci).collect()
+        deb.into_iter().chain(apk).chain(self.images()).collect()
+    }
+
+    fn images(&self) -> Vec<String> {
+        let Some(oci) = &self.oci else {
+            return Vec::new();
+        };
+        if oci.components.is_empty() {
+            return self
+                .image()
+                .or(oci.web.as_deref())
+                .map(|held| format!("oci {held}"))
+                .into_iter()
+                .collect();
+        }
+        oci.parts(self)
+            .into_iter()
+            .map(|part| match part.input {
+                Input::Binary(bin) => format!("oci {} {bin}", part.name),
+                Input::Web(web) => format!("oci {} {web}", part.name),
+                Input::Source => format!("oci {} source", part.name),
+            })
+            .collect()
     }
 
     pub(super) fn server(&self, subject: &str, name: &str) -> Result<(), String> {

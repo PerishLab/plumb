@@ -1,5 +1,6 @@
 mod cargo;
 mod library;
+mod oci;
 
 use std::process::Command;
 
