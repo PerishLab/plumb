@@ -43,17 +43,19 @@ Guard stages proof state below `PLUMB_HOME` and carries the compact proof in Git
 release marker creation refuse a tree without that exact proof; an unchanged
 action world is reused and never starts a process.
 
-A Guard authority is the producer a proof names (`vX.Y.Z@commit`) and its
-Depot mark; `judge` matches both exactly. `Authority::released()` is the one
-compiled into plumb-lib. `plumb release authority --json` prints the running
-binary's, and wharf writes it into each stable seal as
-`"guard": {"producer": "vX.Y.Z@<commit>", "depot": "<sha256>"}`, no other keys,
-the producer naming that seal's release. `Authority::stable()` (feature
-`skill`) reads it from `releases.plumb.perish.uk`: the stable pointer, then the
-seal pinned by its sha256, then that field. It refuses a digest mismatch and a
-missing or foreign field, and its unreachable error names the pointer URL. The
-location is fixed; only unit tests override it. A caller accepting several
-authorities picks the proof's own with `Authority::among`, then verifies.
+A Guard authority is the producer a proof names (`vX.Y.Z@commit`) and the
+active Depot configuration generation (`<sha256>`); `judge` matches both
+exactly. `plumb release authority --json` prints the running binary's
+`{"producer": "vX.Y.Z@<commit>"}`, and wharf writes that producer into each
+stable seal as `"guard": {"producer": "vX.Y.Z@<commit>"}` while resolving the
+floating `depot` generation independently from
+`depot.plumb.perish.uk/channels/stable/configurations/latest.json` (pinning it
+across `ship.yml` jobs via `PLUMB_CONFIGURATION`). `Authority::released()` and
+`Authority::stable()` accept both legacy `{"producer", "depot"}` and decoupled
+`{"producer"}` seals, resolving the floating Depot generation fail-closed when
+omitted. The locations are fixed; only unit tests override them. A caller
+accepting several authorities picks the proof's own with `Authority::among`,
+then verifies.
 
 Downstream repositories do not get scanned by plumb, and plumb does not know
 they exist. The CLI travels to them: install it, run it in a repository, read
@@ -87,9 +89,12 @@ answers for.
   It is consumed by Concord. The registered `follow` operation observes only
   its automation-owned Auto Issue and pull; ordinary Issue delivery belongs
   to Concord. Repository-only `land` remains a separate explicit surface.
-- `crates/cli/{rules,assets,cookbook,help}` — Plumb's governed resources,
-  carried inside the binary. A release is its own rule set: nothing is fetched,
-  installed or overlaid at run time, and changing a rule is a change to Plumb.
+- `crates/cli/{rules,assets,cookbook,help}` — Plumb's governed resources.
+  Released binaries consume `rules/` fail-closed from floating latest Depot
+  (`depot.plumb.perish.uk/channels/stable/configurations/latest.json`, cached
+  immutably under `PLUMB_HOME/depot/generations/<sha256>`) or Wharf's pinned
+  `PLUMB_CONFIGURATION`; unbound development/candidate builds use local
+  `crates/cli/rules/` so self-hosting PRs never deadlock on `covered(&held)`.
   `rules/` holds four things and the compiler holds it to them:
   `catalog.toml` says what each rule requires, `taxonomy.toml` the words it is
   filed under, `atoms/` each judgement a mechanism makes, and `suites/` which
@@ -409,8 +414,9 @@ PerishLab/plumb#509.
 - A marker names identity, not capability. Reading a historical marker does not
   authorize producing its targets today; wharf refuses what the product's own
   manifests no longer support.
-- Depot consigns changelog, skill and scene generations;
-  configuration travels inside the binary. Scenes carry regular file materials,
+- Depot consigns changelog, skill, scene and configuration generations;
+  configuration maintains the floating channel pointer
+  `channels/{channel}/configurations/latest.json` with explicit rollback. Scenes carry regular file materials,
   not an admission to execute them; Seatrial owns their execution semantics. Generations remain immutable and
   addressable. A latest pointer may move, but every movement names the release
   marker and uses conditional readback. A product's own `plumb.toml` declares
