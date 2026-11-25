@@ -91,3 +91,58 @@ fn trusted() {
     assert!(!super::hashed("xyz"));
     assert!(!super::hashed("short"));
 }
+
+#[test]
+fn host() {
+    let held = super::host("radicula");
+    assert_eq!(held.base(), "https://releases.radicula.perish.uk");
+    assert_eq!(
+        held.pointer("stable"),
+        "https://releases.radicula.perish.uk/v1/channels/stable.json"
+    );
+    assert_eq!(
+        held.distribution("stable", "v0.20.0"),
+        "https://releases.radicula.perish.uk/v1/releases/stable/v0.20.0/distribution.json"
+    );
+}
+
+#[test]
+fn absent() {
+    let held = super::census::census(&["crest", "design"], |_| Ok(BTreeMap::new()));
+    assert!(super::census::writable(&held));
+    match super::census::kept(held) {
+        Widths::Known(found) => assert!(found.is_empty()),
+        Widths::Blind(error) => panic!("{error}"),
+    }
+}
+
+#[test]
+fn isolated() {
+    let held = super::census::census(&["crest", "plumb"], |name| {
+        if name == "crest" {
+            Err("cannot fetch public bucket object: io: unexpected end of file".into())
+        } else {
+            Ok(BTreeMap::from([("cargo".into(), 2), ("npm".into(), 1)]))
+        }
+    });
+    assert!(!super::census::writable(&held));
+    match super::census::kept(held) {
+        Widths::Known(found) => {
+            assert_eq!(found.get("cargo").copied(), Some(2));
+            assert_eq!(found.get("npm").copied(), Some(1));
+        }
+        Widths::Blind(error) => panic!("{error}"),
+    }
+}
+
+#[test]
+fn unknown() {
+    let held = super::census::census(&["codehull"], |_| {
+        Err("cannot fetch public bucket object: io: unexpected end of file".into())
+    });
+    assert!(!super::census::writable(&held));
+    match super::census::kept(held) {
+        Widths::Blind(error) => assert!(error.contains("codehull")),
+        Widths::Known(_) => panic!("expected unknown widths"),
+    }
+}

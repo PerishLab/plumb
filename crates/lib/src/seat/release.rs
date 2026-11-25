@@ -54,6 +54,10 @@ impl Authority {
         }
     }
 
+    pub fn product(name: &str) -> Self {
+        Self::at(&format!("https://releases.{name}.perish.uk"))
+    }
+
     pub fn declared(manifest: &str) -> Result<Option<Self>, String> {
         let held: Manifest = toml::from_str(manifest)
             .map_err(|error| format!("cannot parse plumb.toml: {error}"))?;
