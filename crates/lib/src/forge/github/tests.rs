@@ -29,6 +29,7 @@ fn remotes() {
     assert!(refused.is_some_and(|error| error.contains("Forgejo is archived")));
 }
 
+#[cfg(unix)]
 #[test]
 fn pulls() {
     let value = serde_json::json!({

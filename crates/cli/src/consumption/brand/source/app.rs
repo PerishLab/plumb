@@ -11,8 +11,13 @@ pub(super) fn read(root: &Path, path: &Path, mode: Mode) -> Result<Option<App>, 
         Err(error) => return Err(error.to_string()),
     }
     let name = path.join("package.json");
-    let bytes =
-        super::super::material::regular(root, name.to_str().ok_or("non-text app manifest")?)?;
+    let bytes = super::super::material::regular(
+        root,
+        &name
+            .to_str()
+            .ok_or("non-text app manifest")?
+            .replace('\\', "/"),
+    )?;
     let manifest: serde_json::Value =
         serde_json::from_slice(&bytes).map_err(|error| error.to_string())?;
     if !has(&manifest, "vite") || !has(&manifest, "svelte") {
@@ -40,7 +45,10 @@ pub(super) fn read(root: &Path, path: &Path, mode: Mode) -> Result<Option<App>, 
         .map_err(|error| error.to_string())?;
     let text = String::from_utf8(super::super::material::regular(
         root,
-        input.to_str().ok_or("non-text Vite config")?,
+        &input
+            .to_str()
+            .ok_or("non-text Vite config")?
+            .replace('\\', "/"),
     )?)
     .map_err(|error| error.to_string())?;
     let setup = match Activation::read(&text) {

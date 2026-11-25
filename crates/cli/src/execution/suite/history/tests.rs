@@ -1,4 +1,5 @@
 use super::super::model::Target;
+#[cfg(unix)]
 use super::super::runtime::Fixture;
 use super::*;
 use std::time::Duration;

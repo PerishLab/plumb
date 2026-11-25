@@ -1,4 +1,7 @@
-use super::{CEILING, FLOOR, capture, pace};
+#[cfg(unix)]
+use super::capture;
+use super::{CEILING, FLOOR, pace};
+#[cfg(unix)]
 use std::process::Command;
 use std::time::Duration;
 
