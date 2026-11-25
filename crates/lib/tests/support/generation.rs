@@ -179,6 +179,7 @@ fn symbolic() {
     );
 }
 
+#[cfg(feature = "skill")]
 #[test]
 fn brief() {
     use std::io::{Read as _, Write as _};

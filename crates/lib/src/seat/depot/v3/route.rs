@@ -18,9 +18,13 @@ impl<'a> Route<'a> {
     }
 
     fn validate(self) -> Result<(), String> {
-        Value(self.channel).component("release channel")?;
-        super::value::version(self.version)
+        super::value::channel(self.channel, self.version)
     }
+}
+
+pub fn channel(channel: &str, kind: Kind) -> Result<String, String> {
+    Value(channel).channel()?;
+    Ok(format!("channels/{channel}/{}/{POINTER}", kind.directory()))
 }
 
 pub fn generation(route: Route<'_>, generation: &str) -> Result<String, String> {

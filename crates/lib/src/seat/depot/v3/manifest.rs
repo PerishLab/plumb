@@ -106,8 +106,7 @@ impl Manifest {
 impl Identity {
     pub(super) fn validate(&self) -> Result<(), String> {
         Value(&self.product).component("depot product")?;
-        Value(&self.channel).component("release channel")?;
-        super::value::version(&self.version)?;
+        super::value::channel(&self.channel, &self.version)?;
         self.marker.validate()?;
         if self.marker.name != self.version {
             return Err(format!(

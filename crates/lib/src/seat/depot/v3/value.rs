@@ -38,7 +38,14 @@ impl Value<'_> {
     }
 
     pub fn anchored(&self, name: &str) -> Result<(), String> {
-        if self.0.is_empty() || self.0.contains('\\') {
+        if self.0.is_empty() || self.0.starts_with('/') || self.0.contains('\\') {
+            return Err(format!("{name} is not anchored: {}", self.0));
+        }
+        if self
+            .0
+            .split('/')
+            .any(|part| matches!(part, "" | "." | ".."))
+        {
             return Err(format!("{name} is not anchored: {}", self.0));
         }
         if Path::new(self.0)
@@ -57,13 +64,51 @@ impl Value<'_> {
         }
         Ok(())
     }
+
+    pub fn channel(&self) -> Result<(), String> {
+        if matches!(self.0, "stable" | "alpha" | "beta" | "rc") {
+            return Ok(());
+        }
+        Err(format!("invalid release channel: {}", self.0))
+    }
 }
 
-pub(super) fn version(raw: &str) -> Result<(), String> {
+pub(super) fn parse(raw: &str) -> Result<semver::Version, String> {
     Value(raw).component("release version")?;
-    semver::Version::parse(raw.trim_start_matches('v'))
-        .map(|_| ())
-        .map_err(|error| format!("cannot parse release version {raw}: {error}"))
+    let body = raw
+        .strip_prefix('v')
+        .ok_or_else(|| format!("release version must begin with v: {raw}"))?;
+    let parsed = semver::Version::parse(body)
+        .map_err(|error| format!("cannot parse release version {raw}: {error}"))?;
+    if !parsed.build.is_empty() {
+        return Err(format!("release version {raw} carries build metadata"));
+    }
+    Ok(parsed)
+}
+
+pub(super) fn channel(name: &str, raw: &str) -> Result<(), String> {
+    Value(name).channel()?;
+    let parsed = parse(raw)?;
+    if name == "stable" {
+        if !parsed.pre.is_empty() {
+            return Err(format!(
+                "release version {raw} does not belong to channel {name}"
+            ));
+        }
+        return Ok(());
+    }
+    let mut parts = parsed.pre.as_str().split('.');
+    let matched = parts.next() == Some(name)
+        && parts
+            .next()
+            .is_some_and(|number| number.parse::<u64>().is_ok_and(|number| number > 0))
+        && parts.next().is_none();
+    if !matched {
+        return Err(format!(
+            "release version {raw} does not belong to channel {name}"
+        ));
+    }
+    Ok(())
 }
 
 pub(super) fn timestamp(raw: &str) -> Result<(), String> {

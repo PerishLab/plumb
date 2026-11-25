@@ -123,7 +123,7 @@ impl Exact {
     }
 }
 
-fn read(base: &str, manifest: &Manifest, path: &str) -> Result<Vec<u8>, String> {
+pub(super) fn read(base: &str, manifest: &Manifest, path: &str) -> Result<Vec<u8>, String> {
     let bytes = pull(&format!("{base}objects/{path}"))?
         .ok_or_else(|| format!("depot object {path} is absent"))?;
     let executable = manifest
@@ -136,7 +136,7 @@ fn read(base: &str, manifest: &Manifest, path: &str) -> Result<Vec<u8>, String> 
     Ok(bytes)
 }
 
-fn pull(url: &str) -> Result<Option<Vec<u8>>, String> {
+pub(super) fn pull(url: &str) -> Result<Option<Vec<u8>>, String> {
     let started = std::time::Instant::now();
     let mut last = (None, String::new());
     for attempt in 0..ATTEMPTS {

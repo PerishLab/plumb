@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+mod cache;
+#[cfg(feature = "depot")]
+mod discovery;
 mod kind;
 mod local;
 mod manifest;
@@ -10,14 +13,18 @@ mod route;
 mod source;
 mod value;
 
+pub use cache::Cache;
+#[cfg(feature = "depot")]
+pub use discovery::{Channel, Discovered};
 pub use kind::Kind;
 pub use local::install;
 pub use manifest::Manifest;
 pub use pointer::Pointer;
 #[cfg(feature = "depot")]
 pub use remote::{Exact, Generation, Query};
-pub use route::{Route, generation, latest, manifest};
+pub use route::{Route, channel, generation, latest, manifest};
 pub use source::Bundle;
+pub(crate) use source::media;
 
 pub const FORMAT: u32 = 3;
 pub const LEAF: &str = "manifest.json";

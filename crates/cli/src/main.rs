@@ -218,7 +218,7 @@ pub(crate) enum Command {
         deed: command::ship::Deed,
     },
     #[command(
-        about = "Move a release's changelog and skill onto Depot through wharf",
+        about = "Move a release's changelog, skill, scene or configuration onto Depot through wharf",
         long_about = plumb::seat::resource!("help/depot.txt")
     )]
     Depot {
