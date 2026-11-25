@@ -133,12 +133,19 @@ impl Seat<'_> {
     }
 
     fn git(&self, args: &[&str]) -> Result<Output, String> {
-        crate::config::detached("git")
+        let started = std::time::Instant::now();
+        let result = crate::config::detached("git")
             .arg("-C")
             .arg(self.root)
             .args(args)
             .output()
-            .map_err(|error| format!("cannot run git: {error}"))
+            .map_err(|error| format!("cannot run git: {error}"));
+        crate::runtime::exchange::git(
+            args,
+            started,
+            result.as_ref().is_ok_and(|out| out.status.success()),
+        );
+        result
     }
 }
 

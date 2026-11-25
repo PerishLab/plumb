@@ -14,11 +14,18 @@ pub fn fetch(root: &Path) -> Result<(), String> {
 }
 
 fn git(cwd: &Path, args: &[&str], deed: &str) -> Result<String, String> {
-    let output = plumb::config::detached("git")
+    let started = std::time::Instant::now();
+    let result = plumb::config::detached("git")
         .args(args)
         .current_dir(cwd)
         .output()
-        .map_err(|error| format!("cannot run git: {error}"))?;
+        .map_err(|error| format!("cannot run git: {error}"));
+    plumb::observation::git(
+        args,
+        started,
+        result.as_ref().is_ok_and(|out| out.status.success()),
+    );
+    let output = result?;
     if output.status.success() {
         return Ok(String::from_utf8_lossy(&output.stdout).trim().to_string());
     }

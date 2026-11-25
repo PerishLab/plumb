@@ -4,7 +4,7 @@ use super::owed::successor::Stage;
 use super::value;
 use plumb::seat::release::{Authority, Distribution, Marker};
 use std::path::Path;
-use std::process::{Command, Output};
+use std::process::Output;
 
 pub(super) mod launch;
 mod record;
@@ -273,13 +273,15 @@ pub(super) fn reference(listing: &str, name: &str) -> Option<String> {
 }
 
 pub(super) fn git(root: &Path, args: &[&str]) -> Result<Output, String> {
-    run(plumb::config::detached("git").args(args).current_dir(root))
-}
-
-fn run(command: &mut Command) -> Result<Output, String> {
-    command
+    let started = std::time::Instant::now();
+    let result = plumb::config::detached("git")
+        .args(args)
+        .current_dir(root)
         .output()
-        .map_err(|error| format!("cannot run {:?}: {error}", command.get_program()))
+        .map_err(|error| format!("cannot run \"git\": {error}"));
+    let ok = result.as_ref().is_ok_and(|out| out.status.success());
+    plumb::observation::git(args, started, ok);
+    result
 }
 
 pub(super) fn text(deed: &str, output: Output) -> Result<String, String> {

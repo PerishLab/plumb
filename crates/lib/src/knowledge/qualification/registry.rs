@@ -35,13 +35,44 @@ impl Registry<'_> {
         )?;
         let token = self.token(repository)?;
         let url = format!("https://ghcr.io/v2/{repository}/manifests/{marker}");
-        let response = self.0.get(&url).header("Authorization", &format!("Bearer {token}")).header("Accept", "application/vnd.oci.image.index.v1+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json").call().map_err(|_| Fault::unknown("runtime manifest is not anonymously readable"))?;
+        let started = std::time::Instant::now();
+        let response = match self.0.get(&url).header("Authorization", &format!("Bearer {token}")).header("Accept", "application/vnd.oci.image.index.v1+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json").call() {
+            Ok(response) => response,
+            Err(error) => {
+                let code = match error {
+                    ureq::Error::StatusCode(code) => Some(code),
+                    _ => None,
+                };
+                crate::runtime::exchange::https("registry.manifest", "error", code, started.elapsed());
+                return Err(Fault::unknown("runtime manifest is not anonymously readable"));
+            }
+        };
+        let status = response.status().as_u16();
         let header = response
             .headers()
             .get("docker-content-digest")
             .and_then(|v| v.to_str().ok())
             .map(str::to_string);
-        let bytes = self.body(response)?;
+        let bytes = match self.body(response) {
+            Ok(bytes) => {
+                crate::runtime::exchange::https(
+                    "registry.manifest",
+                    "ok",
+                    Some(status),
+                    started.elapsed(),
+                );
+                bytes
+            }
+            Err(error) => {
+                crate::runtime::exchange::https(
+                    "registry.manifest",
+                    "error",
+                    Some(status),
+                    started.elapsed(),
+                );
+                return Err(error);
+            }
+        };
         let value = Wire::parse(&bytes, false)?;
         Wire::require(
             value["schemaVersion"] == 2
@@ -63,14 +94,48 @@ impl Registry<'_> {
     }
 
     fn token(&self, repository: &str) -> Result<String> {
-        let response = self
+        let started = std::time::Instant::now();
+        let response = match self
             .0
             .get(&format!(
                 "https://ghcr.io/token?service=ghcr.io&scope=repository:{repository}:pull"
             ))
             .call()
-            .map_err(|_| Fault::unknown("anonymous runtime registry admission failed"))?;
-        let value = Wire::parse(&self.body(response)?, false)?;
+        {
+            Ok(response) => response,
+            Err(error) => {
+                let code = match error {
+                    ureq::Error::StatusCode(code) => Some(code),
+                    _ => None,
+                };
+                crate::runtime::exchange::https("registry.token", "error", code, started.elapsed());
+                return Err(Fault::unknown(
+                    "anonymous runtime registry admission failed",
+                ));
+            }
+        };
+        let status = response.status().as_u16();
+        let bytes = match self.body(response) {
+            Ok(bytes) => {
+                crate::runtime::exchange::https(
+                    "registry.token",
+                    "ok",
+                    Some(status),
+                    started.elapsed(),
+                );
+                bytes
+            }
+            Err(error) => {
+                crate::runtime::exchange::https(
+                    "registry.token",
+                    "error",
+                    Some(status),
+                    started.elapsed(),
+                );
+                return Err(error);
+            }
+        };
+        let value = Wire::parse(&bytes, false)?;
         Ok(Wire::text(
             value
                 .get("token")

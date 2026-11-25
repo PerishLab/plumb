@@ -48,25 +48,50 @@ impl Reader {
             .build();
         let agent = ureq::Agent::new_with_config(config);
         let url = self.url();
-        let mut response = agent
+        let started = std::time::Instant::now();
+        let mut response = match agent
             .get(&url)
             .header("Accept", "application/json")
             .header("Accept-Encoding", "identity")
             .call()
-            .map_err(|_| "lane public evidence is unavailable")?;
-        if response.status().as_u16() != 200
+        {
+            Ok(response) => response,
+            Err(_) => {
+                crate::runtime::exchange::https("evidence.fetch", "error", None, started.elapsed());
+                return Err("lane public evidence is unavailable".into());
+            }
+        };
+        let status = response.status().as_u16();
+        if status != 200
             || response.get_uri().to_string() != url
             || response.headers().contains_key("Content-Range")
         {
+            let outcome = if status == 404 { "missing" } else { "error" };
+            crate::runtime::exchange::https(
+                "evidence.fetch",
+                outcome,
+                Some(status),
+                started.elapsed(),
+            );
             return Err("lane public evidence response is unverified".into());
         }
         let mut bytes = Vec::new();
-        response
+        if response
             .body_mut()
             .as_reader()
             .take((LIMIT + 1) as u64)
             .read_to_end(&mut bytes)
-            .map_err(|_| "lane public evidence is unavailable")?;
+            .is_err()
+        {
+            crate::runtime::exchange::https(
+                "evidence.fetch",
+                "error",
+                Some(status),
+                started.elapsed(),
+            );
+            return Err("lane public evidence is unavailable".into());
+        }
+        crate::runtime::exchange::https("evidence.fetch", "ok", Some(status), started.elapsed());
         self.verify(&bytes)
     }
 }

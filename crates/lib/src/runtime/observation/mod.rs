@@ -1,9 +1,13 @@
 mod configuration;
+mod remote;
 #[cfg(test)]
 mod testing;
 
 pub use configuration::Configuration;
 use locus::{Adaptor, Candidate, Config, Context, Engine, Hook, Key, Policy, Role};
+#[cfg(any(feature = "vendor", feature = "windtun"))]
+pub use remote::github;
+pub use remote::{Exchange, git, record};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::path::{Path, PathBuf};
@@ -88,6 +92,8 @@ impl Run {
             build(&declaration, command, reporter, hook).map_err(|error| error.to_string())?;
         let seat: &'static Seat = Box::leak(Box::new(seat));
         *ACTIVE.write().unwrap_or_else(|error| error.into_inner()) = Some(seat);
+        #[cfg(any(feature = "vendor", feature = "windtun"))]
+        runseal::github::observe(remote::github);
         Ok(Some(Run {
             producer: declaration.producer,
             seat,
