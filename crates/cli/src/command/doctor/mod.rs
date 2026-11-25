@@ -104,6 +104,7 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
     }
     findings.extend(judge::vocabulary::judge(&vocabulary));
     findings.extend(judge::depot::runtime());
+    findings.extend(judge::depot::mark());
     let summary = Summary::new(&findings, &held.dependencies);
     let ok = summary.wrong == 0 && summary.blind == 0;
     if let Some(finding) = findings

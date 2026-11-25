@@ -34,7 +34,6 @@ struct World<'a> {
 #[derive(Serialize)]
 struct Producer<'a> {
     plumb: &'a str,
-    depot: &'a str,
 }
 
 #[derive(Serialize)]
@@ -111,7 +110,6 @@ fn report(root: &Path, action: Action) -> Result<Report, String> {
         .flatten();
     let repository = crate::command::guard::precommit::cargo::identity(root)?;
     let platform = plumb::config::platform();
-    let depot = plumb::depot::rules()?;
     let world = World {
         schema: SCHEMA,
         repository: &repository,
@@ -121,12 +119,11 @@ fn report(root: &Path, action: Action) -> Result<Report, String> {
     };
     let producer = Producer {
         plumb: plumb::version!("PLUMB"),
-        depot: depot.mark(),
     };
     crate::diagnostic::event("material.identity", || {
         serde_json::json!({
             "repository_key":plumb::depot::sha(repository.as_bytes()),"image":world.image,"platform":platform,
-            "tree":tree,"producer":producer.plumb,"depot":producer.depot
+            "tree":tree,"producer":producer.plumb
         })
     });
     let world = digest(&world)?;
@@ -185,5 +182,101 @@ fn attempt() -> Result<u64, String> {
             .ok_or_else(|| "GITHUB_RUN_ATTEMPT must be positive".into()),
         Err(std::env::VarError::NotPresent) => Ok(1),
         Err(_) => Err("GITHUB_RUN_ATTEMPT is not text".into()),
+    }
+}
+
+#[cfg(test)]
+mod depot {
+    use super::*;
+    use serde::Deserialize;
+    use std::process::Command;
+
+    #[derive(Deserialize, Serialize)]
+    struct Snapshot {
+        depot: String,
+        restore: String,
+        key: String,
+    }
+
+    fn probe(home: &Path, root: &Path, output: &Path) -> Snapshot {
+        let result = Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "command::cache::transport::depot::invariant",
+                "--nocapture",
+            ])
+            .env("PLUMB_HOME", home)
+            .env("PLUMB_TRANSPORT_DEPOT_ROOT", root)
+            .env("PLUMB_TRANSPORT_DEPOT_OUT", output)
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}{}",
+            String::from_utf8_lossy(&result.stdout),
+            String::from_utf8_lossy(&result.stderr)
+        );
+        serde_json::from_slice(&std::fs::read(output).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn invariant() {
+        if let (Some(root), Some(output)) = (
+            std::env::var_os("PLUMB_TRANSPORT_DEPOT_ROOT"),
+            std::env::var_os("PLUMB_TRANSPORT_DEPOT_OUT"),
+        ) {
+            plumb::depot::carry(crate::catalog::carried::FILES);
+            let held = report(Path::new(&root), Action::Inspect).unwrap();
+            let snapshot = Snapshot {
+                depot: plumb::depot::rules().unwrap().mark().to_string(),
+                restore: held.restore,
+                key: held.key,
+            };
+            std::fs::write(output, serde_json::to_vec(&snapshot).unwrap()).unwrap();
+            return;
+        }
+        let home = tempfile::tempdir().unwrap();
+        let root = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            let status = plumb::config::detached("git")
+                .arg("-C")
+                .arg(root.path())
+                .args(args)
+                .status()
+                .unwrap();
+            assert!(status.success());
+        };
+        git(&["init", "-q"]);
+        git(&[
+            "remote",
+            "add",
+            "origin",
+            "https://github.com/Example/probe.git",
+        ]);
+        std::fs::create_dir(root.path().join("src")).unwrap();
+        std::fs::write(
+            root.path().join("Cargo.toml"),
+            "[package]\nname='probe'\nversion='0.1.0'\nedition='2024'\n",
+        )
+        .unwrap();
+        std::fs::write(
+            root.path().join("src/lib.rs"),
+            "pub fn value() -> u8 { 1 }\n",
+        )
+        .unwrap();
+        let status = Command::new("cargo")
+            .args(["generate-lockfile", "--offline"])
+            .current_dir(root.path())
+            .status()
+            .unwrap();
+        assert!(status.success());
+        git(&["add", "."]);
+        let first = probe(home.path(), root.path(), &home.path().join("first.json"));
+        std::fs::create_dir_all(home.path().join("overlay")).unwrap();
+        std::fs::write(home.path().join("overlay/probe.txt"), "overlay\n").unwrap();
+        let next = probe(home.path(), root.path(), &home.path().join("next.json"));
+        assert_ne!(first.depot, next.depot);
+        assert_eq!(first.restore, next.restore);
+        assert_eq!(first.key, next.key);
     }
 }

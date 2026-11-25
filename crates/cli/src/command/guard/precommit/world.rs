@@ -18,6 +18,7 @@ pub(super) struct Check {
 pub(super) struct Prepared {
     pub checks: Vec<Check>,
     pub resolution: Option<plumb::packages::Resolution>,
+    pub depot: String,
     pub material: String,
     pub context: Option<Context>,
 }
@@ -29,6 +30,7 @@ impl Prepared {
         selection: Selection,
         seat: Option<&Path>,
     ) -> Result<Self, String> {
+        let depot = plumb::depot::rules()?.mark().to_string();
         let (locked, observed) = if matches!(selection, Selection::Latest) {
             let (locked, observed) = crate::diagnostic::measure("packages.resolve", || {
                 crate::command::packages::observed(&index.root, "ci-latest")
@@ -95,48 +97,43 @@ impl Prepared {
             }
             let mut programs = crate::catalog::probe::programs(&probes)?;
             programs.extend(tools);
-            programs.extend(
-                commands
-                    .iter()
-                    .filter_map(|command| command.first().cloned()),
-            );
+            programs.extend(commands.iter().filter_map(|c| c.first().cloned()));
             if seat.is_some() {
                 programs.push("cargo".into());
             }
             if programs.iter().any(|program| program == "cargo") {
                 programs.push("rustc".into());
             }
-            let environment = super::environment::capture(root, &programs, &inputs)?;
-            let environment = match name.as_str() {
-                "guard/plumb" => environment,
-                _ => environment.combine(policy.environment()?)?,
-            };
-            let environment = match &context {
-                Some(context) => context.bind(environment)?,
-                None => environment,
-            };
-            let environment = match seat {
-                Some(seat) => super::environment::managed(environment, seat)?,
-                None => environment,
-            };
+            let mut environment = super::environment::capture(root, &programs, &inputs)?;
+            if name != "guard/plumb" {
+                environment = environment.combine(policy.environment()?)?;
+            }
+            if let Some(context) = &context {
+                environment = context.bind(environment)?;
+            }
+            if let Some(seat) = seat {
+                environment = super::environment::managed(environment, seat)?;
+            }
             let mut execution =
                 super::world::execution(&name, environment, &index.root, &programs)?;
             let input = protection
                 .as_ref()
                 .map(|held| held.bind(&name, &input))
                 .unwrap_or(input);
-            let material = if name == "guard/plumb" {
+            let mut material = None;
+            if name == "guard/plumb" {
                 let binding = super::action::Binding {
                     execution: Some(&execution),
                     probes: &probes,
                 };
-                let material = super::world::digest(&name, &input, &commands, &binding)?.material;
+                material = Some(super::world::digest(&name, &input, &commands, &binding)?.material);
                 execution.environment =
                     super::environment::observed(execution.environment, observation.as_ref())?;
-                Some(material)
-            } else {
-                None
-            };
+                if product != "plumb" {
+                    execution.environment =
+                        super::environment::depot(execution.environment, &depot)?;
+                }
+            }
             let execution = Some(std::sync::Arc::new(execution));
             let binding = super::action::Binding {
                 execution: execution.as_deref(),
@@ -156,17 +153,14 @@ impl Prepared {
                 exclusions,
                 execution,
             };
-            super::cargo::register(&mut checks, protection.as_ref(), check)?;
+            super::cargo::register(&mut checks, protection.as_ref(), &depot, check)?;
         }
-        let material = super::super::world::material(
-            &checks
-                .iter()
-                .map(|check| check.material.clone())
-                .collect::<Vec<_>>(),
-        )?;
+        let materials: Vec<_> = checks.iter().map(|c| c.material.clone()).collect();
+        let material = super::super::world::material(&materials)?;
         Ok(Self {
             checks,
             resolution,
+            depot,
             material,
             context,
         })
@@ -174,10 +168,9 @@ impl Prepared {
 
     pub fn reused(&self, root: &Path, tree: &str) -> Option<plumb::guard::Descriptor> {
         plumb::guard::staged(root, tree).ok().filter(|proof| {
-            proof
-                .actions
-                .iter()
-                .eq(self.checks.iter().map(|check| &check.proof))
+            let actions = self.checks.iter().map(|check| &check.proof);
+            proof.depot == self.depot
+                && proof.actions.iter().eq(actions)
                 && proof.resolution == self.resolution
         })
     }
@@ -186,105 +179,120 @@ impl Prepared {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use plumb::guard::Descriptor;
+    use plumb::packages::Observation;
+    use std::{env, fs, process::Command};
 
+    #[derive(serde::Deserialize, serde::Serialize)]
     struct Frame {
+        depot: String,
         material: String,
         proof: String,
+        rust: String,
         observation: String,
     }
 
-    fn prepare(root: &Path) -> Frame {
+    fn prepare(root: &Path, stage: bool) -> Frame {
         let tree = plumb::guard::tree(root).unwrap();
         let index = Index::new(root, &tree).unwrap();
         let seat = super::super::cargo::seat(root, &tree).unwrap();
-        let prepared = Prepared::new(root, &index, Selection::Local, seat.as_deref()).unwrap();
-        let check = prepared
-            .checks
-            .iter()
-            .find(|check| check.proof.name == "guard/plumb")
+        let mut prepared = Prepared::new(root, &index, Selection::Local, seat.as_deref()).unwrap();
+        let checks = &prepared.checks;
+        let find = |name| checks.iter().find(|c| c.proof.name == name).unwrap();
+        let (plumb, rust) = (find("guard/plumb"), find("guard/rust"));
+        let env = &plumb.execution.as_ref().unwrap().environment;
+        let other = &rust.execution.as_ref().unwrap().environment;
+        assert_eq!(env.get("PLUMB_DEPOT_MARK"), Some(prepared.depot.as_str()));
+        assert!(other.get("PLUMB_DEPOT_MARK").is_none());
+        let text = env.get("PLUMB_PACKAGES_OBSERVATION").unwrap();
+        let seen = Observation::read(&index.root, text).unwrap();
+        assert_eq!(seen.resolution.tree, tree);
+        let actions = checks.iter().map(|c| c.proof.clone()).collect();
+        let proof = Descriptor::new(root, tree.clone(), actions).unwrap();
+        let proof = proof
+            .resolved(prepared.resolution.clone().unwrap())
             .unwrap();
-        let text = check
-            .execution
-            .as_ref()
-            .unwrap()
-            .environment
-            .get("PLUMB_PACKAGES_OBSERVATION")
-            .unwrap();
-        let observation = plumb::packages::Observation::read(&index.root, text).unwrap();
-        assert_eq!(observation.resolution.tree, tree);
-        Frame {
-            material: prepared.material,
-            proof: check.proof.world.clone(),
+        assert_eq!(proof.depot, prepared.depot);
+        let frame = Frame {
+            depot: proof.depot.clone(),
+            material: prepared.material.clone(),
+            proof: plumb.proof.world.clone(),
+            rust: rust.proof.world.clone(),
             observation: text.to_owned(),
+        };
+        if stage {
+            plumb::guard::stage(root, &proof).unwrap();
+            assert!(prepared.reused(root, &tree).is_some());
+            prepared.depot = "0".repeat(64);
         }
+        assert!(prepared.reused(root, &tree).is_none());
+        frame
+    }
+
+    fn child(home: &Path, root: &Path, mode: &str) -> Frame {
+        let test = "command::guard::precommit::world::tests::source";
+        let result = Command::new(env::current_exe().unwrap())
+            .args(["--exact", test, "--nocapture"])
+            .env("PLUMB_WORLD_TEST", mode)
+            .env("PLUMB_WORLD_ROOT", root)
+            .env("PLUMB_HOME", home)
+            .output()
+            .unwrap();
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        assert!(result.status.success(), "{stderr}");
+        serde_json::from_slice(&fs::read(home.join(format!("{mode}.json"))).unwrap()).unwrap()
     }
 
     #[test]
     fn source() {
-        if std::env::var_os("PLUMB_WORLD_TEST").is_none() {
-            let home = tempfile::tempdir().unwrap();
-            let output = std::process::Command::new(std::env::current_exe().unwrap())
-                .args([
-                    "--exact",
-                    "command::guard::precommit::world::tests::source",
-                    "--nocapture",
-                ])
-                .env("PLUMB_WORLD_TEST", "child")
-                .env("PLUMB_HOME", home.path())
-                .output()
-                .unwrap();
-            assert!(
-                output.status.success(),
-                "{}{}",
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr)
-            );
+        if let Some(mode) = env::var_os("PLUMB_WORLD_TEST") {
+            plumb::depot::carry(crate::catalog::carried::FILES);
+            let root = env::var_os("PLUMB_WORLD_ROOT").unwrap();
+            let (root, mode) = (Path::new(&root), mode.to_string_lossy());
+            let frame = if mode == "source" {
+                let first = prepare(root, true);
+                fs::write(root.join("src/lib.rs"), "pub fn answer() -> u8 { 2 }\n").unwrap();
+                super::super::tree::git(root, &["add", "src/lib.rs"], "world fixture").unwrap();
+                let next = prepare(root, true);
+                assert_ne!(first.observation, next.observation);
+                assert_ne!(first.proof, next.proof);
+                assert!(Observation::read(root, &first.observation).is_err());
+                assert!(Observation::read(root, &next.observation).is_ok());
+                assert_eq!(first.material, next.material);
+                next
+            } else {
+                prepare(root, false)
+            };
+            let home = env::var_os("PLUMB_HOME").unwrap();
+            let out = Path::new(&home).join(format!("{mode}.json"));
+            fs::write(out, serde_json::to_vec(&frame).unwrap()).unwrap();
             return;
         }
-        plumb::depot::carry(crate::catalog::carried::FILES);
-        let root = tempfile::tempdir().unwrap();
-        let git =
-            |args: &[&str]| super::super::tree::git(root.path(), args, "world fixture").unwrap();
-        git(&["init", "-q"]);
+        let (home, root) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+        let (home, root) = (home.path(), root.path());
+        let git = |a: &[&str]| super::super::tree::git(root, a, "world fixture").unwrap();
         let origin = "https://github.com/Example/probe.git";
+        git(&["init", "-q"]);
         git(&["remote", "add", "origin", origin]);
-        std::fs::create_dir(root.path().join("src")).unwrap();
-        std::fs::write(
-            root.path().join("Cargo.toml"),
-            "[package]\nname='probe'\nversion='0.1.0'\nedition='2024'\n",
-        )
-        .unwrap();
-        std::fs::write(root.path().join("plumb.toml"), "[identity]\nns='probe'\n[workflow.hash.guard]\nrust=['Cargo.toml','Cargo.lock','src']\nplumb=['Cargo.toml','Cargo.lock','src']\n").unwrap();
-        std::fs::write(
-            root.path().join("src/lib.rs"),
-            "pub fn answer() -> u8 { 1 }\n",
-        )
-        .unwrap();
-        let output = std::process::Command::new("cargo")
+        fs::create_dir(root.join("src")).unwrap();
+        let manifest = "[package]\nname='probe'\nversion='0.1.0'\nedition='2024'\n";
+        let config = "[identity]\nns='probe'\n[workflow.hash.guard]\nrust=['Cargo.toml','Cargo.lock','src']\nplumb=['Cargo.toml','Cargo.lock','src']\n";
+        fs::write(root.join("Cargo.toml"), manifest).unwrap();
+        fs::write(root.join("plumb.toml"), config).unwrap();
+        fs::write(root.join("src/lib.rs"), "pub fn answer() -> u8 { 1 }\n").unwrap();
+        let mut cargo = Command::new("cargo");
+        cargo
             .args(["generate-lockfile", "--offline"])
-            .current_dir(root.path())
-            .output()
-            .unwrap();
-        assert!(output.status.success());
+            .current_dir(root);
+        assert!(cargo.status().unwrap().success());
         git(&["add", "."]);
-        let first = prepare(root.path());
-        std::fs::write(
-            root.path().join("src/lib.rs"),
-            "pub fn answer() -> u8 { 2 }\n",
-        )
-        .unwrap();
-        git(&["add", "src/lib.rs"]);
-        let next = prepare(root.path());
-        assert_ne!(
-            first.observation, next.observation,
-            "current observations must bind distinct source trees"
-        );
-        assert_ne!(first.proof, next.proof, "current Guard proof must change");
-        assert!(plumb::packages::Observation::read(root.path(), &first.observation).is_err());
-        assert!(plumb::packages::Observation::read(root.path(), &next.observation).is_ok());
-        assert_eq!(
-            first.material, next.material,
-            "source-only Doctor tree changes must preserve compilation identity"
-        );
+        let first = child(home, root, "source");
+        fs::create_dir_all(home.join("overlay")).unwrap();
+        fs::write(home.join("overlay/probe.txt"), "overlay\n").unwrap();
+        let next = child(home, root, "overlay");
+        assert_ne!(first.depot, next.depot);
+        assert_ne!(first.proof, next.proof);
+        assert_ne!(first.rust, next.rust);
+        assert_eq!(first.material, next.material);
     }
 }
