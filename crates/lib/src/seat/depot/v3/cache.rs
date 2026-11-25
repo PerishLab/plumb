@@ -4,7 +4,7 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
 use super::value::Value;
-use super::{Bundle, LEAF, Manifest, Pointer};
+use super::{Bundle, LEAF, Manifest, Pinned, Pointer};
 
 const OBJECTS: &str = "objects";
 
@@ -14,6 +14,28 @@ pub struct Cache {
 }
 
 struct Entry<'a>(&'a Path);
+
+#[derive(Clone, Copy)]
+enum Target<'a> {
+    Pointer(&'a Pointer),
+    Pinned(&'a Pinned),
+}
+
+impl Target<'_> {
+    fn generation(&self) -> &str {
+        match self {
+            Self::Pointer(pointer) => &pointer.generation,
+            Self::Pinned(pinned) => &pinned.generation,
+        }
+    }
+
+    fn bind(&self, manifest: &Manifest, raw: &[u8]) -> Result<(), String> {
+        match self {
+            Self::Pointer(pointer) => pointer.bind(manifest, raw),
+            Self::Pinned(pinned) => pinned.bind(manifest, raw),
+        }
+    }
+}
 
 impl Cache {
     pub fn new(home: &Path) -> Self {
@@ -48,13 +70,29 @@ impl Cache {
     }
 
     pub fn read(&self, pointer: &Pointer) -> Result<Bundle, String> {
-        let entry = self.generation(&pointer.generation)?;
+        self.load(Target::Pointer(pointer))
+    }
+
+    pub fn pinned(&self, pinned: &Pinned) -> Result<Bundle, String> {
+        self.load(Target::Pinned(pinned))
+    }
+
+    pub fn store(&self, pointer: &Pointer, raw: &[u8], bundle: &Bundle) -> Result<PathBuf, String> {
+        self.save(Target::Pointer(pointer), raw, bundle)
+    }
+
+    pub fn keep(&self, pinned: &Pinned, raw: &[u8], bundle: &Bundle) -> Result<PathBuf, String> {
+        self.save(Target::Pinned(pinned), raw, bundle)
+    }
+
+    fn load(&self, target: Target<'_>) -> Result<Bundle, String> {
+        let entry = self.generation(target.generation())?;
         Entry(&self.home.join("depot")).directory()?;
         Entry(&self.root()).directory()?;
         Entry(&entry).directory()?;
         let raw = Entry(&entry.join(LEAF)).regular()?;
         let manifest = Manifest::parse(&raw)?;
-        pointer.bind(&manifest, &raw)?;
+        target.bind(&manifest, &raw)?;
         let objects = entry.join(OBJECTS);
         Entry(&objects).directory()?;
         let mut bodies = BTreeMap::new();
@@ -66,11 +104,11 @@ impl Cache {
         Ok(Bundle { manifest, bodies })
     }
 
-    pub fn store(&self, pointer: &Pointer, raw: &[u8], bundle: &Bundle) -> Result<PathBuf, String> {
-        pointer.bind(&bundle.manifest, raw)?;
+    fn save(&self, target: Target<'_>, raw: &[u8], bundle: &Bundle) -> Result<PathBuf, String> {
+        target.bind(&bundle.manifest, raw)?;
         verified(bundle)?;
         let generations = self.prepare()?;
-        let target = generations.join(&pointer.generation);
+        let destination = generations.join(target.generation());
         let stage = tempfile::Builder::new()
             .prefix(".stage-")
             .tempdir_in(&generations)
@@ -82,19 +120,19 @@ impl Cache {
             })?;
         populate(stage.path(), raw, bundle)?;
         let staged = stage.keep();
-        match fs::rename(&staged, &target) {
-            Ok(()) => Ok(target),
+        match fs::rename(&staged, &destination) {
+            Ok(()) => Ok(destination),
             Err(error) => {
                 let _ = fs::remove_dir_all(&staged);
                 if matches!(error.kind(), ErrorKind::AlreadyExists)
-                    || fs::symlink_metadata(&target).is_ok()
+                    || fs::symlink_metadata(&destination).is_ok()
                 {
-                    self.read(pointer)?;
-                    return Ok(target);
+                    self.load(target)?;
+                    return Ok(destination);
                 }
                 Err(format!(
                     "cannot commit depot cache {}: {error}",
-                    target.display()
+                    destination.display()
                 ))
             }
         }

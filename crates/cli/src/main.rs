@@ -234,7 +234,6 @@ pub(crate) enum Command {
 }
 
 fn main() {
-    plumb::depot::carry(catalog::carried::FILES);
     if std::env::args_os().nth(1).as_deref() != Some(std::ffi::OsStr::new("runner"))
         && let Err(error) = plumb::identity!("PLUMB")
     {

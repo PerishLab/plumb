@@ -15,11 +15,24 @@ mod store;
 mod tests;
 mod transit;
 
-pub use authority::{Authority, Expected, Verified};
+pub use authority::{Authority, Expected};
 pub use index::tree;
 pub use runtime::Runtime;
 pub use store::Seat as Repository;
 pub use transit::{attach, stage, staged};
+
+#[derive(Debug)]
+pub struct Verified(Descriptor);
+
+impl Verified {
+    pub fn descriptor(&self) -> &Descriptor {
+        &self.0
+    }
+
+    pub fn take(self) -> Descriptor {
+        self.0
+    }
+}
 
 pub const SCHEMA: &str = "plumb.guard-proof/v1";
 pub const TRAILER: &str = "Plumb-Guard-Proof:";
@@ -229,6 +242,27 @@ pub fn commit(root: &Path, commit: &str) -> Result<Descriptor, String> {
 
 pub fn inspect(root: &Path, tree: &str) -> Result<Descriptor, String> {
     store::Seat::new(root)?.inspect(tree)
+}
+
+pub fn producer() -> String {
+    identity()
+}
+
+#[cfg(feature = "depot")]
+pub(super) fn live(source: &str) -> Result<String, String> {
+    crate::depot::v3::Channel {
+        source,
+        product: "plumb",
+        channel: "stable",
+        kind: crate::depot::v3::Kind::Configuration,
+    }
+    .resolve()
+    .map(|generation| generation.pointer.generation)
+}
+
+#[cfg(not(feature = "depot"))]
+pub(super) fn live(_: &str) -> Result<String, String> {
+    Err("plumb-lib floating Depot authority requires the depot feature".into())
 }
 
 fn identity() -> String {

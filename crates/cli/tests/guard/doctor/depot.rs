@@ -179,3 +179,120 @@ fn transport() {
     assert_eq!(before["restore"], after["restore"]);
     assert_eq!(before["key"], after["key"]);
 }
+
+fn collect(root: &Path, dir: &Path, bodies: &mut std::collections::BTreeMap<String, Vec<u8>>) {
+    let mut entries = std::fs::read_dir(dir)
+        .expect("rules")
+        .map(|entry| entry.expect("entry").path())
+        .collect::<Vec<_>>();
+    entries.sort();
+    for path in entries {
+        if path.is_dir() {
+            collect(root, &path, bodies);
+        } else {
+            let rel = path
+                .strip_prefix(root)
+                .expect("strip")
+                .to_string_lossy()
+                .replace('\\', "/");
+            bodies.insert(format!("rules/{rel}"), std::fs::read(&path).expect("rule"));
+        }
+    }
+}
+
+#[test]
+fn configured() {
+    use plumb::depot::{sha, v3};
+    let fixture = super::fixture();
+    let root = fixture.path();
+    let origin = "https://github.com/Example/probe.git";
+    git(root, &["remote", "add", "origin", origin]);
+    git(root, &["add", "plumb.toml"]);
+    let rules = if Path::new("rules").is_dir() {
+        Path::new("rules")
+    } else {
+        Path::new("crates/cli/rules")
+    };
+    let mut bodies = std::collections::BTreeMap::new();
+    collect(rules, rules, &mut bodies);
+    bodies.insert("rules/probe.txt".into(), b"configured\n".to_vec());
+    let objects = bodies
+        .iter()
+        .map(|(path, body)| v3::Object {
+            path: path.clone(),
+            sha256: sha(body),
+            size: body.len() as u64,
+            media: if path.ends_with(".toml") {
+                "application/toml".into()
+            } else {
+                "text/plain".into()
+            },
+            executable: false,
+        })
+        .collect();
+    let manifest = v3::Manifest::new(
+        v3::Identity {
+            product: "plumb".into(),
+            channel: "stable".into(),
+            version: "v0.163.0".into(),
+            marker: v3::Marker {
+                name: "v0.163.0".into(),
+                sha256: "a".repeat(64),
+            },
+            kind: v3::Kind::Configuration,
+        },
+        objects,
+    )
+    .expect("manifest");
+    let pointer = v3::Pointer::new(
+        &manifest,
+        v3::Publication {
+            source: "https://depot.plumb.perish.uk",
+            prior: None,
+            created: "2026-10-28T00:00:00Z".into(),
+        },
+    )
+    .expect("pointer");
+    let raw = manifest.encode().expect("raw");
+    let bundle = v3::Bundle { manifest, bodies };
+    let home = tempfile::tempdir().expect("home");
+    let pinned = v3::Pinned::pointer(&pointer).expect("pinned");
+    v3::Cache::new(home.path())
+        .keep(&pinned, &raw, &bundle)
+        .expect("seed cache");
+    let encoded = pinned.encode().expect("encode");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["doctor", "--json", root.to_str().expect("utf8")])
+        .env("PLUMB_HOME", home.path())
+        .env("PLUMB_CONFIGURATION", &encoded)
+        .env("PLUMB_DEPOT_MARK", &pinned.generation)
+        .env_remove("PLUMB_RULES_SOURCE")
+        .env_remove("PLUMB_RELEASE_VERSION")
+        .output()
+        .expect("doctor");
+    let report: Value = serde_json::from_slice(&output.stdout).expect("doctor json");
+    assert!(output.status.success(), "{report}");
+    assert_eq!(report["ok"], true);
+
+    let log = home.path().join("pinned.jsonl");
+    let transport = Command::new(env!("CARGO_BIN_EXE_plumb"))
+        .args(["cache", "transport", "--json", "--diagnostic"])
+        .arg(&log)
+        .arg(root)
+        .env("PLUMB_HOME", home.path())
+        .env("PLUMB_CONFIGURATION", &encoded)
+        .env_remove("PLUMB_RULES_SOURCE")
+        .env_remove("PLUMB_RELEASE_VERSION")
+        .output()
+        .expect("transport");
+    assert!(transport.status.success());
+    let line = std::fs::read_to_string(&log)
+        .expect("log")
+        .lines()
+        .next()
+        .expect("start")
+        .to_owned();
+    let event: Value = serde_json::from_str(&line).expect("event");
+    assert_eq!(event["data"]["depot"], pinned.generation);
+}
