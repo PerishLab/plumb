@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
+mod census;
 #[cfg(test)]
 mod proof;
 
@@ -26,13 +27,7 @@ pub fn observed() -> Widths {
     if let Some(held) = cached() {
         return held;
     }
-    match collect() {
-        Ok(held) => {
-            store(&held);
-            Widths::Known(held)
-        }
-        Err(error) => Widths::Blind(error),
-    }
+    census::remembered(collect())
 }
 
 fn loaded(path: &Path) -> Widths {
@@ -74,12 +69,12 @@ fn read(path: &Path) -> Result<BTreeMap<String, usize>, String> {
     serde_json::from_slice(&body).map_err(|error| format!("family widths do not parse: {error}"))
 }
 
-fn collect() -> Result<BTreeMap<String, usize>, String> {
-    let mut found = BTreeMap::new();
-    for name in FAMILY {
-        merge(&mut found, Product(name).widths()?);
-    }
-    Ok(found)
+fn collect() -> census::Census {
+    census::census(FAMILY, |name| Product(name).widths())
+}
+
+fn host(name: &str) -> plumb::seat::release::Authority {
+    plumb::seat::release::Authority::product(name)
 }
 
 fn merge(found: &mut BTreeMap<String, usize>, held: BTreeMap<String, usize>) {
@@ -112,7 +107,7 @@ impl Product<'_> {
     }
 
     fn channel(&self) -> Result<Option<String>, String> {
-        let url = format!("https://releases.{}/v1/channels/stable.json", self.0);
+        let url = host(self.0).pointer("stable");
         let Some(body) = fetch(&url)? else {
             return Ok(None);
         };
@@ -141,10 +136,7 @@ impl Product<'_> {
     }
 
     fn record(&self, marker: &str) -> Result<Option<Record>, String> {
-        let url = format!(
-            "https://releases.{}/v1/releases/stable/{marker}/distribution.json",
-            self.0
-        );
+        let url = host(self.0).distribution("stable", marker);
         let Some(body) = fetch(&url)? else {
             return Ok(None);
         };

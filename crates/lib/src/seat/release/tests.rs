@@ -173,3 +173,17 @@ fn placed() {
         authority().seal("stable", "v1.0.0")
     );
 }
+
+#[test]
+fn product() {
+    let held = Authority::product("radicula");
+    assert_eq!(held.base(), "https://releases.radicula.perish.uk");
+    assert_eq!(
+        held.pointer("stable"),
+        "https://releases.radicula.perish.uk/v1/channels/stable.json"
+    );
+    assert_eq!(
+        held.distribution("stable", "v0.20.0"),
+        "https://releases.radicula.perish.uk/v1/releases/stable/v0.20.0/distribution.json"
+    );
+}
