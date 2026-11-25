@@ -41,7 +41,7 @@ pub(super) fn native(route: &str) -> String {
     format!("https://api.github.com/{route}")
 }
 pub(super) fn product(route: &str) -> String {
-    native(&format!("repositories/42/{route}"))
+    native(&format!("repos/{NAME}/{route}"))
 }
 pub(super) fn receipt(marker: &str) -> String {
     let channel = if marker == RC { "rc" } else { "stable" };
@@ -90,18 +90,18 @@ impl Pilot {
             json!({"full_name":NAME,"id":42}),
         );
         this.records.insert(
-            native("repositories/1388431417"),
+            native("repos/PerishLab/.github"),
             json!({"full_name":"PerishLab/.github","id":1388431417_u64,"node_id":"R_kgDOUsHIOQ","default_branch":"main"}),
         );
         this.records.insert(
-            native("repositories/1388431417/branches/main"),
+            native("repos/PerishLab/.github/branches/main"),
             json!({"name":"main","protected":true,"commit":{"sha":HEAD}}),
         );
         this.records
             .insert(product("git/matching-refs/heads/release/"), json!([]));
         this.records.insert(
-            product("git/matching-refs/tags/v"),
-            json!([reference(&format!("tags/{OLD}"), "tag", TAG)]),
+            product("tags?per_page=100&page=1"),
+            json!([{"name":OLD,"commit":{"sha":BASE}}]),
         );
         this.records.insert(
             product("git/ref/heads/main"),
@@ -118,7 +118,7 @@ impl Pilot {
             );
         }
         this.records.insert(
-            product(&format!("compare/{BASE}...main?per_page=1")),
+            product(&format!("compare/{BASE}...{SOURCE}")),
             json!({"merge_base_commit":{"sha":BASE},"status":"ahead"}),
         );
         this.tag(OLD, TAG, BASE, OLD);
@@ -142,7 +142,7 @@ impl Pilot {
         self.blob = entry["sha"].as_str().unwrap().into();
         self.records.insert(
             native(&format!(
-                "repositories/1388431417/contents/{PATH}?ref={HEAD}"
+                "repos/PerishLab/.github/contents/{PATH}?ref={HEAD}"
             )),
             entry,
         );
@@ -186,11 +186,11 @@ impl Pilot {
             "\n{sha}\trefs/tags/{marker}\n{SOURCE}\trefs/tags/{marker}^{{}}"
         ));
         self.records
-            .get_mut(&product("git/matching-refs/tags/v"))
+            .get_mut(&product("tags?per_page=100&page=1"))
             .unwrap()
             .as_array_mut()
             .unwrap()
-            .push(reference(&format!("tags/{marker}"), "tag", sha));
+            .push(json!({"name":marker,"commit":{"sha":SOURCE}}));
     }
 
     pub fn shipped(&mut self) {
@@ -222,7 +222,7 @@ impl Pilot {
 impl Read for Pilot {
     fn bytes(&self, url: &str, _: usize) -> Result<Vec<u8>, Fault> {
         if self.revoked
-            && url == native("repositories/1388431417/branches/main")
+            && url == native("repos/PerishLab/.github/branches/main")
             && self.reads.replace(self.reads.get() + 1) > 0
         {
             let branch = json!({"name":"main","protected":true,"commit":{"sha":BASE}});

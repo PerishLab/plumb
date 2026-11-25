@@ -95,14 +95,8 @@ impl Seat<'_> {
         }
         native.unspent(&decision, marker, &stage)?;
         native.stage(&decision, marker, &stage)?;
-        let tags = native.refs(id, "tags/v")?;
-        let local = self
-            .listing
-            .lines()
-            .filter_map(|s| s.split_once('\t'))
-            .filter(|(_, key)| key.starts_with("refs/tags/v") && !key.ends_with("^{}"))
-            .map(|(v, k)| (k.to_string(), v.to_string()))
-            .collect::<BTreeMap<_, _>>();
+        let tags = native.tags(&repo)?;
+        let local = peeled(self.listing);
         require(
             tags == local,
             "native marker listing differs from the selected remote",
@@ -110,6 +104,10 @@ impl Seat<'_> {
         require(
             native.main()? == authority,
             "organization main changed during successor qualification",
+        )?;
+        require(
+            native.product(&repo)? == id,
+            "product repository identity changed during successor qualification",
         )?;
         require(
             origin::repository(self)? == (repo, push.clone()),
@@ -130,9 +128,9 @@ impl Seat<'_> {
 
 impl<R: Read> Native<'_, R> {
     fn stage(&self, d: &Decision, marker: &str, stage: &Stage<'_>) -> Result<()> {
-        let id = d.identity;
+        let repo = &d.repository;
         let next = &d.successor;
-        let lines = self.refs(id, "heads/release/")?;
+        let lines = self.heads(repo, "release/")?;
         require(
             !lines.contains_key(&format!("refs/heads/release/{}", d.predecessor.marker)),
             "original release line remains open",
@@ -143,7 +141,7 @@ impl<R: Read> Native<'_, R> {
                 marker == next.marker && line.is_none(),
                 "unexpected open successor line",
             )?;
-            return self.branch(id, "main", &next.commit);
+            return self.branch(repo, "main", &next.commit);
         }
         require(line == Some(&next.commit), "native successor line differs")?;
         let expected = if marker == next.rc {
@@ -156,7 +154,7 @@ impl<R: Read> Native<'_, R> {
                 *message == expected,
                 "planned stamp or RC promotion differs",
             ),
-            Stage::Dispatch(_) => origin::annotated(&self.immutable(id, marker)?, marker, d),
+            Stage::Dispatch(_) => origin::annotated(&self.immutable(repo, marker)?, marker, d),
             Stage::Open(_) => unreachable!(),
         }
     }
@@ -212,7 +210,7 @@ impl<R: Read> Native<'_, R> {
 
     fn promotion(&self, d: &Decision) -> Result<()> {
         let next = &d.successor;
-        origin::annotated(&self.immutable(d.identity, &next.rc)?, &next.rc, d)?;
+        origin::annotated(&self.immutable(&d.repository, &next.rc)?, &next.rc, d)?;
         let raw = self.bytes(&format!(
             "{}/v1/releases/rc/{}/distribution.json",
             d.authority, next.rc
@@ -240,4 +238,23 @@ impl<R: Read> Native<'_, R> {
         )?;
         Ok(())
     }
+}
+
+fn peeled(listing: &str) -> BTreeMap<String, String> {
+    let mut tags = BTreeMap::new();
+    for line in listing.lines() {
+        let Some((sha, key)) = line.split_once('\t') else {
+            continue;
+        };
+        if !key.starts_with("refs/tags/v") {
+            continue;
+        }
+        if let Some(base) = key.strip_suffix("^{}") {
+            tags.insert(base.to_string(), sha.to_string());
+        } else {
+            tags.entry(key.to_string())
+                .or_insert_with(|| sha.to_string());
+        }
+    }
+    tags
 }

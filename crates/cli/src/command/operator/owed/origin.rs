@@ -72,15 +72,15 @@ pub(super) fn repository(seat: &Seat<'_>) -> Result<(String, String)> {
 }
 
 impl<R: Read> Native<'_, R> {
-    pub fn manifest(&self, id: u64, commit: &str) -> Result<Vec<u8>> {
+    pub fn manifest(&self, repo: &str, commit: &str) -> Result<Vec<u8>> {
         let path = "plumb.toml";
-        let file = self.api(&format!("repositories/{id}/contents/{path}?ref={commit}"))?;
+        let file = self.api(&format!("repos/{repo}/contents/{path}?ref={commit}"))?;
         content(&file, path, file["sha"].as_str().unwrap_or(""))
     }
 
     pub fn manifests(&self, record: &Decision, seat: &Seat<'_>) -> Result<()> {
-        let old = self.manifest(record.identity, &record.predecessor.commit)?;
-        let current = self.manifest(record.identity, &record.successor.commit)?;
+        let old = self.manifest(&record.repository, &record.predecessor.commit)?;
+        let current = self.manifest(&record.repository, &record.successor.commit)?;
         let local = std::fs::read(seat.root.join("plumb.toml")).map_err(|e| e.to_string())?;
         require(
             current == local,
@@ -103,8 +103,8 @@ impl<R: Read> Native<'_, R> {
         )
     }
 
-    pub fn refs(&self, id: u64, prefix: &str) -> Result<BTreeMap<String, String>> {
-        let val = self.api(&format!("repositories/{id}/git/matching-refs/{prefix}"))?;
+    pub fn heads(&self, repo: &str, prefix: &str) -> Result<BTreeMap<String, String>> {
+        let val = self.api(&format!("repos/{repo}/git/matching-refs/heads/{prefix}"))?;
         let mut seen = BTreeMap::new();
         for r in val
             .as_array()
@@ -115,7 +115,7 @@ impl<R: Read> Native<'_, R> {
                 .as_str()
                 .ok_or("native ref missing object")?;
             require(
-                key.starts_with(&format!("refs/{prefix}"))
+                key.starts_with(&format!("refs/heads/{prefix}"))
                     && super::decision::hex(sha, 40)
                     && seen.insert(key.into(), sha.into()).is_none(),
                 "unexpected or repeated native ref",
@@ -124,10 +124,25 @@ impl<R: Read> Native<'_, R> {
         Ok(seen)
     }
 
+    pub fn tags(&self, repo: &str) -> Result<BTreeMap<String, String>> {
+        let mut seen = BTreeMap::new();
+        for page in 1..=20 {
+            let val = self.api(&format!("repos/{repo}/tags?per_page=100&page={page}"))?;
+            let rows = val
+                .as_array()
+                .ok_or("specified successor: invalid native tag listing")?;
+            collect(&mut seen, rows)?;
+            if rows.len() < 100 {
+                return Ok(seen);
+            }
+        }
+        Err("specified successor: native tag listing exceeds page budget".into())
+    }
+
     pub fn history(&self, record: &Decision) -> Result<()> {
-        let id = record.identity;
+        let repo = &record.repository;
         let old = &record.predecessor;
-        let tag = self.immutable(id, &old.marker)?;
+        let tag = self.immutable(repo, &old.marker)?;
         require(
             tag["sha"] == old.tag && tag["object"]["sha"] == old.commit,
             "original native marker or commit changed",
@@ -136,22 +151,45 @@ impl<R: Read> Native<'_, R> {
             (&old.commit, &old.tree),
             (&record.successor.commit, &record.successor.tree),
         ] {
-            let v = self.api(&format!("repositories/{id}/git/commits/{commit}"))?;
+            let v = self.api(&format!("repos/{repo}/git/commits/{commit}"))?;
             require(
                 v["sha"] == *commit && v["tree"]["sha"] == *tree,
                 "native source tree differs",
             )?;
         }
-        let ancestry = self.api(&format!(
-            "repositories/{id}/compare/{}...main?per_page=1",
-            old.commit
-        ))?;
+        let branch = self.api(&format!("repos/{repo}/git/ref/heads/main"))?;
+        let main = branch["object"]["sha"].as_str().unwrap_or("");
+        require(
+            branch["ref"] == "refs/heads/main"
+                && branch["object"]["type"] == "commit"
+                && super::decision::hex(main, 40),
+            "native main is missing or malformed",
+        )?;
+        let ancestry = self.api(&format!("repos/{repo}/compare/{}...{main}", old.commit))?;
         require(
             ancestry["merge_base_commit"]["sha"] == old.commit
                 && matches!(ancestry["status"].as_str(), Some("ahead" | "identical")),
             "native main does not retain the original commit",
         )
     }
+}
+
+fn collect(seen: &mut BTreeMap<String, String>, rows: &[Value]) -> Result<()> {
+    for row in rows {
+        let name = row["name"].as_str().ok_or("native tag missing name")?;
+        if !name.starts_with('v') {
+            continue;
+        }
+        let sha = row["commit"]["sha"]
+            .as_str()
+            .ok_or("native tag missing commit")?;
+        let key = format!("refs/tags/{name}");
+        require(
+            super::decision::hex(sha, 40) && seen.insert(key, sha.into()).is_none(),
+            "unexpected or repeated native tag",
+        )?;
+    }
+    Ok(())
 }
 
 pub(super) fn annotated(tag: &Value, marker: &str, record: &Decision) -> Result<()> {
