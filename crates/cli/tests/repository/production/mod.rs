@@ -1,3 +1,4 @@
+mod contract;
 mod lane;
 mod preview;
 mod qualification;

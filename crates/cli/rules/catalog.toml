@@ -192,6 +192,24 @@ owner = "release"
 tags = ["cargo", "release"]
 
 [[rule]]
+id = "dispatch.chart-fsgroup-on-root-mismatch"
+summary = "Chart fsGroup pairs with OnRootMismatch"
+law = "Any Helm chart pod securityContext declaring fsGroup also sets fsGroupChangePolicy: OnRootMismatch so pod restarts never recursively chmod private 0700 spool or custody directories."
+evidence = "securityContext blocks in Helm templates below charts/*/templates."
+standing = "mechanized"
+owner = "release"
+tags = ["configuration", "release"]
+
+[[rule]]
+id = "dispatch.web-client-contract"
+summary = "Dual-OCI web fulfills the /client.json contract"
+law = "A Dual-OCI web product carries an empty JSON object at apps/web/public/client.json and mounts a chart ConfigMap at /web/dist/client.json with subPath client.json, readOnly true, and a checksum/client pod annotation."
+evidence = "apps/web/public/client.json and Helm templates below charts/*/templates."
+standing = "mechanized"
+owner = "release"
+tags = ["configuration", "release", "web"]
+
+[[rule]]
 id = "dispatch.chart-splits-ingress"
 summary = "Ingress splits API and web routes"
 law = "Production ingress routes /api to api and / to web; when [release.cfworker] places the web on a worker, it routes /api to api."
@@ -475,6 +493,15 @@ id = "structure.cascade-derives-in-anchor"
 summary = "Cascade derives live in the anchor"
 law = "Repository runtime vocabulary is declared in the anchor crate, not a leaf."
 evidence = "Cascade derive sites compared with anchor and executable api crates."
+standing = "mechanized"
+owner = "plumb"
+tags = ["cargo", "configuration"]
+
+[[rule]]
+id = "structure.config-prefix-identity"
+summary = "Config prefix matches product identity"
+law = "Bare #[plumb::config::prefix] lives only in the anchor crate; explicit prefixes equal or start with <NS>_, and Helm chart container env entries never use generic API_* names outside an api repository."
+evidence = "Rust #[plumb::config::prefix] attributes under crate src trees and container env names in charts/*/templates."
 standing = "mechanized"
 owner = "plumb"
 tags = ["cargo", "configuration"]

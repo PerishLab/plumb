@@ -1,0 +1,30 @@
+# structure.config-prefix-identity
+
+## Trigger
+
+A non-anchor crate (such as `crates/api` with `package.name = "api"`) uses bare
+`#[plumb::config::prefix]`, an explicit `#[plumb::config::prefix("...")]` does
+not match the product identity `<NS>` (`plumb.toml [identity] ns` uppercased,
+`-` to `_`) or `<NS>_*`, or a Helm chart template declares a container `env`
+entry named `API_*` outside an `api` repository.
+
+## Solution
+
+Declare an explicit product prefix in non-anchor crates:
+`#[plumb::config::prefix("<NS>")]` (for example `"FOLIO"`, `"ENSIGN"`, or
+`"CODEHULL"`). Keep bare `#[plumb::config::prefix]` only in the anchor crate
+whose Cargo package name equals `[identity] ns`. During migrations away from
+legacy `API_*` environment variables, wrap the env lookup with
+`plumb::config::migrated(..., "API", ...)` and switch Helm container `env`
+names to `<NS>_*`.
+
+## Evidence
+
+Bare `#[plumb::config::prefix]` reads `CARGO_PKG_NAME`. Inside `crates/api`
+(`name = "api"`), that silently emitted `API_*` environment contracts divorced
+from `plumb.toml [identity] ns`, `plumb::identity!("<NS>")`, and `<NS>_HOME`,
+causing split-brain overrides and chart env drift across multiple products.
+
+## EXIT
+
+Remove this entry only if `#[plumb::config::prefix]` can bind `[identity] ns` hermetically at compile time across published registry tarballs without depending on workspace paths.

@@ -14,8 +14,11 @@ fn ledger() {
     assert!(output.status.success());
     let held = String::from_utf8_lossy(&output.stdout).to_string();
     for code in [
+        "dispatch.chart-fsgroup-on-root-mismatch",
+        "dispatch.web-client-contract",
         "guard.integration-branch",
         "guard.source.index",
+        "structure.config-prefix-identity",
         "structure.seat-member",
         "structure.known-directory",
     ] {
@@ -54,7 +57,7 @@ fn json() {
     let output = run(&["cookbook", "--json"]);
     assert!(output.status.success());
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("json");
-    assert_eq!(value["entries"].as_array().expect("entries").len(), 10);
+    assert_eq!(value["entries"].as_array().expect("entries").len(), 13);
 }
 
 #[test]

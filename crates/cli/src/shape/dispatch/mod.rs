@@ -1,3 +1,4 @@
+pub(crate) mod chart;
 mod production;
 use serde_json::Value as Json;
 use std::path::{Path, PathBuf};
@@ -45,6 +46,7 @@ pub(crate) struct Production {
     pub(crate) workloads: bool,
     pub(crate) ingress: bool,
     pub(crate) aligned: bool,
+    pub(crate) client: Option<chart::Client>,
 }
 
 pub(crate) enum Image {

@@ -1,0 +1,34 @@
+# dispatch.web-client-contract
+
+## Trigger
+
+A Dual-OCI web/API repository (`[release.oci]` with a `web` component and
+`charts/*`, without `[release.cfworker]`) misses any required part of the
+canonical `/client.json` contract: an empty `{}` object at
+`apps/web/public/client.json`, a chart `ConfigMap` carrying `client.json`, a
+`volumeMounts` entry at `/web/dist/client.json` with `subPath: client.json` and
+`readOnly: true`, or a `checksum/client` pod template annotation.
+
+## Solution
+
+Commit `{}` to `apps/web/public/client.json` so the built web image always
+serves a valid empty JSON document by default. In `charts/<product>/templates/web.yaml`,
+render a `<release>-web-client` `ConfigMap` carrying `client.json` (defaulting
+to `{}`), guard nested values with `default dict` so `helm upgrade --reuse-values`
+never fails on absent keys, mount it unconditionally at `/web/dist/client.json`
+with `subPath: client.json` and `readOnly: true`, and annotate the pod template
+with `checksum/client: {{ $payload | sha256sum }}`. Keep the payload limited to
+public browser discovery fields (`issuer`, `client`, `audience`, `endpoint`,
+`observe`, plus product-owned top-level keys) with zero secrets, and never
+override `/client.json` out of band via IngressRoute or reverse-proxy rules.
+
+## Evidence
+
+Divergent web charts that omitted `checksum/client`, conditionalized the
+ConfigMap mount, or lacked `default dict` guards caused stale browser discovery
+configs, failed `--reuse-values` upgrades, and forced fragile out-of-band
+IngressRoute workarounds.
+
+## EXIT
+
+Remove this entry when Dual-OCI web runtime discovery retires `/client.json` ConfigMap mounts in favor of a new mechanized contract.

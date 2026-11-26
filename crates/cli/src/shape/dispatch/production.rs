@@ -1,4 +1,4 @@
-use super::{Image, Plane, Production};
+use super::{Image, Plane, Production, chart};
 use crate::shape::release::{Input, Spec};
 use std::path::{Path, PathBuf};
 
@@ -25,19 +25,20 @@ pub(super) fn read(root: &Path) -> Production {
     } else {
         plane(&webs)
     };
-    let templates = production.templates();
-    let api = templates
+    let files = chart::templates(root);
+    let api = files
         .iter()
-        .any(|text| Manifest(text).workload() && Manifest(text).role("api"));
+        .any(|(_, text)| Manifest(text).workload() && Manifest(text).role("api"));
     let role = placed
-        || templates
+        || files
             .iter()
-            .any(|text| Manifest(text).workload() && Manifest(text).role("web"));
-    let ingress = templates.iter().any(|text| {
+            .any(|(_, text)| Manifest(text).workload() && Manifest(text).role("web"));
+    let ingress = files.iter().any(|(_, text)| {
         Manifest(text).ingress("/api", "api") && (placed || Manifest(text).ingress("/", "web"))
     });
     let cargo = production.version();
-    let aligned = production.charts().iter().any(|path| {
+    let charts = production.charts();
+    let aligned = charts.iter().any(|path| {
         let Ok(text) = std::fs::read_to_string(path) else {
             return false;
         };
@@ -45,12 +46,15 @@ pub(super) fn read(root: &Path) -> Production {
         let app = Manifest(&text).value("appVersion");
         cargo.as_deref() == version.as_deref() && version == app
     });
+    let client =
+        (!placed && !webs.is_empty() && !charts.is_empty()).then(|| chart::client(root, &files));
     Production {
         api: contained || root.join("deploy/api.Dockerfile").is_file(),
         web,
         workloads: api && role,
         ingress,
         aligned,
+        client,
     }
 }
 
@@ -73,22 +77,6 @@ fn plane(paths: &[PathBuf]) -> Image {
 struct Reader<'a>(&'a Path);
 
 impl Reader<'_> {
-    fn templates(&self) -> Vec<String> {
-        let mut paths = Vec::new();
-        let Ok(charts) = std::fs::read_dir(self.0.join("charts")) else {
-            return Vec::new();
-        };
-        for chart in charts.flatten() {
-            collect(&chart.path().join("templates"), "yaml", &mut paths);
-            collect(&chart.path().join("templates"), "yml", &mut paths);
-        }
-        paths.sort();
-        paths
-            .iter()
-            .filter_map(|path| std::fs::read_to_string(path).ok())
-            .collect()
-    }
-
     fn charts(&self) -> Vec<PathBuf> {
         let Ok(charts) = std::fs::read_dir(self.0.join("charts")) else {
             return Vec::new();
@@ -112,20 +100,6 @@ impl Reader<'_> {
             })
             .and_then(toml::Value::as_str)
             .map(str::to_string)
-    }
-}
-
-fn collect(root: &Path, extension: &str, found: &mut Vec<PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(root) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-            collect(&path, extension, found);
-        } else if path.extension().and_then(|value| value.to_str()) == Some(extension) {
-            found.push(path);
-        }
     }
 }
 
