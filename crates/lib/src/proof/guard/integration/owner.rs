@@ -65,9 +65,36 @@ impl Owner {
             .map_err(|error| format!("cannot persist Guard source owner: {error}"))
     }
 
-    pub fn verify(&self, root: &Path) -> Result<(), String> {
+    pub fn available(&self, root: &Path) -> Result<Option<PathBuf>, String> {
+        if !root
+            .parent()
+            .is_some_and(|base| self.path(base).is_ok_and(|path| path == root))
+        {
+            return Err("retained Guard source path disagrees with its owner".into());
+        }
+        let admin = self.verify(root)?;
+        if let Some(admin) = &admin {
+            Self::index(root, admin)?;
+        }
+        Ok(admin)
+    }
+
+    fn index(root: &Path, admin: &Path) -> Result<(), String> {
+        let lock = admin.join("index.lock");
+        match lock.symlink_metadata() {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(format!(
+                "cannot inspect Guard source index lock at {lock:?}: {error}"
+            )),
+            Ok(_) => Err(format!(
+                "retained Guard source {root:?} has a Git index lock at {lock:?}; see plumb cookbook guard.source.index"
+            )),
+        }
+    }
+
+    fn verify(&self, root: &Path) -> Result<Option<PathBuf>, String> {
         match std::fs::symlink_metadata(root) {
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
             Ok(metadata) if metadata.is_dir() && !metadata.file_type().is_symlink() => (),
             _ => return Err("retained Guard source is not an owned directory".into()),
         }
@@ -100,13 +127,7 @@ impl Owner {
         if output.status.code() != Some(1) {
             return Err("retained Guard source must have a detached HEAD".into());
         }
-        Ok(())
-    }
-
-    pub fn owns(&self, root: &Path) -> bool {
-        root.parent()
-            .is_some_and(|base| self.path(base).is_ok_and(|path| path == root))
-            && self.verify(root).is_ok()
+        Ok(Some(admin))
     }
 
     pub fn orphaned(&self, root: &Path) -> bool {
@@ -143,14 +164,22 @@ impl Owner {
     }
 
     pub fn matches(&self, root: &Path) -> bool {
-        if !self.owns(root) {
-            return false;
-        }
-        if !root.exists() {
-            return true;
-        }
-        git(root, &["status", "--porcelain", "--untracked-files=no"])
-            .is_ok_and(|status| status.is_empty())
+        let admin = match self.available(root) {
+            Ok(Some(admin)) => admin,
+            Ok(None) => return true,
+            Err(_) => return false,
+        };
+        git(
+            root,
+            &[
+                "--no-optional-locks",
+                "status",
+                "--porcelain",
+                "--untracked-files=no",
+            ],
+        )
+        .is_ok_and(|status| status.is_empty())
+            && Self::index(root, &admin).is_ok()
     }
 }
 

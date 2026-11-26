@@ -50,7 +50,7 @@ impl Claim {
         } else if Owner::load(&lock)? != owner {
             return Err("retained Guard source ownership disagrees with its repository".into());
         }
-        owner.verify(&root)?;
+        owner.available(&root)?;
         touch(&lock);
         Ok(Self::held(source, path, lock, true))
     }
@@ -63,7 +63,7 @@ impl Claim {
             .symlink_metadata()
             .is_ok_and(|metadata| metadata.is_file())
             && same(&self.path, &self._lock)
-            && Owner::load(&self._lock).is_ok_and(|owner| owner.owns(&self.root))
+            && Owner::load(&self._lock).is_ok_and(|owner| owner.available(&self.root).is_ok())
     }
 
     fn held(source: &Path, path: PathBuf, lock: File, retained: bool) -> Self {

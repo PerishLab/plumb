@@ -1,0 +1,30 @@
+# guard.source.index
+
+## Trigger
+
+The verified retained Guard source has a Git index lock in its linked worktree
+administration. Guard reports the worktree and lock paths and leaves the lock
+in place.
+
+## Solution
+
+If Git or Guard is still using the retained source, let it finish and retry.
+If the lock remains, coordinate with the operator who controls the repository
+and tool home. Pause new Git and Guard activity that could use this seat and
+confirm existing processes are idle. The Guard source lease only coordinates
+Guard processes. The lock file's age, size, or lack of an open handle alone
+cannot establish that it is abandoned.
+
+Confirm the worktree is still the reported detached, registered Guard source.
+Use `git --no-optional-locks status --porcelain` from that source to verify
+it is clean, and `git rev-parse --path-format=absolute --git-path index.lock`
+to confirm the lock path. If ownership, cleanliness, or idleness is uncertain,
+leave the lock and worktree in place.
+
+While the source remains idle, move only the confirmed abandoned lock to a
+private recovery location. Resume activity and retry the same hook from the
+Member. The retained source and action cache can be reused.
+
+## EXIT
+
+Remove this entry when Guard can safely recover abandoned Git index locks.
