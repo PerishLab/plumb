@@ -7,6 +7,7 @@ use std::process::Command;
 use super::tree;
 
 const CODE: &str = "guard.integration-branch";
+const STALE: &str = "guard.stale-base";
 
 #[derive(Serialize)]
 pub struct Finding {
@@ -19,13 +20,45 @@ pub struct Finding {
 }
 
 impl Finding {
+    fn stale(root: &Path, branch: &str) -> Result<(), Self> {
+        let rev = |name| tree::git(root, &["rev-parse", "--verify", name], name).ok();
+        let (Some(upstream), Some(head)) = (rev("refs/remotes/origin/main"), rev("HEAD")) else {
+            return Ok(());
+        };
+        let status = plumb::config::detached("git")
+            .args(["merge-base", "--is-ancestor", &upstream, &head])
+            .current_dir(root)
+            .status()
+            .ok();
+        if status.and_then(|exit| exit.code()) != Some(1) {
+            return Ok(());
+        }
+        Err(Self::refused(
+            root,
+            STALE,
+            format!(
+                "origin/main ({upstream}) is ahead of HEAD ({head}) on {branch}; merge origin/main before running plumb guard"
+            ),
+            "git merge origin/main && plumb guard --refresh".into(),
+        ))
+    }
+
+    fn refused(root: &Path, code: &'static str, message: String, remedy: String) -> Self {
+        Self {
+            schema: "plumb.guard-finding/v1",
+            root: root.to_path_buf(),
+            ok: false,
+            code,
+            message,
+            remedy,
+        }
+    }
+
     pub fn render(&self, json: bool) {
         crate::observation::fault(self.code);
         if json {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(self).expect("Guard finding should encode")
-            );
+            let text = serde_json::to_string_pretty(self).expect("Guard finding should encode");
+            println!("{text}");
         } else {
             eprintln!("plumb guard: {}: {}", self.code, self.message);
             eprintln!("see: {}", self.remedy);
@@ -34,24 +67,18 @@ impl Finding {
 }
 
 pub fn inspect(root: &Path) -> Result<(), Finding> {
-    let branch = tree::git(
-        root,
-        &["branch", "--show-current"],
-        "read the current branch",
-    )
-    .unwrap_or_default();
+    let branch = tree::git(root, &["branch", "--show-current"], "branch").unwrap_or_default();
     match branch.as_str() {
-        "main" | "master" => Err(Finding {
-            schema: "plumb.guard-finding/v1",
-            root: root.to_path_buf(),
-            ok: false,
-            code: CODE,
-            message: format!(
+        "main" | "master" => Err(Finding::refused(
+            root,
+            CODE,
+            format!(
                 "{branch} is an integration branch; begin mutable work from an Issue-managed topic worktree"
             ),
-            remedy: format!("plumb cookbook {CODE}"),
-        }),
-        _ => Ok(()),
+            format!("plumb cookbook {CODE}"),
+        )),
+        "" => Ok(()),
+        _ => Finding::stale(root, &branch),
     }
 }
 

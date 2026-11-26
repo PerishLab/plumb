@@ -109,3 +109,59 @@ fn stalled() {
     assert!(verbs(&fixture, "merge").is_empty());
     assert!(state.merged.is_none());
 }
+
+fn landing(branch: &str, number: u64, state: &str) -> serde_json::Value {
+    json!({
+        "ref": {"ref": format!("refs/heads/{branch}"), "object": {"sha": "a".repeat(40)}},
+        "pull": {"number": number, "state": state, "head": {"ref": branch}, "base": {"ref": "main"}}
+    })
+}
+
+#[test]
+fn yielded() {
+    if !isolated("merge::yielded") {
+        return;
+    }
+    plumb::depot::carry(crate::catalog::carried::FILES);
+    let fixture = Fixture::new(json!({}));
+    let (source, seat, mut state) = staged(&fixture);
+    let root = fixture.root.path();
+    let active = landing("land/feature/42", 99, "open");
+    std::fs::write(root.join("landing.json"), active.to_string()).unwrap();
+
+    let mut fresh = State {
+        schema: "plumb.auto-state/v1".into(),
+        repository: "Example/probe".into(),
+        ..Default::default()
+    };
+    let input = super::super::super::Input {
+        root: source.clone(),
+        json: true,
+    };
+    let early =
+        super::super::super::resume(&input, &fixture.provider(), &seat, &mut fresh).unwrap();
+    assert!(
+        early.contains("yielded to active delivery pull request(s)"),
+        "{early}"
+    );
+    assert!(early.contains("#99 (land/feature/42)"), "{early}");
+    assert_eq!(fresh.issue, 0);
+
+    let skipped = engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap();
+    assert!(skipped.contains("#99 (land/feature/42)"), "{skipped}");
+    assert!(verbs(&fixture, "merge").is_empty());
+    assert!(!root.join("pull.json").exists());
+
+    std::fs::remove_file(root.join("landing.json")).unwrap();
+    std::fs::write(root.join("afterguard.json"), active.to_string()).unwrap();
+    let premerge = engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap();
+    assert!(premerge.contains("#99 (land/feature/42)"), "{premerge}");
+    assert!(verbs(&fixture, "merge").is_empty());
+    assert!(root.join("pull.json").exists());
+    assert!(state.merged.is_none());
+
+    std::fs::remove_file(root.join("landing.json")).unwrap();
+    let settled = engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap();
+    assert!(settled.contains("completed via pull #18"), "{settled}");
+    assert_eq!(fixture.provider().issue(17).unwrap()["state"], "closed");
+}

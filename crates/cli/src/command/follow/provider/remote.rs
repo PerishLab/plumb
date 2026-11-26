@@ -142,6 +142,56 @@ impl Provider<'_> {
         }
     }
 
+    pub(in super::super) fn landing(&self) -> Result<Vec<String>, String> {
+        let branches = self.matching("land/")?;
+        let mut active = Vec::new();
+        for branch in branches {
+            for pull in self.listing(&branch, Some("main"))? {
+                if pull["state"] == "open"
+                    && let Some(number) = pull["number"].as_u64()
+                {
+                    active.push(format!("#{number} ({branch})"));
+                }
+            }
+        }
+        active.sort();
+        active.dedup();
+        Ok(active)
+    }
+
+    fn matching(&self, prefix: &str) -> Result<Vec<String>, String> {
+        let full = format!("refs/heads/{prefix}");
+        match &self.source {
+            Source::Native(client) => {
+                let (owner, name) = self.coordinate()?;
+                let refs = client
+                    .matching(owner, name, prefix)
+                    .map_err(diagnostic)?
+                    .value;
+                Ok(refs
+                    .into_iter()
+                    .filter(|row| row.reference.starts_with(&full))
+                    .filter_map(|row| row.reference.strip_prefix("refs/heads/").map(str::to_owned))
+                    .collect())
+            }
+            #[cfg(all(test, unix))]
+            Source::Fixture => {
+                let refs = self.pages(&format!(
+                    "repos/{}/git/matching-refs/heads/{prefix}",
+                    self.repository
+                ))?;
+                Ok(refs
+                    .iter()
+                    .filter_map(|row| row["ref"].as_str())
+                    .filter(|reference| reference.starts_with(&full))
+                    .filter_map(|reference| {
+                        reference.strip_prefix("refs/heads/").map(str::to_owned)
+                    })
+                    .collect())
+            }
+        }
+    }
+
     pub(in super::super) fn revise(
         &self,
         number: u64,

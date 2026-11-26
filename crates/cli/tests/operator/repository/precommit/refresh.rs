@@ -117,6 +117,59 @@ fn refusals() {
     }
 }
 
+#[test]
+fn stale() {
+    let fixture = cache::fixture();
+    let root = fixture.path();
+    let home = support::home();
+    Repo::git(root, &["commit", "-q", "-m", "base"]);
+    Repo::git(root, &["branch", "main"]);
+    let base = text(root, &["rev-parse", "main"]);
+    Repo::git(root, &["update-ref", "refs/remotes/origin/main", &base]);
+    std::fs::write(
+        root.join("src/lib.rs"),
+        "pub fn answer() -> u8 {\n    43\n}\n",
+    )
+    .expect("topic");
+    Repo::git(root, &["add", "src/lib.rs"]);
+    Repo::git(root, &["commit", "-q", "--no-verify", "-m", "topic"]);
+    Repo::git(root, &["checkout", "-q", "main"]);
+    std::fs::write(root.join("UPSTREAM"), "advanced\n").expect("upstream");
+    Repo::git(root, &["add", "UPSTREAM"]);
+    Repo::git(root, &["commit", "-q", "--no-verify", "-m", "advance"]);
+    let upstream = text(root, &["rev-parse", "main"]);
+    Repo::git(root, &["update-ref", "refs/remotes/origin/main", &upstream]);
+    Repo::git(root, &["checkout", "-q", "topic"]);
+
+    for args in [
+        &["guard", ".", "--json"][..],
+        &["guard", ".", "--refresh", "--json"][..],
+    ] {
+        let output = support::plumb()
+            .args(args)
+            .current_dir(root)
+            .env("PLUMB_HOME", home.path())
+            .output()
+            .expect("stale guard");
+        assert!(!output.status.success());
+        let finding: Value = serde_json::from_slice(&output.stdout).expect("finding JSON");
+        assert_eq!(finding["code"], "guard.stale-base");
+        assert!(finding["message"].as_str().unwrap().contains(&upstream));
+        assert!(
+            finding["remedy"]
+                .as_str()
+                .unwrap()
+                .contains("git merge origin/main")
+        );
+    }
+
+    Repo::git(root, &["merge", "--no-edit", "origin/main"]);
+    cache::success(&run(root, home.path()));
+
+    Repo::git(root, &["update-ref", "-d", "refs/remotes/origin/main"]);
+    cache::success(&run(root, home.path()));
+}
+
 fn run(root: &Path, home: &Path) -> Output {
     support::plumb()
         .args(["guard", ".", "--refresh", "--json"])

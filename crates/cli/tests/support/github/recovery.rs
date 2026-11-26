@@ -40,7 +40,12 @@ impl Store {
         payload.clone()
     }
 
-    fn refs(&self) -> Value {
+    fn refs(&self, endpoint: &str) -> Value {
+        if endpoint.contains("/git/matching-refs/heads/land/")
+            && self.0.join("landing.json").exists()
+        {
+            return json!([[self.read("landing.json")["ref"]]]);
+        }
         let reference = self.reference();
         let result = self.git(&["show-ref", "--verify", "--hash", &reference]);
         if !result.status.success() {
@@ -51,6 +56,13 @@ impl Store {
     }
 
     fn pull(&self, endpoint: &str, payload: &Value) -> Value {
+        if !truth(payload) && endpoint.contains("head=Example:land/") {
+            return if self.0.join("landing.json").exists() {
+                json!([[self.read("landing.json")["pull"]]])
+            } else {
+                json!([[]])
+            };
+        }
         if !truth(payload) && endpoint.ends_with(&format!("/pulls/{}", self.number() + 1)) {
             return self.read("pull.json");
         }
@@ -80,6 +92,9 @@ impl Store {
     }
 
     fn guard(&self) -> Value {
+        if self.0.join("afterguard.json").exists() {
+            fs::rename(self.0.join("afterguard.json"), self.0.join("landing.json")).unwrap();
+        }
         if self.0.join("mergefault").exists() || self.0.join("passing").exists() {
             let run = json!({"name":"Guard","app":{"slug":"github-actions"},"head_sha":self.head(),"status":"completed","conclusion":"success","details_url":"https://github.com/Example/probe/actions/runs/17"});
             return json!([{"check_runs":[run]}]);
@@ -108,7 +123,7 @@ impl Store {
             };
         }
         if endpoint.contains("/git/matching-refs/") {
-            return self.refs();
+            return self.refs(endpoint);
         }
         if endpoint.contains("/git/ref/") {
             if self.0.join("pushfault").exists() {
