@@ -117,3 +117,30 @@ features = ["default", "all-features"]
 [[workflow.tool.guard.test]]
 program = "ssh-keygen"
 platform = ["linux-x86_64", "linux-aarch64", "darwin-aarch64", "darwin-x86_64"]
+
+[[ectropy.boundary]]
+allow = ["receiver"]
+note = "Rust procedural macros must be free functions at the proc-macro crate root accepting TokenStream; these compiler entry points cannot become receiver methods or namespace statics."
+paths = ["crates/macro/src/lib.rs"]
+
+[[ectropy.grant]]
+paths = [
+    "apps/web/vite.config.ts",
+    "crates/*/src/**/*.rs",
+    "crates/lib/src/config.rs",
+    "crates/lib/src/seat/mod.rs",
+    "crates/macro/src/parse.rs",
+]
+syntax = "environment"
+
+[[ectropy.grant]]
+paths = [
+    "crates/lib/src/proof/guard/authority.rs",
+    "crates/macro/src/catalogue/mod.rs",
+    "crates/macro/src/resource.rs",
+]
+syntax = "embed"
+
+[[ectropy.ban]]
+syntax = "lock"
+paths = ["crates/**/*.rs"]
