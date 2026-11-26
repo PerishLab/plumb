@@ -239,3 +239,51 @@ fn homed() {
     let held = run(&["doctor", seat.to_str().expect("path should be utf8")]);
     assert!(!held.contains("anchor is missing"), "{held}");
 }
+
+#[test]
+fn prefixed() {
+    let scratch = tempfile::tempdir().expect("fixture parent should be made");
+    let dir = scratch.path().join("plumb-prefixed");
+    std::fs::create_dir_all(dir.join("crates/cli/src")).expect("fixture should be made");
+    std::fs::create_dir_all(dir.join("crates/api/src")).expect("fixture should be made");
+    std::fs::write(dir.join(".gitignore"), "target/\n").expect("ignore should be written");
+    std::fs::write(
+        dir.join("Cargo.toml"),
+        "[workspace]\nmembers = [\"crates/cli\", \"crates/api\"]\n",
+    )
+    .expect("manifest should be written");
+    std::fs::write(
+        dir.join("crates/cli/Cargo.toml"),
+        "[package]\nname = \"plumb-prefixed\"\n",
+    )
+    .expect("manifest should be written");
+    std::fs::write(
+        dir.join("crates/api/Cargo.toml"),
+        "[package]\nname = \"plumb-prefixed-api\"\n",
+    )
+    .expect("manifest should be written");
+    std::fs::write(
+        dir.join("crates/api/src/main.rs"),
+        "#[derive(radicula_config::Cascade)]\nstruct Config;\nfn main() {}\n",
+    )
+    .expect("source should be written");
+    let held = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(!held.contains("outside the anchor"), "{held}");
+    assert!(!held.contains("is headless"), "{held}");
+
+    std::fs::remove_file(dir.join("crates/api/src/main.rs")).expect("main should be removed");
+    std::fs::write(
+        dir.join("crates/api/src/lib.rs"),
+        "#[derive(radicula_config::Cascade)]\nstruct Config;\n",
+    )
+    .expect("source should be written");
+    let headless = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(
+        headless.contains("api crate at crates/api is headless"),
+        "{headless}"
+    );
+    assert!(
+        headless.contains("Cascade derives in crates/api, outside the anchor"),
+        "{headless}"
+    );
+}

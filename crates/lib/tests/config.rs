@@ -1,4 +1,5 @@
 use plumb::config;
+use radicula_config::Cascade;
 use std::path::{Path, PathBuf};
 
 #[test]
@@ -169,4 +170,56 @@ fn bound() {
         )
         .is_err()
     );
+}
+
+#[derive(Debug, Default, PartialEq, Cascade)]
+#[cascade(section)]
+struct Relay {
+    key: String,
+}
+
+#[derive(Debug, Default, PartialEq, Cascade)]
+#[plumb::config::prefix("FOLIO")]
+struct Settings {
+    issuer: String,
+    #[cascade(section)]
+    locus: Relay,
+}
+
+#[test]
+fn migrated() {
+    assert_eq!(Settings::prefix(), "FOLIO");
+    let both = |key: &str| match key {
+        "FOLIO_ISSUER" => Some("primary".to_string()),
+        "API_ISSUER" => Some("legacy".to_string()),
+        "FOLIO_LOCUS_KEY" => Some("   ".to_string()),
+        "API_LOCUS_KEY" => Some("secret".to_string()),
+        "API_OTHER" => Some("ignored".to_string()),
+        "SIDECAR_PORT" => Some("9000".to_string()),
+        _ => None,
+    };
+    let lookup = config::migrated(&Settings::prefix(), "API", &both);
+    assert_eq!(lookup("FOLIO_ISSUER").as_deref(), Some("primary"));
+    assert_eq!(lookup("FOLIO_LOCUS_KEY").as_deref(), Some("secret"));
+    assert_eq!(lookup("FOLIOX_OTHER"), None);
+    assert_eq!(lookup("SIDECAR_PORT").as_deref(), Some("9000"));
+    assert_eq!(lookup("UNSET_KEY"), None);
+
+    let resolved = Settings::resolve(None, &Settings::prefix(), &lookup).expect("resolved");
+    assert_eq!(resolved.issuer, "primary");
+    assert_eq!(resolved.locus.key, "secret");
+
+    let fallback = |key: &str| match key {
+        "API_ISSUER" => Some("legacy".to_string()),
+        "API_LOCUS_KEY" => Some("legacy-key".to_string()),
+        _ => None,
+    };
+    let merged = Settings::resolve(
+        None,
+        &Settings::prefix(),
+        &config::migrated(&Settings::prefix(), "API", &fallback),
+    )
+    .expect("fallback");
+    assert_eq!(merged.issuer, "legacy");
+    assert_eq!(merged.locus.key, "legacy-key");
 }

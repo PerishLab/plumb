@@ -498,11 +498,13 @@ Absorbed; every product inherits them:
   equal to the repository name. Release, doctor and every later identity read
   it from there; `[release]` carries no name of its own.
 - Human policy enters through the cascade. Radicula owns the generic config
-  runtime and derive; Plumb supplies defining-package prefix and environment
-  lookup. Each binary declares its sections, values and explicit layering, and
-  owns the variables it supplies to a template whose grammar the substrate owns.
-  A manifest spells every injected environment key exactly as the target product
-  derives it.
+  runtime and derive; Plumb supplies prefix declaration (`#[plumb::config::prefix]`
+  for the anchor crate, or `#[plumb::config::prefix("<NS>")]` for non-anchor
+  executables such as `crates/api`), transitional dual-prefix lookup
+  (`plumb::config::migrated`), and environment lookup. Each binary declares its
+  sections, values and explicit layering, and owns the variables it supplies to
+  a template whose grammar the substrate owns. A manifest spells every injected
+  environment key exactly as the target product derives it.
 - Radicula owns the generic execution Context and its scoped carriers. Radicula
   Trace consumes Context and owns its local frame completion; retained Context views
   never own that completion. Locus owns its semantic Context and observation

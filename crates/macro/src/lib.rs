@@ -83,7 +83,43 @@ pub fn bytes(input: TokenStream) -> TokenStream {
         .into()
 }
 
-#[doc = "Adds prefix() using the configuration type's defining package name. Combine with Radicula Cascade and pass prefix() and plumb::config::value explicitly to resolve or layered. This preserves existing application variable names; it declares no CLI identity."]
+#[doc = r#"Adds prefix() using an explicit canonical uppercase literal (`[A-Z][A-Z0-9_]*`) or, when omitted, the defining package name. Combine with Radicula Cascade and pass prefix() and plumb::config::value (or plumb::config::migrated) explicitly to resolve or layered.
+
+```compile_fail
+#[plumb_macro::prefix("")]
+struct Config;
+```
+
+```compile_fail
+#[plumb_macro::prefix("folio")]
+struct Config;
+```
+
+```compile_fail
+#[plumb_macro::prefix("FOLIO-API")]
+struct Config;
+```
+
+```compile_fail
+#[plumb_macro::prefix("1FOLIO")]
+struct Config;
+```
+
+```compile_fail
+#[plumb_macro::prefix("FOLIO API")]
+struct Config;
+```
+
+```compile_fail
+#[plumb_macro::prefix(FOLIO)]
+struct Config;
+```
+
+```compile_fail
+#[plumb_macro::prefix("FOLIO", "EXTRA")]
+struct Config;
+```
+"#]
 #[proc_macro_attribute]
 pub fn prefix(args: TokenStream, input: TokenStream) -> TokenStream {
     prefix::expand(args.into(), input.into())
