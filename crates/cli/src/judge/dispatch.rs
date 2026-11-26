@@ -1,16 +1,23 @@
 use super::finding::{Found, Seed, wrong};
 use crate::catalog::model::Mechanism;
 use crate::catalog::rules::dispatch as rule;
-use crate::shape::dispatch::{Code, Evidence, Image, Manifest, Production, Sidecar};
+use crate::shape::dispatch::{Code, Evidence, Image, Manifest, Production, Sidecar, chart};
 
-pub fn judge(evidence: Option<&Evidence>) -> Found {
-    let Some(evidence) = evidence else {
-        return Found::new();
-    };
+pub fn judge(evidence: Option<&Evidence>, charts: &chart::Evidence) -> Found {
     let mut found = Found::new();
-    manifest(&evidence.manifest, &mut found);
-    code(&evidence.code, &mut found);
-    production(&evidence.production, &mut found);
+    if let Some(evidence) = evidence {
+        manifest(&evidence.manifest, &mut found);
+        code(&evidence.code, &mut found);
+        production(&evidence.production, &mut found);
+    }
+    for path in &charts.mismatch {
+        found.push(wrong(
+            &rule::CHART_FSGROUP_ON_ROOT_MISMATCH,
+            format!(
+                "{path} sets fsGroup without fsGroupChangePolicy: OnRootMismatch; see: plumb cookbook dispatch.chart-fsgroup-on-root-mismatch"
+            ),
+        ));
+    }
     found
 }
 
@@ -162,6 +169,32 @@ fn production(production: &Production, found: &mut Found) {
         &rule::CARGO_CHART_VERSION_TRAIN,
         "Cargo and chart do not share one version train",
     );
+    if let Some(client) = &production.client {
+        let mut missing = Vec::new();
+        if !client.seed {
+            missing.push("empty {} apps/web/public/client.json");
+        }
+        if !client.map {
+            missing.push("chart ConfigMap carrying client.json");
+        }
+        if !client.mount {
+            missing.push(
+                "volumeMount at /web/dist/client.json with subPath client.json and readOnly: true",
+            );
+        }
+        if !client.checksum {
+            missing.push("checksum/client pod template annotation");
+        }
+        if !missing.is_empty() {
+            found.push(wrong(
+                &rule::WEB_CLIENT_CONTRACT,
+                format!(
+                    "Dual-OCI web /client.json contract missing {}; see: plumb cookbook dispatch.web-client-contract",
+                    missing.join(", ")
+                ),
+            ));
+        }
+    }
 }
 
 fn check(found: &mut Found, valid: bool, rule: &'static Mechanism, evidence: &'static str) {

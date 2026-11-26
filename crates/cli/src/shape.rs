@@ -47,10 +47,13 @@ pub struct Shape {
     pub packages: Vec<(String, String)>,
     pub node: Vec<(String, String)>,
     pub repo: Option<String>,
+    pub ns: Option<String>,
     pub named: Vec<(String, String)>,
     pub derived: Vec<String>,
+    pub prefixes: Vec<crate::anchor::Prefix>,
     pub entries: Vec<String>,
     pub dispatch: Option<dispatch::Evidence>,
+    pub(crate) chart: dispatch::chart::Evidence,
     pub web: Option<web::Evidence>,
     pub(crate) policy: Option<policy::Evidence>,
     pub(crate) script: script::Evidence,
@@ -224,6 +227,7 @@ pub fn capture(
         .as_ref()
         .ok()
         .map(|snapshot| plumb::windtun::declared(snapshot).map(|_| ()));
+    let anchor = crate::anchor::Anchor(root);
     Shape {
         wrappers: seat.names(".runseal/wrappers", ".ts"),
         dirs: snapshot.as_ref().map(Root::dirs).unwrap_or_default(),
@@ -255,11 +259,14 @@ pub fn capture(
         mint: seat.mint(),
         packages: seat.packages(),
         node: node::read(root),
-        repo: crate::anchor::Anchor(root).repo(),
-        named: crate::anchor::Anchor(root).names(),
-        derived: crate::anchor::Anchor(root).derives(),
-        entries: crate::anchor::Anchor(root).entries(),
+        repo: anchor.repo(),
+        ns: anchor.ns(),
+        named: anchor.names(),
+        derived: anchor.derives(),
+        prefixes: anchor.prefixes(),
+        entries: anchor.entries(),
         dispatch: dispatch::read(root),
+        chart: dispatch::chart::read(root),
         web: web::read(root),
         policy,
         script: script::read(root, snapshot.as_ref()),

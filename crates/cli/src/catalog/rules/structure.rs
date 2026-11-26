@@ -26,6 +26,7 @@ rules! {
     ANCHOR_UNIQUE => "structure.anchor-unique",
     API_ENTRYPOINT => "structure.api-entrypoint",
     CASCADE_DERIVES_IN_ANCHOR => "structure.cascade-derives-in-anchor",
+    CONFIG_PREFIX_IDENTITY => "structure.config-prefix-identity",
     CARGO_TARGET_IGNORED => "structure.cargo-target-ignored",
     SOURCE_UNDER_SRC => "structure.source-under-src",
     SOURCE_EXPORT_EXPLICIT => "structure.source-export-explicit",

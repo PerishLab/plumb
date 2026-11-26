@@ -1,0 +1,25 @@
+# dispatch.chart-fsgroup-on-root-mismatch
+
+## Trigger
+
+A Helm chart template under `charts/*/templates/*.{yaml,yml}` declares
+`fsGroup:` inside a pod `securityContext` without pairing it with
+`fsGroupChangePolicy: OnRootMismatch`.
+
+## Solution
+
+Add `fsGroupChangePolicy: OnRootMismatch` beside `fsGroup:` inside every pod
+`securityContext` that sets `fsGroup`. When mounting an `emptyDir` for a
+private `0700` spool or custody buffer, mount the `emptyDir` at the parent
+directory and point the buffer path at a child subdirectory so kubelet does not
+expose a `0777` mount root directly as the buffer directory.
+
+## Evidence
+
+Kubernetes defaults `fsGroupChangePolicy` to `Always`. On pod restart, kubelet
+recursively `chmod`s every directory on a PVC carrying `fsGroup` to `2770`,
+breaking private `0700` Locus spool and custody directories on the next boot.
+
+## EXIT
+
+Remove this entry if Kubernetes changes its default `fsGroupChangePolicy` or PerishLab charts retire pod-level `fsGroup` declarations.

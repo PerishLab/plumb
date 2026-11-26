@@ -78,6 +78,7 @@ impl Structure<'_> {
         }
         self.matched(&mut found);
         self.anchored(&mut found);
+        self.prefixed(&mut found);
         for name in &held.lanes {
             if !set::current().lanes.contains(name) {
                 found.push(unknown(
@@ -158,6 +159,60 @@ impl Structure<'_> {
                     &rule::CASCADE_DERIVES_IN_ANCHOR,
                     format!("Cascade derives in {seat}, outside the anchor"),
                 ));
+            }
+        }
+    }
+
+    fn prefixed(&self, found: &mut Found) {
+        let held = self.0;
+        let ns = held.ns.as_deref();
+        let expected = ns.map(|name| name.to_ascii_uppercase().replace('-', "_"));
+        if held.rust
+            && let (Some(ns), Some(expected)) = (ns, expected.as_deref())
+        {
+            self.attributes(ns, expected, found);
+        }
+        if ns != Some("api") {
+            let target = expected.as_deref().unwrap_or("<NS>");
+            for (path, key) in &held.chart.env {
+                found.push(wrong(
+                    &rule::CONFIG_PREFIX_IDENTITY,
+                    format!(
+                        "{path} declares container env {key} instead of {target}_*; see: plumb cookbook structure.config-prefix-identity"
+                    ),
+                ));
+            }
+        }
+    }
+
+    fn attributes(&self, ns: &str, expected: &str, found: &mut Found) {
+        let nested = format!("{expected}_");
+        for item in &self.0.prefixes {
+            let package = self
+                .0
+                .named
+                .iter()
+                .find(|(seat, _)| seat == &item.seat)
+                .map(|(_, name)| name.as_str())
+                .unwrap_or("");
+            match item.value.as_deref() {
+                None if package != ns => found.push(wrong(
+                    &rule::CONFIG_PREFIX_IDENTITY,
+                    format!(
+                        "bare #[plumb::config::prefix] in {} (crate {package}) sits outside anchor {ns}; use #[plumb::config::prefix(\"{expected}\")]; see: plumb cookbook structure.config-prefix-identity",
+                        item.file
+                    ),
+                )),
+                Some(value) if value != expected && !value.starts_with(&nested) => {
+                    found.push(wrong(
+                        &rule::CONFIG_PREFIX_IDENTITY,
+                        format!(
+                            "config prefix \"{value}\" in {} does not match identity {expected}; see: plumb cookbook structure.config-prefix-identity",
+                            item.file
+                        ),
+                    ));
+                }
+                _ => {}
             }
         }
     }
