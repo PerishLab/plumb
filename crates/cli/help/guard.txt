@@ -79,6 +79,15 @@ With no runtime selectors, guard keeps its local contract: it proves the staged
 tree for commit attachment, or checks an explicit --base/--head/--write task
 boundary.
 
+--reuse-only validates an existing staged proof under the same freshness checks
+as ordinary staged Guard. Exit 0 returns the existing proof (with --json, the
+ordinary proof document). Exit 1 means current reuse could not be established.
+This mode can prepare the staged source and probe tools and inputs, but never
+takes the compilation lease, starts Guard actions, or creates a proof from
+cached action results. Call ordinary staged Guard to produce a current proof.
+This option applies only to staged Guard and cannot be combined with runtime
+selectors, a task boundary, --attach, or --refresh.
+
 For preflight before a commit, run `git hook run pre-commit` from the managed
 topic checkout with the current Plumb hooks installed. Use the same external
 identity profile and tool environment for that preflight and the later commit.

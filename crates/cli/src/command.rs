@@ -65,6 +65,7 @@ pub(crate) fn execute(command: Command) -> i32 {
             write,
             attach,
             refresh,
+            reuse,
             json,
             diagnostic: _,
         } => precommit::run(precommit::Input {
@@ -74,6 +75,7 @@ pub(crate) fn execute(command: Command) -> i32 {
             write,
             attach,
             refresh,
+            reuse,
             json,
         }),
         Command::Radius {
