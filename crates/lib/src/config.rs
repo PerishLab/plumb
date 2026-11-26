@@ -20,6 +20,23 @@ pub fn value(key: &str) -> Option<String> {
     std::env::var(key).ok().filter(|value| !value.is_empty())
 }
 
+pub fn migrated<'a>(
+    primary: impl AsRef<str>,
+    legacy: impl AsRef<str>,
+    get: &'a dyn Fn(&str) -> Option<String>,
+) -> impl Fn(&str) -> Option<String> + 'a {
+    let primary = primary.as_ref().to_string();
+    let legacy = legacy.as_ref().to_string();
+    move |key: &str| {
+        get(key).filter(|held| !held.trim().is_empty()).or_else(|| {
+            key.strip_prefix(&primary)
+                .filter(|rest| rest.starts_with('_'))
+                .and_then(|rest| get(&format!("{legacy}{rest}")))
+                .filter(|held| !held.trim().is_empty())
+        })
+    }
+}
+
 pub fn discover(start: &Path, name: &str) -> Result<PathBuf, Vec<PathBuf>> {
     let mut searched = Vec::new();
     for dir in start.ancestors() {
