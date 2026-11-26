@@ -4,8 +4,9 @@ mod engine;
 mod issue;
 pub(super) mod provider;
 mod pull;
+pub(crate) mod recovery;
 mod refresh;
-mod retire;
+use recovery::retire;
 #[cfg(all(test, unix))]
 #[path = "../packages/tests.rs"]
 mod tests;
@@ -119,10 +120,9 @@ fn resume(
         state.issue = issue::create(provider)?;
     }
     issue::snapshot(provider, state.issue)?;
-    let owned = seat.worktree()?.join("worktree");
     if state.worktree.as_os_str().is_empty() {
-        state.worktree = owned;
-    } else if state.worktree != owned {
+        state.worktree = recovery::checkout(&input.root, seat, state)?;
+    } else if !seat.owns(state)? {
         return Err("Auto worktree path is outside its owned state seat".into());
     }
     if let Some(head) = provider.remote(state.issue)? {
@@ -281,6 +281,12 @@ impl Seat {
         file.persist(&self.path)
             .map_err(|error| error.to_string())?;
         Ok(())
+    }
+
+    fn owns(&self, state: &State) -> Result<bool, String> {
+        let parent = self.worktree()?;
+        Ok(state.worktree == parent.join("worktree")
+            || state.worktree == parent.join(format!("worktree-{}", state.issue)))
     }
 
     pub fn worktree(&self) -> Result<&Path, String> {

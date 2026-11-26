@@ -19,7 +19,10 @@ pub(super) fn advance(
                 .as_ref()
                 .is_some_and(|plan| plan.candidate != head)
             {
-                return Err("merged Auto head differs from recorded candidate".into());
+                return Err(format!(
+                    "merged Auto head differs from recorded candidate; inspect plumb follow --help for explicit --recover {}",
+                    state.issue
+                ));
             }
             state.candidate = Some(head.clone());
             state.merged = Some(merge);

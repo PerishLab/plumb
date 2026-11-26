@@ -1,7 +1,7 @@
-use super::{Provider, Seat, State, work};
+use super::super::{Provider, Seat, State, work};
 use std::path::Path;
 
-pub(super) fn run(root: &Path, provider: &Provider<'_>) -> Result<String, String> {
+pub(in super::super) fn run(root: &Path, provider: &Provider<'_>) -> Result<String, String> {
     let seat = Seat::open(provider.repository).map_err(refused)?;
     let mut state = seat.read(provider.repository)?;
     retire(root, provider, &seat, &mut state)
@@ -11,7 +11,7 @@ fn refused(reason: impl std::fmt::Display) -> String {
     format!("retire refused: {reason}")
 }
 
-pub(super) fn retire(
+pub(in super::super) fn retire(
     root: &Path,
     provider: &Provider<'_>,
     seat: &Seat,
@@ -144,7 +144,7 @@ fn owned(root: &Path, seat: &Seat, state: &State) -> Result<Option<String>, Stri
     if state.worktree.as_os_str().is_empty() || !state.worktree.exists() {
         return Ok(None);
     }
-    if state.worktree != seat.worktree()?.join("worktree") {
+    if !seat.owns(state)? {
         return Err(refused(
             "Auto worktree path is outside its owned state seat",
         ));
@@ -170,7 +170,7 @@ fn owned(root: &Path, seat: &Seat, state: &State) -> Result<Option<String>, Stri
         .ok_or_else(|| "Auto worktree path is not UTF-8".into())
 }
 
-pub(super) struct Leftover<'a> {
+pub(in super::super) struct Leftover<'a> {
     pub root: &'a Path,
     pub provider: &'a Provider<'a>,
     pub state: &'a State,

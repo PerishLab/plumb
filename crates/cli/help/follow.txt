@@ -37,6 +37,20 @@ the lease. It then removes the owned auto/<number> branch by exact lease and its
 worktree, clears the seat and prints what it retired, so the next plain run
 opens a fresh Auto from current main.
 
+Use --recover AUTO_ISSUE for a recorded Auto whose merged pull head superseded
+its local candidate. The Issue must already be completed by the same writer
+with exact closure evidence. Recovery requires the complete same-base,
+same-tree publication chain through the exact merged head, the original
+candidate's recorded proof, a successful historical organization Guard on the
+final head, and an exact squash contained by origin/main. It also requires the
+remote branch to be absent and the owned worktree to be clean at a known head.
+
+Recovery retains the original state and observations in recovered-<number>.json
+under the repository's follow state directory. It keeps the original worktree
+and local branch. It clears only the active seat, so a plain follow can start
+again with fresh Guard evidence. Repeating recovery reports the prior receipt.
+Recovery refuses inconsistent or missing evidence. It makes no GitHub writes.
+
 Before opening a new Auto, follow scans origin for leftover auto/<number>
 branches. One is waived only when its Issue is closed, exactly one merged pull
 and no open pull has that head, no running follow or local worktree holds it,

@@ -30,10 +30,7 @@ pub(super) fn close(
     issue::snapshot(provider, state.issue)?;
     let landed =
         plumb::delivery::landed(root, candidate, merge).map_err(|error| error.to_string())?;
-    let body = format!(
-        "Auto follow acceptance satisfied. Merge commit: https://github.com/{}/commit/{merge}. Required organization Guard: {guard}. Exact candidate {} was read back with the same parent, tree and Guard proof.\n\n<!-- plumb.auto-closure/v1 -->",
-        provider.repository, candidate
-    );
+    let body = acceptance(provider.repository, merge, guard, candidate);
     provider.comment(state.issue, &body)?;
     let result = format!(
         "Auto #{} completed via pull #{} at {merge}",
@@ -100,6 +97,12 @@ pub(super) fn close(
     seat.write(state)?;
     Ok(result)
 }
+pub(super) fn acceptance(repository: &str, merge: &str, guard: &str, candidate: &str) -> String {
+    format!(
+        "Auto follow acceptance satisfied. Merge commit: https://github.com/{repository}/commit/{merge}. Required organization Guard: {guard}. Exact candidate {candidate} was read back with the same parent, tree and Guard proof.\n\n<!-- plumb.auto-closure/v1 -->"
+    )
+}
+
 pub(super) fn idle(
     root: &Path,
     provider: &Provider<'_>,

@@ -127,6 +127,8 @@ pub(crate) enum Command {
         json: bool,
         #[arg(long)]
         retire: bool,
+        #[arg(long, conflicts_with = "retire", value_name = "AUTO_ISSUE")]
+        recover: Option<std::num::NonZeroU64>,
     },
     #[command(about = "Report which repositories a candidate version would reach")]
     Radius {
