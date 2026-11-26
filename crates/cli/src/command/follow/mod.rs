@@ -94,6 +94,9 @@ fn resume(
         }
     }
     if state.issue == 0 {
+        if let Some(note) = engine::yielded(provider)? {
+            return Ok(note);
+        }
         retire::Leftover {
             root: &input.root,
             provider,

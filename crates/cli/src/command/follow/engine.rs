@@ -57,6 +57,9 @@ pub(super) fn advance(
     if snapshot.state != "OPEN" {
         return Err("Auto issue is closed without a verified merged pull; human judgment required; if the close is final, run plumb follow --retire, then rerun plumb follow".into());
     }
+    if let Some(note) = yielded(provider)? {
+        return Ok(note);
+    }
     let work = work::Work {
         source: root,
         state,
@@ -157,6 +160,9 @@ pub(super) fn advance(
     };
     work::git(&state.worktree, &["fetch", "origin"])?;
     plumb::delivery::revalidate(request, &plan, &authority).map_err(|error| error.to_string())?;
+    if let Some(note) = yielded(provider)? {
+        return Ok(note);
+    }
     let squash = plumb::delivery::Squash::read(&state.worktree, &plan.candidate)
         .map_err(|error| error.to_string())?;
     provider.merge(state.pull, &squash)?;
@@ -172,6 +178,17 @@ pub(super) fn advance(
     state.guard = Some(guard);
     seat.write(state)?;
     super::closure::close(root, provider, seat, state)
+}
+
+pub(super) fn yielded(provider: &Provider<'_>) -> Result<Option<String>, String> {
+    let active = provider.landing()?;
+    if active.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(format!(
+        "yielded to active delivery pull request(s) targeting main: {}",
+        active.join(", ")
+    )))
 }
 
 fn current(root: &Path, head: &str) -> Result<bool, String> {
