@@ -19,6 +19,9 @@ mod base;
 #[path = "candidate/merge.rs"]
 mod merge;
 
+#[path = "supersession.rs"]
+mod supersession;
+
 #[path = "candidate/retire.rs"]
 mod retire;
 

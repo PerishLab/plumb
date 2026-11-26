@@ -46,6 +46,26 @@ impl Work<'_> {
             };
             git(self.source, &args)?;
         }
+        if !created {
+            return self.inspect();
+        }
+        let (marker, identity) = self.marker()?;
+        std::fs::write(marker, identity).map_err(|error| error.to_string())
+    }
+
+    pub fn inspect(&self) -> Result<(), String> {
+        let (marker, identity) = self.marker()?;
+        let held = std::fs::read(marker).map_err(|error| {
+            format!("existing Auto worktree has no readable ownership marker: {error}")
+        })?;
+        if held != identity {
+            return Err("Auto worktree marker disagrees".into());
+        }
+        Ok(())
+    }
+
+    fn marker(&self) -> Result<(std::path::PathBuf, Vec<u8>), String> {
+        let branch = format!("auto/{}", self.state.issue);
         let actual = git(&self.state.worktree, &["branch", "--show-current"])?;
         if actual != branch {
             return Err("Auto worktree branch disagrees with declared state".into());
@@ -70,16 +90,7 @@ impl Work<'_> {
             self.state.issue,
         ))
         .map_err(|error| error.to_string())?;
-        if created {
-            return std::fs::write(marker, identity).map_err(|error| error.to_string());
-        }
-        let held = std::fs::read(marker).map_err(|error| {
-            format!("existing Auto worktree has no readable ownership marker: {error}")
-        })?;
-        if held != identity {
-            return Err("Auto worktree marker disagrees".into());
-        }
-        Ok(())
+        Ok((marker, identity))
     }
 
     pub fn changed(&self, provider: &super::Provider<'_>, head: &str) -> Result<bool, String> {

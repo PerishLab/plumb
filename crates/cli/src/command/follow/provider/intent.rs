@@ -54,7 +54,11 @@ impl Provider<'_> {
     }
 
     pub(in super::super) fn recorded(&self, issue: u64) -> Result<Option<Intent>, String> {
-        let mut standing = None;
+        Ok(self.intents(issue)?.pop())
+    }
+
+    pub(in super::super) fn intents(&self, issue: u64) -> Result<Vec<Intent>, String> {
+        let mut history = Vec::new();
         for body in self.evidence(issue, "<!-- plumb.auto-push/", "Auto publication intent")? {
             let value = body
                 .split_once("<!-- plumb.auto-push/v1\n")
@@ -63,8 +67,8 @@ impl Provider<'_> {
             let held: Intent = serde_json::from_str(value)
                 .map_err(|error| format!("Auto publication intent is unreadable: {error}"))?;
             held.check(self, issue)?;
-            standing = Some(held);
+            history.push(held);
         }
-        Ok(standing)
+        Ok(history)
     }
 }

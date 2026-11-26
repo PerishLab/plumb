@@ -28,12 +28,15 @@ pub(crate) fn execute(command: Command) -> i32 {
             target,
             json,
             retire,
+            recover,
         } => {
             let input = packages::follow::Input {
                 root: PathBuf::from(target.root),
                 json,
             };
-            if retire {
+            if let Some(number) = recover {
+                packages::follow::recovery::command(input, number.get())
+            } else if retire {
                 packages::follow::retire(input)
             } else {
                 packages::follow::run(input)
