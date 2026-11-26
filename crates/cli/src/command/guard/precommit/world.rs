@@ -1,7 +1,6 @@
 use super::super::workflow::tree::Tree;
 pub(super) use super::super::world::{digest, execution};
-use super::Selection;
-use super::tree::Index;
+use super::{Selection, action::Binding, environment, tree::Index};
 use crate::command::cache::transport::Context;
 use std::path::Path;
 
@@ -111,26 +110,27 @@ impl Prepared {
                 .map(|h| h.bind(&item.name, &input))
                 .unwrap_or(input);
             let mut material = None;
-            if item.name == "guard/plumb" {
-                let binding = super::action::Binding {
-                    execution: Some(&execution),
+            let hash = |execution: Option<&plumb::config::Execution>| {
+                let bound = Binding {
+                    execution,
                     probes: &probes,
                 };
-                let digested = super::world::digest(&item.name, &input, &item.commands, &binding)?;
-                material = Some(digested.material);
-                let obs = observation.as_ref();
-                execution.environment = super::environment::observed(execution.environment, obs)?;
-                if product != "plumb" {
-                    execution.environment =
-                        super::environment::depot(execution.environment, rules)?;
+                digest(&item.name, &input, &item.commands, &bound)
+            };
+            if matches!(item.name.as_str(), "guard/plumb" | "guard/ectropy") {
+                material = Some(hash(Some(&execution))?.material);
+                let mut env = execution.environment;
+                if item.name == "guard/plumb" {
+                    env = environment::observed(env, observation.as_ref())?;
                 }
+                if product != "plumb" || (item.name == "guard/ectropy" && rules.pinned().is_some())
+                {
+                    env = environment::depot(env, rules)?;
+                }
+                execution.environment = env;
             }
             let execution = Some(std::sync::Arc::new(execution));
-            let binding = super::action::Binding {
-                execution: execution.as_deref(),
-                probes: &probes,
-            };
-            let world = super::world::digest(&item.name, &input, &item.commands, &binding)?;
+            let world = hash(execution.as_deref())?;
             let proof = plumb::guard::Action {
                 name: item.name,
                 input,
@@ -171,8 +171,7 @@ impl Prepared {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use plumb::guard::Descriptor;
-    use plumb::packages::Observation;
+    use plumb::{guard::Descriptor, packages::Observation};
     use std::{env, fs, process::Command};
 
     #[derive(serde::Deserialize, serde::Serialize)]
@@ -192,25 +191,26 @@ mod tests {
         let checks = &prepared.checks;
         let find = |name| checks.iter().find(|c| c.proof.name == name).unwrap();
         let (plumb, rust) = (find("guard/plumb"), find("guard/rust"));
-        let env = &plumb.execution.as_ref().unwrap().environment;
-        let other = &rust.execution.as_ref().unwrap().environment;
-        if hosted {
-            assert!(
-                env.get("PLUMB_DEPOT_MARK").is_none() && env.get("PLUMB_CONFIGURATION").is_none()
-            );
+        let env = |name| &find(name).execution.as_ref().unwrap().environment;
+        let (seen, law, other) = (env("guard/plumb"), env("guard/ectropy"), env("guard/rust"));
+        let clear = |e: &plumb::config::Environment| {
+            e.get("PLUMB_DEPOT_MARK").is_none() && e.get("PLUMB_CONFIGURATION").is_none()
+        };
+        let mark = Some(prepared.depot.as_str());
+        assert!(if hosted {
+            clear(seen) && clear(law)
         } else {
-            assert_eq!(env.get("PLUMB_DEPOT_MARK"), Some(prepared.depot.as_str()));
-        }
-        assert!(
-            other.get("PLUMB_DEPOT_MARK").is_none() && other.get("PLUMB_CONFIGURATION").is_none()
-        );
-        let text = env.get("PLUMB_PACKAGES_OBSERVATION").unwrap();
+            seen.get("PLUMB_DEPOT_MARK") == mark && law.get("PLUMB_DEPOT_MARK") == mark
+        });
+        assert!(clear(other));
+        let text = seen.get("PLUMB_PACKAGES_OBSERVATION").unwrap();
         let seen = Observation::read(&index.root, text).unwrap();
         assert_eq!(seen.resolution.tree, tree);
         let actions = checks.iter().map(|c| c.proof.clone()).collect();
         let proof = Descriptor::new(root, tree.clone(), actions).unwrap();
-        let resolution = prepared.resolution.clone().unwrap();
-        let proof = proof.resolved(resolution).unwrap();
+        let proof = proof
+            .resolved(prepared.resolution.clone().unwrap())
+            .unwrap();
         assert_eq!(proof.depot, prepared.depot);
         let frame = Frame {
             depot: proof.depot.clone(),
@@ -280,7 +280,7 @@ mod tests {
         git(&["remote", "add", "origin", origin]);
         fs::create_dir(root.join("src")).unwrap();
         let manifest = "[package]\nname='probe'\nversion='0.1.0'\nedition='2024'\n";
-        let config = "[identity]\nns='probe'\n[workflow.hash.guard]\nrust=['Cargo.toml','Cargo.lock','src']\nplumb=['Cargo.toml','Cargo.lock','src']\n";
+        let config = "[identity]\nns='probe'\n[workflow.hash.guard]\nrust=['Cargo.toml','Cargo.lock','src']\nplumb=['Cargo.toml','Cargo.lock','src']\nectropy=['Cargo.toml','src']\n";
         fs::write(root.join("Cargo.toml"), manifest).unwrap();
         fs::write(root.join("plumb.toml"), config).unwrap();
         fs::write(root.join("src/lib.rs"), "pub fn answer() -> u8 { 1 }\n").unwrap();

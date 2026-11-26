@@ -1,3 +1,4 @@
+pub(crate) mod section;
 mod tracked;
 
 use std::collections::BTreeSet;

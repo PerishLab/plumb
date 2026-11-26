@@ -20,10 +20,9 @@ fn manifest(manifest: &Manifest, found: &mut Found) {
             &rule::SIDECAR_MANIFEST_PRESENT,
             "web/api pair has no sidecar.toml",
         )),
-        Manifest::Unread(error) => found.push(Seed::blind(
-            &rule::SIDECAR_MANIFEST_READABLE,
-            format!("cannot read sidecar.toml: {error}"),
-        )),
+        Manifest::Unread(error) => {
+            found.push(Seed::blind(&rule::SIDECAR_MANIFEST_READABLE, error.clone()))
+        }
         Manifest::Held(sidecar) => held(sidecar, found),
     }
 }

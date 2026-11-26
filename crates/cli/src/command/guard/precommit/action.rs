@@ -201,16 +201,21 @@ impl Catalog<'_> {
         if let Some(error) = &held.refusal {
             return Err(error.clone());
         }
+        let paths: Vec<_> = tree.paths().collect();
         if held.keys.is_empty() {
+            let ectropy = crate::shape::workflow::governed(manifest.as_deref(), &paths);
             held.keys = crate::shape::workflow::inferred(
                 tree.has("Cargo.toml"),
                 tree.has("pnpm-lock.yaml"),
                 tree.has("plumb.toml"),
-                tree.has("ectropy.toml"),
+                ectropy,
             )
             .keys;
         }
         held.validate()?;
+        for key in &mut held.keys {
+            crate::shape::workflow::include(key, tree.has("plumb.toml"), tree.has("ectropy.toml"));
+        }
         let mut checks = Vec::new();
         for key in held.keys.iter().filter(|key| key.lane() == "guard") {
             let name = key.name();
@@ -219,6 +224,7 @@ impl Catalog<'_> {
                 continue;
             }
             let input = tree.digest(key);
+            let matched = tree.selection(&key.paths);
             checks.push(Preparation {
                 probes: held.probes(&name)?,
                 tools: held.tools(&name)?,
@@ -226,11 +232,7 @@ impl Catalog<'_> {
                 input,
                 commands,
                 manifest: manifest.clone(),
-                paths: tree
-                    .selection(&key.paths)
-                    .iter()
-                    .map(|(path, _)| (*path).clone())
-                    .collect(),
+                paths: matched.into_iter().map(|(path, _)| path.clone()).collect(),
             });
         }
         if checks.is_empty() {
@@ -240,40 +242,23 @@ impl Catalog<'_> {
     }
 
     fn commands(&self, tree: &Tree, product: &str, name: &str) -> Result<Vec<Vec<String>>, String> {
-        let cargo = |args: &[&str]| {
-            std::iter::once("cargo".to_string())
-                .chain(args.iter().map(|arg| arg.to_string()))
-                .collect()
-        };
+        let line = |text: &str| text.split_whitespace().map(str::to_string).collect();
         Ok(match name {
             "guard/rust" => vec![
-                cargo(&["fmt", "--all", "--check"]),
-                cargo(&[
-                    "clippy",
-                    "--locked",
-                    "--all-targets",
-                    "--",
-                    "-D",
-                    "warnings",
-                ]),
-                cargo(&[
-                    "check",
-                    "--locked",
-                    "--workspace",
-                    "--all-targets",
-                    "--release",
-                ]),
+                line("cargo fmt --all --check"),
+                line("cargo clippy --locked --all-targets -- -D warnings"),
+                line("cargo check --locked --workspace --all-targets --release"),
             ],
-            "guard/test" => vec![cargo(&["test", "--locked"])],
+            "guard/test" => vec![line("cargo test --locked")],
             "guard/web" => super::web::commands(tree)?,
-            "guard/plumb" if product == "plumb" => vec![cargo(&[
-                "run", "--quiet", "--locked", "--bin", "plumb", "--", "doctor", ".",
-            ])],
-            "guard/plumb" => vec![vec!["plumb".into(), "doctor".into(), ".".into()]],
-            "guard/ectropy" if product == "ectropy" => vec![cargo(&[
-                "run", "--quiet", "--locked", "--bin", "ectropy", "--", ".",
-            ])],
-            "guard/ectropy" => vec![vec!["ectropy".into(), ".".into()]],
+            "guard/plumb" if product == "plumb" => {
+                vec![line("cargo run --quiet --locked --bin plumb -- doctor .")]
+            }
+            "guard/plumb" => vec![line("plumb doctor .")],
+            "guard/ectropy" if product == "ectropy" => {
+                vec![line("cargo run --quiet --locked --bin ectropy -- .")]
+            }
+            "guard/ectropy" => vec![line("ectropy .")],
             _ => Vec::new(),
         })
     }

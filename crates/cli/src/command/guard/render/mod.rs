@@ -76,17 +76,8 @@ impl Seat {
     }
 
     pub fn policy(&self, write: bool) -> i32 {
-        let path = self.0.join("ectropy.toml");
-        let text = match std::fs::read_to_string(&path) {
-            Ok(text) => text,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
-            Err(error) => {
-                eprintln!("plumb policy {}: {error}", self.0.display());
-                return 1;
-            }
-        };
-        let rendered = match policy::render(&self.0, &text) {
-            Ok(rendered) => rendered,
+        let (path, rendered) = match policy::prepare(&self.0) {
+            Ok(held) => held,
             Err(error) => {
                 eprintln!("plumb policy {}: {error}", self.0.display());
                 return 1;

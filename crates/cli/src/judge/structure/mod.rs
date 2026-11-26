@@ -23,7 +23,9 @@ impl Structure<'_> {
         let held = self.0;
         let mut found = Found::new();
         found.extend(collaboration::judge(&held.layout));
-        if held.runseal && !held.laws {
+        if let Some(why) = &held.seal {
+            found.push(blind(&rule::ECTROPY_POLICY_PRESENT, why.clone()));
+        } else if held.runseal && !held.laws {
             found.push(wrong(&rule::ECTROPY_POLICY_PRESENT, "no ectropy.toml"));
         }
         if let Some(name) = &held.mint {
@@ -47,13 +49,7 @@ impl Structure<'_> {
             found.push(wrong(&rule::RESERVED_COMPONENTS_SEAT, COMPONENTS));
         }
         if let Some(why) = &held.unread {
-            found.push(blind(
-                &rule::ECTROPY_POLICY_READABLE,
-                format!(
-                    "cannot read ectropy.toml: {}",
-                    why.lines().next().unwrap_or("")
-                ),
-            ));
+            found.push(blind(&rule::ECTROPY_POLICY_READABLE, why.clone()));
         } else if let Some(policy) = &held.policy {
             found.extend(policy::judge(policy));
         }

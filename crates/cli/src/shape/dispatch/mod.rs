@@ -65,9 +65,10 @@ pub fn read(root: &Path) -> Option<Evidence> {
     if !contains(&web, "svelte") || !contains(&web, "vite") || !workspace.executable() {
         return None;
     }
+    let state = crate::shape::section::read(root, "sidecar.toml", "sidecar");
     Some(Evidence {
-        manifest: workspace.sidecar(),
-        code: workspace.api(),
+        manifest: workspace.sidecar(&state),
+        code: workspace.api(&state),
         production: production::read(root),
     })
 }
@@ -114,18 +115,11 @@ impl Workspace<'_> {
         named && target
     }
 
-    fn sidecar(&self) -> Manifest {
-        let path = self.0.join("sidecar.toml");
-        let Ok(text) = std::fs::read_to_string(&path) else {
-            return Manifest::Absent;
-        };
-        let doc = match text.parse::<toml::Table>() {
-            Ok(doc) => toml::Value::Table(doc),
-            Err(error) => {
-                return Manifest::Unread(
-                    error.to_string().lines().next().unwrap_or("").to_string(),
-                );
-            }
+    fn sidecar(&self, state: &crate::shape::section::State) -> Manifest {
+        let doc = match state {
+            crate::shape::section::State::Absent => return Manifest::Absent,
+            crate::shape::section::State::Unread(error) => return Manifest::Unread(error.clone()),
+            crate::shape::section::State::Held(_, table) => toml::Value::Table(table.clone()),
         };
         let api = doc
             .get("sidecars")
@@ -173,13 +167,19 @@ impl Workspace<'_> {
         })
     }
 
-    fn api(&self) -> Code {
+    fn api(&self, state: &crate::shape::section::State) -> Code {
         let source = self.source(&self.0.join("crates/api/src"), "rs");
-        let launch = std::fs::read_to_string(self.0.join("sidecar.toml")).unwrap_or_default();
+        let table = match state {
+            crate::shape::section::State::Held(_, table) => Some(table),
+            _ => None,
+        };
+        let launch = table
+            .and_then(|table| toml::to_string(table).ok())
+            .unwrap_or_default();
         Code {
             port: source.contains("SIDECAR_PORT")
                 || launch.contains("SIDECAR_PORT")
-                || mapping(&launch),
+                || table.is_some_and(mapping),
             stamp: source.contains("sidecar_stamp") || source.contains("sidecar-stamp"),
             ready: ["\"role\"", "\"api\"", "\"endpoint\""]
                 .iter()
@@ -206,10 +206,7 @@ fn port(value: Option<&toml::Value>, path: Option<&str>) -> bool {
         .is_some_and(|url| url.contains("{port}") && path.is_none_or(|path| url.ends_with(path)))
 }
 
-fn mapping(launch: &str) -> bool {
-    let Ok(doc) = launch.parse::<toml::Table>() else {
-        return false;
-    };
+fn mapping(doc: &toml::Table) -> bool {
     doc.get("sidecars")
         .and_then(toml::Value::as_array)
         .and_then(|list| {

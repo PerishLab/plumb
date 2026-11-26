@@ -14,6 +14,7 @@ pub(crate) use release::identity;
 pub(crate) use repository::dependency::topology;
 pub use repository::dependency::{Dependencies, Dependency};
 pub use repository::layout;
+pub(crate) use repository::policy::section;
 pub(crate) use repository::{dependency, policy, script, toolchain};
 use repository::{node, pack};
 
@@ -34,6 +35,7 @@ pub struct Shape {
     pub components: bool,
     pub rust: bool,
     pub runseal: bool,
+    pub seal: Option<String>,
     pub containers: Vec<(String, String)>,
     pub edition: Option<String>,
     pub binary: bool,
@@ -176,17 +178,14 @@ pub fn capture(
     snapshot: &Result<plumb::snapshot::Snapshot, plumb::snapshot::Refusal>,
 ) -> Shape {
     let seat = Root(root);
-    let laws = root.join("ectropy.toml");
-    let text = std::fs::read_to_string(&laws).unwrap_or_default();
-    let read = text.parse::<toml::Table>();
-    let unread = read.as_ref().err().map(|error| error.to_string());
-    let doc = read.ok().map(toml::Value::Table);
-    let policy = if laws.exists() {
-        doc.as_ref()
-            .map(|doc| policy::Evidence::read(root, doc.clone()))
-    } else {
-        None
+    let (laws, unread, doc) = match section::read(root, "ectropy.toml", "ectropy") {
+        section::State::Absent => (false, None, None),
+        section::State::Unread(why) => (true, Some(why), None),
+        section::State::Held(_, table) => (true, None, Some(toml::Value::Table(table))),
     };
+    let policy = doc
+        .as_ref()
+        .map(|doc| policy::Evidence::read(root, doc.clone()));
     let limit = |key: &str| {
         doc.as_ref()
             .and_then(|value| value.get("limit"))
@@ -217,6 +216,11 @@ pub fn capture(
             (path, exists)
         })
         .collect();
+    let (runseal, seal) = match section::read(root, "runseal.toml", "runseal") {
+        section::State::Absent => (root.join(".runseal").is_dir(), None),
+        section::State::Unread(why) => (true, Some(why)),
+        section::State::Held(_, _) => (true, None),
+    };
     let preview = product::preview::Seat::new(root).read(snapshot.as_ref());
     let qualification = product::qualification::read(root, &preview, snapshot.as_ref());
     let windtun = snapshot
@@ -229,7 +233,7 @@ pub fn capture(
         block: limit("block"),
         path: limit("path"),
         grants,
-        laws: laws.exists(),
+        laws,
         unread,
         lanes: lanes.names(),
         release,
@@ -239,7 +243,8 @@ pub fn capture(
         bounds,
         components: root.join("packages/components").is_dir(),
         rust: root.join("Cargo.toml").exists(),
-        runseal: root.join("runseal.toml").is_file() || root.join(".runseal").is_dir(),
+        runseal,
+        seal,
         containers: lanes.containers(),
         edition: seat.edition(),
         binary: seat.binary(),

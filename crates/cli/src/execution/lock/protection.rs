@@ -75,12 +75,19 @@ impl Protection {
     }
 
     fn policy(root: &Path) -> Result<String, String> {
-        let (_, digest) = reference::file(root, "ectropy.toml")?;
-        let text = std::fs::read_to_string(root.join("ectropy.toml"))
-            .map_err(|error| error.to_string())?;
-        let document: toml::Table = text
-            .parse()
-            .map_err(|error| format!("invalid lock syntax policy: {error}"))?;
+        use crate::shape::section::{Origin, State};
+        let (source, document) = match crate::shape::section::read(root, "ectropy.toml", "ectropy")
+        {
+            State::Held(Origin::File, document) => ("ectropy.toml", document),
+            State::Held(Origin::Section, document) => ("plumb.toml", document),
+            State::Unread(error) => return Err(format!("invalid lock syntax policy: {error}")),
+            State::Absent => {
+                return Err(
+                    "lock protection requires explicit Ectropy lock grant/ban policy".into(),
+                );
+            }
+        };
+        let (_, digest) = reference::file(root, source)?;
         let mut found = false;
         for (name, paths) in ["grant", "ban"].into_iter().flat_map(|name| {
             document
@@ -121,5 +128,101 @@ impl Protection {
             );
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command;
+
+    fn commit(root: &Path) {
+        for args in [
+            &["add", "-A"][..],
+            &[
+                "-c",
+                "user.name=Test",
+                "-c",
+                "user.email=test@example.invalid",
+                "commit",
+                "-q",
+                "-m",
+                "snapshot",
+            ][..],
+        ] {
+            let status = Command::new("git")
+                .arg("-C")
+                .arg(root)
+                .args(args)
+                .status()
+                .unwrap();
+            assert!(status.success());
+        }
+    }
+
+    #[test]
+    fn policy() {
+        let root = tempfile::tempdir().unwrap();
+        let root = root.path();
+        assert!(
+            Command::new("git")
+                .arg("-C")
+                .arg(root)
+                .args(["init", "-q"])
+                .status()
+                .unwrap()
+                .success()
+        );
+        std::fs::create_dir(root.join("src")).unwrap();
+        std::fs::write(root.join("src/lib.rs"), "pub fn a() {}\n").unwrap();
+        commit(root);
+        assert!(Protection::policy(root).is_err());
+
+        std::fs::write(
+            root.join("plumb.toml"),
+            "[[ectropy.ban]]\nsyntax = \"lock\"\npaths = [\"src/**\"]\n",
+        )
+        .unwrap();
+        commit(root);
+        let first = Protection::policy(root).unwrap();
+        assert_eq!(first.len(), 64);
+
+        std::fs::write(
+            root.join("plumb.toml"),
+            "[[ectropy.ban]]\nsyntax = \"lock\"\npaths = [\"src/**\"]\n[ectropy.limit]\nblock = 4\n",
+        )
+        .unwrap();
+        commit(root);
+        let next = Protection::policy(root).unwrap();
+        assert_ne!(first, next);
+
+        std::fs::write(
+            root.join("plumb.toml"),
+            "[[ectropy.grant]]\nsyntax = \"lock\"\npaths = [\"src\"]\n",
+        )
+        .unwrap();
+        commit(root);
+        assert!(
+            Protection::policy(root)
+                .unwrap_err()
+                .contains("regular file")
+        );
+
+        std::fs::write(
+            root.join("ectropy.toml"),
+            "[[ban]]\nsyntax = \"lock\"\npaths = [\"src/**\"]\n",
+        )
+        .unwrap();
+        commit(root);
+        assert!(
+            Protection::policy(root)
+                .unwrap_err()
+                .contains("both ectropy.toml and [ectropy]")
+        );
+
+        std::fs::write(root.join("plumb.toml"), "[identity]\nns = \"probe\"\n").unwrap();
+        commit(root);
+        let legacy = Protection::policy(root).unwrap();
+        assert_eq!(legacy.len(), 64);
     }
 }
