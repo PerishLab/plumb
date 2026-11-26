@@ -146,3 +146,94 @@ fn node() {
         assert!(!refused.contains("private-override"));
     }
 }
+
+#[test]
+fn selection() {
+    for options in [&["-a"][..], &["--", "src/lib.rs"]] {
+        let (fixture, home) = super::hook::installed(None);
+        let root = fixture.path();
+        Repo::git(root, &["checkout", "-qb", "topic"]);
+        Repo::git(
+            root,
+            &[
+                "remote",
+                "add",
+                "origin",
+                "https://example.invalid/Example/probe",
+            ],
+        );
+        std::fs::write(root.join("src/lib.rs"), "pub fn answer() -> u8 { 43 }\n").expect("change");
+        std::fs::remove_file(root.join("tests/probe.rs")).expect("delete");
+        if options[0] == "--" {
+            Repo::git(root, &["add", "-u", "--", "tests/probe.rs"]);
+        }
+        let commit = super::hook::hooked(root, home.path())
+            .args(["commit", "-qm", "candidate"])
+            .args(options)
+            .output()
+            .expect("commit");
+        super::cache::success(&commit);
+        plumb::guard::commit(root, "HEAD").expect("committed proof");
+        let diff = Repo::git(
+            root,
+            &["diff-tree", "--no-commit-id", "--name-status", "-r", "HEAD"],
+        );
+        let expected = if options[0] == "-a" {
+            "M\tsrc/lib.rs\nD\ttests/probe.rs\n"
+        } else {
+            "M\tsrc/lib.rs\n"
+        };
+        assert_eq!(diff.stdout, expected.as_bytes());
+        if options[0] == "--" {
+            let staged = Repo::git(root, &["diff", "--cached", "--name-status"]);
+            assert_eq!(staged.stdout, b"D\ttests/probe.rs\n");
+        }
+    }
+}
+
+#[test]
+fn mismatch() {
+    let (fixture, home) = super::hook::installed(None);
+    let root = fixture.path();
+    Repo::git(root, &["checkout", "-qb", "topic"]);
+    Repo::git(
+        root,
+        &[
+            "remote",
+            "add",
+            "origin",
+            "https://example.invalid/Example/probe",
+        ],
+    );
+    let head = Repo::git(root, &["rev-parse", "HEAD"]);
+    let foreign = tempfile::tempdir().expect("foreign index directory");
+    let index = foreign.path().join("index");
+    std::fs::write(&index, "not this repository's index").expect("foreign index");
+    let preflight = super::hook::hooked(root, home.path())
+        .args(["hook", "run", "pre-commit"])
+        .env("GIT_INDEX_FILE", &index)
+        .output()
+        .expect("preflight");
+    super::cache::success(&preflight);
+
+    let hooks = tempfile::tempdir().expect("message hook directory");
+    std::fs::copy(
+        root.join(".git/hooks/commit-msg"),
+        hooks.path().join("commit-msg"),
+    )
+    .expect("copy installed message hook");
+    std::fs::write(root.join("src/lib.rs"), "pub fn answer() -> u8 { 43 }\n").expect("change");
+    let refused = super::hook::hooked(root, home.path())
+        .arg("-c")
+        .arg(format!("core.hooksPath={}", hooks.path().display()))
+        .args(["commit", "-aqm", "mismatched proof"])
+        .output()
+        .expect("commit");
+    assert!(!refused.status.success());
+    let error = String::from_utf8_lossy(&refused.stderr);
+    assert!(
+        error.contains("no matching pre-commit guard proof for commit tree"),
+        "{error}"
+    );
+    assert_eq!(Repo::git(root, &["rev-parse", "HEAD"]).stdout, head.stdout);
+}

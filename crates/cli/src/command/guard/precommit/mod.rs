@@ -55,8 +55,7 @@ pub fn run(input: Input) -> i32 {
     }
     if let Some(message) = &input.attach {
         return plain(
-            action::prove(&input.root)
-                .and_then(|_| plumb::guard::attach(&input.root, message))
+            plumb::guard::bind(&input.root, message, action::prove)
                 .map(|proof| format!("attached guard proof {} for {}", proof.digest, proof.tree)),
         );
     }
