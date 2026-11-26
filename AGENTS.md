@@ -57,6 +57,15 @@ omitted. The locations are fixed; only unit tests override them. A caller
 accepting several authorities picks the proof's own with `Authority::among`,
 then verifies.
 
+Guard forwards the resolved `PLUMB_CONFIGURATION` and Depot mark to
+`guard/ectropy` so Guard and Ectropy evaluate the exact same immutable Depot
+generation, and infers `guard/ectropy` on any `plumb.toml`-governed repository
+without requiring a standalone `ectropy.toml`. During bailiwick convergence,
+`doctor`, `guard`, `lock`, `dispatch` and `policy` dual-read `[ectropy]`,
+`[sidecar]` and `[runseal]` tables in `plumb.toml` alongside transitional
+standalone `<tool>.toml` files, refusing fail-closed when both exist in the
+same repository.
+
 Downstream repositories do not get scanned by plumb, and plumb does not know
 they exist. The CLI travels to them: install it, run it in a repository, read
 what it reports. Feedback comes home as issues on this repo. That is the hot
