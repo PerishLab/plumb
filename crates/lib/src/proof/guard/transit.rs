@@ -19,6 +19,10 @@ pub fn staged(root: &Path, tree: &str) -> Result<Descriptor, String> {
 pub fn attach(root: &Path, message: &Path) -> Result<Descriptor, String> {
     let tree = super::tree(root)?;
     let proof = staged(root, &tree)?;
+    write(message, proof)
+}
+
+pub(super) fn write(message: &Path, proof: Descriptor) -> Result<Descriptor, String> {
     let token = proof.encode()?;
     let mut text = std::fs::read_to_string(message)
         .map_err(|error| format!("cannot read commit message {}: {error}", message.display()))?;

@@ -16,7 +16,7 @@ mod tests;
 mod transit;
 
 pub use authority::{Authority, Expected};
-pub use index::tree;
+pub use index::{bind, tree};
 pub use runtime::Runtime;
 pub use store::Seat as Repository;
 pub use transit::{attach, stage, staged};

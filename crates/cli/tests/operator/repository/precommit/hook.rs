@@ -134,31 +134,9 @@ fn linked() {
         "pub fn answer() -> u8 {\n    43\n}\n",
     )
     .expect("change");
-    Repo::git(&worktree, &["add", "src/lib.rs"]);
-    let binary = Path::new(env!("CARGO_BIN_EXE_plumb"))
-        .parent()
-        .expect("bin");
-    let path = std::env::join_paths(std::iter::once(binary.to_path_buf()).chain(
-        std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()),
-    ))
-    .expect("path");
-    let commit = support::outside("git")
-        .arg("-C")
-        .arg(&worktree)
-        .args([
-            "-c",
-            "user.name=Plumb Test",
-            "-c",
-            "user.email=plumb@example.invalid",
-            "commit",
-            "-q",
-            "-m",
-            "candidate",
-        ])
-        .env("HOME", home.path())
-        .env("GIT_CONFIG_NOSYSTEM", "1")
-        .env("PATH", path)
-        .env("PLUMB_HOME", home.path())
+
+    let commit = hooked(&worktree, home.path())
+        .args(["commit", "-q", "-a", "-m", "candidate"])
         .output()
         .expect("commit");
     assert!(
@@ -191,29 +169,9 @@ fn guarded() {
     assert!(install.status.success());
     std::fs::write(root.join("src/lib.rs"), "pub fn answer() -> u8 { 43 }\n").expect("change");
     Repo::git(root, &["add", "src/lib.rs"]);
-    let binary = Path::new(env!("CARGO_BIN_EXE_plumb"))
-        .parent()
-        .expect("bin");
-    let path = std::env::join_paths(std::iter::once(binary.to_path_buf()).chain(
-        std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()),
-    ))
-    .expect("path");
-    let commit = support::outside("git")
-        .arg("-C")
-        .arg(root)
-        .args([
-            "-c",
-            "user.name=Plumb Test",
-            "-c",
-            "user.email=plumb@example.invalid",
-            "commit",
-            "-m",
-            "direct main change",
-        ])
-        .env("HOME", home.path())
-        .env("GIT_CONFIG_NOSYSTEM", "1")
-        .env("PATH", path)
-        .env("PLUMB_HOME", home.path())
+
+    let commit = hooked(root, home.path())
+        .args(["commit", "-m", "direct main change"])
         .output()
         .expect("commit");
     assert!(!commit.status.success());
@@ -225,7 +183,7 @@ fn guarded() {
     );
 }
 
-fn installed(hooks: Option<&str>) -> (tempfile::TempDir, tempfile::TempDir) {
+pub(super) fn installed(hooks: Option<&str>) -> (tempfile::TempDir, tempfile::TempDir) {
     let fixture = tempfile::tempdir().expect("fixture");
     seed(fixture.path());
     if let Some(hooks) = hooks {
@@ -288,4 +246,29 @@ fn tracked() {
         "{held}"
     );
     assert!(held.contains("keep Git hooks untracked"), "{held}");
+}
+
+pub(super) fn hooked(root: &Path, home: &Path) -> Command {
+    let binary = Path::new(env!("CARGO_BIN_EXE_plumb"))
+        .parent()
+        .expect("bin");
+    let path = std::env::join_paths(std::iter::once(binary.to_path_buf()).chain(
+        std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()),
+    ))
+    .expect("path");
+    let mut command = support::outside("git");
+    command
+        .arg("-C")
+        .arg(root)
+        .args([
+            "-c",
+            "user.name=Plumb Test",
+            "-c",
+            "user.email=plumb@example.invalid",
+        ])
+        .env("HOME", home)
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("PATH", path)
+        .env("PLUMB_HOME", home);
+    command
 }
