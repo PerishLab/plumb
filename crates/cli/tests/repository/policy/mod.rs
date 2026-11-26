@@ -294,5 +294,6 @@ mod js;
 mod loader;
 mod runseal;
 mod seat;
+mod section;
 mod tools;
 mod web;

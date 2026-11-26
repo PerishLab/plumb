@@ -2,7 +2,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use plumb::rule::Probe;
 
+mod infer;
 mod prerequisite;
+pub use infer::{governed, include};
 use prerequisite::{Tool, declarations};
 
 pub struct Key {

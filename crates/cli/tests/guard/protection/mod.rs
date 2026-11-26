@@ -111,3 +111,39 @@ fn evidence() {
     fixture.git(&["add", "."]);
     assert_eq!(success(fixture.run()), first);
 }
+
+#[test]
+fn section() {
+    let fixture = Fixture::new();
+    fixture.policy(true, true);
+    let manifest = std::fs::read_to_string(fixture.root.path().join("plumb.toml")).unwrap();
+    let merged = format!("{manifest}\n[[ectropy.ban]]\nsyntax = \"lock\"\npaths = [\"src/**\"]\n");
+    fixture.put("plumb.toml", &merged);
+    fixture.git(&["add", "."]);
+    rejected(fixture.run(), "both ectropy.toml and [ectropy]");
+
+    std::fs::remove_file(fixture.root.path().join("ectropy.toml")).unwrap();
+    fixture.put(
+        "plumb.toml",
+        &merged.replace("ectropy=[\"ectropy.toml\"]", "ectropy=[\"src\"]"),
+    );
+    fixture.git(&["add", "-A"]);
+    let first = success(fixture.run());
+    assert_eq!(action(&first, "guard/lock")["name"], "guard/lock");
+    assert_eq!(action(&first, "guard/ectropy")["name"], "guard/ectropy");
+
+    fixture.put(
+        "plumb.toml",
+        &format!(
+            "{}\n[ectropy.limit]\nblock = 4\n",
+            merged.replace("ectropy=[\"ectropy.toml\"]", "ectropy=[\"src\"]")
+        ),
+    );
+    fixture.git(&["add", "plumb.toml"]);
+    let next = success(fixture.run());
+    assert_ne!(
+        action(&first, "guard/ectropy"),
+        action(&next, "guard/ectropy")
+    );
+    assert_ne!(action(&first, "guard/lock"), action(&next, "guard/lock"));
+}
