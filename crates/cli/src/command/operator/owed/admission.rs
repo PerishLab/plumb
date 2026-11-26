@@ -209,3 +209,50 @@ fn spent() {
             .contains("receipt source differs")
     );
 }
+
+#[test]
+fn minor() {
+    let mut p = Pilot::with("v0.28.0", "v0.27.0", "v0.29.0");
+    p.inspect("v0.29.0", Stage::Open(SOURCE)).unwrap();
+    p.line();
+    p.inspect("v0.29.0-rc.1", Stage::Stamp(SOURCE, "v0.29.0-rc.1"))
+        .unwrap();
+    p.marked("v0.29.0-rc.1");
+    p.inspect("v0.29.0-rc.1", Stage::Dispatch(SOURCE)).unwrap();
+    p.shipped();
+    p.inspect(
+        "v0.29.0",
+        Stage::Stamp(SOURCE, "v0.29.0\n\npromotes v0.29.0-rc.1"),
+    )
+    .unwrap();
+    p.marked("v0.29.0");
+    p.inspect("v0.29.0", Stage::Dispatch(SOURCE)).unwrap();
+
+    for (old, prior, next) in [
+        ("v0.28.0", "v0.27.0", "v0.28.1"),
+        ("v0.28.3", "v0.28.2", "v0.29.0"),
+    ] {
+        Pilot::with(old, prior, next)
+            .inspect(next, Stage::Open(SOURCE))
+            .unwrap();
+    }
+    for (old, prior, next) in [
+        ("v0.28.0", "v0.27.0", "v0.29.1"),
+        ("v0.28.0", "v0.27.0", "v0.30.0"),
+        ("v0.28.0", "v0.27.0", "v1.0.0"),
+        ("v1.2.3", "v1.2.2", "v1.3.0"),
+    ] {
+        assert!(
+            Pilot::with(old, prior, next)
+                .inspect(next, Stage::Open(SOURCE))
+                .is_err(),
+            "{old} -> {next}"
+        );
+    }
+    for rc in ["v0.29.0-rc.2", "v0.29.0-beta.1"] {
+        let mut p = Pilot::with("v0.28.0", "v0.27.0", "v0.29.0");
+        p.record["successor"]["rc"] = json!(rc);
+        p.approve();
+        assert!(p.inspect("v0.29.0", Stage::Open(SOURCE)).is_err(), "{rc}");
+    }
+}

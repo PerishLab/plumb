@@ -66,6 +66,14 @@ pub(super) fn stable(marker: &str) -> Result<Version> {
     Ok(parsed)
 }
 
+fn allowed(before: &Version, after: &Version) -> bool {
+    let patch = (before.major, before.minor) == (after.major, after.minor)
+        && before.patch.checked_add(1) == Some(after.patch);
+    let minor = (before.major, after.major, after.patch) == (0, 0, 0)
+        && before.minor.checked_add(1) == Some(after.minor);
+    patch || minor
+}
+
 impl Decision {
     pub fn check(&self, repo: &str, id: u64) -> Result<()> {
         let old = &self.predecessor;
@@ -79,10 +87,8 @@ impl Decision {
         let before = stable(&old.marker)?;
         let after = stable(&next.marker)?;
         require(
-            (before.major, before.minor) == (after.major, after.minor)
-                && before.patch.checked_add(1) == Some(after.patch)
-                && next.rc == format!("{}-rc.1", next.marker),
-            "expected the immediate higher patch and its first RC",
+            allowed(&before, &after) && next.rc == format!("{}-rc.1", next.marker),
+            "expected the immediate higher patch (or immediate 0.x minor) and its first RC",
         )?;
         require(
             [&old.tag, &old.commit, &old.tree, &next.commit, &next.tree]

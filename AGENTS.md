@@ -409,7 +409,8 @@ PerishLab/plumb#509.
   stamp` and `ship dispatch` normally refuse a later version while one is owed.
   An explicit `--successor GIT_BLOB` on open, stamp and dispatch authenticates
   a decision from the protected main of PerishLab/.github. It admits one exact
-  patch and first RC while the original distribution remains owed. All other
+  immediate patch (or immediate `0.(minor+1).0` minor for `0.x` predecessors)
+  and first RC while the original distribution remains owed. All other
   applicable obligations must be settled. Source, native refs, old receipt and
   stable channel must agree with the decision. Stable promotion verifies the
   completed exact RC and a completed successor exhausts the decision.
