@@ -48,7 +48,7 @@ pub fn abandon() {
     for (source, root) in live().drain(..) {
         if owner::Owner::retained(&root)
             && !owner::Owner::read(&root.with_extension("lock"))
-                .is_ok_and(|owner| owner.owns(&root))
+                .is_ok_and(|owner| owner.available(&root).is_ok())
         {
             continue;
         }

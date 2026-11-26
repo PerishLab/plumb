@@ -10,6 +10,80 @@ pub(super) fn seat(home: &Path) -> PathBuf {
 }
 
 #[test]
+fn recovery() {
+    let fixture = cache::fixture();
+    let root = fixture.path();
+    let home = support::home();
+    cache::success(&cache::run(root, home.path()));
+    let source = seat(home.path());
+    let lock = Repo::git(
+        &source,
+        &[
+            "rev-parse",
+            "--path-format=absolute",
+            "--git-path",
+            "index.lock",
+        ],
+    );
+    let lock = PathBuf::from(String::from_utf8(lock.stdout).unwrap().trim());
+    let index = root.join(".git/index");
+    let staged = std::fs::read(&index).unwrap();
+    let record = std::fs::File::open(source.with_extension("lock")).unwrap();
+    let idle = std::time::SystemTime::now() - std::time::Duration::from_secs(7200);
+    record.set_modified(idle).unwrap();
+    let idle = record.metadata().unwrap().modified().unwrap();
+
+    std::fs::write(&lock, "").unwrap();
+    let checkout = plumb::config::detached("git")
+        .arg("-C")
+        .arg(&source)
+        .args(["checkout", "--detach", "HEAD"])
+        .output()
+        .unwrap();
+    assert!(!checkout.status.success());
+    assert!(String::from_utf8_lossy(&checkout.stderr).contains("index.lock"));
+    for _ in 0..2 {
+        let refused = cache::run(root, home.path());
+        assert!(!refused.status.success());
+        let error = String::from_utf8_lossy(&refused.stderr);
+        assert!(
+            error.contains("plumb cookbook guard.source.index"),
+            "{error}"
+        );
+        assert!(error.contains(lock.to_str().unwrap()), "{error}");
+    }
+    plumb::integration::staging::reap(&home.path().join("tmp"));
+    assert_eq!(std::fs::read(&lock).unwrap(), b"");
+    assert_eq!(record.metadata().unwrap().modified().unwrap(), idle);
+    assert_eq!(std::fs::read(&index).unwrap(), staged);
+    assert!(
+        Repo::git(&source, &["--no-optional-locks", "status", "--porcelain"])
+            .stdout
+            .is_empty()
+    );
+
+    std::fs::rename(&lock, home.path().join("recovered-index")).unwrap();
+    let recovered = cache::run(root, home.path());
+    cache::success(&recovered);
+    assert!(!String::from_utf8_lossy(&recovered.stderr).contains("guard guard/rust"));
+    assert_eq!(seat(home.path()), source);
+    assert_eq!(std::fs::read(&index).unwrap(), staged);
+
+    let message = fixture.path().join("message");
+    std::fs::write(&message, "candidate\n").unwrap();
+    let attached = support::plumb()
+        .args(["guard", ".", "--attach"])
+        .arg(&message)
+        .current_dir(root)
+        .env("PLUMB_HOME", home.path())
+        .output()
+        .unwrap();
+    cache::success(&attached);
+    Repo::git(root, &["commit", "-q", "-F", message.to_str().unwrap()]);
+    plumb::guard::commit(root, "HEAD").expect("committed proof");
+}
+
+#[test]
 fn fresh() {
     let fixture = cache::fixture();
     let root = fixture.path();

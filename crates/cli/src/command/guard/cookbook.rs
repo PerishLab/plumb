@@ -5,6 +5,7 @@ const SOURCES: &[&str] = &[
     plumb::seat::resource!("cookbook/env.toolchain-domain.txt"),
     plumb::seat::resource!("cookbook/follow.foreign-writer.txt"),
     plumb::seat::resource!("cookbook/guard.integration-branch.txt"),
+    plumb::seat::resource!("cookbook/guard.source.index.txt"),
     plumb::seat::resource!("cookbook/structure.known-directory.txt"),
     plumb::seat::resource!("cookbook/structure.known-file.txt"),
     plumb::seat::resource!("cookbook/structure.seat-affirmed.txt"),
