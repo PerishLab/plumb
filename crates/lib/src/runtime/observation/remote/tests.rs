@@ -24,8 +24,29 @@ fn verbs() {
 #[cfg(all(feature = "depot", feature = "vendor"))]
 #[test]
 fn exchanges() {
-    enabled();
-    disabled();
+    const CHILD: &str = "PLUMB_TEST_OBSERVATION_EXCHANGES";
+    if std::env::var_os(CHILD).is_some() {
+        enabled();
+        disabled();
+        println!("exchange fixture verified");
+        return;
+    }
+
+    let output = Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "runtime::observation::remote::tests::exchanges",
+            "--nocapture",
+        ])
+        .env(CHILD, "1")
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success() && stdout.contains("exchange fixture verified"),
+        "{stdout}\n{stderr}"
+    );
 }
 
 #[cfg(all(feature = "depot", feature = "vendor"))]
