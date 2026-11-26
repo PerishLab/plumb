@@ -44,7 +44,7 @@ fn sparse() {
     govern(&root);
     std::fs::write(
         root.join("plumb.toml"),
-        "[identity]\nns = \"probe\"\n\n[runseal]\n\n[[ectropy.boundary]]\npaths = [\"apps/web/vite.config.ts\"]\nallow = [\"path\"]\nnote = \"vite config\"\n\n[[ectropy.grant]]\nsyntax = \"environment\"\npaths = [\"apps/web/vite.config.ts\"]\n\n[[ectropy.grant]]\nsyntax = \"lock\"\npaths = [\"crates/cli/src/lib.rs\"]\n\n[[ectropy.vocabulary.term]]\nname = \"vite_config\"\ndescription = \"fixture\"\n",
+        "[identity]\nns = \"probe\"\n\n[runseal]\n\n[[ectropy.boundary]]\npaths = [\"apps/web/vite.config.ts\"]\nallow = [\"path\"]\nnote = \"vite config\"\n\n[[ectropy.grant]]\nsyntax = \"environment\"\npaths = [\"apps/web/vite.config.ts\"]\n\n[[ectropy.grant]]\nsyntax = \"lock\"\npaths = [\"crates/cli/src/lib.rs\"]\n",
     )
     .expect("manifest");
 
@@ -73,7 +73,7 @@ fn reconcile() {
     govern(&root);
     std::fs::write(
         root.join("plumb.toml"),
-        "[identity]\nns = \"probe\"\n\n[runseal]\n\n[ectropy.scan]\ninclude = [\"old\"]\n\n[ectropy.module]\nroots = [\"old\"]\n\n[ectropy.limit]\nblock = 99\n\n[ectropy.comment]\nallow = true\n\n[ectropy.word]\nsingle = false\n\n[[ectropy.grant]]\nsyntax = \"test\"\npaths = [\"extra/**\"]\n\n[[ectropy.grant]]\nsyntax = \"environment\"\npaths = [\"apps/web/vite.config.ts\"]\n\n[[ectropy.grant]]\nsyntax = \"environment\"\npaths = [\"apps/web/vite.config.ts\", \"apps/web/extra.ts\"]\n\n[[ectropy.grant]]\nsyntax = \"lock\"\npaths = [\"apps/web/vite.config.ts\"]\n\n[[ectropy.ban]]\nsyntax = \"style\"\npaths = [\"apps/web/src/lib/components/**\", \"custom/**\"]\n\n[[ectropy.boundary]]\npaths = [\"apps/web/vite.config.ts\"]\nallow = [\"path\"]\nnote = \"vite config\"\n\n[[ectropy.vocabulary.term]]\nname = \"vite_config\"\ndescription = \"fixture\"\n",
+        "[identity]\nns = \"probe\"\n\n[runseal]\n\n[ectropy.scan]\ninclude = [\"old\"]\n\n[ectropy.module]\nroots = [\"old\"]\n\n[ectropy.limit]\nblock = 99\n\n[ectropy.comment]\nallow = true\n\n[[ectropy.grant]]\nsyntax = \"test\"\npaths = [\"extra/**\"]\n\n[[ectropy.grant]]\nsyntax = \"environment\"\npaths = [\"apps/web/vite.config.ts\"]\n\n[[ectropy.grant]]\nsyntax = \"environment\"\npaths = [\"apps/web/vite.config.ts\", \"apps/web/extra.ts\"]\n\n[[ectropy.grant]]\nsyntax = \"lock\"\npaths = [\"apps/web/vite.config.ts\"]\n\n[[ectropy.ban]]\nsyntax = \"style\"\npaths = [\"apps/web/src/lib/components/**\", \"custom/**\"]\n\n[[ectropy.boundary]]\npaths = [\"apps/web/vite.config.ts\"]\nallow = [\"path\"]\nnote = \"vite config\"\n",
     )
     .expect("manifest");
 
@@ -86,7 +86,6 @@ fn reconcile() {
         "[ectropy.module]",
         "[ectropy.limit]",
         "[ectropy.comment]",
-        "[ectropy.word]",
         "syntax = \"test\"",
         "apps/web/src/lib/components/**",
         "skills/**/*.md",
@@ -102,7 +101,6 @@ fn reconcile() {
         "syntax = \"lock\"",
         "custom/**",
         "allow = [\"path\"]",
-        "name = \"vite_config\"",
     ] {
         assert!(text.contains(kept), "should keep {kept}:\n{text}");
     }
@@ -198,7 +196,7 @@ fn contiguous() {
     std::fs::create_dir_all(root.join("apps/web/src/lib/components")).expect("components");
     std::fs::create_dir_all(root.join("skills/plumb")).expect("skills");
     govern(&root);
-    let kept = "# top comment\n[identity]\nns = \"probe\"\n\n[ectropy.scan]\ninclude = [\"old\"]\n\n[[ectropy.vocabulary.term]]\nname = \"vite_config\"\ndescription = \"fixture\"\n\n# release comment\n[release]\nauthority = \"https://example.invalid\"\n";
+    let kept = "# top comment\n[identity]\nns = \"probe\"\n\n[ectropy.scan]\ninclude = [\"old\"]\n\n[[ectropy.grant]]\nsyntax = \"lock\"\npaths = [\"crates/cli/src/lib.rs\"]\n\n# release comment\n[release]\nauthority = \"https://example.invalid\"\n";
     std::fs::write(root.join("plumb.toml"), kept).expect("manifest");
     assert!(policy(&root, true).status.success());
     let text = std::fs::read_to_string(root.join("plumb.toml")).expect("patched");
@@ -206,7 +204,7 @@ fn contiguous() {
         "# top comment",
         "# release comment",
         "ns = \"probe\"",
-        "name = \"vite_config\"",
+        "syntax = \"lock\"",
     ] {
         assert!(text.contains(held), "{text}");
     }

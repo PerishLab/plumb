@@ -70,7 +70,7 @@ impl Policy<'_> {
 
     fn overlay(&self, mut doc: toml::Table) -> toml::Table {
         let want = Expected::read(self.0);
-        for owned in ["scan", "module", "limit", "comment", "word"] {
+        for owned in ["scan", "module", "limit", "comment"] {
             doc.remove(owned);
         }
         prune(
