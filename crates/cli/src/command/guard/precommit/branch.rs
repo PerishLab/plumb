@@ -106,7 +106,7 @@ impl Refresh<'_> {
 
     fn execute(self) -> Result<Outcome, String> {
         let before = Snapshot::read(self.0)?;
-        let proof = super::action::prove(self.0)?;
+        let proof = super::action::prove(self.0, false)?;
         let current = Snapshot::read(self.0)?;
         if current != before {
             return Err(format!(

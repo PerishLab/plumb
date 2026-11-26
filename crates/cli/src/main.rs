@@ -105,6 +105,8 @@ pub(crate) enum Command {
         attach: Option<PathBuf>,
         #[arg(long, conflicts_with_all = ["base", "head", "write", "attach"])]
         refresh: bool,
+        #[arg(long = "reuse-only", conflicts_with_all = ["base", "head", "write", "attach", "refresh"])]
+        reuse: bool,
         #[arg(long)]
         json: bool,
         #[arg(long, value_name = "NEW_FILE")]

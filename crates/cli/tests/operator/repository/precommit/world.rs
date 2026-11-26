@@ -119,20 +119,23 @@ fn unread() {
             std::fs::write(root.join("NOTES"), "unrelated\n").expect("unrelated");
             Repo::git(root, &["add", "NOTES"]);
         }
-        let mut guard = super::support::plumb();
-        guard
-            .args(["guard", ".", "--json"])
-            .current_dir(root)
-            .env("PLUMB_HOME", home.path())
-            .env("PATH", &path);
+        let guard = || {
+            let mut command = support::plumb();
+            command
+                .args(["guard", ".", "--json"])
+                .current_dir(root)
+                .env("PLUMB_HOME", home.path())
+                .env("PATH", &path);
+            command
+        };
         std::fs::write(&rustc, "#!/bin/sh\nexit 71\n").expect("unread tool");
-        let output = guard.output().expect("guard");
+        let output = guard().output().expect("guard");
         assert!(!output.status.success(), "unread tool cannot reuse proof");
         assert!(String::from_utf8_lossy(&output.stderr).contains("rustc --version failed"));
         assert!(!String::from_utf8_lossy(&output.stderr).contains("guard guard/rust"));
         std::fs::write(&rustc, "#!/bin/sh\nprintf '%s\\n' 'rustc changed-world'\n")
             .expect("changed tool");
-        let output = guard.output().expect("guard");
+        let output = guard().output().expect("guard");
         assert!(
             !output.status.success(),
             "changed broken tool cannot reuse proof"
@@ -146,7 +149,15 @@ fn unread() {
             ),
         )
         .expect("same version, different tool");
-        let output = guard.output().expect("guard");
+        if !changed {
+            let output = guard().arg("--reuse-only").output().expect("guard reuse");
+            assert_eq!(output.status.code(), Some(1));
+            assert!(output.stdout.is_empty());
+            let error = String::from_utf8_lossy(&output.stderr);
+            assert!(error.contains("stored proof no longer matches"), "{error}");
+            assert!(!error.contains("guard guard/rust"), "{error}");
+        }
+        let output = guard().output().expect("guard");
         assert!(
             !output.status.success(),
             "same version cannot hide changed tool"
