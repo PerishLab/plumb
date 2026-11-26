@@ -11,9 +11,20 @@ pub(crate) enum State {
     Held(Origin, toml::Table),
 }
 
+pub(crate) fn present(path: &Path) -> Result<bool, String> {
+    match std::fs::symlink_metadata(path) {
+        Ok(_) => Ok(true),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
 pub(crate) fn read(root: &Path, file: &str, name: &str) -> State {
     let path = root.join(file);
-    let exists = path.symlink_metadata().is_ok();
+    let exists = match present(&path) {
+        Ok(exists) => exists,
+        Err(error) => return State::Unread(format!("cannot read {file}: {}", line(error))),
+    };
     let held = extract(&root.join("plumb.toml"), name);
     match (exists, held) {
         (true, Ok(Some(_))) => State::Unread(format!(
@@ -30,11 +41,10 @@ pub(crate) fn read(root: &Path, file: &str, name: &str) -> State {
 }
 
 fn extract(path: &Path, name: &str) -> Result<Option<toml::Table>, String> {
-    let text = match std::fs::read_to_string(path) {
-        Ok(text) => text,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => return Err(error.to_string()),
-    };
+    if !present(path)? {
+        return Ok(None);
+    }
+    let text = std::fs::read_to_string(path).map_err(|error| error.to_string())?;
     let mut doc = text
         .parse::<toml::Table>()
         .map_err(|error| error.to_string())?;
@@ -139,6 +149,31 @@ mod tests {
                 assert!(why.contains("cannot read [ectropy] in plumb.toml"), "{why}")
             }
             _ => panic!("expected non-table refusal"),
+        }
+        std::fs::remove_file(root.path().join("plumb.toml")).unwrap();
+        std::fs::create_dir(root.path().join("plumb.toml")).unwrap();
+        match read(root.path(), "ectropy.toml", "ectropy") {
+            State::Unread(why) => {
+                assert!(why.contains("cannot read [ectropy] in plumb.toml"), "{why}")
+            }
+            _ => panic!("expected unreadable plumb.toml refusal"),
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn dangling() {
+        let root = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(
+            root.path().join("missing.toml"),
+            root.path().join("plumb.toml"),
+        )
+        .unwrap();
+        match read(root.path(), "ectropy.toml", "ectropy") {
+            State::Unread(why) => {
+                assert!(why.contains("cannot read [ectropy] in plumb.toml"), "{why}")
+            }
+            _ => panic!("expected dangling symlink refusal"),
         }
     }
 }

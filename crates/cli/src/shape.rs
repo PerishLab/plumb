@@ -178,14 +178,11 @@ pub fn capture(
     snapshot: &Result<plumb::snapshot::Snapshot, plumb::snapshot::Refusal>,
 ) -> Shape {
     let seat = Root(root);
-    let (laws, unread, doc) = match section::read(root, "ectropy.toml", "ectropy") {
-        section::State::Absent => (false, None, None),
-        section::State::Unread(why) => (true, Some(why), None),
-        section::State::Held(_, table) => (true, None, Some(toml::Value::Table(table))),
-    };
-    let policy = doc
-        .as_ref()
-        .map(|doc| policy::Evidence::read(root, doc.clone()));
+    let resolved = policy::resolve(root);
+    let laws = resolved.laws;
+    let unread = resolved.unread;
+    let doc = resolved.document;
+    let policy = resolved.policy;
     let limit = |key: &str| {
         doc.as_ref()
             .and_then(|value| value.get("limit"))

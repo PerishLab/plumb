@@ -70,7 +70,8 @@ fn clean() {
 #[test]
 fn failing() {
     let fixture = crate::fixture();
-    std::fs::write(fixture.path().join("runseal.toml"), "").expect("create governed fixture");
+    std::fs::remove_file(fixture.path().join("plumb.toml")).expect("remove governance");
+    std::fs::write(fixture.path().join("runseal.toml"), "").expect("create runseal fixture");
     let output = run(fixture.path());
     assert!(!output.status.success());
     let report: Value = serde_json::from_slice(&output.stdout).expect("doctor json");
@@ -96,6 +97,30 @@ fn failing() {
             .iter()
             .any(|finding| finding["code"] == "structure.ectropy-policy-present")
     );
+}
+
+#[test]
+fn drifted() {
+    let fixture = crate::fixture();
+    let path = fixture.path().join("plumb.toml");
+    let base = std::fs::read_to_string(&path).expect("read governance");
+    std::fs::write(&path, format!("{base}\n[ectropy.limit]\nblock = 99\n"))
+        .expect("write drifted overlay");
+    let output = run(fixture.path());
+    assert!(!output.status.success());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("doctor json");
+    assert_eq!(report["ok"], false);
+    assert_eq!(report["clean"], false);
+    assert_eq!(report["summary"]["blind"], 0);
+    assert_eq!(report["summary"]["out_of_true"], 1);
+    let findings = report["findings"].as_array().expect("findings");
+    assert!(findings.iter().any(|finding| {
+        finding["code"] == "structure.ectropy-policy"
+            && finding["grade"] == "out of true"
+            && finding["evidence"]
+                .as_str()
+                .is_some_and(|text| text.contains("ectropy limit block must be 4"))
+    }));
 }
 
 #[test]
