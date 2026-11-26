@@ -114,6 +114,80 @@ fn retained() {
 }
 
 #[test]
+fn reuse() {
+    let fixture = fixture();
+    let root = fixture.path();
+    let home = support::home();
+    let reuse = || {
+        support::plumb()
+            .args(["guard", ".", "--json", "--reuse-only"])
+            .current_dir(root)
+            .env("PLUMB_HOME", home.path())
+            .output()
+            .expect("guard reuse")
+    };
+    let refuse = |output: Output| {
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains("cannot reuse staged guard proof"), "{error}");
+        assert!(!error.contains("guard guard/rust"), "{error}");
+    };
+
+    refuse(reuse());
+    assert!(!home.path().join("cache/guard/cargo").exists());
+    let first = run(root, home.path());
+    success(&first);
+    let reused = reuse();
+    success(&reused);
+    assert_eq!(first.stdout, reused.stdout);
+    assert!(!String::from_utf8_lossy(&reused.stderr).contains("guard guard/rust"));
+
+    std::fs::write(root.join("notes.txt"), "unrelated change").expect("unrelated");
+    Repo::git(root, &["add", "notes.txt"]);
+    refuse(reuse());
+    let next = run(root, home.path());
+    success(&next);
+    assert_ne!(first.stdout, next.stdout);
+    let proof: plumb::guard::Descriptor = serde_json::from_slice(&next.stdout).expect("proof");
+    let file = home
+        .path()
+        .join("proof/guard")
+        .join(plumb::depot::sha(proof.repository.as_bytes()))
+        .join(format!("{}.json", proof.tree));
+    std::fs::write(&file, b"{").expect("corrupt proof");
+    refuse(reuse());
+    assert_eq!(std::fs::read(file).expect("preserved proof"), b"{");
+
+    for arguments in [
+        &["--refresh"][..],
+        &["--base", "a", "--head", "b", "--write", "."][..],
+    ] {
+        let output = support::plumb()
+            .args(["guard", ".", "--reuse-only"])
+            .args(arguments)
+            .current_dir(root)
+            .env("PLUMB_HOME", home.path())
+            .output()
+            .expect("guard mode conflict");
+        assert_eq!(output.status.code(), Some(2));
+    }
+    let output = support::plumb()
+        .args(["guard", ".", "--reuse-only"])
+        .current_dir(root)
+        .env("PLUMB_HOME", home.path())
+        .env("PLUMB_GUARD_STRENGTH", "full")
+        .env("PLUMB_GUARD_BOUNDARY", "head")
+        .output()
+        .expect("guard runtime conflict");
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("runtime Guard selectors cannot be combined")
+    );
+}
+
+#[test]
 fn isolated() {
     let first = fixture();
     let second = fixture();

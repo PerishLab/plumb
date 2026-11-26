@@ -20,32 +20,44 @@ pub(super) struct Catalog<'a> {
     pub product: &'a str,
 }
 
-pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
-    prepare(root, false)
+pub(super) fn prove(root: &Path, reuse: bool) -> Result<Descriptor, String> {
+    prepare(root, false, reuse)
 }
 
 pub(super) fn resolved(root: &Path) -> Result<Descriptor, String> {
-    prepare(root, true)
+    prepare(root, true, false)
 }
 
 #[locus::trace(with = crate::observation::view())]
-fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
+fn prepare(root: &Path, latest: bool, reuse: bool) -> Result<Descriptor, String> {
     let _held = crate::execution::signal::Hold::new()?;
-    crate::diagnostic::measure("guard.prove", || Proof { root, latest }.run())
+    crate::diagnostic::measure("guard.prove", || {
+        Proof {
+            root,
+            latest,
+            reuse,
+        }
+        .run()
+    })
 }
 
 struct Proof<'a> {
     root: &'a Path,
     latest: bool,
+    reuse: bool,
 }
 
 impl Proof<'_> {
     fn run(&self) -> Result<Descriptor, String> {
-        let Self { root, latest } = *self;
+        let Self {
+            root,
+            latest,
+            reuse,
+        } = *self;
         let tree = plumb::guard::tree(root)?;
         crate::diagnostic::event("staged", || serde_json::json!({"tree":tree}));
         let seat = super::cargo::seat(root, &tree)?;
-        if plumb::guard::staged(root, &tree).is_ok() {
+        let prepare = || {
             let index = crate::diagnostic::measure("source.prepare", || Index::new(root, &tree))?;
             let prepared = crate::diagnostic::measure("guard.prepare", || {
                 Prepared::new(
@@ -56,25 +68,28 @@ impl Proof<'_> {
                 )
             })?;
             record(&prepared);
+            Ok::<_, String>((index, prepared))
+        };
+        let staged = plumb::guard::staged(root, &tree);
+        if staged.is_ok() {
+            let (_index, prepared) = prepare()?;
             if let Some(proof) = prepared.reused(root, &tree) {
+                if reuse && plumb::guard::tree(root)? != tree {
+                    return Err("staged tree changed during proof validation".into());
+                }
                 crate::diagnostic::event("guard.reused", || serde_json::json!({"proof":proof}));
                 return Ok(proof);
             }
+        }
+        if reuse {
+            staged?;
+            return Err("stored proof no longer matches the current staged Guard world".into());
         }
         let lease = seat
             .is_some()
             .then(|| super::cargo::Lease::new(root))
             .transpose()?;
-        let index = crate::diagnostic::measure("source.prepare", || Index::new(root, &tree))?;
-        let prepared = crate::diagnostic::measure("guard.prepare", || {
-            Prepared::new(
-                root,
-                &index,
-                super::Selection::guard(latest),
-                seat.as_deref(),
-            )
-        })?;
-        record(&prepared);
+        let (index, prepared) = prepare()?;
         if let Some(proof) = prepared.reused(root, &tree) {
             crate::diagnostic::event("guard.reused", || serde_json::json!({"proof":proof}));
             return Ok(proof);

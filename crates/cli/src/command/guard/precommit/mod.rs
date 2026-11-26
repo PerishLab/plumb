@@ -27,6 +27,7 @@ pub struct Input {
     pub write: Vec<String>,
     pub attach: Option<PathBuf>,
     pub refresh: bool,
+    pub reuse: bool,
     pub json: bool,
 }
 
@@ -44,10 +45,10 @@ pub fn run(input: Input) -> i32 {
                 input.json,
             );
         }
-        if input.attach.is_some() || input.refresh {
+        if input.attach.is_some() || input.refresh || input.reuse {
             return super::runtime::refused(
                 &input.root,
-                "runtime Guard selectors cannot be combined with --attach or --refresh",
+                "runtime Guard selectors cannot be combined with --attach, --refresh, or --reuse-only",
                 input.json,
             );
         }
@@ -55,7 +56,7 @@ pub fn run(input: Input) -> i32 {
     }
     if let Some(message) = &input.attach {
         return plain(
-            action::prove(&input.root)
+            action::prove(&input.root, false)
                 .and_then(|_| plumb::guard::attach(&input.root, message))
                 .map(|proof| format!("attached guard proof {} for {}", proof.digest, proof.tree)),
         );
@@ -65,7 +66,7 @@ pub fn run(input: Input) -> i32 {
     }
     match (&input.base, &input.head) {
         (Some(base), Some(head)) => boundary(&input, base, head),
-        (None, None) if input.write.is_empty() => Staged(&input.root).run(input.json),
+        (None, None) if input.write.is_empty() => Staged(&input.root).run(input.json, input.reuse),
         _ => {
             eprintln!("plumb guard: --base, --head, and --write form one task boundary");
             1
@@ -185,12 +186,12 @@ fn boundary(input: &Input, base: &str, head: &str) -> i32 {
 struct Staged<'a>(&'a Path);
 
 impl Staged<'_> {
-    fn run(&self, json: bool) -> i32 {
+    fn run(&self, json: bool, reuse: bool) -> i32 {
         if let Err(finding) = branch::inspect(self.0) {
             finding.render(json);
             return 1;
         }
-        match action::prove(self.0) {
+        match action::prove(self.0, reuse) {
             Ok(proof) => {
                 if json {
                     println!(
@@ -217,7 +218,12 @@ impl Staged<'_> {
                 0
             }
             Err(error) => {
-                eprintln!("plumb guard: {error}");
+                let context = if reuse {
+                    "cannot reuse staged guard proof: "
+                } else {
+                    ""
+                };
+                eprintln!("plumb guard: {context}{error}");
                 1
             }
         }
