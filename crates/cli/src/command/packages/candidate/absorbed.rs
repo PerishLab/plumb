@@ -1,6 +1,6 @@
 use super::super::super::super::closure;
 use super::super::super::super::provider::Intent;
-use super::{Fixture, Seat, State, advance, commit, engine, fixture, isolated, work};
+use super::{Fixture, Seat, State, advance, engine, fixture, isolated, work};
 use serde_json::{Value, json};
 use std::path::Path;
 
@@ -58,6 +58,13 @@ pub(super) fn intent(fixture: &Fixture, source: &Path, state: &State) {
     fixture.provider().intent(17, &held).unwrap();
 }
 
+fn absorb(source: &Path, text: &str) -> String {
+    std::fs::write(source.join("Cargo.toml"), text).unwrap();
+    work::git(source, &["add", "Cargo.toml"]).unwrap();
+    work::git(source, &["commit", "-q", "-m", "main absorbed"]).unwrap();
+    work::git(source, &["rev-parse", "HEAD"]).unwrap()
+}
+
 fn stopped(fixture: &Fixture, source: &Path, seat: &Seat) -> (State, String) {
     let mut state = seat.read("Example/probe").unwrap();
     let error = engine::advance(source, &fixture.provider(), seat, &mut state).unwrap_err();
@@ -65,7 +72,8 @@ fn stopped(fixture: &Fixture, source: &Path, seat: &Seat) -> (State, String) {
     let state = seat.read("Example/probe").unwrap();
     let old = state.pushed.clone().unwrap();
     let text = std::fs::read_to_string(state.worktree.join("Cargo.toml")).unwrap();
-    commit(source, "Cargo.toml", &text);
+    let head = absorb(source, &text);
+    assert_ne!(head, old);
     advance(source);
     (state, old)
 }
