@@ -292,6 +292,7 @@ description = "fixture"
 mod crates;
 mod js;
 mod loader;
+mod overlay;
 mod runseal;
 mod seat;
 mod section;

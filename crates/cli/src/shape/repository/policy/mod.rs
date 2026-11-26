@@ -1,30 +1,15 @@
+mod overlay;
+mod schema;
 pub(crate) mod section;
 mod tracked;
+
+pub use overlay::bounds;
+pub(crate) use overlay::resolve;
+pub(crate) use schema::validate;
 
 use std::collections::BTreeSet;
 use std::path::Path;
 use tracked::{Tracked, earning, suffixes};
-
-pub fn bounds(doc: Option<&toml::Value>) -> Vec<String> {
-    let mut found = Vec::new();
-    let Some(list) = doc
-        .and_then(|value| value.get("boundary"))
-        .and_then(toml::Value::as_array)
-    else {
-        return found;
-    };
-    for edge in list {
-        let Some(paths) = edge.get("paths").and_then(toml::Value::as_array) else {
-            continue;
-        };
-        for path in paths.iter().filter_map(toml::Value::as_str) {
-            if !path.contains('*') {
-                found.push(path.to_string());
-            }
-        }
-    }
-    found
-}
 
 pub(crate) struct Evidence {
     pub actual: toml::Value,

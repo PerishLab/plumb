@@ -13,19 +13,28 @@ impl Policy<'_> {
     fn prepare(&self) -> Result<(PathBuf, String), String> {
         match crate::shape::section::read(self.0, "ectropy.toml", "ectropy") {
             State::Unread(error) => Err(error),
-            State::Absent => Ok((
-                self.0.join("ectropy.toml"),
-                self.render(toml::Table::new())?,
-            )),
             State::Held(Origin::File, table) => {
                 Ok((self.0.join("ectropy.toml"), self.render(table)?))
             }
-            State::Held(Origin::Section, table) => {
-                let path = self.0.join("plumb.toml");
-                let text = std::fs::read_to_string(&path).map_err(|error| error.to_string())?;
-                Ok((path, self.patch(&text, table)?))
-            }
+            State::Held(Origin::Section, table) => self.converge(table),
+            State::Absent => match crate::shape::section::present(&self.0.join("plumb.toml")) {
+                Ok(true) => self.converge(toml::Table::new()),
+                Ok(false) => Ok((
+                    self.0.join("ectropy.toml"),
+                    self.render(toml::Table::new())?,
+                )),
+                Err(error) => Err(format!("cannot read plumb.toml: {error}")),
+            },
         }
+    }
+
+    fn converge(&self, table: toml::Table) -> Result<(PathBuf, String), String> {
+        if let Err(why) = crate::shape::policy::validate(&table) {
+            return Err(format!("invalid [ectropy] in plumb.toml: {why}"));
+        }
+        let path = self.0.join("plumb.toml");
+        let text = std::fs::read_to_string(&path).map_err(|error| error.to_string())?;
+        Ok((path, self.patch(&text, table)?))
     }
 
     fn render(&self, table: toml::Table) -> Result<String, String> {
@@ -34,11 +43,16 @@ impl Policy<'_> {
     }
 
     fn patch(&self, text: &str, table: toml::Table) -> Result<String, String> {
+        let lean = self.overlay(table);
         let mut doc = text
             .parse::<toml_edit::DocumentMut>()
             .map_err(|error| error.to_string())?;
+        if lean.is_empty() {
+            doc.remove("ectropy");
+            return Ok(doc.to_string());
+        }
         let target = seat(&doc);
-        let body = self.render(table)?;
+        let body = toml::to_string_pretty(&lean).map_err(|error| error.to_string())?;
         let parsed = body
             .parse::<toml_edit::DocumentMut>()
             .map_err(|error| error.to_string())?;
@@ -52,6 +66,21 @@ impl Policy<'_> {
         place(&mut section, target);
         doc["ectropy"] = toml_edit::Item::Table(section);
         Ok(doc.to_string())
+    }
+
+    fn overlay(&self, mut doc: toml::Table) -> toml::Table {
+        let want = Expected::read(self.0);
+        for owned in ["scan", "module", "limit", "comment", "word"] {
+            doc.remove(owned);
+        }
+        prune(
+            &mut doc,
+            "grant",
+            Some("test"),
+            ("environment", &want.environment),
+        );
+        prune(&mut doc, "ban", None, ("style", &want.bans));
+        doc
     }
 
     fn reconcile(&self, mut doc: toml::Table) -> toml::Table {
@@ -98,6 +127,61 @@ impl Policy<'_> {
         merge(&mut doc, ("ban", "style"), want.bans, true);
         doc
     }
+}
+
+pub(super) fn prune(
+    doc: &mut toml::Table,
+    table: &str,
+    dropped: Option<&str>,
+    filter: (&str, &BTreeSet<String>),
+) {
+    let (name, covered) = filter;
+    let entries = doc
+        .remove(table)
+        .and_then(|value| value.as_array().cloned())
+        .unwrap_or_default();
+    let mut kept = Vec::new();
+    let mut extra = BTreeSet::new();
+    for entry in entries {
+        let kind = entry
+            .as_table()
+            .and_then(|held| held.get("syntax"))
+            .and_then(toml::Value::as_str);
+        if dropped.is_some() && kind == dropped {
+            continue;
+        }
+        if kind == Some(name) {
+            collect(&entry, covered, &mut extra);
+        } else {
+            kept.push(entry);
+        }
+    }
+    if !extra.is_empty() {
+        kept.push(toml::Value::Table(toml::Table::from_iter([
+            ("syntax".to_string(), toml::Value::String(name.to_string())),
+            ("paths".to_string(), values(&extra)),
+        ])));
+    }
+    if !kept.is_empty() {
+        doc.insert(table.to_string(), toml::Value::Array(kept));
+    }
+}
+
+fn collect(entry: &toml::Value, covered: &BTreeSet<String>, extra: &mut BTreeSet<String>) {
+    let Some(paths) = entry
+        .as_table()
+        .and_then(|held| held.get("paths"))
+        .and_then(toml::Value::as_array)
+    else {
+        return;
+    };
+    extra.extend(
+        paths
+            .iter()
+            .filter_map(toml::Value::as_str)
+            .filter(|path| !covered.contains(*path))
+            .map(str::to_string),
+    );
 }
 
 fn merge(doc: &mut toml::Table, syntax: (&str, &str), mut paths: BTreeSet<String>, preserve: bool) {

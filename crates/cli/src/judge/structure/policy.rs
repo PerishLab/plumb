@@ -73,15 +73,34 @@ pub fn judge(evidence: &Evidence) -> Found {
 
 struct Policy<'a>(&'a toml::Value);
 
+const BASELINES: [(&str, i64); 3] = [("combination", 3), ("tuple", 3), ("schema", 2)];
+
 impl Policy<'_> {
     fn limits(&self, found: &mut Vec<String>) {
-        for (name, value) in crate::catalog::set::limits() {
+        let required = crate::catalog::set::limits();
+        for (name, value) in &required {
             let seen = self
                 .0
                 .get("limit")
-                .and_then(|table| table.get(&name))
+                .and_then(|table| table.get(name))
                 .and_then(toml::Value::as_integer);
-            if seen != Some(value) {
+            if seen != Some(*value) {
+                found.push(format!("ectropy limit {name} must be {value}"));
+            }
+        }
+        for (name, value) in BASELINES {
+            if required.contains_key(name) {
+                continue;
+            }
+            let Some(seen) = self
+                .0
+                .get("limit")
+                .and_then(|table| table.get(name))
+                .and_then(toml::Value::as_integer)
+            else {
+                continue;
+            };
+            if seen != value {
                 found.push(format!("ectropy limit {name} must be {value}"));
             }
         }
