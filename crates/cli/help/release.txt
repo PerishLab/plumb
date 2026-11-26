@@ -99,6 +99,7 @@ A specified successor uses --successor GIT_BLOB on release open, release stamp
 and ship dispatch. This selects a single decision on the protected main of
 PerishLab/.github. Each operation authenticates the decision, the original
 incomplete publication and current stable channel, exact repository and refs,
-and every other applicable predecessor obligation. Only the recorded patch,
-its first RC and its approved source qualify. Stable still promotes that
-complete RC. Release owed always reports the predecessor's actual state.
+and every other applicable predecessor obligation. Only the recorded immediate
+patch (or immediate 0.x minor), its first RC and its approved source qualify.
+Stable still promotes that complete RC. Release owed always reports the
+predecessor's actual state.

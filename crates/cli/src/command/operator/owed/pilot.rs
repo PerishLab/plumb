@@ -23,11 +23,12 @@ const TAG: &str = "dddddddddddddddddddddddddddddddddddddddd";
 const HEAD: &str = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 const NAME: &str = "Example/seat";
 const HOST: &str = "https://releases.seat.example";
-const PATH: &str = "governance/release-successors/42/v1.2.4.json";
 pub(super) const DEBT: &str = "release.marker-distributed";
 
 pub(super) struct Pilot {
     root: TempDir,
+    next: String,
+    rc: String,
     pub records: BTreeMap<String, Value>,
     pub listing: String,
     pub record: Value,
@@ -44,7 +45,11 @@ pub(super) fn product(route: &str) -> String {
     native(&format!("repos/{NAME}/{route}"))
 }
 pub(super) fn receipt(marker: &str) -> String {
-    let channel = if marker == RC { "rc" } else { "stable" };
+    let channel = if marker.contains("-rc.") {
+        "rc"
+    } else {
+        "stable"
+    };
     format!("{HOST}/v1/releases/{channel}/{marker}/distribution.json")
 }
 pub(super) fn channel() -> String {
@@ -65,11 +70,18 @@ fn reference(name: &str, kind: &str, sha: &str) -> Value {
 
 impl Pilot {
     pub fn new() -> Self {
+        Self::with(OLD, "v1.2.2", NEXT)
+    }
+
+    pub fn with(old: &str, prior: &str, next: &str) -> Self {
+        let rc = format!("{next}-rc.1");
         let root = tempfile::tempdir().expect("temporary Git source");
         let mut this = Self {
             root,
+            next: next.into(),
+            rc: rc.clone(),
             records: BTreeMap::new(),
-            listing: format!("{TAG}\trefs/tags/{OLD}\n{BASE}\trefs/tags/{OLD}^{{}}"),
+            listing: format!("{TAG}\trefs/tags/{old}\n{BASE}\trefs/tags/{old}^{{}}"),
             record: Value::Null,
             blob: String::new(),
             owed: vec![DEBT],
@@ -80,10 +92,10 @@ impl Pilot {
         this.git(&["remote", "add", "origin", "git@github.com:Example/seat.git"]);
         let manifest=b"[identity]\nns='seat'\n[release]\nauthority='https://releases.seat.example'\nbinaries=['seat']\ntargets=['x86_64-unknown-linux-gnu']\n";
         std::fs::write(this.root.path().join("plumb.toml"), manifest).expect("manifest");
-        let old = json!({"schema":1,"repository":NAME,"marker":OLD,"commit":BASE,"tree":TREE,"state":"incomplete","media":{"binaries":"published","oci":"failed","channel":"unreached"}});
-        let pointer = json!({"schema":1,"channel":"stable","product":"seat","releaseVersion":"v1.2.2","commit":BASE});
-        this.record = json!({"schema":"plumb.release.successor/v1","repository":NAME,"repository_id":42,"authority":HOST,"predecessor":{"marker":OLD,"commit":BASE,"tree":TREE,"tag":TAG,"distribution_sha256":digest(&old),"channel_sha256":digest(&pointer)},"successor":{"marker":NEXT,"rc":RC,"commit":SOURCE,"tree":TREE}});
-        this.records.insert(receipt(OLD), old);
+        let stale = json!({"schema":1,"repository":NAME,"marker":old,"commit":BASE,"tree":TREE,"state":"incomplete","media":{"binaries":"published","oci":"failed","channel":"unreached"}});
+        let pointer = json!({"schema":1,"channel":"stable","product":"seat","releaseVersion":prior,"commit":BASE});
+        this.record = json!({"schema":"plumb.release.successor/v1","repository":NAME,"repository_id":42,"authority":HOST,"predecessor":{"marker":old,"commit":BASE,"tree":TREE,"tag":TAG,"distribution_sha256":digest(&stale),"channel_sha256":digest(&pointer)},"successor":{"marker":next,"rc":rc,"commit":SOURCE,"tree":TREE}});
+        this.records.insert(receipt(old), stale);
         this.records.insert(channel(), pointer);
         this.records.insert(
             native("repos/Example/seat"),
@@ -101,7 +113,7 @@ impl Pilot {
             .insert(product("git/matching-refs/heads/release/"), json!([]));
         this.records.insert(
             product("tags?per_page=100&page=1"),
-            json!([{"name":OLD,"commit":{"sha":BASE}}]),
+            json!([{"name":old,"commit":{"sha":BASE}}]),
         );
         this.records.insert(
             product("git/ref/heads/main"),
@@ -121,7 +133,7 @@ impl Pilot {
             product(&format!("compare/{BASE}...{SOURCE}")),
             json!({"merge_base_commit":{"sha":BASE},"status":"ahead"}),
         );
-        this.tag(OLD, TAG, BASE, OLD);
+        this.tag(old, TAG, BASE, old);
         this.approve();
         this
     }
@@ -138,11 +150,12 @@ impl Pilot {
     }
 
     pub fn approve(&mut self) {
-        let entry = file(PATH, self.record.to_string().as_bytes());
+        let path = format!("governance/release-successors/42/{}.json", self.next);
+        let entry = file(&path, self.record.to_string().as_bytes());
         self.blob = entry["sha"].as_str().unwrap().into();
         self.records.insert(
             native(&format!(
-                "repos/PerishLab/.github/contents/{PATH}?ref={HEAD}"
+                "repos/PerishLab/.github/contents/{path}?ref={HEAD}"
             )),
             entry,
         );
@@ -163,7 +176,7 @@ impl Pilot {
         self.records.insert(
             product("git/matching-refs/heads/release/"),
             json!([reference(
-                &format!("heads/release/{NEXT}"),
+                &format!("heads/release/{}", self.next),
                 "commit",
                 SOURCE
             )]),
@@ -171,15 +184,15 @@ impl Pilot {
     }
 
     pub fn marked(&mut self, marker: &str) {
-        let sha = if marker == RC {
+        let sha = if marker == self.rc {
             "1111111111111111111111111111111111111111"
         } else {
             "2222222222222222222222222222222222222222"
         };
-        let message = if marker == RC {
-            RC.to_string()
+        let message = if marker == self.rc {
+            self.rc.clone()
         } else {
-            format!("{NEXT}\n\npromotes {RC}")
+            format!("{}\n\npromotes {}", self.next, self.rc)
         };
         self.tag(marker, sha, SOURCE, &message);
         self.listing.push_str(&format!(
@@ -194,7 +207,7 @@ impl Pilot {
     }
 
     pub fn shipped(&mut self) {
-        self.records.insert(receipt(RC),json!({"schema":1,"repository":NAME,"marker":RC,"commit":SOURCE,"tree":TREE,"state":"complete"}));
+        self.records.insert(receipt(&self.rc),json!({"schema":1,"repository":NAME,"marker":self.rc,"commit":SOURCE,"tree":TREE,"state":"complete"}));
     }
 
     pub fn inspect(&self, marker: &str, stage: Stage<'_>) -> Result<(), String> {
