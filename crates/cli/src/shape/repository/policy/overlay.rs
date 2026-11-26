@@ -154,14 +154,11 @@ fn apply(mut base: toml::Table, mut overlay: toml::Table) -> toml::Table {
     if let Some(toml::Value::Table(mut extra)) = overlay.remove("module") {
         target.union("module", "roots", extra.remove("roots"));
     }
-    for section in ["limit", "comment", "word"] {
+    for section in ["limit", "comment"] {
         target.replace(section, overlay.remove(section));
     }
     for key in ["grant", "ban", "boundary"] {
         target.extend(key, overlay.remove(key));
-    }
-    if let Some(value) = overlay.remove("vocabulary") {
-        base.insert("vocabulary".to_string(), value);
     }
     base
 }

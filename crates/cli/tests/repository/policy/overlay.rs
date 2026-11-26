@@ -24,10 +24,6 @@ fn overrides() {
             "ectropy limit schema must be 2",
         ),
         (
-            "[ectropy.word]\nsingle = false\n",
-            "ectropy word.single must be true",
-        ),
-        (
             "[ectropy.comment]\nallow = true\n",
             "ectropy comment.allow must be false",
         ),
@@ -80,9 +76,12 @@ fn malformed() {
             "scan.include must be an array of strings",
         ),
         (
-            "[ectropy.word]\nsingle = \"yes\"\n",
-            "word.single must be a boolean",
+            "[ectropy.comment]\nallow = \"yes\"\n",
+            "comment.allow must be a boolean",
         ),
+        ("[ectropy.word]\nsingle = false\n", "unknown key `word`"),
+        ("[ectropy.word]\nsingle = true\n", "unknown key `word`"),
+        ("[ectropy.word]\n", "unknown key `word`"),
         (
             "[ectropy]\ngrant = [\"bad\"]\n",
             "grant must be an array of tables",
@@ -108,16 +107,17 @@ fn malformed() {
             "boundary law `grant` admits no exemption",
         ),
         (
+            "[[ectropy.boundary]]\npaths = [\"a.rs\"]\nallow = [\"word\"]\nnote = \"why\"\n",
+            "boundary law `word` admits no exemption",
+        ),
+        (
             "[[ectropy.boundary]]\npaths = [\"a.rs\"]\nallow = [\"file\"]\nnote = \"   \"\n",
             "boundary note must not be empty",
         ),
+        ("[ectropy.vocabulary]\n", "unknown key `vocabulary`"),
         (
-            "[[ectropy.vocabulary.term]]\nname = \"vite_config\"\n",
-            "description must not be empty",
-        ),
-        (
-            "[[ectropy.vocabulary.term]]\nname = \"vite_config\"\ndescription = \"a\"\n\n[[ectropy.vocabulary.term]]\nname = \"vite_config\"\ndescription = \"b\"\n",
-            "duplicate vocabulary term `vite_config`",
+            "[[ectropy.vocabulary.term]]\nname = \"vite_config\"\ndescription = \"fixture\"\n",
+            "unknown key `vocabulary`",
         ),
     ];
     for (section, expected) in cases {

@@ -1,5 +1,3 @@
-use std::collections::BTreeSet;
-
 const LIMITS: [&str; 9] = [
     "block",
     "path",
@@ -14,7 +12,7 @@ const LIMITS: [&str; 9] = [
 
 const SYNTAX: [&str; 6] = ["embed", "environment", "lock", "process", "style", "test"];
 
-const EXEMPT: [&str; 18] = [
+const EXEMPT: [&str; 17] = [
     "block",
     "burr",
     "combination",
@@ -32,10 +30,9 @@ const EXEMPT: [&str; 18] = [
     "shadow",
     "tempdir",
     "tuple",
-    "word",
 ];
 
-const SEALED: [&str; 4] = ["ban", "coverage", "grant", "reach"];
+const SEALED: [&str; 5] = ["ban", "coverage", "grant", "reach", "word"];
 
 pub(crate) fn validate(overlay: &toml::Table) -> Result<(), String> {
     for (key, value) in overlay {
@@ -45,11 +42,9 @@ pub(crate) fn validate(overlay: &toml::Table) -> Result<(), String> {
             "module" => field.lists("module", &["roots"])?,
             "limit" => field.limit()?,
             "comment" => field.flag("comment", "allow")?,
-            "word" => field.flag("word", "single")?,
             "boundary" => field.boundaries()?,
             "grant" => field.rules("grant")?,
             "ban" => field.rules("ban")?,
-            "vocabulary" => field.vocabulary()?,
             _ => return Err(format!("unknown key `{key}`")),
         }
     }
@@ -149,19 +144,6 @@ impl<'a> Field<'a> {
         }
         Ok(())
     }
-
-    fn vocabulary(&self) -> Result<(), String> {
-        for (key, entry) in self.table("vocabulary")? {
-            if key != "term" {
-                return Err(format!("unknown key `vocabulary.{key}`"));
-            }
-            let mut names = BTreeSet::new();
-            for item in Field(entry).tables("vocabulary.term")? {
-                Entry(item).term(&mut names)?;
-            }
-        }
-        Ok(())
-    }
 }
 
 struct Entry<'a>(&'a toml::Table);
@@ -227,24 +209,6 @@ impl<'a> Entry<'a> {
         }
         Ok(())
     }
-
-    fn term(&self, names: &mut BTreeSet<String>) -> Result<(), String> {
-        self.known("vocabulary.term", &["name", "description"])?;
-        let name = self.text("vocabulary.term", "name")?.unwrap_or("").trim();
-        if name.is_empty() {
-            return Err("vocabulary term name must not be empty".to_string());
-        }
-        let description = self.text("vocabulary.term", "description")?.unwrap_or("");
-        if description.trim().is_empty() {
-            return Err(format!(
-                "vocabulary term `{name}` description must not be empty"
-            ));
-        }
-        if !names.insert(name.to_string()) {
-            return Err(format!("duplicate vocabulary term `{name}`"));
-        }
-        Ok(())
-    }
 }
 
 fn allowed(name: &str) -> Result<(), String> {
@@ -280,4 +244,41 @@ fn glob(pattern: &str) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate;
+
+    #[test]
+    fn retired() {
+        let cases = [
+            (
+                "[[boundary]]\npaths = [\"a.rs\"]\nallow = [\"word\"]\nnote = \"why\"\n",
+                "boundary law `word` admits no exemption",
+            ),
+            ("[word]\n", "unknown key `word`"),
+            ("[word]\nsingle = true\n", "unknown key `word`"),
+            ("[word]\nsingle = false\n", "unknown key `word`"),
+            ("[vocabulary]\n", "unknown key `vocabulary`"),
+            (
+                "[[vocabulary.term]]\nname = \"vite_config\"\ndescription = \"fixture\"\n",
+                "unknown key `vocabulary`",
+            ),
+        ];
+        for (input, expected) in cases {
+            let table: toml::Table = input.parse().expect("table");
+            let error = validate(&table).expect_err("retired schema must fail");
+            assert_eq!(error, expected, "{input}");
+        }
+    }
+
+    #[test]
+    fn valid() {
+        let sparse: toml::Table = "[[boundary]]\npaths = [\"a.rs\"]\nallow = [\"path\"]\nnote = \"ok\"\n\n[[grant]]\nsyntax = \"lock\"\npaths = [\"a.rs\"]\n"
+            .parse()
+            .expect("table");
+        assert!(validate(&toml::Table::new()).is_ok());
+        assert!(validate(&sparse).is_ok());
+    }
 }
