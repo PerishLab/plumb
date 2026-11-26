@@ -24,9 +24,16 @@ impl Gated {
         std::fs::write(
             root.join("build.rs"),
             format!(
-                "fn main() {{\n    std::fs::write({:?}, \"\").unwrap();\n    while std::path::Path::new({:?}).exists() {{\n        std::thread::sleep(std::time::Duration::from_millis(50));\n    }}\n}}\n",
-                signals.path().join("started"),
-                signals.path().join("gate"),
+                r#"fn main() {{
+    let signals = {:?};
+    let signals = std::path::Path::new(signals);
+    std::fs::write(signals.join("started"), "").unwrap();
+    while signals.join("gate").exists() {{
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }}
+}}
+"#,
+                signals.path(),
             ),
         )
         .expect("build script");
@@ -63,10 +70,15 @@ impl Gated {
             if self.signals.path().join("started").exists() {
                 return guard;
             }
-            assert!(
-                guard.try_wait().expect("guard state").is_none(),
-                "guard finished before its check started"
-            );
+            if guard.try_wait().expect("guard state").is_some() {
+                let output = guard.wait_with_output().expect("guard output");
+                panic!(
+                    "guard finished before its check started ({})\nstdout:\n{}\nstderr:\n{}",
+                    output.status,
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
+                );
+            }
             std::thread::sleep(Duration::from_millis(100));
         }
         panic!("guard check never started");
