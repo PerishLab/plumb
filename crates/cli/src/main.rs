@@ -129,6 +129,10 @@ pub(crate) enum Command {
         retire: bool,
         #[arg(long, conflicts_with = "retire", value_name = "AUTO_ISSUE")]
         recover: Option<std::num::NonZeroU64>,
+        #[arg(long = "root-ca-file", value_name = "FILE", requires = "token")]
+        roots: Option<PathBuf>,
+        #[arg(long = "token-file", value_name = "FILE", requires = "roots")]
+        token: Option<PathBuf>,
     },
     #[command(about = "Report which repositories a candidate version would reach")]
     Radius {

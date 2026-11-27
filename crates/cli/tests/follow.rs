@@ -58,3 +58,23 @@ fn transport() {
     let error = writer::check(17, Some(owner), || Err("provider unavailable".into())).unwrap_err();
     assert_eq!(error, "provider unavailable");
 }
+
+#[test]
+fn custody() {
+    use std::process::Command;
+
+    for (option, required) in [
+        ("--root-ca-file", "--token-file"),
+        ("--token-file", "--root-ca-file"),
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_plumb"))
+            .args(["follow", option, "unused"])
+            .env("GH_TOKEN", "inert-token")
+            .env("GITHUB_TOKEN", "inert-token")
+            .env("GITHUB_TOKEN_FILE", "inert-token-file")
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        assert!(String::from_utf8_lossy(&output.stderr).contains(required));
+    }
+}

@@ -67,4 +67,12 @@ follow.foreign-writer.
 
 GitHub access uses the active credential's Runseal client. Set GITHUB_TOKEN_FILE
 for explicit token custody or use the GitHub token carried by your Runseal profile.
+Use --root-ca-file FILE to explicitly replace the bundled WebPKI roots for
+this invocation's GitHub API client. Runseal requires an absolute private PEM
+bundle and still verifies TLS for https://api.github.com. Supply the bundle
+together with --token-file FILE, an absolute private token file intended for
+that trust boundary. Both options are required together. Ambient GitHub
+credentials are ignored when custom roots are selected. Git transport and
+artifact storage keep their own trust.
+
 Auto has no Concord Member and does not repair business source or perform releases.

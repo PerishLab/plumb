@@ -29,17 +29,23 @@ pub(crate) fn execute(command: Command) -> i32 {
             json,
             retire,
             recover,
+            roots,
+            token,
         } => {
             let input = packages::follow::Input {
                 root: PathBuf::from(target.root),
                 json,
             };
+            let trust = roots
+                .as_deref()
+                .zip(token.as_deref())
+                .map(|(roots, token)| packages::follow::Trust { roots, token });
             if let Some(number) = recover {
-                packages::follow::recovery::command(input, number.get())
+                packages::follow::recovery::command(input, number.get(), trust)
             } else if retire {
-                packages::follow::retire(input)
+                packages::follow::retire(input, trust)
             } else {
-                packages::follow::run(input)
+                packages::follow::run(input, trust)
             }
         }
         Command::Lift { target, json } => packages::lift(PathBuf::from(target.root), json),

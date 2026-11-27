@@ -13,6 +13,7 @@ mod tests;
 mod work;
 
 use provider::Provider;
+pub(crate) use provider::Trust;
 use refresh::scope;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -25,8 +26,8 @@ pub(crate) struct Input {
     pub json: bool,
 }
 
-pub(crate) fn run(input: Input) -> i32 {
-    match execute(&input) {
+pub(crate) fn run(input: Input, trust: Option<Trust<'_>>) -> i32 {
+    match execute(&input, trust) {
         Ok(message) => report(&input, &message),
         Err(error) => {
             eprintln!("plumb follow: {error}");
@@ -35,9 +36,9 @@ pub(crate) fn run(input: Input) -> i32 {
     }
 }
 
-pub(crate) fn retire(input: Input) -> i32 {
+pub(crate) fn retire(input: Input, trust: Option<Trust<'_>>) -> i32 {
     let retired = repository(&input.root).and_then(|repository| {
-        let provider = Provider::native(&repository)?;
+        let provider = Provider::native(&repository, trust)?;
         retire::run(&input.root, &provider)
     });
     match retired {
@@ -61,9 +62,9 @@ fn report(input: &Input, message: &str) -> i32 {
     0
 }
 
-fn execute(input: &Input) -> Result<String, String> {
+fn execute(input: &Input, trust: Option<Trust<'_>>) -> Result<String, String> {
     let repository = repository(&input.root)?;
-    let provider = Provider::native(&repository)?;
+    let provider = Provider::native(&repository, trust)?;
     let seat = Seat::open(&repository)?;
     let mut state = seat.read(&repository)?;
     resume(input, &provider, &seat, &mut state).map_err(|error| provider.stopped(&state, error))

@@ -1,7 +1,7 @@
 mod observe;
 pub(super) mod retire;
 
-use super::{Input, Provider, Seat, State, provider::Intent, repository, work};
+use super::{Input, Provider, Seat, State, Trust, provider::Intent, repository, work};
 use observe::Recovery;
 use serde::{Deserialize, Serialize};
 use std::io::Write;
@@ -20,9 +20,9 @@ struct Receipt {
     history: Vec<Intent>,
 }
 
-pub(crate) fn command(input: Input, number: u64) -> i32 {
+pub(crate) fn command(input: Input, number: u64, trust: Option<Trust<'_>>) -> i32 {
     let recovered = repository(&input.root).and_then(|repository| {
-        let provider = Provider::native(&repository)?;
+        let provider = Provider::native(&repository, trust)?;
         run(&input.root, &provider, number)
     });
     match recovered {
