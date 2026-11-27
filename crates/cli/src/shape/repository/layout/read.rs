@@ -1,4 +1,4 @@
-use super::{Declared, Evidence, Group, Held, Read, Seat, affirm};
+use super::{Declared, Evidence, Group, Held, Read, Seat, Transition, affirm};
 use plumb::snapshot::{Refusal, Snapshot};
 use std::path::Path;
 
@@ -25,16 +25,39 @@ pub fn stated(root: &Path) -> Held {
         Ok(doc) => doc,
         Err(error) => return Held::Wrong(format!("cannot parse plumb.toml: {error}")),
     };
-    match super::manifest::layered(doc) {
-        Ok((doc, overrides)) => match declared(&doc) {
-            Held::Stated(mut held) => {
-                held.overrides = overrides;
-                Held::Stated(held)
-            }
-            other => other,
-        },
+    let project = doc.clone();
+    let (merged, overrides) = match super::manifest::layered(doc) {
+        Ok(held) => held,
+        Err(error) => return Held::Wrong(error),
+    };
+    let mut held = match declared(&merged) {
+        Held::Stated(held) => held,
+        other => return other,
+    };
+    held.overrides = overrides;
+    match transitions(&project) {
+        Ok(priors) => {
+            held.transitions = priors;
+            Held::Stated(held)
+        }
         Err(error) => Held::Wrong(error),
     }
+}
+
+fn transitions(project: &toml::Table) -> Result<Vec<Transition>, String> {
+    let mut found = Vec::new();
+    for (doc, note) in super::manifest::transitions(project)? {
+        match declared(&doc) {
+            Held::Stated(declared) => found.push(Transition { declared, note }),
+            Held::Wrong(error) => {
+                return Err(format!("invalid transitional Depot layout: {error}"));
+            }
+            Held::Absent | Held::Outside => {
+                return Err("transitional Depot layout declares no layout".to_string());
+            }
+        }
+    }
+    Ok(found)
 }
 
 pub fn parse(text: &str) -> Held {

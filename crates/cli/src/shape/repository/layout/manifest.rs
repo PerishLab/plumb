@@ -2,6 +2,7 @@ use std::collections::BTreeSet;
 use toml::{Table, Value};
 
 pub const DEFAULTS: &str = "rules/suites/layout.toml";
+pub const TRANSITIONS: &str = "rules/suites/transition.toml";
 
 pub fn layered(project: Table) -> Result<(Table, Vec<String>), String> {
     let mut overrides = Vec::new();
@@ -11,15 +12,84 @@ pub fn layered(project: Table) -> Result<(Table, Vec<String>), String> {
     }
 }
 
+pub fn transitions(project: &Table) -> Result<Vec<(Table, Option<String>)>, String> {
+    let Some(doc) = carried(TRANSITIONS, false)? else {
+        return Ok(Vec::new());
+    };
+    expand(doc, project)
+}
+
+fn expand(doc: Table, project: &Table) -> Result<Vec<(Table, Option<String>)>, String> {
+    for key in doc.keys() {
+        if key != "layout" {
+            return Err(format!("{TRANSITIONS} carries no field called {key}"));
+        }
+    }
+    let Some(value) = doc.get("layout") else {
+        return Ok(Vec::new());
+    };
+    let list = value
+        .as_array()
+        .ok_or_else(|| format!("{TRANSITIONS} layout must be an array of tables"))?;
+    let mut held = Vec::with_capacity(list.len());
+    for entry in list {
+        let (base, note) = prior(entry)?;
+        let merged = merge(base, project.clone(), "", &mut Vec::new());
+        held.push((merged, note));
+    }
+    Ok(held)
+}
+
+fn prior(value: &Value) -> Result<(Table, Option<String>), String> {
+    let table = value
+        .as_table()
+        .ok_or_else(|| format!("{TRANSITIONS} layout entry must be a table"))?;
+    if let Some(key) = table
+        .keys()
+        .find(|key| !matches!(key.as_str(), "seat" | "file" | "note"))
+    {
+        return Err(format!(
+            "{TRANSITIONS} layout entry carries no field called {key}"
+        ));
+    }
+    let note = match table.get("note") {
+        None => None,
+        Some(value) => Some(
+            value
+                .as_str()
+                .ok_or_else(|| format!("{TRANSITIONS} layout note must be a string"))?
+                .trim()
+                .to_string(),
+        )
+        .filter(|text| !text.is_empty()),
+    };
+    let mut layout = Table::new();
+    for key in ["seat", "file"] {
+        if let Some(held) = table.get(key) {
+            layout.insert(key.to_string(), held.clone());
+        }
+    }
+    let mut base = Table::new();
+    base.insert("layout".to_string(), Value::Table(layout));
+    Ok((base, note))
+}
+
 fn defaults() -> Result<Option<Table>, String> {
+    carried(DEFAULTS, true)
+}
+
+fn carried(path: &str, required: bool) -> Result<Option<Table>, String> {
     let Ok(rules) = plumb::depot::rules() else {
         return Ok(None);
     };
+    if !required && !rules.files().iter().any(|(held, _)| held == path) {
+        return Ok(None);
+    }
     rules
-        .read(DEFAULTS)?
+        .read(path)?
         .parse()
         .map(Some)
-        .map_err(|error| format!("cannot parse the carried {DEFAULTS}: {error}"))
+        .map_err(|error| format!("cannot parse the carried {path}: {error}"))
 }
 
 fn taken(before: Value, stated: Value, path: String, overrides: &mut Vec<String>) -> Value {
@@ -117,7 +187,7 @@ fn released(mut entry: Value, field: &str, claimed: &BTreeSet<String>) -> Option
 
 #[cfg(test)]
 mod tests {
-    use super::merge;
+    use super::{expand, merge};
     use toml::Table;
 
     fn table(text: &str) -> Table {
@@ -191,5 +261,35 @@ mod tests {
             overrides,
             ["name AGENTS.md", "path skills/*", "release.skill"]
         );
+    }
+
+    #[test]
+    fn transitional() {
+        let project = table("[[layout.seat]]\npath = \"crates/*\"\n");
+        let empty = table("layout = []\n");
+        assert!(expand(empty, &project).expect("empty").is_empty());
+
+        let doc = table(
+            "[[layout]]\nnote = \"  pre-bailiwick  \"\n[[layout.file]]\nname = [\"plumb.toml\", \"ectropy.toml\"]\n[[layout]]\n[[layout.file]]\nname = [\"plumb.toml\"]\n",
+        );
+        let expanded = expand(doc, &project).expect("expanded");
+        assert_eq!(expanded.len(), 2);
+        assert_eq!(expanded[0].1.as_deref(), Some("pre-bailiwick"));
+        assert_eq!(expanded[1].1, None);
+        let seats = expanded[0].0["layout"]["seat"].as_array().expect("seats");
+        assert_eq!(seats[0]["path"].as_str(), Some("crates/*"));
+    }
+
+    #[test]
+    fn rejected() {
+        let project = table("");
+        for bad in [
+            "other = 1\n",
+            "layout = \"bad\"\n",
+            "[[layout]]\nextra = 1\n",
+            "[[layout]]\nnote = 1\n",
+        ] {
+            assert!(expand(table(bad), &project).is_err(), "{bad}");
+        }
     }
 }

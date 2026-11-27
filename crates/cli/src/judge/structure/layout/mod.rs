@@ -5,11 +5,11 @@ mod private;
 mod retired;
 pub(crate) use crate::catalog::member as rule;
 
-pub(crate) use face::{Faces, authority};
+pub(crate) use face::{Faces, Standing, authority};
 
 use crate::catalog::rules::structure as law;
 use crate::judge::finding::{Seed, blind, unknown, wrong};
-use crate::shape::layout::{Declared, Group, Held, Read, Seat, affirm};
+use crate::shape::layout::{Declared, Held, Read, Seat, affirm};
 use plumb::snapshot::Snapshot;
 use std::collections::BTreeSet;
 
@@ -33,8 +33,26 @@ fn verdict(held: &Held, tree: Tree<'_>) -> Vec<Seed> {
 
 struct Tree<'a>(&'a Snapshot, &'a str, &'a affirm::Held);
 
-fn named(group: &Group) -> Vec<String> {
-    group.names.clone()
+fn notice(target: &str, faces: &str, standing: Standing<'_>) -> Option<Seed> {
+    let book = "see: plumb cookbook structure.seat-affirmed";
+    match standing {
+        Standing::Current => None,
+        Standing::Transitional(note) => {
+            let detail = note.map_or(String::new(), |text| format!(" ({text})"));
+            Some(Seed::noted(
+                &law::SEAT_AFFIRMED,
+                format!(
+                    "{target} was affirmed against a transitional Depot layout{detail} over {faces}; reread it against the updated Depot layout and run plumb affirm --write; {book}"
+                ),
+            ))
+        }
+        Standing::Stale => Some(wrong(
+            &law::SEAT_AFFIRMED,
+            format!(
+                "{target} was affirmed against a different {faces}; reread it and run plumb affirm; {book}"
+            ),
+        )),
+    }
 }
 
 impl Tree<'_> {
@@ -64,7 +82,7 @@ impl Tree<'_> {
         for group in declared.groups.iter().filter(|group| !group.retired) {
             for held in &group.rule {
                 found.extend(content::read(self.0, group, held));
-                found.extend(self.affirmed(declared, held, &named(group)));
+                found.extend(self.affirmed(declared, held, &group.names));
             }
         }
         found
@@ -105,22 +123,12 @@ impl Tree<'_> {
                 ),
             )];
         }
-        let faces = Faces(self.0).taken(declared, &member.affirms);
-        let authority = authority(&faces);
-        let mut found = Vec::new();
-        for target in targets {
-            if self.2.authority(target) == Some(authority.as_str()) {
-                continue;
-            }
-            found.push(wrong(
-                &law::SEAT_AFFIRMED,
-                format!(
-                    "{target} was affirmed against a different {}; reread it and run plumb affirm; see: plumb cookbook structure.seat-affirmed",
-                    member.affirms.join(", ")
-                ),
-            ));
-        }
-        found
+        let judged = Faces(self.0).evaluate(declared, &member.affirms);
+        let faces = member.affirms.join(", ");
+        targets
+            .iter()
+            .filter_map(|target| notice(target, &faces, judged.judge(self.2.authority(target))))
+            .collect()
     }
 
     fn applied(&self, seat: &Seat, held: &str) -> Vec<Seed> {

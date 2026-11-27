@@ -13,8 +13,10 @@ pub struct Owed {
 
 pub fn owed(root: &Path) -> Result<Vec<Owed>, String> {
     let snapshot = Snapshot::read(root).map_err(refuse)?;
-    let Held::Stated(declared) = crate::shape::layout::stated(root) else {
-        return Err("no layout is declared".to_string());
+    let declared = match crate::shape::layout::stated(root) {
+        Held::Stated(declared) => declared,
+        Held::Wrong(error) => return Err(error),
+        Held::Outside | Held::Absent => return Err("no layout is declared".to_string()),
     };
     let mut found = Vec::new();
     for seat in declared.seats.iter().filter(|seat| !seat.retired) {

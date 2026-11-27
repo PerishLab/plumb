@@ -1,3 +1,9 @@
+# Active Depot layout defaults merged under each repository's plumb.toml.
+# Before changing seats or file groups here, copy the retired [layout] tables
+# into rules/suites/transition.toml as a [[layout]] entry for the bounded
+# cutover window so existing .plumb/affirmed.toml files warn as noted instead
+# of breaking the fleet simultaneously.
+
 [layout]
 
 [[layout.seat]]
