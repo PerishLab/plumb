@@ -274,14 +274,20 @@ fn prefixed() {
     std::fs::remove_file(dir.join("crates/api/src/main.rs")).expect("main should be removed");
     std::fs::write(
         dir.join("crates/api/src/lib.rs"),
+        "pub fn ready() -> bool {\n    true\n}\n",
+    )
+    .expect("source should be written");
+    let library = run(&["doctor", dir.to_str().expect("path should be utf8")]);
+    assert!(!library.contains("is headless"), "{library}");
+    assert!(!library.contains("outside the anchor"), "{library}");
+
+    std::fs::write(
+        dir.join("crates/api/src/lib.rs"),
         "#[derive(radicula_config::Cascade)]\nstruct Config;\n",
     )
     .expect("source should be written");
     let headless = run(&["doctor", dir.to_str().expect("path should be utf8")]);
-    assert!(
-        headless.contains("api crate at crates/api is headless"),
-        "{headless}"
-    );
+    assert!(!headless.contains("is headless"), "{headless}");
     assert!(
         headless.contains("Cascade derives in crates/api, outside the anchor"),
         "{headless}"
