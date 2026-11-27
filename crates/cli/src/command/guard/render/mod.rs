@@ -75,6 +75,30 @@ impl Seat {
         }
     }
 
+    pub fn scaffold(&self, version: Option<String>, home: &std::path::Path) -> i32 {
+        let Some(held) = version.filter(|held| !held.trim().is_empty()) else {
+            eprintln!("plumb changelog: --scaffold needs the --version the note describes");
+            return 1;
+        };
+        match crate::command::changelog::scaffold(&self.0, home, &held) {
+            Ok(built) => {
+                println!(
+                    "scaffolded {} in {} ({} commits, {} units, budget {} lines per language)",
+                    built.version,
+                    home.display(),
+                    built.commits,
+                    built.units,
+                    built.budget
+                );
+                0
+            }
+            Err(error) => {
+                eprintln!("plumb changelog: {error}");
+                1
+            }
+        }
+    }
+
     pub fn policy(&self, write: bool) -> i32 {
         let (path, rendered) = match policy::prepare(&self.0) {
             Ok(held) => held,

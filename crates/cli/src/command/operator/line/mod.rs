@@ -183,10 +183,14 @@ pub(in crate::command) fn close(
         return Ok(closed);
     }
     let home = plumb::config::home();
-    Ok(match observed(&line.spec, &version, home.as_deref()) {
-        Some(seen) => format!("{closed}\n{seen}"),
-        None => closed,
-    })
+    let mut lines = vec![closed];
+    if let Some(note) = super::owed::settle::remaining(&line.seat(), &version) {
+        lines.push(note);
+    }
+    if let Some(seen) = observed(&line.spec, &version, home.as_deref()) {
+        lines.push(seen);
+    }
+    Ok(lines.join("\n"))
 }
 
 pub(in crate::command) fn owed(version: Option<&str>, remote: &str) -> Result<String, String> {

@@ -105,7 +105,14 @@ pub(crate) fn execute(command: Command) -> i32 {
             target,
             version,
             prove: Some(home),
+            ..
         } => render::Seat::new(PathBuf::from(target.root)).proven(version, &home),
+        Command::Changelog {
+            target,
+            version,
+            scaffold: Some(home),
+            ..
+        } => render::Seat::new(PathBuf::from(target.root)).scaffold(version, &home),
         Command::Changelog {
             target, version, ..
         } => render::Seat::new(PathBuf::from(target.root)).changelog(version),
