@@ -85,6 +85,16 @@ pub(super) fn origin() -> Result<Option<String>, String> {
 }
 
 fn skipped(command: &Command) -> bool {
+    if matches!(
+        command,
+        Command::Release { deed }
+            if !matches!(
+                deed,
+                crate::command::release::Deed::Settle { skill: Some(_), .. }
+            )
+    ) {
+        return true;
+    }
     matches!(
         command,
         Command::Instance { .. }
@@ -92,7 +102,6 @@ fn skipped(command: &Command) -> bool {
             | Command::Configuration { .. }
             | Command::Windtun { .. }
             | Command::Metadata { .. }
-            | Command::Release { .. }
             | Command::Ship { .. }
             | Command::Skill { .. }
     ) || recovery(command)
@@ -217,5 +226,48 @@ fn current(candidate: &str, standing: &str) -> bool {
     match (parse(candidate), parse(standing)) {
         (Ok(left), Ok(right)) => left >= right,
         _ => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::skipped;
+    use crate::Command;
+    use crate::command::release::Deed;
+    use std::path::PathBuf;
+
+    #[test]
+    fn releases() {
+        let with = Command::Release {
+            deed: Deed::Settle {
+                version: Some("v0.171.0".into()),
+                changelog: None,
+                skill: Some(PathBuf::from("brief")),
+                remote: "origin".into(),
+                dry: true,
+                json: false,
+            },
+        };
+        assert!(!skipped(&with));
+
+        let without = Command::Release {
+            deed: Deed::Settle {
+                version: Some("v0.171.0".into()),
+                changelog: Some(PathBuf::from("notes")),
+                skill: None,
+                remote: "origin".into(),
+                dry: false,
+                json: false,
+            },
+        };
+        assert!(skipped(&without));
+
+        let owed = Command::Release {
+            deed: Deed::Owed {
+                version: None,
+                remote: "origin".into(),
+            },
+        };
+        assert!(skipped(&owed));
     }
 }
