@@ -497,7 +497,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1431,9 +1431,9 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
 name = "radicula-config"
-version = "0.19.0"
+version = "0.21.0"
 source = "sparse+https://cargo.perish.uk/"
-checksum = "ddcdf4b5b85c591354142633f27646235cc5b05c1aaef70dd4bdbdfe2e860285"
+checksum = "3131fea5deb2dd44eb69e0e3b8ecf00cffc75046a15b74c806a39c6c16edd76a"
 dependencies = [
  "radicula-config-macros",
  "serde",
@@ -1442,9 +1442,9 @@ dependencies = [
 
 [[package]]
 name = "radicula-config-macros"
-version = "0.19.0"
+version = "0.21.0"
 source = "sparse+https://cargo.perish.uk/"
-checksum = "d99d67c8e705525a6dd339370d94e707c4951f7b6fba7b85eb5a1f3cf689153a"
+checksum = "3d89d6877fffa9069bc5c185daa0fa4535d76a82228a7ccf367d1633b9c333d2"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1628,9 +1628,9 @@ dependencies = [
 
 [[package]]
 name = "runseal"
-version = "0.62.0"
+version = "0.66.0"
 source = "sparse+https://cargo.perish.uk/"
-checksum = "94aabfc650d95b4a327e4f52016a4eb49452e0a21bb3775e1c4595eb7e7ad140"
+checksum = "415e3c663bb17a541595595a17a9fa51dbee51e114cacd1c042d5cbcdddd3ca5"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -1641,9 +1641,11 @@ dependencies = [
  "ipnet",
  "libc",
  "path-absolutize",
+ "radicula-config",
  "radicula-http",
  "radicula-lock",
  "radicula-oidc",
+ "rustls",
  "serde",
  "serde_json",
  "sha1",
@@ -1692,7 +1694,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1749,7 +1751,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2158,7 +2160,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2569,7 +2571,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

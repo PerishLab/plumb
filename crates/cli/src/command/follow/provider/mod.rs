@@ -10,10 +10,14 @@ use serde_json::Value;
 #[cfg(all(test, unix))]
 use std::io::Write;
 use std::io::{Read, Seek};
-#[cfg(all(test, unix))]
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
+
+pub(crate) struct Trust<'a> {
+    pub roots: &'a Path,
+    pub token: &'a Path,
+}
 
 pub(super) struct Provider<'a> {
     pub source: Source,
@@ -33,9 +37,16 @@ pub(super) enum Source {
 pub(super) use plumb::delivery::Patience;
 
 impl<'a> Provider<'a> {
-    pub(super) fn native(repository: &'a str) -> Result<Self, String> {
+    pub(super) fn native(repository: &'a str, trust: Option<Trust<'_>>) -> Result<Self, String> {
+        let client = if let Some(trust) = trust {
+            Client::open(trust.token)
+                .and_then(|client| client.bundle(trust.roots))
+                .map_err(diagnostic)?
+        } else {
+            crate::command::github()?
+        };
         Ok(Self {
-            source: Source::Native(Box::new(crate::command::github()?)),
+            source: Source::Native(Box::new(client)),
             #[cfg(all(test, unix))]
             command: Path::new(""),
             repository,
