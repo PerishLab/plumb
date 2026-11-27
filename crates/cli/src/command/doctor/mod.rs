@@ -107,6 +107,12 @@ pub fn run(root: PathBuf, json: bool) -> i32 {
     findings.extend(judge::vocabulary::judge(&vocabulary));
     findings.extend(judge::depot::runtime());
     findings.extend(judge::depot::mark());
+    if let Ok(Some((report, mark))) = crate::consumption::drift::check(&root) {
+        findings.push(finding::Finding::new(finding::Seed::noted(
+            &PLUMB_CURRENT,
+            report.summary(&mark),
+        )));
+    }
     let summary = Summary::new(&findings, &held.dependencies);
     let ok = summary.wrong == 0 && summary.blind == 0;
     if let Some(finding) = findings
