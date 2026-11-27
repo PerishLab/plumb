@@ -139,14 +139,14 @@ impl Structure<'_> {
         }
         let api = format!("{repo}-api");
         let mut seats: BTreeSet<&str> = anchors.iter().map(|seat| seat.as_str()).collect();
-        for (seat, _) in held
+        for (seat, name) in held
             .named
             .iter()
             .filter(|(_, name)| name == "api" || name == &api)
         {
             if held.entries.contains(seat) {
                 seats.insert(seat);
-            } else {
+            } else if name == "api" {
                 found.push(wrong(
                     &rule::API_ENTRYPOINT,
                     format!("api crate at {seat} is headless"),
