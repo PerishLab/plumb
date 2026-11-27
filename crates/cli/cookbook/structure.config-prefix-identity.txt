@@ -5,7 +5,7 @@
 A non-anchor crate (such as `crates/api` with `package.name = "api"`) uses bare
 `#[plumb::config::prefix]`, an explicit `#[plumb::config::prefix("...")]` does
 not match the product identity `<NS>` (`plumb.toml [identity] ns` uppercased,
-`-` to `_`) or `<NS>_*`, or a Helm chart template declares a container `env`
+`-` to `_`) or `<NS>_*`, or a Helm chart template (`charts/*/templates/*.{yaml,yml,tpl}`) declares a container `env`
 entry named `API_*` outside an `api` repository.
 
 ## Solution

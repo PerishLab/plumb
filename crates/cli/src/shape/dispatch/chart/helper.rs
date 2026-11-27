@@ -1,114 +1,7 @@
-use serde_json::Value as Json;
-use std::path::{Path, PathBuf};
-
-pub(crate) struct Evidence {
-    pub(crate) env: Vec<(String, String)>,
-    pub(crate) mismatch: Vec<String>,
-}
-
-pub(crate) struct Client {
-    pub(crate) seed: bool,
-    pub(crate) map: bool,
-    pub(crate) mount: bool,
-    pub(crate) checksum: bool,
-}
-
-pub(crate) fn read(root: &Path) -> Evidence {
-    Tree(root).read()
-}
-
-pub(crate) fn templates(root: &Path) -> Vec<(String, String)> {
-    Tree(root).templates()
-}
-
-pub(crate) fn client(root: &Path, files: &[(String, String)]) -> Client {
-    Tree(root).client(files)
-}
-
-struct Tree<'a>(&'a Path);
-
-impl Tree<'_> {
-    fn read(&self) -> Evidence {
-        let mut env = Vec::new();
-        let mut mismatch = Vec::new();
-        for (path, text) in self.templates() {
-            let template = Template(&text);
-            for key in template.env() {
-                env.push((path.clone(), key));
-            }
-            if template.mismatch() {
-                mismatch.push(path);
-            }
-        }
-        Evidence { env, mismatch }
-    }
-
-    fn templates(&self) -> Vec<(String, String)> {
-        let mut paths = Vec::new();
-        let Ok(charts) = std::fs::read_dir(self.0.join("charts")) else {
-            return Vec::new();
-        };
-        for chart in charts.flatten() {
-            let dir = chart.path().join("templates");
-            Tree(&dir).collect("yaml", &mut paths);
-            Tree(&dir).collect("yml", &mut paths);
-        }
-        paths.sort();
-        paths
-            .into_iter()
-            .filter_map(|path| {
-                let text = std::fs::read_to_string(&path).ok()?;
-                let relative = path
-                    .strip_prefix(self.0)
-                    .unwrap_or(&path)
-                    .to_string_lossy()
-                    .replace('\\', "/");
-                Some((relative, text))
-            })
-            .collect()
-    }
-
-    fn client(&self, files: &[(String, String)]) -> Client {
-        let seed = std::fs::read_to_string(self.0.join("apps/web/public/client.json"))
-            .ok()
-            .and_then(|text| serde_json::from_str::<Json>(&text).ok())
-            .is_some_and(|value| matches!(value, Json::Object(map) if map.is_empty()));
-        let mut map = false;
-        let mut mount = false;
-        let mut checksum = false;
-        for (_, text) in files {
-            let template = Template(text);
-            map |= template.configmap();
-            mount |= template.mount();
-            checksum |= template.checksum();
-        }
-        Client {
-            seed,
-            map,
-            mount,
-            checksum,
-        }
-    }
-
-    fn collect(&self, extension: &str, found: &mut Vec<PathBuf>) {
-        let Ok(entries) = std::fs::read_dir(self.0) else {
-            return;
-        };
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                Tree(&path).collect(extension, found);
-            } else if path.extension().and_then(|value| value.to_str()) == Some(extension) {
-                found.push(path);
-            }
-        }
-    }
-}
-
-struct Template<'a>(&'a str);
+pub(super) struct Template<'a>(pub(super) &'a str);
 
 impl Template<'_> {
-    fn env(&self) -> Vec<String> {
+    pub(super) fn env(&self) -> Vec<String> {
         let mut found = Vec::new();
         for line in self.0.lines() {
             let Some((key, value)) = entry(line) else {
@@ -121,7 +14,7 @@ impl Template<'_> {
         found
     }
 
-    fn mismatch(&self) -> bool {
+    pub(super) fn mismatch(&self) -> bool {
         let lines: Vec<&str> = self.0.lines().collect();
         for (index, line) in lines.iter().enumerate() {
             let Some((key, value)) = entry(line) else {
@@ -137,7 +30,7 @@ impl Template<'_> {
         false
     }
 
-    fn configmap(&self) -> bool {
+    pub(super) fn configmap(&self) -> bool {
         documents(self.0).any(|doc| {
             let mut kind = false;
             let mut key = false;
@@ -151,7 +44,7 @@ impl Template<'_> {
         })
     }
 
-    fn mount(&self) -> bool {
+    pub(super) fn mount(&self) -> bool {
         let lines: Vec<&str> = self.0.lines().collect();
         for (index, line) in lines.iter().enumerate() {
             let Some((key, value)) = entry(line) else {
@@ -167,11 +60,65 @@ impl Template<'_> {
         false
     }
 
-    fn checksum(&self) -> bool {
+    pub(super) fn checksum(&self) -> bool {
         self.0.lines().any(|line| {
             entry(line).is_some_and(|(key, value)| key == "checksum/client" && !value.is_empty())
         })
     }
+}
+
+pub(super) fn defined(text: &str) -> bool {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut index = 0;
+    while index < lines.len() {
+        let trimmed = strip(lines[index]).trim();
+        if !opens(trimmed) {
+            index += 1;
+            continue;
+        }
+        let mut depth = 1usize;
+        let mut group = false;
+        let mut policy = false;
+        index += 1;
+        while index < lines.len() && depth > 0 {
+            let line = lines[index];
+            let body = strip(line).trim();
+            depth = step(depth, body);
+            if depth > 0
+                && let Some((key, value)) = entry(line)
+            {
+                group |= key == "fsGroup";
+                policy |= key == "fsGroupChangePolicy" && value == "OnRootMismatch";
+            }
+            index += 1;
+        }
+        if group && !policy {
+            return true;
+        }
+    }
+    false
+}
+
+fn opens(trimmed: &str) -> bool {
+    keyword(trimmed) == Some("define")
+}
+
+fn step(depth: usize, trimmed: &str) -> usize {
+    match keyword(trimmed) {
+        Some("if" | "with" | "range" | "define" | "block") => depth.saturating_add(1),
+        Some("end") => depth.saturating_sub(1),
+        _ => depth,
+    }
+}
+
+fn keyword(trimmed: &str) -> Option<&str> {
+    let inner = trimmed
+        .strip_prefix("{{-")
+        .or_else(|| trimmed.strip_prefix("{{"))?
+        .strip_suffix("-}}")
+        .or_else(|| trimmed.strip_suffix("}}"))?
+        .trim();
+    inner.split_whitespace().next()
 }
 
 fn documents(text: &str) -> impl Iterator<Item = &str> {
@@ -188,7 +135,7 @@ fn block(lines: &[&str], base: usize) -> bool {
         }
         let depth = indent(line);
         if directive(trimmed) {
-            if depth <= base && trimmed.contains("end") {
+            if depth <= base && keyword(trimmed) == Some("end") {
                 break;
             }
             continue;
@@ -215,7 +162,7 @@ fn mounted(lines: &[&str], base: usize) -> bool {
         }
         let depth = indent(line);
         if directive(trimmed) {
-            if depth <= base && trimmed.contains("end") {
+            if depth <= base && keyword(trimmed) == Some("end") {
                 break;
             }
             continue;

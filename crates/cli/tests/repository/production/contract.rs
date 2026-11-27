@@ -188,3 +188,37 @@ fn fsgroup() {
     let ok = doctor(root.path());
     assert!(!ok.contains("chart-fsgroup-on-root-mismatch"), "{ok}");
 }
+
+#[test]
+fn helpers() {
+    let root = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(root.path().join("charts/specimen/templates")).unwrap();
+    write(root.path(), "plumb.toml", "[identity]\nns = \"specimen\"\n");
+    write(
+        root.path(),
+        "charts/specimen/templates/_helpers.tpl",
+        "{{- define \"specimen.env\" -}}\n- name: API_STORE_KIND\n  value: \"pg\"\n{{- end -}}\n{{- define \"specimen.security\" -}}\n{{- if .Values.enabled }}\nfsGroup: 10001\n{{- end }}\n{{- end -}}\n",
+    );
+    let bad = doctor(root.path());
+    assert!(
+        bad.contains(
+            "charts/specimen/templates/_helpers.tpl declares container env API_STORE_KIND instead of SPECIMEN_*"
+        ),
+        "{bad}"
+    );
+    assert!(
+        bad.contains(
+            "charts/specimen/templates/_helpers.tpl sets fsGroup without fsGroupChangePolicy: OnRootMismatch"
+        ),
+        "{bad}"
+    );
+
+    write(
+        root.path(),
+        "charts/specimen/templates/_helpers.tpl",
+        "{{- define \"specimen.storekey\" -}}\nAPI_STORE_URL\n{{- end -}}\n{{- define \"specimen.env\" -}}\n- name: SPECIMEN_STORE_KIND\n  value: \"pg\"\n{{- end -}}\n{{- define \"specimen.security\" -}}\n{{- if .Values.enabled }}\nfsGroup: 10001\nfsGroupChangePolicy: OnRootMismatch\n{{- end }}\n{{- end -}}\n",
+    );
+    let ok = doctor(root.path());
+    assert!(!ok.contains("config-prefix-identity"), "{ok}");
+    assert!(!ok.contains("chart-fsgroup-on-root-mismatch"), "{ok}");
+}
