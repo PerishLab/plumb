@@ -8,5 +8,8 @@ edition = "2024"
 license = "MIT"
 repository = "https://github.com/PerishLab/plumb"
 
+[profile.dev]
+debug = "line-tables-only"
+
 [profile.dev.package.sha2]
 opt-level = 3
