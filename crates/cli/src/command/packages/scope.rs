@@ -5,7 +5,7 @@ use std::path::Path;
 
 fn commit(root: &Path) -> String {
     work::git(root, &["add", "."]).unwrap();
-    work::git(root, &["commit", "-q", "-m", "fixture delta"]).unwrap();
+    Fixture::dated(root, &["commit", "-q", "-m", "fixture delta"]).unwrap();
     work::git(root, &["rev-parse", "HEAD"]).unwrap()
 }
 
@@ -78,7 +78,7 @@ fn projected() {
     put(&root, "crates/probe/Cargo.lock");
     let source = commit(&root);
     let tree = work::git(&root, &["rev-parse", "HEAD^{tree}"]).unwrap();
-    let candidate = work::git(
+    let candidate = Fixture::dated(
         &root,
         &[
             "commit-tree",
@@ -133,7 +133,7 @@ fn cold() {
     let text = std::fs::read_to_string(&manifest).unwrap();
     std::fs::write(manifest, format!("{text}description='cold merge'\n")).unwrap();
     work::git(&source, &["add", "Cargo.toml"]).unwrap();
-    work::git(&source, &["commit", "-q", "-m", "Refs #17."]).unwrap();
+    Fixture::dated(&source, &["commit", "-q", "-m", "Refs #17."]).unwrap();
     let proof = crate::command::guard::precommit::branch::renew(&source).unwrap();
     let parent = work::git(&source, &["rev-parse", "origin/main"]).unwrap();
     let message = format!(
@@ -141,12 +141,12 @@ fn cold() {
         plumb::guard::TRAILER,
         proof.encode().unwrap()
     );
-    let candidate = work::git(
+    let candidate = Fixture::dated(
         &source,
         &["commit-tree", &proof.tree, "-p", &parent, "-m", &message],
     )
     .unwrap();
-    let merge = work::git(
+    let merge = Fixture::dated(
         &source,
         &[
             "commit-tree",
@@ -158,6 +158,7 @@ fn cold() {
         ],
     )
     .unwrap();
+    assert_ne!(merge, candidate);
     work::git(
         &source,
         &[
@@ -210,7 +211,7 @@ fn issueonly() {
     let source = fixture.repository("pub fn answer() -> u8 { 42 }\n");
     std::fs::write(source.join("package.json"), "{").unwrap();
     work::git(&source, &["add", "package.json"]).unwrap();
-    work::git(&source, &["commit", "-q", "-m", "fixture resolver blocker"]).unwrap();
+    Fixture::dated(&source, &["commit", "-q", "-m", "fixture resolver blocker"]).unwrap();
     work::git(&source, &["push", "origin", "main"]).unwrap();
     let (source, seat) = fixture.cold(&source);
     let input = super::super::super::Input {

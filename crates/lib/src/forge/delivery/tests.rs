@@ -68,6 +68,7 @@ fn exact() {
     assert!(!message.contains(crate::guard::TRAILER));
     assert!(message.contains(super::evidence::TRAILER));
     let merged = repo.merge(&plan.candidate, &message);
+    assert_ne!(merged, plan.candidate);
     let landed = super::landed(repo.root(), &plan.candidate, &merged).expect("native readback");
     assert_eq!(landed.tree, plan.evidence.tree);
     assert!(crate::delivery::landed(repo.root(), &plan.candidate, &merged).is_err());
@@ -255,6 +256,7 @@ fn retired() {
     let plan = plan(&repo, &Check::new("ok"));
     let message = git(repo.root(), &["log", "-1", "--format=%B", &plan.candidate]);
     let head = repo.merge(&plan.candidate, &message);
+    assert_ne!(head, plan.candidate);
     let held = super::landed(repo.root(), &plan.candidate, &head).expect("native readback");
     let origin = tempfile::tempdir().expect("origin");
     let bare = origin.path().to_str().expect("utf8");

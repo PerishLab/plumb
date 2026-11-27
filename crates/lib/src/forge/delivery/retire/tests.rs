@@ -1,6 +1,9 @@
 use super::{Delivered, Kept, Pushed, retired};
 use crate::guard::{Action, Descriptor, TRAILER};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static CLOCK: AtomicU64 = AtomicU64::new(1_700_000_000);
 
 const PROJECTION: &str = "land/topic";
 const TOPIC: &str = "topic";
@@ -125,6 +128,7 @@ fn deleted() {
     let repo = Repo::new();
     let root = repo.root();
     let head = repo.merge(&repo.base);
+    assert_ne!(head, repo.candidate);
     let (landed, retired) =
         retired(&delivered(&root, &repo.candidate, &head), &repo.pushed()).expect("retired");
     assert_eq!(landed.head, head);
@@ -167,6 +171,7 @@ fn moved() {
     git(&root, &["commit", "-q", "--allow-empty", "-m", "later"]);
     let later = git(&root, &["rev-parse", "HEAD"]);
     let head = repo.merge(&repo.base);
+    assert_ne!(head, repo.candidate);
     let (_, retired) =
         retired(&delivered(&root, &repo.candidate, &head), &repo.pushed()).expect("retired");
     assert!(retired.deleted.is_empty(), "{:?}", retired.deleted);
@@ -210,6 +215,7 @@ fn elsewhere() {
         ],
     );
     let head = repo.merge(&repo.base);
+    assert_ne!(head, repo.candidate);
     let (_, retired) =
         retired(&delivered(&root, &repo.candidate, &head), &repo.pushed()).expect("retired");
     assert_eq!(retired.deleted, [PROJECTION]);
@@ -231,12 +237,18 @@ fn proof(root: &Path, tree: &str) -> Descriptor {
 }
 
 fn git(root: &Path, args: &[&str]) -> String {
-    let output = crate::config::detached("git")
-        .arg("-C")
-        .arg(root)
-        .args(args)
-        .output()
-        .expect("git");
+    let mut command = crate::config::detached("git");
+    command.arg("-C").arg(root).args(args);
+    if args
+        .first()
+        .is_some_and(|arg| matches!(*arg, "commit" | "commit-tree" | "merge"))
+    {
+        let time = format!("{} +0000", CLOCK.fetch_add(1, Ordering::Relaxed));
+        command
+            .env("GIT_AUTHOR_DATE", &time)
+            .env("GIT_COMMITTER_DATE", &time);
+    }
+    let output = command.output().expect("git");
     assert!(
         output.status.success(),
         "git {args:?}: {}",
