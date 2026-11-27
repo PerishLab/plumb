@@ -1,3 +1,4 @@
+use super::super::runtime::{Fault, changed};
 pub(super) use super::super::world::Binding;
 use super::cargo::Lease;
 use super::tree::{self, Index};
@@ -7,17 +8,22 @@ use plumb::guard::Descriptor;
 use std::path::Path;
 
 pub(super) fn prove(root: &Path) -> Result<Descriptor, String> {
-    prepare(root, false)
+    prepare(root, false).map_err(|fault| match fault {
+        Fault::Control(message) | Fault::Other(message) => message,
+    })
 }
 
-pub(super) fn resolved(root: &Path) -> Result<Descriptor, String> {
+pub(super) fn resolved(root: &Path) -> Result<Descriptor, Fault> {
     prepare(root, true)
 }
 
 #[locus::trace(with = crate::observation::view())]
-fn prepare(root: &Path, latest: bool) -> Result<Descriptor, String> {
+fn prepare(root: &Path, latest: bool) -> Result<Descriptor, Fault> {
     let _held = crate::execution::signal::Hold::new()?;
-    crate::diagnostic::measure("guard.prove", || Proof { root, latest }.run())
+    let mut span = crate::diagnostic::Span::new("guard.prove");
+    let result = Proof { root, latest }.run();
+    span.complete(result.is_ok());
+    result
 }
 
 struct Proof<'a> {
@@ -27,6 +33,7 @@ struct Proof<'a> {
 
 enum Refusal {
     Rollover(String),
+    Control(String),
     Check(String),
 }
 
@@ -36,8 +43,21 @@ impl From<String> for Refusal {
     }
 }
 
+impl From<Refusal> for Fault {
+    fn from(refusal: Refusal) -> Self {
+        match refusal {
+            Refusal::Control(error) => Self::Control(error),
+            Refusal::Check(error) | Refusal::Rollover(error) => Self::Other(error),
+        }
+    }
+}
+
 impl Proof<'_> {
-    fn run(&self) -> Result<Descriptor, String> {
+    fn run(&self) -> Result<Descriptor, Fault> {
+        let control = self
+            .latest
+            .then(crate::judge::depot::Control::snapshot)
+            .flatten();
         let tree = plumb::guard::tree(self.root)?;
         crate::diagnostic::event("staged", || serde_json::json!({"tree":tree}));
         let seat = cargo::seat(self.root, &tree)?;
@@ -50,22 +70,22 @@ impl Proof<'_> {
             tree: &tree,
             seat: seat.as_deref(),
             lease: lease.as_ref(),
+            control: control.as_ref(),
             restarted: false,
         };
         let change = match attempt.run() {
             Ok(proof) => return Ok(proof),
-            Err(Refusal::Check(error)) => return Err(error),
             Err(Refusal::Rollover(change)) => change,
+            Err(other) => return Err(other.into()),
         };
         eprintln!("{change}. Restarting verification with current packages.");
         attempt.restarted = true;
-        match attempt.run() {
-            Ok(proof) => Ok(proof),
-            Err(Refusal::Check(error)) => Err(error),
-            Err(Refusal::Rollover(change)) => {
-                Err(format!("{change}. Guard refused after one restart."))
+        attempt.run().map_err(|refusal| match refusal {
+            Refusal::Rollover(change) => {
+                Fault::Other(format!("{change}. Guard refused after one restart."))
             }
-        }
+            other => other.into(),
+        })
     }
 
     fn local(&self, tree: &str, seat: Option<&Path>) -> Result<Option<Descriptor>, String> {
@@ -97,6 +117,7 @@ struct Attempt<'a> {
     tree: &'a str,
     seat: Option<&'a Path>,
     lease: Option<&'a Lease>,
+    control: Option<&'a crate::judge::depot::Control>,
     restarted: bool,
 }
 
@@ -118,6 +139,17 @@ impl Attempt<'_> {
             return Err(Refusal::Rollover(change));
         }
         if let Some(error) = failure {
+            let execution = prepared
+                .checks
+                .iter()
+                .find(|check| check.proof.name == "guard/plumb")
+                .and_then(|check| check.execution.as_deref());
+            if let Some(message) = self
+                .control
+                .and_then(|held| held.rolled(&index.root, execution))
+            {
+                return Err(Refusal::Control(message));
+            }
             return Err(Refusal::Check(error));
         }
         tree::unchanged(&index)?;
@@ -240,28 +272,6 @@ fn record(prepared: &Prepared) {
             "image":prepared.context.as_ref().map(|context|&context.image)
         })
     });
-}
-
-fn changed(
-    root: &std::path::Path,
-    channels: Option<&plumb::packages::Channels>,
-) -> Result<Option<String>, String> {
-    let Some(channels) = channels else {
-        return Ok(None);
-    };
-    let changes = crate::diagnostic::measure("packages.reobserve", || channels.changes(root))
-        .map_err(|error| format!("guard.packages.unavailable: {error}"))?;
-    if changes.is_empty() {
-        return Ok(None);
-    }
-    crate::diagnostic::event(
-        "packages.rollover",
-        || serde_json::json!({"changes":changes}),
-    );
-    Ok(Some(format!(
-        "guard.packages.rollover: {}",
-        changes.join(", ")
-    )))
 }
 
 pub(super) type Packages = (

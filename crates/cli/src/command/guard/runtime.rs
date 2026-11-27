@@ -5,8 +5,21 @@ use std::path::{Path, PathBuf};
 const SCHEMA: &str = plumb::guard::Runtime::SCHEMA;
 const STRENGTH: &str = "PLUMB_GUARD_STRENGTH";
 const BOUNDARY: &str = "PLUMB_GUARD_BOUNDARY";
+pub(super) const ROLLOVER: &str = "guard.control.rollover";
 
 pub(super) struct Selection;
+
+#[derive(Debug, Eq, PartialEq)]
+pub(super) enum Fault {
+    Control(String),
+    Other(String),
+}
+
+impl From<String> for Fault {
+    fn from(message: String) -> Self {
+        Self::Other(message)
+    }
+}
 
 #[derive(Serialize)]
 struct Evidence {
@@ -40,7 +53,23 @@ struct Refusal<'a> {
     schema: &'static str,
     root: &'a Path,
     ok: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    code: Option<&'static str>,
     message: &'a str,
+}
+
+impl Refusal<'_> {
+    fn emit(&self, json: bool) -> i32 {
+        if json {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(self).expect("runtime Guard refusal should encode")
+            );
+        } else {
+            eprintln!("plumb guard: {}", self.message);
+        }
+        1
+    }
 }
 
 impl Selection {
@@ -99,31 +128,32 @@ impl Selection {
                 }
                 0
             }
-            Err(error) => refused(root, &error, json),
+            Err(Fault::Control(error)) => Refusal {
+                schema: SCHEMA,
+                root,
+                ok: false,
+                code: Some(ROLLOVER),
+                message: &error,
+            }
+            .emit(json),
+            Err(Fault::Other(error)) => refused(root, &error, json),
         }
     }
 }
 
 pub(super) fn refused(root: &Path, message: &str, json: bool) -> i32 {
-    if json {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&Refusal {
-                schema: SCHEMA,
-                root,
-                ok: false,
-                message,
-            })
-            .expect("runtime Guard refusal should encode")
-        );
-    } else {
-        eprintln!("plumb guard: {message}");
+    Refusal {
+        schema: SCHEMA,
+        root,
+        ok: false,
+        code: None,
+        message,
     }
-    1
+    .emit(json)
 }
 
 #[locus::trace(with = crate::observation::view())]
-fn prove(root: &Path) -> Result<Evidence, String> {
+fn prove(root: &Path) -> Result<Evidence, Fault> {
     let before = Head::read(root)?;
     crate::diagnostic::event(
         "source",
@@ -134,16 +164,16 @@ fn prove(root: &Path) -> Result<Evidence, String> {
     let after = Head::read(root)?;
     after.clean(root)?;
     if before != after {
-        return Err(format!(
+        return Err(Fault::Other(format!(
             "HEAD changed while Guard ran: {} became {}",
             before.commit, after.commit
-        ));
+        )));
     }
     if guard.tree != after.tree {
-        return Err(format!(
+        return Err(Fault::Other(format!(
             "Guard proved tree {}, not HEAD tree {}",
             guard.tree, after.tree
-        ));
+        )));
     }
     let digest = plumb::guard::Runtime::seal(&after.commit, &guard)?;
     Ok(Evidence {
@@ -208,4 +238,57 @@ fn value(name: &str) -> Result<Option<String>, String> {
                 .map_err(|_| format!("{name} is not UTF-8"))
         })
         .transpose()
+}
+
+pub(super) fn changed(
+    root: &Path,
+    channels: Option<&plumb::packages::Channels>,
+) -> Result<Option<String>, String> {
+    let Some(channels) = channels else {
+        return Ok(None);
+    };
+    let changes = crate::diagnostic::measure("packages.reobserve", || channels.changes(root))
+        .map_err(|error| format!("guard.packages.unavailable: {error}"))?;
+    if changes.is_empty() {
+        return Ok(None);
+    }
+    crate::diagnostic::event(
+        "packages.rollover",
+        || serde_json::json!({"changes":changes}),
+    );
+    Ok(Some(format!(
+        "guard.packages.rollover: {}",
+        changes.join(", ")
+    )))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ROLLOVER, Refusal, SCHEMA};
+    use std::path::Path;
+
+    #[test]
+    fn refusal() {
+        let plain = serde_json::to_value(Refusal {
+            schema: SCHEMA,
+            root: Path::new("/repo"),
+            ok: false,
+            code: None,
+            message: "stale at start",
+        })
+        .expect("plain");
+        assert_eq!(plain["ok"], false);
+        assert!(plain.get("code").is_none());
+
+        let control = serde_json::to_value(Refusal {
+            schema: SCHEMA,
+            root: Path::new("/repo"),
+            ok: false,
+            code: Some(ROLLOVER),
+            message: "guard.control.rollover: running Plumb v0.166.0 rolled over to stable v0.167.0 during Guard",
+        })
+        .expect("control");
+        assert_eq!(control["ok"], false);
+        assert_eq!(control["code"], "guard.control.rollover");
+    }
 }
