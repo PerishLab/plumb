@@ -51,11 +51,11 @@ struct Binding<'a> {
 impl Pinned {
     pub fn pointer(pointer: &Pointer) -> Result<Self, String> {
         if pointer.product != "plumb"
-            || pointer.channel != "stable"
+            || !allowed(&pointer.channel)
             || pointer.kind != Kind::Configuration
         {
             return Err(format!(
-                "pinned depot configuration requires plumb/stable/configuration, got {}/{}/{}",
+                "pinned depot configuration requires plumb/{{stable,rc,beta}}/configuration, got {}/{}/{}",
                 pointer.product,
                 pointer.channel,
                 pointer.kind.label()
@@ -120,7 +120,7 @@ impl Pinned {
         };
         let expected = Binding {
             product: "plumb",
-            channel: "stable",
+            channel: self.channel.as_str(),
             version: self.version.as_str(),
             kind: Kind::Configuration,
             generation: self.generation.clone(),
@@ -174,13 +174,13 @@ impl Pinned {
     }
 
     fn fields(&self) -> Result<String, String> {
-        if self.channel != "stable" {
+        if !allowed(&self.channel) {
             return Err(format!(
-                "pinned depot configuration channel must be stable, got {}",
+                "pinned depot configuration channel must be stable, rc or beta, got {}",
                 self.channel
             ));
         }
-        super::value::channel("stable", &self.version)?;
+        super::value::channel(&self.channel, &self.version)?;
         Value(&self.generation).digest("depot generation")?;
         Value(&self.manifest.sha256).digest("depot manifest sha256")?;
         if self.manifest.size == 0 || self.manifest.size > CAP {
@@ -200,6 +200,10 @@ impl Pinned {
         Value(origin).source()?;
         Ok(origin.to_string())
     }
+}
+
+fn allowed(channel: &str) -> bool {
+    matches!(channel, "stable" | "rc" | "beta")
 }
 
 #[cfg(test)]

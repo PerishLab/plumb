@@ -129,6 +129,10 @@ impl Rules {
         &self.mark
     }
 
+    pub fn files(&self) -> &[(String, Vec<u8>)] {
+        &self.files
+    }
+
     pub fn pinned(&self) -> Option<&v3::Pinned> {
         self.pinned.as_ref()
     }

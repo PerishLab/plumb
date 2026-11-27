@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 pub(crate) mod brand;
 pub mod configuration;
+pub(crate) mod drift;
 pub(crate) mod instance;
 pub mod lane;
 pub mod lock;
@@ -146,10 +147,20 @@ fn remote(source: &str, raw: Option<&str>) -> Result<(), String> {
             Rules::resolved(&bundle, pinned)?
         }
         None => {
+            let selected = pick(plumb::version!("PLUMB"), |name| {
+                Channel {
+                    source,
+                    product: "plumb",
+                    channel: name,
+                    kind: Kind::Configuration,
+                }
+                .pointer()
+                .map(|pointer| pointer.version)
+            })?;
             let discovered = Channel {
                 source,
                 product: "plumb",
-                channel: "stable",
+                channel: selected,
                 kind: Kind::Configuration,
             }
             .cached(&home)?;
@@ -169,4 +180,42 @@ fn candidate() -> Result<(), String> {
 #[cfg(not(debug_assertions))]
 fn candidate() -> Result<(), String> {
     Err("release Plumb requires Depot configuration".into())
+}
+
+const STABLE: &str = "stable";
+
+fn pick<F>(version: &str, mut read: F) -> Result<&'static str, String>
+where
+    F: FnMut(&str) -> Result<String, String>,
+{
+    let Some(candidate) = prerelease(version) else {
+        return Ok(STABLE);
+    };
+    let Ok(staged) = read(candidate) else {
+        return Ok(STABLE);
+    };
+    let Ok(standing) = read(STABLE) else {
+        return Ok(candidate);
+    };
+    if current(&staged, &standing) {
+        Ok(candidate)
+    } else {
+        Ok(STABLE)
+    }
+}
+
+fn prerelease(version: &str) -> Option<&'static str> {
+    match crate::command::release::channel(version).ok()?.as_str() {
+        "rc" => Some("rc"),
+        "beta" => Some("beta"),
+        _ => None,
+    }
+}
+
+fn current(candidate: &str, standing: &str) -> bool {
+    let parse = |raw: &str| semver::Version::parse(raw.strip_prefix('v').unwrap_or(raw));
+    match (parse(candidate), parse(standing)) {
+        (Ok(left), Ok(right)) => left >= right,
+        _ => false,
+    }
 }
