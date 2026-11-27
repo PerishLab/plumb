@@ -222,3 +222,54 @@ fn helpers() {
     assert!(!ok.contains("config-prefix-identity"), "{ok}");
     assert!(!ok.contains("chart-fsgroup-on-root-mismatch"), "{ok}");
 }
+
+#[test]
+fn pullsecrets() {
+    let root = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(root.path().join("charts/specimen/templates")).unwrap();
+    write(
+        root.path(),
+        "charts/specimen/values.yaml",
+        "replicaCount: 1\n",
+    );
+    write(
+        root.path(),
+        "charts/specimen/templates/service.yaml",
+        "kind: Service\nmetadata:\n  name: specimen\n",
+    );
+    write(
+        root.path(),
+        "charts/specimen/templates/api.yaml",
+        "kind: Deployment\nspec:\n  template:\n    spec:\n      containers:\n        - name: api\n          image: nginx:1.29\n",
+    );
+    let bad = doctor(root.path());
+    assert!(
+        bad.contains("charts/specimen/values.yaml omits optional imagePullSecrets"),
+        "{bad}"
+    );
+    assert!(
+        bad.contains("charts/specimen/templates/api.yaml omits optional imagePullSecrets"),
+        "{bad}"
+    );
+    assert!(
+        !bad.contains("service.yaml omits optional imagePullSecrets"),
+        "{bad}"
+    );
+    assert!(
+        bad.contains("see: plumb cookbook dispatch.chart-image-pull-secrets"),
+        "{bad}"
+    );
+
+    write(
+        root.path(),
+        "charts/specimen/values.yaml",
+        "replicaCount: 1\nimagePullSecrets: []\n",
+    );
+    write(
+        root.path(),
+        "charts/specimen/templates/api.yaml",
+        "kind: Deployment\nspec:\n  template:\n    spec:\n      {{- with .Values.imagePullSecrets }}\n      imagePullSecrets:\n        {{- toYaml . | nindent 8 }}\n      {{- end }}\n      containers:\n        - name: api\n          image: nginx:1.29\n",
+    );
+    let ok = doctor(root.path());
+    assert!(!ok.contains("chart-image-pull-secrets"), "{ok}");
+}

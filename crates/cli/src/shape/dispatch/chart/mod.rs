@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 pub(crate) struct Evidence {
     pub(crate) env: Vec<(String, String)>,
     pub(crate) mismatch: Vec<String>,
+    pub(crate) secrets: Vec<String>,
 }
 
 pub(crate) struct Client {
@@ -55,7 +56,62 @@ impl Tree<'_> {
         env.sort();
         mismatch.sort();
         mismatch.dedup();
-        Evidence { env, mismatch }
+        let secrets = self.secrets();
+        Evidence {
+            env,
+            mismatch,
+            secrets,
+        }
+    }
+
+    fn secrets(&self) -> Vec<String> {
+        let mut missing = Vec::new();
+        let Ok(charts) = std::fs::read_dir(self.0.join("charts")) else {
+            return missing;
+        };
+        for chart in charts.flatten() {
+            self.inspect(&chart.path(), &mut missing);
+        }
+        missing.sort();
+        missing.dedup();
+        missing
+    }
+
+    fn inspect(&self, dir: &Path, missing: &mut Vec<String>) {
+        let values = dir.join("values.yaml");
+        let Ok(text) = std::fs::read_to_string(&values) else {
+            return;
+        };
+        let mut templates = Vec::new();
+        let root = dir.join("templates");
+        for extension in ["yaml", "yml"] {
+            Tree(&root).collect(extension, &mut templates);
+        }
+        templates.sort();
+        let mut workload = false;
+        for path in templates {
+            let Ok(body) = std::fs::read_to_string(&path) else {
+                continue;
+            };
+            let template = Template(&body);
+            if !template.workload() {
+                continue;
+            }
+            workload = true;
+            if template.unsecret() {
+                missing.push(self.relative(&path));
+            }
+        }
+        if workload && !helper::declared(&text) {
+            missing.push(self.relative(&values));
+        }
+    }
+
+    fn relative(&self, path: &Path) -> String {
+        path.strip_prefix(self.0)
+            .unwrap_or(path)
+            .to_string_lossy()
+            .replace('\\', "/")
     }
 
     fn templates(&self) -> Vec<(String, String)> {

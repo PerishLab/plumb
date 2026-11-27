@@ -3,6 +3,7 @@ use std::fmt::Write;
 
 const SOURCES: &[&str] = &[
     plumb::seat::resource!("cookbook/dispatch.chart-fsgroup-on-root-mismatch.txt"),
+    plumb::seat::resource!("cookbook/dispatch.chart-image-pull-secrets.txt"),
     plumb::seat::resource!("cookbook/dispatch.web-client-contract.txt"),
     plumb::seat::resource!("cookbook/env.toolchain-domain.txt"),
     plumb::seat::resource!("cookbook/follow.foreign-writer.txt"),

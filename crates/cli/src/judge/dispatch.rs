@@ -18,6 +18,14 @@ pub fn judge(evidence: Option<&Evidence>, charts: &chart::Evidence) -> Found {
             ),
         ));
     }
+    for path in &charts.secrets {
+        found.push(wrong(
+            &rule::CHART_IMAGE_PULL_SECRETS,
+            format!(
+                "{path} omits optional imagePullSecrets; see: plumb cookbook dispatch.chart-image-pull-secrets"
+            ),
+        ));
+    }
     found
 }
 
