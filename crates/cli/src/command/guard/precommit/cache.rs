@@ -39,7 +39,7 @@ pub(super) fn record(proof: &Action) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::super::super::workflow::tree::Tree;
-    use super::super::{Selection, action::Catalog, cargo, tree, world::Prepared};
+    use super::super::{Selection, cargo, suite::Catalog, tree, world::Prepared};
     use plumb::depot::{Rules, sha, v3};
     use std::{env, fs, path::Path, process::Command};
 

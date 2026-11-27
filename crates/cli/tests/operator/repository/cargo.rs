@@ -6,14 +6,14 @@ use std::process::Output;
 
 const THIRD: &str = "registry+https://github.com/rust-lang/crates.io-index";
 
-struct Fixture {
-    root: tempfile::TempDir,
+pub(super) struct Fixture {
+    pub(super) root: tempfile::TempDir,
     home: tempfile::TempDir,
-    tools: tempfile::TempDir,
+    pub(super) tools: tempfile::TempDir,
 }
 
 impl Fixture {
-    fn new(direct: bool, offered: &[&str]) -> Self {
+    pub(super) fn new(direct: bool, offered: &[&str]) -> Self {
         Self::shaped(direct, false, offered)
     }
 
@@ -113,7 +113,7 @@ impl Fixture {
         .unwrap();
     }
 
-    fn offer(tools: &Path, versions: &[&str]) {
+    pub(super) fn offer(tools: &Path, versions: &[&str]) {
         std::fs::create_dir_all(tools.join("index")).unwrap();
         let mut keel = String::new();
         let mut gate = String::new();
@@ -169,7 +169,7 @@ impl Fixture {
         lock
     }
 
-    fn plumb(&self, verb: &str) -> Output {
+    pub(super) fn plumb(&self, verb: &str) -> Output {
         let mut paths = vec![self.tools.path().to_path_buf()];
         paths.extend(std::env::split_paths(&std::env::var_os("PATH").unwrap()));
         support::plumb()
@@ -185,16 +185,16 @@ impl Fixture {
             .unwrap()
     }
 
-    fn lock(&self) -> String {
+    pub(super) fn lock(&self) -> String {
         std::fs::read_to_string(self.root.path().join("Cargo.lock")).unwrap()
     }
 
-    fn git(&self, args: &[&str]) -> String {
+    pub(super) fn git(&self, args: &[&str]) -> String {
         String::from_utf8(Repo::git(self.root.path(), args).stdout).unwrap()
     }
 }
 
-fn report(output: &Output) -> Value {
+pub(super) fn report(output: &Output) -> Value {
     assert!(
         output.status.success(),
         "{}{}",

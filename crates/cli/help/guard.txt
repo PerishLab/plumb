@@ -107,7 +107,12 @@ Doctor notes a lock lagging a first-party stable, with locked and latest
 versions, instead of refusing it. Standalone plumb doctor still reports that lag
 out of true. Evidence records the resolution context, exact package versions
 and effective tree.
-Unreadable registries and verification commands changing tracked inputs fail.
+Full/head Guard reobserves first-party stable channels before issuing or reusing
+a proof. A channel move reports guard.packages.rollover and restarts from the
+original source once. Actions whose inputs and worlds still match can reuse
+their verified results. Guard reports reused and restarted actions. Another
+move or an unavailable observation refuses the proof. Unreadable registries
+and verification commands changing tracked inputs fail.
 Human and --json output bind both selectors, repository,
 commit, tree, Plumb and Depot identities, platform, action inputs, and execution
 worlds into one evidence digest.

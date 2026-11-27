@@ -4,8 +4,8 @@ mod cache;
 pub(crate) mod cargo;
 mod environment;
 pub(crate) mod hook;
+mod suite;
 pub(crate) mod tree;
-mod web;
 mod world;
 
 use plumb::boundary::{Refusal, Report, Request};
@@ -92,8 +92,8 @@ impl Selection {
         self,
         tree: &super::workflow::tree::Tree,
         product: &str,
-    ) -> Result<Vec<action::Preparation>, String> {
-        let mut checks = action::Catalog { tree, product }.checks()?;
+    ) -> Result<Vec<suite::Preparation>, String> {
+        let mut checks = suite::Catalog { tree, product }.checks()?;
         crate::consumption::brand::admit(
             tree.text("plumb.toml")?.as_deref(),
             checks.iter().any(|check| check.name == "guard/web"),
