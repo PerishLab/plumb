@@ -10,7 +10,7 @@ mod absorbed;
 fn commit(root: &Path, path: &str, text: &str) -> String {
     std::fs::write(root.join(path), text).unwrap();
     work::git(root, &["add", path]).unwrap();
-    work::git(root, &["commit", "-q", "-m", "fixture delta"]).unwrap();
+    Fixture::dated(root, &["commit", "-q", "-m", "fixture delta"]).unwrap();
     work::git(root, &["rev-parse", "HEAD"]).unwrap()
 }
 
@@ -52,7 +52,8 @@ fn incorporated() {
     let (_fixture, source, state) = fixture();
     let old = state.pushed.as_deref().unwrap();
     let text = std::fs::read_to_string(state.worktree.join("Cargo.toml")).unwrap();
-    commit(&source, "Cargo.toml", &text);
+    let landed = commit(&source, "Cargo.toml", &text);
+    assert_ne!(landed, old);
     commit(&source, "src/lib.rs", "pub fn answer() -> u8 { 43 }\n");
     advance(&source);
     let base = work::git(&source, &["rev-parse", "origin/main"]).unwrap();
@@ -214,7 +215,8 @@ fn advanced() {
     state = seat.read("Example/probe").unwrap();
     let old = state.pushed.clone().unwrap();
     let text = std::fs::read_to_string(state.worktree.join("Cargo.toml")).unwrap();
-    commit(&source, "Cargo.toml", &text);
+    let landed = commit(&source, "Cargo.toml", &text);
+    assert_ne!(landed, old);
     commit(
         &source,
         "src/lib.rs",

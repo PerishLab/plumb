@@ -1,9 +1,47 @@
 use super::{Fixture, issue, work};
 use serde_json::json;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static CLOCK: AtomicU64 = AtomicU64::new(1_700_000_000);
 
 impl Fixture {
+    fn stamp() -> String {
+        format!("{} +0000", CLOCK.fetch_add(1, Ordering::Relaxed))
+    }
+
+    pub(super) fn dated(root: &std::path::Path, args: &[&str]) -> Result<String, String> {
+        let mut command = plumb::config::detached("git");
+        command
+            .arg("-C")
+            .arg(root)
+            .args(args)
+            .env("GIT_TERMINAL_PROMPT", "0")
+            .stdin(std::process::Stdio::null());
+        if args
+            .first()
+            .is_some_and(|arg| matches!(*arg, "commit" | "commit-tree" | "merge"))
+        {
+            let time = Self::stamp();
+            command
+                .env("GIT_AUTHOR_DATE", &time)
+                .env("GIT_COMMITTER_DATE", &time);
+        }
+        let output = command.output().map_err(|error| error.to_string())?;
+        if !output.status.success() {
+            return Err(format!(
+                "fixture git refused ({}): {}",
+                output.status,
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
+        String::from_utf8(output.stdout)
+            .map(|text| text.trim().into())
+            .map_err(|error| format!("fixture git output is not UTF-8: {error}"))
+    }
+
     fn git(&self, root: &std::path::Path, args: &[&str]) -> Result<String, String> {
-        let output = plumb::config::detached("git")
+        let mut command = plumb::config::detached("git");
+        command
             .arg("-C")
             .arg(root)
             .args(args)
@@ -12,9 +50,17 @@ impl Fixture {
             .env("GIT_AUTHOR_EMAIL", "auto@plumb.invalid")
             .env("GIT_COMMITTER_NAME", "Plumb Auto")
             .env("GIT_COMMITTER_EMAIL", "auto@plumb.invalid")
-            .stdin(std::process::Stdio::null())
-            .output()
-            .map_err(|error| error.to_string())?;
+            .stdin(std::process::Stdio::null());
+        if args
+            .first()
+            .is_some_and(|arg| matches!(*arg, "commit" | "commit-tree" | "merge"))
+        {
+            let time = Self::stamp();
+            command
+                .env("GIT_AUTHOR_DATE", &time)
+                .env("GIT_COMMITTER_DATE", &time);
+        }
+        let output = command.output().map_err(|error| error.to_string())?;
         if !output.status.success() {
             return Err(format!(
                 "fixture git refused ({}): {}",
@@ -155,7 +201,7 @@ fn publication() {
     let text = std::fs::read_to_string(&path).unwrap();
     std::fs::write(path, format!("{text}description='publication recovery'\n")).unwrap();
     work::git(&state.worktree, &["add", "Cargo.toml"]).unwrap();
-    work::git(&state.worktree, &["commit", "-q", "-m", "Refs #17."]).unwrap();
+    Fixture::dated(&state.worktree, &["commit", "-q", "-m", "Refs #17."]).unwrap();
     std::fs::write(fixture.root.path().join("mergefault"), "once").unwrap();
     let error =
         super::engine::advance(&source, &fixture.provider(), &seat, &mut state).unwrap_err();
