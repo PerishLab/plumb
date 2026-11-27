@@ -1,3 +1,4 @@
+use super::super::transfer::watch::{WINDOW, Watch, follow};
 use super::artifact::Slot;
 use plumb::config::Execution;
 use std::io::Write as _;
@@ -17,6 +18,7 @@ struct Request<'a> {
     authenticated: bool,
     limits: (u64, u64),
     headers: Option<&'a Path>,
+    watched: bool,
 }
 
 impl Client {
@@ -52,6 +54,7 @@ impl Client {
             authenticated: true,
             limits: (65536, timeout),
             headers: None,
+            watched: false,
         })?;
         if status != "200" {
             return Err(format!("GitHub cache metadata returned HTTP {status}"));
@@ -74,6 +77,7 @@ impl Client {
             authenticated: true,
             limits: (65536, redirect),
             headers: Some(headers.path()),
+            watched: false,
         })?;
         if status != "302" {
             return Err(format!("GitHub cache download returned HTTP {status}"));
@@ -96,6 +100,7 @@ impl Client {
             authenticated: false,
             limits: (maximum, timeout),
             headers: None,
+            watched: true,
         })?;
         if status != "200" {
             return Err(format!("cache artifact storage returned HTTP {status}"));
@@ -122,6 +127,7 @@ impl Client {
             authenticated,
             limits,
             headers,
+            watched,
         } = request;
         let mut command = self.execution.command("curl")?;
         command.args([
@@ -159,9 +165,15 @@ impl Client {
             command.arg("--dump-header").arg(headers);
         }
         command.arg(url);
-        let output = command
-            .output()
-            .map_err(|_| "cannot run isolated cache read transport")?;
+        let output = if watched {
+            follow(command, target, Watch::new(limits.0, WINDOW), &|| {
+                self.leftover()
+            })?
+        } else {
+            command
+                .output()
+                .map_err(|_| "cannot run isolated cache read transport")?
+        };
         if !output.status.success() {
             return Err(self
                 .leftover()

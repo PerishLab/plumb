@@ -283,3 +283,4 @@ mod native;
 mod scan;
 #[cfg(test)]
 mod tests;
+pub(in crate::command::cache) mod watch;
