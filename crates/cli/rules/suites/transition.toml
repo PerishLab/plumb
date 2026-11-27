@@ -1,0 +1,8 @@
+# Transitional prior Depot layouts accepted as noted findings under
+# rule://seat/affirmed while repositories audit and re-affirm AGENTS.md.
+#
+# When rules/suites/layout.toml changes in Depot (for example, retiring legacy
+# root <tool>.toml files), copy the prior [layout] tables here as a [[layout]]
+# entry (with an optional note) for the bounded cutover window. Removing the
+# entry restores fail-closed enforcement against that prior Depot layout.
+layout = []

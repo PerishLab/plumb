@@ -28,6 +28,13 @@ pub struct Declared {
     pub seats: Vec<Seat>,
     pub groups: Vec<Group>,
     pub overrides: Vec<String>,
+    pub transitions: Vec<Transition>,
+}
+
+#[derive(Clone)]
+pub struct Transition {
+    pub declared: Declared,
+    pub note: Option<String>,
 }
 
 #[derive(Clone)]

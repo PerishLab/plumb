@@ -5,12 +5,23 @@
 A wayfinder was affirmed against a different set of authority faces than the
 ones standing now.
 
+When Depot updates `rules/suites/layout.toml` and carries the retired Depot
+layout in `rules/suites/transition.toml`, an unchanged repository holding that
+prior affirmation receives a `noted` finding instead of an `out of true`
+failure for the duration of the cutover window. Any repo-local layout or lane
+change still fails closed immediately.
+
 ## Solution
 
 Read the target against what moved, then record. The finding names the faces its
 rule watches, so compare the two authorities to find what changed. Fix what the
 wayfinder now gets wrong, then run `plumb affirm --write`. Recording without
 reading is not evidence.
+
+For a transitional Depot layout `noted` finding, audit the target against the
+updated Depot layout and run `plumb affirm --write` before the cutover window
+closes and the prior entry leaves `rules/suites/transition.toml`. `plumb doctor`
+and `plumb guard` never rewrite `.plumb/affirmed.toml` automatically.
 
 Never widen the watched faces to silence a finding. Which faces a rule watches
 is a row that can be corrected, not an escape hatch.
