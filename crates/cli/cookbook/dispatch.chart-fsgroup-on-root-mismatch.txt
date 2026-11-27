@@ -2,8 +2,8 @@
 
 ## Trigger
 
-A Helm chart template under `charts/*/templates/*.{yaml,yml}` declares
-`fsGroup:` inside a pod `securityContext` without pairing it with
+A Helm chart template or helper under `charts/*/templates/*.{yaml,yml,tpl}` declares
+`fsGroup:` inside a pod `securityContext` or `define` helper without pairing it with
 `fsGroupChangePolicy: OnRootMismatch`.
 
 ## Solution
