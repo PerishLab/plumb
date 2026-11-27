@@ -1,3 +1,4 @@
+use plumb::snapshot::Snapshot;
 use plumb::vocabulary::{Dictionary, decode, encode, scan};
 use std::path::Path;
 use std::process::Command;
@@ -160,4 +161,107 @@ fn gitlink() {
     assert!(report.ok);
     assert_eq!(report.coverage.scanned, 1);
     assert!(report.hits.is_empty());
+}
+
+#[test]
+fn missing() {
+    let fixture = repo();
+    let root = fixture.path();
+    std::fs::write(root.join("ectropy.toml"), "policy = 1\n").expect("ectropy");
+    git(root, &["add", "ectropy.toml"]);
+    std::fs::remove_file(root.join("ectropy.toml")).expect("delete");
+
+    let error = Snapshot::read(root).expect_err("unstaged deletion must refuse");
+    assert_eq!(error.kind, "tracked");
+    assert!(error.missing(), "{error}");
+    assert!(error.message.contains("ectropy.toml"), "{error}");
+    assert!(error.message.contains("git rm ectropy.toml"), "{error}");
+    assert!(error.message.contains("git add -u"), "{error}");
+    assert!(error.message.contains("restore"), "{error}");
+    assert!(!error.message.contains("os error 2"), "{error}");
+
+    let staged = Snapshot::staged(root).expect("staged snapshot reads git index");
+    assert_eq!(staged.entries().len(), 1);
+    assert_eq!(staged.entries()[0].path(), "ectropy.toml");
+    assert_eq!(staged.entries()[0].bytes(), b"policy = 1\n");
+}
+
+#[test]
+fn multiple() {
+    let fixture = repo();
+    let root = fixture.path();
+    std::fs::write(root.join("ectropy.toml"), "a = 1\n").expect("ectropy");
+    std::fs::write(root.join("runseal.toml"), "b = 2\n").expect("runseal");
+    std::fs::write(root.join("kept.toml"), "c = 3\n").expect("kept");
+    git(root, &["add", "."]);
+    std::fs::remove_file(root.join("ectropy.toml")).expect("delete ectropy");
+    std::fs::remove_file(root.join("runseal.toml")).expect("delete runseal");
+
+    let error = Snapshot::read(root).expect_err("multiple unstaged deletions must refuse");
+    assert_eq!(error.kind, "tracked");
+    assert!(error.missing(), "{error}");
+    assert!(error.message.contains("ectropy.toml"), "{error}");
+    assert!(error.message.contains("runseal.toml"), "{error}");
+    assert!(!error.message.contains("kept.toml"), "{error}");
+    assert!(error.message.contains("git rm"), "{error}");
+    assert!(error.message.contains("git add -u"), "{error}");
+    assert!(error.message.contains("restore"), "{error}");
+    assert!(!error.message.contains("os error 2"), "{error}");
+
+    git(root, &["add", "-u"]);
+    let after = Snapshot::read(root).expect("staged deletions allow read");
+    assert_eq!(after.entries().len(), 1);
+    assert_eq!(after.entries()[0].path(), "kept.toml");
+}
+
+#[test]
+fn capped() {
+    let fixture = repo();
+    let root = fixture.path();
+    for index in 1..=12 {
+        std::fs::write(root.join(format!("item{index:02}.toml")), "x\n").expect("write");
+    }
+    git(root, &["add", "."]);
+    for index in 1..=12 {
+        std::fs::remove_file(root.join(format!("item{index:02}.toml"))).expect("delete");
+    }
+
+    let error = Snapshot::read(root).expect_err("many unstaged deletions must refuse");
+    assert_eq!(error.kind, "tracked");
+    assert!(error.missing(), "{error}");
+    assert!(error.message.contains("item01.toml"), "{error}");
+    assert!(error.message.contains("item10.toml"), "{error}");
+    assert!(!error.message.contains("item11.toml"), "{error}");
+    assert!(error.message.contains("(and 2 more)"), "{error}");
+}
+
+#[cfg(unix)]
+#[test]
+fn dangling() {
+    use std::os::unix::fs::symlink;
+
+    let fixture = repo();
+    let root = fixture.path();
+    symlink("target", root.join("link")).expect("symlink");
+    git(root, &["add", "link"]);
+    std::fs::remove_file(root.join("link")).expect("delete link");
+
+    let error = Snapshot::read(root).expect_err("deleted symlink must refuse");
+    assert_eq!(error.kind, "tracked");
+    assert!(error.missing(), "{error}");
+    assert!(error.message.contains("link"), "{error}");
+
+    git(root, &["add", "-u"]);
+    std::fs::write(root.join("regular"), "held\n").expect("regular");
+    git(root, &["add", "regular"]);
+    std::fs::remove_file(root.join("regular")).expect("remove regular");
+    symlink("nowhere", root.join("regular")).expect("broken symlink");
+
+    let broken = Snapshot::read(root).expect_err("broken symlink must refuse");
+    assert_eq!(broken.kind, "tracked");
+    assert!(!broken.missing(), "{broken}");
+    assert!(
+        broken.message.contains("cannot read tracked path regular"),
+        "{broken}"
+    );
 }
