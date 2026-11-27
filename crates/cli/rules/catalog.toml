@@ -201,6 +201,15 @@ owner = "release"
 tags = ["configuration", "release"]
 
 [[rule]]
+id = "dispatch.chart-image-pull-secrets"
+summary = "Workload charts expose optional imagePullSecrets"
+law = "Any Helm chart declaring Kubernetes workloads exposes top-level imagePullSecrets in values.yaml (defaulting to [] for Public-first pulls) and wires optional imagePullSecrets into every workload pod spec."
+evidence = "charts/*/values.yaml and workload templates below charts/*/templates (*.yaml, *.yml)."
+standing = "mechanized"
+owner = "release"
+tags = ["configuration", "release"]
+
+[[rule]]
 id = "dispatch.web-client-contract"
 summary = "Dual-OCI web fulfills the /client.json contract"
 law = "A Dual-OCI web product carries an empty JSON object at apps/web/public/client.json and mounts a chart ConfigMap at /web/dist/client.json with subPath client.json, readOnly true, and a checksum/client pod annotation."

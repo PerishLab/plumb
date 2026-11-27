@@ -23,5 +23,6 @@ rules! {
     CHART_SPLITS_INGRESS => "dispatch.chart-splits-ingress",
     CARGO_CHART_VERSION_TRAIN => "dispatch.cargo-chart-version-train",
     CHART_FSGROUP_ON_ROOT_MISMATCH => "dispatch.chart-fsgroup-on-root-mismatch",
+    CHART_IMAGE_PULL_SECRETS => "dispatch.chart-image-pull-secrets",
     WEB_CLIENT_CONTRACT => "dispatch.web-client-contract",
 }

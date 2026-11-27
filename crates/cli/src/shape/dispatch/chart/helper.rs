@@ -65,6 +65,41 @@ impl Template<'_> {
             entry(line).is_some_and(|(key, value)| key == "checksum/client" && !value.is_empty())
         })
     }
+
+    pub(super) fn workload(&self) -> bool {
+        documents(self.0).any(pod)
+    }
+
+    pub(super) fn unsecret(&self) -> bool {
+        documents(self.0).any(|doc| pod(doc) && !secret(doc))
+    }
+}
+
+pub(super) fn declared(values: &str) -> bool {
+    values.lines().any(|line| {
+        indent(line) == 0 && entry(line).is_some_and(|(key, _)| key == "imagePullSecrets")
+    })
+}
+
+fn pod(doc: &str) -> bool {
+    let mut kind = false;
+    let mut containers = false;
+    for line in doc.lines() {
+        if let Some((key, value)) = entry(line) {
+            kind |= key == "kind"
+                && matches!(
+                    value,
+                    "Deployment" | "StatefulSet" | "Job" | "CronJob" | "DaemonSet"
+                );
+            containers |= key == "containers" && value.is_empty();
+        }
+    }
+    kind && containers
+}
+
+fn secret(doc: &str) -> bool {
+    doc.lines()
+        .any(|line| entry(line).is_some_and(|(key, _)| key == "imagePullSecrets"))
 }
 
 pub(super) fn defined(text: &str) -> bool {

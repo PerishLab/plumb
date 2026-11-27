@@ -4,6 +4,8 @@
 # seat.
 replicaCount: 1
 
+imagePullSecrets: []
+
 image:
   repository: nginx
   tag: "1.29-alpine"
