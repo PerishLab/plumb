@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-pub(super) const DEFAULT: u64 = 60;
+pub(super) const DEFAULT: u64 = 90;
 const KEY: &str = "PLUMB_GUARD_RESTORE_BUDGET";
 
 pub(crate) fn budget() -> Result<Duration, String> {
