@@ -41,6 +41,8 @@ struct Shape {
     layout: Vec<String>,
     lanes: Vec<String>,
     publishes: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    libraries: Vec<String>,
     sites: Vec<String>,
     dependencies: Vec<Dependency>,
     topology: crate::shape::topology::Report,
@@ -215,6 +217,7 @@ impl Shape {
             layout: held.dirs.iter().cloned().collect(),
             lanes: held.lanes.iter().cloned().collect(),
             publishes: held.ships.iter().cloned().collect(),
+            libraries: held.release.libraries.clone(),
             sites: held.sites.iter().cloned().collect(),
             topology: held.topology.clone(),
             dependencies: held

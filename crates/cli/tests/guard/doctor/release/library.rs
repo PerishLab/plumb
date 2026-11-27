@@ -42,9 +42,9 @@ fn fixture(root: &Path) {
     command(root, "cargo", &["generate-lockfile", "--offline"]);
 }
 
-fn report(root: &Path, targets: &str) -> serde_json::Value {
+fn report(root: &Path, top: &str, extra: &str) -> serde_json::Value {
     let text = format!(
-        "[identity]\nns='foo'\n[dependency]\nroot=true\n[release]\nauthority='https://example.invalid'\ntargets={targets}\n[release.cargo]\nregistry='perish'\npackages=['foo-lock','foo-token']\n"
+        "[identity]\nns='foo'\n[dependency]\nroot=true\n[release]\nauthority='https://example.invalid'\n{top}[release.cargo]\nregistry='perish'\npackages=['foo-lock','foo-token']\n{extra}"
     );
     std::fs::write(root.join("plumb.toml"), text).unwrap();
     command(root, "git", &["add", "."]);
@@ -61,8 +61,9 @@ fn report(root: &Path, targets: &str) -> serde_json::Value {
 fn platforms() {
     let (_scratch, root) = super::seat("library-platforms");
     fixture(&root);
-    let targets = "['x86_64-unknown-linux-gnu','aarch64-apple-darwin','x86_64-pc-windows-msvc']";
-    let held = report(&root, targets);
+    let targets =
+        "targets=['x86_64-unknown-linux-gnu','aarch64-apple-darwin','x86_64-pc-windows-msvc']\n";
+    let held = report(&root, targets, "");
     let topology = &held["shape"]["topology"];
     assert_eq!(topology["nodes"].as_array().unwrap().len(), 2);
     assert_eq!(topology["unknown"], serde_json::json!([]));
@@ -80,10 +81,10 @@ fn platforms() {
         "{held}"
     );
     for targets in [
-        "['x86_64-apple-darwin']",
-        "['x86_64-unknown-linux-gnu','x86_64-unknown-linux-gnu']",
+        "targets=['x86_64-apple-darwin']\n",
+        "targets=['x86_64-unknown-linux-gnu','x86_64-unknown-linux-gnu']\n",
     ] {
-        let held = report(&root, targets);
+        let held = report(&root, targets, "");
         assert!(
             held["findings"]
                 .as_array()
@@ -92,6 +93,45 @@ fn platforms() {
                 .any(|finding| finding["code"] == "release.spec-declared"
                     && finding["grade"] == "out of true"),
             "{held}"
+        );
+    }
+}
+
+#[test]
+fn libraries() {
+    let (_scratch, root) = super::seat("cargo-library-targets");
+    fixture(&root);
+    let default = report(&root, "", "");
+    assert_eq!(
+        default["shape"]["libraries"],
+        serde_json::json!([
+            "x86_64-unknown-linux-gnu",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc"
+        ]),
+        "{default}"
+    );
+    let narrow = report(&root, "", "targets=['x86_64-unknown-linux-gnu']\n");
+    assert_eq!(
+        narrow["shape"]["libraries"],
+        serde_json::json!(["x86_64-unknown-linux-gnu"]),
+        "{narrow}"
+    );
+    for bad in [
+        "targets=[]\n",
+        "targets=['aarch64-apple-darwin']\n",
+        "targets=['x86_64-unknown-linux-gnu','x86_64-unknown-linux-gnu']\n",
+        "targets=['x86_64-apple-darwin']\n",
+    ] {
+        let refused = report(&root, "", bad);
+        assert!(
+            refused["findings"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|finding| finding["code"] == "release.spec-declared"
+                    && finding["grade"] == "out of true"),
+            "{bad}: {refused}"
         );
     }
 }

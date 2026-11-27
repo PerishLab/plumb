@@ -32,6 +32,9 @@ pub fn render(seen: Held<'_>) {
     if !held.release.placements.is_empty() {
         println!("  places    {}", held.release.placements.join(", "));
     }
+    if !held.release.libraries.is_empty() {
+        println!("  libraries {}", held.release.libraries.join(" "));
+    }
     if !held.sites.is_empty() {
         println!("  sites     {}", show(&held.sites));
     }

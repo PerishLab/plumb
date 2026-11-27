@@ -1,3 +1,5 @@
+#[cfg(test)]
+mod cargo;
 mod oci;
 #[cfg(test)]
 mod tests;
@@ -13,6 +15,7 @@ use std::path::Path;
 pub struct Cargo {
     pub registry: String,
     pub packages: Vec<String>,
+    pub targets: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -38,6 +41,16 @@ pub struct Npm {
 }
 
 impl Cargo {
+    pub fn platforms(&self) -> Vec<String> {
+        match &self.targets {
+            Some(targets) => targets.clone(),
+            None => super::target::LIBRARIES
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+        }
+    }
+
     pub(super) fn validate(&self) -> Result<(), String> {
         super::token("Cargo registry", &self.registry, false)?;
         if self.packages.is_empty() {
@@ -48,6 +61,27 @@ impl Cargo {
             super::token("Cargo package", package, false)?;
             if !packages.insert(package) {
                 return Err(format!("duplicate Cargo package {package}"));
+            }
+        }
+        if let Some(targets) = &self.targets {
+            if targets.is_empty() {
+                return Err(
+                    "Cargo attachment must declare at least one target when targets is present"
+                        .into(),
+                );
+            }
+            let mut triples = BTreeSet::new();
+            for triple in targets {
+                super::target::resolve(triple)?;
+                if !triples.insert(triple.as_str()) {
+                    return Err(format!("duplicate Cargo target {triple}"));
+                }
+            }
+            if !triples.contains(super::executable::LINUX) {
+                return Err(format!(
+                    "Cargo attachment targets must include {}",
+                    super::executable::LINUX
+                ));
             }
         }
         Ok(())

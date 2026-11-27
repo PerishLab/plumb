@@ -14,6 +14,12 @@ pub(super) const TARGETS: [&str; 4] = [
     "x86_64-pc-windows-msvc",
 ];
 
+pub(super) const LIBRARIES: [&str; 3] = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+];
+
 pub(super) fn resolve(triple: &str) -> Result<Target, String> {
     if TARGETS.contains(&triple) {
         Ok(Target {
