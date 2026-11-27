@@ -174,6 +174,13 @@ pub(crate) enum Command {
             help = "Prove a prepared release note against the diff budget of --version"
         )]
         prove: Option<PathBuf>,
+        #[arg(
+            long,
+            value_name = "DIR",
+            conflicts_with = "prove",
+            help = "Write a changelog skeleton sized to the diff budget of --version"
+        )]
+        scaffold: Option<PathBuf>,
     },
     #[command(about = "Project the repository side of the configuration Plumb carries")]
     Configuration {

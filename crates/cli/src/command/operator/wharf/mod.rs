@@ -21,11 +21,7 @@ pub(in crate::command) fn stamp(
     dry: bool,
     successor: Option<&str>,
 ) -> Result<String, String> {
-    let held = if raw.starts_with('v') {
-        raw.to_string()
-    } else {
-        format!("v{raw}")
-    };
+    let held = crate::command::changelog::stamped(raw);
     let channel = super::super::release::channel(&held)?;
     if channel != STABLE && !PRERELEASES.contains(&channel.as_str()) {
         return Err(format!(
@@ -246,7 +242,8 @@ pub(super) fn dispatch(options: Dispatch) -> Result<String, String> {
             }
             let said = status::verdict(record, &options.marker, launch::identity(&url))
                 .map_err(|error| format!("{url}: {error}"))?;
-            Ok(format!("{url}\n{said}"))
+            let tail = super::owed::settle::after(&seat, &options.marker, &commit);
+            Ok(format!("{url}\n{said}{tail}"))
         }
         Some(url) => Ok(url),
     }

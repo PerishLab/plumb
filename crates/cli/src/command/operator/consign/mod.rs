@@ -18,15 +18,15 @@ const WORKFLOW: &str = "depot.yml";
 #[group(skip)]
 pub struct Consign {
     #[arg(long)]
-    version: String,
+    pub(super) version: String,
     #[arg(long, value_parser = ["changelog", "skill", "scene", "configuration"])]
-    kind: String,
+    pub(super) kind: String,
     #[arg(long, value_name = "DIR")]
-    dir: Option<PathBuf>,
+    pub(super) dir: Option<PathBuf>,
     #[arg(long = "no-watch")]
-    unwatched: bool,
+    pub(super) unwatched: bool,
     #[arg(long = "dry-run")]
-    dry: bool,
+    pub(super) dry: bool,
 }
 
 struct Lodging<'a> {
@@ -129,7 +129,7 @@ fn gathered(
     Ok((goods::directory(dir)?, kind))
 }
 
-fn brief(dir: &Path) -> Result<(), String> {
+pub(super) fn brief(dir: &Path) -> Result<(), String> {
     let rule = crate::catalog::member::parse(WAYFINDER)
         .and_then(|held| crate::catalog::member::member(&held))?;
     vet(dir, rule.leaf.as_deref().unwrap_or("SKILL.md"), rule.bytes)

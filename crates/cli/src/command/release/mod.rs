@@ -73,6 +73,21 @@ fn execute(deed: Deed) -> Result<String, String> {
             dry,
         } => super::operator::close(&version, abandon, &remote, dry),
         Deed::Owed { version, remote } => super::operator::owed(version.as_deref(), &remote),
+        Deed::Settle {
+            version,
+            changelog,
+            skill,
+            remote,
+            dry,
+            json,
+        } => super::operator::settle(super::operator::Settle {
+            version,
+            changelog,
+            skill,
+            remote,
+            dry,
+            json,
+        }),
         Deed::Authority { json } => guard(json),
     }
 }

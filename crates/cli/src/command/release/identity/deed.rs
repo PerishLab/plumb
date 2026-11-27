@@ -89,6 +89,21 @@ pub enum Deed {
         #[arg(long, default_value = "origin")]
         remote: String,
     },
+    #[command(about = "Settle remaining post-release Depot and branch obligations")]
+    Settle {
+        #[arg(long)]
+        version: Option<String>,
+        #[arg(long, value_name = "DIR")]
+        changelog: Option<std::path::PathBuf>,
+        #[arg(long, value_name = "DIR")]
+        skill: Option<std::path::PathBuf>,
+        #[arg(long, default_value = "origin")]
+        remote: String,
+        #[arg(long = "dry-run")]
+        dry: bool,
+        #[arg(long)]
+        json: bool,
+    },
     #[command(about = "Report the Guard authority this binary's proofs carry")]
     Authority {
         #[arg(long)]
