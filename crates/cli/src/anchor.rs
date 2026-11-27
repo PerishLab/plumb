@@ -63,18 +63,54 @@ impl Anchor<'_> {
     }
 
     pub fn repo(&self) -> Option<String> {
-        if let Some(name) = declared(self.0) {
-            return Some(name);
+        self.identity()
+            .or_else(|| self.declared())
+            .or_else(|| self.origin())
+            .or_else(|| self.basename())
+    }
+
+    fn identity(&self) -> Option<String> {
+        let text = std::fs::read_to_string(self.0.join("plumb.toml")).ok()?;
+        let doc = text.parse::<toml::Table>().ok()?;
+        doc.get("identity")
+            .and_then(|value| value.get("ns"))
+            .and_then(toml::Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+    }
+
+    fn declared(&self) -> Option<String> {
+        let text = std::fs::read_to_string(self.0.join("Cargo.toml")).ok()?;
+        let doc = text.parse::<toml::Table>().ok()?;
+        let package = doc
+            .get("workspace")
+            .and_then(|value| value.get("package"))
+            .or_else(|| doc.get("package"))?;
+        named(package.get("repository")?.as_str()?)
+    }
+
+    fn origin(&self) -> Option<String> {
+        if !self.0.join(".git").exists() {
+            return None;
         }
+        let output = plumb::config::detached("git")
+            .arg("-C")
+            .arg(self.0)
+            .args(["remote", "get-url", "origin"])
+            .output()
+            .ok()
+            .filter(|output| output.status.success())?;
+        let url = String::from_utf8(output.stdout).ok()?;
+        named(&url)
+    }
+
+    fn basename(&self) -> Option<String> {
         let root = std::fs::canonicalize(self.0).ok()?;
         home(&root)
             .unwrap_or(root)
             .file_name()
             .map(|name| name.to_string_lossy().to_string())
-    }
-
-    pub fn ns(&self) -> Option<String> {
-        identity(self.0).or_else(|| self.repo())
     }
 
     pub fn prefixes(&self) -> Vec<Prefix> {
@@ -111,31 +147,11 @@ impl Anchor<'_> {
     }
 }
 
-fn identity(root: &Path) -> Option<String> {
-    let text = std::fs::read_to_string(root.join("plumb.toml")).ok()?;
-    let doc = text.parse::<toml::Table>().ok()?;
-    doc.get("identity")
-        .and_then(|value| value.get("ns"))
-        .and_then(toml::Value::as_str)
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
-}
-
-fn declared(root: &Path) -> Option<String> {
-    let text = std::fs::read_to_string(root.join("Cargo.toml")).ok()?;
-    let doc = text.parse::<toml::Table>().ok()?;
-    let package = doc
-        .get("workspace")
-        .and_then(|value| value.get("package"))
-        .or_else(|| doc.get("package"))?;
-    let repository = package.get("repository")?.as_str()?;
-    repository
-        .trim_end_matches('/')
-        .rsplit(['/', ':'])
-        .next()
-        .map(|name| name.strip_suffix(".git").unwrap_or(name).to_string())
-        .filter(|name| !name.is_empty())
+fn named(raw: &str) -> Option<String> {
+    let trimmed = raw.trim().trim_end_matches(['/', '\\']);
+    let tail = trimmed.rsplit(['/', ':', '\\']).next()?;
+    let stem = tail.strip_suffix(".git").unwrap_or(tail);
+    (!stem.is_empty() && stem != "." && stem != "..").then(|| stem.to_string())
 }
 
 fn home(root: &Path) -> Option<PathBuf> {

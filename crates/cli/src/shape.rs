@@ -1,7 +1,6 @@
 pub(crate) mod dispatch;
 pub mod web;
-use std::collections::BTreeSet;
-use std::path::Path;
+use std::{collections::BTreeSet, path::Path};
 
 pub mod lane;
 pub mod pair;
@@ -228,6 +227,7 @@ pub fn capture(
         .ok()
         .map(|snapshot| plumb::windtun::declared(snapshot).map(|_| ()));
     let anchor = crate::anchor::Anchor(root);
+    let repo = anchor.repo();
     Shape {
         wrappers: seat.names(".runseal/wrappers", ".ts"),
         dirs: snapshot.as_ref().map(Root::dirs).unwrap_or_default(),
@@ -259,8 +259,8 @@ pub fn capture(
         mint: seat.mint(),
         packages: seat.packages(),
         node: node::read(root),
-        repo: anchor.repo(),
-        ns: anchor.ns(),
+        ns: repo.clone(),
+        repo,
         named: anchor.names(),
         derived: anchor.derives(),
         prefixes: anchor.prefixes(),
