@@ -9,6 +9,7 @@ pub struct Release {
     pub attachments: BTreeSet<String>,
     pub executables: Vec<String>,
     pub placements: Vec<String>,
+    pub libraries: Vec<String>,
     pub widths: BTreeMap<String, usize>,
     pub refusal: Option<String>,
     pub misnamed: Option<String>,
@@ -53,6 +54,10 @@ impl Root<'_> {
             attachments,
             executables: spec.lines(),
             placements: spec.placements(),
+            libraries: spec
+                .cargo
+                .as_ref()
+                .map_or_else(Vec::new, |cargo| cargo.platforms()),
             widths: widths(spec),
             refusal: None,
             misnamed: misnamed(self.0, &spec.product),
