@@ -35,10 +35,38 @@ pub struct Resolution {
     pub packages: Vec<Package>,
 }
 
+pub struct Channels(Vec<Package>);
+
+impl Channels {
+    pub fn changes(&self, root: &Path) -> Result<Vec<String>, String> {
+        let mut changes = Vec::new();
+        for held in &self.0 {
+            let current = registry::latest(root, &held.ecosystem, &held.name).map_err(|error| {
+                format!(
+                    "cannot reobserve {} stable {}: {error}",
+                    held.ecosystem, held.name
+                )
+            })?;
+            if held.version != current {
+                changes.push(format!(
+                    "{} {} {} -> {current}",
+                    held.ecosystem, held.name, held.version
+                ));
+            }
+        }
+        Ok(changes)
+    }
+
+    pub fn packages(&self) -> &[Package] {
+        &self.0
+    }
+}
+
 pub struct Plan {
     edits: Vec<manifest::Edit>,
     manifests: Vec<String>,
     required: BTreeSet<(String, String)>,
+    channels: Channels,
     pub resolution: Resolution,
 }
 
@@ -85,11 +113,22 @@ impl Plan {
         }
         let mut crates = registry::coherent(&indexes)?;
         let mut packages = Vec::new();
+        let mut channels = Vec::new();
         for (ecosystem, name) in names {
             let version = match crates.remove(&name).filter(|_| ecosystem == "cargo") {
                 Some(version) => version,
                 None => registry::latest(root, &ecosystem, &name)?,
             };
+            let current = indexes
+                .get(&name)
+                .filter(|_| ecosystem == "cargo")
+                .and_then(|entries| entries.first())
+                .map_or_else(|| version.clone(), |entry| entry.version.to_string());
+            channels.push(Package {
+                version: current,
+                ecosystem: ecosystem.clone(),
+                name: name.clone(),
+            });
             packages.push(Package {
                 version,
                 ecosystem,
@@ -100,6 +139,7 @@ impl Plan {
             edits,
             manifests,
             required,
+            channels: Channels(channels),
             resolution: Resolution {
                 context: context.into(),
                 tree: String::new(),
@@ -113,6 +153,10 @@ impl Plan {
     }
 
     pub fn settle(&self, root: &Path) -> Result<Resolution, String> {
+        self.observe(root).map(|(resolution, _)| resolution)
+    }
+
+    pub fn observe(&self, root: &Path) -> Result<(Resolution, Channels), String> {
         let mut expanded = None;
         for _ in 0..4 {
             let plan = expanded.as_ref().unwrap_or(self);
@@ -134,7 +178,18 @@ impl Plan {
                 continue;
             }
             plan.verify(root)?;
-            return Ok(plan.resolution.clone());
+            let channels = plan
+                .channels
+                .0
+                .iter()
+                .filter(|observed| {
+                    held.packages.iter().any(|package| {
+                        package.ecosystem == observed.ecosystem && package.name == observed.name
+                    })
+                })
+                .cloned()
+                .collect();
+            return Ok((plan.resolution.clone(), Channels(channels)));
         }
         Err("first-party dependency graph did not settle within four resolutions".into())
     }

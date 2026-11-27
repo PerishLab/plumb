@@ -4,7 +4,7 @@ use plumb::packages::{Plan, Resolution};
 use std::path::{Path, PathBuf};
 
 pub(crate) fn resolve(root: &Path, context: &str) -> Result<Resolution, String> {
-    let (locked, _) = observed(root, context)?;
+    let (locked, _, _) = observed(root, context)?;
     if crate::shape::release::migration::migrate(root)? {
         super::guard::precommit::tree::git(
             root,
@@ -15,9 +15,12 @@ pub(crate) fn resolve(root: &Path, context: &str) -> Result<Resolution, String> 
     Ok(locked)
 }
 
-pub(crate) fn observed(root: &Path, context: &str) -> Result<(Resolution, Resolution), String> {
+pub(crate) fn observed(
+    root: &Path,
+    context: &str,
+) -> Result<(Resolution, Resolution, plumb::packages::Channels), String> {
     let plan = Plan::read(root, context)?;
-    let mut latest = plan.settle(root)?;
+    let (mut latest, channels) = plan.observe(root)?;
     let changes = super::guard::precommit::tree::git(
         root,
         &["diff", "--name-only", "HEAD"],
@@ -38,7 +41,7 @@ pub(crate) fn observed(root: &Path, context: &str) -> Result<(Resolution, Resolu
     }
     let locked = plumb::packages::locked(root, context)?;
     latest.tree = locked.tree.clone();
-    Ok((locked, latest))
+    Ok((locked, latest, channels))
 }
 
 pub(crate) fn lift(root: PathBuf, json: bool) -> i32 {

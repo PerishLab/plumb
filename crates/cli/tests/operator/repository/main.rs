@@ -7,6 +7,7 @@ mod packages;
 mod precommit;
 #[cfg(unix)]
 mod reclaim;
+mod rollover;
 #[cfg(unix)]
 #[path = "staging/main.rs"]
 mod staging;

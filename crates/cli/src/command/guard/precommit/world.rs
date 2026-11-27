@@ -20,6 +20,7 @@ pub(super) struct Prepared {
     pub depot: String,
     pub material: String,
     pub context: Option<Context>,
+    pub channels: Option<plumb::packages::Channels>,
 }
 
 impl Prepared {
@@ -31,14 +32,7 @@ impl Prepared {
     ) -> Result<Self, String> {
         let rules = plumb::depot::rules()?;
         let depot = rules.mark().to_string();
-        let (locked, observed) = if matches!(selection, Selection::Latest) {
-            let (locked, observed) = crate::diagnostic::measure("packages.resolve", || {
-                crate::command::packages::observed(&index.root, "ci-latest")
-            })?;
-            (locked, Some(plumb::packages::Observation::new(observed)))
-        } else {
-            (plumb::packages::locked(&index.root, "local-locked")?, None)
-        };
+        let (locked, observed, channels) = super::action::packages(index, selection)?;
         index.settle()?;
         let resolution = Some(locked);
         let captured = Tree::read(&index.root, None)?;
@@ -66,13 +60,15 @@ impl Prepared {
         let mut checks = Vec::new();
         for mut item in prepared {
             let input = crate::shape::topology::bind(&item.name, item.input, topology.as_deref());
+            let input =
+                super::suite::bind(&captured, (&item.name, &product), input, channels.as_ref())?;
             let (input, brand) = crate::consumption::brand::prepare(
                 (&item.name, input),
                 &index.root,
                 resolution.as_ref(),
             )?;
             let (exclusions, policy) = if item.name == "guard/web" {
-                super::web::prepare(&index.root, &mut item.commands)?
+                super::suite::prepare(&index.root, &mut item.commands)?
             } else {
                 Default::default()
             };
@@ -155,6 +151,7 @@ impl Prepared {
             depot,
             material,
             context,
+            channels,
         })
     }
 
