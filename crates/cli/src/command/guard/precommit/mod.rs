@@ -72,7 +72,7 @@ pub fn run(input: Input) -> i32 {
     }
 }
 
-pub(super) fn prove(root: &Path) -> Result<plumb::guard::Descriptor, String> {
+pub(super) fn prove(root: &Path) -> Result<plumb::guard::Descriptor, super::runtime::Fault> {
     action::resolved(root)
 }
 
