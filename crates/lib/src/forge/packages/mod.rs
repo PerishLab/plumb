@@ -163,11 +163,18 @@ impl Plan {
             for edit in &plan.edits {
                 edit.write(root)?;
             }
-            cargo::Lock(root).update(&plan.resolution.packages, &plan.manifests)?;
-            npm::Lock(root).update(
-                &plan.resolution.packages,
-                plan.edits.iter().any(|edit| edit.npm()),
-            )?;
+            let manifested = plan.edits.iter().any(|edit| edit.npm());
+            let (rust, node) = std::thread::scope(|scope| {
+                let rust = scope
+                    .spawn(|| cargo::Lock(root).update(&plan.resolution.packages, &plan.manifests));
+                let node = npm::Lock(root).update(&plan.resolution.packages, manifested);
+                let rust = rust
+                    .join()
+                    .unwrap_or_else(|_| Err("cargo lock update panicked".into()));
+                (rust, node)
+            });
+            rust?;
+            node?;
             let held = locked(root, &plan.resolution.context)?;
             if held.packages.iter().any(|package| {
                 !plan.resolution.packages.iter().any(|wanted| {
