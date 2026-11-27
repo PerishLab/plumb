@@ -17,10 +17,19 @@ pub struct Snapshot {
     untracked: Vec<String>,
 }
 
+const LIMIT: usize = 10;
+const MARKER: &str = "missing from the working tree (unstaged deletion";
+
 #[derive(Clone, Debug, Eq, PartialEq, serde::Serialize)]
 pub struct Refusal {
     pub kind: &'static str,
     pub message: String,
+}
+
+impl Refusal {
+    pub fn missing(&self) -> bool {
+        self.kind == "tracked" && self.message.contains(MARKER)
+    }
 }
 
 impl Display for Refusal {
@@ -34,8 +43,20 @@ impl std::error::Error for Refusal {}
 impl Snapshot {
     pub fn read(root: &Path) -> Result<Self, Refusal> {
         let mut held = Self::listed(root)?;
+        let mut missing = Vec::new();
         for entry in &mut held.entries {
-            entry.bytes = bytes(root, entry)?;
+            if !missing.is_empty() {
+                if entry.missing(root) {
+                    missing.push(entry.path.clone());
+                }
+            } else if let Some(data) = entry.load(root)? {
+                entry.bytes = data;
+            } else {
+                missing.push(entry.path.clone());
+            }
+        }
+        if !missing.is_empty() {
+            return Err(absent(&missing));
         }
         Ok(held)
     }
@@ -143,6 +164,37 @@ impl Entry {
     pub fn bytes(&self) -> &[u8] {
         &self.bytes
     }
+
+    fn load(&self, root: &Path) -> Result<Option<Vec<u8>>, Refusal> {
+        if self.mode == "160000" {
+            return Ok(Some(self.oid.as_bytes().to_vec()));
+        }
+        let path = root.join(&self.path);
+        if self.mode == "120000" {
+            let target = match std::fs::read_link(&path) {
+                Ok(target) => target,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound && gone(&path) => {
+                    return Ok(None);
+                }
+                Err(error) => return Err(unread(&self.path, error)),
+            };
+            return native(target.as_os_str()).map(Some).ok_or_else(|| {
+                refuse(
+                    "tracked",
+                    format!("symlink {} has a non-UTF-8 target", self.path),
+                )
+            });
+        }
+        match std::fs::read(&path) {
+            Ok(data) => Ok(Some(data)),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound && gone(&path) => Ok(None),
+            Err(error) => Err(unread(&self.path, error)),
+        }
+    }
+
+    fn missing(&self, root: &Path) -> bool {
+        self.mode != "160000" && gone(&root.join(&self.path))
+    }
 }
 
 fn listing(root: &Path, args: &[&str], fallback: &str) -> Result<Vec<u8>, Refusal> {
@@ -172,21 +224,35 @@ fn paths(root: &Path) -> Result<Vec<String>, Refusal> {
         .collect()
 }
 
-fn bytes(root: &Path, entry: &Entry) -> Result<Vec<u8>, Refusal> {
-    if entry.mode == "160000" {
-        return Ok(entry.oid.as_bytes().to_vec());
-    }
-    let path = root.join(&entry.path);
-    if entry.mode == "120000" {
-        let target = std::fs::read_link(&path).map_err(|error| unread(&entry.path, error))?;
-        return native(target.as_os_str()).ok_or_else(|| {
-            refuse(
-                "tracked",
-                format!("symlink {} has a non-UTF-8 target", entry.path),
+fn gone(path: &Path) -> bool {
+    std::fs::symlink_metadata(path).is_err_and(|error| error.kind() == std::io::ErrorKind::NotFound)
+}
+
+fn absent(missing: &[String]) -> Refusal {
+    let message = match missing {
+        [path] => {
+            let argument = if path.chars().any(char::is_whitespace) {
+                format!("\"{path}\"")
+            } else {
+                path.clone()
+            };
+            format!(
+                "tracked path {path} is {MARKER}); stage it with `git rm {argument}` or `git add -u`, or restore it"
             )
-        });
-    }
-    std::fs::read(&path).map_err(|error| unread(&entry.path, error))
+        }
+        paths => {
+            let tail = paths.len().saturating_sub(LIMIT);
+            let shown = if tail > 0 {
+                format!("{} (and {tail} more)", paths[..LIMIT].join(", "))
+            } else {
+                paths.join(", ")
+            };
+            format!(
+                "tracked paths are {MARKER}s): {shown}; stage them with `git rm` or `git add -u`, or restore them"
+            )
+        }
+    };
+    refuse("tracked", message)
 }
 
 #[cfg(unix)]

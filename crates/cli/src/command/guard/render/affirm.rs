@@ -1,6 +1,6 @@
 use crate::judge::structure::layout::{Faces, authority, rule};
 use crate::shape::layout::{Declared, Held};
-use plumb::snapshot::Snapshot;
+use plumb::snapshot::{Refusal, Snapshot};
 use std::path::Path;
 
 pub const SEAT: &str = ".plumb/affirmed.toml";
@@ -12,7 +12,7 @@ pub struct Owed {
 }
 
 pub fn owed(root: &Path) -> Result<Vec<Owed>, String> {
-    let snapshot = Snapshot::read(root).map_err(|error| error.to_string())?;
+    let snapshot = Snapshot::read(root).map_err(refuse)?;
     let Held::Stated(declared) = crate::shape::layout::stated(root) else {
         return Err("no layout is declared".to_string());
     };
@@ -74,6 +74,13 @@ pub fn write(root: &Path, owed: &[Owed]) -> Result<(), String> {
         std::fs::create_dir_all(base).map_err(|error| error.to_string())?;
     }
     std::fs::write(&seat, body).map_err(|error| error.to_string())
+}
+
+fn refuse(error: Refusal) -> String {
+    if error.missing() {
+        return format!("{error} before running `plumb affirm`");
+    }
+    error.to_string()
 }
 
 fn record(target: &str, rule: &str, authority: &str) -> String {
